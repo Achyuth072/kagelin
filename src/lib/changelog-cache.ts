@@ -58,19 +58,26 @@ export function isNewerThan(a: string, b: string): boolean {
   return false;
 }
 
-export function scopeToMinor(
+export function filterForDisplay(
   entries: ChangelogEntry[],
   appVersion: string,
 ): ChangelogEntry[] {
-  const parts = parseVersion(appVersion);
-  const major = parts[0] ?? 0;
-  const minor = parts[1] ?? 0;
-  const prefix = `${major}.${minor}.`;
+  const isPreview = appVersion.includes("preview");
 
-  return entries.filter((e) => {
-    if (e.version === "unreleased") return false;
-    return e.version.startsWith(prefix);
-  });
+  if (isPreview) {
+    const parts = parseVersion(appVersion);
+    const prefix = `${parts[0] ?? 0}.${parts[1] ?? 0}.`;
+    return entries.filter(
+      (e) =>
+        e.version !== "unreleased" &&
+        e.version.startsWith(prefix) &&
+        e.version.includes("preview"),
+    );
+  }
+
+  return entries
+    .filter((e) => e.version !== "unreleased" && !e.version.includes("preview"))
+    .slice(0, 3);
 }
 
 export function useChangelogEntries(
@@ -100,7 +107,7 @@ export function useChangelogEntries(
   }, [open]);
 
   const targetVersion = forceVersion ?? appVersion;
-  const filtered = scopeToMinor(entries, targetVersion);
+  const filtered = filterForDisplay(entries, targetVersion);
 
   return { entries: filtered, loading: loading && cache === null };
 }
