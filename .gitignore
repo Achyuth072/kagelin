@@ -72,10 +72,3 @@ tests/unit/*.txt
 /docker_data/
 
 .vercel/
-
-/.planning/
-/.agent/
-/.gemini/
-/.serena/
-/.husky/
-/.claude/
