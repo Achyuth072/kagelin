@@ -16,26 +16,19 @@ const { mockCancel, mockToast } = vi.hoisted(() => ({
 let mockIsRunning = false;
 let mockRemainingSeconds = 1500; // 25 min
 const TOTAL_SECONDS = 1500;
+let mockIsGuestMode = false;
 
 // ===== Module mocks =====
 
-vi.mock("@/lib/store/timerStore", () => ({
-  useTimerStore: (selector: (state: any) => any) => {
-    const state = {
-      state: {
-        isRunning: mockIsRunning,
-        remainingSeconds: mockRemainingSeconds,
-        mode: "focus",
-      },
-      settings: {
-        focusDuration: 25,
-        shortBreakDuration: 5,
-        longBreakDuration: 15,
-      },
-      cancel: mockCancel,
-    };
-    return selector(state);
-  },
+vi.mock("@/components/TimerProvider", () => ({
+  useTimer: () => ({
+    state: {
+      isRunning: mockIsRunning,
+      remainingSeconds: mockRemainingSeconds,
+      mode: "focus",
+    },
+    cancel: mockCancel,
+  }),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -55,6 +48,7 @@ describe("CancelSessionButton", () => {
     vi.clearAllMocks();
     mockIsRunning = false;
     mockRemainingSeconds = TOTAL_SECONDS;
+    mockIsGuestMode = false;
   });
 
   // --- Test 1: Visible when timer is active ---
