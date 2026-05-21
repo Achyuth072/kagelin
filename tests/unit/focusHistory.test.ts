@@ -40,9 +40,7 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 vi.mock("@/lib/store/uiStore", () => ({
-  useUiStore: {
-    getState: vi.fn(() => ({ isPipActive: false, setIsSynced: vi.fn() })),
-  },
+  useUiStore: { getState: vi.fn(() => ({ isPipActive: false, setIsSynced: vi.fn() })) },
 }));
 
 vi.mock("@/lib/store/focusHistoryStore", () => ({

@@ -194,5 +194,57 @@ describe("useTimerStore", () => {
       // Then: completedSessions resets to 0 (stop semantics unchanged)
       expect(useTimerStore.getState().state.completedSessions).toBe(0);
     });
+
+    it("should NOT dispatch timer-complete event (no session logging triggered by cancel)", () => {
+      // Given: A running timer
+      const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+      useTimerStore.setState((s) => ({
+        state: {
+          ...s.state,
+          isRunning: true,
+          remainingSeconds: 500,
+          completedSessions: 2,
+          activeTaskId: "task-1",
+        },
+      }));
+
+      // When: Cancelling the timer
+      useTimerStore.getState().cancel();
+
+      // Then: No timer-complete custom event should be dispatched
+      const timerCompleteCalls = dispatchSpy.mock.calls.filter(
+        ([event]) =>
+          event instanceof CustomEvent && event.type === "timer-complete",
+      );
+      expect(timerCompleteCalls).toHaveLength(0);
+      dispatchSpy.mockRestore();
+    });
+
+    it("should produce state matching getInitialState except completedSessions is preserved", () => {
+      // Given: A running timer with 4 completed sessions
+      useTimerStore.setState((s) => ({
+        state: {
+          ...s.state,
+          isRunning: true,
+          remainingSeconds: 700,
+          completedSessions: 4,
+          activeTaskId: "task-cancel",
+          startedAt: Date.now(),
+        },
+      }));
+
+      // When: Cancelling the timer
+      useTimerStore.getState().cancel();
+
+      // Then: State matches initial state structure
+      const { state, settings } = useTimerStore.getState();
+      expect(state.mode).toBe("focus");
+      expect(state.isRunning).toBe(false);
+      expect(state.remainingSeconds).toBe(settings.focusDuration * 60);
+      expect(state.activeTaskId).toBeNull();
+      expect(state.startedAt).toBeNull();
+      // EXCEPT completedSessions is preserved
+      expect(state.completedSessions).toBe(4);
+    });
   });
 });
