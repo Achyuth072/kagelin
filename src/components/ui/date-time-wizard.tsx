@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
@@ -17,6 +17,8 @@ interface DateTimeWizardProps {
   onClose: () => void;
   showTime?: boolean;
   allowPastDates?: boolean;
+  /** Constrain content height to fit inside a Popover using the Radix available-height CSS var */
+  compact?: boolean;
 }
 
 export function DateTimeWizard({
@@ -25,16 +27,43 @@ export function DateTimeWizard({
   onClose,
   showTime = true,
   allowPastDates = false,
+  compact = false,
 }: DateTimeWizardProps) {
   const { trigger } = useHaptic();
   const { formatTime } = useTimeFormat();
   const [step, setStep] = useState<"date" | "time">("date");
   const [tempDate, setTempDate] = useState<Date | undefined>(date);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   // Sync tempDate if prop changes externally (optional, but good practice)
   useEffect(() => {
     setTempDate(date);
   }, [date]);
+
+  // Radix Dialog uses `react-remove-scroll` and vaul Drawer uses similar
+  // document-level handlers that call preventDefault() on wheel/touchmove
+  // events fired outside their allowed scroll shards. Because PopoverContent
+  // portals to document.body (outside the Dialog/Drawer DOM), our scroll
+  // area's events would otherwise bubble to those handlers and get killed —
+  // breaking scroll wheel on desktop and touch drag on mobile.
+  //
+  // Both libraries register their handlers in the bubble phase (passive:false,
+  // capture:false). Stopping propagation at the element level prevents the
+  // event from ever reaching the document handler, while native scroll on
+  // this overflow-y-auto element still happens.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const stop = (e: Event) => e.stopPropagation();
+    el.addEventListener("wheel", stop);
+    el.addEventListener("touchmove", stop);
+    el.addEventListener("touchstart", stop);
+    return () => {
+      el.removeEventListener("wheel", stop);
+      el.removeEventListener("touchmove", stop);
+      el.removeEventListener("touchstart", stop);
+    };
+  }, []);
 
   const handleDateSelect = (newDate: Date | undefined) => {
     if (!newDate) {
@@ -106,7 +135,18 @@ export function DateTimeWizard({
       </div>
 
       {/* Content Area */}
-      <div className="p-2 sm:p-3">
+      <div
+        ref={scrollRef}
+        className="p-2 sm:p-3 overflow-y-auto overscroll-contain"
+        style={
+          compact
+            ? {
+                maxHeight:
+                  "calc(min(380px, var(--radix-popover-content-available-height, 80dvh)) - 52px)",
+              }
+            : undefined
+        }
+      >
         {step === "date" ? (
           <div className="animate-in fade-in zoom-in-95 duration-200">
             <Calendar
@@ -118,7 +158,7 @@ export function DateTimeWizard({
                   ? undefined
                   : { before: new Date(new Date().setHours(0, 0, 0, 0)) }
               }
-              captionLayout="dropdown"
+              captionLayout="label"
               fromYear={new Date().getFullYear() - 1}
               toYear={new Date().getFullYear() + 5}
               initialFocus
