@@ -1,94 +1,71 @@
 # Kanso
 
-Kanso is a **Zen-Modernist** task management and focus tool. It fuses the Japanese philosophy of **Kanso** (simplicity) with **Modernism** to create a quiet, high-density environment for deep work.
+An all-in-one productivity app combining tasks, deep focus, habits, and calendar. Ink & matte design, offline-first, no account required.
 
-## Key Workflows
+**[usekanso.vercel.app](https://usekanso.vercel.app)** — try it instantly in Guest Mode.
 
-### 1. Capture & Organize
+## Features
 
-- **Global Command Menu**: `Ctrl/Cmd + K` for instant search, navigation, and actions.
-- **Micro & Macro Views**: Shift between **Masonry Grid**, **Board**, and **List** views instantly with `1/2/3`.
-- **Split View**: Desktop List View automatically opens a master-detail split panel.
-- **Project Structure**: Multi-layered project management with archiving and mobile-native drawers.
-- **Group & Filter**: Group tasks by project, priority, or due date with full drag-and-drop across groups.
+### Tasks & Organization
+- **Command Menu** (`Ctrl/Cmd+K`): instant search, navigation, and actions.
+- **Three views**: Masonry Grid, Board, and List — switch with `Shift+1/2/3`.
+- **Split View**: Desktop List opens a master-detail panel automatically.
+- **Projects**: multi-level project structure with archiving and mobile drawers.
+- **Group & Filter**: group by project, priority, or due date with drag-and-drop across groups.
+- **Recurring tasks**: per-task Strict (anchors to due date) or Flexible (anchors to completion) recurrence.
 
-### 2. High-Fidelity Tracking
+### Focus & Habits
+- **Focus Timer**: PiP-enabled Pomodoro engine with real-time sync across devices.
+- **Habit tracking**: standardized tracking with longevity streaks and uhabits `.db` import.
+- **Activity heatmap**: visualize focus minutes and habit completions over time.
 
-- **Habit Mastery**: Standardized habit tracking with haptic feedback, longevity tracking, and uhabits (.db) import support.
-- **Activity Heatmap**: Track focus minutes and habit completions via a visual consistency chart.
-- **Focus Timer**: PiP-enabled Pomodoro engine with real-time stats and background session detection.
-- **Recurrence Modes**: Per-task Strict (anchor to due date) or Flexible (anchor to completion date) recurrence.
+### Calendar
+- **Event creation**: native calendar events with NLP-assisted time parsing.
+- **Multi-provider sync**: Google Calendar, Microsoft Outlook, and any CalDAV server (Nextcloud, iCloud, Fastmail).
+- **ICS portability**: universal `.ics` (RFC 5545) import and export.
 
-### 3. Calendar & Events
+### Data Ownership
+- **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed.
+- **WebDAV sync**: sync guest data with personal servers (Nextcloud, Synology) without an account.
+- **Backups**: encrypted `.zip` export/import. Registered users can export or permanently delete all cloud data.
+- **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
 
-- **Native Event Creation**: Create calendar events directly from the calendar with an NLP-assisted time parser.
-- **Multi-Provider Sync**: Bi-directional sync with Google Calendar, Microsoft Outlook, and any CalDAV server (Nextcloud, iCloud, Fastmail).
-- **ICS Portability**: Universal `.ics` (RFC 5545) import and export for full calendar portability.
+### Preferences
+- **Time format**: system-wide 12h/24h toggle across all time displays.
+- **Keyboard accessible**: Esc closes all modals, full focus-trap and `aria-modal` compliance.
+- **Haptic feedback**: standardized haptic palette for precise mobile feedback.
 
-### 4. Data Ownership & Sync
-
-- **Guest / Private Mode**: A zero-footprint experience running entirely in `localStorage` — no account required.
-- **WebDAV Sync**: Sync guest data with personal servers (Nextcloud, Synology) without an account.
-- **Export / Import**: Universal `.zip` backups and `.ics` (RFC 5545) portability.
-- **Account Data Sovereignty**: Registered users can export, import, or permanently delete all cloud data.
-- **Offline-First PWA**: Full offline support via a service worker with stale-while-revalidate caching and a branded offline shell.
-
-### 5. Preferences & Accessibility
-
-- **Time Format**: System-wide 12-hour / 24-hour / system toggle applied across all time displays.
-- **Keyboard Accessible**: Esc closes all open modals; full focus-trap and `aria-modal` audit completed.
-- **Haptic Feedback**: "Seijaku" haptic pattern system for precise mobile feedback on all interactions.
-
-## Essential Shortcuts
+## Shortcuts
 
 | Shortcut            | Action                                                            |
 | ------------------- | ----------------------------------------------------------------- |
-| `1 - 6`             | Quick Navigation (Home, Habits, Calendar, Stats, Focus, Settings) |
-| `Shift + 1 / 2 / 3` | Switch View (Grid / Board / List)                                 |
-| `Ctrl/Cmd + K`      | Open Command Palette                                              |
-| `Ctrl/Cmd + B`      | Toggle Sidebar                                                    |
-| `N / H / E / P`     | Create New (Task, Habit, Event, Project)                          |
-| `Shift + H`         | View all Shortcuts                                                |
+| `1–6`               | Quick navigation (Home, Habits, Calendar, Stats, Focus, Settings) |
+| `Shift+1 / 2 / 3`  | Switch view (Grid / Board / List)                                 |
+| `Ctrl/Cmd+K`        | Open Command Palette                                              |
+| `Ctrl/Cmd+B`        | Toggle Sidebar                                                    |
+| `N / H / E / P`     | Create new (Task, Habit, Event, Project)                          |
+| `Shift+H`           | View all shortcuts                                                |
 
-## Get Started
+## Stack
 
-1. **Web App**: [usekanso.vercel.app](https://usekanso.vercel.app)
-2. **Guest Mode**: Try the full experience instantly, no account required.
-
-## Built with
-
-- **Next.js 16.1.0 (App Router)** and **Supabase (Postgres/Realtime/SSR)**
-- **TanStack Query v5.90+** (Persistence via IndexedDB) and **Zustand v5**
-- **React 19.2.3** (Pre-optimized for Concurrent Mode + React Compiler)
-- **Tailwind CSS v4** and **Shadcn UI** (Radical Minimalism)
-- **Framer Motion** and **@dnd-kit** (Optimized Flat-DOM implementation)
-- **Serwist** for Typed Service Worker & Offline-First PWA support
-- **react-activity-calendar** and **Recharts** for data visualization
-- **tsdav** and **ical.js** for CalDAV / ICS calendar sync and portability
+- **Next.js 16.1.0** (App Router) + **React 19.2.3** (React Compiler)
+- **Supabase** (Postgres, Auth, Realtime)
+- **TanStack Query v5** (IndexedDB persistence) + **Zustand v5**
+- **Tailwind CSS v4** + **Shadcn UI** (Radix)
+- **Framer Motion** + **@dnd-kit** (flat-DOM drag-and-drop)
+- **Serwist** (typed service worker, offline-first PWA)
+- **tsdav** + **ical.js** (CalDAV/ICS sync)
 
 ## Setup
 
-### Prerequisites
+**Prerequisites**: Node.js 20+, a Supabase project with the schema from `supabase/schema.sql`.
 
-- Node.js 20+
-- A Supabase project with the schema from `supabase/schema.sql`
-
-### Getting Started
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Set up your environment:
-   ```bash
-   cp .env.example .env.local
-   ```
-   _Add your Supabase keys to .env.local_
-4. Start the dev server:
-   ```bash
-   npm run dev
-   ```
+```bash
+git clone <repo>
+npm install
+cp .env.example .env.local   # add your Supabase keys
+npm run dev
+```
 
 ## License
 
