@@ -3,15 +3,21 @@
  * Handles the high-level sync flow for any provider using the SyncAdapter interface.
  */
 
+import "./register-adapters";
 import { createClient } from "@/lib/supabase/client";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
-import type { UpdateExternalCalendarInput } from "@/lib/types/external-calendar";
+import type {
+  ExternalCalendar,
+  UpdateExternalCalendarInput,
+} from "@/lib/types/external-calendar";
 import {
   getAdapter,
   type SyncResult,
+  type SyncAdapter,
   type SyncAdapterConfig,
   type RemoteEvent,
 } from "./adapter-interface";
+import { computePullMutations, type PullMutations } from "./pull-merge";
 
 /**
  * Perform a full sync for an external calendar
@@ -88,107 +94,38 @@ export async function syncExternalCalendar(
 
     if (localError) throw localError;
 
-    // 6. Execute sync logic (Apply Remote Changes)
-    const localByRemoteId = new Map<string, CalendarEvent>(
-      (localEvents as CalendarEvent[])
-        ?.filter((e) => e.metadata?.remote_id)
-        .map((e) => [e.metadata!.remote_id as string, e]) || [],
+    // 6. Compute and apply pull mutations (LWW + kansoId adoption)
+    const incoming = remoteEvents
+      .map((remote) => {
+        const parsed = adapter.parseRemoteEvent(remote);
+        if (!parsed) return null;
+        return {
+          remoteId: remote.remoteId,
+          etag: remote.etag,
+          updatedAt: remote.updatedAt ?? new Date(),
+          kansoId: remote.kansoId,
+          parsed,
+        };
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null);
+
+    const mutations = computePullMutations(
+      (localEvents as CalendarEvent[]) ?? [],
+      incoming,
+      deletedRemoteIds,
     );
 
-    // 6a. Process remote additions/updates
-    for (const remote of remoteEvents) {
-      const existing = localByRemoteId.get(remote.remoteId);
-      const parsed = adapter.parseRemoteEvent(remote);
-      if (!parsed) continue;
+    const pullResult = await applyPullMutations(mutations, calendar);
+    result.created += pullResult.created;
+    result.updated += pullResult.updated;
+    result.archived += pullResult.archived;
+    result.errors.push(...pullResult.errors);
 
-      if (!existing) {
-        // Create locally
-        const { error } = await supabase.from("calendar_events").insert({
-          ...parsed,
-          user_id: calendar.user_id,
-          remote_calendar_id: calendar.id,
-          metadata: {
-            ...parsed.metadata,
-            remote_id: remote.remoteId,
-            etag: remote.etag,
-          },
-        });
-        if (error)
-          result.errors.push(
-            `Failed to create ${remote.remoteId}: ${error.message}`,
-          );
-        else result.created++;
-      } else {
-        // Update locally (LWW — simplified: assume remote is always source of truth for now)
-        if (existing.metadata?.etag !== remote.etag) {
-          const { error } = await supabase
-            .from("calendar_events")
-            .update({
-              ...parsed,
-              metadata: {
-                ...parsed.metadata,
-                remote_id: remote.remoteId,
-                etag: remote.etag,
-              },
-            })
-            .eq("id", existing.id);
-          if (error)
-            result.errors.push(
-              `Failed to update ${existing.id}: ${error.message}`,
-            );
-          else result.updated++;
-        }
-      }
-    }
-
-    // 6b. Process remote deletions
-    for (const remoteId of deletedRemoteIds) {
-      const existing = localByRemoteId.get(remoteId);
-      if (existing) {
-        const { error } = await supabase
-          .from("calendar_events")
-          .update({ is_archived: true })
-          .eq("id", existing.id);
-        if (error)
-          result.errors.push(
-            `Failed to archive ${existing.id}: ${error.message}`,
-          );
-        else result.archived++;
-      }
-    }
-
-    // 7. Execute bidirectional sync (Push Local Changes)
+    // 7. Push local changes (sync_state IS NOT NULL) for bidirectional calendars
     if (calendar.sync_direction === "bidirectional") {
-      const { data: pendingPush } = await supabase
-        .from("calendar_events")
-        .select("*")
-        .eq("remote_calendar_id", calendar.id)
-        .is("metadata->remote_id", null);
-
-      if (pendingPush) {
-        for (const local of pendingPush) {
-          try {
-            const { remoteId, etag } = await adapter.pushEvent(local);
-            await supabase
-              .from("calendar_events")
-              .update({
-                metadata: {
-                  ...((local.metadata as Record<string, unknown>) || {}),
-                  remote_id: remoteId,
-                  etag,
-                },
-              })
-              .eq("id", local.id);
-            result.pushed++;
-          } catch (e: unknown) {
-            result.errors.push(
-              `Failed to push local ${local.id}: ${
-                e instanceof Error ? e.message : String(e)
-              }`,
-            );
-          }
-        }
-      }
+      const pushResult = await pushPendingEvents(calendar, adapter);
+      result.pushed += pushResult.pushed;
+      result.errors.push(...pushResult.errors);
     }
 
     // 8. Finalize status and sync token
@@ -207,6 +144,145 @@ export async function syncExternalCalendar(
       sync_error: message,
     });
   }
+
+  return result;
+}
+
+/**
+ * Push all locally-queued changes (sync_state IS NOT NULL) to the remote provider.
+ * Implements the drain rule: if updated_at advanced during the push (concurrent edit),
+ * the sync_state is kept as 'pending_update' rather than cleared.
+ */
+export async function pushPendingEvents(
+  calendar: Pick<ExternalCalendar, "id" | "user_id" | "sync_direction" | "provider">,
+  adapter: Pick<SyncAdapter, "pushEvent" | "updateRemoteEvent" | "deleteRemoteEvent">,
+): Promise<Pick<SyncResult, "pushed" | "errors">> {
+  const supabase = createClient();
+  const result = { pushed: 0, errors: [] as string[] };
+
+  const { data: pending, error } = await supabase
+    .from("calendar_events")
+    .select("*")
+    .eq("remote_calendar_id", calendar.id)
+    .not("sync_state", "is", null);
+
+  if (error || !pending) return result;
+
+  for (const event of pending as CalendarEvent[]) {
+    try {
+      if (event.sync_state === "pending_delete") {
+        await adapter.deleteRemoteEvent(event.remote_id!);
+        await supabase.from("calendar_events").delete().eq("id", event.id);
+        result.pushed++;
+        continue;
+      }
+
+      let remoteId = event.remote_id;
+      let etag: string;
+
+      if (event.sync_state === "pending_create") {
+        const pushed = await adapter.pushEvent(event);
+        remoteId = pushed.remoteId;
+        etag = pushed.etag;
+      } else {
+        // pending_update
+        const updated = await adapter.updateRemoteEvent(event.remote_id!, event);
+        etag = updated.etag;
+      }
+
+      // Drain rule: clear sync_state only if updated_at is unchanged
+      const { count } = await supabase
+        .from("calendar_events")
+        .update({ remote_id: remoteId, etag, sync_state: null })
+        .eq("id", event.id)
+        .eq("updated_at", event.updated_at);
+
+      if (count === 0) {
+        // Concurrent edit advanced updated_at — keep pending_update so it re-pushes
+        await supabase
+          .from("calendar_events")
+          .update({ remote_id: remoteId, etag, sync_state: "pending_update" })
+          .eq("id", event.id);
+      }
+
+      result.pushed++;
+    } catch (e: unknown) {
+      result.errors.push(
+        `Failed to push ${event.id}: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Apply computed pull mutations to the local DB.
+ * Writes remote_id and etag as top-level columns, never in metadata.
+ */
+export async function applyPullMutations(
+  mutations: PullMutations,
+  calendar: Pick<ExternalCalendar, "id" | "user_id">,
+): Promise<Pick<SyncResult, "created" | "updated" | "archived" | "errors">> {
+  const supabase = createClient();
+  const result = { created: 0, updated: 0, archived: 0, errors: [] as string[] };
+
+  // Batch inserts
+  if (mutations.toCreate.length > 0) {
+    const rows = mutations.toCreate.map((item) => ({
+      ...item,
+      user_id: calendar.user_id,
+      remote_calendar_id: calendar.id,
+    }));
+    const { error } = await supabase.from("calendar_events").insert(rows);
+    if (error) {
+      result.errors.push(`Failed to batch-create events: ${error.message}`);
+    } else {
+      result.created += rows.length;
+    }
+  }
+
+  // Updates are per-row (different payloads) — run in parallel
+  await Promise.all(
+    mutations.toUpdate.map(async (item) => {
+      const { error } = await supabase
+        .from("calendar_events")
+        .update({ ...item.data, etag: item.etag, ...(item.clearSyncState ? { sync_state: null } : {}) })
+        .eq("id", item.id);
+      if (error) result.errors.push(`Failed to update ${item.id}: ${error.message}`);
+      else result.updated++;
+    }),
+  );
+
+  // Batch archive
+  if (mutations.toArchive.length > 0) {
+    const { error } = await supabase
+      .from("calendar_events")
+      .update({ is_archived: true })
+      .in("id", mutations.toArchive);
+    if (error) result.errors.push(`Failed to batch-archive events: ${error.message}`);
+    else result.archived += mutations.toArchive.length;
+  }
+
+  // Batch hard-delete
+  if (mutations.toHardDelete.length > 0) {
+    const { error } = await supabase
+      .from("calendar_events")
+      .delete()
+      .in("id", mutations.toHardDelete);
+    if (error) result.errors.push(`Failed to batch-delete events: ${error.message}`);
+  }
+
+  // Adopt — parallel (different remote_id/etag per row)
+  await Promise.all(
+    mutations.toAdopt.map(async (item) => {
+      const { error } = await supabase
+        .from("calendar_events")
+        .update({ remote_id: item.remote_id, etag: item.etag, sync_state: null })
+        .eq("id", item.id);
+      if (error) result.errors.push(`Failed to adopt ${item.id}: ${error.message}`);
+    }),
+  );
 
   return result;
 }

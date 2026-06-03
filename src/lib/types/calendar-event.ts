@@ -28,6 +28,9 @@ export interface CalendarEvent {
   etag: string | null;
   ics_uid: string | null;
 
+  // Offline-first CRUD queue
+  sync_state: 'pending_create' | 'pending_update' | 'pending_delete' | null;
+
   // Soft Deletion
   is_archived: boolean;
 

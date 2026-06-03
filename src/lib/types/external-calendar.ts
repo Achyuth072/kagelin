@@ -1,7 +1,7 @@
 /**
  * External Calendar Types
  * Matches supabase external_calendars table schema
- * Supports: CalDAV (Free), Google (Premium), Outlook (Premium)
+ * Supports: CalDAV (all users), Google/Outlook OAuth (registered users)
  */
 
 export type SyncStatus = "pending" | "syncing" | "success" | "error";
@@ -9,8 +9,8 @@ export type SyncDirection = "bidirectional" | "pull" | "push";
 
 /**
  * All supported calendar providers
- * - CalDAV-based: 'caldav', 'icloud', 'fastmail', 'nextcloud' (Free tier)
- * - Native API: 'google', 'outlook' (Premium tier per D-48-08)
+ * - CalDAV-based: 'caldav', 'icloud', 'fastmail', 'nextcloud'
+ * - Native OAuth: 'google', 'outlook' (registered users only — needs auth.uid())
  */
 export type CalendarProvider =
   | "caldav"
@@ -20,27 +20,13 @@ export type CalendarProvider =
   | "fastmail"
   | "nextcloud";
 
-/**
- * Providers that use native OAuth APIs (Premium tier)
- */
-export const PREMIUM_PROVIDERS: CalendarProvider[] = ["google", "outlook"];
-
-/**
- * Providers that use CalDAV protocol (Free tier)
- */
+/** Providers that use CalDAV protocol */
 export const CALDAV_PROVIDERS: CalendarProvider[] = [
   "caldav",
   "icloud",
   "fastmail",
   "nextcloud",
 ];
-
-/**
- * Check if a provider requires premium subscription
- */
-export function isPremiumProvider(provider: CalendarProvider): boolean {
-  return PREMIUM_PROVIDERS.includes(provider);
-}
 
 export interface ExternalCalendar {
   id: string;

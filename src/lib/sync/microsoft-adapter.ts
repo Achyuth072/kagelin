@@ -241,7 +241,8 @@ export class MicrosoftGraphAdapter implements SyncAdapter {
       headers: { Authorization: `Bearer ${this.accessToken}` },
     });
 
-    if (!response.ok && response.status !== 404) {
+    // 404/410 both mean already-absent — delete is idempotent (see google-adapter).
+    if (!response.ok && response.status !== 404 && response.status !== 410) {
       throw new Error(`Failed to delete event: ${response.status}`);
     }
   }

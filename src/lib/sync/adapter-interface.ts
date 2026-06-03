@@ -49,6 +49,8 @@ export interface RemoteEvent {
   data: string | Record<string, unknown>;
   /** Last modified timestamp */
   updatedAt?: Date;
+  /** Kanso local event ID stamped on create — used for interrupted-create reconciliation */
+  kansoId?: string;
 }
 
 /**
