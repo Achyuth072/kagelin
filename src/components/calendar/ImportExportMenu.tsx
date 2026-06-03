@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   MoreVertical,
   FileDown,
@@ -9,6 +10,7 @@ import {
   RefreshCw,
   CalendarSync,
 } from "lucide-react";
+import { runCalendarSync, formatSyncSummary } from "@/lib/sync/run-sync";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +22,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { ConnectCalendarDialog } from "./ConnectCalendarDialog";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useProfile } from "@/lib/hooks/useProfile";
 import { useCreateCalendarEvent } from "@/lib/hooks/useCalendarEventMutations";
 import { parseICSFile } from "@/lib/utils/ics-parser";
 import { downloadICS } from "@/lib/utils/ics-generator";
@@ -33,11 +34,33 @@ interface ImportExportMenuProps {
 
 export function ImportExportMenu({ events }: ImportExportMenuProps) {
   const { trigger } = useHaptic();
-  const { profile } = useProfile();
-  const isPremiumUser = profile?.is_premium ?? false;
+  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const createEvent = useCreateCalendarEvent();
   const [isImporting, setIsImporting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = async () => {
+    trigger("toggle");
+    setIsSyncing(true);
+    try {
+      const summary = await runCalendarSync();
+      if (summary.configured === 0) {
+        toast.info("No calendars configured yet. Connect a calendar first.");
+      } else if (summary.errors.length) {
+        toast.error(`Sync completed with errors: ${summary.errors[0]}`);
+      } else {
+        toast.success(formatSyncSummary(summary));
+        trigger("success");
+      }
+      // Refetch so pulled/pushed changes appear without a manual reload
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+    } catch {
+      toast.error("Sync failed");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleExport = () => {
     trigger("thud");
@@ -151,19 +174,16 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
 
           <div className="md:hidden">
             <DropdownMenuItem
-              onClick={() => {
-                trigger("toggle");
-                // TODO: Wire up sync logic
-              }}
+              onClick={handleSync}
+              disabled={isSyncing}
               className="cursor-pointer gap-2 py-2"
             >
-              <RefreshCw className="h-4 w-4 text-brand" />
-              <span>Sync Now</span>
+              <RefreshCw className={`h-4 w-4 text-brand${isSyncing ? " animate-spin" : ""}`} />
+              <span>{isSyncing ? "Syncing…" : "Sync Now"}</span>
             </DropdownMenuItem>
           </div>
 
           <ConnectCalendarDialog
-            isPremiumUser={isPremiumUser}
             trigger={
               <DropdownMenuItem
                 onSelect={(e) => e.preventDefault()}

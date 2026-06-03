@@ -423,10 +423,12 @@ export function CreateEventDialog({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="p-0 w-[var(--radix-popover-trigger-width)] z-[60] data-[state=closed]:animate-none data-[state=closed]:duration-0 data-[state=closed]:fade-out-0"
+                  className="p-0 w-[var(--radix-popover-trigger-width)] z-[60]"
                   align="start"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onInteractOutside={(e) => e.preventDefault()}
+                  // Show suggestions without grabbing focus — stops the mobile
+                  // soft-keyboard popping (and the focus-return flash) just from
+                  // opening the dropdown. Tapping the search field still types.
+                  onOpenAutoFocus={(e) => e.preventDefault()}
                 >
                   <Command shouldFilter={true}>
                     <CommandInput

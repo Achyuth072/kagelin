@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
   ChevronLeft,
@@ -22,6 +24,9 @@ import { cn } from "@/lib/utils";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { ImportExportMenu } from "./ImportExportMenu";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
+import { runCalendarSync, formatSyncSummary } from "@/lib/sync/run-sync";
+import { markAutoSync } from "@/lib/sync/sync-scheduler";
+import { toast } from "sonner";
 
 interface CalendarToolbarProps {
   onCreateEvent: () => void;
@@ -37,6 +42,31 @@ export function CalendarToolbar({
   const { currentDate, view, setView, goToToday, next, prev } =
     useCalendarStore();
   const { trigger } = useHaptic();
+  const queryClient = useQueryClient();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = async () => {
+    trigger("toggle");
+    setIsSyncing(true);
+    markAutoSync();
+    try {
+      const summary = await runCalendarSync();
+      if (summary.configured === 0) {
+        toast.info("No calendars configured yet. Connect a calendar first.");
+      } else if (summary.errors.length) {
+        toast.error(`Sync completed with errors: ${summary.errors[0]}`);
+      } else {
+        toast.success(formatSyncSummary(summary));
+        trigger("success");
+      }
+      // Refetch so pulled/pushed changes appear without a manual reload
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+    } catch {
+      toast.error("Sync failed");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // We render all options and use CSS to hide desktop/mobile specific ones
   const availableViews: {
@@ -207,12 +237,12 @@ export function CalendarToolbar({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              trigger("toggle");
-            }}
+            onClick={handleSync}
+            disabled={isSyncing}
+            title="Sync calendars"
             className="h-9 w-9 p-0 items-center justify-center bg-secondary/40 hover:bg-secondary/60 border border-border/50 shadow-none rounded-lg"
           >
-            <RefreshCw className="h-4 w-4" strokeWidth={2.25} />
+            <RefreshCw className={cn("h-4 w-4", isSyncing && "animate-spin")} strokeWidth={2.25} />
           </Button>
 
           <Button

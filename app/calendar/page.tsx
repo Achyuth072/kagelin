@@ -9,9 +9,11 @@ import { YearView } from "@/components/calendar/YearView";
 import { MonthView } from "@/components/calendar/MonthView";
 import { ScheduleView } from "@/components/calendar/ScheduleView";
 import { useCalendarEvents } from "@/lib/hooks/useCalendarEvents";
+import { useCalendarSync } from "@/lib/hooks/useCalendarSync";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
 import { useTask } from "@/lib/hooks/useTasks";
 import TaskSheet from "@/components/tasks/TaskSheet";
+import { toast } from "sonner";
 
 export default function CalendarPage() {
   const { currentDate, view, events, setView, setDate, openCreateEvent } =
@@ -19,9 +21,21 @@ export default function CalendarPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const { data: fullTask } = useTask(selectedTaskId);
-
   // Fetch real events from Supabase
   useCalendarEvents();
+  // Wire sync triggers: mount (throttled), window refocus, debounced post-edit push
+  useCalendarSync();
+
+  // OAuth errors surface here; the success path (?connected=) is owned by
+  // ConnectCalendarDialog, which reopens at the calendar picker.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("oauth_error");
+    if (oauthError) {
+      toast.error(`Calendar connection failed: ${oauthError}`);
+      window.history.replaceState({}, "", "/calendar");
+    }
+  }, []);
 
   // Detect mobile/desktop for view switching
   useEffect(() => {
