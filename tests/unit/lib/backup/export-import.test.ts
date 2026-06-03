@@ -31,6 +31,7 @@ describe("export-import", () => {
         remote_calendar_id: null,
         etag: null,
         ics_uid: null,
+        sync_state: null,
         is_archived: false,
         metadata: {},
         created_at: new Date().toISOString(),
