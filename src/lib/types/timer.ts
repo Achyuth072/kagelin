@@ -29,6 +29,9 @@ export interface TimerSyncState {
   remaining_seconds: number;
   is_running: boolean;
   active_task_id: string | null;
+  ends_at: string | null; // ISO timestamp deadline while running; null when paused/idle
+  source_device_id: string | null;
+  completed_sessions: number;
   updated_at: string; // ISO timestamp
 }
 
@@ -38,7 +41,8 @@ export interface TimerState {
   remainingSeconds: number;
   completedSessions: number;
   activeTaskId: string | null;
-  startedAt: number | null; // Unix timestamp (ms) when timer started
+  endsAt: number | null; // Absolute server-epoch deadline (ms) while running; null when paused/idle
+  sourceDeviceId: string | null; // Device that last explicitly wrote the running state (ownership marker)
 }
 
 export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
