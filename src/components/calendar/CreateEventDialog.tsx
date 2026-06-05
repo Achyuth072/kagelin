@@ -42,6 +42,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { DateTimeWizard } from "@/components/ui/date-time-wizard";
 import {
   useCreateCalendarEvent,
@@ -164,6 +169,8 @@ export function CreateEventDialog({
   // all updating). Same pattern as watch() → useWatch() fix in FocusSettingsDialog.
   const isFormValid =
     !!title && title.trim().length >= 1 && title.length <= 200;
+
+  const isRecurring = !!event?.metadata?.recurring_series_id;
 
   // NLP parsing on title change (only when creating)
   useEffect(() => {
@@ -494,38 +501,64 @@ export function CreateEventDialog({
           {/* Footer */}
           <div className="shrink-0 flex justify-end items-center gap-3 p-4 border-t pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background">
             {event && (
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="h-10 w-10 p-0 [&_svg]:!size-5 rounded-lg transition-seijaku-fast"
-                onClick={handleDelete}
-                disabled={deleteEvent.isPending}
-                title="Delete event"
-              >
-                <Trash2 strokeWidth={2.25} />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span
+                    className={isRecurring ? "cursor-not-allowed" : undefined}
+                  >
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="h-10 w-10 p-0 [&_svg]:size-5! rounded-lg transition-seijaku-fast"
+                      onClick={handleDelete}
+                      disabled={isRecurring || deleteEvent.isPending}
+                      aria-label="Delete event"
+                    >
+                      <Trash2 strokeWidth={2.25} />
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {isRecurring && (
+                  <TooltipContent side="top">
+                    Recurring events can only be edited in the source calendar
+                  </TooltipContent>
+                )}
+              </Tooltip>
             )}
-            <Button
-              type="submit"
-              size="sm"
-              disabled={
-                !isFormValid ||
-                !safeStartDate ||
-                !safeEndDate ||
-                createEvent.isPending ||
-                updateEvent.isPending
-              }
-              className="h-10 w-10 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
-              title={event ? "Save changes" : "Create event"}
-              aria-label={event ? "Save changes" : "Create event"}
-            >
-              {event ? (
-                <Save className="h-5 w-5 stroke-[2.25px]" />
-              ) : (
-                <Send className="h-5 w-5 stroke-[2.25px]" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span
+                  className={isRecurring ? "cursor-not-allowed" : undefined}
+                >
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={
+                      isRecurring ||
+                      !isFormValid ||
+                      !safeStartDate ||
+                      !safeEndDate ||
+                      createEvent.isPending ||
+                      updateEvent.isPending
+                    }
+                    className="h-10 w-10 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
+                    aria-label={event ? "Save changes" : "Create event"}
+                  >
+                    {event ? (
+                      <Save className="h-5 w-5 stroke-[2.25px]" />
+                    ) : (
+                      <Send className="h-5 w-5 stroke-[2.25px]" />
+                    )}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {isRecurring && (
+                <TooltipContent side="top">
+                  Recurring events can only be edited in the source calendar
+                </TooltipContent>
               )}
-            </Button>
+            </Tooltip>
           </div>
         </form>
       </ResponsiveDialogContent>

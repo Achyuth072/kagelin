@@ -369,6 +369,98 @@ describe("CreateEventDialog — button activation (edit mode)", () => {
   });
 });
 
+// ── Recurring event gate ───────────────────────────────────────────────────
+
+describe("CreateEventDialog — recurring event read-only gate", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const recurringEvent = {
+    id: "evt-rec-1",
+    title: "Weekly Standup",
+    description: null,
+    location: null,
+    start: new Date("2025-06-01T09:00:00"),
+    end: new Date("2025-06-01T09:30:00"),
+    allDay: false,
+    color: "#000",
+    metadata: { recurring_series_id: "series-abc123" },
+  };
+
+  it("[R1] save button is disabled when event has recurring_series_id", async () => {
+    render(
+      <CreateEventDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        event={recurringEvent}
+      />,
+    );
+
+    await flushResetTimer();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /save changes/i }),
+      ).toBeDisabled();
+    });
+  });
+
+  it("[R2] delete button is disabled when event has recurring_series_id", async () => {
+    render(
+      <CreateEventDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        event={recurringEvent}
+      />,
+    );
+
+    await flushResetTimer();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /delete event/i }),
+      ).toBeDisabled();
+    });
+  });
+
+  it("[R3] buttons are NOT disabled for a normal (non-recurring) edit event", async () => {
+    const normalEvent = {
+      id: "evt-normal-1",
+      title: "One-off Meeting",
+      description: null,
+      location: null,
+      start: new Date("2025-06-01T10:00:00"),
+      end: new Date("2025-06-01T11:00:00"),
+      allDay: false,
+      color: "#000",
+    };
+
+    render(
+      <CreateEventDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        event={normalEvent}
+      />,
+    );
+
+    await flushResetTimer();
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /save changes/i }),
+      ).not.toBeDisabled();
+    });
+    expect(
+      screen.getByRole("button", { name: /delete event/i }),
+    ).not.toBeDisabled();
+  });
+});
+
 // ── Race condition tests — setTimeout(0) reset ─────────────────────────────
 
 describe("CreateEventDialog — setTimeout(0) reset race condition", () => {
