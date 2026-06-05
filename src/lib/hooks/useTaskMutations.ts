@@ -1,6 +1,10 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  QueryClient,
+} from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import type { Task, CreateTaskInput } from "@/lib/types/task";
@@ -9,6 +13,15 @@ import { handleMutationError } from "@/lib/utils/mutation-error";
 
 import { taskMutations } from "@/lib/mutations/task";
 import { mockStore } from "@/lib/mock/mock-store";
+
+function invalidateTaskCaches(queryClient: QueryClient): void {
+  void Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+    queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
+    queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] }),
+    queryClient.invalidateQueries({ queryKey: ["focus-tasks"] }),
+  ]);
+}
 
 export function useCreateTask() {
   const queryClient = useQueryClient();
@@ -79,11 +92,7 @@ export function useCreateTask() {
       handleMutationError(err);
     },
     onSettled: (_data, _error, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["focus-tasks"] });
-      // If this was a subtask, also invalidate the parent's subtask list
+      invalidateTaskCaches(queryClient);
       if (variables.parent_id) {
         queryClient.invalidateQueries({
           queryKey: ["subtasks", variables.parent_id],
@@ -136,10 +145,7 @@ export function useToggleTask() {
       handleMutationError(err);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["focus-tasks"] });
+      invalidateTaskCaches(queryClient);
     },
   });
 }
@@ -176,10 +182,7 @@ export function useUpdateTask() {
       handleMutationError(err);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["focus-tasks"] });
+      invalidateTaskCaches(queryClient);
     },
   });
 }
@@ -293,10 +296,7 @@ export function useDeleteTask() {
       handleMutationError(err);
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["focus-tasks"] });
+      invalidateTaskCaches(queryClient);
     },
   });
 }

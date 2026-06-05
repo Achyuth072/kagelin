@@ -103,12 +103,11 @@ export const taskMutations = {
       if (is_completed && recurrenceRule) {
         const { calculateNextDueDate } = await import("../utils/recurrence");
         const now = new Date();
-        const nextDueDate = calculateNextDueDate(
+        const nextDueDateIso = calculateNextDueDate(
           now,
           recurrenceRule,
           updatedTask.due_date,
-        );
-        const nextDueDateIso = nextDueDate.toISOString();
+        ).toISOString();
         const nextDoDateIso = updatedTask.do_date
           ? calculateNextDueDate(
               now,
@@ -187,12 +186,11 @@ export const taskMutations = {
     if (is_completed && recurrenceRule) {
       const { calculateNextDueDate } = await import("../utils/recurrence");
       const now = new Date();
-      const nextDueDate = calculateNextDueDate(
+      const nextDueDateIso = calculateNextDueDate(
         now,
         recurrenceRule,
         currentTask.due_date,
-      );
-      const nextDueDateIso = nextDueDate.toISOString();
+      ).toISOString();
       const nextDoDateIso = currentTask.do_date
         ? calculateNextDueDate(
             now,
