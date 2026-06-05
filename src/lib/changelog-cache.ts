@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 
 export type ChangelogSectionKey = "Added" | "Improved" | "Fixed";
 
+export const SECTION_ORDER: ChangelogSectionKey[] = [
+  "Added",
+  "Improved",
+  "Fixed",
+];
+
 export interface ChangelogEntry {
   version: string;
   date: string;
@@ -58,16 +64,26 @@ export function isNewerThan(a: string, b: string): boolean {
   return false;
 }
 
-export function filterForDisplay(entries: ChangelogEntry[]): ChangelogEntry[] {
-  const visible =
-    RELEASE_CHANNEL === "stable"
-      ? entries.filter((e) => e.channel === "stable")
-      : entries;
-  return visible.slice(0, RELEASE_CHANNEL === "stable" ? 3 : 15);
+export function filterForDisplay(
+  entries: ChangelogEntry[],
+  channel: "preview" | "stable" = RELEASE_CHANNEL,
+): ChangelogEntry[] {
+  const isStable = channel === "stable";
+  const visible = isStable
+    ? entries.filter((e) => e.channel === "stable")
+    : entries;
+  return visible.slice(0, isStable ? 3 : 15);
 }
 
-export function latestVisibleVersion(entries: ChangelogEntry[]): string | null {
-  return filterForDisplay(entries)[0]?.version ?? null;
+export function latestVisibleVersion(
+  entries: ChangelogEntry[],
+  channel: "preview" | "stable" = RELEASE_CHANNEL,
+): string | null {
+  const isStable = channel === "stable";
+  for (const e of entries) {
+    if (!isStable || e.channel === "stable") return e.version;
+  }
+  return null;
 }
 
 export function useChangelogEntries(open: boolean): {

@@ -11,16 +11,14 @@ import { Sparkles } from "lucide-react";
 import {
   useChangelogEntries,
   isNewerThan,
+  SECTION_ORDER,
   type ChangelogEntry,
-  type ChangelogSectionKey,
 } from "@/lib/changelog-cache";
 
 interface ChangelogPopupProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-const SECTION_ORDER: ChangelogSectionKey[] = ["Added", "Improved", "Fixed"];
 
 function EntryView({ entry }: { entry: ChangelogEntry }) {
   const visibleSections = SECTION_ORDER.filter(

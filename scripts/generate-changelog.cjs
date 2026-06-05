@@ -4,8 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 // ---------------------------------------------------------------------------
-// Shared bucketing logic — exported so tests and the migration script can
-// import it without running the git/file logic below.
+// Shared bucketing logic — exported so tests can import without running CLI.
 // ---------------------------------------------------------------------------
 const BUCKET = { feat: "Added", fix: "Fixed", perf: "Improved", refactor: "Improved" };
 const SKIP = new Set(["chore", "docs", "test", "ci", "build", "style", "revert"]);
@@ -38,65 +37,52 @@ module.exports = { bucketCommits, channelFromVersion };
 // CLI entry — only runs when called directly, not when require()'d by tests.
 // ---------------------------------------------------------------------------
 if (require.main === module) {
-  const version = process.argv[2];
-  const channel = process.argv[3] && /^(preview|stable)$/.test(process.argv[3])
-    ? process.argv[3]
-    : null;
-  // If argv[3] was consumed as channel, shift the rest; otherwise keep positions.
-  const argOffset = channel !== null ? 1 : 0;
-  const since = process.argv[3 + argOffset];
-  const until = process.argv[4 + argOffset] || "HEAD";
-  const date = process.argv[5 + argOffset] || new Date().toISOString().split("T")[0];
+  // Named flag: --channel=preview | --channel=stable (optional; auto-detected otherwise)
+  const channelArg = process.argv.find((a) => /^--channel=(preview|stable)$/.test(a));
+  const positional = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+  const [version, since, until = "HEAD", date = new Date().toISOString().split("T")[0]] =
+    positional;
 
   if (!version || !since) {
     console.error(
-      "Usage: generate-changelog.cjs <version> [channel] <since> [until] [date]",
+      "Usage: generate-changelog.cjs <version> <since> [until] [date] [--channel=preview|stable]",
     );
-    console.error("  <version>   Version string (e.g. 1.22.0-preview.1)");
-    console.error("  [channel]   'preview' or 'stable' (auto-detected from version if omitted)");
-    console.error("  <since>     Git ref to start log from (e.g. <prev_release_hash>)");
-    console.error("  [until]     Optional end ref (defaults to HEAD)");
-    console.error("  [date]      Optional date (defaults to today)");
+    console.error("  <version>           Version string (e.g. 1.22.0)");
+    console.error("  <since>             Git ref to start log from (e.g. <prev-tag>)");
+    console.error("  [until]             End ref (defaults to HEAD)");
+    console.error("  [date]              Date (defaults to today)");
+    console.error("  [--channel=stable]  Override channel (auto-detected from version if omitted)");
     process.exit(1);
   }
 
-  const resolvedChannel = channel ?? channelFromVersion(version);
+  const resolvedChannel = channelArg ? channelArg.split("=")[1] : channelFromVersion(version);
 
   const changelogFile = path.join(process.cwd(), "public", "changelog.json");
   fs.mkdirSync(path.dirname(changelogFile), { recursive: true });
 
   function exec(cmd) {
-    return execSync(cmd, {
-      encoding: "utf-8",
-      maxBuffer: 10 * 1024 * 1024,
-    }).trim();
+    return execSync(cmd, { encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 }).trim();
   }
 
-  const hashes = exec(
-    `git log "${since}..${until}" --format="%H" --no-merges` +
+  // Single git log call — get all subjects at once instead of one exec per hash.
+  const rawSubjects = exec(
+    `git log "${since}..${until}" --format="%s" --no-merges` +
       ` -- . ":(exclude).planning" ":(exclude).agent" ":(exclude).gemini" ":(exclude).husky" ":(exclude).vercelignore"`,
-  )
+  );
+  const headings = rawSubjects
     .split("\n")
-    .filter(Boolean);
-
-  const headings = [];
-
-  for (const hash of hashes) {
-    const subject = exec(`git log -1 --format="%s" "${hash}"`);
-    if (/^chore: .*release/.test(subject)) continue;
-    if (/^merge: sync release/.test(subject)) continue;
-    headings.push(subject);
-  }
+    .filter(Boolean)
+    .filter((s) => !/^chore: .*release/.test(s) && !/^merge: sync release/.test(s));
 
   const sections = bucketCommits(headings);
 
   if (resolvedChannel === "stable") {
-    console.log("");
-    console.log("╔══════════════════════════════════════════════════════╗");
-    console.log("║  STABLE RELEASE — hand-polish the sections below    ║");
-    console.log("║  in public/changelog.json before tagging the release ║");
-    console.log("╚══════════════════════════════════════════════════════╝");
-    console.log("");
+    console.log(
+      "\n╔══════════════════════════════════════════════════════╗\n" +
+      "║  STABLE RELEASE — hand-polish the sections below    ║\n" +
+      "║  in public/changelog.json before tagging the release ║\n" +
+      "╚══════════════════════════════════════════════════════╝\n",
+    );
   }
 
   let entries = [];
