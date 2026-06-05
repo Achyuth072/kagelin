@@ -24,7 +24,7 @@ import { toast } from "sonner";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
 import { isBefore, isToday, parseISO, startOfDay } from "date-fns";
-import { Target, Check } from "lucide-react";
+import { Target, Check, Repeat } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
@@ -263,6 +263,12 @@ export function FocusTaskPicker() {
           >
             {task.content}
           </span>
+          {task.recurrence && (
+            <Repeat
+              className="h-3 w-3 shrink-0 text-muted-foreground/50"
+              strokeWidth={2.25}
+            />
+          )}
           {isActive && (
             <Check
               className="h-3.5 w-3.5 text-brand shrink-0"

@@ -82,6 +82,7 @@ export function useCreateTask() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["focus-tasks"] });
       // If this was a subtask, also invalidate the parent's subtask list
       if (variables.parent_id) {
         queryClient.invalidateQueries({
@@ -138,6 +139,7 @@ export function useToggleTask() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["focus-tasks"] });
     },
   });
 }
@@ -177,6 +179,7 @@ export function useUpdateTask() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["focus-tasks"] });
     },
   });
 }
@@ -293,6 +296,7 @@ export function useDeleteTask() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["focus-tasks"] });
     },
   });
 }
