@@ -241,32 +241,55 @@ export async function applyPullMutations(
     errors: [] as string[],
   };
 
-  // Batch inserts — skip any remote_id that already exists for this user
-  // (prevents duplicates when two external_calendars rows sync overlapping events)
+  // Inserts — dedup against remote_ids this user already owns. A live match in
+  // another calendar is a genuine duplicate (skip); an archived match is an
+  // orphan left by a disconnect, so revive it into this calendar rather than
+  // dropping it (otherwise reconnect pulls nothing and events stay hidden).
   if (mutations.toCreate.length > 0) {
     const remoteIds = mutations.toCreate
       .map((item) => item.remote_id)
       .filter((id): id is string => !!id);
 
-    let alreadyOwned = new Set<string>();
+    let existingByRemoteId = new Map<
+      string,
+      { id: string; is_archived: boolean }
+    >();
     if (remoteIds.length > 0) {
       const { data: existing } = await supabase
         .from("calendar_events")
-        .select("remote_id")
+        .select("id, remote_id, is_archived")
         .eq("user_id", calendar.user_id)
         .in("remote_id", remoteIds);
-      alreadyOwned = new Set(
-        (existing ?? []).map((e: { remote_id: string }) => e.remote_id),
+      existingByRemoteId = new Map(
+        (existing ?? []).map(
+          (e: { id: string; remote_id: string; is_archived: boolean }) => [
+            e.remote_id,
+            { id: e.id, is_archived: e.is_archived },
+          ],
+        ),
       );
     }
 
-    const rows = mutations.toCreate
-      .filter((item) => !item.remote_id || !alreadyOwned.has(item.remote_id))
-      .map((item) => ({
-        ...item,
-        user_id: calendar.user_id,
-        remote_calendar_id: calendar.id,
-      }));
+    const rows: Array<Record<string, unknown>> = [];
+    const revivals: Array<{
+      id: string;
+      item: (typeof mutations.toCreate)[number];
+    }> = [];
+    for (const item of mutations.toCreate) {
+      const match = item.remote_id
+        ? existingByRemoteId.get(item.remote_id)
+        : undefined;
+      if (!match) {
+        rows.push({
+          ...item,
+          user_id: calendar.user_id,
+          remote_calendar_id: calendar.id,
+        });
+      } else if (match.is_archived) {
+        revivals.push({ id: match.id, item });
+      }
+      // else: live in another calendar — genuine duplicate, skip
+    }
 
     if (rows.length > 0) {
       const { error } = await supabase.from("calendar_events").insert(rows);
@@ -276,6 +299,22 @@ export async function applyPullMutations(
         result.created += rows.length;
       }
     }
+
+    await Promise.all(
+      revivals.map(async ({ id, item }) => {
+        const { error } = await supabase
+          .from("calendar_events")
+          .update({
+            ...item,
+            remote_calendar_id: calendar.id,
+            is_archived: false,
+          })
+          .eq("id", id);
+        if (error)
+          result.errors.push(`Failed to revive ${id}: ${error.message}`);
+        else result.created++;
+      }),
+    );
   }
 
   // Updates are per-row (different payloads) — run in parallel

@@ -1,36 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { PullMutations } from "@/lib/sync/pull-merge";
 
-const {
-  capturedInserts,
-  capturedUpdates,
-  capturedDeletes,
-  mockExistingRemoteIds,
-} = vi.hoisted(() => {
-  const capturedInserts: unknown[] = [];
-  const capturedUpdates: Array<{ data: Record<string, unknown>; id: string }> =
-    [];
-  const capturedDeletes: string[] = [];
-  // Controls what the cross-calendar dedup SELECT returns.
-  // Set to a list of remote_ids that "already exist" in another calendar.
-  const mockExistingRemoteIds: string[] = [];
-  return {
-    capturedInserts,
-    capturedUpdates,
-    capturedDeletes,
-    mockExistingRemoteIds,
-  };
-});
+const { capturedInserts, capturedUpdates, capturedDeletes, mockExistingRows } =
+  vi.hoisted(() => {
+    const capturedInserts: unknown[] = [];
+    const capturedUpdates: Array<{
+      data: Record<string, unknown>;
+      id: string;
+    }> = [];
+    const capturedDeletes: string[] = [];
+    // Controls what the dedup SELECT returns — rows that already own a remote_id
+    // for this user. `is_archived` distinguishes an event still active in another
+    // calendar (skip) from an orphan left by a disconnect (revive).
+    const mockExistingRows: Array<{
+      id: string;
+      remote_id: string;
+      is_archived: boolean;
+    }> = [];
+    return {
+      capturedInserts,
+      capturedUpdates,
+      capturedDeletes,
+      mockExistingRows,
+    };
+  });
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
     from: () => ({
-      // Cross-calendar dedup: SELECT remote_id … .eq(user_id).in(remote_id, [...])
+      // Dedup: SELECT id, remote_id, is_archived … .eq(user_id).in(remote_id, [...])
       select: (_cols: string) => ({
         eq: (_col: string, _val: string) => ({
           in: (_col2: string, _ids: string[]) =>
             Promise.resolve({
-              data: mockExistingRemoteIds.map((id) => ({ remote_id: id })),
+              data: mockExistingRows,
               error: null,
             }),
         }),
@@ -69,7 +72,7 @@ describe("applyPullMutations", () => {
     capturedInserts.length = 0;
     capturedUpdates.length = 0;
     capturedDeletes.length = 0;
-    mockExistingRemoteIds.length = 0;
+    mockExistingRows.length = 0;
   });
 
   it("toCreate inserts with remote_id and etag as top-level columns, not in metadata", async () => {
@@ -107,10 +110,14 @@ describe("applyPullMutations", () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it("toCreate skips events whose remote_id already exists in another calendar (cross-calendar dedup)", async () => {
+  it("toCreate skips events whose remote_id is active in another calendar (cross-calendar dedup)", async () => {
     // Simulate: calendar B tries to insert "recurring-instance-001",
-    // but that remote_id was already inserted by calendar A.
-    mockExistingRemoteIds.push("recurring-instance-001");
+    // but that remote_id is already live (not archived) in calendar A.
+    mockExistingRows.push({
+      id: "owned-by-cal-a",
+      remote_id: "recurring-instance-001",
+      is_archived: false,
+    });
 
     const { applyPullMutations } = await import("@/lib/sync/orchestrator");
 
@@ -139,9 +146,57 @@ describe("applyPullMutations", () => {
 
     const result = await applyPullMutations(mutations, mockCalendar);
 
-    // "recurring-instance-001" should be skipped — already owned by another calendar
+    // "recurring-instance-001" should be skipped — still live in another calendar
     expect(capturedInserts).toHaveLength(1);
     expect(capturedInserts[0]).toMatchObject({ remote_id: "one-off-002" });
+    expect(result.created).toBe(1);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it("toCreate revives an archived orphan (disconnect → reconnect) instead of skipping it", async () => {
+    // Simulate: the calendar was disconnected (events archived, kept) then
+    // reconnected under a new external_calendars row. The remote event comes
+    // back as a fresh toCreate, but its remote_id still belongs to the archived
+    // orphan. It must be revived, not silently dropped.
+    mockExistingRows.push({
+      id: "orphan-1",
+      remote_id: "reconnected-001",
+      is_archived: true,
+    });
+
+    const { applyPullMutations } = await import("@/lib/sync/orchestrator");
+
+    const mutations: PullMutations = {
+      toCreate: [
+        {
+          title: "Standup",
+          start_time: "2026-06-12T05:30:00Z",
+          end_time: "2026-06-12T06:00:00Z",
+          remote_id: "reconnected-001",
+          etag: "etag-reconnect",
+        },
+      ],
+      toUpdate: [],
+      toArchive: [],
+      toHardDelete: [],
+      toAdopt: [],
+    };
+
+    const result = await applyPullMutations(mutations, mockCalendar);
+
+    // Not inserted as a new row — the orphan is updated in place.
+    expect(capturedInserts).toHaveLength(0);
+    expect(capturedUpdates).toContainEqual(
+      expect.objectContaining({
+        id: "orphan-1",
+        data: expect.objectContaining({
+          remote_id: "reconnected-001",
+          etag: "etag-reconnect",
+          is_archived: false,
+          remote_calendar_id: "cal-1",
+        }),
+      }),
+    );
     expect(result.created).toBe(1);
     expect(result.errors).toHaveLength(0);
   });
