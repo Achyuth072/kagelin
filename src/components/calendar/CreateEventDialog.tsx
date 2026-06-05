@@ -435,7 +435,7 @@ export function CreateEventDialog({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="p-0 w-[var(--radix-popover-trigger-width)] z-[60]"
+                  className="p-0 w-[var(--radix-popover-trigger-width)]"
                   align="start"
                   // Show suggestions without grabbing focus — stops the mobile
                   // soft-keyboard popping (and the focus-return flash) just from
