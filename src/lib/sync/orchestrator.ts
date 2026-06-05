@@ -154,8 +154,14 @@ export async function syncExternalCalendar(
  * the sync_state is kept as 'pending_update' rather than cleared.
  */
 export async function pushPendingEvents(
-  calendar: Pick<ExternalCalendar, "id" | "user_id" | "sync_direction" | "provider">,
-  adapter: Pick<SyncAdapter, "pushEvent" | "updateRemoteEvent" | "deleteRemoteEvent">,
+  calendar: Pick<
+    ExternalCalendar,
+    "id" | "user_id" | "sync_direction" | "provider"
+  >,
+  adapter: Pick<
+    SyncAdapter,
+    "pushEvent" | "updateRemoteEvent" | "deleteRemoteEvent"
+  >,
 ): Promise<Pick<SyncResult, "pushed" | "errors">> {
   const supabase = createClient();
   const result = { pushed: 0, errors: [] as string[] };
@@ -186,7 +192,10 @@ export async function pushPendingEvents(
         etag = pushed.etag;
       } else {
         // pending_update
-        const updated = await adapter.updateRemoteEvent(event.remote_id!, event);
+        const updated = await adapter.updateRemoteEvent(
+          event.remote_id!,
+          event,
+        );
         etag = updated.etag;
       }
 
@@ -225,20 +234,47 @@ export async function applyPullMutations(
   calendar: Pick<ExternalCalendar, "id" | "user_id">,
 ): Promise<Pick<SyncResult, "created" | "updated" | "archived" | "errors">> {
   const supabase = createClient();
-  const result = { created: 0, updated: 0, archived: 0, errors: [] as string[] };
+  const result = {
+    created: 0,
+    updated: 0,
+    archived: 0,
+    errors: [] as string[],
+  };
 
-  // Batch inserts
+  // Batch inserts — skip any remote_id that already exists for this user
+  // (prevents duplicates when two external_calendars rows sync overlapping events)
   if (mutations.toCreate.length > 0) {
-    const rows = mutations.toCreate.map((item) => ({
-      ...item,
-      user_id: calendar.user_id,
-      remote_calendar_id: calendar.id,
-    }));
-    const { error } = await supabase.from("calendar_events").insert(rows);
-    if (error) {
-      result.errors.push(`Failed to batch-create events: ${error.message}`);
-    } else {
-      result.created += rows.length;
+    const remoteIds = mutations.toCreate
+      .map((item) => item.remote_id)
+      .filter((id): id is string => !!id);
+
+    let alreadyOwned = new Set<string>();
+    if (remoteIds.length > 0) {
+      const { data: existing } = await supabase
+        .from("calendar_events")
+        .select("remote_id")
+        .eq("user_id", calendar.user_id)
+        .in("remote_id", remoteIds);
+      alreadyOwned = new Set(
+        (existing ?? []).map((e: { remote_id: string }) => e.remote_id),
+      );
+    }
+
+    const rows = mutations.toCreate
+      .filter((item) => !item.remote_id || !alreadyOwned.has(item.remote_id))
+      .map((item) => ({
+        ...item,
+        user_id: calendar.user_id,
+        remote_calendar_id: calendar.id,
+      }));
+
+    if (rows.length > 0) {
+      const { error } = await supabase.from("calendar_events").insert(rows);
+      if (error) {
+        result.errors.push(`Failed to batch-create events: ${error.message}`);
+      } else {
+        result.created += rows.length;
+      }
     }
   }
 
@@ -247,9 +283,14 @@ export async function applyPullMutations(
     mutations.toUpdate.map(async (item) => {
       const { error } = await supabase
         .from("calendar_events")
-        .update({ ...item.data, etag: item.etag, ...(item.clearSyncState ? { sync_state: null } : {}) })
+        .update({
+          ...item.data,
+          etag: item.etag,
+          ...(item.clearSyncState ? { sync_state: null } : {}),
+        })
         .eq("id", item.id);
-      if (error) result.errors.push(`Failed to update ${item.id}: ${error.message}`);
+      if (error)
+        result.errors.push(`Failed to update ${item.id}: ${error.message}`);
       else result.updated++;
     }),
   );
@@ -260,7 +301,8 @@ export async function applyPullMutations(
       .from("calendar_events")
       .update({ is_archived: true })
       .in("id", mutations.toArchive);
-    if (error) result.errors.push(`Failed to batch-archive events: ${error.message}`);
+    if (error)
+      result.errors.push(`Failed to batch-archive events: ${error.message}`);
     else result.archived += mutations.toArchive.length;
   }
 
@@ -270,7 +312,8 @@ export async function applyPullMutations(
       .from("calendar_events")
       .delete()
       .in("id", mutations.toHardDelete);
-    if (error) result.errors.push(`Failed to batch-delete events: ${error.message}`);
+    if (error)
+      result.errors.push(`Failed to batch-delete events: ${error.message}`);
   }
 
   // Adopt — parallel (different remote_id/etag per row)
@@ -278,9 +321,14 @@ export async function applyPullMutations(
     mutations.toAdopt.map(async (item) => {
       const { error } = await supabase
         .from("calendar_events")
-        .update({ remote_id: item.remote_id, etag: item.etag, sync_state: null })
+        .update({
+          remote_id: item.remote_id,
+          etag: item.etag,
+          sync_state: null,
+        })
         .eq("id", item.id);
-      if (error) result.errors.push(`Failed to adopt ${item.id}: ${error.message}`);
+      if (error)
+        result.errors.push(`Failed to adopt ${item.id}: ${error.message}`);
     }),
   );
 

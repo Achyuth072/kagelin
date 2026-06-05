@@ -459,6 +459,24 @@ describe("CreateEventDialog — recurring event read-only gate", () => {
       screen.getByRole("button", { name: /delete event/i }),
     ).not.toBeDisabled();
   });
+
+  it("[R4] title input is disabled when event has recurring_series_id", async () => {
+    render(
+      <CreateEventDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        event={recurringEvent}
+      />,
+    );
+
+    await flushResetTimer();
+
+    await waitFor(() => {
+      expect(
+        screen.getByPlaceholderText(/lunch at 1pm tomorrow/i),
+      ).toBeDisabled();
+    });
+  });
 });
 
 // ── Race condition tests — setTimeout(0) reset ─────────────────────────────

@@ -298,7 +298,8 @@ export function CreateEventDialog({
                 {...register("title")}
                 id="event-title"
                 placeholder="Lunch at 1pm tomorrow..."
-                autoFocus={isFinePointer}
+                autoFocus={isFinePointer && !isRecurring}
+                disabled={isRecurring}
                 className={cn(
                   "text-lg font-medium",
                   errors.title && "border-destructive",
@@ -319,6 +320,7 @@ export function CreateEventDialog({
               <Switch
                 id="all-day"
                 checked={allDay}
+                disabled={isRecurring}
                 onCheckedChange={(checked) => {
                   trigger("toggle"); // TOGGLE haptic
                   setValue("all_day", checked);
@@ -336,6 +338,7 @@ export function CreateEventDialog({
                     className="justify-start text-left font-normal shadow-none border-border/80"
                     onClick={() => trigger("tick")}
                     type="button"
+                    disabled={isRecurring}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
                     {safeStartDate
@@ -375,6 +378,7 @@ export function CreateEventDialog({
                     className="justify-start text-left font-normal shadow-none border-border/80"
                     onClick={() => trigger("tick")}
                     type="button"
+                    disabled={isRecurring}
                   >
                     <Clock className="mr-2 h-4 w-4" />
                     {safeEndDate
@@ -420,6 +424,7 @@ export function CreateEventDialog({
                     role="combobox"
                     aria-expanded={locationOpen}
                     className="w-full justify-start text-left font-normal shadow-none border-border/80"
+                    disabled={isRecurring}
                   >
                     <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
                     {locationValue || (
@@ -494,6 +499,7 @@ export function CreateEventDialog({
                 id="event-description"
                 placeholder="Add notes..."
                 rows={3}
+                disabled={isRecurring}
               />
             </div>
           </div>
