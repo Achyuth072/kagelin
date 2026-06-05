@@ -2,17 +2,17 @@
 
 import { useEffect, useState } from "react";
 
-export interface ChangelogCommit {
-  hash: string;
-  heading: string;
-  body: string;
-}
+export type ChangelogSectionKey = "Added" | "Improved" | "Fixed";
 
 export interface ChangelogEntry {
   version: string;
   date: string;
-  commits: ChangelogCommit[];
+  channel: "preview" | "stable";
+  sections: Partial<Record<ChangelogSectionKey, string[]>>;
 }
+
+export const RELEASE_CHANNEL: "preview" | "stable" =
+  process.env.NEXT_PUBLIC_RELEASE_CHANNEL === "stable" ? "stable" : "preview";
 
 let cache: ChangelogEntry[] | null = null;
 let fetchPromise: Promise<ChangelogEntry[]> | null = null;
@@ -58,33 +58,22 @@ export function isNewerThan(a: string, b: string): boolean {
   return false;
 }
 
-export function filterForDisplay(
-  entries: ChangelogEntry[],
-  appVersion: string,
-): ChangelogEntry[] {
-  const isPreview = appVersion.includes("preview");
-
-  if (isPreview) {
-    const parts = parseVersion(appVersion);
-    const prefix = `${parts[0] ?? 0}.${parts[1] ?? 0}.`;
-    return entries.filter(
-      (e) =>
-        e.version !== "unreleased" &&
-        e.version.startsWith(prefix) &&
-        e.version.includes("preview"),
-    );
-  }
-
-  return entries
-    .filter((e) => e.version !== "unreleased" && !e.version.includes("preview"))
-    .slice(0, 3);
+export function filterForDisplay(entries: ChangelogEntry[]): ChangelogEntry[] {
+  const visible =
+    RELEASE_CHANNEL === "stable"
+      ? entries.filter((e) => e.channel === "stable")
+      : entries;
+  return visible.slice(0, RELEASE_CHANNEL === "stable" ? 3 : 15);
 }
 
-export function useChangelogEntries(
-  open: boolean,
-  appVersion: string,
-  forceVersion?: string,
-): { entries: ChangelogEntry[]; loading: boolean } {
+export function latestVisibleVersion(entries: ChangelogEntry[]): string | null {
+  return filterForDisplay(entries)[0]?.version ?? null;
+}
+
+export function useChangelogEntries(open: boolean): {
+  entries: ChangelogEntry[];
+  loading: boolean;
+} {
   const [entries, setEntries] = useState<ChangelogEntry[]>(() => cache ?? []);
   const [loading, setLoading] = useState(() => cache === null);
 
@@ -106,8 +95,6 @@ export function useChangelogEntries(
     }
   }, [open]);
 
-  const targetVersion = forceVersion ?? appVersion;
-  const filtered = filterForDisplay(entries, targetVersion);
-
+  const filtered = filterForDisplay(entries);
   return { entries: filtered, loading: loading && cache === null };
 }
