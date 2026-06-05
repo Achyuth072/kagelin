@@ -22,7 +22,7 @@ import { usePiP } from "@/components/providers/PiPProvider";
 import { useFullscreen } from "@/lib/hooks/useFullscreen";
 import { Minimize2, Target, PictureInPicture2 } from "lucide-react";
 import { useTodayFocusSessions } from "@/lib/hooks/useTodayFocusSessions";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 const MODE_LABELS: Record<TimerMode, string> = {
   focus: "Focus",
@@ -51,10 +51,7 @@ export default function FocusPage() {
   // Auto-start only on an explicit "play focus" intent (set by the task play
   // button), consumed once on mount. Plain navigation to /focus must never
   // start a timer — opening a device faithfully mirrors the shared state.
-  const hasAutoStarted = useRef(false);
   useEffect(() => {
-    if (hasAutoStarted.current) return;
-    hasAutoStarted.current = true;
     if (useTimerStore.getState().consumeFocusStart()) {
       start();
     }

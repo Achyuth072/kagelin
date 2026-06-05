@@ -190,8 +190,7 @@ export function useTimerSync() {
   // tab returns to the foreground — a backgrounded device (esp. mobile) drops the
   // realtime channel and would otherwise show stale state until the next UPDATE.
   const resync = useCallback(async () => {
-    await probeServerOffset();
-    await hydrate();
+    await Promise.all([probeServerOffset(), hydrate()]);
   }, [probeServerOffset, hydrate]);
 
   useEffect(() => {

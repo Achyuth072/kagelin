@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
+import { startOfDay } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
+
+const supabase = createClient();
 
 /**
  * useTodayFocusSessions — count of focus sessions completed *today*, sourced
@@ -18,9 +21,7 @@ export function useTodayFocusSessions() {
     queryKey: ["today-focus-count", isGuestMode],
     staleTime: 30_000,
     queryFn: async (): Promise<number> => {
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-      const startIso = startOfToday.toISOString();
+      const startIso = startOfDay(new Date()).toISOString();
 
       if (isGuestMode) {
         return mockStore
@@ -28,7 +29,6 @@ export function useTodayFocusSessions() {
           .filter((log) => log.start_time >= startIso).length;
       }
 
-      const supabase = createClient();
       const { count, error } = await supabase
         .from("focus_logs")
         .select("id", { count: "exact", head: true })
