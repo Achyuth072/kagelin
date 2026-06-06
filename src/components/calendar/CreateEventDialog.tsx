@@ -300,7 +300,7 @@ export function CreateEventDialog({
   };
 
   const rowCls =
-    "flex items-center gap-3 px-3 py-2.5 rounded-md mx-2 transition-colors";
+    "flex items-center gap-3 px-3 py-2.5 rounded-md mx-2 transition-seijaku-fast";
   const hoverCls = isRecurring ? "" : "hover:bg-muted/40";
 
   return (
@@ -375,7 +375,7 @@ export function CreateEventDialog({
             <div
               className={cn(
                 "mx-2 my-1 pl-3 border-l-2 border-brand/40 rounded-r-md",
-                !isRecurring && "hover:bg-muted/40 transition-colors",
+                !isRecurring && "hover:bg-muted/40 transition-seijaku-fast",
               )}
             >
               {/* Start */}
