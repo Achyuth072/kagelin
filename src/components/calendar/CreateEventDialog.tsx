@@ -98,6 +98,31 @@ function getDefaultEndDate(start: Date) {
   return new Date(start.getTime() + 3600000);
 }
 
+// Wraps a disabled button with a cursor-not-allowed span and a tooltip explaining
+// why recurring events are read-only.
+function RecurringTooltip({
+  isRecurring,
+  children,
+}: {
+  isRecurring: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={isRecurring ? "cursor-not-allowed" : undefined}>
+          {children}
+        </span>
+      </TooltipTrigger>
+      {isRecurring && (
+        <TooltipContent side="top">
+          Recurring events can only be edited in the source calendar
+        </TooltipContent>
+      )}
+    </Tooltip>
+  );
+}
+
 // Fixed-width icon cell — keeps text columns aligned across all rows.
 function IconCell({
   children,
@@ -567,65 +592,43 @@ export function CreateEventDialog({
           {/* Footer */}
           <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background sm:rounded-b-lg">
             {event && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span
-                    className={isRecurring ? "cursor-not-allowed" : undefined}
-                  >
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
-                      onClick={handleDelete}
-                      disabled={isRecurring || deleteEvent.isPending}
-                      aria-label="Delete event"
-                    >
-                      <Trash2 strokeWidth={2.25} />
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                {isRecurring && (
-                  <TooltipContent side="top">
-                    Recurring events can only be edited in the source calendar
-                  </TooltipContent>
-                )}
-              </Tooltip>
+              <RecurringTooltip isRecurring={isRecurring}>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
+                  onClick={handleDelete}
+                  disabled={isRecurring || deleteEvent.isPending}
+                  aria-label="Delete event"
+                >
+                  <Trash2 strokeWidth={2.25} />
+                </Button>
+              </RecurringTooltip>
             )}
             <div className="flex-1" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className={isRecurring ? "cursor-not-allowed" : undefined}
-                >
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={
-                      isRecurring ||
-                      !isFormValid ||
-                      !safeStartDate ||
-                      !safeEndDate ||
-                      createEvent.isPending ||
-                      updateEvent.isPending
-                    }
-                    className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
-                    aria-label={event ? "Save changes" : "Create event"}
-                  >
-                    {event ? (
-                      <Save className="h-5 w-5 stroke-[2.25px]" />
-                    ) : (
-                      <Send className="h-5 w-5 stroke-[2.25px]" />
-                    )}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {isRecurring && (
-                <TooltipContent side="top">
-                  Recurring events can only be edited in the source calendar
-                </TooltipContent>
-              )}
-            </Tooltip>
+            <RecurringTooltip isRecurring={isRecurring}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={
+                  isRecurring ||
+                  !isFormValid ||
+                  !safeStartDate ||
+                  !safeEndDate ||
+                  createEvent.isPending ||
+                  updateEvent.isPending
+                }
+                className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
+                aria-label={event ? "Save changes" : "Create event"}
+              >
+                {event ? (
+                  <Save className="h-5 w-5 stroke-[2.25px]" />
+                ) : (
+                  <Send className="h-5 w-5 stroke-[2.25px]" />
+                )}
+              </Button>
+            </RecurringTooltip>
           </div>
         </form>
       </ResponsiveDialogContent>

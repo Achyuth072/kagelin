@@ -100,21 +100,20 @@ export async function POST(request: Request) {
   // archived synced events whose remote_calendar_id references a now-deleted
   // external_calendars row. The sync revive path remains a safety net.
   if (newCalendarIds.length > 0) {
-    const { data: allCalendars } = await admin
-      .from("external_calendars")
-      .select("id")
-      .eq("user_id", user.id);
+    const [{ data: allCalendars }, { data: archivedSynced }] =
+      await Promise.all([
+        admin.from("external_calendars").select("id").eq("user_id", user.id),
+        admin
+          .from("calendar_events")
+          .select("id, remote_calendar_id")
+          .eq("user_id", user.id)
+          .eq("is_archived", true)
+          .not("remote_id", "is", null)
+          .not("remote_calendar_id", "is", null),
+      ]);
     const activeIds = new Set(
       (allCalendars ?? []).map((c: { id: string }) => c.id),
     );
-
-    const { data: archivedSynced } = await admin
-      .from("calendar_events")
-      .select("id, remote_calendar_id")
-      .eq("user_id", user.id)
-      .eq("is_archived", true)
-      .not("remote_id", "is", null)
-      .not("remote_calendar_id", "is", null);
 
     const orphanIds = (archivedSynced ?? [])
       .filter(

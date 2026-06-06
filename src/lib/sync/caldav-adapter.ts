@@ -74,7 +74,10 @@ export class CalDAVAdapter implements SyncAdapter {
     });
   }
 
-  async fullSync(_timeWindowDays: number = 730): Promise<{
+  async fullSync(
+    _pastDays: number = 90,
+    _futureDays: number = 365,
+  ): Promise<{
     events: RemoteEvent[];
     syncToken: string;
   }> {
