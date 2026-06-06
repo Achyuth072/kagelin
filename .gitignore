@@ -72,3 +72,7 @@ tests/unit/*.txt
 /docker_data/
 
 .vercel/
+
+.planning/
+CLAUDE.md
+docs/agents/
