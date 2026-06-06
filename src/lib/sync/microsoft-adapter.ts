@@ -72,7 +72,10 @@ export class MicrosoftGraphAdapter implements SyncAdapter {
     }));
   }
 
-  async fullSync(timeWindowDays: number = 730): Promise<{
+  async fullSync(
+    pastDays: number = 90,
+    futureDays: number = 365,
+  ): Promise<{
     events: RemoteEvent[];
     syncToken: string;
   }> {
@@ -82,10 +85,10 @@ export class MicrosoftGraphAdapter implements SyncAdapter {
 
     const calendarId = this.externalCalendar.remote_calendar_id;
     const startDateTime = new Date(
-      Date.now() - timeWindowDays * 24 * 60 * 60 * 1000,
+      Date.now() - pastDays * 24 * 60 * 60 * 1000,
     ).toISOString();
     const endDateTime = new Date(
-      Date.now() + timeWindowDays * 24 * 60 * 60 * 1000,
+      Date.now() + futureDays * 24 * 60 * 60 * 1000,
     ).toISOString();
 
     // Use calendarView for time-windowed query

@@ -6,6 +6,32 @@ import "./register-adapters";
 
 const OAUTH_PROVIDERS = ["google", "outlook"];
 
+// In-memory token cache — avoids a server round-trip (decrypt + provider call)
+// on every sync trigger. Entries are refreshed when within 5 min of expiry.
+const TOKEN_REFRESH_MARGIN_MS = 5 * 60 * 1000;
+const tokenCache = new Map<
+  string,
+  { accessToken: string; expiresAt: number }
+>();
+
+async function getCachedToken(provider: string): Promise<string> {
+  const cached = tokenCache.get(provider);
+  if (cached && cached.expiresAt - Date.now() > TOKEN_REFRESH_MARGIN_MS) {
+    return cached.accessToken;
+  }
+  const res = await fetch(`/api/calendar/token?provider=${provider}`);
+  if (!res.ok) throw new Error(`${provider} needs reconnecting`);
+  const { access_token, expires_at } = (await res.json()) as {
+    access_token: string;
+    expires_at: number;
+  };
+  tokenCache.set(provider, {
+    accessToken: access_token,
+    expiresAt: expires_at,
+  });
+  return access_token;
+}
+
 export interface RunSyncSummary {
   configured: number;
   created: number;
@@ -26,21 +52,23 @@ export function formatSyncSummary(s: RunSyncSummary): string {
   if (s.updated) parts.push(`${s.updated} updated`);
   if (s.archived) parts.push(`${s.archived} removed`);
   if (s.pushed) parts.push(`${s.pushed} pushed`);
-  return parts.length ? `Synced — ${parts.join(", ")}` : "Calendar is up to date";
+  return parts.length
+    ? `Synced — ${parts.join(", ")}`
+    : "Calendar is up to date";
 }
 
-/** Fetch one access token per OAuth provider in the set, deduplicated + parallel. */
+/** Resolve one access token per OAuth provider in the set, deduplicated + parallel. */
 async function mintTokens(providers: string[]): Promise<Map<string, string>> {
-  const cache = new Map<string, string>();
-  const oauth = [...new Set(providers.filter((p) => OAUTH_PROVIDERS.includes(p)))];
+  const result = new Map<string, string>();
+  const oauth = [
+    ...new Set(providers.filter((p) => OAUTH_PROVIDERS.includes(p))),
+  ];
   await Promise.all(
     oauth.map(async (provider) => {
-      const res = await fetch(`/api/calendar/token?provider=${provider}`);
-      if (!res.ok) throw new Error(`${provider} needs reconnecting`);
-      cache.set(provider, (await res.json()).access_token as string);
+      result.set(provider, await getCachedToken(provider));
     }),
   );
-  return cache;
+  return result;
 }
 
 /**
@@ -87,7 +115,9 @@ export async function runCalendarSync(): Promise<RunSyncSummary> {
       summary.pushed += r.value.pushed;
       summary.errors.push(...r.value.errors);
     } else {
-      summary.errors.push(r.reason instanceof Error ? r.reason.message : String(r.reason));
+      summary.errors.push(
+        r.reason instanceof Error ? r.reason.message : String(r.reason),
+      );
     }
   }
 
@@ -137,7 +167,9 @@ export async function runCalendarPush(): Promise<RunSyncSummary> {
       summary.pushed += r.value.pushed;
       summary.errors.push(...r.value.errors);
     } else {
-      summary.errors.push(r.reason instanceof Error ? r.reason.message : String(r.reason));
+      summary.errors.push(
+        r.reason instanceof Error ? r.reason.message : String(r.reason),
+      );
     }
   }
 

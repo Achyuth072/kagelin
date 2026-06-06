@@ -49,20 +49,25 @@ export function CalendarToolbar({
     trigger("toggle");
     setIsSyncing(true);
     markAutoSync();
+    const toastId = toast.loading("Syncing calendar…");
     try {
       const summary = await runCalendarSync();
       if (summary.configured === 0) {
-        toast.info("No calendars configured yet. Connect a calendar first.");
+        toast.info("No calendars configured yet. Connect a calendar first.", {
+          id: toastId,
+        });
       } else if (summary.errors.length) {
-        toast.error(`Sync completed with errors: ${summary.errors[0]}`);
+        toast.error(`Sync completed with errors: ${summary.errors[0]}`, {
+          id: toastId,
+        });
       } else {
-        toast.success(formatSyncSummary(summary));
+        toast.success(formatSyncSummary(summary), { id: toastId });
         trigger("success");
       }
       // Refetch so pulled/pushed changes appear without a manual reload
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     } catch {
-      toast.error("Sync failed");
+      toast.error("Sync failed", { id: toastId });
     } finally {
       setIsSyncing(false);
     }
@@ -242,7 +247,10 @@ export function CalendarToolbar({
             title="Sync calendars"
             className="h-9 w-9 p-0 items-center justify-center bg-secondary/40 hover:bg-secondary/60 border border-border/50 shadow-none rounded-lg"
           >
-            <RefreshCw className={cn("h-4 w-4", isSyncing && "animate-spin")} strokeWidth={2.25} />
+            <RefreshCw
+              className={cn("h-4 w-4", isSyncing && "animate-spin")}
+              strokeWidth={2.25}
+            />
           </Button>
 
           <Button

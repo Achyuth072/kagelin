@@ -67,7 +67,10 @@ export class GoogleCalendarAdapter implements SyncAdapter {
     }));
   }
 
-  async fullSync(timeWindowDays: number = 730): Promise<{
+  async fullSync(
+    pastDays: number = 90,
+    futureDays: number = 365,
+  ): Promise<{
     events: RemoteEvent[];
     syncToken: string;
   }> {
@@ -75,9 +78,15 @@ export class GoogleCalendarAdapter implements SyncAdapter {
       throw new Error("Adapter not initialized or remote_calendar_id not set");
     }
 
-    const calendarId = encodeURIComponent(this.externalCalendar.remote_calendar_id);
-    const timeMin = new Date(Date.now() - timeWindowDays * 24 * 60 * 60 * 1000).toISOString();
-    const timeMax = new Date(Date.now() + timeWindowDays * 24 * 60 * 60 * 1000).toISOString();
+    const calendarId = encodeURIComponent(
+      this.externalCalendar.remote_calendar_id,
+    );
+    const timeMin = new Date(
+      Date.now() - pastDays * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    const timeMax = new Date(
+      Date.now() + futureDays * 24 * 60 * 60 * 1000,
+    ).toISOString();
     const baseUrl = `${GOOGLE_CALENDAR_API}/calendars/${calendarId}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&maxResults=2500`;
 
     const allItems: Record<string, unknown>[] = [];
@@ -106,7 +115,11 @@ export class GoogleCalendarAdapter implements SyncAdapter {
         etag: item.etag as string,
         data: item,
         updatedAt: item.updated ? new Date(item.updated as string) : undefined,
-        kansoId: (item.extendedProperties as Record<string, Record<string, string>> | undefined)?.private?.kansoId,
+        kansoId: (
+          item.extendedProperties as
+            | Record<string, Record<string, string>>
+            | undefined
+        )?.private?.kansoId,
       })),
       syncToken,
     };
@@ -159,8 +172,14 @@ export class GoogleCalendarAdapter implements SyncAdapter {
             remoteId: item.id as string,
             etag: item.etag as string,
             data: item,
-            updatedAt: item.updated ? new Date(item.updated as string) : undefined,
-            kansoId: (item.extendedProperties as Record<string, Record<string, string>> | undefined)?.private?.kansoId,
+            updatedAt: item.updated
+              ? new Date(item.updated as string)
+              : undefined,
+            kansoId: (
+              item.extendedProperties as
+                | Record<string, Record<string, string>>
+                | undefined
+            )?.private?.kansoId,
           });
         }
       }
@@ -288,7 +307,9 @@ export class GoogleCalendarAdapter implements SyncAdapter {
 
     // Recurring instances carry recurringEventId — persist the series id so the UI
     // can gate edit/delete (recurring events are read-only this phase).
-    const recurringSeriesId = googleEvent.recurringEventId as string | undefined;
+    const recurringSeriesId = googleEvent.recurringEventId as
+      | string
+      | undefined;
 
     return {
       title: (googleEvent.summary as string) || "Untitled Event",
@@ -303,7 +324,9 @@ export class GoogleCalendarAdapter implements SyncAdapter {
         google_event_id: googleEvent.id,
         google_etag: googleEvent.etag,
         google_html_link: googleEvent.htmlLink,
-        ...(recurringSeriesId ? { recurring_series_id: recurringSeriesId } : {}),
+        ...(recurringSeriesId
+          ? { recurring_series_id: recurringSeriesId }
+          : {}),
       },
     };
   }

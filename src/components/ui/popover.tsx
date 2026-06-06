@@ -13,6 +13,7 @@ const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content> & {
     disablePortal?: boolean;
+    container?: HTMLElement | null;
   }
 >(
   (
@@ -22,6 +23,7 @@ const PopoverContent = React.forwardRef<
       sideOffset = 4,
       collisionPadding = 8,
       disablePortal = false,
+      container,
       ...props
     },
     ref,
@@ -42,10 +44,11 @@ const PopoverContent = React.forwardRef<
         {...props}
       />
     );
-    return disablePortal ? (
-      content
-    ) : (
-      <PopoverPrimitive.Portal>{content}</PopoverPrimitive.Portal>
+    if (disablePortal) return content;
+    return (
+      <PopoverPrimitive.Portal container={container ?? undefined}>
+        {content}
+      </PopoverPrimitive.Portal>
     );
   },
 );
