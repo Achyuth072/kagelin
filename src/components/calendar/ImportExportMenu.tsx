@@ -39,6 +39,7 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
   const createEvent = useCreateCalendarEvent();
   const [isImporting, setIsImporting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
 
   const handleSync = async () => {
     trigger("toggle");
@@ -178,22 +179,20 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
               disabled={isSyncing}
               className="cursor-pointer gap-2 py-2"
             >
-              <RefreshCw className={`h-4 w-4 text-brand${isSyncing ? " animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-4 w-4 text-brand${isSyncing ? " animate-spin" : ""}`}
+              />
               <span>{isSyncing ? "Syncing…" : "Sync Now"}</span>
             </DropdownMenuItem>
           </div>
 
-          <ConnectCalendarDialog
-            trigger={
-              <DropdownMenuItem
-                onSelect={(e) => e.preventDefault()}
-                className="cursor-pointer gap-2 py-2"
-              >
-                <CalendarSync className="h-4 w-4 text-brand" />
-                <span>Manage Calendars</span>
-              </DropdownMenuItem>
-            }
-          />
+          <DropdownMenuItem
+            onClick={() => setManageOpen(true)}
+            className="cursor-pointer gap-2 py-2"
+          >
+            <CalendarSync className="h-4 w-4 text-brand" />
+            <span>Manage Calendars</span>
+          </DropdownMenuItem>
 
           <DropdownMenuSeparator />
 
@@ -219,6 +218,8 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <ConnectCalendarDialog open={manageOpen} onOpenChange={setManageOpen} />
     </>
   );
 }

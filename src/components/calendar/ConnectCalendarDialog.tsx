@@ -47,13 +47,26 @@ const CALDAV_STORAGE_KEY = "kanso_caldav_credentials";
 interface ConnectCalendarDialogProps {
   onSuccess?: () => void;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function ConnectCalendarDialog({
   onSuccess,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: ConnectCalendarDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = useCallback(
+    (val: boolean) => {
+      if (isControlled) onOpenChange?.(val);
+      else setUncontrolledOpen(val);
+    },
+    [isControlled, onOpenChange],
+  );
   const [step, setStep] = useState<
     "select" | "configure_caldav" | "pick_calendars"
   >("select");
@@ -64,7 +77,9 @@ export function ConnectCalendarDialog({
     useState<CalendarProvider | null>(null);
 
   // Calendar picker (OAuth providers)
-  const [pickerCalendars, setPickerCalendars] = useState<DiscoveredCalendar[]>([]);
+  const [pickerCalendars, setPickerCalendars] = useState<DiscoveredCalendar[]>(
+    [],
+  );
   const [pickerSelected, setPickerSelected] = useState<Set<string>>(new Set());
   const [pickerLoading, setPickerLoading] = useState(false);
   const [pickerSaving, setPickerSaving] = useState(false);
@@ -97,7 +112,9 @@ export function ConnectCalendarDialog({
       setPickerCalendars(calendars);
       setPickerSelected(alreadyAdded as Set<string>);
     } catch (e) {
-      setPickerError(e instanceof Error ? e.message : "Failed to list calendars");
+      setPickerError(
+        e instanceof Error ? e.message : "Failed to list calendars",
+      );
     } finally {
       setPickerLoading(false);
     }
@@ -181,16 +198,19 @@ export function ConnectCalendarDialog({
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const connected = params.get("connected");
-    if (!connected || CALDAV_PROVIDERS.includes(connected as CalendarProvider)) return;
+    if (!connected || CALDAV_PROVIDERS.includes(connected as CalendarProvider))
+      return;
 
     const name = connected.charAt(0).toUpperCase() + connected.slice(1);
     toast.success(`${name} Calendar connected`);
     // Refresh the connected-providers list so the "Connected" section is ready
-    queryClient.invalidateQueries({ queryKey: ["calendar-connected-providers"] });
+    queryClient.invalidateQueries({
+      queryKey: ["calendar-connected-providers"],
+    });
     window.history.replaceState({}, "", "/calendar");
     setOpen(true);
     openCalendarPicker(connected as CalendarProvider);
-  }, [openCalendarPicker, queryClient]);
+  }, [openCalendarPicker, queryClient, setOpen]);
 
   const clearStoredCredentials = () => {
     if (typeof window !== "undefined") {
@@ -288,8 +308,10 @@ export function ConnectCalendarDialog({
         if (!val) resetDialog();
       }}
     >
-      <Trigger asChild>
-        {trigger || (
+      {trigger ? (
+        <Trigger asChild>{trigger}</Trigger>
+      ) : !isControlled ? (
+        <Trigger asChild>
           <Button
             variant="outline"
             className={cn("gap-2", "w-10 px-0 md:w-auto md:px-4")}
@@ -297,8 +319,8 @@ export function ConnectCalendarDialog({
             <CalendarSync className="w-4 h-4" />
             <span className="hidden md:inline">Connect Calendar</span>
           </Button>
-        )}
-      </Trigger>
+        </Trigger>
+      ) : null}
 
       <ResponsiveDialogContent className="sm:max-w-lg p-0 overflow-hidden rounded-t-[20px] sm:rounded-xl">
         <ResponsiveDialogHeader className="px-4 pt-6 sm:px-6 text-left">
@@ -318,11 +340,19 @@ export function ConnectCalendarDialog({
 
         {step === "select" && connectedProviders.length > 0 && (
           <div className="px-4 pt-4 sm:px-6 space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Connected</p>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Connected
+            </p>
             {connectedProviders.map((p) => (
-              <div key={p} className="flex items-center justify-between rounded-lg border border-border/50 bg-card/50 px-3 py-2">
+              <div
+                key={p}
+                className="flex items-center justify-between rounded-lg border border-border/50 bg-card/50 px-3 py-2"
+              >
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-green-500" strokeWidth={2.25} />
+                  <CheckCircle2
+                    className="w-4 h-4 text-green-500"
+                    strokeWidth={2.25}
+                  />
                   <span className="text-sm font-medium capitalize">{p}</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -343,7 +373,9 @@ export function ConnectCalendarDialog({
                     title={`Disconnect ${p}`}
                     onClick={async () => {
                       await disconnect(p);
-                      toast.success(`${p.charAt(0).toUpperCase() + p.slice(1)} disconnected`);
+                      toast.success(
+                        `${p.charAt(0).toUpperCase() + p.slice(1)} disconnected`,
+                      );
                     }}
                   >
                     <Trash2 className="w-3.5 h-3.5" strokeWidth={2.25} />
@@ -566,7 +598,9 @@ export function ConnectCalendarDialog({
               </Button>
               <Button
                 type="button"
-                disabled={pickerSaving || pickerLoading || pickerSelected.size === 0}
+                disabled={
+                  pickerSaving || pickerLoading || pickerSelected.size === 0
+                }
                 onClick={saveCalendarPicks}
                 className="bg-brand text-white shadow-brand/10 hover:bg-brand/90"
               >
@@ -582,7 +616,6 @@ export function ConnectCalendarDialog({
             </div>
           </div>
         )}
-
       </ResponsiveDialogContent>
     </ResponsiveDialog>
   );
