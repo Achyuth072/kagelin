@@ -11,7 +11,9 @@ interface PickedCalendar {
 // List the user's configured external_calendars (id + remote id + provider)
 export async function GET() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -37,11 +39,16 @@ export async function POST(request: Request) {
   const picks = (body.calendars ?? []) as PickedCalendar[];
 
   if (!provider || picks.length === 0) {
-    return NextResponse.json({ error: "provider and calendars required" }, { status: 400 });
+    return NextResponse.json(
+      { error: "provider and calendars required" },
+      { status: 400 },
+    );
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -55,7 +62,9 @@ export async function POST(request: Request) {
     .eq("user_id", user.id)
     .eq("provider", provider);
   const existingIds = new Set(
-    (existing ?? []).map((r: { remote_calendar_id: string | null }) => r.remote_calendar_id),
+    (existing ?? []).map(
+      (r: { remote_calendar_id: string | null }) => r.remote_calendar_id,
+    ),
   );
 
   const rows = picks
@@ -82,6 +91,44 @@ export async function POST(request: Request) {
   if (error) {
     console.error("[calendar-calendars:POST] insert failed:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const newCalendarIds = (data ?? []).map((r: { id: string }) => r.id);
+
+  // Adopt orphaned archived events from this provider's previous connection so
+  // they reappear immediately without waiting for a sync cycle. Orphans are
+  // archived synced events whose remote_calendar_id references a now-deleted
+  // external_calendars row. The sync revive path remains a safety net.
+  if (newCalendarIds.length > 0) {
+    const { data: allCalendars } = await admin
+      .from("external_calendars")
+      .select("id")
+      .eq("user_id", user.id);
+    const activeIds = new Set(
+      (allCalendars ?? []).map((c: { id: string }) => c.id),
+    );
+
+    const { data: archivedSynced } = await admin
+      .from("calendar_events")
+      .select("id, remote_calendar_id")
+      .eq("user_id", user.id)
+      .eq("is_archived", true)
+      .not("remote_id", "is", null)
+      .not("remote_calendar_id", "is", null);
+
+    const orphanIds = (archivedSynced ?? [])
+      .filter(
+        (e: { id: string; remote_calendar_id: string }) =>
+          !activeIds.has(e.remote_calendar_id),
+      )
+      .map((e: { id: string }) => e.id);
+
+    if (orphanIds.length > 0) {
+      await admin
+        .from("calendar_events")
+        .update({ remote_calendar_id: newCalendarIds[0], is_archived: false })
+        .in("id", orphanIds);
+    }
   }
 
   return NextResponse.json({ created: data?.length ?? 0 });
