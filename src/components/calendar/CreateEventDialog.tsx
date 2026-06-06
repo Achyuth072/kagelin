@@ -437,10 +437,14 @@ export function CreateEventDialog({
                 <PopoverContent
                   className="p-0 w-[var(--radix-popover-trigger-width)]"
                   align="start"
-                  // Show suggestions without grabbing focus — stops the mobile
-                  // soft-keyboard popping (and the focus-return flash) just from
-                  // opening the dropdown. Tapping the search field still types.
-                  onOpenAutoFocus={(e) => e.preventDefault()}
+                  // On desktop (Radix Dialog + react-remove-scroll), disable the
+                  // portal so the popup stays inside the scroll-lock region.
+                  // On mobile (Vaul drawer), keep the portal so the popup escapes
+                  // the drawer's transform context and isn't clipped at the top.
+                  disablePortal={isFinePointer}
+                  onOpenAutoFocus={
+                    isFinePointer ? undefined : (e) => e.preventDefault()
+                  }
                 >
                   <Command shouldFilter={true}>
                     <CommandInput
