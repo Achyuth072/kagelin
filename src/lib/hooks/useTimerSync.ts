@@ -6,12 +6,32 @@ import { useAuth } from "@/components/AuthProvider";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useUiStore } from "@/lib/store/uiStore";
 import { focusMutations } from "@/lib/mutations/focus";
+import type { UpsertTimerStateInput } from "@/lib/mutations/focus";
 import { getDeviceId } from "@/lib/store/deviceId";
 import { computeOffset, setServerOffset } from "@/lib/store/serverClock";
 import type { TimerMode, TimerState, TimerSettings } from "@/lib/types/timer";
 import { toast } from "sonner";
 
 const VALID_MODES: TimerMode[] = ["focus", "shortBreak", "longBreak"];
+
+/** Build the user_timer_state row payload shared by upsert and completion claim. */
+function timerStateToRow(
+  userId: string,
+  state: TimerState,
+  settings: TimerSettings,
+): UpsertTimerStateInput {
+  return {
+    user_id: userId,
+    mode: state.mode,
+    remaining_seconds: state.remainingSeconds,
+    is_running: state.isRunning,
+    active_task_id: state.activeTaskId,
+    ends_at: state.endsAt ? new Date(state.endsAt).toISOString() : null,
+    source_device_id: getDeviceId(),
+    completed_sessions: state.completedSessions,
+    settings,
+  };
+}
 
 function parseMode(raw: unknown, fallback: TimerMode): TimerMode {
   if (typeof raw === "string" && VALID_MODES.includes(raw as TimerMode)) {
@@ -100,21 +120,11 @@ export function useTimerSync() {
    * Stamps source_device_id so this device's realtime echo is dropped.
    */
   const upsertTimerState = useCallback(async () => {
-    const currentState = useTimerStore.getState().state;
     if (!user) return;
+    const { state, settings } = useTimerStore.getState();
 
     await focusMutations.upsertTimerState({
-      user_id: user.id,
-      mode: currentState.mode,
-      remaining_seconds: currentState.remainingSeconds,
-      is_running: currentState.isRunning,
-      active_task_id: currentState.activeTaskId,
-      ends_at: currentState.endsAt
-        ? new Date(currentState.endsAt).toISOString()
-        : null,
-      source_device_id: getDeviceId(),
-      completed_sessions: currentState.completedSessions,
-      settings: useTimerStore.getState().settings,
+      ...timerStateToRow(user.id, state, settings),
       updated_at: new Date().toISOString(),
     });
   }, [user]);
@@ -130,15 +140,7 @@ export function useTimerSync() {
       if (!user) return true;
       const { state, settings } = useTimerStore.getState();
       return focusMutations.claimTimerCompletion({
-        user_id: user.id,
-        mode: state.mode,
-        remaining_seconds: state.remainingSeconds,
-        is_running: state.isRunning,
-        active_task_id: state.activeTaskId,
-        ends_at: state.endsAt ? new Date(state.endsAt).toISOString() : null,
-        source_device_id: getDeviceId(),
-        completed_sessions: state.completedSessions,
-        settings,
+        ...timerStateToRow(user.id, state, settings),
         claim_ends_at: new Date(prevEndsAt).toISOString(),
       });
     },
