@@ -124,4 +124,20 @@ describe("useFocusTimer — completion claim", () => {
     // ...but the loser must NOT log the session again.
     expect(mockLogMutate).not.toHaveBeenCalled();
   });
+
+  it("fails open and still logs when the claim throws (transient error)", async () => {
+    mockClaimTimerCompletion.mockRejectedValue(new Error("network down"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mountRunningSession();
+
+    await act(async () => {
+      vi.setSystemTime(NOW + 3000);
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(mockClaimTimerCompletion).toHaveBeenCalledWith(NOW + 2000);
+    // A transient claim failure must not drop the completed session.
+    expect(mockLogMutate).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
 });

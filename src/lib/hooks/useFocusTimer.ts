@@ -108,11 +108,29 @@ export function useFocusTimer() {
       // so the session is never double-logged even if two devices finish at
       // once. (prevState.endsAt is the deadline that just passed.)
       if (prevState.endsAt != null) {
-        const won = await claimTimerCompletion(prevState.endsAt);
-        if (!won) return;
+        try {
+          const won = await claimTimerCompletion(prevState.endsAt);
+          if (!won) return;
+        } catch (err) {
+          // Transient network/auth error — we can't confirm the claim. Fail open
+          // and still log + notify locally rather than silently dropping the
+          // completed session; a rare double-log on simultaneous multi-device
+          // completion is preferable to losing the user's work.
+          console.warn(
+            "Timer completion claim failed; proceeding locally:",
+            err,
+          );
+        }
       } else {
         // No deadline to claim against (deploy transient / edge) — just persist.
-        await syncToServer();
+        try {
+          await syncToServer();
+        } catch (err) {
+          console.warn(
+            "Timer completion sync failed; proceeding locally:",
+            err,
+          );
+        }
       }
 
       // Log focus if needed
