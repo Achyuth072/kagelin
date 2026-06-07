@@ -164,7 +164,7 @@ async function flushResetTimer() {
 }
 
 function typeIntoTitle(text: string) {
-  const input = screen.getByPlaceholderText(/lunch at 1pm tomorrow/i);
+  const input = screen.getByPlaceholderText(/add title/i);
   fireEvent.change(input, { target: { value: text } });
   return input;
 }
@@ -472,9 +472,7 @@ describe("CreateEventDialog — recurring event read-only gate", () => {
     await flushResetTimer();
 
     await waitFor(() => {
-      expect(
-        screen.getByPlaceholderText(/lunch at 1pm tomorrow/i),
-      ).toBeDisabled();
+      expect(screen.getByPlaceholderText(/add title/i)).toBeDisabled();
     });
   });
 });
@@ -529,7 +527,7 @@ describe("CreateEventDialog — setTimeout(0) reset race condition", () => {
       expect(button).toBeDisabled();
     });
 
-    const titleInput = screen.getByPlaceholderText(/lunch at 1pm tomorrow/i);
+    const titleInput = screen.getByPlaceholderText(/add title/i);
     expect(titleInput).toHaveValue("");
   });
 
