@@ -202,7 +202,10 @@ export async function pushPendingEvents(
       // Drain rule: clear sync_state only if updated_at is unchanged
       const { count } = await supabase
         .from("calendar_events")
-        .update({ remote_id: remoteId, etag, sync_state: null })
+        .update(
+          { remote_id: remoteId, etag, sync_state: null },
+          { count: "exact" },
+        )
         .eq("id", event.id)
         .eq("updated_at", event.updated_at);
 
