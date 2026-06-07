@@ -21,10 +21,16 @@ export type ExchangeResult =
       newEncryptedToken?: { ciphertext: string; iv: string };
     };
 
-export async function exchangeForAccessToken(input: ExchangeInput): Promise<ExchangeResult> {
+export async function exchangeForAccessToken(
+  input: ExchangeInput,
+): Promise<ExchangeResult> {
   const { provider, encryptedToken, tokenIv, encryptionKey } = input;
 
-  const refreshToken = await decryptRefreshToken(encryptedToken, tokenIv, encryptionKey);
+  const refreshToken = await decryptRefreshToken(
+    encryptedToken,
+    tokenIv,
+    encryptionKey,
+  );
 
   const endpoint = TOKEN_ENDPOINTS[provider];
   if (!endpoint) throw new Error(`Unknown provider: ${provider}`);
@@ -44,8 +50,18 @@ export async function exchangeForAccessToken(input: ExchangeInput): Promise<Exch
 
   const data = await response.json();
 
-  if (!response.ok || data.error === "invalid_grant") {
+  // Only a genuine revocation (invalid_grant) means the refresh token is dead.
+  if (data.error === "invalid_grant") {
     return { disconnected: true };
+  }
+
+  // Transient failures (5xx, 429, network blips surfacing as non-ok) must not be
+  // treated as a disconnect — throw so the caller leaves the token row intact and
+  // the sync retries on the next cycle.
+  if (!response.ok) {
+    throw new Error(
+      `Token endpoint returned ${response.status} for ${provider}: ${data.error ?? "unknown error"}`,
+    );
   }
 
   const result: ExchangeResult = {

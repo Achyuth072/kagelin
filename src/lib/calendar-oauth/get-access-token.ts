@@ -10,7 +10,8 @@ export interface ProviderAccessToken {
  * Server-only: read a user's encrypted refresh token (service-role), exchange it
  * for a fresh access token, and persist any rotated refresh token. Returns null
  * if the user has no token row or the provider has revoked access (in which case
- * the row is deleted so the UI shows a reconnect state).
+ * the row is deleted so the UI shows a reconnect state). Transient token-endpoint
+ * failures (5xx/429) throw and leave the row intact so a retry can recover.
  */
 export async function getProviderAccessToken(
   userId: string,

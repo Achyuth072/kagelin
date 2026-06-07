@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { exchangeForAccessToken } from "@/lib/calendar-oauth/token-exchange";
-import { encryptRefreshToken, decryptRefreshToken } from "@/lib/calendar-oauth/token-crypto";
+import {
+  encryptRefreshToken,
+  decryptRefreshToken,
+} from "@/lib/calendar-oauth/token-crypto";
 
 const TEST_KEY = "a".repeat(64);
 const REFRESH_TOKEN = "1//refresh-token-value";
@@ -81,5 +84,41 @@ describe("exchangeForAccessToken", () => {
     });
 
     expect(result.disconnected).toBe(true);
+  });
+
+  it("transient 503 → throws and does not report disconnected", async () => {
+    const { ciphertext, iv } = await makeStoredToken();
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ error: "backend_unavailable" }),
+    } as Response);
+
+    await expect(
+      exchangeForAccessToken({
+        provider: "google",
+        encryptedToken: ciphertext,
+        tokenIv: iv,
+        encryptionKey: TEST_KEY,
+      }),
+    ).rejects.toThrow(/503/);
+  });
+
+  it("429 rate limit → throws rather than disconnecting", async () => {
+    const { ciphertext, iv } = await makeStoredToken();
+    vi.spyOn(global, "fetch").mockResolvedValue({
+      ok: false,
+      status: 429,
+      json: async () => ({ error: "rate_limit_exceeded" }),
+    } as Response);
+
+    await expect(
+      exchangeForAccessToken({
+        provider: "google",
+        encryptedToken: ciphertext,
+        tokenIv: iv,
+        encryptionKey: TEST_KEY,
+      }),
+    ).rejects.toThrow(/429/);
   });
 });
