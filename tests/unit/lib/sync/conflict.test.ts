@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { resolveLWW } from "@/lib/sync/conflict";
 
 describe("resolveLWW", () => {
-  it("no pending_update → remote always wins", () => {
+  it("clean synced row (null) → remote always wins", () => {
     expect(
       resolveLWW({
         syncState: null,
@@ -10,6 +10,16 @@ describe("resolveLWW", () => {
         remoteUpdatedAt: "2026-06-01T11:00:00Z",
       }),
     ).toBe("remote");
+  });
+
+  it("pending_delete → local wins even when remote is newer (no resurrection)", () => {
+    expect(
+      resolveLWW({
+        syncState: "pending_delete",
+        localUpdatedAt: "2026-06-01T11:00:00Z",
+        remoteUpdatedAt: "2026-06-01T12:00:00Z",
+      }),
+    ).toBe("local");
   });
 
   it("pending_update, local newer → local wins", () => {
