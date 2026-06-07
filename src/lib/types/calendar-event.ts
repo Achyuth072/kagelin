@@ -28,6 +28,9 @@ export interface CalendarEvent {
   etag: string | null;
   ics_uid: string | null;
 
+  // Offline-first CRUD queue
+  sync_state: "pending_create" | "pending_update" | "pending_delete" | null;
+
   // Soft Deletion
   is_archived: boolean;
 
@@ -82,6 +85,7 @@ export interface CalendarEventUI {
   location?: string | null;
   category?: string | null;
   isArchived?: boolean;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -99,5 +103,6 @@ export function toCalendarEventUI(event: CalendarEvent): CalendarEventUI {
     location: event.location,
     category: event.category,
     isArchived: event.is_archived,
+    metadata: event.metadata,
   };
 }

@@ -102,12 +102,19 @@ export const taskMutations = {
 
       if (is_completed && recurrenceRule) {
         const { calculateNextDueDate } = await import("../utils/recurrence");
-        const nextDueDate = calculateNextDueDate(
-          new Date(),
+        const now = new Date();
+        const nextDueDateIso = calculateNextDueDate(
+          now,
           recurrenceRule,
           updatedTask.due_date,
-        );
-        const nextDueDateIso = nextDueDate.toISOString();
+        ).toISOString();
+        const nextDoDateIso = updatedTask.do_date
+          ? calculateNextDueDate(
+              now,
+              recurrenceRule,
+              updatedTask.do_date,
+            ).toISOString()
+          : null;
 
         // Prevent duplicate future instances in mock store
         const alreadyExists = mockStore
@@ -127,7 +134,7 @@ export const taskMutations = {
             description: updatedTask.description,
             priority: updatedTask.priority,
             due_date: nextDueDateIso,
-            do_date: updatedTask.do_date,
+            do_date: nextDoDateIso,
             is_evening: updatedTask.is_evening || false,
             recurrence: recurrenceRule,
             is_completed: false,
@@ -178,12 +185,19 @@ export const taskMutations = {
 
     if (is_completed && recurrenceRule) {
       const { calculateNextDueDate } = await import("../utils/recurrence");
-      const nextDueDate = calculateNextDueDate(
-        new Date(),
+      const now = new Date();
+      const nextDueDateIso = calculateNextDueDate(
+        now,
         recurrenceRule,
         currentTask.due_date,
-      );
-      const nextDueDateIso = nextDueDate.toISOString();
+      ).toISOString();
+      const nextDoDateIso = currentTask.do_date
+        ? calculateNextDueDate(
+            now,
+            recurrenceRule,
+            currentTask.do_date,
+          ).toISOString()
+        : null;
 
       // Prevent duplicate future instances if already created
       const existingTasks = await supabase
@@ -205,7 +219,7 @@ export const taskMutations = {
             description: currentTask.description,
             priority: currentTask.priority,
             due_date: nextDueDateIso,
-            do_date: currentTask.do_date,
+            do_date: nextDoDateIso,
             is_evening: currentTask.is_evening || false,
             recurrence: recurrenceRule,
             is_completed: false,

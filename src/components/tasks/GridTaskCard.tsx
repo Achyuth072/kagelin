@@ -11,6 +11,7 @@ import {
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
 import { useToggleTask } from "@/lib/hooks/useTaskMutations";
+import { useTimerStore } from "@/lib/store/timerStore";
 import { Play, Calendar, Flag, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -74,6 +75,7 @@ export const GridTaskCard = memo(function GridTaskCard({
     e.stopPropagation();
     triggerHaptic?.("thud");
     setActiveTaskId?.(task.id);
+    useTimerStore.getState().requestFocusStart();
     router.push("/focus");
   };
 
@@ -93,6 +95,7 @@ export const GridTaskCard = memo(function GridTaskCard({
     } else if (info.offset.x < -SWIPE_THRESHOLD && !task.is_completed) {
       triggerHaptic?.("thud");
       setActiveTaskId?.(task.id);
+      useTimerStore.getState().requestFocusStart();
       router.push("/focus");
     }
   };

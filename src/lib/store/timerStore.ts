@@ -4,14 +4,21 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TimerMode, TimerState, TimerSettings } from "@/lib/types/timer";
 import { DEFAULT_TIMER_SETTINGS } from "@/lib/types/timer";
+import { serverNow, isServerClockReady } from "@/lib/store/serverClock";
+import { getDeviceId } from "@/lib/store/deviceId";
 
 interface TimerStore {
   state: TimerState;
   settings: TimerSettings;
   isLoaded: boolean;
+  // Transient intent: set by an explicit "play focus" tap, consumed once by the
+  // focus page on mount. Keeps mere navigation to /focus from starting a timer.
+  pendingFocusStart: boolean;
 
   // Actions
   setLoaded: (loaded: boolean) => void;
+  requestFocusStart: () => void;
+  consumeFocusStart: () => boolean;
   start: (taskId?: string) => void;
   pause: () => void;
   stop: () => void;
@@ -44,8 +51,24 @@ const getInitialState = (settings: TimerSettings): TimerState => ({
   remainingSeconds: settings.focusDuration * 60,
   completedSessions: 0,
   activeTaskId: null,
-  startedAt: null,
+  endsAt: null,
+  sourceDeviceId: null,
 });
+
+// remainingSeconds left until an absolute deadline, clamped at 0.
+function secondsUntil(endsAt: number): number {
+  return Math.max(0, Math.ceil((endsAt - serverNow()) / 1000));
+}
+
+// The device the user is actively looking at finishes the session; a
+// backgrounded or closed device clamps to 00:00 and mirrors the result. When
+// several foregrounded devices hit the deadline at once, an atomic DB claim in
+// the sync layer elects a single winner (so only one logs/sounds/advances).
+function isForeground(): boolean {
+  return (
+    typeof document === "undefined" || document.visibilityState === "visible"
+  );
+}
 
 export const useTimerStore = create<TimerStore>()(
   persist(
@@ -53,8 +76,17 @@ export const useTimerStore = create<TimerStore>()(
       state: getInitialState(DEFAULT_TIMER_SETTINGS),
       settings: DEFAULT_TIMER_SETTINGS,
       isLoaded: false,
+      pendingFocusStart: false,
 
       setLoaded: (loaded) => set({ isLoaded: loaded }),
+
+      requestFocusStart: () => set({ pendingFocusStart: true }),
+
+      consumeFocusStart: () => {
+        const had = get().pendingFocusStart;
+        if (had) set({ pendingFocusStart: false });
+        return had;
+      },
 
       start: (taskId) => {
         const { state } = get();
@@ -65,7 +97,10 @@ export const useTimerStore = create<TimerStore>()(
             ...s.state,
             isRunning: true,
             activeTaskId: targetTaskId,
-            startedAt: Date.now(),
+            // Anchor the deadline to the time that remains — resuming a partial
+            // session must not inflate back toward the full duration.
+            endsAt: serverNow() + s.state.remainingSeconds * 1000,
+            sourceDeviceId: getDeviceId(),
           },
         }));
       },
@@ -75,7 +110,11 @@ export const useTimerStore = create<TimerStore>()(
           state: {
             ...s.state,
             isRunning: false,
-            startedAt: null,
+            remainingSeconds: s.state.endsAt
+              ? secondsUntil(s.state.endsAt)
+              : s.state.remainingSeconds,
+            endsAt: null,
+            sourceDeviceId: getDeviceId(),
           },
         }));
       },
@@ -83,7 +122,10 @@ export const useTimerStore = create<TimerStore>()(
       stop: () => {
         const { settings } = get();
         set({
-          state: getInitialState(settings),
+          state: {
+            ...getInitialState(settings),
+            sourceDeviceId: getDeviceId(),
+          },
         });
       },
 
@@ -97,6 +139,7 @@ export const useTimerStore = create<TimerStore>()(
           state: {
             ...getInitialState(settings),
             completedSessions: rolledBack,
+            sourceDeviceId: getDeviceId(),
           },
         });
       },
@@ -115,20 +158,7 @@ export const useTimerStore = create<TimerStore>()(
       },
 
       tick: () => {
-        const { state } = get();
-        if (!state.isRunning) return;
-
-        if (state.remainingSeconds <= 0) {
-          get().completeTimer();
-          return;
-        }
-
-        set((s) => ({
-          state: {
-            ...s.state,
-            remainingSeconds: s.state.remainingSeconds - 1,
-          },
-        }));
+        get().reconcile();
       },
 
       updateSettings: (newSettings) => {
@@ -152,26 +182,42 @@ export const useTimerStore = create<TimerStore>()(
       },
 
       reconcile: () => {
-        const { state, settings } = get();
-        if (!state.isRunning || !state.startedAt) return;
+        const { state } = get();
+        if (!state.isRunning) return;
 
-        const elapsedMs = Date.now() - state.startedAt;
-        const totalMs = getDurationForMode(state.mode, settings) * 1000;
+        // Deploy-boundary transient: a running row whose endsAt hasn't been
+        // populated yet — trust remaining_seconds, never complete. The owner's
+        // next write populates endsAt.
+        if (state.endsAt === null) return;
 
-        if (elapsedMs >= totalMs) {
-          get().completeTimer();
-        } else {
-          const newRemaining = Math.max(
-            0,
-            Math.ceil((totalMs - elapsedMs) / 1000),
-          );
+        // Never complete on an unprobed clock: after a reload the server offset
+        // resets to 0, so a skewed wall clock could read past the deadline and
+        // fire a spurious early completion before the offset is re-established.
+        // Clamp the display to 00:00 and defer — the next tick after the probe
+        // lands re-evaluates against the real clock.
+        if (!isServerClockReady()) {
           set((s) => ({
             state: {
               ...s.state,
-              remainingSeconds: newRemaining,
+              remainingSeconds: secondsUntil(state.endsAt!),
             },
           }));
+          return;
         }
+
+        const remaining = secondsUntil(state.endsAt);
+        if (remaining <= 0) {
+          // The foregrounded device completes; backgrounded/closed devices clamp
+          // to 00:00 and mirror the synced transition when they return.
+          if (isForeground()) {
+            get().completeTimer();
+          } else {
+            set((s) => ({ state: { ...s.state, remainingSeconds: 0 } }));
+          }
+          return;
+        }
+
+        set((s) => ({ state: { ...s.state, remainingSeconds: remaining } }));
       },
 
       completeTimer: (options) => {
@@ -181,7 +227,6 @@ export const useTimerStore = create<TimerStore>()(
         let nextMode: TimerMode = state.mode;
         let newCompletedSessions = state.completedSessions;
         let nextIsRunning = false;
-        let nextStartedAt: number | null = null;
 
         if (state.mode === "focus") {
           newCompletedSessions = state.completedSessions + 1;
@@ -189,22 +234,23 @@ export const useTimerStore = create<TimerStore>()(
             newCompletedSessions >= settings.sessionsBeforeLongBreak;
           nextMode = isLongBreakTime ? "longBreak" : "shortBreak";
           nextIsRunning = settings.autoStartBreak;
-          nextStartedAt = nextIsRunning ? Date.now() : null;
         } else {
           nextMode = "focus";
           nextIsRunning = settings.autoStartFocus;
           newCompletedSessions =
             state.mode === "longBreak" ? 0 : state.completedSessions;
-          nextStartedAt = nextIsRunning ? Date.now() : null;
         }
 
+        const nextDuration = getDurationForMode(nextMode, settings);
         const nextState: TimerState = {
           ...state,
           mode: nextMode,
           isRunning: nextIsRunning,
-          remainingSeconds: getDurationForMode(nextMode, settings),
+          remainingSeconds: nextDuration,
           completedSessions: newCompletedSessions,
-          startedAt: nextStartedAt,
+          // The completing owner writes the next deadline and re-stamps itself.
+          endsAt: nextIsRunning ? serverNow() + nextDuration * 1000 : null,
+          sourceDeviceId: getDeviceId(),
         };
 
         set({ state: nextState });
@@ -226,6 +272,23 @@ export const useTimerStore = create<TimerStore>()(
     {
       name: "kanso-timer-storage",
       storage: createJSONStorage(() => localStorage),
+      version: 1,
+      // v0 persisted `startedAt` (the removed full-duration anchor). Drop it and
+      // reconstruct an absolute `endsAt` from the surviving remainingSeconds so a
+      // running timer keeps counting down across the deadline-model upgrade.
+      migrate: (persisted, version) => {
+        const next = persisted as { state?: Partial<TimerState> };
+        if (version < 1 && next?.state) {
+          const s = next.state as Partial<TimerState> & { startedAt?: unknown };
+          delete s.startedAt;
+          s.sourceDeviceId = null;
+          s.endsAt =
+            s.isRunning && typeof s.remainingSeconds === "number"
+              ? serverNow() + s.remainingSeconds * 1000
+              : null;
+        }
+        return next as { state: TimerState; settings: TimerSettings };
+      },
       partialize: (s) => ({
         state: s.state,
         settings: s.settings,

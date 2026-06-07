@@ -95,6 +95,11 @@ vi.mock("@/lib/store/uiStore", () => ({
       isShortcutsHelpOpen: false,
       isArchivedProjectsOpen: false,
       setArchivedProjectsOpen: vi.fn(),
+      lastDismissedVersion: null,
+      setLastDismissedVersion: vi.fn(),
+      isChangelogOpen: false,
+      setChangelogOpen: vi.fn(),
+      setHasChangelogUpdate: vi.fn(),
     };
     return sel ? sel(state) : state;
   }),

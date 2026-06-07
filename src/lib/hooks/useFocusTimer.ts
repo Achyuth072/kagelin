@@ -53,11 +53,11 @@ export function useFocusTimer() {
     skip: storeSkip,
     tick,
     reconcile,
-    updateSettings,
+    updateSettings: storeUpdateSettings,
     setLoaded,
   } = useTimerStore();
 
-  const { upsertTimerState } = useTimerSync();
+  const { upsertTimerState, claimTimerCompletion } = useTimerSync();
 
   const syncToServer = useCallback(async () => {
     await upsertTimerState();
@@ -78,6 +78,7 @@ export function useFocusTimer() {
     mutationFn: focusMutations.logSession,
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["today-focus-count"] });
     },
   });
 
@@ -94,12 +95,43 @@ export function useFocusTimer() {
 
   // Handle timer completion side effects
   useEffect(() => {
-    const handleComplete = (event: Event) => {
+    const handleComplete = async (event: Event) => {
       const customEvent = event as TimerCompleteEvent;
       const { prevState, nextState, options } = customEvent.detail;
 
       // Reset notification ref
       notificationIdRef.current = null;
+
+      // Atomically claim this completion. The local state already advanced
+      // optimistically; the claim writes it to the DB only if no other device
+      // beat us to it. The loser skips side-effects and mirrors via realtime —
+      // so the session is never double-logged even if two devices finish at
+      // once. (prevState.endsAt is the deadline that just passed.)
+      if (prevState.endsAt != null) {
+        try {
+          const won = await claimTimerCompletion(prevState.endsAt);
+          if (!won) return;
+        } catch (err) {
+          // Transient network/auth error — we can't confirm the claim. Fail open
+          // and still log + notify locally rather than silently dropping the
+          // completed session; a rare double-log on simultaneous multi-device
+          // completion is preferable to losing the user's work.
+          console.warn(
+            "Timer completion claim failed; proceeding locally:",
+            err,
+          );
+        }
+      } else {
+        // No deadline to claim against (deploy transient / edge) — just persist.
+        try {
+          await syncToServer();
+        } catch (err) {
+          console.warn(
+            "Timer completion sync failed; proceeding locally:",
+            err,
+          );
+        }
+      }
 
       // Log focus if needed
       if (!options?.skipLog && prevState.mode === "focus") {
@@ -183,6 +215,8 @@ export function useFocusTimer() {
     trigger,
     pathname,
     showNotification,
+    syncToServer,
+    claimTimerCompletion,
   ]);
 
   // Handle visibility change for state reconciliation
@@ -305,6 +339,16 @@ export function useFocusTimer() {
     storeCancel();
     syncToServer();
   }, [handleCancelNotification, storeCancel, syncToServer]);
+
+  // Settings are per-account: propagate changes so other devices agree on
+  // durations, progress, and session labels.
+  const updateSettings = useCallback(
+    (newSettings: Parameters<typeof storeUpdateSettings>[0]) => {
+      storeUpdateSettings(newSettings);
+      syncToServer();
+    },
+    [storeUpdateSettings, syncToServer],
+  );
 
   // Initial sync on mount if timer is running (handles PWA reopen with active timer)
   const hasSyncedRef = useRef(false);

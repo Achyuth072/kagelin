@@ -486,7 +486,6 @@ export function SettingsClient({ version }: SettingsClientProps) {
       <ChangelogPopup
         open={isChangelogOpen}
         onOpenChange={setIsChangelogOpen}
-        appVersion={version}
       />
 
       {isSigningOut && <LoaderOverlay message="Signing out..." />}

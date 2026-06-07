@@ -2,11 +2,10 @@
 
 /**
  * Connect Calendar Dialog
- * Supports: CalDAV, Google (Premium), Outlook (Premium)
- * Per D-48-08: Shows premium badges and gating logic
+ * Supports: CalDAV, Google OAuth, Outlook OAuth
  */
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -20,35 +19,146 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { CalendarSync, Shield, Crown, Network, Calendar } from "lucide-react";
+import {
+  CalendarSync,
+  Network,
+  CheckCircle2,
+  Trash2,
+  Loader2,
+  Calendars,
+} from "lucide-react";
 import {
   CalendarProvider,
   CALDAV_PROVIDERS,
-  isPremiumProvider,
+  DiscoveredCalendar,
 } from "@/lib/types/external-calendar";
 import { cn } from "@/lib/utils";
 import { discoverCalendars } from "@/lib/caldav/client";
-import { Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  useConnectedCalendarProviders,
+  useDisconnectCalendarProvider,
+} from "@/lib/hooks/useConnectedCalendarProviders";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const CALDAV_STORAGE_KEY = "kanso_caldav_credentials";
 
 interface ConnectCalendarDialogProps {
   onSuccess?: () => void;
-  isPremiumUser?: boolean;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function ConnectCalendarDialog({
   onSuccess,
-  isPremiumUser = false,
   trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: ConnectCalendarDialogProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+  const setOpen = useCallback(
+    (val: boolean) => {
+      if (isControlled) onOpenChange?.(val);
+      else setUncontrolledOpen(val);
+    },
+    [isControlled, onOpenChange],
+  );
   const [step, setStep] = useState<
-    "select" | "configure_caldav" | "premium_gate" | "coming_soon"
+    "select" | "configure_caldav" | "pick_calendars"
   >("select");
+  const { data: connectedProviders = [] } = useConnectedCalendarProviders();
+  const disconnect = useDisconnectCalendarProvider();
+  const queryClient = useQueryClient();
   const [selectedProvider, setSelectedProvider] =
     useState<CalendarProvider | null>(null);
+
+  // Calendar picker (OAuth providers)
+  const [pickerCalendars, setPickerCalendars] = useState<DiscoveredCalendar[]>(
+    [],
+  );
+  const [pickerSelected, setPickerSelected] = useState<Set<string>>(new Set());
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerSaving, setPickerSaving] = useState(false);
+  const [pickerError, setPickerError] = useState<string | null>(null);
+
+  const openCalendarPicker = useCallback(async (provider: CalendarProvider) => {
+    setSelectedProvider(provider);
+    setStep("pick_calendars");
+    setPickerLoading(true);
+    setPickerError(null);
+    setPickerCalendars([]);
+    try {
+      const [discoverRes, configuredRes] = await Promise.all([
+        fetch(`/api/calendar/discover?provider=${provider}`),
+        fetch(`/api/calendar/calendars`),
+      ]);
+      if (!discoverRes.ok) {
+        const { error } = await discoverRes.json().catch(() => ({ error: "" }));
+        throw new Error(error || "Failed to list calendars");
+      }
+      const { calendars } = await discoverRes.json();
+      const { calendars: configured = [] } = configuredRes.ok
+        ? await configuredRes.json()
+        : { calendars: [] };
+      const alreadyAdded = new Set(
+        configured
+          .filter((c: { provider: string }) => c.provider === provider)
+          .map((c: { remote_calendar_id: string }) => c.remote_calendar_id),
+      );
+      setPickerCalendars(calendars);
+      setPickerSelected(alreadyAdded as Set<string>);
+    } catch (e) {
+      setPickerError(
+        e instanceof Error ? e.message : "Failed to list calendars",
+      );
+    } finally {
+      setPickerLoading(false);
+    }
+  }, []);
+
+  const togglePick = (id: string) => {
+    setPickerSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const saveCalendarPicks = async () => {
+    if (!selectedProvider) return;
+    setPickerSaving(true);
+    try {
+      const picks = pickerCalendars
+        .filter((c) => pickerSelected.has(c.url))
+        .map((c) => ({
+          remote_calendar_id: c.url,
+          name: c.displayName,
+          color: c.color,
+        }));
+      const res = await fetch(`/api/calendar/calendars`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: selectedProvider, calendars: picks }),
+      });
+      if (!res.ok) {
+        const { error } = await res.json().catch(() => ({ error: "" }));
+        throw new Error(error || "Failed to save");
+      }
+      queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      toast.success("Calendars saved — run Sync to pull events");
+      setOpen(false);
+      onSuccess?.();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save calendars");
+    } finally {
+      setPickerSaving(false);
+    }
+  };
 
   // CalDAV Configuration Form
   const [caldavForm, setCaldavForm] = useState({
@@ -82,6 +192,26 @@ export function ConnectCalendarDialog({
     }
   }, [open]);
 
+  // Resume after OAuth redirect: /calendar?connected=:provider → open the dialog
+  // straight at the calendar picker so there's no "did it connect?" gap.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("connected");
+    if (!connected || CALDAV_PROVIDERS.includes(connected as CalendarProvider))
+      return;
+
+    const name = connected.charAt(0).toUpperCase() + connected.slice(1);
+    toast.success(`${name} Calendar connected`);
+    // Refresh the connected-providers list so the "Connected" section is ready
+    queryClient.invalidateQueries({
+      queryKey: ["calendar-connected-providers"],
+    });
+    window.history.replaceState({}, "", "/calendar");
+    setOpen(true);
+    openCalendarPicker(connected as CalendarProvider);
+  }, [openCalendarPicker, queryClient, setOpen]);
+
   const clearStoredCredentials = () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem(CALDAV_STORAGE_KEY);
@@ -101,6 +231,9 @@ export function ConnectCalendarDialog({
     setSelectedProvider(null);
     setError(null);
     setDiscoveredCount(null);
+    setPickerCalendars([]);
+    setPickerSelected(new Set());
+    setPickerError(null);
     setCaldavForm({
       server_url: "",
       username: "",
@@ -111,11 +244,8 @@ export function ConnectCalendarDialog({
 
   const handleProviderSelect = (provider: CalendarProvider) => {
     setSelectedProvider(provider);
-    if (isPremiumProvider(provider) && !isPremiumUser) {
-      setStep("premium_gate");
-    } else if (CALDAV_PROVIDERS.includes(provider)) {
+    if (CALDAV_PROVIDERS.includes(provider)) {
       setStep("configure_caldav");
-      // Set default server URL for known providers
       if (provider === "icloud")
         setCaldavForm((f) => ({
           ...f,
@@ -127,16 +257,9 @@ export function ConnectCalendarDialog({
           server_url: "https://caldav.fastmail.com",
         }));
     } else {
-      // Handle Google/Outlook OAuth (Premium)
-      handleOAuthConnect(provider);
+      // Google / Outlook — redirect to server-side OAuth initiation
+      window.location.href = `/api/calendar/connect/${provider}`;
     }
-  };
-
-  const handleOAuthConnect = async (provider: CalendarProvider) => {
-    // This is a scaffold for Phase 48
-    console.log(`Connecting to ${provider} via OAuth (Coming Soon)...`);
-    setSelectedProvider(provider);
-    setStep("coming_soon");
   };
 
   const handleCaldavConnect = async (e: React.FormEvent) => {
@@ -185,8 +308,10 @@ export function ConnectCalendarDialog({
         if (!val) resetDialog();
       }}
     >
-      <Trigger asChild>
-        {trigger || (
+      {trigger ? (
+        <Trigger asChild>{trigger}</Trigger>
+      ) : !isControlled ? (
+        <Trigger asChild>
           <Button
             variant="outline"
             className={cn("gap-2", "w-10 px-0 md:w-auto md:px-4")}
@@ -194,27 +319,72 @@ export function ConnectCalendarDialog({
             <CalendarSync className="w-4 h-4" />
             <span className="hidden md:inline">Connect Calendar</span>
           </Button>
-        )}
-      </Trigger>
+        </Trigger>
+      ) : null}
 
       <ResponsiveDialogContent className="sm:max-w-lg p-0 overflow-hidden rounded-t-[20px] sm:rounded-xl">
         <ResponsiveDialogHeader className="px-4 pt-6 sm:px-6 text-left">
-          <ResponsiveDialogTitle className="text-xl font-semibold tracking-tight">
+          <ResponsiveDialogTitle className="text-xl font-semibold tracking-tight capitalize">
             {step === "select" && "Connect Calendar"}
             {step === "configure_caldav" && `Configure ${selectedProvider}`}
-            {step === "premium_gate" && "Upgrade to Premium"}
-            {step === "coming_soon" && `${selectedProvider} Support`}
+            {step === "pick_calendars" && `${selectedProvider} Calendars`}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="text-sm text-muted-foreground/80">
             {step === "select" && "Sync your events from external providers."}
             {step === "configure_caldav" &&
               "Enter your server details and app-specific password."}
-            {step === "premium_gate" &&
-              `Native ${selectedProvider} support requires a premium subscription.`}
-            {step === "coming_soon" &&
-              `Direct ${selectedProvider} integration is launching soon.`}
+            {step === "pick_calendars" &&
+              "Choose which calendars to sync with Kanso."}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
+
+        {step === "select" && connectedProviders.length > 0 && (
+          <div className="px-4 pt-4 sm:px-6 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Connected
+            </p>
+            {connectedProviders.map((p) => (
+              <div
+                key={p}
+                className="flex items-center justify-between rounded-lg border border-border/50 bg-card/50 px-3 py-2"
+              >
+                <div className="flex items-center gap-2">
+                  <CheckCircle2
+                    className="w-4 h-4 text-green-500"
+                    strokeWidth={2.25}
+                  />
+                  <span className="text-sm font-medium capitalize">{p}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+                    title={`Choose ${p} calendars`}
+                    onClick={() => openCalendarPicker(p as CalendarProvider)}
+                  >
+                    <Calendars className="w-3.5 h-3.5" strokeWidth={2.25} />
+                    Calendars
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    title={`Disconnect ${p}`}
+                    onClick={async () => {
+                      await disconnect(p);
+                      toast.success(
+                        `${p.charAt(0).toUpperCase() + p.slice(1)} disconnected`,
+                      );
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {step === "select" && (
           <div className="grid grid-cols-2 gap-4 px-4 py-6 sm:px-6">
@@ -240,7 +410,6 @@ export function ConnectCalendarDialog({
                   />
                 </svg>
               }
-              isPremium
               onClick={() => handleProviderSelect("google")}
             />
             <ProviderButton
@@ -253,7 +422,6 @@ export function ConnectCalendarDialog({
                   />
                 </svg>
               }
-              isPremium
               onClick={() => handleProviderSelect("outlook")}
             />
             <ProviderButton
@@ -381,62 +549,69 @@ export function ConnectCalendarDialog({
           </form>
         )}
 
-        {step === "premium_gate" && (
-          <div className="px-4 py-8 sm:px-6 flex flex-col items-center text-center space-y-6">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <Crown className="w-8 h-8 text-primary" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Premium Feature</h3>
-              <p className="text-sm text-muted-foreground max-w-[280px]">
-                Direct {selectedProvider} sync and bidirectional real-time
-                updates are exclusive to Premium users.
+        {step === "pick_calendars" && (
+          <div className="px-4 py-6 sm:px-6 space-y-4">
+            {pickerLoading ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading calendars…
+              </div>
+            ) : pickerError ? (
+              <p className="text-sm text-destructive py-4">{pickerError}</p>
+            ) : pickerCalendars.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4">
+                No calendars found for this account.
               </p>
-            </div>
-            <div className="w-full space-y-2 pt-6">
-              <Button className="w-full bg-brand text-white shadow-sm shadow-brand/10 hover:bg-brand/90 h-11">
-                Upgrade to Premium
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full hover:bg-accent/50"
-                onClick={() => setStep("select")}
-              >
-                View Free Alternatives
-              </Button>
-            </div>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground pt-2">
-              <Shield className="w-3 h-3" />
-              <span>Encrypted & Privacy-First Sync</span>
-            </div>
-          </div>
-        )}
+            ) : (
+              <div className="space-y-1 max-h-[320px] overflow-y-auto">
+                {pickerCalendars.map((cal) => (
+                  <label
+                    key={cal.url}
+                    className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/50 px-3 py-2.5 cursor-pointer hover:bg-accent/30"
+                  >
+                    <Checkbox
+                      checked={pickerSelected.has(cal.url)}
+                      onCheckedChange={() => togglePick(cal.url)}
+                    />
+                    {cal.color && (
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: cal.color }}
+                      />
+                    )}
+                    <span className="text-sm font-medium truncate">
+                      {cal.displayName}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
 
-        {step === "coming_soon" && (
-          <div className="px-4 py-8 sm:px-6 flex flex-col items-center text-center space-y-6">
-            <div className="w-16 h-16 rounded-full bg-brand/10 flex items-center justify-center">
-              <Calendar className="w-8 h-8 text-brand" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">
-                Native Support Coming Soon
-              </h3>
-              <p className="text-sm text-muted-foreground max-w-[280px]">
-                We&apos;re currently perfecting the native {selectedProvider}
-                sync to ensure your data stays private and encrypted.
-              </p>
-            </div>
-            <div className="w-full space-y-2 pt-6">
-              <p className="text-xs text-muted-foreground mb-4">
-                In the meantime, you can import your {selectedProvider} calendar
-                via **ICS File** or use **CalDAV** if available.
-              </p>
+            <div className="flex justify-between items-center pt-2">
               <Button
-                variant="outline"
-                className="w-full hover:bg-accent/50 h-11"
+                type="button"
+                variant="ghost"
+                className="hover:bg-accent/50"
                 onClick={() => setStep("select")}
               >
-                Back to Providers
+                Back
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  pickerSaving || pickerLoading || pickerSelected.size === 0
+                }
+                onClick={saveCalendarPicks}
+                className="bg-brand text-white shadow-brand/10 hover:bg-brand/90"
+              >
+                {pickerSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Saving…
+                  </>
+                ) : (
+                  `Save ${pickerSelected.size || ""} calendar${pickerSelected.size === 1 ? "" : "s"}`.trim()
+                )}
               </Button>
             </div>
           </div>
@@ -450,13 +625,11 @@ function ProviderButton({
   name,
   subtitle,
   icon,
-  isPremium,
   onClick,
 }: {
   name: string;
   subtitle?: string;
   icon: React.ReactNode;
-  isPremium?: boolean;
   onClick: () => void;
 }) {
   return (
@@ -467,7 +640,6 @@ function ProviderButton({
         "transition-all duration-300 ease-out",
         "hover:border-border/80 hover:bg-accent/30 hover:shadow-sm",
         "active:scale-[0.98] group relative",
-        isPremium && "opacity-90 hover:opacity-100",
       )}
     >
       <div className="mb-3 transition-transform duration-300 group-hover:scale-110">
@@ -483,13 +655,6 @@ function ProviderButton({
         <span className="text-[10px] text-muted-foreground mt-0.5">
           {subtitle}
         </span>
-      )}
-
-      {isPremium && (
-        <div className="absolute top-3 right-3 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-brand/10 text-brand text-[8px] font-bold uppercase tracking-wider shadow-none">
-          <Crown className="w-2.5 h-2.5" />
-          PRO
-        </div>
       )}
     </button>
   );

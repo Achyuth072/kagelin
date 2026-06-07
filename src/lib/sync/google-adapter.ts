@@ -26,6 +26,22 @@ import { registerAdapter } from "./adapter-interface";
 
 const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 
+/**
+ * Shift a `YYYY-MM-DD` date string by whole days, in UTC.
+ *
+ * Google all-day events use an exclusive `end.date` (a single-day event on
+ * June 6 has start.date=2026-06-06, end.date=2026-06-07), whereas Kanso stores
+ * an inclusive last day (`...T23:59:59Z`). We convert with -1 day on the way in
+ * and +1 day on the way out. Plain UTC arithmetic avoids the local-timezone
+ * drift that date-fns `format` would introduce on date-only values.
+ */
+function shiftDateUTC(date: string, days: number): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
 export class GoogleCalendarAdapter implements SyncAdapter {
   readonly provider: CalendarProvider = "google";
 
@@ -36,21 +52,8 @@ export class GoogleCalendarAdapter implements SyncAdapter {
     if (!config.accessToken) {
       throw new Error("Google adapter requires OAuth accessToken in config");
     }
-
     this.accessToken = config.accessToken;
     this.externalCalendar = config.externalCalendar;
-
-    // Validate token by making a simple API call
-    const response = await fetch(
-      `${GOOGLE_CALENDAR_API}/users/me/calendarList?maxResults=1`,
-      {
-        headers: { Authorization: `Bearer ${this.accessToken}` },
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(`Google API auth failed: ${response.status}`);
-    }
   }
 
   async discoverCalendars(): Promise<DiscoveredCalendar[]> {
@@ -80,7 +83,10 @@ export class GoogleCalendarAdapter implements SyncAdapter {
     }));
   }
 
-  async fullSync(timeWindowDays: number = 730): Promise<{
+  async fullSync(
+    pastDays: number = 90,
+    futureDays: number = 365,
+  ): Promise<{
     events: RemoteEvent[];
     syncToken: string;
   }> {
@@ -92,32 +98,46 @@ export class GoogleCalendarAdapter implements SyncAdapter {
       this.externalCalendar.remote_calendar_id,
     );
     const timeMin = new Date(
-      Date.now() - timeWindowDays * 24 * 60 * 60 * 1000,
+      Date.now() - pastDays * 24 * 60 * 60 * 1000,
     ).toISOString();
     const timeMax = new Date(
-      Date.now() + timeWindowDays * 24 * 60 * 60 * 1000,
+      Date.now() + futureDays * 24 * 60 * 60 * 1000,
     ).toISOString();
+    const baseUrl = `${GOOGLE_CALENDAR_API}/calendars/${calendarId}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&maxResults=2500`;
 
-    const url = `${GOOGLE_CALENDAR_API}/calendars/${calendarId}/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`;
+    const allItems: Record<string, unknown>[] = [];
+    let pageToken: string | undefined;
+    let syncToken = "";
 
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${this.accessToken}` },
-    });
+    do {
+      const url = pageToken ? `${baseUrl}&pageToken=${pageToken}` : baseUrl;
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to fetch events: ${response.status}`);
-    }
+      if (!response.ok) {
+        throw new Error(`Failed to fetch events: ${response.status}`);
+      }
 
-    const data = await response.json();
+      const data = await response.json();
+      allItems.push(...(data.items || []));
+      syncToken = data.nextSyncToken || syncToken;
+      pageToken = data.nextPageToken;
+    } while (pageToken);
 
     return {
-      events: (data.items || []).map((item: Record<string, unknown>) => ({
+      events: allItems.map((item) => ({
         remoteId: item.id as string,
         etag: item.etag as string,
-        data: item, // Store full Google event object
+        data: item,
         updatedAt: item.updated ? new Date(item.updated as string) : undefined,
+        kansoId: (
+          item.extendedProperties as
+            | Record<string, Record<string, string>>
+            | undefined
+        )?.private?.kansoId,
       })),
-      syncToken: data.nextSyncToken || "",
+      syncToken,
     };
   }
 
@@ -129,46 +149,66 @@ export class GoogleCalendarAdapter implements SyncAdapter {
     const calendarId = encodeURIComponent(
       this.externalCalendar.remote_calendar_id,
     );
-    const url = `${GOOGLE_CALENDAR_API}/calendars/${calendarId}/events?syncToken=${syncToken}`;
-
-    const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${this.accessToken}` },
-    });
-
-    if (!response.ok) {
-      // Sync token may be invalidated — need full sync
-      if (response.status === 410) {
-        throw new Error("SYNC_TOKEN_EXPIRED");
-      }
-      throw new Error(`Incremental sync failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const items = data.items || [];
+    // singleEvents=true must match the full-sync token's setting, otherwise Google
+    // returns the unexpanded recurring master (only the start day shows in Kanso).
+    const baseUrl = `${GOOGLE_CALENDAR_API}/calendars/${calendarId}/events?syncToken=${encodeURIComponent(syncToken)}&singleEvents=true`;
 
     const deleted: string[] = [];
     const updated: RemoteEvent[] = [];
+    let pageToken: string | undefined;
+    // Only the LAST page carries nextSyncToken. Must paginate through every page,
+    // or the token never advances and the same first page (e.g. 250 cancelled
+    // instances) is reprocessed every sync while new events on later pages are
+    // never seen.
+    let newSyncToken = syncToken;
 
-    for (const item of items) {
-      if (item.status === "cancelled") {
-        deleted.push(item.id);
-      } else {
-        updated.push({
-          remoteId: item.id as string,
-          etag: item.etag as string,
-          data: item,
-          updatedAt: item.updated
-            ? new Date(item.updated as string)
-            : undefined,
-        });
+    do {
+      const url = pageToken
+        ? `${baseUrl}&pageToken=${encodeURIComponent(pageToken)}`
+        : baseUrl;
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${this.accessToken}` },
+      });
+
+      if (!response.ok) {
+        // Sync token may be invalidated — need full sync
+        if (response.status === 410) {
+          throw new Error("SYNC_TOKEN_EXPIRED");
+        }
+        throw new Error(`Incremental sync failed: ${response.status}`);
       }
-    }
+
+      const data = await response.json();
+
+      for (const item of data.items || []) {
+        if (item.status === "cancelled") {
+          deleted.push(item.id);
+        } else {
+          updated.push({
+            remoteId: item.id as string,
+            etag: item.etag as string,
+            data: item,
+            updatedAt: item.updated
+              ? new Date(item.updated as string)
+              : undefined,
+            kansoId: (
+              item.extendedProperties as
+                | Record<string, Record<string, string>>
+                | undefined
+            )?.private?.kansoId,
+          });
+        }
+      }
+
+      if (data.nextSyncToken) newSyncToken = data.nextSyncToken;
+      pageToken = data.nextPageToken;
+    } while (pageToken);
 
     return {
       created: [], // Caller determines this
       updated,
       deleted,
-      newSyncToken: data.nextSyncToken || syncToken,
+      newSyncToken,
     };
   }
 
@@ -254,7 +294,11 @@ export class GoogleCalendarAdapter implements SyncAdapter {
       },
     );
 
-    if (!response.ok && response.status !== 404) {
+    // 404 (Not Found) and 410 (Gone) both mean the event is already absent on the
+    // provider — a delete is idempotent, so treat them as success. Otherwise a
+    // concurrent sync (or an already-cancelled recurring instance) leaves the
+    // pending_delete tombstone stuck, erroring on every subsequent sync.
+    if (!response.ok && response.status !== 404 && response.status !== 410) {
       throw new Error(`Failed to delete event: ${response.status}`);
     }
   }
@@ -277,19 +321,29 @@ export class GoogleCalendarAdapter implements SyncAdapter {
 
     const allDay = !!start.date && !start.dateTime;
 
+    // Recurring instances carry recurringEventId — persist the series id so the UI
+    // can gate edit/delete (recurring events are read-only this phase).
+    const recurringSeriesId = googleEvent.recurringEventId as
+      | string
+      | undefined;
+
     return {
       title: (googleEvent.summary as string) || "Untitled Event",
       description: googleEvent.description as string | undefined,
       location: googleEvent.location as string | undefined,
       start_time: allDay ? `${start.date}T00:00:00Z` : start.dateTime!,
       end_time: allDay
-        ? `${end?.date || start.date}T23:59:59Z`
+        ? // Google end.date is exclusive — step back a day to the inclusive last day.
+          `${end?.date ? shiftDateUTC(end.date, -1) : start.date}T23:59:59Z`
         : end?.dateTime || start.dateTime!,
       all_day: allDay,
       metadata: {
         google_event_id: googleEvent.id,
         google_etag: googleEvent.etag,
         google_html_link: googleEvent.htmlLink,
+        ...(recurringSeriesId
+          ? { recurring_series_id: recurringSeriesId }
+          : {}),
       },
     };
   }
@@ -302,11 +356,13 @@ export class GoogleCalendarAdapter implements SyncAdapter {
       summary: event.title,
       description: event.description || undefined,
       location: event.location || undefined,
+      extendedProperties: { private: { kansoId: event.id } },
     };
 
     if (event.all_day) {
       googleEvent.start = { date: event.start_time.split("T")[0] };
-      googleEvent.end = { date: event.end_time.split("T")[0] };
+      // Google end.date is exclusive — step forward a day from our inclusive last day.
+      googleEvent.end = { date: shiftDateUTC(event.end_time.split("T")[0], 1) };
     } else {
       googleEvent.start = { dateTime: event.start_time };
       googleEvent.end = { dateTime: event.end_time };

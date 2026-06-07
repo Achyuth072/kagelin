@@ -6,6 +6,12 @@ import { removePushSubscription, syncPushSubscription } from "@/lib/push-api";
 const mockSetNotificationsEnabled = vi.fn();
 let mockNotificationsEnabled = false;
 
+let mockIsGuestMode = false;
+
+vi.mock("@/components/AuthProvider", () => ({
+  useAuth: vi.fn(() => ({ isGuestMode: mockIsGuestMode })),
+}));
+
 vi.mock("@/lib/store/uiStore", () => ({
   useUiStore: vi.fn((selector) => {
     const state = {
@@ -26,6 +32,7 @@ describe("usePushNotifications", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockNotificationsEnabled = false;
+    mockIsGuestMode = false;
 
     Object.defineProperty(window, "Notification", {
       value: {
@@ -37,6 +44,7 @@ describe("usePushNotifications", () => {
 
     Object.defineProperty(navigator, "serviceWorker", {
       value: {
+        getRegistration: vi.fn().mockResolvedValue(true),
         ready: Promise.resolve({
           pushManager: {
             getSubscription: vi.fn().mockResolvedValue(null),
@@ -95,6 +103,7 @@ describe("usePushNotifications", () => {
 
     Object.defineProperty(navigator, "serviceWorker", {
       value: {
+        getRegistration: vi.fn().mockResolvedValue(true),
         ready: Promise.resolve({
           pushManager: {
             getSubscription: vi.fn().mockResolvedValue(existingSubscription),
@@ -130,6 +139,7 @@ describe("usePushNotifications", () => {
 
     Object.defineProperty(navigator, "serviceWorker", {
       value: {
+        getRegistration: vi.fn().mockResolvedValue(true),
         ready: Promise.resolve({
           pushManager: {
             getSubscription: vi.fn().mockResolvedValue(oldSubscription),
@@ -168,6 +178,7 @@ describe("usePushNotifications", () => {
 
     Object.defineProperty(navigator, "serviceWorker", {
       value: {
+        getRegistration: vi.fn().mockResolvedValue(true),
         ready: Promise.resolve({
           pushManager: {
             getSubscription: vi.fn().mockResolvedValue(null),
@@ -201,6 +212,7 @@ describe("usePushNotifications", () => {
 
     Object.defineProperty(navigator, "serviceWorker", {
       value: {
+        getRegistration: vi.fn().mockResolvedValue(true),
         ready: Promise.resolve({
           pushManager: {
             getSubscription: vi.fn().mockResolvedValue(existingSubscription),
@@ -232,6 +244,7 @@ describe("usePushNotifications", () => {
 
     Object.defineProperty(navigator, "serviceWorker", {
       value: {
+        getRegistration: vi.fn().mockResolvedValue(true),
         ready: Promise.resolve({
           pushManager: {
             getSubscription: vi.fn().mockResolvedValue(subscription),
@@ -278,6 +291,7 @@ describe("usePushNotifications", () => {
 
     Object.defineProperty(navigator, "serviceWorker", {
       value: {
+        getRegistration: vi.fn().mockResolvedValue(true),
         ready: Promise.resolve({
           pushManager: {
             getSubscription: vi.fn().mockResolvedValue(subscription),

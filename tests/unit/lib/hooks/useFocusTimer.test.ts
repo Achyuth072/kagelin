@@ -76,7 +76,8 @@ describe("useFocusTimer", () => {
         remainingSeconds: 1500,
         completedSessions: 0,
         activeTaskId: null,
-        startedAt: null,
+        endsAt: null,
+        sourceDeviceId: null,
       },
       settings: DEFAULT_TIMER_SETTINGS,
     });

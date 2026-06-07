@@ -49,6 +49,8 @@ export interface RemoteEvent {
   data: string | Record<string, unknown>;
   /** Last modified timestamp */
   updatedAt?: Date;
+  /** Kanso local event ID stamped on create — used for interrupted-create reconciliation */
+  kansoId?: string;
 }
 
 /**
@@ -82,10 +84,14 @@ export interface SyncAdapter {
   discoverCalendars(): Promise<DiscoveredCalendar[]>;
 
   /**
-   * Perform full initial sync (no sync token)
-   * @param timeWindowDays - Days before/after now to sync (default: 365*2)
+   * Perform full initial sync (no sync token).
+   * @param pastDays - Days of history to fetch (default: 90)
+   * @param futureDays - Days of future events to fetch (default: 365)
    */
-  fullSync(timeWindowDays?: number): Promise<{
+  fullSync(
+    pastDays?: number,
+    futureDays?: number,
+  ): Promise<{
     events: RemoteEvent[];
     syncToken: string;
   }>;

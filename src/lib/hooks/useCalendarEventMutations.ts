@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { calendarEventMutations } from "@/lib/mutations/calendar-event";
 import { useCalendarStore } from "@/lib/calendar/store";
+import { notifyLocalEdit } from "@/lib/sync/sync-scheduler";
 import { toCalendarEventUI } from "@/lib/types/calendar-event";
 import type {
   CreateCalendarEventInput,
@@ -23,6 +24,7 @@ export function useCreateCalendarEvent() {
       // Invalidate queries to refetch from DB
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
+      notifyLocalEdit();
     },
   });
 }
@@ -38,6 +40,7 @@ export function useUpdateCalendarEvent() {
       const uiEvent = toCalendarEventUI(data);
       updateEvent(data.id, uiEvent);
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      notifyLocalEdit();
     },
   });
 }
@@ -51,6 +54,7 @@ export function useDeleteCalendarEvent() {
     onSuccess: (_, id) => {
       deleteEvent(id);
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+      notifyLocalEdit();
     },
   });
 }

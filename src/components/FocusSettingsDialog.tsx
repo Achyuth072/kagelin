@@ -373,6 +373,7 @@ export function FocusSettingsDialog() {
     handleSubmit,
     reset,
     watch,
+    trigger: triggerValidation,
     formState: { isValid },
   } = methods;
 
@@ -408,6 +409,10 @@ export function FocusSettingsDialog() {
 
   // Handle back navigation on mobile to close drawer instead of navigating away
   useBackNavigation(open && !isDesktop, () => setOpen(false));
+
+  useEffect(() => {
+    triggerValidation();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onFormSubmit = () => {
     trigger("thud");

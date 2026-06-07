@@ -1,16 +1,23 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react/display-name */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import React, { useEffect } from "react";
 
 // ===== Hoisted mocks =====
 
-const { mockRouterPush, mockSetActiveTaskId, mockStart, mockPause } =
-  vi.hoisted(() => ({
-    mockRouterPush: vi.fn(),
-    mockSetActiveTaskId: vi.fn(),
-    mockStart: vi.fn(),
-    mockPause: vi.fn(),
-  }));
+const {
+  mockRouterPush,
+  mockSetActiveTaskId,
+  mockStart,
+  mockPause,
+  mockConsumeFocusStart,
+} = vi.hoisted(() => ({
+  mockRouterPush: vi.fn(),
+  mockSetActiveTaskId: vi.fn(),
+  mockStart: vi.fn(),
+  mockPause: vi.fn(),
+  mockConsumeFocusStart: vi.fn(() => false),
+}));
 
 // ===== Reactive mock state for timer store =====
 
@@ -147,32 +154,17 @@ vi.mock("@/lib/store/timerStore", () => ({
 }));
 
 // ===== Minimal auto-start harness (replicates app/focus/page.tsx mount effect) =====
+// The focus page now auto-starts ONLY on an explicit play-focus intent flag,
+// consumed once on mount — never merely because a task is active.
 
-function AutoStartHarness() {
-  const { useTimerStore } = vi.importActual("@/lib/store/timerStore") as any;
-
-  // We can't use hooks dynamically, so create a fixed harness that
-  // mimics the focus page's auto-start effect behavior
-
-  const state = { activeTaskId: mockActiveTaskId, isRunning: mockIsRunning };
-
-  useEffect(() => {
-    if (state.activeTaskId && !state.isRunning) {
-      mockStart();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return <div data-testid="auto-start-harness" />;
-}
-
-// Use a non-hoisted import for the auto-start hook pattern
 function FocusPageAutoStartHarness() {
+  const ranRef = React.useRef(false);
   useEffect(() => {
-    if (mockActiveTaskId && !mockIsRunning) {
+    if (ranRef.current) return;
+    ranRef.current = true;
+    if (mockConsumeFocusStart()) {
       mockStart();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return <div data-testid="focus-harness">Focus Page Mock</div>;
@@ -185,39 +177,39 @@ describe("Focus auto-start on mount (Tests 7 & 8)", () => {
     vi.clearAllMocks();
     mockActiveTaskId = null;
     mockIsRunning = false;
+    mockConsumeFocusStart.mockReturnValue(false);
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  // --- Test 7: Auto-start when activeTaskId set and !isRunning ---
+  // --- Test 7: Auto-start when an explicit play-focus intent was set ---
 
-  it("should call start() on mount when activeTaskId is set and isRunning is false", () => {
-    mockActiveTaskId = "task-123";
-    mockIsRunning = false;
+  it("should call start() on mount when a pending focus-start intent is present", () => {
+    mockConsumeFocusStart.mockReturnValue(true);
 
     render(<FocusPageAutoStartHarness />);
 
     expect(mockStart).toHaveBeenCalledTimes(1);
   });
 
-  // --- Test 8a: No auto-start when activeTaskId is null ---
+  // --- Test 8a: No auto-start without the intent flag (plain navigation) ---
 
-  it("should NOT call start() on mount when activeTaskId is null", () => {
-    mockActiveTaskId = null;
-    mockIsRunning = false;
+  it("should NOT call start() on mount when there is no pending focus-start intent", () => {
+    mockConsumeFocusStart.mockReturnValue(false);
 
     render(<FocusPageAutoStartHarness />);
 
     expect(mockStart).not.toHaveBeenCalled();
   });
 
-  // --- Test 8b: No auto-start when already running ---
+  // --- Test 8b: No auto-start when resuming a paused session without intent ---
 
-  it("should NOT call start() on mount when timer is already running", () => {
+  it("should NOT call start() on mount for an active paused session without intent", () => {
     mockActiveTaskId = "task-123";
-    mockIsRunning = true;
+    mockIsRunning = false;
+    mockConsumeFocusStart.mockReturnValue(false);
 
     render(<FocusPageAutoStartHarness />);
 
