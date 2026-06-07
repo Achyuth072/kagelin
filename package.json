@@ -1,6 +1,6 @@
 {
   "name": "kanso",
-  "version": "1.21.0",
+  "version": "1.22.0-preview.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "scripts": {

@@ -1,26 +1,52 @@
 [
   {
+    "version": "1.22.0-preview.0",
+    "date": "2026-06-07",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Connect Google, Outlook, or CalDAV calendars with two-way sync and conflict resolution",
+        "Recurrence indicator in the focus task picker"
+      ],
+      "Improved": [
+        "Focus timer rebuilt on a deadline model for accurate cross-device sync",
+        "Recurring events are now read-only in the create/edit dialog (edit them at the source)",
+        "Calendar reconnects re-link and revive existing events automatically",
+        "Changelog grouped by release channel"
+      ],
+      "Fixed": [
+        "All-day event dates syncing incorrectly with Google Calendar",
+        "Deleted or edited events reappearing after a sync",
+        "Refresh tokens dropped on temporary provider errors",
+        "Settings save button staying greyed out after opening",
+        "Location dropdown clipping on mobile",
+        "Manage Calendars dialog opening behind the dropdown menu",
+        "AlertDialog appearing behind other overlays"
+      ]
+    }
+  },
+  {
     "version": "1.21.0",
     "date": "2026-05-28",
     "channel": "stable",
     "sections": {
       "Added": [
-        "Cross-device timer sync — start a focus session on one device, see it live on another",
+        "Cross-device timer sync, so a focus session started on one device shows up live on another",
         "Focus task picker with per-project grouping and overdue/today tabs",
         "Fullscreen focus mode with picture-in-picture timer",
         "Cancel session with full rollback for abandoned sessions",
-        "Push notifications re-validate automatically on service-worker change or page focus"
+        "Push notifications re-validate automatically on service worker change or page focus"
       ],
       "Improved": [
-        "Focus settings: harmonised sections and cleaner ink & matte styling",
-        "Calendar: centred now-indicator, smoother mobile gestures, week view on desktop only",
-        "Toasts: content-driven width, properly centred on mobile",
-        "Sidebar: centred collapsed icon backgrounds"
+        "Focus settings dialog: harmonised sections and cleaner ink & matte styling",
+        "Calendar: centred now-indicator, smoother mobile gestures, week view limited to desktop",
+        "Toasts now size to their content and stay centred on mobile",
+        "Sidebar collapsed icon backgrounds centred reliably"
       ],
       "Fixed": [
-        "Overlays stacking incorrectly (portalled overlays now at correct z-index)",
+        "Overlays stacking incorrectly (portalled overlays now sit at the correct z-index)",
         "Time-picker keyboard not appearing on Android",
-        "Guest mode: push toggle disabled and backend sync blocked correctly"
+        "Guest mode push toggle and backend sync now correctly blocked"
       ]
     }
   },
@@ -42,12 +68,11 @@
     "channel": "preview",
     "sections": {
       "Fixed": [
-        "Establish clean z-index stack — 70/60/50/40 hierarchy",
-        "Lower notifications to z-40 — stay below dialogs (z-50), above header/FAB via DOM order",
-        "Future-proof z-index hierarchy — changelog z-60, notifications z-50",
-        "Lower notification z-index to 40 (below changelog z-50), add 44px touch targets to filter component",
-        "Add missing isChangelogOpen fields to UiState test mocks",
-        "Consolidate completed grayscale class to TaskItem root"
+        "Established a clean z-index stack (70/60/50/40 hierarchy)",
+        "Notifications now sit below dialogs and above header/FAB",
+        "Notification z-index lowered below the changelog, with larger touch targets on filter chips",
+        "Added missing isChangelogOpen fields to UiState test mocks",
+        "Consolidated the completed grayscale class onto TaskItem root"
       ]
     }
   },

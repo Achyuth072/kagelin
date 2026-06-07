@@ -1,20 +1,26 @@
 # Changelog
 
+## v1.22.0-preview.0 — June 2026
+
+- **Calendar provider sync**: connect Google, Outlook, or CalDAV with two-way sync, conflict resolution, and offline-safe queuing
+- Focus timer rebuilt on a deadline model for accurate cross-device sync, even after reopening or a network blip
+- Recurrence indicator added to the focus task picker; recurring events are now read-only in the create/edit dialog
+- Changelog entries now group by stable/preview channel
+- Fixed all-day event date sync, dropped refresh tokens, the greyed-out settings save button, mobile location dropdown clipping, and overlay stacking order
+
 ## v1.21.0 — May 2026
 
-- **Real-time Focus Orchestration** — cross-device timer sync via Postgres replication, Picture-in-Picture integration with fullscreen awareness, and a per-project FocusTaskPicker with overdue/today grouping
-- **FocusTimer sync** — timer state persists across devices with `postgres_changes` subscription and automatic conflict resolution
-- **Fullscreen toggle** — dedicated FullscreenToggle component with reactive PiP close
-- **Cancel session with rollback** — abandoned sessions no longer log partial history
-- **Push notification re-validation** — subscriptions re-validate on service worker and visibility changes
-- **FocusSettingsDialog polish** — harmonized sections, differentiated PiP/fullscreen buttons, ink & matte tokens
-- **Calendar improvements** — centered now-indicator, mobile gesture conflict resolved, week view gated to desktop
-- **Toast improvements** — content-driven width, mobile centering, removed unnecessary overrides
-- **Sidebar** — centered collapsed icon backgrounds reliably
-- **Overlay z-index fixes** — portaled overlays bumped to z-70
-- **Android keyboard fix** — time picker no longer breaks on mobile keyboard open
-- **Guest mode** — push toggle disabled with backend sync blocked for guest accounts
-- **Changelog & hotkey UX** — toasts suppressed while changelog open, hotkeys blocked behind modals, "What's New" moved to sidebar
+- **Real-time Focus Orchestration**: cross-device timer sync, picture-in-picture with fullscreen awareness, and a per-project focus task picker with overdue/today grouping
+- Cancel session now rolls back fully, so abandoned sessions don't log partial history
+- Push notification subscriptions re-validate on service worker and visibility changes
+- Focus settings dialog: harmonized sections and cleaner ink & matte styling
+- Calendar: centered now-indicator, smoother mobile gestures, week view limited to desktop
+- Toasts now size to their content and stay centered on mobile
+- Sidebar collapsed icon backgrounds centered reliably
+- Overlays now stack at the correct z-index
+- Android keyboard no longer breaks the time picker
+- Guest mode push toggle and backend sync correctly blocked
+- Toasts suppressed while the changelog is open, hotkeys blocked behind modals, "What's New" moved to the sidebar
 
 ## v1.20.1 — May 2026
 
