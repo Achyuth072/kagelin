@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/api/require-user";
 import { getProviderAccessToken } from "@/lib/calendar-oauth/get-access-token";
 
 export async function GET(request: Request) {
@@ -10,13 +10,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "provider required" }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { user, error: authError } = await requireUser();
+  if (authError) return authError;
 
   let token;
   try {

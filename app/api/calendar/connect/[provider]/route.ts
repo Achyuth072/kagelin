@@ -1,6 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/api/require-user";
 import { generatePKCE } from "@/lib/calendar-oauth/pkce";
 
 const PROVIDER_AUTH_URLS: Record<string, string> = {
@@ -10,7 +10,8 @@ const PROVIDER_AUTH_URLS: Record<string, string> = {
 
 const PROVIDER_SCOPES: Record<string, string> = {
   google: "https://www.googleapis.com/auth/calendar openid email",
-  outlook: "https://graph.microsoft.com/Calendars.ReadWrite offline_access openid email",
+  outlook:
+    "https://graph.microsoft.com/Calendars.ReadWrite offline_access openid email",
 };
 
 export async function GET(
@@ -23,11 +24,8 @@ export async function GET(
     return NextResponse.json({ error: "Unknown provider" }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { error: authError } = await requireUser();
+  if (authError) return authError;
 
   const { codeVerifier, codeChallenge } = await generatePKCE();
   const state = crypto.randomUUID();
@@ -57,7 +55,10 @@ export async function GET(
 
   const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/calendar/oauth/callback`;
   const url = new URL(PROVIDER_AUTH_URLS[provider]);
-  url.searchParams.set("client_id", process.env[`${provider.toUpperCase()}_CLIENT_ID`] ?? "");
+  url.searchParams.set(
+    "client_id",
+    process.env[`${provider.toUpperCase()}_CLIENT_ID`] ?? "",
+  );
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", PROVIDER_SCOPES[provider]);
