@@ -11,6 +11,10 @@
  */
 
 let serverOffsetMs = 0;
+// Until the offset has been probed from the server, `serverNow()` is just the
+// (possibly skewed) local clock. Callers that take irreversible actions on the
+// deadline — e.g. completing a timer — must wait for this to flip true.
+let serverClockReady = false;
 
 /**
  * computeOffset — derive `serverClock − localClock` from one RTT-corrected probe.
@@ -33,10 +37,16 @@ export function computeOffset(
 
 export function setServerOffset(offsetMs: number): void {
   serverOffsetMs = offsetMs;
+  serverClockReady = true;
 }
 
 export function getServerOffset(): number {
   return serverOffsetMs;
+}
+
+/** Whether the offset has been established from at least one server probe. */
+export function isServerClockReady(): boolean {
+  return serverClockReady;
 }
 
 /** serverNow — the current server time in epoch ms. */

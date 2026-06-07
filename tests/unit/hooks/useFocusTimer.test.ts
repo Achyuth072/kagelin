@@ -2,6 +2,7 @@ import { renderHook, act } from "@testing-library/react";
 import { useFocusTimer } from "@/lib/hooks/useFocusTimer";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { setServerOffset } from "@/lib/store/serverClock";
 import type { TimerState } from "@/lib/types/timer";
 
 // Mock dependencies
@@ -96,6 +97,10 @@ describe("useFocusTimer - Reconciliation", () => {
     vi.useFakeTimers();
     localStorage.clear();
     vi.clearAllMocks();
+    // These reconciliation tests assume a live session whose server clock has
+    // been probed; mark it ready so deadline completion isn't deferred by the
+    // unprobed-clock guard (that deferral is covered in timerStoreClockReadiness).
+    setServerOffset(0);
     Object.defineProperty(document, "hidden", {
       configurable: true,
       value: false,

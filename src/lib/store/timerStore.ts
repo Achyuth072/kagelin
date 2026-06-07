@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TimerMode, TimerState, TimerSettings } from "@/lib/types/timer";
 import { DEFAULT_TIMER_SETTINGS } from "@/lib/types/timer";
-import { serverNow } from "@/lib/store/serverClock";
+import { serverNow, isServerClockReady } from "@/lib/store/serverClock";
 import { getDeviceId } from "@/lib/store/deviceId";
 
 interface TimerStore {
@@ -189,6 +189,21 @@ export const useTimerStore = create<TimerStore>()(
         // populated yet — trust remaining_seconds, never complete. The owner's
         // next write populates endsAt.
         if (state.endsAt === null) return;
+
+        // Never complete on an unprobed clock: after a reload the server offset
+        // resets to 0, so a skewed wall clock could read past the deadline and
+        // fire a spurious early completion before the offset is re-established.
+        // Clamp the display to 00:00 and defer — the next tick after the probe
+        // lands re-evaluates against the real clock.
+        if (!isServerClockReady()) {
+          set((s) => ({
+            state: {
+              ...s.state,
+              remainingSeconds: secondsUntil(state.endsAt!),
+            },
+          }));
+          return;
+        }
 
         const remaining = secondsUntil(state.endsAt);
         if (remaining <= 0) {

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { DEFAULT_TIMER_SETTINGS } from "@/lib/types/timer";
 import type { TimerSettings } from "@/lib/types/timer";
+import { setServerOffset } from "@/lib/store/serverClock";
 
 /**
  * Timer Store Test Perspectives
@@ -31,6 +32,9 @@ describe("useTimerStore", () => {
       settings: DEFAULT_TIMER_SETTINGS,
       isLoaded: true,
     });
+    // A live session has always probed the server clock; mark it ready so
+    // deadline completion isn't deferred by the unprobed-clock guard.
+    setServerOffset(0);
     vi.useFakeTimers();
   });
 
