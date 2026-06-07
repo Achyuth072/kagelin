@@ -26,6 +26,22 @@ import { registerAdapter } from "./adapter-interface";
 
 const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3";
 
+/**
+ * Shift a `YYYY-MM-DD` date string by whole days, in UTC.
+ *
+ * Google all-day events use an exclusive `end.date` (a single-day event on
+ * June 6 has start.date=2026-06-06, end.date=2026-06-07), whereas Kanso stores
+ * an inclusive last day (`...T23:59:59Z`). We convert with -1 day on the way in
+ * and +1 day on the way out. Plain UTC arithmetic avoids the local-timezone
+ * drift that date-fns `format` would introduce on date-only values.
+ */
+function shiftDateUTC(date: string, days: number): string {
+  const [y, m, d] = date.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
 export class GoogleCalendarAdapter implements SyncAdapter {
   readonly provider: CalendarProvider = "google";
 
@@ -317,7 +333,8 @@ export class GoogleCalendarAdapter implements SyncAdapter {
       location: googleEvent.location as string | undefined,
       start_time: allDay ? `${start.date}T00:00:00Z` : start.dateTime!,
       end_time: allDay
-        ? `${end?.date || start.date}T23:59:59Z`
+        ? // Google end.date is exclusive — step back a day to the inclusive last day.
+          `${end?.date ? shiftDateUTC(end.date, -1) : start.date}T23:59:59Z`
         : end?.dateTime || start.dateTime!,
       all_day: allDay,
       metadata: {
@@ -344,7 +361,8 @@ export class GoogleCalendarAdapter implements SyncAdapter {
 
     if (event.all_day) {
       googleEvent.start = { date: event.start_time.split("T")[0] };
-      googleEvent.end = { date: event.end_time.split("T")[0] };
+      // Google end.date is exclusive — step forward a day from our inclusive last day.
+      googleEvent.end = { date: shiftDateUTC(event.end_time.split("T")[0], 1) };
     } else {
       googleEvent.start = { dateTime: event.start_time };
       googleEvent.end = { dateTime: event.end_time };
