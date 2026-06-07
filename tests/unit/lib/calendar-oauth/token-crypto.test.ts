@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { encryptRefreshToken, decryptRefreshToken } from "@/lib/calendar-oauth/token-crypto";
+import {
+  encryptRefreshToken,
+  decryptRefreshToken,
+} from "@/lib/calendar-oauth/token-crypto";
 
 const TEST_KEY = "0".repeat(64); // 32-byte key as 64 hex chars
 
@@ -23,6 +26,8 @@ describe("token-crypto", () => {
     const token = "secret-refresh-token";
     const { ciphertext, iv } = await encryptRefreshToken(token, TEST_KEY);
     const wrongKey = "f".repeat(64);
-    await expect(decryptRefreshToken(ciphertext, iv, wrongKey)).rejects.toThrow();
+    await expect(
+      decryptRefreshToken(ciphertext, iv, wrongKey),
+    ).rejects.toThrow();
   });
 });

@@ -18,7 +18,9 @@ const AUTO_SYNC_THROTTLE_MS = 30 * 1000;
 let lastAutoSyncAt = 0;
 
 /** True if enough time has elapsed since the last auto (mount/refocus) sync. */
-export function canAutoSync(throttleMs: number = AUTO_SYNC_THROTTLE_MS): boolean {
+export function canAutoSync(
+  throttleMs: number = AUTO_SYNC_THROTTLE_MS,
+): boolean {
   return Date.now() - lastAutoSyncAt > throttleMs;
 }
 

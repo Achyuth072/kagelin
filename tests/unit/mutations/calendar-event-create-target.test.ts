@@ -5,7 +5,9 @@ import type { CreateCalendarEventInput } from "@/lib/types/calendar-event";
 
 const { bidiCalendarsRef, capturedInsert } = vi.hoisted(() => {
   const bidiCalendarsRef: { value: Array<{ id: string }> } = { value: [] };
-  const capturedInsert: { value: Record<string, unknown> | null } = { value: null };
+  const capturedInsert: { value: Record<string, unknown> | null } = {
+    value: null,
+  };
   return { bidiCalendarsRef, capturedInsert };
 });
 
@@ -45,7 +47,9 @@ vi.mock("@/lib/supabase/client", () => ({
   }),
 }));
 
-function makeInput(overrides: Partial<CreateCalendarEventInput> = {}): CreateCalendarEventInput {
+function makeInput(
+  overrides: Partial<CreateCalendarEventInput> = {},
+): CreateCalendarEventInput {
   return {
     title: "Standup",
     start_time: "2026-06-10T09:00:00Z",
@@ -63,7 +67,8 @@ describe("calendarEventMutations.create — default sync target", () => {
 
   it("stamps remote_calendar_id + pending_create when a bidirectional calendar exists", async () => {
     bidiCalendarsRef.value = [{ id: "bidi-cal-1" }];
-    const { calendarEventMutations } = await import("@/lib/mutations/calendar-event");
+    const { calendarEventMutations } =
+      await import("@/lib/mutations/calendar-event");
 
     await calendarEventMutations.create(makeInput());
 
@@ -75,7 +80,8 @@ describe("calendarEventMutations.create — default sync target", () => {
 
   it("leaves sync fields null when no bidirectional calendar is connected", async () => {
     bidiCalendarsRef.value = [];
-    const { calendarEventMutations } = await import("@/lib/mutations/calendar-event");
+    const { calendarEventMutations } =
+      await import("@/lib/mutations/calendar-event");
 
     await calendarEventMutations.create(makeInput());
 
@@ -85,7 +91,8 @@ describe("calendarEventMutations.create — default sync target", () => {
 
   it("keeps a recurring authored event local-only (never queued for push)", async () => {
     bidiCalendarsRef.value = [{ id: "bidi-cal-1" }];
-    const { calendarEventMutations } = await import("@/lib/mutations/calendar-event");
+    const { calendarEventMutations } =
+      await import("@/lib/mutations/calendar-event");
 
     await calendarEventMutations.create(
       makeInput({ recurrence_rule: "FREQ=WEEKLY;BYDAY=MO" }),

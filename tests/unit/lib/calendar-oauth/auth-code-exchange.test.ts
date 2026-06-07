@@ -31,7 +31,10 @@ describe("exchangeAuthCode", () => {
   it("throws when provider returns an error", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue({
       ok: false,
-      json: async () => ({ error: "invalid_grant", error_description: "Code expired" }),
+      json: async () => ({
+        error: "invalid_grant",
+        error_description: "Code expired",
+      }),
     } as Response);
 
     await expect(

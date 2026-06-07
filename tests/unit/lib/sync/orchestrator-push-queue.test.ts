@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
 import type { ExternalCalendar } from "@/lib/types/external-calendar";
+import type { SyncAdapter } from "@/lib/sync/adapter-interface";
 
 // ── Hoisted mock state ────────────────────────────────────────────────────────
 
@@ -15,7 +16,12 @@ const { pendingEventsRef, capturedUpdates, capturedDeletes, drainTriggerRef } =
     const capturedDeletes: string[] = [];
     const drainTriggerRef = { value: false };
 
-    return { pendingEventsRef, capturedUpdates, capturedDeletes, drainTriggerRef };
+    return {
+      pendingEventsRef,
+      capturedUpdates,
+      capturedDeletes,
+      drainTriggerRef,
+    };
   });
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -40,7 +46,10 @@ vi.mock("@/lib/supabase/client", () => ({
               return Promise.resolve({ count, error: null });
             },
             // Thenable for unconditional update (only one .eq('id'))
-            then: (resolve: (v: unknown) => void, reject: (e: unknown) => void) => {
+            then: (
+              resolve: (v: unknown) => void,
+              reject: (e: unknown) => void,
+            ) => {
               capturedUpdates.push(captured);
               return Promise.resolve({ error: null }).then(resolve, reject);
             },
@@ -87,7 +96,10 @@ function makeEvent(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   };
 }
 
-const mockCalendar: Pick<ExternalCalendar, "id" | "user_id" | "sync_direction" | "provider"> = {
+const mockCalendar: Pick<
+  ExternalCalendar,
+  "id" | "user_id" | "sync_direction" | "provider"
+> = {
   id: "cal-1",
   user_id: "user-1",
   sync_direction: "bidirectional",
@@ -106,16 +118,28 @@ describe("pushPendingEvents", () => {
 
   it("pending_create: calls adapter.pushEvent and writes remote_id + etag + sync_state null", async () => {
     const { pushPendingEvents } = await import("@/lib/sync/orchestrator");
-    const event = makeEvent({ remote_id: null, etag: null, sync_state: "pending_create" });
+    const event = makeEvent({
+      remote_id: null,
+      etag: null,
+      sync_state: "pending_create",
+    });
     pendingEventsRef.value = [event];
 
     const mockAdapter = {
-      pushEvent: vi.fn().mockResolvedValue({ remoteId: "remote-new", etag: "etag-new" }),
+      pushEvent: vi
+        .fn()
+        .mockResolvedValue({ remoteId: "remote-new", etag: "etag-new" }),
       updateRemoteEvent: vi.fn(),
       deleteRemoteEvent: vi.fn(),
     };
 
-    const result = await pushPendingEvents(mockCalendar as ExternalCalendar, mockAdapter as any);
+    const result = await pushPendingEvents(
+      mockCalendar as ExternalCalendar,
+      mockAdapter as Pick<
+        SyncAdapter,
+        "pushEvent" | "updateRemoteEvent" | "deleteRemoteEvent"
+      >,
+    );
 
     expect(mockAdapter.pushEvent).toHaveBeenCalledWith(event);
     expect(capturedUpdates).toContainEqual(
@@ -143,9 +167,18 @@ describe("pushPendingEvents", () => {
       deleteRemoteEvent: vi.fn(),
     };
 
-    const result = await pushPendingEvents(mockCalendar as ExternalCalendar, mockAdapter as any);
+    const result = await pushPendingEvents(
+      mockCalendar as ExternalCalendar,
+      mockAdapter as Pick<
+        SyncAdapter,
+        "pushEvent" | "updateRemoteEvent" | "deleteRemoteEvent"
+      >,
+    );
 
-    expect(mockAdapter.updateRemoteEvent).toHaveBeenCalledWith(event.remote_id, event);
+    expect(mockAdapter.updateRemoteEvent).toHaveBeenCalledWith(
+      event.remote_id,
+      event,
+    );
     expect(capturedUpdates).toContainEqual(
       expect.objectContaining({
         id: event.id,
@@ -160,7 +193,10 @@ describe("pushPendingEvents", () => {
 
   it("pending_delete: calls adapter.deleteRemoteEvent then hard-deletes the row", async () => {
     const { pushPendingEvents } = await import("@/lib/sync/orchestrator");
-    const event = makeEvent({ sync_state: "pending_delete", is_archived: true });
+    const event = makeEvent({
+      sync_state: "pending_delete",
+      is_archived: true,
+    });
     pendingEventsRef.value = [event];
 
     const mockAdapter = {
@@ -169,7 +205,13 @@ describe("pushPendingEvents", () => {
       deleteRemoteEvent: vi.fn().mockResolvedValue(undefined),
     };
 
-    const result = await pushPendingEvents(mockCalendar as ExternalCalendar, mockAdapter as any);
+    const result = await pushPendingEvents(
+      mockCalendar as ExternalCalendar,
+      mockAdapter as Pick<
+        SyncAdapter,
+        "pushEvent" | "updateRemoteEvent" | "deleteRemoteEvent"
+      >,
+    );
 
     expect(mockAdapter.deleteRemoteEvent).toHaveBeenCalledWith(event.remote_id);
     expect(capturedDeletes).toContain(event.id);
@@ -188,7 +230,13 @@ describe("pushPendingEvents", () => {
       deleteRemoteEvent: vi.fn(),
     };
 
-    await pushPendingEvents(mockCalendar as ExternalCalendar, mockAdapter as any);
+    await pushPendingEvents(
+      mockCalendar as ExternalCalendar,
+      mockAdapter as Pick<
+        SyncAdapter,
+        "pushEvent" | "updateRemoteEvent" | "deleteRemoteEvent"
+      >,
+    );
 
     // Fallback unconditional update must set sync_state='pending_update' (not null)
     expect(capturedUpdates).toContainEqual(

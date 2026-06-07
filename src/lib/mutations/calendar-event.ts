@@ -114,10 +114,9 @@ export const calendarEventMutations = {
       .eq("id", id)
       .single();
 
-    const syncUpdate =
-      current?.remote_calendar_id
-        ? { sync_state: applyCrudTransition(current.sync_state, "edit").newState }
-        : {};
+    const syncUpdate = current?.remote_calendar_id
+      ? { sync_state: applyCrudTransition(current.sync_state, "edit").newState }
+      : {};
 
     const { data, error } = await supabase
       .from("calendar_events")
@@ -149,9 +148,15 @@ export const calendarEventMutations = {
       .single();
 
     if (current?.remote_calendar_id) {
-      const { newState, hardDelete } = applyCrudTransition(current.sync_state, "delete");
+      const { newState, hardDelete } = applyCrudTransition(
+        current.sync_state,
+        "delete",
+      );
       if (hardDelete) {
-        const { error } = await supabase.from("calendar_events").delete().eq("id", id);
+        const { error } = await supabase
+          .from("calendar_events")
+          .delete()
+          .eq("id", id);
         if (error) throw new Error(error.message);
       } else {
         // Queue for remote deletion on next sync

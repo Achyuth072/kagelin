@@ -21,8 +21,12 @@ export function useDisconnectCalendarProvider() {
   const queryClient = useQueryClient();
 
   return async (provider: string) => {
-    await fetch(`/api/calendar/disconnect?provider=${provider}`, { method: "DELETE" });
-    queryClient.invalidateQueries({ queryKey: ["calendar-connected-providers"] });
+    await fetch(`/api/calendar/disconnect?provider=${provider}`, {
+      method: "DELETE",
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["calendar-connected-providers"],
+    });
     queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
   };
 }

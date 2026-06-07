@@ -7,6 +7,7 @@ An all-in-one productivity app combining tasks, deep focus, habits, and calendar
 ## Features
 
 ### Tasks & Organization
+
 - **Command Menu** (`Ctrl/Cmd+K`): instant search, navigation, and actions.
 - **Three views**: Masonry Grid, Board, and List — switch with `Shift+1/2/3`.
 - **Split View**: Desktop List opens a master-detail panel automatically.
@@ -15,36 +16,40 @@ An all-in-one productivity app combining tasks, deep focus, habits, and calendar
 - **Recurring tasks**: per-task Strict (anchors to due date) or Flexible (anchors to completion) recurrence.
 
 ### Focus & Habits
+
 - **Focus Timer**: PiP-enabled Pomodoro engine with real-time sync across devices.
 - **Habit tracking**: standardized tracking with longevity streaks and uhabits `.db` import.
 - **Activity heatmap**: visualize focus minutes and habit completions over time.
 
 ### Calendar
+
 - **Event creation**: native calendar events with NLP-assisted time parsing.
 - **Multi-provider sync**: Google Calendar, Microsoft Outlook, and any CalDAV server (Nextcloud, iCloud, Fastmail).
 - **ICS portability**: universal `.ics` (RFC 5545) import and export.
 
 ### Data Ownership
+
 - **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed.
 - **WebDAV sync**: sync guest data with personal servers (Nextcloud, Synology) without an account.
 - **Backups**: encrypted `.zip` export/import. Registered users can export or permanently delete all cloud data.
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
 
 ### Preferences
+
 - **Time format**: system-wide 12h/24h toggle across all time displays.
 - **Keyboard accessible**: Esc closes all modals, full focus-trap and `aria-modal` compliance.
 - **Haptic feedback**: standardized haptic palette for precise mobile feedback.
 
 ## Shortcuts
 
-| Shortcut            | Action                                                            |
-| ------------------- | ----------------------------------------------------------------- |
-| `1–6`               | Quick navigation (Home, Habits, Calendar, Stats, Focus, Settings) |
-| `Shift+1 / 2 / 3`  | Switch view (Grid / Board / List)                                 |
-| `Ctrl/Cmd+K`        | Open Command Palette                                              |
-| `Ctrl/Cmd+B`        | Toggle Sidebar                                                    |
-| `N / H / E / P`     | Create new (Task, Habit, Event, Project)                          |
-| `Shift+H`           | View all shortcuts                                                |
+| Shortcut          | Action                                                            |
+| ----------------- | ----------------------------------------------------------------- |
+| `1–6`             | Quick navigation (Home, Habits, Calendar, Stats, Focus, Settings) |
+| `Shift+1 / 2 / 3` | Switch view (Grid / Board / List)                                 |
+| `Ctrl/Cmd+K`      | Open Command Palette                                              |
+| `Ctrl/Cmd+B`      | Toggle Sidebar                                                    |
+| `N / H / E / P`   | Create new (Task, Habit, Event, Project)                          |
+| `Shift+H`         | View all shortcuts                                                |
 
 ## Stack
 

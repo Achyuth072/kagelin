@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { runCalendarSync, runCalendarPush } from "@/lib/sync/run-sync";
-import { canAutoSync, markAutoSync, onLocalEdit } from "@/lib/sync/sync-scheduler";
+import {
+  canAutoSync,
+  markAutoSync,
+  onLocalEdit,
+} from "@/lib/sync/sync-scheduler";
 import { useAuth } from "@/components/AuthProvider";
 
 const PUSH_DEBOUNCE_MS = 2500;

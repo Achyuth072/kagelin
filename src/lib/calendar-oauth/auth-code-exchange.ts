@@ -16,7 +16,9 @@ export interface AuthCodeExchangeResult {
   expiresAt: number;
 }
 
-export async function exchangeAuthCode(input: AuthCodeExchangeInput): Promise<AuthCodeExchangeResult> {
+export async function exchangeAuthCode(
+  input: AuthCodeExchangeInput,
+): Promise<AuthCodeExchangeResult> {
   const { provider, code, codeVerifier, redirectUri } = input;
 
   const endpoint = TOKEN_ENDPOINTS[provider];
@@ -40,7 +42,10 @@ export async function exchangeAuthCode(input: AuthCodeExchangeInput): Promise<Au
   const data = await response.json();
 
   if (!response.ok) {
-    const description = (data.error_description as string) ?? (data.error as string) ?? "Auth code exchange failed";
+    const description =
+      (data.error_description as string) ??
+      (data.error as string) ??
+      "Auth code exchange failed";
     throw new Error(description);
   }
 

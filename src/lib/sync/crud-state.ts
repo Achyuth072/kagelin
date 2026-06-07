@@ -14,7 +14,8 @@ export function applyCrudTransition(
 ): CrudTransition {
   if (action === "edit") {
     // Never downgrade pending_create — no remote exists yet
-    if (current === "pending_create") return { newState: "pending_create", hardDelete: false };
+    if (current === "pending_create")
+      return { newState: "pending_create", hardDelete: false };
     return { newState: "pending_update", hardDelete: false };
   }
 

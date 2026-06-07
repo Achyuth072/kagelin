@@ -479,6 +479,7 @@ export function CreateEventDialog({
                     type="button"
                     role="combobox"
                     aria-expanded={locationOpen}
+                    aria-controls="location-combobox-list"
                     disabled={isRecurring}
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors",
@@ -505,6 +506,7 @@ export function CreateEventDialog({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
+                  id="location-combobox-list"
                   className="p-0 w-[var(--radix-popover-trigger-width)]"
                   align="start"
                   container={locationPortalEl}

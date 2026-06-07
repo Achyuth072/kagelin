@@ -19,7 +19,11 @@ export async function encryptRefreshToken(
   const ivBytes = Buffer.allocUnsafe(IV_BYTES);
   crypto.getRandomValues(ivBytes);
   const encoded = Buffer.from(token, "utf-8");
-  const encrypted = await crypto.subtle.encrypt({ name: ALGORITHM, iv: ivBytes }, key, encoded);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: ALGORITHM, iv: ivBytes },
+    key,
+    encoded,
+  );
   return {
     ciphertext: Buffer.from(encrypted).toString("base64"),
     iv: ivBytes.toString("base64"),

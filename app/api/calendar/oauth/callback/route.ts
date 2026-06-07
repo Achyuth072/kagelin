@@ -12,11 +12,15 @@ export async function GET(request: Request) {
   const errorParam = searchParams.get("error");
 
   if (errorParam) {
-    return NextResponse.redirect(`${origin}/calendar?oauth_error=${encodeURIComponent(errorParam)}`);
+    return NextResponse.redirect(
+      `${origin}/calendar?oauth_error=${encodeURIComponent(errorParam)}`,
+    );
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(`${origin}/calendar?oauth_error=missing_params`);
+    return NextResponse.redirect(
+      `${origin}/calendar?oauth_error=missing_params`,
+    );
   }
 
   const cookieStore = await cookies();
@@ -25,7 +29,9 @@ export async function GET(request: Request) {
   const provider = cookieStore.get("calendar_oauth_provider")?.value;
 
   if (!storedState || storedState !== state || !codeVerifier || !provider) {
-    return NextResponse.redirect(`${origin}/calendar?oauth_error=invalid_state`);
+    return NextResponse.redirect(
+      `${origin}/calendar?oauth_error=invalid_state`,
+    );
   }
 
   // Clear PKCE / state cookies
@@ -34,14 +40,21 @@ export async function GET(request: Request) {
   cookieStore.delete("calendar_oauth_provider");
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.redirect(`${origin}/login`);
   }
 
   try {
     const redirectUri = `${origin}/api/calendar/oauth/callback`;
-    const { refreshToken } = await exchangeAuthCode({ provider, code, codeVerifier, redirectUri });
+    const { refreshToken } = await exchangeAuthCode({
+      provider,
+      code,
+      codeVerifier,
+      redirectUri,
+    });
 
     const encKey = process.env.CALENDAR_TOKEN_ENC_KEY;
     if (!encKey) throw new Error("CALENDAR_TOKEN_ENC_KEY not set");
@@ -50,11 +63,19 @@ export async function GET(request: Request) {
 
     // Service-role client: calendar_oauth_tokens has no client-facing RLS policies
     const admin = createAdminClient();
-    const { error: upsertError } = await admin.from("calendar_oauth_tokens").upsert(
-      { user_id: user.id, provider, encrypted_refresh_token: ciphertext, token_iv: iv },
-      { onConflict: "user_id,provider" },
-    );
-    if (upsertError) throw new Error(`Token upsert failed: ${upsertError.message}`);
+    const { error: upsertError } = await admin
+      .from("calendar_oauth_tokens")
+      .upsert(
+        {
+          user_id: user.id,
+          provider,
+          encrypted_refresh_token: ciphertext,
+          token_iv: iv,
+        },
+        { onConflict: "user_id,provider" },
+      );
+    if (upsertError)
+      throw new Error(`Token upsert failed: ${upsertError.message}`);
 
     return NextResponse.redirect(`${origin}/calendar?connected=${provider}`);
   } catch (e) {
