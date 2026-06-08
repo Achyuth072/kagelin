@@ -173,6 +173,7 @@ export function CreateEventDialog({
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [locationSearch, setLocationSearch] = useState("");
   const [locationPortalEl, setLocationPortalEl] =
     useState<HTMLDivElement | null>(null);
   const locationListRef = useRef<HTMLDivElement>(null);
@@ -261,11 +262,13 @@ export function CreateEventDialog({
             location: event.location || "",
             all_day: event.allDay || false,
           });
+          setLocationSearch(event.location || "");
         } else {
           const now = normalizedDefaultDate ?? new Date();
           setStartDate(now);
           setEndDate(getDefaultEndDate(now));
           reset({ title: "", description: "", location: "", all_day: false });
+          setLocationSearch("");
         }
       }, 0);
       return () => clearTimeout(timer);
@@ -532,9 +535,9 @@ export function CreateEventDialog({
                   <Command shouldFilter={true}>
                     <CommandInput
                       placeholder="Search or enter location..."
-                      value={locationValue || ""}
+                      value={locationSearch}
                       onValueChange={(val) => {
-                        setValue("location", val, { shouldValidate: true });
+                        setLocationSearch(val);
                       }}
                     />
                     <CommandList
@@ -542,8 +545,30 @@ export function CreateEventDialog({
                       className="overscroll-contain"
                     >
                       <CommandEmpty>
-                        Press enter or click outside to use custom location
+                        {locationSearch.trim() ? "" : "No locations found"}
                       </CommandEmpty>
+                      {locationSearch.trim() &&
+                        !uniqueLocations.some(
+                          (loc) =>
+                            loc.toLowerCase() ===
+                            locationSearch.trim().toLowerCase(),
+                        ) && (
+                          <CommandGroup heading="Custom">
+                            <CommandItem
+                              value={locationSearch.trim()}
+                              className="text-foreground data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground"
+                              onSelect={() => {
+                                setValue("location", locationSearch.trim(), {
+                                  shouldValidate: true,
+                                });
+                                setLocationOpen(false);
+                              }}
+                            >
+                              <MapPin className="mr-2 h-4 w-4" />
+                              Use &quot;{locationSearch.trim()}&quot;
+                            </CommandItem>
+                          </CommandGroup>
+                        )}
                       <CommandGroup heading="Suggestions">
                         {uniqueLocations.map((loc) => (
                           <CommandItem
@@ -554,6 +579,7 @@ export function CreateEventDialog({
                               setValue("location", loc, {
                                 shouldValidate: true,
                               });
+                              setLocationSearch(loc);
                               setLocationOpen(false);
                             }}
                           >
