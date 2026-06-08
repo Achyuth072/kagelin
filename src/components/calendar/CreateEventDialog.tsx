@@ -501,8 +501,9 @@ export function CreateEventDialog({
                     aria-controls="location-combobox-list"
                     disabled={isRecurring}
                     className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors",
-                      !isRecurring && "hover:bg-muted/40",
+                      "flex items-center gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast",
+                      hoverCls,
+                      "w-full text-left",
                       "disabled:opacity-50 disabled:cursor-not-allowed",
                     )}
                   >
@@ -524,7 +525,7 @@ export function CreateEventDialog({
                     </span>
                     {locationValue && (
                       <span
-                        className="ml-auto mr-1 flex-shrink-0 rounded p-0.5 text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                        className="ml-auto mr-1 flex-shrink-0 rounded p-0.5 text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-seijaku-fast cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           setValue("location", "", {
