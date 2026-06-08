@@ -622,10 +622,11 @@ export function CreateEventDialog({
                   placeholder="Add notes"
                   rows={2}
                   disabled={isRecurring}
+                  style={{ fontSize: "0.875rem" }}
                   className={cn(
                     "flex-1 bg-transparent border-0 outline-none resize-none",
-                    "text-sm text-foreground placeholder:text-muted-foreground/60",
-                    "leading-relaxed p-0 min-h-[48px]",
+                    "text-sm text-foreground placeholder:text-muted-foreground/50",
+                    "leading-normal p-0 min-h-[48px]",
                     "disabled:opacity-50 disabled:cursor-not-allowed",
                   )}
                 />
