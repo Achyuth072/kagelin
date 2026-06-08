@@ -3,7 +3,7 @@
 "use no memo";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useForm, useWatch, useFormState } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -175,6 +175,7 @@ export function CreateEventDialog({
   const [locationOpen, setLocationOpen] = useState(false);
   const [locationPortalEl, setLocationPortalEl] =
     useState<HTMLDivElement | null>(null);
+  const locationListRef = useRef<HTMLDivElement>(null);
   const events = useCalendarStore((state) => state.events);
   const safeStartDate = coerceValidDate(startDate);
   const safeEndDate = coerceValidDate(endDate);
@@ -229,6 +230,20 @@ export function CreateEventDialog({
       return () => clearTimeout(timer);
     }
   }, [title, setValue, event]);
+
+  useEffect(() => {
+    const el = locationListRef.current;
+    if (!el) return;
+    const stop = (e: Event) => e.stopPropagation();
+    el.addEventListener("wheel", stop);
+    el.addEventListener("touchmove", stop);
+    el.addEventListener("touchstart", stop);
+    return () => {
+      el.removeEventListener("wheel", stop);
+      el.removeEventListener("touchmove", stop);
+      el.removeEventListener("touchstart", stop);
+    };
+  }, []);
 
   // Reset/Initialize form when dialog opens
   useEffect(() => {
@@ -522,7 +537,10 @@ export function CreateEventDialog({
                         setValue("location", val, { shouldValidate: true });
                       }}
                     />
-                    <CommandList>
+                    <CommandList
+                      ref={locationListRef}
+                      className="overscroll-contain"
+                    >
                       <CommandEmpty>
                         Press enter or click outside to use custom location
                       </CommandEmpty>
