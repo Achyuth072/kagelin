@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.22.0-preview.2",
+    "date": "2026-06-08",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Custom location quick-select item in dropdown when typed input matches no suggestion",
+        "Inline clear button for location combobox",
+        "Location dropdown trigger restyled with mobile alignment fixes",
+        "Notes textarea styling harmonised with other dialog inputs"
+      ]
+    }
+  },
+  {
     "version": "1.22.0-preview.1",
     "date": "2026-06-08",
     "channel": "preview",

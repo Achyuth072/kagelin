@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.22.0-preview.2 — June 2026
+
+- Location dropdown: custom location item, inline clear button, restyled trigger with mobile alignment
+- Notes textarea styling harmonised with other dialog inputs
+
 ## v1.22.0-preview.1 — June 2026
 
 - Toast notifications now dismiss on left or right swipe, which is the natural gesture for bottom-centre toasts
