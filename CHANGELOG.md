@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.22.0-preview.1 — June 2026
+
+- Toast notifications now dismiss on left or right swipe, which is the natural gesture for bottom-centre toasts
+- Detail panel close button lives in a header bar now instead of floating over content
+- Fullscreen toggle works on Android and iOS, Safari prefixes and the phone guard are sorted
+- Focus settings dialog re-runs validation every time it opens, not just the first time
+
 ## v1.22.0-preview.0 — June 2026
 
 - **Calendar provider sync**: connect Google, Outlook, or CalDAV with two-way sync, conflict resolution, and offline-safe queuing

@@ -76,3 +76,4 @@ tests/unit/*.txt
 .planning/
 CLAUDE.md
 docs/agents/
+.claude/

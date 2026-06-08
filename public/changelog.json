@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.22.0-preview.1",
+    "date": "2026-06-08",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Toast notifications dismiss on left and right swipe gestures",
+        "Detail panel close button repositioned to a header bar so it never overlaps content",
+        "Fullscreen toggle on mobile, works on Android and iOS Safari",
+        "Focus settings dialog re-runs validation every time it opens, not just once"
+      ]
+    }
+  },
+  {
     "version": "1.22.0-preview.0",
     "date": "2026-06-07",
     "channel": "preview",
