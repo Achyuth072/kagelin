@@ -411,8 +411,10 @@ export function FocusSettingsDialog() {
   useBackNavigation(open && !isDesktop, () => setOpen(false));
 
   useEffect(() => {
-    triggerValidation();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (open) {
+      triggerValidation();
+    }
+  }, [open, triggerValidation]);
 
   const onFormSubmit = () => {
     trigger("thud");
