@@ -18,6 +18,7 @@ import {
   Check,
   Send,
   Save,
+  X,
 } from "lucide-react";
 import {
   Command,
@@ -521,6 +522,22 @@ export function CreateEventDialog({
                     >
                       {locationValue || "Add location"}
                     </span>
+                    {locationValue && (
+                      <span
+                        className="ml-auto mr-1 flex-shrink-0 rounded p-0.5 text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setValue("location", "", {
+                            shouldValidate: true,
+                          });
+                          setLocationSearch("");
+                        }}
+                        tabIndex={-1}
+                        aria-label="Clear location"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </span>
+                    )}
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
