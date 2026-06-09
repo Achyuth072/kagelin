@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.22.0-preview.4",
+    "date": "2026-06-09",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Guest mode calendar connection status no longer errors",
+        "Focus settings dialog validation fixed to run on mount"
+      ],
+      "Improved": [
+        "Location combobox state synced with the form controller for consistency",
+        "Fullscreen vendor-prefix helpers consolidated into a single object"
+      ]
+    }
+  },
+  {
     "version": "1.22.0-preview.3",
     "date": "2026-06-09",
     "channel": "preview",

@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.22.0-preview.4 — June 2026
+
+- Guest mode calendar connection status no longer errors
+- Focus settings dialog validation fixed to run on mount
+- Location combobox state synced with the form controller for consistency
+- Fullscreen vendor-prefix helpers consolidated
+
 ## v1.22.0-preview.3 — June 2026
 
 - Location history now persists across event deletions
