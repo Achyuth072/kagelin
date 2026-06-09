@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.22.0-preview.3",
+    "date": "2026-06-09",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Location history now persists across event deletions",
+        "Scroll in the location suggestion list (wheel and touch were silently broken)",
+        "Spurious network errors on the calendar page in guest mode"
+      ]
+    }
+  },
+  {
     "version": "1.22.0-preview.2",
     "date": "2026-06-08",
     "channel": "preview",

@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.22.0-preview.3 — June 2026
+
+- Location history now persists across event deletions
+- Location dropdown: scroll with wheel or touch now works inside the suggestion list
+- Guest mode no longer triggers spurious network errors on the calendar page
+
 ## v1.22.0-preview.2 — June 2026
 
 - Location dropdown: custom location item, inline clear button, restyled trigger with mobile alignment
