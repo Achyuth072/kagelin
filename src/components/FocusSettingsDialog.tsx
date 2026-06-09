@@ -357,7 +357,7 @@ export function FocusSettingsDialog() {
 
   const methods = useForm<TimerSettings>({
     resolver: zodResolver(FocusSettingsSchema),
-    mode: "onChange",
+    mode: "all",
     defaultValues: {
       focusDuration: settings.focusDuration,
       shortBreakDuration: settings.shortBreakDuration,
@@ -373,7 +373,6 @@ export function FocusSettingsDialog() {
     handleSubmit,
     reset,
     watch,
-    trigger: triggerValidation,
     formState: { isValid },
   } = methods;
 
@@ -409,12 +408,6 @@ export function FocusSettingsDialog() {
 
   // Handle back navigation on mobile to close drawer instead of navigating away
   useBackNavigation(open && !isDesktop, () => setOpen(false));
-
-  useEffect(() => {
-    if (open) {
-      triggerValidation();
-    }
-  }, [open, triggerValidation]);
 
   const onFormSubmit = () => {
     trigger("thud");
