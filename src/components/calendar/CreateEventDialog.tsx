@@ -4,7 +4,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useForm, useWatch, useFormState } from "react-hook-form";
+import { useForm, useWatch, useFormState, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, isValid } from "date-fns";
@@ -176,7 +176,7 @@ export function CreateEventDialog({
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
-  const [locationSearch, setLocationSearch] = useState("");
+  const [draftLocation, setDraftLocation] = useState("");
   const [locationPortalEl, setLocationPortalEl] =
     useState<HTMLDivElement | null>(null);
   const locationListRef = useRef<HTMLDivElement>(null);
@@ -209,7 +209,6 @@ export function CreateEventDialog({
 
   const allDay = useWatch({ control, name: "all_day" });
   const title = useWatch({ control, name: "title" });
-  const locationValue = useWatch({ control, name: "location" });
   const { errors } = useFormState({ control });
 
   // Derive form validity from useWatch values instead of formState.isValid
@@ -257,13 +256,13 @@ export function CreateEventDialog({
             location: event.location || "",
             all_day: event.allDay || false,
           });
-          setLocationSearch(event.location || "");
+          setDraftLocation(event.location || "");
         } else {
           const now = normalizedDefaultDate ?? new Date();
           setStartDate(now);
           setEndDate(getDefaultEndDate(now));
           reset({ title: "", description: "", location: "", all_day: false });
-          setLocationSearch("");
+          setDraftLocation("");
         }
       }, 0);
       return () => clearTimeout(timer);
@@ -313,7 +312,7 @@ export function CreateEventDialog({
     onOpenChange(false);
   };
 
-  const trimmedSearch = locationSearch.trim();
+  const trimmedSearch = draftLocation.trim();
 
   const rowCls =
     "flex items-center gap-3 px-3 py-2.5 rounded-md mx-2 transition-seijaku-fast";
@@ -485,135 +484,135 @@ export function CreateEventDialog({
 
             {/* Location */}
             <div className="mx-2">
-              <Popover
-                open={locationOpen}
-                onOpenChange={setLocationOpen}
-                modal={false}
-              >
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    role="combobox"
-                    aria-expanded={locationOpen}
-                    aria-controls="location-combobox-list"
-                    disabled={isRecurring}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast",
-                      hoverCls,
-                      "w-full text-left",
-                      "disabled:opacity-50 disabled:cursor-not-allowed",
-                    )}
+              <Controller
+                name="location"
+                control={control}
+                render={({ field }) => (
+                  <Popover
+                    open={locationOpen}
+                    onOpenChange={setLocationOpen}
+                    modal={false}
                   >
-                    <IconCell>
-                      <MapPin
-                        className="h-4 w-4 text-muted-foreground"
-                        strokeWidth={2.25}
-                      />
-                    </IconCell>
-                    <span
-                      className={cn(
-                        "text-sm flex-1 truncate",
-                        locationValue
-                          ? "text-foreground"
-                          : "text-muted-foreground/60",
-                      )}
-                    >
-                      {locationValue || "Add location"}
-                    </span>
-                    {locationValue && (
-                      <span
-                        className="ml-auto mr-1 flex-shrink-0 rounded p-0.5 text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-seijaku-fast cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setValue("location", "", {
-                            shouldValidate: true,
-                          });
-                          setLocationSearch("");
-                        }}
-                        tabIndex={-1}
-                        aria-label="Clear location"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </span>
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  id="location-combobox-list"
-                  className="p-0 w-[var(--radix-popover-trigger-width)]"
-                  align="start"
-                  container={locationPortalEl}
-                  onOpenAutoFocus={
-                    isFinePointer ? undefined : (e) => e.preventDefault()
-                  }
-                >
-                  <Command shouldFilter={true}>
-                    <CommandInput
-                      placeholder="Search or enter location..."
-                      value={locationSearch}
-                      onValueChange={(val) => {
-                        setLocationSearch(val);
-                      }}
-                    />
-                    <CommandList
-                      ref={locationListRef}
-                      className="overscroll-contain"
-                    >
-                      <CommandEmpty>
-                        {trimmedSearch ? "" : "No locations found"}
-                      </CommandEmpty>
-                      {trimmedSearch &&
-                        !uniqueLocations.some(
-                          (loc) =>
-                            loc.toLowerCase() === trimmedSearch.toLowerCase(),
-                        ) && (
-                          <CommandGroup heading="Custom">
-                            <CommandItem
-                              value={trimmedSearch}
-                              className="text-foreground data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground"
-                              onSelect={() => {
-                                setValue("location", trimmedSearch, {
-                                  shouldValidate: true,
-                                });
-                                setLocationOpen(false);
-                              }}
-                            >
-                              <MapPin className="mr-2 h-4 w-4" />
-                              Use &quot;{trimmedSearch}&quot;
-                            </CommandItem>
-                          </CommandGroup>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        role="combobox"
+                        aria-expanded={locationOpen}
+                        aria-controls="location-combobox-list"
+                        disabled={isRecurring}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast",
+                          hoverCls,
+                          "w-full text-left",
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
                         )}
-                      <CommandGroup heading="Suggestions">
-                        {uniqueLocations.map((loc) => (
-                          <CommandItem
-                            key={loc}
-                            value={loc}
-                            className="text-foreground data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground"
-                            onSelect={() => {
-                              setValue("location", loc, {
-                                shouldValidate: true,
-                              });
-                              setLocationSearch(loc);
-                              setLocationOpen(false);
+                      >
+                        <IconCell>
+                          <MapPin
+                            className="h-4 w-4 text-muted-foreground"
+                            strokeWidth={2.25}
+                          />
+                        </IconCell>
+                        <span
+                          className={cn(
+                            "text-sm flex-1 truncate",
+                            field.value
+                              ? "text-foreground"
+                              : "text-muted-foreground/60",
+                          )}
+                        >
+                          {field.value || "Add location"}
+                        </span>
+                        {field.value && (
+                          <span
+                            className="ml-auto mr-1 flex-shrink-0 rounded p-0.5 text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-seijaku-fast cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              field.onChange("");
+                              setDraftLocation("");
                             }}
+                            tabIndex={-1}
+                            aria-label="Clear location"
                           >
-                            <MapPin className="mr-2 h-4 w-4" />
-                            {loc}
-                            <Check
-                              className={cn(
-                                "ml-auto h-4 w-4",
-                                locationValue === loc
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+                            <X className="h-3.5 w-3.5" />
+                          </span>
+                        )}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      id="location-combobox-list"
+                      className="p-0 w-[var(--radix-popover-trigger-width)]"
+                      align="start"
+                      container={locationPortalEl}
+                      onOpenAutoFocus={
+                        isFinePointer ? undefined : (e) => e.preventDefault()
+                      }
+                    >
+                      <Command shouldFilter={true}>
+                        <CommandInput
+                          placeholder="Search or enter location..."
+                          value={draftLocation}
+                          onValueChange={setDraftLocation}
+                        />
+                        <CommandList
+                          ref={locationListRef}
+                          className="overscroll-contain"
+                        >
+                          <CommandEmpty>
+                            {trimmedSearch ? "" : "No locations found"}
+                          </CommandEmpty>
+                          {trimmedSearch &&
+                            !uniqueLocations.some(
+                              (loc) =>
+                                loc.toLowerCase() ===
+                                trimmedSearch.toLowerCase(),
+                            ) && (
+                              <CommandGroup heading="Custom">
+                                <CommandItem
+                                  value={trimmedSearch}
+                                  className="text-foreground data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground"
+                                  onSelect={() => {
+                                    field.onChange(trimmedSearch);
+                                    setDraftLocation(trimmedSearch);
+                                    setLocationOpen(false);
+                                  }}
+                                >
+                                  <MapPin className="mr-2 h-4 w-4" />
+                                  Use &quot;{trimmedSearch}&quot;
+                                </CommandItem>
+                              </CommandGroup>
+                            )}
+                          <CommandGroup heading="Suggestions">
+                            {uniqueLocations.map((loc) => (
+                              <CommandItem
+                                key={loc}
+                                value={loc}
+                                className="text-foreground data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground"
+                                onSelect={() => {
+                                  field.onChange(loc);
+                                  setDraftLocation(loc);
+                                  setLocationOpen(false);
+                                }}
+                              >
+                                <MapPin className="mr-2 h-4 w-4" />
+                                {loc}
+                                <Check
+                                  className={cn(
+                                    "ml-auto h-4 w-4",
+                                    field.value === loc
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              />
             </div>
 
             {/* Notes */}
