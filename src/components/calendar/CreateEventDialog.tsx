@@ -58,6 +58,7 @@ import { parseEventInput } from "@/lib/utils/nlp-event";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useCalendarStore } from "@/lib/calendar/store";
+import { useLocationHistoryStore } from "@/lib/store/locationHistoryStore";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
 
 const CreateEventSchema = z.object({
@@ -179,15 +180,19 @@ export function CreateEventDialog({
     useState<HTMLDivElement | null>(null);
   const locationListRef = useRef<HTMLDivElement>(null);
   const events = useCalendarStore((state) => state.events);
+  const locationHistory = useLocationHistoryStore((state) => state.locations);
+  const addLocation = useLocationHistoryStore((state) => state.addLocation);
   const safeStartDate = coerceValidDate(startDate);
   const safeEndDate = coerceValidDate(endDate);
 
   const uniqueLocations = useMemo(() => {
-    const history = events
+    const fromEvents = events
       .map((e) => e.location)
       .filter((loc): loc is string => Boolean(loc && loc.trim() !== ""));
-    return Array.from(new Set([...PREDEFINED_LOCATIONS, ...history]));
-  }, [events]);
+    return Array.from(
+      new Set([...PREDEFINED_LOCATIONS, ...locationHistory, ...fromEvents]),
+    );
+  }, [events, locationHistory]);
 
   const { register, handleSubmit, control, setValue, reset } =
     useForm<CreateEventFormData>({
@@ -287,6 +292,7 @@ export function CreateEventDialog({
   const onFormSubmit = (data: CreateEventFormData) => {
     if (!safeStartDate || !safeEndDate) return;
     trigger("thud");
+    if (data.location) addLocation(data.location);
     if (event) {
       updateEvent.mutate({
         id: event.id,

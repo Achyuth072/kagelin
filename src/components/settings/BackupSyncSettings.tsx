@@ -38,6 +38,7 @@ import {
   type WebDAVCredentials,
 } from "@/lib/backup/webdav-sync";
 import { mockStore } from "@/lib/mock/mock-store";
+import { useLocationHistoryStore } from "@/lib/store/locationHistoryStore";
 import type { BackupData } from "@/lib/backup/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/AuthProvider";
@@ -50,6 +51,7 @@ export function BackupSyncSettings() {
   const { trigger } = useHaptic();
   const { isGuestMode } = useAuth();
   const { exportData, importData } = useAccountData();
+  const locationHistory = useLocationHistoryStore((state) => state.locations);
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -116,6 +118,7 @@ export function BackupSyncSettings() {
         habit_entries: mockStore.getHabitEntries(),
         focus_logs: mockStore.getFocusLogs(),
         events: mockStore.getEvents(),
+        location_history: locationHistory,
       };
 
       const blob = await createBackupZip(backupData);
@@ -162,6 +165,9 @@ export function BackupSyncSettings() {
       // Replace the guest snapshot in one write so large restores do not
       // repeatedly stringify an ever-growing payload.
       mockStore.restoreBackup(backupData);
+      useLocationHistoryStore.setState({
+        locations: backupData.location_history ?? [],
+      });
 
       // Mark guest-data queries stale so all visible screens refresh from the
       // updated local snapshot without a full page reload.
@@ -263,6 +269,7 @@ export function BackupSyncSettings() {
         habit_entries: mockStore.getHabitEntries(),
         focus_logs: mockStore.getFocusLogs(),
         events: mockStore.getEvents(),
+        location_history: locationHistory,
       };
 
       const result = await uploadWebDavBackup(
@@ -304,6 +311,9 @@ export function BackupSyncSettings() {
       if (result.success && result.data) {
         // Apply the downloaded snapshot atomically.
         mockStore.restoreBackup(result.data);
+        useLocationHistoryStore.setState({
+          locations: result.data.location_history ?? [],
+        });
 
         await invalidateGuestDataQueries();
 

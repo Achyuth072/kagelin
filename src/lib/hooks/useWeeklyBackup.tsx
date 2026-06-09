@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/AuthProvider";
 import { createBackupZip, downloadBackup } from "@/lib/backup/export-import";
 import { mockStore } from "@/lib/mock/mock-store";
+import { useLocationHistoryStore } from "@/lib/store/locationHistoryStore";
 import type { BackupData } from "@/lib/backup/types";
 
 const STORAGE_KEY = "kanso_last_backup_date";
@@ -18,6 +19,7 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 export function useWeeklyBackup() {
   const { isGuestMode } = useAuth();
   const hasPrompted = useRef(false);
+  const locationHistory = useLocationHistoryStore((state) => state.locations);
 
   // Memoize lastBackupDate to prevent creating new Date object on every render
   const lastBackupDate = useMemo(() => {
@@ -47,6 +49,7 @@ export function useWeeklyBackup() {
         habit_entries: mockStore.getHabitEntries(),
         focus_logs: mockStore.getFocusLogs(),
         events: mockStore.getEvents(),
+        location_history: locationHistory,
       };
 
       const blob = await createBackupZip(backupData);
@@ -60,7 +63,7 @@ export function useWeeklyBackup() {
       console.error("Backup failed:", error);
       toast.error("Failed to create backup");
     }
-  }, [updateLastBackupDate]);
+  }, [updateLastBackupDate, locationHistory]);
 
   useEffect(() => {
     // Only for guest mode
