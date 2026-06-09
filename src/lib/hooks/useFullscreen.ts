@@ -36,8 +36,8 @@ function isFullscreenEnabled(): boolean {
 
 async function requestFullscreenApi(element: Element): Promise<void> {
   const el = element as ElementWithVendorPrefixes;
-  if (element.requestFullscreen) {
-    await element.requestFullscreen();
+  if (el.requestFullscreen) {
+    await el.requestFullscreen();
   } else if (el.webkitRequestFullscreen) {
     await el.webkitRequestFullscreen();
   }
@@ -45,8 +45,8 @@ async function requestFullscreenApi(element: Element): Promise<void> {
 
 async function exitFullscreenApi(): Promise<void> {
   const doc = document as DocumentWithVendorPrefixes;
-  if (document.exitFullscreen) {
-    await document.exitFullscreen();
+  if (doc.exitFullscreen) {
+    await doc.exitFullscreen();
   } else if (doc.webkitExitFullscreen) {
     await doc.webkitExitFullscreen();
   }

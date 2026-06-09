@@ -51,7 +51,6 @@ export function BackupSyncSettings() {
   const { trigger } = useHaptic();
   const { isGuestMode } = useAuth();
   const { exportData, importData } = useAccountData();
-  const locationHistory = useLocationHistoryStore((state) => state.locations);
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -118,7 +117,7 @@ export function BackupSyncSettings() {
         habit_entries: mockStore.getHabitEntries(),
         focus_logs: mockStore.getFocusLogs(),
         events: mockStore.getEvents(),
-        location_history: locationHistory,
+        location_history: useLocationHistoryStore.getState().locations,
       };
 
       const blob = await createBackupZip(backupData);
@@ -269,7 +268,7 @@ export function BackupSyncSettings() {
         habit_entries: mockStore.getHabitEntries(),
         focus_logs: mockStore.getFocusLogs(),
         events: mockStore.getEvents(),
-        location_history: locationHistory,
+        location_history: useLocationHistoryStore.getState().locations,
       };
 
       const result = await uploadWebDavBackup(

@@ -19,7 +19,6 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 export function useWeeklyBackup() {
   const { isGuestMode } = useAuth();
   const hasPrompted = useRef(false);
-  const locationHistory = useLocationHistoryStore((state) => state.locations);
 
   // Memoize lastBackupDate to prevent creating new Date object on every render
   const lastBackupDate = useMemo(() => {
@@ -49,7 +48,7 @@ export function useWeeklyBackup() {
         habit_entries: mockStore.getHabitEntries(),
         focus_logs: mockStore.getFocusLogs(),
         events: mockStore.getEvents(),
-        location_history: locationHistory,
+        location_history: useLocationHistoryStore.getState().locations,
       };
 
       const blob = await createBackupZip(backupData);
@@ -63,7 +62,7 @@ export function useWeeklyBackup() {
       console.error("Backup failed:", error);
       toast.error("Failed to create backup");
     }
-  }, [updateLastBackupDate, locationHistory]);
+  }, [updateLastBackupDate]);
 
   useEffect(() => {
     // Only for guest mode

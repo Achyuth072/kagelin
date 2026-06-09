@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
+import { useScrollIsolation } from "@/lib/hooks/useScrollIsolation";
 import { Calendar } from "@/components/ui/calendar";
 import { SegmentedTimePicker } from "@/components/ui/segmented-time-picker";
 import { Button } from "@/components/ui/button";
@@ -40,30 +41,7 @@ export function DateTimeWizard({
     setTempDate(date);
   }, [date]);
 
-  // Radix Dialog uses `react-remove-scroll` and vaul Drawer uses similar
-  // document-level handlers that call preventDefault() on wheel/touchmove
-  // events fired outside their allowed scroll shards. Because PopoverContent
-  // portals to document.body (outside the Dialog/Drawer DOM), our scroll
-  // area's events would otherwise bubble to those handlers and get killed —
-  // breaking scroll wheel on desktop and touch drag on mobile.
-  //
-  // Both libraries register their handlers in the bubble phase (passive:false,
-  // capture:false). Stopping propagation at the element level prevents the
-  // event from ever reaching the document handler, while native scroll on
-  // this overflow-y-auto element still happens.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const stop = (e: Event) => e.stopPropagation();
-    el.addEventListener("wheel", stop);
-    el.addEventListener("touchmove", stop);
-    el.addEventListener("touchstart", stop);
-    return () => {
-      el.removeEventListener("wheel", stop);
-      el.removeEventListener("touchmove", stop);
-      el.removeEventListener("touchstart", stop);
-    };
-  }, []);
+  useScrollIsolation(scrollRef);
 
   const handleDateSelect = (newDate: Date | undefined) => {
     if (!newDate) {

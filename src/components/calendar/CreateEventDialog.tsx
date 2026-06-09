@@ -59,6 +59,7 @@ import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useLocationHistoryStore } from "@/lib/store/locationHistoryStore";
+import { useScrollIsolation } from "@/lib/hooks/useScrollIsolation";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
 
 const CreateEventSchema = z.object({
@@ -238,19 +239,7 @@ export function CreateEventDialog({
     }
   }, [title, setValue, event]);
 
-  useEffect(() => {
-    const el = locationListRef.current;
-    if (!el) return;
-    const stop = (e: Event) => e.stopPropagation();
-    el.addEventListener("wheel", stop);
-    el.addEventListener("touchmove", stop);
-    el.addEventListener("touchstart", stop);
-    return () => {
-      el.removeEventListener("wheel", stop);
-      el.removeEventListener("touchmove", stop);
-      el.removeEventListener("touchstart", stop);
-    };
-  }, []);
+  useScrollIsolation(locationListRef, locationOpen);
 
   // Reset/Initialize form when dialog opens
   useEffect(() => {
@@ -323,6 +312,8 @@ export function CreateEventDialog({
     deleteEvent.mutate(event.id);
     onOpenChange(false);
   };
+
+  const trimmedSearch = locationSearch.trim();
 
   const rowCls =
     "flex items-center gap-3 px-3 py-2.5 rounded-md mx-2 transition-seijaku-fast";
@@ -569,27 +560,26 @@ export function CreateEventDialog({
                       className="overscroll-contain"
                     >
                       <CommandEmpty>
-                        {locationSearch.trim() ? "" : "No locations found"}
+                        {trimmedSearch ? "" : "No locations found"}
                       </CommandEmpty>
-                      {locationSearch.trim() &&
+                      {trimmedSearch &&
                         !uniqueLocations.some(
                           (loc) =>
-                            loc.toLowerCase() ===
-                            locationSearch.trim().toLowerCase(),
+                            loc.toLowerCase() === trimmedSearch.toLowerCase(),
                         ) && (
                           <CommandGroup heading="Custom">
                             <CommandItem
-                              value={locationSearch.trim()}
+                              value={trimmedSearch}
                               className="text-foreground data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground"
                               onSelect={() => {
-                                setValue("location", locationSearch.trim(), {
+                                setValue("location", trimmedSearch, {
                                   shouldValidate: true,
                                 });
                                 setLocationOpen(false);
                               }}
                             >
                               <MapPin className="mr-2 h-4 w-4" />
-                              Use &quot;{locationSearch.trim()}&quot;
+                              Use &quot;{trimmedSearch}&quot;
                             </CommandItem>
                           </CommandGroup>
                         )}

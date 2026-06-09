@@ -18,17 +18,17 @@ export const useLocationHistoryStore = create<LocationHistoryState>()(
         const trimmed = location.trim();
         if (!trimmed) return;
         set((state) => {
-          const existing = state.locations.find(
-            (l) => l.toLowerCase() === trimmed.toLowerCase(),
-          );
-          const canonical = existing ?? trimmed;
-          const deduped = [
-            canonical,
-            ...state.locations.filter(
-              (l) => l.toLowerCase() !== trimmed.toLowerCase(),
-            ),
-          ].slice(0, MAX_HISTORY);
-          return { locations: deduped };
+          const lower = trimmed.toLowerCase();
+          let canonical = trimmed;
+          const rest: string[] = [];
+          for (const l of state.locations) {
+            if (l.toLowerCase() === lower) {
+              canonical = l;
+            } else {
+              rest.push(l);
+            }
+          }
+          return { locations: [canonical, ...rest].slice(0, MAX_HISTORY) };
         });
       },
     }),
