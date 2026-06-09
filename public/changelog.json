@@ -116,6 +116,37 @@
     }
   },
   {
+    "version": "1.20.0",
+    "date": "2026-05-20",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Global 12hr/24hr/system time format preference applied across all time displays",
+        "Strict and flexible task recurrence modes",
+        "Loop Habit Tracker (uhabits) partial data import",
+        "Account data controls for registered users: export, import, and delete cloud data",
+        "Changelog popup with channel-based filtering, version scoping, and prefetch cache"
+      ],
+      "Improved": [
+        "Drag-and-drop with cross-group mutations and auto-scroll in list and board views",
+        "Smart filter system unified and performance-optimised",
+        "Sort and group transitions wrapped in useTransition for smoother rendering",
+        "Notification and changelog layering, touch targets, and accessibility",
+        "Mobile UX polish across task, habit, and settings screens"
+      ],
+      "Fixed": [
+        "Task DnD grouping and metadata sync issues",
+        "Desktop list DnD layout shift resolved with stricter container boundaries",
+        "Mobile/desktop list view spacing and border overlap",
+        "Ghost task list alignment, completed-state opacity, and mobile filter chip spacing",
+        "z-index stack cleaned up with a clear 70/60/50/40 hierarchy",
+        "Toast centering on mobile",
+        "Android keyboard not appearing on time picker",
+        "Stale cached version showing after a fresh deploy"
+      ]
+    }
+  },
+  {
     "version": "1.19.2-preview.21",
     "date": "2026-05-20",
     "channel": "preview",
@@ -359,6 +390,378 @@
     "sections": {
       "Added": [
         "Global 12hr/24hr time format preference"
+      ]
+    }
+  },
+  {
+    "version": "1.19.0",
+    "date": "2026-05-04",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Task Continuity: completed tasks stay visible in the list until the end of the day"
+      ],
+      "Improved": [
+        "React Compiler integrated for optimised component rendering",
+        "Core data lookups refactored to Map-based O(1) complexity",
+        "High-frequency state isolated into dedicated Zustand micro-stores",
+        "Replaced Framer Motion with native CSS animations in dialogs",
+        "Mobile swipe physics recalibrated for a tighter, hardware-native feel"
+      ],
+      "Fixed": [
+        "Redundant project tags removed across all views for a cleaner UI"
+      ]
+    }
+  },
+  {
+    "version": "1.18.0",
+    "date": "2026-04-20",
+    "channel": "stable",
+    "sections": {
+      "Improved": [
+        "Calendar Elastic Grid for better viewport stability and refined mobile navigation",
+        "Header heights standardised and matte sidebar styling refined",
+        "Project management flows and task view responsiveness improved",
+        "Push notification delivery telemetry added"
+      ],
+      "Fixed": [
+        "Push notification ghost deliveries resolved",
+        "CI validation regressions resolved and code formatting standardised"
+      ]
+    }
+  },
+  {
+    "version": "1.17.0",
+    "date": "2026-04-13",
+    "channel": "stable",
+    "sections": {
+      "Improved": [
+        "Unified Matte & Ink aesthetic: shadows and semantic colours replaced with a consistent design system",
+        "Sidebar and modal rendering optimised for zero-jank, zero-lag interactions",
+        "Global icon weight standardised and accent colour applied consistently",
+        "Tactile gestures, haptic signatures, and hold-to-drag unified across components",
+        "Guest mode resilience hardened with accessibility compliance improvements"
+      ],
+      "Fixed": [
+        "Desktop list layout clipping resolved"
+      ]
+    }
+  },
+  {
+    "version": "1.16.2",
+    "date": "2026-04-07",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Date validation loosened to handle ISO strings with timezone offsets",
+        "Task date picker now shows visual error feedback and surfaces hidden validation errors",
+        "Silent form invalidation resolved in task create and edit views"
+      ]
+    }
+  },
+  {
+    "version": "1.16.1",
+    "date": "2026-04-07",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Build failure from Uint8Array to BlobPart type mismatch resolved"
+      ]
+    }
+  },
+  {
+    "version": "1.16.0",
+    "date": "2026-04-07",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Mobile toast positioning and layout responsiveness",
+        "Habit heatmap scrolling during sidebar transitions stabilised",
+        "Activity trend visualisation centred; DrumPicker interactions refined",
+        "Settings page layout and typography standardised for visual hierarchy",
+        "All remaining lint errors resolved; full CI validation achieved"
+      ]
+    }
+  },
+  {
+    "version": "1.15.2",
+    "date": "2026-04-04",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Next.js 16 WebDAV route type constraints resolved"
+      ]
+    }
+  },
+  {
+    "version": "1.15.1",
+    "date": "2026-04-04",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Invalid route exports removed to fix Vercel build failure"
+      ]
+    }
+  },
+  {
+    "version": "1.15.0",
+    "date": "2026-04-04",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "WebDAV backup sync for guest users",
+        "Universal ZIP backup and restore",
+        "Weekly backup reminders in guest mode"
+      ],
+      "Improved": [
+        "Mobile settings revamped with a cleaner matte tab layout",
+        "Settings page sticky footer now docks correctly"
+      ]
+    }
+  },
+  {
+    "version": "1.14.3",
+    "date": "2026-04-02",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Data clearing dialog for secure account reset"
+      ],
+      "Fixed": [
+        "Calendar query cache isolated for guest mode to prevent cross-account leaks",
+        "Sidebar alignment and mobile icon sizing corrected"
+      ]
+    }
+  },
+  {
+    "version": "1.14.2",
+    "date": "2026-04-01",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Mobile sidebar footer settings padding adjusted for improved ergonomics"
+      ]
+    }
+  },
+  {
+    "version": "1.14.1",
+    "date": "2026-04-01",
+    "channel": "stable",
+    "sections": {
+      "Improved": [
+        "Mobile sidebar width locked to 62vw for stability on small screens",
+        "Task view selector height, sidebar touch targets, and navigation trigger styles standardised"
+      ]
+    }
+  },
+  {
+    "version": "1.14.0",
+    "date": "2026-04-01",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Command menu action synchronisation and global keyboard shortcuts"
+      ],
+      "Improved": [
+        "Habits, Stats, and Settings views with fluid responsiveness across screen sizes",
+        "Calendar view selector spacing refined for mobile viewports",
+        "Kanban board shadows and header alignment polished",
+        "Guest mode experience and analytics dashboard harmonised",
+        "Sidebar animations and responsive triggers stabilised"
+      ]
+    }
+  },
+  {
+    "version": "1.13.1",
+    "date": "2026-03-31",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Event overflow popover collision padding prevents clipping at viewport edges",
+        "Day view date labels use a concise format on mobile to prevent overflow",
+        "Month view limits to 2 visible events when an overflow indicator is present"
+      ]
+    }
+  },
+  {
+    "version": "1.13.0",
+    "date": "2026-03-30",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Enhanced visual differentiation between tasks and events across all calendar views",
+        "Unified project management menus: dropdowns on desktop, drawers on mobile",
+        "Location metadata on events with external map navigation links",
+        "High-contrast visual indicators for active task filter and sort states",
+        "Full interactivity for monthly event overflow popups"
+      ],
+      "Fixed": [
+        "Android focus issue preventing automatic keyboard popup in dialogs",
+        "Layout responsiveness on wide-aspect mobile devices",
+        "Calendar FAB behaviour stabilised; month view and grid line opacities harmonised",
+        "Project deletion visibility hardened across all views",
+        "Guest mode and settings pages aligned with brand styling",
+        "Sidebar touch interaction persistence on mobile",
+        "Metadata tag styling standardised for priorities and subtasks"
+      ]
+    }
+  },
+  {
+    "version": "1.12.0",
+    "date": "2026-03-27",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Multi-provider calendar sync: Google, Outlook, and CalDAV with bidirectional sync",
+        "Natural language event creation",
+        "Universal .ics (RFC 5545) import and export"
+      ],
+      "Improved": [
+        "Calendar UI standardised with matte aesthetic and Seijaku haptics",
+        "Offline-first event persistence with background synchronisation"
+      ]
+    }
+  },
+  {
+    "version": "1.11.0",
+    "date": "2026-03-25",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Project deletion now prompts with a multi-choice confirmation: move tasks to inbox, delete, or archive",
+        "Unarchive projects directly from the sidebar"
+      ],
+      "Improved": [
+        "Activity heatmap migrated to react-activity-calendar for better React integration and smaller bundle",
+        "Heatmap cell hover tooltips show date, focus hours, and task count",
+        "Tactile feedback standardised across 40+ components via a semantic haptic registry",
+        "Subtask list in task items loads lazily to reduce initial render weight in dense views",
+        "Global sync indicator rewritten with a ref-based state machine for smoother feedback",
+        "Mobile project management rebuilt with a responsive drawer pattern"
+      ],
+      "Fixed": [
+        "Kanban and list DnD ghost states corrected for visual parity and mobile touch isolation"
+      ]
+    }
+  },
+  {
+    "version": "1.10.0",
+    "date": "2026-02-13",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Comprehensive offline-first architecture with a branded offline fallback page",
+        "Magic Link as the primary authentication method",
+        "Guest-to-cloud data migration with multi-pass ID mapping and subtask relationship preservation"
+      ],
+      "Improved": [
+        "Service worker navigation timeout patched to prevent TCP stall on slow connections",
+        "Auth middleware hardened to prevent redirect loops during offline state"
+      ],
+      "Fixed": [
+        "Animation race condition in task edit view"
+      ]
+    }
+  },
+  {
+    "version": "1.9.0",
+    "date": "2026-01-29",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Habits tracking with a per-habit activity heatmap and dedicated Create/Edit views",
+        "Habit repetitions surfaced in the stats dashboard",
+        "Backend push notification infrastructure with pg_cron scheduled delivery",
+        "Smart timer notifications and auto-transition scheduling",
+        "Split View (master-detail) layout for desktop task browsing",
+        "Real-time current-time indicator with auto-scroll in the calendar",
+        "Horizontal auto-scroll for the mobile week view",
+        "Play button directly on grid and board task cards",
+        "Monthly calendar overflow popover for viewing hidden events"
+      ],
+      "Improved": [
+        "Mobile haptics standardised to Seijaku specs across all interactions",
+        "TaskItem decomposed and focus UI alignment refined",
+        "PWA safe area hardening and visual polish",
+        "Kanban column layout rebuilt with a hybrid stack model"
+      ],
+      "Fixed": [
+        "Duplicate timer completion toasts on app resume",
+        "PiP state not persisting across navigation",
+        "CurrentTimeIndicator clipping and alignment across breakpoints",
+        "Calendar column transparency and vertical clipping in TimeGrid"
+      ]
+    }
+  },
+  {
+    "version": "1.8.0",
+    "date": "2026-01-13",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Grid and Kanban views for tasks",
+        "Android swipe-back navigation for all modal sheets",
+        "Zen Funnel view hierarchy with refined Kanban card layout"
+      ],
+      "Improved": [
+        "Zen-Modernist design system evolved: Kanso Blue accent, refined borders, and updated physics",
+        "Command Menu aesthetics updated for better contrast hierarchy",
+        "Mobile header layout, haptics, and keyboard robustness hardened",
+        "Adaptive height for mobile drawers to prevent keyboard layout breakage",
+        "Performance via memoization across core components",
+        "Typography and bundle size optimised with dynamic imports"
+      ],
+      "Fixed": [
+        "Calendar header scroll leak in TimeGrid and ScheduleView",
+        "Mobile scrolling cutoff in Grid and Kanban views",
+        "Mobile tooltip and list scrolling regressions"
+      ]
+    }
+  },
+  {
+    "version": "1.5.0",
+    "date": "2026-01-07",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Focus Mode soundscapes, picture-in-picture timer refinements, and mobile optimisations"
+      ],
+      "Improved": [
+        "Zen-Modernist physics applied across all interactive surfaces",
+        "Real-time productivity stats with responsive haptic feedback",
+        "Matte & Ink visual polish and UI state consistency",
+        "Guest Mode indicator redesigned as a responsive floating banner"
+      ],
+      "Fixed": [
+        "Mobile calendar layout regression and viewport cut-off"
+      ]
+    }
+  },
+  {
+    "version": "1.0.0",
+    "date": "2026-01-06",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Task management with list, calendar, and kanban views",
+        "Recurring task support",
+        "Advanced scheduling and deep Focus Mode integration",
+        "Custom task sorting and drag-and-drop reordering",
+        "Keyboard-first navigation with global shortcuts",
+        "Command menu for search and quick actions",
+        "Completed tasks history logbook",
+        "Universal share target for quick task capture",
+        "Universal haptic feedback system with a global toggle in settings",
+        "Guest Mode with full localStorage isolation and data controls",
+        "High-fidelity drum picker for time selection",
+        "Collapsible sidebar with project management",
+        "Zod validation schemas and hardened row-level security policies"
+      ],
+      "Improved": [
+        "Statistics page with activity heatmap and focus-trend hours view",
+        "Settings redesigned with a tabbed sidebar layout",
+        "Mobile PWA with native swipe gestures",
+        "Canvas Minimal design system applied across focus, stats, and calendar views"
       ]
     }
   }
