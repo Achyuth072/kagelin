@@ -24,33 +24,26 @@ interface ElementWithVendorPrefixes extends Element {
   webkitRequestFullscreen?: () => Promise<void>;
 }
 
-function getFullscreenElement(): Element | null {
-  const doc = document as DocumentWithVendorPrefixes;
-  return document.fullscreenElement ?? doc.webkitFullscreenElement ?? null;
-}
-
-function isFullscreenEnabled(): boolean {
-  const doc = document as DocumentWithVendorPrefixes;
-  return document.fullscreenEnabled ?? doc.webkitFullscreenEnabled ?? false;
-}
-
-async function requestFullscreenApi(element: Element): Promise<void> {
-  const el = element as ElementWithVendorPrefixes;
-  if (el.requestFullscreen) {
-    await el.requestFullscreen();
-  } else if (el.webkitRequestFullscreen) {
-    await el.webkitRequestFullscreen();
-  }
-}
-
-async function exitFullscreenApi(): Promise<void> {
-  const doc = document as DocumentWithVendorPrefixes;
-  if (doc.exitFullscreen) {
-    await doc.exitFullscreen();
-  } else if (doc.webkitExitFullscreen) {
-    await doc.webkitExitFullscreen();
-  }
-}
+const fsApi = {
+  element: () =>
+    document.fullscreenElement ??
+    (document as DocumentWithVendorPrefixes).webkitFullscreenElement ??
+    null,
+  enabled: () =>
+    document.fullscreenEnabled ??
+    (document as DocumentWithVendorPrefixes).webkitFullscreenEnabled ??
+    false,
+  request: (el: Element) =>
+    (
+      (el as ElementWithVendorPrefixes).requestFullscreen ??
+      (el as ElementWithVendorPrefixes).webkitRequestFullscreen
+    )?.call(el),
+  exit: () =>
+    (
+      document.exitFullscreen ??
+      (document as DocumentWithVendorPrefixes).webkitExitFullscreen
+    )?.call(document),
+};
 
 export function useFullscreen() {
   const setIsFullscreen = useUiStore((state) => state.setIsFullscreen);
@@ -59,7 +52,7 @@ export function useFullscreen() {
   // Sync fullscreenchange events to uiStore (standard + webkit)
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!getFullscreenElement());
+      setIsFullscreen(!!fsApi.element());
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
@@ -79,9 +72,9 @@ export function useFullscreen() {
     // isFullscreen && isPiPActive and calls closePiP(), which correctly
     // handles both Chrome Document PiP and Firefox popup fallback.
 
-    if (isFullscreenEnabled()) {
+    if (fsApi.enabled()) {
       try {
-        await requestFullscreenApi(document.documentElement);
+        await fsApi.request(document.documentElement);
       } catch {
         // Fullscreen API can throw (e.g., iOS Safari restricts to <video>)
         // or fail silently. Fall through — set isFullscreen true for CSS layout.
@@ -93,8 +86,8 @@ export function useFullscreen() {
   }, [setIsFullscreen]);
 
   const exitFullscreen = useCallback(() => {
-    if (getFullscreenElement()) {
-      exitFullscreenApi();
+    if (fsApi.element()) {
+      fsApi.exit();
     }
     setIsFullscreen(false);
     // Do NOT auto-restore PiP per D-09
