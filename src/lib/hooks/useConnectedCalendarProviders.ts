@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/components/AuthProvider";
 
 async function fetchConnectedProviders(): Promise<string[]> {
   const res = await fetch("/api/calendar/connected");
@@ -11,12 +10,9 @@ async function fetchConnectedProviders(): Promise<string[]> {
 }
 
 export function useConnectedCalendarProviders() {
-  const { isGuestMode } = useAuth();
-
   return useQuery({
     queryKey: ["calendar-connected-providers"],
     queryFn: fetchConnectedProviders,
-    enabled: !isGuestMode,
     staleTime: 30_000,
   });
 }

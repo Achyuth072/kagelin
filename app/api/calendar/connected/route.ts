@@ -1,10 +1,16 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/api/require-user";
 
 export async function GET() {
-  const { user, error: authError } = await requireUser();
-  if (authError) return authError;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ providers: [] });
+  }
 
   // Service-role: calendar_oauth_tokens has no client-facing RLS policies
   const admin = createAdminClient();
