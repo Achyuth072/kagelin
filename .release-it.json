@@ -16,7 +16,7 @@
   },
   "hooks": {
     "after:bump": [
-      "node scripts/generate-changelog.cjs ${version} v${latestVersion} --channel=preview",
+      "node scripts/generate-changelog.cjs ${version} --channel=preview",
       "git add public/changelog.json public/changelog-version.json"
     ]
   }

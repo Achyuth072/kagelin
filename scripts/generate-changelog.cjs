@@ -1,76 +1,32 @@
 #!/usr/bin/env node
-const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-
-// ---------------------------------------------------------------------------
-// Shared bucketing logic — exported so tests can import without running CLI.
-// ---------------------------------------------------------------------------
-const BUCKET = {
-  feat: "Added",
-  fix: "Fixed",
-  perf: "Improved",
-  refactor: "Improved",
-};
-const SKIP = new Set([
-  "chore",
-  "docs",
-  "test",
-  "ci",
-  "build",
-  "style",
-  "revert",
-]);
-// Captures:  type  scope?  !?  :  message
-const CC = /^(\w+)(?:\([^)]*\))?!?:\s*(.+)$/;
-
-function bucketCommits(headings) {
-  const sections = { Added: [], Improved: [], Fixed: [] };
-  for (const heading of headings) {
-    const m = heading.match(CC);
-    if (!m) continue;
-    const [, type, message] = m;
-    if (SKIP.has(type)) continue;
-    const bucket = BUCKET[type];
-    if (!bucket) continue;
-    sections[bucket].push(message.trim());
-  }
-  return Object.fromEntries(
-    Object.entries(sections).filter(([, v]) => v.length > 0),
-  );
-}
 
 function channelFromVersion(v) {
   return /-(preview|rc)/.test(v) ? "preview" : "stable";
 }
 
-module.exports = { bucketCommits, channelFromVersion };
+module.exports = { channelFromVersion };
 
 // ---------------------------------------------------------------------------
 // CLI entry — only runs when called directly, not when require()'d by tests.
+//
+// Promotes the hand-written "Unreleased" entry in public/changelog.json to a
+// real version. Release notes are written by hand as part of normal PRs, not
+// generated from commit messages — see .planning/CHANGELOG-AUTOMATION.md.
 // ---------------------------------------------------------------------------
 if (require.main === module) {
-  // Named flag: --channel=preview | --channel=stable (optional; auto-detected otherwise)
   const channelArg = process.argv.find((a) =>
     /^--channel=(preview|stable)$/.test(a),
   );
   const positional = process.argv.slice(2).filter((a) => !a.startsWith("--"));
-  const [
-    version,
-    since,
-    until = "HEAD",
-    date = new Date().toISOString().split("T")[0],
-  ] = positional;
+  const [version, date = new Date().toISOString().split("T")[0]] = positional;
 
-  if (!version || !since) {
+  if (!version) {
     console.error(
-      "Usage: generate-changelog.cjs <version> <since> [until] [date] [--channel=preview|stable]",
+      "Usage: generate-changelog.cjs <version> [date] [--channel=preview|stable]",
     );
     console.error("  <version>           Version string (e.g. 1.22.0)");
-    console.error(
-      "  <since>             Git ref to start log from (e.g. <prev-tag>)",
-    );
-    console.error("  [until]             End ref (defaults to HEAD)");
     console.error("  [date]              Date (defaults to today)");
     console.error(
       "  [--channel=stable]  Override channel (auto-detected from version if omitted)",
@@ -83,60 +39,29 @@ if (require.main === module) {
     : channelFromVersion(version);
 
   const changelogFile = path.join(process.cwd(), "public", "changelog.json");
-  fs.mkdirSync(path.dirname(changelogFile), { recursive: true });
+  const entries = JSON.parse(fs.readFileSync(changelogFile, "utf-8"));
 
-  function exec(cmd) {
-    return execSync(cmd, {
-      encoding: "utf-8",
-      maxBuffer: 10 * 1024 * 1024,
-    }).trim();
-  }
-
-  // Single git log call — get all subjects at once instead of one exec per hash.
-  const rawSubjects = exec(
-    `git log "${since}..${until}" --format="%s" --no-merges` +
-      ` -- . ":(exclude).planning" ":(exclude).agent" ":(exclude).gemini" ":(exclude).husky" ":(exclude).vercelignore"`,
-  );
-  const headings = rawSubjects
-    .split("\n")
-    .filter(Boolean)
-    .filter(
-      (s) => !/^chore: .*release/.test(s) && !/^merge: sync release/.test(s),
+  const unreleased = entries.find((e) => e.version === "Unreleased");
+  if (!unreleased) {
+    console.error(
+      'No "Unreleased" entry found in public/changelog.json — add one with the notes for this release before bumping.',
     );
-
-  const sections = bucketCommits(headings);
-
-  if (resolvedChannel === "stable") {
-    console.log(
-      "\n╔══════════════════════════════════════════════════════╗\n" +
-        "║  STABLE RELEASE — hand-polish the sections below     ║\n" +
-        "║  in public/changelog.json before tagging the release ║\n" +
-        "╚══════════════════════════════════════════════════════╝\n",
-    );
+    process.exit(1);
   }
 
-  let entries = [];
-  if (fs.existsSync(changelogFile)) {
-    try {
-      entries = JSON.parse(fs.readFileSync(changelogFile, "utf-8"));
-    } catch {
-      console.warn(
-        "Warning: could not parse existing changelog.json, starting fresh",
-      );
-    }
-  }
+  unreleased.version = version;
+  unreleased.date = date;
+  unreleased.channel = resolvedChannel;
 
-  entries.unshift({ version, date, channel: resolvedChannel, sections });
-
-  // Cap entries to keep the file bounded — old entries live in git history.
-  const MAX_ENTRIES = 50;
-  if (entries.length > MAX_ENTRIES) {
-    entries = entries.slice(0, MAX_ENTRIES);
-  }
+  entries.unshift({
+    version: "Unreleased",
+    date: null,
+    channel: "preview",
+    sections: {},
+  });
 
   fs.writeFileSync(changelogFile, JSON.stringify(entries, null, 2) + "\n");
 
-  // Write a lightweight version file for pollers (avoids fetching the full changelog).
   const versionFile = path.join(
     process.cwd(),
     "public",
@@ -147,7 +72,5 @@ if (require.main === module) {
     JSON.stringify({ version, channel: resolvedChannel }) + "\n",
   );
 
-  console.log(
-    `✓ Added ${resolvedChannel} entry for v${version} (${headings.length} commits → ${Object.values(sections).flat().length} visible items)`,
-  );
+  console.log(`✓ Promoted Unreleased → ${resolvedChannel} v${version}`);
 }

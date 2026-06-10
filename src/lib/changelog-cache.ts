@@ -12,7 +12,7 @@ export const SECTION_ORDER: ChangelogSectionKey[] = [
 
 export interface ChangelogEntry {
   version: string;
-  date: string;
+  date: string | null;
   channel: "preview" | "stable";
   sections: Partial<Record<ChangelogSectionKey, string[]>>;
 }
@@ -89,9 +89,10 @@ export function filterForDisplay(
   channel: "preview" | "stable" = RELEASE_CHANNEL,
 ): ChangelogEntry[] {
   const isStable = channel === "stable";
+  const released = entries.filter((e) => e.version !== "Unreleased");
   const visible = isStable
-    ? entries.filter((e) => e.channel === "stable")
-    : entries;
+    ? released.filter((e) => e.channel === "stable")
+    : released;
   return visible.slice(0, isStable ? 3 : 15);
 }
 
@@ -101,6 +102,7 @@ export function latestVisibleVersion(
 ): string | null {
   const isStable = channel === "stable";
   for (const e of entries) {
+    if (e.version === "Unreleased") continue;
     if (!isStable || e.channel === "stable") return e.version;
   }
   return null;
