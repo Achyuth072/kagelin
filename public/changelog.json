@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.22.0-preview.7",
+    "date": "2026-06-10",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "fall back to request origin for calendar OAuth redirect"
+      ]
+    }
+  },
+  {
     "version": "1.22.0-preview.6",
     "date": "2026-06-10",
     "channel": "preview",
@@ -635,25 +645,6 @@
       ],
       "Fixed": [
         "Kanban and list DnD ghost states corrected for visual parity and mobile touch isolation"
-      ]
-    }
-  },
-  {
-    "version": "1.10.0",
-    "date": "2026-02-13",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Comprehensive offline-first architecture with a branded offline fallback page",
-        "Magic Link as the primary authentication method",
-        "Guest-to-cloud data migration with multi-pass ID mapping and subtask relationship preservation"
-      ],
-      "Improved": [
-        "Service worker navigation timeout patched to prevent TCP stall on slow connections",
-        "Auth middleware hardened to prevent redirect loops during offline state"
-      ],
-      "Fixed": [
-        "Animation race condition in task edit view"
       ]
     }
   }
