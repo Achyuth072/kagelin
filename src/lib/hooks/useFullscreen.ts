@@ -2,32 +2,67 @@
 
 import { useCallback, useEffect } from "react";
 import { useUiStore } from "@/lib/store/uiStore";
-import { useHaptic } from "@/lib/hooks/useHaptic";
 
 /**
  * Fullscreen Hook
  *
- * Manages fullscreen mode using the Browser Fullscreen API (desktop)
- * and CSS layout mode (mobile). Implements mutual exclusion with PiP per D-09.
+ * Manages fullscreen mode using the Browser Fullscreen API (desktop + Android)
+ * and CSS layout mode (iOS fallback). Implements mutual exclusion with PiP per D-09.
  *
- * Desktop: uses document.documentElement.requestFullscreen() / document.exitFullscreen()
- * Mobile: sets isFullscreen flag in uiStore for custom full-page CSS layout
+ * Desktop/Android: uses document.documentElement.requestFullscreen() / document.exitFullscreen()
+ * iOS: gracefully fails API call, falls back to CSS layout via isFullscreen flag
+ * Safari: uses webkit vendor prefixes alongside standard API
  */
+
+interface DocumentWithVendorPrefixes extends Document {
+  webkitFullscreenElement?: Element | null;
+  webkitFullscreenEnabled?: boolean;
+  webkitExitFullscreen?: () => Promise<void>;
+}
+
+interface ElementWithVendorPrefixes extends Element {
+  webkitRequestFullscreen?: () => Promise<void>;
+}
+
+const fsApi = {
+  element: () =>
+    document.fullscreenElement ??
+    (document as DocumentWithVendorPrefixes).webkitFullscreenElement ??
+    null,
+  enabled: () =>
+    document.fullscreenEnabled ??
+    (document as DocumentWithVendorPrefixes).webkitFullscreenEnabled ??
+    false,
+  request: (el: Element) =>
+    (
+      (el as ElementWithVendorPrefixes).requestFullscreen ??
+      (el as ElementWithVendorPrefixes).webkitRequestFullscreen
+    )?.call(el),
+  exit: () =>
+    (
+      document.exitFullscreen ??
+      (document as DocumentWithVendorPrefixes).webkitExitFullscreen
+    )?.call(document),
+};
 
 export function useFullscreen() {
   const setIsFullscreen = useUiStore((state) => state.setIsFullscreen);
   const isFullscreen = useUiStore((state) => state.isFullscreen);
-  const { isPhone } = useHaptic();
 
-  // Sync fullscreenchange events to uiStore
+  // Sync fullscreenchange events to uiStore (standard + webkit)
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      setIsFullscreen(!!fsApi.element());
     };
 
     document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange,
+      );
     };
   }, [setIsFullscreen]);
 
@@ -37,22 +72,22 @@ export function useFullscreen() {
     // isFullscreen && isPiPActive and calls closePiP(), which correctly
     // handles both Chrome Document PiP and Firefox popup fallback.
 
-    if (!isPhone && document.fullscreenEnabled) {
+    if (fsApi.enabled()) {
       try {
-        await document.documentElement.requestFullscreen();
+        await fsApi.request(document.documentElement);
       } catch {
-        // Fullscreen API can throw if user gesture is missing
-        // Fall through — set isFullscreen true for CSS layout anyway
+        // Fullscreen API can throw (e.g., iOS Safari restricts to <video>)
+        // or fail silently. Fall through — set isFullscreen true for CSS layout.
       }
     }
 
-    // Set flag for both desktop and mobile (mobile uses this for CSS layout)
+    // Set flag for all platforms (mobile uses this for CSS layout fallback)
     setIsFullscreen(true);
-  }, [isPhone, setIsFullscreen]);
+  }, [setIsFullscreen]);
 
   const exitFullscreen = useCallback(() => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
+    if (fsApi.element()) {
+      fsApi.exit();
     }
     setIsFullscreen(false);
     // Do NOT auto-restore PiP per D-09

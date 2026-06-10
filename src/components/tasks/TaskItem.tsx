@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { useDeleteTask, useToggleTask } from "@/lib/hooks/useTaskMutations";
+import { useTimerStore } from "@/lib/store/timerStore";
 import {
   DraggableAttributes,
   DraggableSyntheticListeners,
@@ -72,6 +73,7 @@ function TaskItemBase({
     e.stopPropagation();
     triggerHaptic?.("thud");
     setActiveTaskId?.(task.id);
+    useTimerStore.getState().requestFocusStart();
     router.push("/focus");
   };
 

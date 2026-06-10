@@ -20,7 +20,7 @@ export function Toaster() {
       duration={isChangelogOpen ? Infinity : 4000}
       style={{ zIndex: 70 }}
       mobileOffset={{ left: 16, right: 16, bottom: 16 }}
-      swipeDirections={["bottom"]}
+      swipeDirections={["left", "right", "bottom"]}
       toastOptions={{
         unstyled: true,
         style: {

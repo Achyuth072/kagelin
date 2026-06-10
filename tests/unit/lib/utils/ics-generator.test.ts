@@ -29,7 +29,7 @@ describe("ICS Generator", () => {
     const ics = generateICS(mockEvents);
 
     expect(ics).toContain("BEGIN:VCALENDAR");
-    expect(ics).toContain("PRODID:-//Kanso//Calendar//EN");
+    expect(ics).toContain("PRODID:-//Kagelin//Calendar//EN");
     expect(ics).toContain("SUMMARY:Test Event");
     expect(ics).toContain("DESCRIPTION:Test Description");
     expect(ics).toContain("LOCATION:Test Location");

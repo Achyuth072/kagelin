@@ -5,7 +5,7 @@ export interface ProjectColor {
 
 export const PROJECT_COLORS: ProjectColor[] = [
   { name: "Sumi Ink", hex: "#1A1A1A" },
-  { name: "Kanso Blue", hex: "#4B6CB7" },
+  { name: "Kagelin Blue", hex: "#4B6CB7" },
   { name: "Muted Sage", hex: "#839B82" },
   { name: "Plum", hex: "#8B6B80" },
   { name: "Terracotta", hex: "#B56C5A" },
@@ -30,4 +30,4 @@ export const PROJECT_COLORS: ProjectColor[] = [
   { name: "Silver", hex: "#A8A8A0" },
 ];
 
-export const DEFAULT_PROJECT_COLOR = "#4B6CB7"; // Kanso Blue
+export const DEFAULT_PROJECT_COLOR = "#4B6CB7"; // Kagelin Blue

@@ -38,6 +38,7 @@ import {
   type WebDAVCredentials,
 } from "@/lib/backup/webdav-sync";
 import { mockStore } from "@/lib/mock/mock-store";
+import { useLocationHistoryStore } from "@/lib/store/locationHistoryStore";
 import type { BackupData } from "@/lib/backup/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/AuthProvider";
@@ -116,6 +117,7 @@ export function BackupSyncSettings() {
         habit_entries: mockStore.getHabitEntries(),
         focus_logs: mockStore.getFocusLogs(),
         events: mockStore.getEvents(),
+        location_history: useLocationHistoryStore.getState().locations,
       };
 
       const blob = await createBackupZip(backupData);
@@ -162,6 +164,9 @@ export function BackupSyncSettings() {
       // Replace the guest snapshot in one write so large restores do not
       // repeatedly stringify an ever-growing payload.
       mockStore.restoreBackup(backupData);
+      useLocationHistoryStore.setState({
+        locations: backupData.location_history ?? [],
+      });
 
       // Mark guest-data queries stale so all visible screens refresh from the
       // updated local snapshot without a full page reload.
@@ -263,6 +268,7 @@ export function BackupSyncSettings() {
         habit_entries: mockStore.getHabitEntries(),
         focus_logs: mockStore.getFocusLogs(),
         events: mockStore.getEvents(),
+        location_history: useLocationHistoryStore.getState().locations,
       };
 
       const result = await uploadWebDavBackup(
@@ -304,6 +310,9 @@ export function BackupSyncSettings() {
       if (result.success && result.data) {
         // Apply the downloaded snapshot atomically.
         mockStore.restoreBackup(result.data);
+        useLocationHistoryStore.setState({
+          locations: result.data.location_history ?? [],
+        });
 
         await invalidateGuestDataQueries();
 
@@ -574,7 +583,7 @@ export function BackupSyncSettings() {
               <p className="text-[10px] text-muted-foreground/50 text-center leading-relaxed">
                 Your credentials are stored locally via{" "}
                 <span className="font-mono">localStorage</span> and never sent
-                to Kanso servers.
+                to Kagelin servers.
               </p>
             </CardContent>
           </Card>

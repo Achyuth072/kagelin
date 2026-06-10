@@ -55,7 +55,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
             Import Data
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
-            Choose a file to migrate your data to Kanso.
+            Choose a file to migrate your data to Kagelin.
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 

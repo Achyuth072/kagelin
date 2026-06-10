@@ -174,7 +174,7 @@ export function NotificationSettings() {
       await sendPushNotification({
         endpoint: activeSubscription.endpoint,
         title: "Test Notification",
-        body: "This is a server-sent test notification from Kanso",
+        body: "This is a server-sent test notification from Kagelin",
         data: { type: "test" },
       });
       toast.success("Test notification sent to this device");

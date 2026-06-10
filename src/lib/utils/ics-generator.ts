@@ -6,7 +6,7 @@ import type { CalendarEventUI } from "@/lib/types/calendar-event";
  */
 export function generateICS(
   events: CalendarEventUI[],
-  calendarName: string = "Kanso Calendar",
+  calendarName: string = "Kagelin Calendar",
 ): string {
   const calendar: ICalCalendar = ical({
     name: calendarName,
@@ -14,7 +14,7 @@ export function generateICS(
 
   // Set Product ID
   calendar.prodId({
-    company: "Kanso",
+    company: "Kagelin",
     product: "Calendar",
     language: "EN",
   });

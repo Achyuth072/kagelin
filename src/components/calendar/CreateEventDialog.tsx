@@ -3,8 +3,8 @@
 "use no memo";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useMemo } from "react";
-import { useForm, useWatch, useFormState } from "react-hook-form";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useForm, useWatch, useFormState, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format, isValid } from "date-fns";
@@ -12,10 +12,13 @@ import {
   Calendar,
   Clock,
   MapPin,
+  AlignLeft,
+  Sun,
   Trash2,
   Check,
   Send,
   Save,
+  X,
 } from "lucide-react";
 import {
   Command,
@@ -33,15 +36,17 @@ import {
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { DateTimeWizard } from "@/components/ui/date-time-wizard";
 import {
   useCreateCalendarEvent,
@@ -53,6 +58,8 @@ import { parseEventInput } from "@/lib/utils/nlp-event";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useCalendarStore } from "@/lib/calendar/store";
+import { useLocationHistoryStore } from "@/lib/store/locationHistoryStore";
+import { useScrollIsolation } from "@/lib/hooks/useScrollIsolation";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
 
 const CreateEventSchema = z.object({
@@ -82,20 +89,61 @@ interface CreateEventDialogProps {
 }
 
 function coerceValidDate(value: unknown): Date | undefined {
-  if (value instanceof Date) {
-    return isValid(value) ? value : undefined;
-  }
-
+  if (value instanceof Date) return isValid(value) ? value : undefined;
   if (typeof value === "string" || typeof value === "number") {
     const parsed = new Date(value);
     return isValid(parsed) ? parsed : undefined;
   }
-
   return undefined;
 }
 
 function getDefaultEndDate(start: Date) {
   return new Date(start.getTime() + 3600000);
+}
+
+// Wraps a disabled button with a cursor-not-allowed span and a tooltip explaining
+// why recurring events are read-only.
+function RecurringTooltip({
+  isRecurring,
+  children,
+}: {
+  isRecurring: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={isRecurring ? "cursor-not-allowed" : undefined}>
+          {children}
+        </span>
+      </TooltipTrigger>
+      {isRecurring && (
+        <TooltipContent side="top">
+          Recurring events can only be edited in the source calendar
+        </TooltipContent>
+      )}
+    </Tooltip>
+  );
+}
+
+// Fixed-width icon cell — keeps text columns aligned across all rows.
+function IconCell({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "w-5 shrink-0 flex items-start justify-center pt-[3px]",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function CreateEventDialog({
@@ -128,16 +176,24 @@ export function CreateEventDialog({
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
+  const [draftLocation, setDraftLocation] = useState("");
+  const [locationPortalEl, setLocationPortalEl] =
+    useState<HTMLDivElement | null>(null);
+  const locationListRef = useRef<HTMLDivElement>(null);
   const events = useCalendarStore((state) => state.events);
+  const locationHistory = useLocationHistoryStore((state) => state.locations);
+  const addLocation = useLocationHistoryStore((state) => state.addLocation);
   const safeStartDate = coerceValidDate(startDate);
   const safeEndDate = coerceValidDate(endDate);
 
   const uniqueLocations = useMemo(() => {
-    const history = events
+    const fromEvents = events
       .map((e) => e.location)
       .filter((loc): loc is string => Boolean(loc && loc.trim() !== ""));
-    return Array.from(new Set([...PREDEFINED_LOCATIONS, ...history]));
-  }, [events]);
+    return Array.from(
+      new Set([...PREDEFINED_LOCATIONS, ...locationHistory, ...fromEvents]),
+    );
+  }, [events, locationHistory]);
 
   const { register, handleSubmit, control, setValue, reset } =
     useForm<CreateEventFormData>({
@@ -153,40 +209,36 @@ export function CreateEventDialog({
 
   const allDay = useWatch({ control, name: "all_day" });
   const title = useWatch({ control, name: "title" });
-  const locationValue = useWatch({ control, name: "location" });
   const { errors } = useFormState({ control });
 
   // Derive form validity from useWatch values instead of formState.isValid
   // or useFormState().isValid. Both formState and useFormState use RHF's Proxy
   // for property-access subscriptions, which React Compiler memoizes away —
   // isValid never triggers a re-render. useWatch is an explicit hook subscription
-  // that React Compiler tracks correctly (proven by allDay toggle, title, location
-  // all updating). Same pattern as watch() → useWatch() fix in FocusSettingsDialog.
+  // that React Compiler tracks correctly.
   const isFormValid =
     !!title && title.trim().length >= 1 && title.length <= 200;
+
+  const isRecurring = !!event?.metadata?.recurring_series_id;
 
   // NLP parsing on title change (only when creating)
   useEffect(() => {
     if (event || !title || title.length < 3) return;
-
-    // Use title as NLP input
     const parsed = parseEventInput(title);
     const start = parsed.start;
     const end = parsed.end;
     const isAllDay = parsed.allDay;
-
     if (start) {
       const timer = setTimeout(() => {
         setStartDate(start);
-        // Update end date to 1 hour after or use parsed end
         setEndDate(coerceValidDate(end) ?? getDefaultEndDate(start));
-        if (isAllDay) {
-          setValue("all_day", true);
-        }
+        if (isAllDay) setValue("all_day", true);
       }, 0);
       return () => clearTimeout(timer);
     }
   }, [title, setValue, event]);
+
+  useScrollIsolation(locationListRef, locationOpen);
 
   // Reset/Initialize form when dialog opens
   useEffect(() => {
@@ -204,16 +256,13 @@ export function CreateEventDialog({
             location: event.location || "",
             all_day: event.allDay || false,
           });
+          setDraftLocation(event.location || "");
         } else {
           const now = normalizedDefaultDate ?? new Date();
           setStartDate(now);
           setEndDate(getDefaultEndDate(now));
-          reset({
-            title: "",
-            description: "",
-            location: "",
-            all_day: false,
-          });
+          reset({ title: "", description: "", location: "", all_day: false });
+          setDraftLocation("");
         }
       }, 0);
       return () => clearTimeout(timer);
@@ -230,9 +279,8 @@ export function CreateEventDialog({
 
   const onFormSubmit = (data: CreateEventFormData) => {
     if (!safeStartDate || !safeEndDate) return;
-
-    trigger("thud"); // THUD haptic for save commitment
-
+    trigger("thud");
+    if (data.location) addLocation(data.location);
     if (event) {
       updateEvent.mutate({
         id: event.id,
@@ -253,7 +301,6 @@ export function CreateEventDialog({
         all_day: data.all_day,
       });
     }
-
     trigger("success");
     onOpenChange(false);
   };
@@ -265,78 +312,110 @@ export function CreateEventDialog({
     onOpenChange(false);
   };
 
+  const trimmedSearch = draftLocation.trim();
+
+  const rowCls =
+    "flex items-center gap-3 px-3 py-2.5 rounded-md mx-2 transition-seijaku-fast";
+  const hoverCls = isRecurring ? "" : "hover:bg-muted/40";
+
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden">
+      <ResponsiveDialogContent className="sm:max-w-[425px] p-0">
         <form
           onSubmit={handleSubmit(onFormSubmit) as any}
           className="flex flex-col h-auto max-h-[85dvh]"
         >
-          <ResponsiveDialogHeader className="px-4 pt-6 shrink-0">
-            <ResponsiveDialogTitle className="type-h2">
+          {/* a11y title — hidden visually; the native input is the visual title */}
+          <ResponsiveDialogHeader className="sr-only">
+            <ResponsiveDialogTitle>
               {event ? "Edit Event" : "Create Event"}
             </ResponsiveDialogTitle>
-            <ResponsiveDialogDescription className="sr-only">
-              Add a new event to your calendar
+            <ResponsiveDialogDescription>
+              {event
+                ? "Edit this calendar event"
+                : "Add a new event to your calendar"}
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-4">
-            {/* Title with NLP */}
-            <div className="grid gap-2">
-              <Label htmlFor="event-title" className="sr-only">
-                Event Title
-              </Label>
-              <Input
-                {...register("title")}
-                id="event-title"
-                placeholder="Lunch at 1pm tomorrow..."
-                autoFocus={isFinePointer}
-                className={cn(
-                  "text-lg font-medium",
-                  errors.title && "border-destructive",
-                )}
-              />
-              {errors.title && (
-                <p className="text-xs text-destructive">
-                  {errors.title.message}
-                </p>
+          {/* Title — native input, bottom border only, no box */}
+          <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
+            <input
+              {...register("title")}
+              id="event-title"
+              placeholder="Add title"
+              autoFocus={isFinePointer && !isRecurring}
+              disabled={isRecurring}
+              className={cn(
+                "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none",
+                "placeholder:text-muted-foreground/50 text-foreground",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                errors.title && "placeholder:text-destructive/60",
               )}
-            </div>
+            />
+            {errors.title && (
+              <p className="text-xs text-destructive mt-1">
+                {errors.title.message}
+              </p>
+            )}
+          </div>
 
-            {/* All Day Toggle */}
-            <div className="flex items-center justify-between">
-              <Label htmlFor="all-day" className="text-sm font-medium">
-                All day
-              </Label>
+          {/* Portal target for location dropdown. Sits inside the Dialog DOM so
+              react-remove-scroll allows wheel events, but outside overflow-y-auto
+              so the fixed-position popup never clips at the scroll container edge. */}
+          <div ref={setLocationPortalEl} />
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto min-h-0 py-2">
+            {/* All-day row */}
+            <div className={cn(rowCls, hoverCls)}>
+              <IconCell>
+                <Sun
+                  className="h-4 w-4 text-muted-foreground"
+                  strokeWidth={2.25}
+                />
+              </IconCell>
+              <span className="text-sm flex-1 text-foreground">All day</span>
               <Switch
                 id="all-day"
                 checked={allDay}
+                disabled={isRecurring}
                 onCheckedChange={(checked) => {
-                  trigger("toggle"); // TOGGLE haptic
+                  trigger("toggle");
                   setValue("all_day", checked);
                 }}
               />
             </div>
 
-            {/* Start Date/Time */}
-            <div className="grid gap-2">
-              <Label className="text-sm font-medium">Start</Label>
+            {/* Time block — left accent groups start + end */}
+            <div
+              className={cn(
+                "mx-2 my-1 pl-3 border-l-2 border-brand/40 rounded-r-md",
+                !isRecurring && "hover:bg-muted/40 transition-seijaku-fast",
+              )}
+            >
+              {/* Start */}
               <Popover open={showStartPicker} onOpenChange={setShowStartPicker}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="justify-start text-left font-normal shadow-none border-border/80"
-                    onClick={() => trigger("tick")}
+                  <button
                     type="button"
+                    disabled={isRecurring}
+                    onClick={() => trigger("tick")}
+                    className="w-full flex items-center gap-3 px-2 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Calendar className="mr-2 h-4 w-4" />
-                    {safeStartDate
-                      ? allDay
-                        ? format(safeStartDate, "PPP")
-                        : format(safeStartDate, "PPP p")
-                      : "Pick a date"}
-                  </Button>
+                    <IconCell>
+                      <Calendar
+                        className="h-4 w-4 text-muted-foreground"
+                        strokeWidth={2.25}
+                      />
+                    </IconCell>
+                    <span className="text-sm text-foreground">
+                      {safeStartDate
+                        ? allDay
+                          ? format(safeStartDate, "PPP")
+                          : format(safeStartDate, "PPP p")
+                        : "Pick a date"}
+                    </span>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent
                   className="w-auto p-0 overflow-hidden"
@@ -356,26 +435,30 @@ export function CreateEventDialog({
                   />
                 </PopoverContent>
               </Popover>
-            </div>
 
-            {/* End Date/Time */}
-            <div className="grid gap-2">
-              <Label className="text-sm font-medium">End</Label>
+              {/* End */}
               <Popover open={showEndPicker} onOpenChange={setShowEndPicker}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="justify-start text-left font-normal shadow-none border-border/80"
-                    onClick={() => trigger("tick")}
+                  <button
                     type="button"
+                    disabled={isRecurring}
+                    onClick={() => trigger("tick")}
+                    className="w-full flex items-center gap-3 px-2 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Clock className="mr-2 h-4 w-4" />
-                    {safeEndDate
-                      ? allDay
-                        ? format(safeEndDate, "PPP")
-                        : format(safeEndDate, "PPP p")
-                      : "Pick an end time"}
-                  </Button>
+                    <IconCell>
+                      <Clock
+                        className="h-4 w-4 text-muted-foreground"
+                        strokeWidth={2.25}
+                      />
+                    </IconCell>
+                    <span className="text-sm text-muted-foreground">
+                      {safeEndDate
+                        ? allDay
+                          ? format(safeEndDate, "PPP")
+                          : format(safeEndDate, "PPP p")
+                        : "Pick an end time"}
+                    </span>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent
                   className="w-auto p-0 overflow-hidden"
@@ -397,133 +480,215 @@ export function CreateEventDialog({
               </Popover>
             </div>
 
-            {/* Location */}
-            <div className="grid gap-2">
-              <Label htmlFor="event-location" className="text-sm font-medium">
-                Location
-              </Label>
-              <Popover
-                open={locationOpen}
-                onOpenChange={setLocationOpen}
-                modal={false}
-              >
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={locationOpen}
-                    className="w-full justify-start text-left font-normal shadow-none border-border/80"
-                  >
-                    <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
-                    {locationValue || (
-                      <span className="text-muted-foreground">
-                        Search location...
-                      </span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="p-0 w-[var(--radix-popover-trigger-width)] z-[60] data-[state=closed]:animate-none data-[state=closed]:duration-0 data-[state=closed]:fade-out-0"
-                  align="start"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onInteractOutside={(e) => e.preventDefault()}
-                >
-                  <Command shouldFilter={true}>
-                    <CommandInput
-                      placeholder="Search or enter location..."
-                      value={locationValue || ""}
-                      onValueChange={(val) => {
-                        setValue("location", val, { shouldValidate: true });
-                      }}
-                    />
-                    <CommandList>
-                      <CommandEmpty>
-                        Press enter or click outside to use custom location
-                      </CommandEmpty>
-                      <CommandGroup heading="Suggestions">
-                        {uniqueLocations.map((loc) => (
-                          <CommandItem
-                            key={loc}
-                            value={loc}
-                            className="text-foreground data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground"
-                            onSelect={() => {
-                              setValue("location", loc, {
-                                shouldValidate: true,
-                              });
-                              setLocationOpen(false);
-                            }}
-                          >
-                            <MapPin className="mr-2 h-4 w-4" />
-                            {loc}
-                            <Check
-                              className={cn(
-                                "ml-auto h-4 w-4",
-                                locationValue === loc
-                                  ? "opacity-100"
-                                  : "opacity-0",
-                              )}
-                            />
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
+            <div className="h-1" />
 
-            {/* Description */}
-            <div className="grid gap-2">
-              <Label
-                htmlFor="event-description"
-                className="text-sm font-medium"
-              >
-                Notes
-              </Label>
-              <Textarea
-                {...register("description")}
-                id="event-description"
-                placeholder="Add notes..."
-                rows={3}
+            {/* Location */}
+            <div className="mx-2">
+              <Controller
+                name="location"
+                control={control}
+                render={({ field }) => (
+                  <Popover
+                    open={locationOpen}
+                    onOpenChange={setLocationOpen}
+                    modal={false}
+                  >
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        role="combobox"
+                        aria-expanded={locationOpen}
+                        aria-controls="location-combobox-list"
+                        disabled={isRecurring}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast",
+                          hoverCls,
+                          "w-full text-left",
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
+                        )}
+                      >
+                        <IconCell>
+                          <MapPin
+                            className="h-4 w-4 text-muted-foreground"
+                            strokeWidth={2.25}
+                          />
+                        </IconCell>
+                        <span
+                          className={cn(
+                            "text-sm flex-1 truncate",
+                            field.value
+                              ? "text-foreground"
+                              : "text-muted-foreground/60",
+                          )}
+                        >
+                          {field.value || "Add location"}
+                        </span>
+                        {field.value && (
+                          <span
+                            className="ml-auto mr-1 flex-shrink-0 rounded p-0.5 text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-seijaku-fast cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              field.onChange("");
+                              setDraftLocation("");
+                            }}
+                            tabIndex={-1}
+                            aria-label="Clear location"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </span>
+                        )}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      id="location-combobox-list"
+                      className="p-0 w-[var(--radix-popover-trigger-width)]"
+                      align="start"
+                      container={locationPortalEl}
+                      onOpenAutoFocus={
+                        isFinePointer ? undefined : (e) => e.preventDefault()
+                      }
+                    >
+                      <Command shouldFilter={true}>
+                        <CommandInput
+                          placeholder="Search or enter location..."
+                          value={draftLocation}
+                          onValueChange={setDraftLocation}
+                        />
+                        <CommandList
+                          ref={locationListRef}
+                          className="overscroll-contain"
+                        >
+                          <CommandEmpty>
+                            {trimmedSearch ? "" : "No locations found"}
+                          </CommandEmpty>
+                          {trimmedSearch &&
+                            !uniqueLocations.some(
+                              (loc) =>
+                                loc.toLowerCase() ===
+                                trimmedSearch.toLowerCase(),
+                            ) && (
+                              <CommandGroup heading="Custom">
+                                <CommandItem
+                                  value={trimmedSearch}
+                                  className="text-foreground data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground"
+                                  onSelect={() => {
+                                    field.onChange(trimmedSearch);
+                                    setDraftLocation(trimmedSearch);
+                                    setLocationOpen(false);
+                                  }}
+                                >
+                                  <MapPin className="mr-2 h-4 w-4" />
+                                  Use &quot;{trimmedSearch}&quot;
+                                </CommandItem>
+                              </CommandGroup>
+                            )}
+                          <CommandGroup heading="Suggestions">
+                            {uniqueLocations.map((loc) => (
+                              <CommandItem
+                                key={loc}
+                                value={loc}
+                                className="text-foreground data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground"
+                                onSelect={() => {
+                                  field.onChange(loc);
+                                  setDraftLocation(loc);
+                                  setLocationOpen(false);
+                                }}
+                              >
+                                <MapPin className="mr-2 h-4 w-4" />
+                                {loc}
+                                <Check
+                                  className={cn(
+                                    "ml-auto h-4 w-4",
+                                    field.value === loc
+                                      ? "opacity-100"
+                                      : "opacity-0",
+                                  )}
+                                />
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
               />
             </div>
+
+            {/* Notes */}
+            <div className="mx-2">
+              <div
+                className={cn(
+                  "flex items-start gap-3 px-3 py-2.5 rounded-md transition-colors",
+                  !isRecurring && "hover:bg-muted/40",
+                )}
+              >
+                <IconCell className="pt-[5px]">
+                  <AlignLeft
+                    className="h-4 w-4 text-muted-foreground"
+                    strokeWidth={2.25}
+                  />
+                </IconCell>
+                <textarea
+                  {...register("description")}
+                  id="event-description"
+                  placeholder="Add notes"
+                  rows={2}
+                  disabled={isRecurring}
+                  style={{ fontSize: "0.875rem" }}
+                  className={cn(
+                    "flex-1 bg-transparent border-0 outline-none resize-none",
+                    "text-sm text-foreground placeholder:text-muted-foreground/50",
+                    "leading-normal p-0 min-h-[48px]",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="h-1" />
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 flex justify-end items-center gap-3 p-4 border-t pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background">
+          <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background sm:rounded-b-lg">
             {event && (
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="h-10 w-10 p-0 [&_svg]:!size-5 rounded-lg transition-seijaku-fast"
-                onClick={handleDelete}
-                disabled={deleteEvent.isPending}
-                title="Delete event"
-              >
-                <Trash2 strokeWidth={2.25} />
-              </Button>
+              <RecurringTooltip isRecurring={isRecurring}>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
+                  onClick={handleDelete}
+                  disabled={isRecurring || deleteEvent.isPending}
+                  aria-label="Delete event"
+                >
+                  <Trash2 strokeWidth={2.25} />
+                </Button>
+              </RecurringTooltip>
             )}
-            <Button
-              type="submit"
-              size="sm"
-              disabled={
-                !isFormValid ||
-                !safeStartDate ||
-                !safeEndDate ||
-                createEvent.isPending ||
-                updateEvent.isPending
-              }
-              className="h-10 w-10 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
-              title={event ? "Save changes" : "Create event"}
-              aria-label={event ? "Save changes" : "Create event"}
-            >
-              {event ? (
-                <Save className="h-5 w-5 stroke-[2.25px]" />
-              ) : (
-                <Send className="h-5 w-5 stroke-[2.25px]" />
-              )}
-            </Button>
+            <div className="flex-1" />
+            <RecurringTooltip isRecurring={isRecurring}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={
+                  isRecurring ||
+                  !isFormValid ||
+                  !safeStartDate ||
+                  !safeEndDate ||
+                  createEvent.isPending ||
+                  updateEvent.isPending
+                }
+                className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
+                aria-label={event ? "Save changes" : "Create event"}
+              >
+                {event ? (
+                  <Save className="h-5 w-5 stroke-[2.25px]" />
+                ) : (
+                  <Send className="h-5 w-5 stroke-[2.25px]" />
+                )}
+              </Button>
+            </RecurringTooltip>
           </div>
         </form>
       </ResponsiveDialogContent>

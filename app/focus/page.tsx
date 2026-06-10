@@ -17,11 +17,12 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { Task } from "@/lib/types/task";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useTimerStore } from "@/lib/store/timerStore";
 import { usePiP } from "@/components/providers/PiPProvider";
 import { useFullscreen } from "@/lib/hooks/useFullscreen";
 import { Minimize2, Target, PictureInPicture2 } from "lucide-react";
-import { useFocusHistoryStore } from "@/lib/store/focusHistoryStore";
-import { useMemo, useEffect, useRef } from "react";
+import { useTodayFocusSessions } from "@/lib/hooks/useTodayFocusSessions";
+import { useEffect } from "react";
 
 const MODE_LABELS: Record<TimerMode, string> = {
   focus: "Focus",
@@ -44,23 +45,17 @@ export default function FocusPage() {
   const { trigger, isPhone } = useHaptic();
   const { isPiPSupported, isPiPActive, openPiP, closePiP } = usePiP();
   const { isFullscreen } = useFullscreen();
-  const { sessions } = useFocusHistoryStore();
-  const todaySessionsCount = useMemo(() => {
-    const today = new Date().toDateString();
-    return sessions.filter(
-      (s) => new Date(s.completedAt).toDateString() === today,
-    ).length;
-  }, [sessions]);
+  // Sourced from the server focus_logs so every device shows the same count.
+  const { data: todaySessionsCount = 0 } = useTodayFocusSessions();
 
-  // Auto-start when navigating from a task with activeTaskId set (e.g., play focus tap)
-  // Runs only once on mount — the ref prevents re-triggering on state changes
-  const hasAutoStarted = useRef(false);
+  // Auto-start only on an explicit "play focus" intent (set by the task play
+  // button), consumed once on mount. Plain navigation to /focus must never
+  // start a timer — opening a device faithfully mirrors the shared state.
   useEffect(() => {
-    if (!hasAutoStarted.current && state.activeTaskId && !state.isRunning) {
-      hasAutoStarted.current = true;
+    if (useTimerStore.getState().consumeFocusStart()) {
       start();
     }
-  }, [state.activeTaskId, state.isRunning, start]);
+  }, [start]);
 
   // Fetch active task if one is set
   useQuery({
@@ -274,7 +269,7 @@ export default function FocusPage() {
             </h2>
             <p className="text-muted-foreground max-w-[280px]">
               The timer is running in a floating window. You can browse other
-              pages in Kanso.
+              pages in Kagelin.
             </p>
             <Button
               variant="outline"

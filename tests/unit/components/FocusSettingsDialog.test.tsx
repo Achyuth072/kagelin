@@ -196,4 +196,34 @@ describe("FocusSettingsDialog", () => {
       expect(mockHapticTrigger).toHaveBeenCalledWith("thud");
     });
   });
+
+  it("validates form when dialog re-opens", async () => {
+    render(<FocusSettingsDialog />);
+
+    // Open dialog first time
+    await act(async () => {
+      fireEvent.click(screen.getByText("Adjust Settings"));
+    });
+
+    // Save button should be enabled (valid form)
+    const saveButton = screen.getByText("Save Changes");
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled();
+    });
+
+    // Close dialog
+    await act(async () => {
+      fireEvent.click(screen.getByText("Cancel"));
+    });
+
+    // Re-open dialog
+    await act(async () => {
+      fireEvent.click(screen.getByText("Adjust Settings"));
+    });
+
+    // Save button should still be enabled after re-opening (validation ran)
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled();
+    });
+  });
 });

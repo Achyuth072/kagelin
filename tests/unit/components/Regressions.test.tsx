@@ -90,7 +90,7 @@ describe("Regression Fixes", () => {
     const dayOne = dayOneText.closest("div.relative");
 
     expect(dayOne).toBeTruthy();
-    // Expect standard borders (/40) consistent with Ruthless Kanso design system
+    // Expect standard borders (/40) consistent with Ruthless Kagelin design system
     const grid = dayOne?.parentElement;
     expect(grid?.className).toContain("divide-border/40");
     expect(dayOne?.className).toContain("relative"); // Structural verification

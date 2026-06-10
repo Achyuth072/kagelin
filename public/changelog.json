@@ -1,372 +1,651 @@
 [
   {
+    "version": "1.22.0-preview.7",
+    "date": "2026-06-10",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "fall back to request origin for calendar OAuth redirect"
+      ]
+    }
+  },
+  {
+    "version": "1.22.0-preview.6",
+    "date": "2026-06-10",
+    "channel": "preview",
+    "sections": {}
+  },
+  {
+    "version": "1.22.0-preview.5",
+    "date": "2026-06-10",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "add lightweight version polling endpoint"
+      ]
+    }
+  },
+  {
+    "version": "1.22.0-preview.4",
+    "date": "2026-06-09",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Guest mode calendar connection status no longer errors",
+        "Focus settings dialog validation fixed to run on mount"
+      ],
+      "Improved": [
+        "Location combobox state synced with the form controller for consistency",
+        "Fullscreen vendor-prefix helpers consolidated into a single object"
+      ]
+    }
+  },
+  {
+    "version": "1.22.0-preview.3",
+    "date": "2026-06-09",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Location history now persists across event deletions",
+        "Scroll in the location suggestion list (wheel and touch were silently broken)",
+        "Spurious network errors on the calendar page in guest mode"
+      ]
+    }
+  },
+  {
+    "version": "1.22.0-preview.2",
+    "date": "2026-06-08",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Custom location quick-select item in dropdown when typed input matches no suggestion",
+        "Inline clear button for location combobox",
+        "Location dropdown trigger restyled with mobile alignment fixes",
+        "Notes textarea styling harmonised with other dialog inputs"
+      ]
+    }
+  },
+  {
+    "version": "1.22.0-preview.1",
+    "date": "2026-06-08",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Toast notifications dismiss on left and right swipe gestures",
+        "Detail panel close button repositioned to a header bar so it never overlaps content",
+        "Fullscreen toggle on mobile, works on Android and iOS Safari",
+        "Focus settings dialog re-runs validation every time it opens, not just once"
+      ]
+    }
+  },
+  {
+    "version": "1.22.0-preview.0",
+    "date": "2026-06-07",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Connect Google, Outlook, or CalDAV calendars with two-way sync and conflict resolution",
+        "Recurrence indicator in the focus task picker"
+      ],
+      "Improved": [
+        "Focus timer rebuilt on a deadline model for accurate cross-device sync",
+        "Recurring events are now read-only in the create/edit dialog (edit them at the source)",
+        "Calendar reconnects re-link and revive existing events automatically",
+        "Changelog grouped by release channel"
+      ],
+      "Fixed": [
+        "All-day event dates syncing incorrectly with Google Calendar",
+        "Deleted or edited events reappearing after a sync",
+        "Refresh tokens dropped on temporary provider errors",
+        "Settings save button staying greyed out after opening",
+        "Location dropdown clipping on mobile",
+        "Manage Calendars dialog opening behind the dropdown menu",
+        "AlertDialog appearing behind other overlays"
+      ]
+    }
+  },
+  {
     "version": "1.21.0",
     "date": "2026-05-28",
-    "commits": [
-      {
-        "hash": "7c70e63",
-        "heading": "Real-time Focus Orchestration, Calendar improvements and minor fixes",
-        "body": "- Cross-device timer sync via Postgres replication (postgres_changes)\n- FocusTaskPicker with per-project grouping, overdue/today tabs, guest mode\n- FullscreenToggle with reactive PiP close on fullscreen\n- Cancel session with rollback for abandoned sessions\n- Push notification re-validation on SW change and visibility change\n- FocusSettingsDialog polish: harmonized sections, ink & matte tokens\n- Calendar: centered now-indicator, mobile gesture fix, week view gated to desktop\n- Toast: content-driven width, mobile centering, removed overrides\n- Sidebar: centered collapsed icon backgrounds\n- Overlay z-index fixes (portaled overlays bumped to z-70)\n- Android keyboard fix for time picker\n- Guest mode: push toggle disabled, backend sync blocked"
-      }
-    ]
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Cross-device timer sync, so a focus session started on one device shows up live on another",
+        "Focus task picker with per-project grouping and overdue/today tabs",
+        "Fullscreen focus mode with picture-in-picture timer",
+        "Cancel session with full rollback for abandoned sessions",
+        "Push notifications re-validate automatically on service worker change or page focus"
+      ],
+      "Improved": [
+        "Focus settings dialog: harmonised sections and cleaner ink & matte styling",
+        "Calendar: centred now-indicator, smoother mobile gestures, week view limited to desktop",
+        "Toasts now size to their content and stay centred on mobile",
+        "Sidebar collapsed icon backgrounds centred reliably",
+        "Toasts suppressed while the changelog is open, hotkeys blocked behind modals"
+      ],
+      "Fixed": [
+        "Overlays stacking incorrectly (portalled overlays now sit at the correct z-index)",
+        "Time-picker keyboard not appearing on Android",
+        "Guest mode push toggle and backend sync now correctly blocked"
+      ]
+    }
   },
   {
     "version": "1.20.1",
     "date": "2026-05-20",
-    "commits": [
-      {
-        "hash": "release",
-        "heading": "refactor: simplify version check logic, enhance masonry layout responsiveness and optimise header layout",
-        "body": ""
-      }
-    ]
+    "channel": "stable",
+    "sections": {
+      "Improved": [
+        "Faster, more reliable update detection",
+        "More responsive masonry layout on varied screen widths",
+        "Tidier header layout"
+      ]
+    }
+  },
+  {
+    "version": "1.20.0",
+    "date": "2026-05-20",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Android keyboard not appearing on time picker"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.21",
     "date": "2026-05-20",
-    "commits": [
-      {
-        "hash": "b243918",
-        "heading": "fix: establish clean z-index stack — 70/60/50/40 hierarchy",
-        "body": ""
-      },
-      {
-        "hash": "8b94a1a",
-        "heading": "fix: lower notifications to z-40 — stay below dialogs (z-50), above header/FAB via DOM order",
-        "body": ""
-      },
-      {
-        "hash": "74d0d32",
-        "heading": "fix: future-proof z-index hierarchy — changelog z-60, notifications z-50",
-        "body": ""
-      },
-      {
-        "hash": "6171e4e",
-        "heading": "fix: lower notification z-index to 40 (below changelog z-50), add 44px touch targets to filter component",
-        "body": ""
-      },
-      {
-        "hash": "c11f341",
-        "heading": "fix: Add missing isChangelogOpen fields to UiState test mocks",
-        "body": "- Add isChangelogOpen/setChangelogOpen to mock objects in\n  BoardDndCrossGroup, DndDropRace, and DndLayoutShift tests\n- Fixes 3 pre-existing TS errors blocking ci:validate\n\nRefs: ba2f6c5"
-      },
-      {
-        "hash": "20b3e38",
-        "heading": "fix: Consolidate completed grayscale class to TaskItem root",
-        "body": "- Remove duplicate task-ink-completed-card from ListTaskCard\n  (class already exists on parent TaskItem root div)\n- Fix Prettier formatting in KanbanBoard.test.tsx"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Established a clean z-index stack (70/60/50/40 hierarchy)",
+        "Notifications now sit below dialogs and above header/FAB",
+        "Notification z-index lowered below the changelog, with larger touch targets on filter chips",
+        "Added missing isChangelogOpen fields to UiState test mocks",
+        "Consolidated the completed grayscale class onto TaskItem root"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.20",
     "date": "2026-05-19",
-    "commits": [
-      {
-        "hash": "b99ebaf",
-        "heading": "refactor: Wrap sort/group in useTransition and fix filter component layout",
-        "body": "- Wrap setSortBy/setGroupBy in useTransition to dim task list during re-render\n- Animate task list opacity (0.6 to 1) with transition-opacity duration-150\n- Swap filter container transition-all for transition-colors to prevent icon jump\n- Keep filter button at fixed h-8 w-8; remove conditional sizing\n- Apply flex-1 to filter only when both sort and group are active\n- Hide flex-1 spacer when filter uses flex-1 to prevent 50/50 width split\n- Remove transition-colors from filter icon for instant color change\n- Speed up container (100ms) and chips fade-in (150ms) transitions\n- Balance chips right padding (pr-4 to pr-1.5) to eliminate gap"
-      },
-      {
-        "hash": "ba2f6c5",
-        "heading": "fix: resolve mobile z-index issues for toast notifications and move 'What's New' indicator to mobile header",
-        "body": ""
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Wrap sort/group in useTransition and fix filter component layout"
+      ],
+      "Fixed": [
+        "Resolve mobile z-index issues for toast notifications and move 'What's New' indicator to mobile header"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.19",
     "date": "2026-05-17",
-    "commits": [
-      {
-        "hash": "3a1dc3f",
-        "heading": "refactor: unify notification styling by removing colored backgrounds and standardizing icon colors",
-        "body": ""
-      },
-      {
-        "hash": "ad83f48",
-        "heading": "fix: override w-fit width on mobile Sonner toasts to ensure proper centering",
-        "body": ""
-      },
-      {
-        "hash": "4b98f8d",
-        "heading": "fix(calendar): Unskip CreateEventDialog from React Compiler",
-        "body": "- Replace destructured formState.isValid with useWatch-derived value to bypass RHF Proxy subscription blocked by compiler\n- Add \"use no memo\" directive to opt component out of compiler memoization\n- Add useFormState for error display only (non-critical path)"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Unify notification styling by removing coloured backgrounds and standardising icon colours"
+      ],
+      "Fixed": [
+        "Override w-fit width on mobile Sonner toasts to ensure proper centring",
+        "Unskip CreateEventDialog from React Compiler"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.18",
     "date": "2026-05-16",
-    "commits": [
-      {
-        "hash": "67803ff",
-        "heading": "fix(53-16): align ghost task list layout, apply completed state opacity, and adjust mobile filter chip spacing",
-        "body": ""
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Align ghost task list layout, apply completed state opacity, and adjust mobile filter chip spacing"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.17",
     "date": "2026-05-15",
-    "commits": [
-      {
-        "hash": "6995e24",
-        "heading": "test: stabilize test suite and resolve css lint regressions",
-        "body": "- Hardened mocks for AppShell, MobileScrolling, and SwipeableTaskContent tests\n- Fixed DND position calculation mocks in DndPositionBug test\n- Reverted Sonner mobile toast from translate to transform to satisfy Tailwind linting\n- Suppressed tailwindcss/no-important warnings in globals.css for required overrides\n- Cleaned up unused variables and explicit any types in unit tests\n- Verified stabilization with 58 passing tests and green production build\n- Updated STATE.md with verification summary (260515-verify)"
-      },
-      {
-        "hash": "a2eae38",
-        "heading": "fix(53-15): resolve persistent snap-back and positioning bugs",
-        "body": "- Fix all-zero day_order monotonicity bug in computeReorderPairs\n- Implement deferred lock release in TaskBoard via useEffect\n- Gate CSS transitions on transform presence in sortable task cards\n- Patch stale closures and missing index guards in Board handleDragOver\n- Apply ink & matte brand styling to RecurrencePicker mode toggles\n- Archive comprehensive DnD audit and diagnostic docs to resolved folder"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Stabilise test suite and resolve CSS lint regressions"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.16",
     "date": "2026-05-13",
-    "commits": [
-      {
-        "hash": "0a45cf9",
-        "heading": "fix(changelog): invalidate cache when new version detected by poller, fix stale preview.13 showing after deploy",
-        "body": ""
-      }
-    ]
-  },
-  {
-    "version": "1.19.2-preview.15",
-    "date": "2026-05-13",
-    "commits": [
-      {
-        "hash": "da2ac2e",
-        "heading": "feat(53-14): add 24hr mode to SegmentedTimePicker + haptic feedback to quick-select buttons",
-        "body": "- Add timeFormat prop to SegmentedTimePicker with 12h/24h/system support\n- Hide AM/PM segment and display 0-23 hours in 24hr mode\n- Detect system locale via Intl.DateTimeFormat for 'system' option\n- Replace trigger(toggle) with trigger(tick) for Today/Tomorrow/Evening quick-select buttons"
-      },
-      {
-        "hash": "722a68a",
-        "heading": "feat(53-14): wire useTimeFormat into all display components + system locale",
-        "body": "- Add Intl.DateTimeFormat system locale detection to useTimeFormat hook\n- Add formatDateWithTime helper for combined date+time formatting\n- Replace all 8 hardcoded 'h:mm a' format strings with useTimeFormat calls\n- Implement system locale option in useTimeFormat\n- Remove unused data-time-format attribute from layout.tsx"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Invalidate cache when new version detected by poller, fix stale preview.13 showing after deploy"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.14",
     "date": "2026-05-13",
-    "commits": [
-      {
-        "hash": "97a01a7",
-        "heading": "fix(changelog): align What's New indicator with Ink & Matte design, answer performance question",
-        "body": ""
-      },
-      {
-        "hash": "cac820a",
-        "heading": "feat(changelog): robust version detection with soft indicator, polling, and auto-injected version",
-        "body": "- Auto-inject NEXT_PUBLIC_APP_VERSION from package.json in next.config.ts\n- Add lastDismissedVersion to uiStore (migrates from lastSeenVersion)\n- Skip changelog popup on first visit (no new-user spam)\n- Poll changelog.json + visibilitychange listener to detect server deploys\n- Show soft \"What's New\" indicator instead of auto-opening modal\n- Remove stale hardcoded version fallbacks from components"
-      },
-      {
-        "hash": "3ddcf40",
-        "heading": "feat(53-13): enhance notification system by moving Toaster, adjusting z-index, and refining styles",
-        "body": ""
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add 24hr mode to SegmentedTimePicker and haptic feedback to quick-select buttons",
+        "Wire useTimeFormat into all display components with system locale detection"
+      ],
+      "Fixed": [
+        "Align What's New indicator with Ink & Matte design"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.13",
     "date": "2026-05-12",
-    "commits": [
-      {
-        "hash": "a681c26",
-        "heading": "feat(53-12): restore guest account settings and enhance import functionality",
-        "body": "- Implemented changes to allow guest users to access Backup/Sync settings while hiding the \"Delete Cloud Data\" button.\n- Updated `SettingsClient.tsx` to conditionally render account options based on guest mode.\n- Added new utility functions for handling uhabits import errors and improved the import process to handle duplicates and remap IDs correctly.\n- Enhanced the `mapUhabitsToKanso` function to include color mapping and icon inference based on habit names.\n- Added tests for uhabits import functionality and error classification to ensure robustness.\n- Updated package.json to include a script for copying the WASM file during preparation."
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Restore guest account settings and enhance import functionality"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.12",
     "date": "2026-05-11",
-    "commits": [
-      {
-        "hash": "5951a8e",
-        "heading": "chore(quick): check build using npm run build (passes clean)",
-        "body": ""
-      },
-      {
-        "hash": "2d56c62",
-        "heading": "fix(focus): persist slider and switch changes via watch() subscription",
-        "body": "Removed the `type === \"change\"` guard in the watch() callback that blocked\npersistence for programmatic setValue() calls. Native DOM inputs set type\nto \"change\" but sliders/switches call setValue() with type: undefined,\nso settings were never saved when using sliders or toggles. The safeParse\ncall already guards against invalid values — no type guard needed.\n\nAdds regression test covering the slider → setValue → watch → updateSettings\npath that was previously untested and broken.\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-      },
-      {
-        "hash": "4f4ebdf",
-        "heading": "fix(timer): resolve focus settings toggles broken by React Compiler",
-        "body": "- Replace watch(\"field\") with useWatch({ control, name }) in SettingsForm for\n  React Compiler compatibility — watch() uses an internal pub/sub mechanism the\n  compiler cannot track, causing memoized components to skip re-renders on\n  setValue() calls (toggles and sliders appeared stuck)\n- Stabilize updateSettings useEffect dependency via useRef pattern to prevent\n  constant resubscription on every timer tick (TimerProvider recreates context\n  object each second due to timer.state changes)\n- Add 7 regression tests covering toggle false→true, double-toggle, both toggles\n  independent, start-from-true, and schema validation boundaries"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Persist slider and switch changes via watch() subscription",
+        "Resolve focus settings toggles broken by React Compiler"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.11",
     "date": "2026-05-11",
-    "commits": [
-      {
-        "hash": "7a2dcb9",
-        "heading": "feat(53-10): changelog popup with prefetch cache, accessibility, and version scoping",
-        "body": "Core:\n- Create src/lib/changelog-cache.ts with module-level prefetch cache\n- Rewrite ChangelogPopup with instant rendering (no fetch-on-open delay)\n- Improve accessibility: font-semibold weights, full contrast colors, readable sizes\n- Scope changelog entries to current minor version (e.g. 1.19.x only)\n- Show all preview.0 through current preview entries\n\nPipeline:\n- preview.sh: intelligent base commit selection (merge sync for preview.0, last preview for preview.1+)\n- Fix changelog.json: preview.0 had 241 ancient commits, reduced to 1 (c9c9409)\n- Exclude planning/agent/gemini/husky/vercelignore from commit logs\n\nUpdated planning artifacts: ROADMAP.md, STATE.md, 53-10-SUMMARY.md"
-      },
-      {
-        "hash": "2ec6cf3",
-        "heading": "fix(build): replace missing @base-ui/react/use-render, install @radix-ui/react-scroll-area, fix pre-existing lint issues in filters.tsx",
-        "body": ""
-      },
-      {
-        "hash": "3d34e38",
-        "heading": "build: add vercel package to dependencies",
-        "body": ""
-      }
-    ]
-  },
-  {
-    "version": "unreleased",
-    "date": "2026-05-11",
-    "commits": [
-      {
-        "hash": "2ec6cf3",
-        "heading": "fix(build): replace missing @base-ui/react/use-render, install @radix-ui/react-scroll-area, fix pre-existing lint issues in filters.tsx",
-        "body": ""
-      },
-      {
-        "hash": "3d34e38",
-        "heading": "build: add vercel package to dependencies",
-        "body": ""
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Changelog popup with prefetch cache, accessibility, and version scoping"
+      ],
+      "Fixed": [
+        "Replace missing @base-ui/react/use-render, install @radix-ui/react-scroll-area, fix pre-existing lint issues"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.10",
     "date": "2026-05-11",
-    "commits": [
-      {
-        "hash": "fe93435",
-        "heading": "feat(tasks): unify smart filter system and optimize performance",
-        "body": "- Consolidate filter triggers and indicators into a unified Smart Button system\n- Implement React 18 transitions for filter updates to ensure interaction fluidity\n- Refactor mobile indicators into a native touch-scroll track to resolve clipping\n- Prevent mobile scroll bounce with touch-action and overscroll containment\n- Optimize task list and board synchronization to eliminate DnD initialization lag\n- Implement state hydration tracking and safety script in app/layout.tsx\n- Add unit tests for uiStore hydration logic\n- Fix pre-existing library build errors in filters.tsx and upscale desktop aesthetics\n- Archive resolved debug session logs for Phase 53-09 hardening"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Unify smart filter system and optimise performance"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.9",
     "date": "2026-05-07",
-    "commits": [
-      {
-        "hash": "e44ffc3",
-        "heading": "feat(habits): implement Loop Habit Tracker import and harden habit UI",
-        "body": "- Implement Loop Habit Tracker (.db) import engine using sql.js\n- Create shared hooks useUhabitsImport and useIcsImport for unified migration logic\n- Implement HabitOptionsMenu on Habits page with direct file picker access\n- Harden Habit creation/edit UI with reduced vertical padding and spacing\n- Fix Habits page header layout alignment for mobile devices\n- Restore direct ICS import functionality to Settings menu\n- Update branding from UHabits to Loop Habit Tracker across UI and hooks\n- Add comprehensive unit tests for Loop Habit Tracker data mapping"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Loop Habit Tracker import and hardened habit UI"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.8",
     "date": "2026-05-07",
-    "commits": [
-      {
-        "hash": "9992ba7",
-        "heading": "feat(ui): polish mobile UX and unify project visuals",
-        "body": "- Implement swipe-based navigation for mobile calendar views\n- Optimize MonthView cell visibility and fix mobile clipping (Quick Task)\n- Remove redundant project text tags from all task views (Quick Task)\n- Simplify mobile calendar header by removing navigation arrows (Quick Task)\n- Fix 'Schedule' text cut-off in mobile view selector"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Mobile UX polish and unified project visuals"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.7",
     "date": "2026-05-07",
-    "commits": [
-      {
-        "hash": "47ad4a3",
-        "heading": "fix: Resolve Task DnD grouping and meta tag sync issues",
-        "body": "- Fix overdue tasks incorrectly moving to Today during reordering in date groups\n- Synchronize due_date with do_date when moving tasks between date groups\n- Preserve is_evening status during reordering in all grouped views\n- Add unit tests to verify task-dnd logic and prevent regressions\n- Update planning artifacts with quick task details"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Resolve task DnD grouping and meta tag sync issues"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.6",
     "date": "2026-05-07",
-    "commits": [
-      {
-        "hash": "2be750e",
-        "heading": "feat(ui): harden modal accessibility and refine view-specific task visuals",
-        "body": "- Hardened modal keyboard accessibility by optimizing Escape key handling in GlobalHotkeys and relying on native Radix UI dismissal for Sheets and Dialogs\n- Verified and implemented proper focus traps and ARIA attributes across all core modal components for structural accessibility\n- Reverted shared visual unification in favor of distinct view-specific identities, restoring the original Flag icon priority rendering\n- Refined TaskGhost specifically for the Board view: reduced base width to 280px, implemented vertical layout, and added the evening moon indicator\n- Optimized DragOverlay scaling and rotation across Board and List views for more subtle, professional animations\n- Updated TaskSheet to default subtask visibility to collapsed when editing to reduce initial interface clutter\n- Fixed visibility logic to ensure completed repeated tasks are correctly rendered in the Mobile Grid view\n- Updated phase 53-06 planning and summary documentation and removed obsolete imports"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Harden modal accessibility and refine view-specific task visuals"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.5",
     "date": "2026-05-07",
-    "commits": [
-      {
-        "hash": "02e4d56",
-        "heading": "fix(ui): resolve desktop list dnd layout shift by hardening container boundaries",
-        "body": ""
-      },
-      {
-        "hash": "b6c9401",
-        "heading": "fix(ui): apply strict containment to task list scroll container",
-        "body": "- Added `contain: strict` and `position: relative` to `TaskList` scroll container.\n- Prevented layout recalculation propagation to the page root during high-frequency dnd-kit auto-scroll events.\n- Verified fix against `DndLayoutShift.test.tsx`."
-      },
-      {
-        "hash": "17155bc",
-        "heading": "feat(260506-rgt): refine dnd autoScroll canScroll logic",
-        "body": "- Exclude BODY and HTML elements from auto-scroll to prevent layout clipping\n- Keep existing no-dnd-scroll class check"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Refine DnD autoScroll canScroll logic"
+      ],
+      "Fixed": [
+        "Resolve desktop list DnD layout shift by hardening container boundaries",
+        "Apply strict containment to task list scroll container"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.4",
     "date": "2026-05-06",
-    "commits": [
-      {
-        "hash": "f6d505e",
-        "heading": "fix: align mobile and desktop list view spacing by removing inner rounded corners and fixing border overlap",
-        "body": ""
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Align mobile and desktop list view spacing by removing inner rounded corners and fixing border overlap"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.3",
     "date": "2026-05-05",
-    "commits": [
-      {
-        "hash": "934d1dc",
-        "heading": "feat(tasks): enhance drag-and-drop with cross-group mutations and auto-scroll",
-        "body": ""
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Enhance drag-and-drop with cross-group mutations and auto-scroll"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.2",
     "date": "2026-05-05",
-    "commits": [
-      {
-        "hash": "36cc9fb",
-        "heading": "feat: implement data sovereignty for registered users",
-        "body": "- Add useAccountData hook for cloud data export/import/deletion\n- Update BackupSyncSettings to support cloud data operations\n- Make DeleteUserDataDialog context-aware for registered users\n- Enable data management controls in SettingsClient for all users\n- Add unit tests for useAccountData hook"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Data sovereignty for registered users — export, import, and delete cloud data"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.1",
     "date": "2026-05-05",
-    "commits": [
-      {
-        "hash": "ba8eb5b",
-        "heading": "feat(task): implement strict vs flexible task recurrence",
-        "body": "- Added 'mode' field to RecurrenceRule and Task schemas\n- Updated calculateNextDueDate to support Strict vs Flexible recurrence logic\n- Added recurrence_settings column to database schema and migrations\n- Updated RecurrencePicker UI with mode toggle\n- Added unit tests for recurrence logic\n- Updated roadmap status"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Strict vs flexible task recurrence modes"
+      ]
+    }
   },
   {
     "version": "1.19.2-preview.0",
     "date": "2026-05-05",
-    "commits": [
-      {
-        "hash": "c9c9409",
-        "heading": "feat: implement global 12hr/24hr time format preference",
-        "body": "- Added timeFormat and setTimeFormat to uiStore with persistence\n- Created useTimeFormat hook for centralized time formatting using date-fns\n- Added Time Format selection (12h, 24h, system) to Settings Preferences tab\n- Added unit tests for time formatting logic in useTimeFormat.test.ts"
-      }
-    ]
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Global 12hr/24hr time format preference"
+      ]
+    }
+  },
+  {
+    "version": "1.19.1",
+    "date": "2026-05-10",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Focus timer sliders no longer reset when switching tabs or navigating away",
+        "Guest mode loads faster with no unnecessary network calls"
+      ]
+    }
+  },
+  {
+    "version": "1.19.0",
+    "date": "2026-05-04",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Task Continuity: completed tasks stay visible in the list until the end of the day"
+      ],
+      "Improved": [
+        "React Compiler integrated for optimised component rendering",
+        "Core data lookups refactored to Map-based O(1) complexity",
+        "High-frequency state isolated into dedicated Zustand micro-stores",
+        "Replaced Framer Motion with native CSS animations in dialogs",
+        "Mobile swipe physics recalibrated for a tighter, hardware-native feel",
+        "Task list rendering scales linearly — stays fast with 500+ tasks"
+      ],
+      "Fixed": [
+        "Redundant project tags removed across all views for a cleaner UI"
+      ]
+    }
+  },
+  {
+    "version": "1.18.0",
+    "date": "2026-04-20",
+    "channel": "stable",
+    "sections": {
+      "Improved": [
+        "Calendar Elastic Grid for better viewport stability and refined mobile navigation",
+        "Header heights standardised and matte sidebar styling refined",
+        "Project management flows and task view responsiveness improved",
+        "Push notification delivery telemetry added"
+      ],
+      "Fixed": [
+        "Push notification ghost deliveries resolved",
+        "CI validation regressions resolved and code formatting standardised"
+      ]
+    }
+  },
+  {
+    "version": "1.17.0",
+    "date": "2026-04-13",
+    "channel": "stable",
+    "sections": {
+      "Improved": [
+        "Unified Matte & Ink aesthetic: shadows and semantic colours replaced with a consistent design system",
+        "Sidebar and modal rendering optimised for zero-jank, zero-lag interactions",
+        "Global icon weight standardised and accent colour applied consistently",
+        "Tactile gestures, haptic signatures, and hold-to-drag unified across components",
+        "Guest mode resilience hardened with accessibility compliance improvements"
+      ],
+      "Fixed": [
+        "Desktop list layout clipping resolved"
+      ]
+    }
+  },
+  {
+    "version": "1.16.2",
+    "date": "2026-04-07",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Date validation loosened to handle ISO strings with timezone offsets",
+        "Task date picker now shows visual error feedback and surfaces hidden validation errors",
+        "Silent form invalidation resolved in task create and edit views"
+      ]
+    }
+  },
+  {
+    "version": "1.16.1",
+    "date": "2026-04-07",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Build failure from Uint8Array to BlobPart type mismatch resolved"
+      ]
+    }
+  },
+  {
+    "version": "1.16.0",
+    "date": "2026-04-07",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Mobile toast positioning and layout responsiveness",
+        "Habit heatmap scrolling during sidebar transitions stabilised",
+        "Activity trend visualisation centred; DrumPicker interactions refined",
+        "Settings page layout and typography standardised for visual hierarchy",
+        "All remaining lint errors resolved; full CI validation achieved"
+      ]
+    }
+  },
+  {
+    "version": "1.15.2",
+    "date": "2026-04-04",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Next.js 16 WebDAV route type constraints resolved"
+      ]
+    }
+  },
+  {
+    "version": "1.15.1",
+    "date": "2026-04-04",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Invalid route exports removed to fix Vercel build failure"
+      ]
+    }
+  },
+  {
+    "version": "1.15.0",
+    "date": "2026-04-04",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "WebDAV backup sync for guest users",
+        "Universal ZIP backup and restore",
+        "Weekly backup reminders in guest mode"
+      ],
+      "Improved": [
+        "Mobile settings revamped with a cleaner matte tab layout",
+        "Settings page sticky footer now docks correctly"
+      ]
+    }
+  },
+  {
+    "version": "1.14.3",
+    "date": "2026-04-02",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Data clearing dialog for secure account reset"
+      ],
+      "Fixed": [
+        "Calendar query cache isolated for guest mode to prevent cross-account leaks",
+        "Sidebar alignment and mobile icon sizing corrected"
+      ]
+    }
+  },
+  {
+    "version": "1.14.2",
+    "date": "2026-04-01",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Mobile sidebar footer settings padding adjusted for improved ergonomics"
+      ]
+    }
+  },
+  {
+    "version": "1.14.1",
+    "date": "2026-04-01",
+    "channel": "stable",
+    "sections": {
+      "Improved": [
+        "Mobile sidebar width locked to 62vw for stability on small screens",
+        "Task view selector height, sidebar touch targets, and navigation trigger styles standardised"
+      ]
+    }
+  },
+  {
+    "version": "1.14.0",
+    "date": "2026-04-01",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Command menu action synchronisation and global keyboard shortcuts"
+      ],
+      "Improved": [
+        "Habits, Stats, and Settings views with fluid responsiveness across screen sizes",
+        "Calendar view selector spacing refined for mobile viewports",
+        "Kanban board shadows and header alignment polished",
+        "Guest mode experience and analytics dashboard harmonised",
+        "Sidebar animations and responsive triggers stabilised"
+      ]
+    }
+  },
+  {
+    "version": "1.13.1",
+    "date": "2026-03-31",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Event overflow popover collision padding prevents clipping at viewport edges",
+        "Day view date labels use a concise format on mobile to prevent overflow",
+        "Month view limits to 2 visible events when an overflow indicator is present"
+      ]
+    }
+  },
+  {
+    "version": "1.13.0",
+    "date": "2026-03-30",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Enhanced visual differentiation between tasks and events across all calendar views",
+        "Unified project management menus: dropdowns on desktop, drawers on mobile",
+        "Location metadata on events with external map navigation links",
+        "High-contrast visual indicators for active task filter and sort states",
+        "Full interactivity for monthly event overflow popups"
+      ],
+      "Fixed": [
+        "Android focus issue preventing automatic keyboard popup in dialogs",
+        "Layout responsiveness on wide-aspect mobile devices",
+        "Calendar FAB behaviour stabilised; month view and grid line opacities harmonised",
+        "Project deletion visibility hardened across all views",
+        "Guest mode and settings pages aligned with brand styling",
+        "Sidebar touch interaction persistence on mobile",
+        "Metadata tag styling standardised for priorities and subtasks"
+      ]
+    }
+  },
+  {
+    "version": "1.12.0",
+    "date": "2026-03-27",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Multi-provider calendar sync: Google, Outlook, and CalDAV with bidirectional sync",
+        "Natural language event creation",
+        "Universal .ics (RFC 5545) import and export"
+      ],
+      "Improved": [
+        "Calendar UI standardised with matte aesthetic and Seijaku haptics",
+        "Offline-first event persistence with background synchronisation"
+      ]
+    }
+  },
+  {
+    "version": "1.11.0",
+    "date": "2026-03-25",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Project deletion now prompts with a multi-choice confirmation: move tasks to inbox, delete, or archive",
+        "Unarchive projects directly from the sidebar"
+      ],
+      "Improved": [
+        "Activity heatmap migrated to react-activity-calendar for better React integration and smaller bundle",
+        "Heatmap cell hover tooltips show date, focus hours, and task count",
+        "Tactile feedback standardised across 40+ components via a semantic haptic registry",
+        "Subtask list in task items loads lazily to reduce initial render weight in dense views",
+        "Global sync indicator rewritten with a ref-based state machine for smoother feedback",
+        "Mobile project management rebuilt with a responsive drawer pattern"
+      ],
+      "Fixed": [
+        "Kanban and list DnD ghost states corrected for visual parity and mobile touch isolation"
+      ]
+    }
   }
 ]

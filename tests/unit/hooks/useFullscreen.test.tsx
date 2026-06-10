@@ -29,8 +29,8 @@ let fullscreenChangeHandler: (() => void) | null = null;
 // ===== Module mocks =====
 
 vi.mock("@/lib/store/uiStore", () => ({
-  useUiStore: (selector: (state: any) => any) => {
-    const state = {
+  useUiStore: (selector: (state: Record<string, unknown>) => unknown) => {
+    const state: Record<string, unknown> = {
       isFullscreen: mockIsFullscreenValue,
       setIsFullscreen: mockSetIsFullscreen,
       isPipActive: false,
@@ -48,26 +48,36 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   }),
 }));
 
-vi.mock("framer-motion", () => ({
-  motion: {
-    button: React.forwardRef<HTMLButtonElement, React.ComponentProps<"button">>(
-      ({ children, onClick, className, ...props }, ref) => {
-        return (
-          <button ref={ref} onClick={onClick} className={className} {...props}>
-            {children}
-          </button>
-        );
-      },
+vi.mock("framer-motion", () => {
+  const MotionButton = React.forwardRef<
+    HTMLButtonElement,
+    React.ComponentProps<"button">
+  >(({ children, onClick, className, ...props }, ref) => {
+    return (
+      <button ref={ref} onClick={onClick} className={className} {...props}>
+        {children}
+      </button>
+    );
+  });
+  MotionButton.displayName = "MotionButton";
+
+  return {
+    motion: {
+      button: MotionButton,
+    },
+    AnimatePresence: ({ children }: { children: React.ReactNode }) => (
+      <>{children}</>
     ),
-  },
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
-}));
+  };
+});
 
 vi.mock("lucide-react", () => ({
-  Maximize2: (props: any) => <svg data-testid="maximize2-icon" {...props} />,
-  Minimize2: (props: any) => <svg data-testid="minimize2-icon" {...props} />,
+  Maximize2: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg data-testid="maximize2-icon" {...props} />
+  ),
+  Minimize2: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg data-testid="minimize2-icon" {...props} />
+  ),
 }));
 
 // ===== Test suite =====
@@ -118,9 +128,9 @@ describe("useFullscreen", () => {
     expect(mockSetIsFullscreen).toHaveBeenCalledWith(true);
   });
 
-  // --- Test 2: Mobile enterFullscreen sets isFullscreen without Fullscreen API ---
+  // --- Test 2: Mobile enterFullscreen attempts Fullscreen API (Android succeeds, iOS gracefully fails) ---
 
-  it("should set isFullscreen without calling Fullscreen API on mobile", async () => {
+  it("should attempt Fullscreen API on mobile (Android succeeds, iOS gracefully fails to CSS layout)", async () => {
     mockIsPhoneValue = true;
 
     const { result } = renderHook(() => useFullscreen());
@@ -129,9 +139,9 @@ describe("useFullscreen", () => {
       await result.current.enterFullscreen();
     });
 
-    // Should NOT call requestFullscreen on mobile
-    expect(requestFullscreenFn).not.toHaveBeenCalled();
-    // But should still set isFullscreen to true for CSS layout
+    // Should attempt requestFullscreen on mobile (Android will succeed, iOS will throw/fail)
+    expect(requestFullscreenFn).toHaveBeenCalledTimes(1);
+    // Should still set isFullscreen to true for CSS layout (iOS fallback, Android enhancement)
     expect(mockSetIsFullscreen).toHaveBeenCalledWith(true);
   });
 
@@ -204,6 +214,91 @@ describe("useFullscreen", () => {
     });
     expect(mockSetIsFullscreen).toHaveBeenCalledWith(false);
   });
+
+  // --- Test 6b: webkitfullscreenchange event updates isFullscreen (Safari) ---
+
+  it("should sync isFullscreen state via webkitfullscreenchange event listener (Safari)", async () => {
+    let webkitFullscreenChangeHandler: (() => void) | null = null;
+
+    document.addEventListener = vi.fn((event, handler) => {
+      if (event === "fullscreenchange") {
+        fullscreenChangeHandler = handler as () => void;
+      }
+      if (event === "webkitfullscreenchange") {
+        webkitFullscreenChangeHandler = handler as () => void;
+      }
+    });
+
+    renderHook(() => useFullscreen());
+    expect(webkitFullscreenChangeHandler).not.toBeNull();
+
+    // Simulate entering fullscreen via webkit
+    mockFullscreenElement = document.documentElement;
+    await act(async () => {
+      webkitFullscreenChangeHandler!();
+    });
+    expect(mockSetIsFullscreen).toHaveBeenCalledWith(true);
+
+    // Simulate exiting fullscreen via webkit
+    mockFullscreenElement = null;
+    await act(async () => {
+      webkitFullscreenChangeHandler!();
+    });
+    expect(mockSetIsFullscreen).toHaveBeenCalledWith(false);
+  });
+
+  // --- Test 6c: Safari vendor prefix fallback for requestFullscreen ---
+
+  it("should use webkitRequestFullscreen when standard API is unavailable (Safari)", async () => {
+    const webkitRequestFullscreenFn = vi.fn().mockResolvedValue(undefined);
+
+    // Remove standard API
+    {
+      const el = document.documentElement as unknown as {
+        requestFullscreen?: () => Promise<void>;
+        webkitRequestFullscreen?: () => Promise<void>;
+      };
+      delete el.requestFullscreen;
+      el.webkitRequestFullscreen = webkitRequestFullscreenFn;
+    }
+
+    const { result } = renderHook(() => useFullscreen());
+
+    await act(async () => {
+      await result.current.enterFullscreen();
+    });
+
+    expect(webkitRequestFullscreenFn).toHaveBeenCalledTimes(1);
+    expect(mockSetIsFullscreen).toHaveBeenCalledWith(true);
+  });
+
+  // --- Test 6d: Safari vendor prefix fallback for exitFullscreen ---
+
+  it("should use webkitExitFullscreen when standard API is unavailable (Safari)", async () => {
+    const webkitExitFullscreenFn = vi.fn().mockResolvedValue(undefined);
+
+    // Simulate fullscreen being active
+    mockFullscreenElement = document.documentElement;
+
+    // Remove standard API
+    {
+      const doc = document as unknown as {
+        exitFullscreen?: () => Promise<void>;
+        webkitExitFullscreen?: () => Promise<void>;
+      };
+      delete doc.exitFullscreen;
+      doc.webkitExitFullscreen = webkitExitFullscreenFn;
+    }
+
+    const { result } = renderHook(() => useFullscreen());
+
+    await act(async () => {
+      result.current.exitFullscreen();
+    });
+
+    expect(webkitExitFullscreenFn).toHaveBeenCalledTimes(1);
+    expect(mockSetIsFullscreen).toHaveBeenCalledWith(false);
+  });
 });
 
 describe("FullscreenToggle", () => {
@@ -217,7 +312,7 @@ describe("FullscreenToggle", () => {
     // Given: not fullscreen
     mockIsFullscreenValue = false;
 
-    const { rerender, unmount } = render(<FullscreenToggle />);
+    const { unmount } = render(<FullscreenToggle />);
     expect(screen.getByTestId("maximize2-icon")).toBeInTheDocument();
     expect(screen.queryByTestId("minimize2-icon")).not.toBeInTheDocument();
     expect(screen.getByRole("button")).toHaveAttribute(

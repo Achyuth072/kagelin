@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/AuthProvider";
 import { createBackupZip, downloadBackup } from "@/lib/backup/export-import";
 import { mockStore } from "@/lib/mock/mock-store";
+import { useLocationHistoryStore } from "@/lib/store/locationHistoryStore";
 import type { BackupData } from "@/lib/backup/types";
 
 const STORAGE_KEY = "kanso_last_backup_date";
@@ -13,7 +14,7 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Hook that prompts guest users to back up their data weekly.
- * Per RESEARCH.md: Use subtle, dismissible toast (not modal) to avoid "Kanso" violation.
+ * Per RESEARCH.md: Use subtle, dismissible toast (not modal) to avoid "Kagelin" violation.
  */
 export function useWeeklyBackup() {
   const { isGuestMode } = useAuth();
@@ -47,6 +48,7 @@ export function useWeeklyBackup() {
         habit_entries: mockStore.getHabitEntries(),
         focus_logs: mockStore.getFocusLogs(),
         events: mockStore.getEvents(),
+        location_history: useLocationHistoryStore.getState().locations,
       };
 
       const blob = await createBackupZip(backupData);

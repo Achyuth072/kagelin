@@ -27,8 +27,14 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("@/lib/supabase/client", () => ({
   createClient: vi.fn(() => {
     const channelObj = {
-      on: vi.fn((_event: string, _config: any, _callback: any) => channelObj),
-      subscribe: vi.fn((_callback?: any) => ({
+      on: vi.fn(
+        (
+          _event: string,
+          _config: Record<string, unknown>,
+          _callback: () => void,
+        ) => channelObj,
+      ),
+      subscribe: vi.fn((_callback?: (status: string) => void) => ({
         unsubscribe: vi.fn(),
       })),
     };
@@ -94,7 +100,8 @@ describe("Focus History — cancel does not log session", () => {
         remainingSeconds: DEFAULT_TIMER_SETTINGS.focusDuration * 60,
         completedSessions: 0,
         activeTaskId: null,
-        startedAt: null,
+        endsAt: null,
+        sourceDeviceId: null,
       },
       settings: DEFAULT_TIMER_SETTINGS,
       isLoaded: true,
@@ -114,7 +121,8 @@ describe("Focus History — cancel does not log session", () => {
         remainingSeconds: 1200,
         completedSessions: 2,
         activeTaskId: "task-active",
-        startedAt: Date.now() - 60000, // started 1 min ago
+        endsAt: Date.now() + 1200 * 1000, // 1200s left
+        sourceDeviceId: null,
       },
     }));
 

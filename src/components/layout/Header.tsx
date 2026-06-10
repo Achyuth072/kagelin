@@ -24,7 +24,12 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { Task } from "@/lib/types/task";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { prefetchChangelog, isNewerThan } from "@/lib/changelog-cache";
+import {
+  prefetchChangelog,
+  isNewerThan,
+  fetchLatestVersion,
+  RELEASE_CHANNEL,
+} from "@/lib/changelog-cache";
 import { useUiStore } from "@/lib/store/uiStore";
 import { SyncIndicator } from "@/components/ui/SyncIndicator";
 
@@ -103,14 +108,14 @@ export const Header = React.memo(function Header() {
     prefetchChangelog();
     const check = async () => {
       try {
-        const res = await fetch("/changelog.json", { cache: "no-store" });
-        const data = await res.json();
-        if (data?.[0]?.version) {
-          setServerVersion((prev) => {
-            if (prev !== data[0].version) return data[0].version;
-            return prev;
-          });
-        }
+        const info = await fetchLatestVersion();
+        if (!info) return;
+        // Stable builds should not react to preview-only releases.
+        if (RELEASE_CHANNEL === "stable" && info.channel !== "stable") return;
+        setServerVersion((prev) => {
+          if (prev !== info.version) return info.version;
+          return prev;
+        });
       } catch {
         // ignore
       }

@@ -3,11 +3,22 @@ import { renderHook, act } from "@testing-library/react";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { DEFAULT_TIMER_SETTINGS } from "@/lib/types/timer";
 import { useTimerSync } from "@/lib/hooks/useTimerSync";
+import { getDeviceId } from "@/lib/store/deviceId";
+import { getServerOffset, setServerOffset } from "@/lib/store/serverClock";
 
 // ===== Hoisted mocks for module-level mocking =====
 
-const { mockUseAuth, mockSetIsSynced, toastMock, mockUpsertTimerState } =
-  vi.hoisted(() => ({
+const {
+  mockUseAuth,
+  mockSetIsSynced,
+  toastMock,
+  mockUpsertTimerState,
+  hydrate,
+  mockRpc,
+  mockMaybeSingle,
+} = vi.hoisted(() => {
+  const hydrate = { row: null as Record<string, unknown> | null };
+  return {
     mockUseAuth: vi.fn().mockReturnValue({
       user: { id: "user-1" },
       isGuestMode: false,
@@ -15,12 +26,28 @@ const { mockUseAuth, mockSetIsSynced, toastMock, mockUpsertTimerState } =
     mockSetIsSynced: vi.fn(),
     toastMock: vi.fn(),
     mockUpsertTimerState: vi.fn(),
-  }));
+    // Mutable row returned by the initial hydrate SELECT.
+    hydrate,
+    // Server-time probe — number by default (no offset) for deterministic tests.
+    // data is widened to allow string payloads (PostgREST bigint-as-string case).
+    mockRpc: vi.fn(
+      async () =>
+        ({ data: Date.now(), error: null }) as {
+          data: number | string;
+          error: null;
+        },
+    ),
+    // Initial hydrate SELECT — returns the configurable hydrate row.
+    mockMaybeSingle: vi.fn(async () => ({ data: hydrate.row, error: null })),
+  };
+});
 
 // ===== Postgres changes callback capture =====
 
-let pgCallback: ((payload: any) => void) | null = null;
-let statusCallback: ((status: string) => void) | null = null;
+type PgPayload = { new: Record<string, unknown> };
+let pgCallback: ((payload: PgPayload) => void) | null = null;
+let pgConfig: Record<string, unknown> | null = null;
+let _statusCallback: ((status: string) => void) | null = null;
 
 vi.mock("@/components/AuthProvider", () => ({
   useAuth: mockUseAuth,
@@ -29,12 +56,19 @@ vi.mock("@/components/AuthProvider", () => ({
 vi.mock("@/lib/supabase/client", () => ({
   createClient: vi.fn(() => {
     const channelObj = {
-      on: vi.fn((_event: string, _config: any, callback: any) => {
-        pgCallback = callback;
-        return channelObj;
-      }),
-      subscribe: vi.fn((callback: any) => {
-        statusCallback = callback || null;
+      on: vi.fn(
+        (
+          _event: string,
+          config: Record<string, unknown>,
+          callback: (p: PgPayload) => void,
+        ) => {
+          pgConfig = config;
+          pgCallback = callback;
+          return channelObj;
+        },
+      ),
+      subscribe: vi.fn((callback: (status: string) => void) => {
+        _statusCallback = callback || null;
         if (callback) callback("SUBSCRIBED");
         return { unsubscribe: vi.fn() };
       }),
@@ -42,6 +76,12 @@ vi.mock("@/lib/supabase/client", () => ({
     return {
       channel: vi.fn(() => channelObj),
       removeChannel: vi.fn(),
+      rpc: mockRpc,
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({ maybeSingle: mockMaybeSingle })),
+        })),
+      })),
     };
   }),
 }));
@@ -70,7 +110,15 @@ describe("useTimerSync", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     pgCallback = null;
-    statusCallback = null;
+    pgConfig = null;
+    _statusCallback = null;
+    hydrate.row = null;
+    setServerOffset(0);
+    mockRpc.mockImplementation(async () => ({ data: Date.now(), error: null }));
+    mockMaybeSingle.mockImplementation(async () => ({
+      data: hydrate.row,
+      error: null,
+    }));
 
     // Reset timer store to defaults
     useTimerStore.setState({
@@ -80,7 +128,8 @@ describe("useTimerSync", () => {
         remainingSeconds: DEFAULT_TIMER_SETTINGS.focusDuration * 60,
         completedSessions: 0,
         activeTaskId: null,
-        startedAt: null,
+        endsAt: null,
+        sourceDeviceId: null,
       },
       settings: DEFAULT_TIMER_SETTINGS,
       isLoaded: true,
@@ -124,14 +173,14 @@ describe("useTimerSync", () => {
   // --- Test 3: Remote UPDATE with newer updated_at applies state ---
 
   it("should apply remote state to timerStore on UPDATE with newer updated_at", () => {
-    const { result } = renderHook(() => useTimerSync());
+    renderHook(() => useTimerSync());
     expect(pgCallback).not.toBeNull();
 
     const initialState = useTimerStore.getState().state;
     expect(initialState.mode).toBe("focus");
     expect(initialState.isRunning).toBe(false);
 
-    // When: Simulate a remote UPDATE with running state
+    // When: Simulate a remote UPDATE with running state (from another device)
     act(() => {
       pgCallback!({
         new: {
@@ -139,6 +188,7 @@ describe("useTimerSync", () => {
           remaining_seconds: 300,
           is_running: true,
           active_task_id: "task-remote",
+          source_device_id: "other-device",
           updated_at: "2024-01-01T12:00:00Z",
         },
       });
@@ -152,11 +202,10 @@ describe("useTimerSync", () => {
     expect(updatedState.activeTaskId).toBe("task-remote");
   });
 
-  // --- Test 4: Self-originating update (echo guard) ---
+  // --- Test 4: Self-originating update (echo guard by source_device_id) ---
 
-  it("should skip self-originating update within 500ms of lastWriteAt", async () => {
-    vi.useFakeTimers();
-    const { result } = renderHook(() => useTimerSync());
+  it("should skip a remote update whose source_device_id is this device", () => {
+    renderHook(() => useTimerSync());
     expect(pgCallback).not.toBeNull();
 
     // Given: Some initial state
@@ -170,12 +219,7 @@ describe("useTimerSync", () => {
       },
     }));
 
-    // When: Call upsertTimerState (sets lastWriteAt to now via ref)
-    await act(async () => {
-      await result.current.upsertTimerState();
-    });
-
-    // Then: Immediately simulate a remote update (echo)
+    // When: A remote update arrives stamped with our own device id (an echo)
     act(() => {
       pgCallback!({
         new: {
@@ -183,6 +227,7 @@ describe("useTimerSync", () => {
           remaining_seconds: 300,
           is_running: true,
           active_task_id: "task-echo",
+          source_device_id: getDeviceId(),
           updated_at: "2024-01-01T12:01:00Z",
         },
       });
@@ -199,7 +244,7 @@ describe("useTimerSync", () => {
   // --- Test 5: Stale remote update skipped (last-write-wins) ---
 
   it("should skip stale remote update with older updated_at", () => {
-    const { result } = renderHook(() => useTimerSync());
+    renderHook(() => useTimerSync());
     expect(pgCallback).not.toBeNull();
 
     // Given: A fresh remote update comes in first
@@ -210,6 +255,7 @@ describe("useTimerSync", () => {
           remaining_seconds: 1400,
           is_running: true,
           active_task_id: "task-first",
+          source_device_id: "other-device",
           updated_at: "2024-01-01T12:10:00Z",
         },
       });
@@ -225,6 +271,7 @@ describe("useTimerSync", () => {
           remaining_seconds: 200,
           is_running: false,
           active_task_id: "task-stale",
+          source_device_id: "other-device",
           updated_at: "2024-01-01T12:05:00Z",
         },
       });
@@ -269,7 +316,7 @@ describe("useTimerSync", () => {
   // --- Test 8: Toast on remote pause/stop ---
 
   it("should show toast on remote pause command", () => {
-    const { result } = renderHook(() => useTimerSync());
+    renderHook(() => useTimerSync());
     expect(pgCallback).not.toBeNull();
 
     // Given: Timer is running locally
@@ -291,6 +338,7 @@ describe("useTimerSync", () => {
           remaining_seconds: 750,
           is_running: false,
           active_task_id: "task-running",
+          source_device_id: "other-device",
           updated_at: "2024-01-01T12:15:00Z",
         },
       });
@@ -304,7 +352,7 @@ describe("useTimerSync", () => {
   });
 
   it("should show toast on remote stop command", () => {
-    const { result } = renderHook(() => useTimerSync());
+    renderHook(() => useTimerSync());
     expect(pgCallback).not.toBeNull();
 
     // Given: Timer is running locally
@@ -326,6 +374,7 @@ describe("useTimerSync", () => {
           remaining_seconds: 0,
           is_running: false,
           active_task_id: null,
+          source_device_id: "other-device",
           updated_at: "2024-01-01T12:16:00Z",
         },
       });
@@ -336,5 +385,163 @@ describe("useTimerSync", () => {
       "Timer stopped from another device",
       expect.any(Object),
     );
+  });
+
+  // --- Test 9: Initial hydrate mirrors a running row on subscribe ---
+
+  it("should hydrate the live running row (endsAt) on subscribe", async () => {
+    // Given: a running row already exists, ending 600s from now
+    const endsAt = new Date(Date.now() + 600_000).toISOString();
+    hydrate.row = {
+      mode: "focus",
+      remaining_seconds: 900,
+      is_running: true,
+      active_task_id: "task-live",
+      ends_at: endsAt,
+      source_device_id: "other-device",
+      completed_sessions: 2,
+      updated_at: "2024-01-01T12:20:00Z",
+    };
+
+    await act(async () => {
+      renderHook(() => useTimerSync());
+    });
+
+    // Then: the local store mirrors the deadline and ticks toward it (~600s)
+    const state = useTimerStore.getState().state;
+    expect(state.isRunning).toBe(true);
+    expect(state.activeTaskId).toBe("task-live");
+    expect(state.endsAt).toBe(Date.parse(endsAt));
+    expect(state.completedSessions).toBe(2);
+    expect(state.remainingSeconds).toBeLessThanOrEqual(600);
+    expect(state.remainingSeconds).toBeGreaterThan(595);
+  });
+
+  // --- Test 10: Offset probe tolerates bigint returned as a string (H2) ---
+
+  it("computes the server offset even when the probe returns a numeric string", async () => {
+    // PostgREST can serialize BIGINT as a string; the probe must still work.
+    const serverMs = Date.now() + 50_000; // server ~50s ahead
+    mockRpc.mockImplementation(async () => ({
+      data: String(serverMs),
+      error: null,
+    }));
+
+    await act(async () => {
+      renderHook(() => useTimerSync());
+    });
+
+    // Offset should be ~+50s (allowing for RTT/timing slack), not 0.
+    expect(getServerOffset()).toBeGreaterThan(40_000);
+  });
+
+  // --- Test 11: Re-hydrate from the DB on visibility change (H3) ---
+
+  it("re-hydrates the live row when the tab returns to the foreground", async () => {
+    // Mount with an idle row.
+    hydrate.row = {
+      mode: "focus",
+      remaining_seconds: 1500,
+      is_running: false,
+      active_task_id: null,
+      ends_at: null,
+      source_device_id: "other-device",
+      completed_sessions: 0,
+      updated_at: "2024-01-01T12:00:00Z",
+    };
+    await act(async () => {
+      renderHook(() => useTimerSync());
+    });
+    const hydrateCallsAfterMount = mockMaybeSingle.mock.calls.length;
+
+    // While backgrounded, the server advanced to a running session.
+    const endsAt = new Date(Date.now() + 300_000).toISOString();
+    hydrate.row = {
+      mode: "focus",
+      remaining_seconds: 600,
+      is_running: true,
+      active_task_id: "task-bg",
+      ends_at: endsAt,
+      source_device_id: "other-device",
+      completed_sessions: 3,
+      updated_at: "2024-01-01T12:30:00Z",
+    };
+
+    // Returning to the foreground must pull fresh state.
+    await act(async () => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "visible",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(mockMaybeSingle.mock.calls.length).toBeGreaterThan(
+      hydrateCallsAfterMount,
+    );
+    const state = useTimerStore.getState().state;
+    expect(state.isRunning).toBe(true);
+    expect(state.activeTaskId).toBe("task-bg");
+    expect(state.completedSessions).toBe(3);
+  });
+
+  // --- Test 12: Settings ride along with the upsert (H5) ---
+
+  it("includes the local focus settings in the upsert payload", async () => {
+    const { result } = renderHook(() => useTimerSync());
+    useTimerStore.setState({
+      settings: { ...DEFAULT_TIMER_SETTINGS, focusDuration: 1 },
+    });
+
+    await act(async () => {
+      await result.current.upsertTimerState();
+    });
+
+    expect(mockUpsertTimerState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        settings: expect.objectContaining({ focusDuration: 1 }),
+      }),
+    );
+  });
+
+  // --- Test 13: Remote settings are applied so devices agree (H5) ---
+
+  it("applies remote settings on UPDATE", () => {
+    renderHook(() => useTimerSync());
+    expect(pgCallback).not.toBeNull();
+
+    act(() => {
+      pgCallback!({
+        new: {
+          mode: "focus",
+          remaining_seconds: 60,
+          is_running: false,
+          active_task_id: null,
+          ends_at: null,
+          source_device_id: "other-device",
+          completed_sessions: 0,
+          settings: { ...DEFAULT_TIMER_SETTINGS, focusDuration: 1 },
+          updated_at: "2024-01-01T13:00:00Z",
+        },
+      });
+    });
+
+    expect(useTimerStore.getState().settings.focusDuration).toBe(1);
+  });
+
+  // --- Test 14: Subscribes WITHOUT a non-PK filter so realtime delivers (H4) ---
+
+  it("subscribes without a user_id filter (RLS scopes delivery; non-PK filter needs REPLICA IDENTITY FULL)", () => {
+    renderHook(() => useTimerSync());
+
+    expect(pgConfig).not.toBeNull();
+    expect(pgConfig).toMatchObject({
+      schema: "public",
+      table: "user_timer_state",
+    });
+    // A server-side filter on the non-PK user_id column silently drops UPDATEs
+    // unless REPLICA IDENTITY FULL is set; RLS already scopes delivery to the
+    // user's own row, so no filter is needed.
+    expect(pgConfig?.filter).toBeUndefined();
   });
 });

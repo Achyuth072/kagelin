@@ -1,0 +1,23 @@
+{
+  "$schema": "https://unpkg.com/release-it@20/schema/release-it.json",
+  "git": {
+    "requireBranch": "dev",
+    "commitMessage": "chore: release v${version}",
+    "tagName": "v${version}",
+    "tagAnnotation": "Release ${version}",
+    "push": true
+  },
+  "github": {
+    "release": true,
+    "preRelease": true
+  },
+  "npm": {
+    "publish": false
+  },
+  "hooks": {
+    "after:bump": [
+      "node scripts/generate-changelog.cjs ${version} v${latestVersion} --channel=preview",
+      "git add public/changelog.json public/changelog-version.json"
+    ]
+  }
+}

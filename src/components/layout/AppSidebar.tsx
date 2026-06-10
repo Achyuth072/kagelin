@@ -127,7 +127,7 @@ export function AppSidebar() {
                 SIDEBAR_COLLAPSE.hideContent,
               )}
             >
-              <span className="type-h2 whitespace-nowrap">Kanso</span>
+              <span className="type-h2 whitespace-nowrap">Kagelin</span>
               <SidebarTrigger className="h-9 w-9 shrink-0 active:scale-95 transition-all [&_svg]:stroke-[2.25px]" />
             </div>
           </div>

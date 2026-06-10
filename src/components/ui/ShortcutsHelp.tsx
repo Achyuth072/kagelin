@@ -83,7 +83,7 @@ export function ShortcutsHelp({ open, onOpenChange }: ShortcutsHelpProps) {
             Keyboard Shortcuts
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="text-[11px] uppercase tracking-[0.02em] text-muted-foreground font-medium pt-1">
-            Refine your workflow with Kanso
+            Refine your workflow with Kagelin
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 

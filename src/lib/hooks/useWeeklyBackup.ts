@@ -13,7 +13,7 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Hook that prompts guest users to back up their data weekly.
- * Per RESEARCH.md: Use subtle, dismissible toast (not modal) to avoid "Kanso" violation.
+ * Per RESEARCH.md: Use subtle, dismissible toast (not modal) to avoid "Kagelin" violation.
  */
 export function useWeeklyBackup() {
   const { isGuestMode } = useAuth();

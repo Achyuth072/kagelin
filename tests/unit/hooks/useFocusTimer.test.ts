@@ -2,6 +2,8 @@ import { renderHook, act } from "@testing-library/react";
 import { useFocusTimer } from "@/lib/hooks/useFocusTimer";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { setServerOffset } from "@/lib/store/serverClock";
+import type { TimerState } from "@/lib/types/timer";
 
 // Mock dependencies
 vi.mock("@tanstack/react-query", () => ({
@@ -73,6 +75,15 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: vi.fn(() => ({ trigger: vi.fn(), isPhone: false })),
 }));
 
+// Stub the sync layer: completion side-effects are gated on winning the atomic
+// claim, which resolves true here (single-device → always wins).
+vi.mock("@/lib/hooks/useTimerSync", () => ({
+  useTimerSync: () => ({
+    upsertTimerState: vi.fn().mockResolvedValue(undefined),
+    claimTimerCompletion: vi.fn().mockResolvedValue(true),
+  }),
+}));
+
 describe("useFocusTimer - Reconciliation", () => {
   afterEach(() => {
     vi.useRealTimers();
@@ -86,6 +97,10 @@ describe("useFocusTimer - Reconciliation", () => {
     vi.useFakeTimers();
     localStorage.clear();
     vi.clearAllMocks();
+    // These reconciliation tests assume a live session whose server clock has
+    // been probed; mark it ready so deadline completion isn't deferred by the
+    // unprobed-clock guard (that deferral is covered in timerStoreClockReadiness).
+    setServerOffset(0);
     Object.defineProperty(document, "hidden", {
       configurable: true,
       value: false,
@@ -98,7 +113,8 @@ describe("useFocusTimer - Reconciliation", () => {
         remainingSeconds: 1500,
         completedSessions: 0,
         activeTaskId: null,
-        startedAt: null,
+        endsAt: null,
+        sourceDeviceId: null,
       },
     });
   });
@@ -114,9 +130,11 @@ describe("useFocusTimer - Reconciliation", () => {
       remainingSeconds: 1500, // 25 mins initially
       completedSessions: 0,
       activeTaskId: null,
-      startedAt: startTime, // Started 30s ago
+      // Deadline = start + full duration; reconcile derives remaining from it
+      endsAt: startTime + 1500 * 1000, // started 30s ago → 1470s left
+      sourceDeviceId: null,
     };
-    useTimerStore.setState({ state: initialState as any });
+    useTimerStore.setState({ state: initialState as TimerState });
 
     // When: Set the system time to baseTime (30s after timer started), then render
     vi.setSystemTime(baseTime);
@@ -127,7 +145,7 @@ describe("useFocusTimer - Reconciliation", () => {
     expect(toastMock).not.toHaveBeenCalled();
   });
 
-  it("should trigger completion and show toast exactly once when session ended while away", () => {
+  it("should trigger completion and show toast exactly once when session ended while away", async () => {
     // Given: Timer started 50 mins ago (1500s session = 25 mins, so 50 mins is well over)
     const baseTime = new Date("2024-01-01T12:50:00Z").getTime();
     const startTime = baseTime - 3000000; // 50 minutes before baseTime
@@ -138,13 +156,16 @@ describe("useFocusTimer - Reconciliation", () => {
       remainingSeconds: 1500,
       completedSessions: 0,
       activeTaskId: null,
-      startedAt: startTime,
+      endsAt: startTime + 1500 * 1000,
+      sourceDeviceId: null,
     };
-    useTimerStore.setState({ state: initialState as any });
+    useTimerStore.setState({ state: initialState as TimerState });
 
     // When: Set system time to baseTime (50 mins later), then render
     vi.setSystemTime(baseTime);
     const { result } = renderHook(() => useFocusTimer());
+    // Completion side-effects await the atomic claim — flush the microtask.
+    await act(async () => {});
 
     // Then: Reconciliation should run on mount, showing exactly 1 toast
     expect(toastMock).toHaveBeenCalledTimes(1);
@@ -168,9 +189,10 @@ describe("useFocusTimer - Reconciliation", () => {
       remainingSeconds: 1500,
       completedSessions: 0,
       activeTaskId: null,
-      startedAt: startTime,
+      endsAt: startTime + 1500 * 1000,
+      sourceDeviceId: null,
     };
-    useTimerStore.setState({ state: initialState as any });
+    useTimerStore.setState({ state: initialState as TimerState });
 
     vi.setSystemTime(baseTime);
     renderHook(() => useFocusTimer());
@@ -186,7 +208,7 @@ describe("useFocusTimer - Reconciliation", () => {
     expect(toastMock).toHaveBeenCalledTimes(callCountAfterMount);
   });
 
-  it("should show toast on mount when session expired while app was closed", () => {
+  it("should show toast on mount when session expired while app was closed", async () => {
     // Given: Timer that started 30 mins ago (expired) is in localStorage
     const baseTime = Date.now();
     const startTime = baseTime - 30 * 60 * 1000; // 30 mins ago
@@ -197,14 +219,17 @@ describe("useFocusTimer - Reconciliation", () => {
       remainingSeconds: 1500, // 25 mins
       completedSessions: 0,
       activeTaskId: null,
-      startedAt: startTime,
+      endsAt: startTime + 1500 * 1000,
+      sourceDeviceId: null,
     };
-    useTimerStore.setState({ state: expiredState as any });
+    useTimerStore.setState({ state: expiredState as TimerState });
 
     vi.setSystemTime(baseTime);
 
     // When: Hook mounts (simulating PWA reopen)
     renderHook(() => useFocusTimer());
+    // Completion side-effects await the atomic claim — flush the microtask.
+    await act(async () => {});
 
     // Then: Toast should appear exactly once
     expect(toastMock).toHaveBeenCalled();

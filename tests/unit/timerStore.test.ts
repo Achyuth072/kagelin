@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { DEFAULT_TIMER_SETTINGS } from "@/lib/types/timer";
 import type { TimerSettings } from "@/lib/types/timer";
+import { setServerOffset } from "@/lib/store/serverClock";
 
 /**
  * Timer Store Test Perspectives
@@ -9,7 +10,7 @@ import type { TimerSettings } from "@/lib/types/timer";
  * | Perspective | Target | Verification |
  * |-------------|--------|--------------|
  * | Initialization | useTimerStore | Correct default values and loaded state |
- * | Controls | start/pause/stop | State transitions and startedAt timestamps |
+ * | Controls | start/pause/stop | State transitions and endsAt timestamps |
  * | Ticking | tick | decrement remainingSeconds and handle completion |
  * | Settings | updateSettings | duration sync when idle |
  */
@@ -25,11 +26,15 @@ describe("useTimerStore", () => {
         remainingSeconds: settings.focusDuration * 60,
         completedSessions: 0,
         activeTaskId: null,
-        startedAt: null,
+        endsAt: null,
+        sourceDeviceId: null,
       },
       settings: DEFAULT_TIMER_SETTINGS,
       isLoaded: true,
     });
+    // A live session has always probed the server clock; mark it ready so
+    // deadline completion isn't deferred by the unprobed-clock guard.
+    setServerOffset(0);
     vi.useFakeTimers();
   });
 
@@ -54,7 +59,7 @@ describe("useTimerStore", () => {
     const { state } = useTimerStore.getState();
     expect(state.isRunning).toBe(true);
     expect(state.activeTaskId).toBe(taskId);
-    expect(state.startedAt).not.toBeNull();
+    expect(state.endsAt).not.toBeNull();
   });
 
   it("should pause the timer", () => {
@@ -68,7 +73,7 @@ describe("useTimerStore", () => {
     // Then: State should not be running
     const { state } = useTimerStore.getState();
     expect(state.isRunning).toBe(false);
-    expect(state.startedAt).toBeNull();
+    expect(state.endsAt).toBeNull();
   });
 
   it("should decrement remainingSeconds on tick", () => {
@@ -76,7 +81,8 @@ describe("useTimerStore", () => {
     useTimerStore.getState().start();
     const initialSeconds = useTimerStore.getState().state.remainingSeconds;
 
-    // When: Ticking once
+    // When: A second of wall-clock passes and we tick (deadline recompute)
+    vi.advanceTimersByTime(1000);
     useTimerStore.getState().tick();
 
     // Then: remainingSeconds should be 1499
@@ -86,9 +92,14 @@ describe("useTimerStore", () => {
   });
 
   it("should handle timer completion on tick", () => {
-    // Given: A running timer with 1 second left
+    // Given: A running timer whose deadline has already passed
     useTimerStore.setState((s) => ({
-      state: { ...s.state, isRunning: true, remainingSeconds: 0 },
+      state: {
+        ...s.state,
+        isRunning: true,
+        remainingSeconds: 0,
+        endsAt: Date.now() - 1000,
+      },
     }));
 
     // When: Ticking once
@@ -139,7 +150,7 @@ describe("useTimerStore", () => {
           remainingSeconds: 500,
           completedSessions: 3,
           activeTaskId: "task-1",
-          startedAt: Date.now(),
+          endsAt: Date.now(),
         },
       }));
 
@@ -152,7 +163,7 @@ describe("useTimerStore", () => {
       expect(state.isRunning).toBe(false);
       expect(state.remainingSeconds).toBe(settings.focusDuration * 60);
       expect(state.activeTaskId).toBeNull();
-      expect(state.startedAt).toBeNull();
+      expect(state.endsAt).toBeNull();
       expect(state.completedSessions).toBe(3);
     });
 
@@ -165,7 +176,7 @@ describe("useTimerStore", () => {
           remainingSeconds: 800,
           completedSessions: 3,
           activeTaskId: "task-2",
-          startedAt: Date.now(),
+          endsAt: Date.now(),
         },
       }));
 
@@ -185,7 +196,7 @@ describe("useTimerStore", () => {
           remainingSeconds: 1500,
           completedSessions: 3,
           activeTaskId: null,
-          startedAt: null,
+          endsAt: null,
         },
       }));
 
@@ -230,7 +241,7 @@ describe("useTimerStore", () => {
           remainingSeconds: 700,
           completedSessions: 4,
           activeTaskId: "task-cancel",
-          startedAt: Date.now(),
+          endsAt: Date.now(),
         },
       }));
 
@@ -243,7 +254,7 @@ describe("useTimerStore", () => {
       expect(state.isRunning).toBe(false);
       expect(state.remainingSeconds).toBe(settings.focusDuration * 60);
       expect(state.activeTaskId).toBeNull();
-      expect(state.startedAt).toBeNull();
+      expect(state.endsAt).toBeNull();
       // EXCEPT completedSessions is preserved
       expect(state.completedSessions).toBe(4);
     });
@@ -258,7 +269,7 @@ describe("useTimerStore", () => {
           isRunning: true,
           completedSessions: 2,
           activeTaskId: "task-3",
-          startedAt: Date.now(),
+          endsAt: Date.now(),
         },
       }));
 
@@ -289,7 +300,8 @@ describe("useTimerStore", () => {
           remainingSeconds: longBreakSettings.focusDuration * 60,
           completedSessions: 3,
           activeTaskId: "task-4",
-          startedAt: Date.now(),
+          endsAt: Date.now(),
+          sourceDeviceId: null,
         },
       });
 
@@ -316,7 +328,7 @@ describe("useTimerStore", () => {
           remainingSeconds: 800,
           completedSessions: 2,
           activeTaskId: "task-5",
-          startedAt: Date.now(),
+          endsAt: Date.now(),
         },
       }));
 
@@ -337,7 +349,7 @@ describe("useTimerStore", () => {
           remainingSeconds: 300,
           completedSessions: 0,
           activeTaskId: null,
-          startedAt: null,
+          endsAt: null,
         },
       }));
 

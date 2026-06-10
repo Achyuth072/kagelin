@@ -35,6 +35,28 @@ const nextConfig: NextConfig = {
   // Empty turbopack config to silence webpack warning
   turbopack: {},
   reactCompiler: true,
+  async headers() {
+    return [
+      {
+        source: "/changelog.json",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, no-cache, must-revalidate",
+          },
+        ],
+      },
+      {
+        source: "/changelog-version.json",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, no-cache, must-revalidate",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 // Only wrap with Serwist when using Webpack (dev:pwa, build)

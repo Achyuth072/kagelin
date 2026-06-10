@@ -15,7 +15,7 @@ export async function createBackupZip(data: BackupData): Promise<Blob> {
     .map((e) => toCalendarEventUI(e));
 
   const icsContent =
-    eventsUI.length > 0 ? generateICS(eventsUI, "Kanso Backup") : "";
+    eventsUI.length > 0 ? generateICS(eventsUI, "Kagelin Backup") : "";
 
   const files = Object.create(null);
   const jsonU8 = strToU8(jsonContent);

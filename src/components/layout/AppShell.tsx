@@ -39,6 +39,8 @@ import {
   prefetchChangelog,
   invalidateChangelogCache,
   isNewerThan,
+  fetchLatestVersion,
+  RELEASE_CHANNEL,
 } from "@/lib/changelog-cache";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useWeeklyBackup } from "@/lib/hooks/useWeeklyBackup";
@@ -131,16 +133,16 @@ function ChangelogPopupWatcher() {
   useEffect(() => {
     const checkForUpdates = async () => {
       try {
-        const res = await fetch("/changelog.json", { cache: "no-store" });
-        const data = await res.json();
-        if (data?.[0]?.version) {
-          setServerVersion((prev) => {
-            if (prev !== data[0].version) {
-              invalidateChangelogCache();
-            }
-            return data[0].version;
-          });
-        }
+        const info = await fetchLatestVersion();
+        if (!info) return;
+        // Stable builds should not react to preview-only releases.
+        if (RELEASE_CHANNEL === "stable" && info.channel !== "stable") return;
+        setServerVersion((prev) => {
+          if (prev !== info.version) {
+            invalidateChangelogCache();
+          }
+          return info.version;
+        });
       } catch {
         // ignore
       }
@@ -168,8 +170,6 @@ function ChangelogPopupWatcher() {
   return (
     <ChangelogPopup
       open={isChangelogOpen}
-      appVersion={APP_VERSION}
-      forceVersion={serverVersion || undefined}
       onOpenChange={(val) => {
         if (!val) {
           setChangelogOpen(false);
@@ -254,11 +254,9 @@ function ChangelogManualTrigger() {
   return (
     <ChangelogPopup
       open={forceVersion !== null}
-      appVersion={APP_VERSION}
       onOpenChange={(val) => {
         if (!val) setForceVersion(null);
       }}
-      forceVersion={forceVersion || undefined}
     />
   );
 }

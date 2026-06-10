@@ -183,80 +183,88 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
 
   return (
     <>
-      <div className="h-full relative overflow-hidden">
+      <div className="flex flex-col h-full">
         {onClose && (
-          <button
-            onClick={() => {
-              trigger("tick");
-              onClose();
-            }}
-            className="absolute top-3 right-3 z-50 h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 border border-border transition-all duration-200"
-            aria-label="Close task details"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.25"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="opacity-80"
+          <div className="shrink-0 flex justify-end px-4 pt-3">
+            <button
+              onClick={() => {
+                trigger("tick");
+                onClose();
+              }}
+              className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 border border-border transition-all duration-200"
+              aria-label="Close task details"
             >
-              <path d="M18 6 6 18" />
-              <path d="m6 6 12 12" />
-            </svg>
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.25"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="opacity-80"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
         )}
-        <TaskEditView
-          initialTask={task}
-          content={content}
-          setContent={(v) => setValue("content", v, { shouldValidate: true })}
-          description={description}
-          setDescription={(v) =>
-            setValue("description", v, { shouldValidate: true })
-          }
-          isPreviewMode={isPreviewMode}
-          setIsPreviewMode={setIsPreviewMode}
-          dueDate={dueDate}
-          setDueDate={(v) => setValue("due_date", v, { shouldValidate: true })}
-          doDate={doDate}
-          setDoDate={(v) => setValue("do_date", v, { shouldValidate: true })}
-          isEvening={isEvening}
-          setIsEvening={(v) =>
-            setValue("is_evening", v, { shouldValidate: true })
-          }
-          priority={priority}
-          setPriority={(v) => setValue("priority", v, { shouldValidate: true })}
-          recurrence={recurrence}
-          setRecurrence={(v) =>
-            setValue("recurrence", v, { shouldValidate: true })
-          }
-          selectedProjectId={selectedProjectId}
-          setSelectedProjectId={(v) =>
-            setValue("project_id", v, { shouldValidate: true })
-          }
-          datePickerOpen={datePickerOpen}
-          setDatePickerOpen={setDatePickerOpen}
-          doDatePickerOpen={doDatePickerOpen}
-          setDoDatePickerOpen={setDoDatePickerOpen}
-          showSubtasks={showSubtasks}
-          setShowSubtasks={setShowSubtasks}
-          draftSubtasks={draftSubtasks}
-          setDraftSubtasks={setDraftSubtasks}
-          inboxProjectId={inboxProject?.id || null}
-          projects={projects}
-          isMobile={isMobile}
-          hasContent={isValid}
-          isPending={isPending}
-          onSubmit={handleSubmit(onFormSubmit)}
-          onDelete={handleDelete}
-          onKeyDown={handleKeyDown}
-          errors={errors}
-          mode="panel"
-        />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <TaskEditView
+            initialTask={task}
+            content={content}
+            setContent={(v) => setValue("content", v, { shouldValidate: true })}
+            description={description}
+            setDescription={(v) =>
+              setValue("description", v, { shouldValidate: true })
+            }
+            isPreviewMode={isPreviewMode}
+            setIsPreviewMode={setIsPreviewMode}
+            dueDate={dueDate}
+            setDueDate={(v) =>
+              setValue("due_date", v, { shouldValidate: true })
+            }
+            doDate={doDate}
+            setDoDate={(v) => setValue("do_date", v, { shouldValidate: true })}
+            isEvening={isEvening}
+            setIsEvening={(v) =>
+              setValue("is_evening", v, { shouldValidate: true })
+            }
+            priority={priority}
+            setPriority={(v) =>
+              setValue("priority", v, { shouldValidate: true })
+            }
+            recurrence={recurrence}
+            setRecurrence={(v) =>
+              setValue("recurrence", v, { shouldValidate: true })
+            }
+            selectedProjectId={selectedProjectId}
+            setSelectedProjectId={(v) =>
+              setValue("project_id", v, { shouldValidate: true })
+            }
+            datePickerOpen={datePickerOpen}
+            setDatePickerOpen={setDatePickerOpen}
+            doDatePickerOpen={doDatePickerOpen}
+            setDoDatePickerOpen={setDoDatePickerOpen}
+            showSubtasks={showSubtasks}
+            setShowSubtasks={setShowSubtasks}
+            draftSubtasks={draftSubtasks}
+            setDraftSubtasks={setDraftSubtasks}
+            inboxProjectId={inboxProject?.id || null}
+            projects={projects}
+            isMobile={isMobile}
+            hasContent={isValid}
+            isPending={isPending}
+            onSubmit={handleSubmit(onFormSubmit)}
+            onDelete={handleDelete}
+            onKeyDown={handleKeyDown}
+            errors={errors}
+            mode="panel"
+          />
+        </div>
       </div>
 
       <DeleteConfirmationDialog

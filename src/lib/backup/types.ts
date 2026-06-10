@@ -24,4 +24,5 @@ export interface BackupData {
   habit_entries: HabitEntry[];
   focus_logs: FocusLog[];
   events: CalendarEvent[];
+  location_history?: string[];
 }

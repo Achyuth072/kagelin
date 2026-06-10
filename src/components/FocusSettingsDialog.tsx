@@ -357,7 +357,7 @@ export function FocusSettingsDialog() {
 
   const methods = useForm<TimerSettings>({
     resolver: zodResolver(FocusSettingsSchema),
-    mode: "onChange",
+    mode: "all",
     defaultValues: {
       focusDuration: settings.focusDuration,
       shortBreakDuration: settings.shortBreakDuration,

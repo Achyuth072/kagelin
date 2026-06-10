@@ -70,7 +70,7 @@ serve(async (req) => {
             }
 
             const payload = JSON.stringify({
-              title: item.payload?.title || "Kanso",
+              title: item.payload?.title || "Kagelin",
               body: item.payload?.body || "Notification",
               data: item.payload?.data || {},
             });

@@ -98,7 +98,7 @@ describe("NotificationSettings Component", () => {
         expect(sendPushNotification).toHaveBeenCalledWith({
           endpoint: "https://current-device.test",
           title: "Test Notification",
-          body: "This is a server-sent test notification from Kanso",
+          body: "This is a server-sent test notification from Kagelin",
           data: { type: "test" },
         });
       },
