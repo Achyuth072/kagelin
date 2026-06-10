@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.22.0-preview.5",
+    "date": "2026-06-10",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "add lightweight version polling endpoint"
+      ]
+    }
+  },
+  {
     "version": "1.22.0-preview.4",
     "date": "2026-06-09",
     "channel": "preview",
@@ -663,96 +673,6 @@
         "PiP state not persisting across navigation",
         "CurrentTimeIndicator clipping and alignment across breakpoints",
         "Calendar column transparency and vertical clipping in TimeGrid"
-      ]
-    }
-  },
-  {
-    "version": "1.8.0",
-    "date": "2026-01-13",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Grid and Kanban views for tasks",
-        "Android swipe-back navigation for all modal sheets",
-        "Zen Funnel view hierarchy with refined Kanban card layout"
-      ],
-      "Improved": [
-        "Zen-Modernist design system evolved: Kanso Blue accent, refined borders, and updated physics",
-        "Command Menu aesthetics updated for better contrast hierarchy",
-        "Mobile header layout, haptics, and keyboard robustness hardened",
-        "Adaptive height for mobile drawers to prevent keyboard layout breakage",
-        "Performance via memoization across core components",
-        "Typography and bundle size optimised with dynamic imports"
-      ],
-      "Fixed": [
-        "Calendar header scroll leak in TimeGrid and ScheduleView",
-        "Mobile scrolling cutoff in Grid and Kanban views",
-        "Mobile tooltip and list scrolling regressions"
-      ]
-    }
-  },
-  {
-    "version": "1.6.0",
-    "date": "2025-12-06",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Split View — List View on desktop opens a resizable detail panel alongside the task list",
-        "Play button on every task card — starts a focused session instantly; hover-revealed on desktop, always visible on mobile"
-      ]
-    }
-  },
-  {
-    "version": "1.5.0",
-    "date": "2026-01-07",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Focus Mode soundscapes, picture-in-picture timer refinements, and mobile optimisations"
-      ],
-      "Improved": [
-        "Zen-Modernist physics applied across all interactive surfaces",
-        "Matte & Ink visual polish and UI state consistency",
-        "Guest Mode indicator redesigned as a responsive floating banner"
-      ],
-      "Fixed": [
-        "Mobile calendar layout regression and viewport cut-off"
-      ]
-    }
-  },
-  {
-    "version": "1.2.0",
-    "date": "2025-10-25",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Focus timer — Pomodoro-style sessions with configurable work and break lengths, PiP mode, and session history",
-        "Stats dashboard with daily and weekly focus trends"
-      ]
-    }
-  },
-  {
-    "version": "1.0.0",
-    "date": "2025-10-06",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Task management with list, calendar",
-        "Advanced scheduling and deep Focus Mode integration",
-        "Custom task sorting and drag-and-drop reordering",
-        "Keyboard-first navigation with global shortcuts",
-        "Command menu for search and quick actions",
-        "Completed tasks history logbook",
-        "Universal share target for quick task capture",
-        "Universal haptic feedback system with a global toggle in settings",
-        "High-fidelity drum picker for time selection",
-        "Collapsible sidebar with project management",
-        "Zod validation schemas and hardened row-level security policies"
-      ],
-      "Improved": [
-        "Settings redesigned with a tabbed sidebar layout",
-        "Mobile PWA with native swipe gestures",
-        "Canvas Minimal design system applied across focus, stats, and calendar views"
       ]
     }
   }
