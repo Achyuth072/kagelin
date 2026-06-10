@@ -1,5 +1,11 @@
 [
   {
+    "version": "1.22.0-preview.6",
+    "date": "2026-06-10",
+    "channel": "preview",
+    "sections": {}
+  },
+  {
     "version": "1.22.0-preview.5",
     "date": "2026-06-10",
     "channel": "preview",
@@ -648,31 +654,6 @@
       ],
       "Fixed": [
         "Animation race condition in task edit view"
-      ]
-    }
-  },
-  {
-    "version": "1.9.0",
-    "date": "2026-01-29",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Habits tracking with a per-habit activity heatmap and dedicated Create/Edit views",
-        "Habit repetitions surfaced in the stats dashboard",
-        "Backend push notification infrastructure with pg_cron scheduled delivery",
-        "Smart timer notifications and auto-transition scheduling",
-        "Monthly calendar overflow popover for viewing hidden events"
-      ],
-      "Improved": [
-        "TaskItem decomposed and focus UI alignment refined",
-        "PWA safe area hardening and visual polish",
-        "Kanban column layout rebuilt with a hybrid stack model"
-      ],
-      "Fixed": [
-        "Duplicate timer completion toasts on app resume",
-        "PiP state not persisting across navigation",
-        "CurrentTimeIndicator clipping and alignment across breakpoints",
-        "Calendar column transparency and vertical clipping in TimeGrid"
       ]
     }
   }
