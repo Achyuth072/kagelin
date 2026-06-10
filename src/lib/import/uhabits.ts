@@ -131,7 +131,7 @@ function findClosestKansoColor(loopHex: string): string {
 
 function paletteToHex(colorIndex: number): string {
   const loopHex = LOOP_COLOR_PALETTE[colorIndex];
-  if (!loopHex) return "#4B6CB7"; // default Kanso Blue
+  if (!loopHex) return "#4B6CB7"; // default Kagelin Blue
   return findClosestKansoColor(loopHex);
 }
 

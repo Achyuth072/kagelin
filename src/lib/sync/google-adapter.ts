@@ -30,7 +30,7 @@ const GOOGLE_CALENDAR_API = "https://www.googleapis.com/calendar/v3";
  * Shift a `YYYY-MM-DD` date string by whole days, in UTC.
  *
  * Google all-day events use an exclusive `end.date` (a single-day event on
- * June 6 has start.date=2026-06-06, end.date=2026-06-07), whereas Kanso stores
+ * June 6 has start.date=2026-06-06, end.date=2026-06-07), whereas Kagelin stores
  * an inclusive last day (`...T23:59:59Z`). We convert with -1 day on the way in
  * and +1 day on the way out. Plain UTC arithmetic avoids the local-timezone
  * drift that date-fns `format` would introduce on date-only values.
@@ -150,7 +150,7 @@ export class GoogleCalendarAdapter implements SyncAdapter {
       this.externalCalendar.remote_calendar_id,
     );
     // singleEvents=true must match the full-sync token's setting, otherwise Google
-    // returns the unexpanded recurring master (only the start day shows in Kanso).
+    // returns the unexpanded recurring master (only the start day shows in Kagelin).
     const baseUrl = `${GOOGLE_CALENDAR_API}/calendars/${calendarId}/events?syncToken=${encodeURIComponent(syncToken)}&singleEvents=true`;
 
     const deleted: string[] = [];
@@ -311,7 +311,7 @@ export class GoogleCalendarAdapter implements SyncAdapter {
 
     const googleEvent = remote.data as Record<string, unknown>;
 
-    // Parse Google event to Kanso format
+    // Parse Google event to Kagelin format
     const start = googleEvent.start as Record<string, string> | undefined;
     const end = googleEvent.end as Record<string, string> | undefined;
 
@@ -349,7 +349,7 @@ export class GoogleCalendarAdapter implements SyncAdapter {
   }
 
   /**
-   * Convert Kanso event to Google Calendar event format
+   * Convert Kagelin event to Google Calendar event format
    */
   private toGoogleEvent(event: CalendarEvent): Record<string, unknown> {
     const googleEvent: Record<string, unknown> = {

@@ -109,7 +109,7 @@ self.addEventListener("push", (event) => {
     tag: "kanso-notification",
   };
 
-  let title = "Kanso";
+  let title = "Kagelin";
   let body = "You have a new notification";
 
   if (event.data) {

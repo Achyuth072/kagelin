@@ -453,7 +453,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
               >
                 <div className="flex items-center gap-2">
                   <span className="type-micro text-muted-foreground/80 group-hover:text-foreground transition-colors">
-                    Kanso • v{version}
+                    Kagelin • v{version}
                   </span>
                   {version.includes("preview") && (
                     <span className="px-1.5 py-0.5 rounded-[3px] bg-brand/10 text-brand text-[9px] font-bold uppercase tracking-[0.08em] border border-brand/20 leading-none">

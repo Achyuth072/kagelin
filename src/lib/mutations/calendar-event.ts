@@ -50,7 +50,7 @@ export const calendarEventMutations = {
 
     const eventId = input._clientId || crypto.randomUUID();
 
-    // Default-new-event target (55-DESIGN): a brand-new Kanso event has no home,
+    // Default-new-event target (55-DESIGN): a brand-new Kagelin event has no home,
     // so it round-trips through the first-connected bidirectional calendar.
     // Recurring authored events stay local-only — never half-sync a series.
     let remoteCalendarId: string | null = null;

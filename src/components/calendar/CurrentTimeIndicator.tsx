@@ -16,7 +16,7 @@ interface CurrentTimeIndicatorProps {
 
 /**
  * CurrentTimeIndicator displays a real-time horizontal line representing "now" on the calendar grid.
- * Styled according to Zen-Modernism: Kanso Blue, high contrast, dampened transitions.
+ * Styled according to Zen-Modernism: Kagelin Blue, high contrast, dampened transitions.
  */
 export function CurrentTimeIndicator({
   className,

@@ -19,9 +19,9 @@ describe("ColorPicker", () => {
   // When: Rendering the component
   // Then: The button corresponding to that color should have an active state
   it("shows the selected color as active", () => {
-    const selectedColor = "#4B6CB7"; // Kanso Blue
+    const selectedColor = "#4B6CB7"; // Kagelin Blue
     render(<ColorPicker value={selectedColor} onChange={mockOnChange} />);
-    const selectedButton = screen.getByLabelText("Kanso Blue");
+    const selectedButton = screen.getByLabelText("Kagelin Blue");
     expect(selectedButton).toHaveAttribute("aria-checked", "true");
   });
 

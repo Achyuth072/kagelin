@@ -77,7 +77,7 @@ export function ChangelogPopup({ open, onOpenChange }: ChangelogPopupProps) {
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="text-[11px] font-semibold tracking-[0.01em] text-foreground pt-1">
             {displayEntries.length > 0
-              ? `Kanso v${displayEntries[0].version}`
+              ? `Kagelin v${displayEntries[0].version}`
               : "Recent changes"}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>

@@ -583,7 +583,7 @@ export function BackupSyncSettings() {
               <p className="text-[10px] text-muted-foreground/50 text-center leading-relaxed">
                 Your credentials are stored locally via{" "}
                 <span className="font-mono">localStorage</span> and never sent
-                to Kanso servers.
+                to Kagelin servers.
               </p>
             </CardContent>
           </Card>

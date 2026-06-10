@@ -21,13 +21,13 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kanso",
+  title: "Kagelin",
   description: "Your personal productivity super-app",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Kanso",
+    title: "Kagelin",
   },
 };
 

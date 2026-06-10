@@ -1,8 +1,10 @@
-# Kanso
+# Kagelin
+
+> "Work quietly. Own everything."
 
 An all-in-one productivity app combining tasks, deep focus, habits, and calendar. Ink & matte design, offline-first, no account required.
 
-**[usekanso.vercel.app](https://usekanso.vercel.app)** — try it instantly in Guest Mode.
+**[kagelin.app](https://kagelin.app)**
 
 ## Features
 
@@ -71,7 +73,3 @@ npm install
 cp .env.example .env.local   # add your Supabase keys
 npm run dev
 ```
-
-## License
-
-[AGPL-3.0](./LICENSE)

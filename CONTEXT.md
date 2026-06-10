@@ -1,6 +1,6 @@
-# Kanso — Domain Glossary
+# Kagelin — Domain Glossary
 
-The canonical vocabulary for Kanso. This file is a glossary, not a spec — it
+The canonical vocabulary for Kagelin. This file is a glossary, not a spec — it
 defines what terms _mean_, never how they're implemented. When a term here
 conflicts with how something is being described in a plan or PR, the conflict
 must be resolved before proceeding.
@@ -17,7 +17,7 @@ These are three distinct features with very different server-compute costs.
 A calendar pull/push initiated **on the user's own device** (opening the
 calendar, "Sync now", a debounced post-edit push, window refocus). The browser
 talks **directly** to the provider (Google / Microsoft / CalDAV) using the
-user's own access token and API quota. Kanso's only server cost is an
+user's own access token and API quota. Kagelin's only server cost is an
 occasional access-token refresh. Cheap. Available to **registered users** (free
 tier included).
 
@@ -50,7 +50,7 @@ a server-anchored identity.
 
 ### Registered (free)
 
-A user with a Kanso account (`auth.uid()`). Data persists to the cloud. Gets
+A user with a Kagelin account (`auth.uid()`). Data persists to the cloud. Gets
 **on-demand calendar sync** for all providers. Does **not** get realtime
 cross-device mirroring, background auto-sync, or push.
 
@@ -66,13 +66,13 @@ auto-sync, and push notifications on top of the registered-free capabilities.
 ### Connect Calendar (vs. login identity)
 
 The OAuth consent flow for _granting calendar access_ is **separate** from the
-login/auth identity. A user logs into Kanso via magic link; connecting a Google
+login/auth identity. A user logs into Kagelin via magic link; connecting a Google
 or Outlook calendar is a distinct, additional consent with calendar scopes.
 
 ### Primary calendar / write target
 
 Of the calendars discovered on a connected account, exactly one is the **write
-target** — the calendar Kanso-authored events are pushed to. It defaults to the
+target** — the calendar Kagelin-authored events are pushed to. It defaults to the
 account's primary calendar. All other discovered calendars are read-only (pull)
 display.
 
@@ -84,7 +84,7 @@ then hard-deleted locally.
 
 ### kansoId
 
-Kanso's own event `id` (UUID), stamped into the remote event at create time via
+Kagelin's own event `id` (UUID), stamped into the remote event at create time via
 a provider-specific extended property (Google: `extendedProperties.private.kansoId`;
 MS Graph: `singleValueExtendedProperties`). Returned on read so that a subsequent
 pull can recognise a just-created event and adopt its `remote_id` / `etag` without

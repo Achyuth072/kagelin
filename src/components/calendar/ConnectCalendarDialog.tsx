@@ -334,7 +334,7 @@ export function ConnectCalendarDialog({
             {step === "configure_caldav" &&
               "Enter your server details and app-specific password."}
             {step === "pick_calendars" &&
-              "Choose which calendars to sync with Kanso."}
+              "Choose which calendars to sync with Kagelin."}
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 

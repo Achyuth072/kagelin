@@ -269,7 +269,7 @@ export default function FocusPage() {
             </h2>
             <p className="text-muted-foreground max-w-[280px]">
               The timer is running in a floating window. You can browse other
-              pages in Kanso.
+              pages in Kagelin.
             </p>
             <Button
               variant="outline"

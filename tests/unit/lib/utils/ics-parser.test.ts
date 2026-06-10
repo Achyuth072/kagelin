@@ -5,7 +5,7 @@ describe("ics-parser", () => {
   test("parses a single event successfully", () => {
     const ics = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//Kanso//Test//EN
+PRODID:-//Kagelin//Test//EN
 BEGIN:VEVENT
 UID:123@kanso
 DTSTAMP:20260326T100000Z

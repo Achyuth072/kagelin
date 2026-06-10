@@ -54,7 +54,7 @@ class MockStore {
         id: pWork,
         user_id: "guest",
         name: "Work 💼",
-        color: "#4B6CB7", // Kanso Blue
+        color: "#4B6CB7", // Kagelin Blue
         view_style: "list",
         is_inbox: false,
         is_archived: false,
@@ -353,7 +353,7 @@ class MockStore {
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
           all_day: false,
-          color: "#4B6CB7", // Kanso brand
+          color: "#4B6CB7", // Kagelin brand
           category: "event",
           recurrence_rule: null,
           remote_id: null,

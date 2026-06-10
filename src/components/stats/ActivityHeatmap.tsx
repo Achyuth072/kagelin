@@ -89,7 +89,7 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
     return () => cancelAnimationFrame(frame);
   }, [calendarData.length, isMobile, isLoading]);
 
-  // Monochromatic Kanso theme (brand color scale)
+  // Monochromatic Kagelin theme (brand color scale)
   const theme = useMemo(
     () => ({
       dark: [

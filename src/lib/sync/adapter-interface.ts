@@ -49,7 +49,7 @@ export interface RemoteEvent {
   data: string | Record<string, unknown>;
   /** Last modified timestamp */
   updatedAt?: Date;
-  /** Kanso local event ID stamped on create — used for interrupted-create reconciliation */
+  /** Kagelin local event ID stamped on create — used for interrupted-create reconciliation */
   kansoId?: string;
 }
 
@@ -125,7 +125,7 @@ export interface SyncAdapter {
   deleteRemoteEvent(remoteId: string): Promise<void>;
 
   /**
-   * Convert remote event data to Kanso CalendarEvent input
+   * Convert remote event data to Kagelin CalendarEvent input
    * Provider-specific parsing (ICS for CalDAV, JSON for Google/MS)
    */
   parseRemoteEvent(remote: RemoteEvent): CreateCalendarEventInput | null;

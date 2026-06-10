@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     }
 
     const payload = JSON.stringify({
-      title: title || "Kanso",
+      title: title || "Kagelin",
       body: body || "New notification",
       data: data || {},
     });

@@ -37,7 +37,7 @@ describe("uhabitsImport", () => {
 
     expect(result.entries).toHaveLength(1);
     expect(result.entries[0].date).toBe("2024-05-07");
-    // Loop's YES (value=2) must be normalized to Kanso's completed (value=1)
+    // Loop's YES (value=2) must be normalized to Kagelin's completed (value=1)
     expect(result.entries[0].value).toBe(1);
   });
 
@@ -71,31 +71,31 @@ describe("uhabitsImport", () => {
     expect(result.entries[0].value).toBe(1);
   });
 
-  it("should normalize value=2 (Loop YES) to value=1 (Kanso completed)", () => {
+  it("should normalize value=2 (Loop YES) to value=1 (Kagelin completed)", () => {
     const mockHabits = [{ id: 1, name: "Read", archived: 0 }];
     const mockRepetitions = [{ habit: 1, timestamp: 1715097600000, value: 2 }];
     const result = mapUhabitsToKanso(mockHabits, mockRepetitions);
     expect(result.entries[0].value).toBe(1);
   });
 
-  it("should map Loop palette indices to the closest Kanso palette color", () => {
+  it("should map Loop palette indices to the closest Kagelin palette color", () => {
     const kansoHexes = new Set(PROJECT_COLORS.map((c) => c.hex.toLowerCase()));
 
     const mockHabits = [
-      { id: 1, name: "Test", archived: 0, color: 0 }, // Loop Red → closest Kanso
-      { id: 2, name: "Test2", archived: 0, color: 7 }, // Loop Teal → closest Kanso
+      { id: 1, name: "Test", archived: 0, color: 0 }, // Loop Red → closest Kagelin
+      { id: 2, name: "Test2", archived: 0, color: 7 }, // Loop Teal → closest Kagelin
       { id: 3, name: "Test3", archived: 0, color: 99 }, // Unknown index → default
     ];
     const result = mapUhabitsToKanso(mockHabits, []);
 
-    // All mapped colors must exist in the Kanso palette
+    // All mapped colors must exist in the Kagelin palette
     expect(kansoHexes.has(result.habits[0].color.toLowerCase())).toBe(true);
     expect(kansoHexes.has(result.habits[1].color.toLowerCase())).toBe(true);
 
     // Specific mappings (nearest-neighbor in RGB space against the 24-color palette)
     expect(result.habits[0].color).toBe("#B56C5A"); // Loop Red #f44336 → Terracotta
     expect(result.habits[1].color).toBe("#4A8A8A"); // Loop Teal #009688 → Teal
-    expect(result.habits[2].color).toBe("#4B6CB7"); // unknown → Kanso Blue default
+    expect(result.habits[2].color).toBe("#4B6CB7"); // unknown → Kagelin Blue default
   });
 
   it("should infer icon from habit name keywords", () => {
