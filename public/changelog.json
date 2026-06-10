@@ -3,7 +3,67 @@
     "version": "1.22.0",
     "date": "2026-06-10",
     "channel": "stable",
-    "sections": {}
+    "sections": {
+      "Added": [
+        "add lightweight version polling endpoint",
+        "sync perf improvements and create-event modal restructure",
+        "re-link events to new calendar on provider reconnect",
+        "prevent editing recurring events in create/edit dialog",
+        "channel-based sections with auto-bucketing",
+        "recurrence glyph + picker staleness + do_date spawn fix",
+        "pendingFocusStart intent flag and server-sourced today-count on focus page",
+        "completion claim, settings sync, today-count in useFocusTimer",
+        "rewrite useTimerSync for deadline model",
+        "add claimTimerCompletion mutation and sync settings in upsert",
+        "replace startedAt with endsAt deadline model in timerStore",
+        "add serverClock and deviceId helpers",
+        "wire calendar OAuth UI and Sync now controls",
+        "add calendar sync hooks and sync-state mutation stamping",
+        "extend sync engine for bidirectional CRUD and conflict resolution",
+        "add calendar OAuth connect/callback routes and token encryption"
+      ],
+      "Improved": [
+        "consolidate vendor-prefix helpers into fsApi object",
+        "bind location combobox to RHF Controller",
+        "simplify scroll isolation, location store, and fullscreen helpers",
+        "build the timer sync payload in one place",
+        "share one auth check across calendar routes",
+        "cleanup after phase 55",
+        "simplify generator, filtering and tests",
+        "extract invalidateTaskCaches helper + inline nextDueDate",
+        "simplify timer sync and today-count hook"
+      ],
+      "Fixed": [
+        "fall back to request origin for calendar OAuth redirect",
+        "return 200 [] from /api/calendar/connected for guests",
+        "remove triggerValidation useEffect, use RHF mode: all",
+        "suppress 401s from GET /api/calendar/connected for guests",
+        "persist location history across event deletions",
+        "restyle location dropdown trigger and fix mobile alignment",
+        "add inline clear button for location combobox",
+        "harmonize notes textarea styling with other dialog inputs",
+        "add selectable \"Use\" item for custom location in dropdown",
+        "stop location dropdown from closing drawer when scrolling",
+        "run validation when settings dialog opens",
+        "fullscreen toggle works on mobile (Android API, iOS CSS fallback, Safari prefixes)",
+        "reposition close button in detail panel to avoid content overlap",
+        "allow left/right swipe to dismiss toasts",
+        "save button greyed out when opening settings",
+        "update tests to match current source code",
+        "re-queue calendar events edited mid-push",
+        "avoid early timer completion after reopening",
+        "don't lose a finished session on a network blip",
+        "correct all-day event dates for Google Calendar",
+        "stop deleted events coming back after a sync",
+        "keep refresh token on temporary errors",
+        "update transition classes for improved hover effects",
+        "close dropdown menu when opening Manage Calendars dialog",
+        "prevent location dropdown clipping on mobile and fix touch interaction",
+        "raise AlertDialog z-index above modal layer",
+        "revive archived events when reconnecting calendar",
+        "stop recurring events duplicating and make them fully read-only"
+      ]
+    }
   },
   {
     "version": "1.22.0-preview.7",
@@ -613,22 +673,6 @@
         "Guest mode and settings pages aligned with brand styling",
         "Sidebar touch interaction persistence on mobile",
         "Metadata tag styling standardised for priorities and subtasks"
-      ]
-    }
-  },
-  {
-    "version": "1.12.0",
-    "date": "2026-03-27",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Multi-provider calendar sync: Google, Outlook, and CalDAV with bidirectional sync",
-        "Natural language event creation",
-        "Universal .ics (RFC 5545) import and export"
-      ],
-      "Improved": [
-        "Calendar UI standardised with matte aesthetic and Seijaku haptics",
-        "Offline-first event persistence with background synchronisation"
       ]
     }
   }

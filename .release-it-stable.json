@@ -15,7 +15,7 @@
   },
   "hooks": {
     "after:bump": [
-      "node scripts/generate-changelog.cjs ${version} v${latestVersion} --channel=stable",
+      "node scripts/generate-changelog.cjs ${version} \"$(git describe --tags --abbrev=0 --match 'v*.*.*' --exclude 'v*-*')\" --channel=stable",
       "git add public/changelog.json public/changelog-version.json"
     ]
   }
