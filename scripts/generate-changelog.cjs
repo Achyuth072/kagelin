@@ -137,7 +137,11 @@ if (require.main === module) {
   fs.writeFileSync(changelogFile, JSON.stringify(entries, null, 2) + "\n");
 
   // Write a lightweight version file for pollers (avoids fetching the full changelog).
-  const versionFile = path.join(process.cwd(), "public", "changelog-version.json");
+  const versionFile = path.join(
+    process.cwd(),
+    "public",
+    "changelog-version.json",
+  );
   fs.writeFileSync(
     versionFile,
     JSON.stringify({ version, channel: resolvedChannel }) + "\n",
