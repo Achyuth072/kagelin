@@ -15,7 +15,7 @@ const PROVIDER_SCOPES: Record<string, string> = {
 };
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const { provider } = await params;
@@ -53,7 +53,8 @@ export async function GET(
     path: "/",
   });
 
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/calendar/oauth/callback`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+  const redirectUri = `${appUrl}/api/calendar/oauth/callback`;
   const url = new URL(PROVIDER_AUTH_URLS[provider]);
   url.searchParams.set(
     "client_id",
