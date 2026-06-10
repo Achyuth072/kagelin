@@ -1,5 +1,11 @@
 [
   {
+    "version": "1.22.0",
+    "date": "2026-06-10",
+    "channel": "stable",
+    "sections": {}
+  },
+  {
     "version": "1.22.0-preview.7",
     "date": "2026-06-10",
     "channel": "preview",
@@ -623,28 +629,6 @@
       "Improved": [
         "Calendar UI standardised with matte aesthetic and Seijaku haptics",
         "Offline-first event persistence with background synchronisation"
-      ]
-    }
-  },
-  {
-    "version": "1.11.0",
-    "date": "2026-03-25",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Project deletion now prompts with a multi-choice confirmation: move tasks to inbox, delete, or archive",
-        "Unarchive projects directly from the sidebar"
-      ],
-      "Improved": [
-        "Activity heatmap migrated to react-activity-calendar for better React integration and smaller bundle",
-        "Heatmap cell hover tooltips show date, focus hours, and task count",
-        "Tactile feedback standardised across 40+ components via a semantic haptic registry",
-        "Subtask list in task items loads lazily to reduce initial render weight in dense views",
-        "Global sync indicator rewritten with a ref-based state machine for smoother feedback",
-        "Mobile project management rebuilt with a responsive drawer pattern"
-      ],
-      "Fixed": [
-        "Kanban and list DnD ghost states corrected for visual parity and mobile touch isolation"
       ]
     }
   }
