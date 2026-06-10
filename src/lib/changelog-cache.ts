@@ -23,9 +23,29 @@ export const RELEASE_CHANNEL: "preview" | "stable" =
 let cache: ChangelogEntry[] | null = null;
 let fetchPromise: Promise<ChangelogEntry[]> | null = null;
 
+export interface ChangelogVersionInfo {
+  version: string;
+  channel: "preview" | "stable";
+}
+
+let versionCache: ChangelogVersionInfo | null = null;
+
 export function invalidateChangelogCache(): void {
   cache = null;
   fetchPromise = null;
+  versionCache = null;
+}
+
+export function fetchLatestVersion(): Promise<ChangelogVersionInfo | null> {
+  if (versionCache) return Promise.resolve(versionCache);
+
+  return fetch("/changelog-version.json")
+    .then((r) => r.json())
+    .then((data: ChangelogVersionInfo) => {
+      versionCache = data;
+      return data;
+    })
+    .catch(() => null);
 }
 
 export function prefetchChangelog(): Promise<ChangelogEntry[]> {

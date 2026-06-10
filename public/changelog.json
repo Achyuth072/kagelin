@@ -94,7 +94,8 @@
         "Focus settings dialog: harmonised sections and cleaner ink & matte styling",
         "Calendar: centred now-indicator, smoother mobile gestures, week view limited to desktop",
         "Toasts now size to their content and stay centred on mobile",
-        "Sidebar collapsed icon backgrounds centred reliably"
+        "Sidebar collapsed icon backgrounds centred reliably",
+        "Toasts suppressed while the changelog is open, hotkeys blocked behind modals"
       ],
       "Fixed": [
         "Overlays stacking incorrectly (portalled overlays now sit at the correct z-index)",
@@ -120,29 +121,8 @@
     "date": "2026-05-20",
     "channel": "stable",
     "sections": {
-      "Added": [
-        "Global 12hr/24hr/system time format preference applied across all time displays",
-        "Strict and flexible task recurrence modes",
-        "Loop Habit Tracker (uhabits) partial data import",
-        "Account data controls for registered users: export, import, and delete cloud data",
-        "Changelog popup with channel-based filtering, version scoping, and prefetch cache"
-      ],
-      "Improved": [
-        "Drag-and-drop with cross-group mutations and auto-scroll in list and board views",
-        "Smart filter system unified and performance-optimised",
-        "Sort and group transitions wrapped in useTransition for smoother rendering",
-        "Notification and changelog layering, touch targets, and accessibility",
-        "Mobile UX polish across task, habit, and settings screens"
-      ],
       "Fixed": [
-        "Task DnD grouping and metadata sync issues",
-        "Desktop list DnD layout shift resolved with stricter container boundaries",
-        "Mobile/desktop list view spacing and border overlap",
-        "Ghost task list alignment, completed-state opacity, and mobile filter chip spacing",
-        "z-index stack cleaned up with a clear 70/60/50/40 hierarchy",
-        "Toast centering on mobile",
-        "Android keyboard not appearing on time picker",
-        "Stale cached version showing after a fresh deploy"
+        "Android keyboard not appearing on time picker"
       ]
     }
   },
@@ -214,20 +194,6 @@
     "sections": {
       "Fixed": [
         "Invalidate cache when new version detected by poller, fix stale preview.13 showing after deploy"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.15",
-    "date": "2026-05-13",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add 24hr mode to SegmentedTimePicker and haptic feedback to quick-select buttons",
-        "Wire useTimeFormat into all display components with system locale detection"
-      ],
-      "Fixed": [
-        "Align What's New indicator with Ink & Matte design"
       ]
     }
   },
@@ -394,6 +360,17 @@
     }
   },
   {
+    "version": "1.19.1",
+    "date": "2026-05-10",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Focus timer sliders no longer reset when switching tabs or navigating away",
+        "Guest mode loads faster with no unnecessary network calls"
+      ]
+    }
+  },
+  {
     "version": "1.19.0",
     "date": "2026-05-04",
     "channel": "stable",
@@ -406,7 +383,8 @@
         "Core data lookups refactored to Map-based O(1) complexity",
         "High-frequency state isolated into dedicated Zustand micro-stores",
         "Replaced Framer Motion with native CSS animations in dialogs",
-        "Mobile swipe physics recalibrated for a tighter, hardware-native feel"
+        "Mobile swipe physics recalibrated for a tighter, hardware-native feel",
+        "Task list rendering scales linearly — stays fast with 500+ tasks"
       ],
       "Fixed": [
         "Redundant project tags removed across all views for a cleaner UI"
@@ -673,14 +651,9 @@
         "Habit repetitions surfaced in the stats dashboard",
         "Backend push notification infrastructure with pg_cron scheduled delivery",
         "Smart timer notifications and auto-transition scheduling",
-        "Split View (master-detail) layout for desktop task browsing",
-        "Real-time current-time indicator with auto-scroll in the calendar",
-        "Horizontal auto-scroll for the mobile week view",
-        "Play button directly on grid and board task cards",
         "Monthly calendar overflow popover for viewing hidden events"
       ],
       "Improved": [
-        "Mobile haptics standardised to Seijaku specs across all interactions",
         "TaskItem decomposed and focus UI alignment refined",
         "PWA safe area hardening and visual polish",
         "Kanban column layout rebuilt with a hybrid stack model"
@@ -719,6 +692,17 @@
     }
   },
   {
+    "version": "1.6.0",
+    "date": "2025-12-06",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Split View — List View on desktop opens a resizable detail panel alongside the task list",
+        "Play button on every task card — starts a focused session instantly; hover-revealed on desktop, always visible on mobile"
+      ]
+    }
+  },
+  {
     "version": "1.5.0",
     "date": "2026-01-07",
     "channel": "stable",
@@ -728,7 +712,6 @@
       ],
       "Improved": [
         "Zen-Modernist physics applied across all interactive surfaces",
-        "Real-time productivity stats with responsive haptic feedback",
         "Matte & Ink visual polish and UI state consistency",
         "Guest Mode indicator redesigned as a responsive floating banner"
       ],
@@ -738,13 +721,23 @@
     }
   },
   {
-    "version": "1.0.0",
-    "date": "2026-01-06",
+    "version": "1.2.0",
+    "date": "2025-10-25",
     "channel": "stable",
     "sections": {
       "Added": [
-        "Task management with list, calendar, and kanban views",
-        "Recurring task support",
+        "Focus timer — Pomodoro-style sessions with configurable work and break lengths, PiP mode, and session history",
+        "Stats dashboard with daily and weekly focus trends"
+      ]
+    }
+  },
+  {
+    "version": "1.0.0",
+    "date": "2025-10-06",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Task management with list, calendar",
         "Advanced scheduling and deep Focus Mode integration",
         "Custom task sorting and drag-and-drop reordering",
         "Keyboard-first navigation with global shortcuts",
@@ -752,13 +745,11 @@
         "Completed tasks history logbook",
         "Universal share target for quick task capture",
         "Universal haptic feedback system with a global toggle in settings",
-        "Guest Mode with full localStorage isolation and data controls",
         "High-fidelity drum picker for time selection",
         "Collapsible sidebar with project management",
         "Zod validation schemas and hardened row-level security policies"
       ],
       "Improved": [
-        "Statistics page with activity heatmap and focus-trend hours view",
         "Settings redesigned with a tabbed sidebar layout",
         "Mobile PWA with native swipe gestures",
         "Canvas Minimal design system applied across focus, stats, and calendar views"

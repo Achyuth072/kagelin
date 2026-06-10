@@ -109,7 +109,7 @@ if (require.main === module) {
   if (resolvedChannel === "stable") {
     console.log(
       "\n╔══════════════════════════════════════════════════════╗\n" +
-        "║  STABLE RELEASE — hand-polish the sections below    ║\n" +
+        "║  STABLE RELEASE — hand-polish the sections below     ║\n" +
         "║  in public/changelog.json before tagging the release ║\n" +
         "╚══════════════════════════════════════════════════════╝\n",
     );
@@ -128,7 +128,21 @@ if (require.main === module) {
 
   entries.unshift({ version, date, channel: resolvedChannel, sections });
 
+  // Cap entries to keep the file bounded — old entries live in git history.
+  const MAX_ENTRIES = 50;
+  if (entries.length > MAX_ENTRIES) {
+    entries = entries.slice(0, MAX_ENTRIES);
+  }
+
   fs.writeFileSync(changelogFile, JSON.stringify(entries, null, 2) + "\n");
+
+  // Write a lightweight version file for pollers (avoids fetching the full changelog).
+  const versionFile = path.join(process.cwd(), "public", "changelog-version.json");
+  fs.writeFileSync(
+    versionFile,
+    JSON.stringify({ version, channel: resolvedChannel }) + "\n",
+  );
+
   console.log(
     `✓ Added ${resolvedChannel} entry for v${version} (${headings.length} commits → ${Object.values(sections).flat().length} visible items)`,
   );
