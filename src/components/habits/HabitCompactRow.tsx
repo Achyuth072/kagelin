@@ -1,17 +1,28 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
+import type {
+  DraggableAttributes,
+  DraggableSyntheticListeners,
+} from "@dnd-kit/core";
 import { useMarkHabitComplete } from "@/lib/hooks/useHabitMutations";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { getRolling7Days } from "@/lib/utils/habit-rolling";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
+import { DragHandle } from "@/components/tasks/DragHandle";
 import { HabitStripCell } from "./HabitStripCell";
 
 interface HabitCompactRowProps {
   habit: HabitWithEntries;
   icon?: LucideIcon;
   onEdit?: () => void;
+  // Drag wiring (compact view): desktop shows a left-edge handle, mobile spreads
+  // the listeners on the whole row behind a long-press delay.
+  isDesktop?: boolean;
+  dragListeners?: DraggableSyntheticListeners;
+  dragAttributes?: DraggableAttributes;
+  dragActivatorRef?: (element: HTMLElement | null) => void;
 }
 
 /**
@@ -23,6 +34,10 @@ export function HabitCompactRow({
   habit,
   icon: Icon,
   onEdit,
+  isDesktop,
+  dragListeners,
+  dragAttributes,
+  dragActivatorRef,
 }: HabitCompactRowProps) {
   const markComplete = useMarkHabitComplete();
   const coarse = useCoarsePointer();
@@ -43,8 +58,21 @@ export function HabitCompactRow({
   return (
     <div
       onClick={onEdit}
-      className="flex cursor-pointer flex-col gap-3 px-4 py-3.5 transition-seijaku-fast hover:bg-secondary/20 md:flex-row md:items-center md:gap-4"
+      {...(!isDesktop ? dragAttributes : {})}
+      {...(!isDesktop ? dragListeners : {})}
+      className="group flex cursor-pointer flex-col gap-3 px-4 py-3.5 transition-seijaku-fast hover:bg-secondary/20 md:flex-row md:items-center md:gap-4"
     >
+      {/* Desktop: left-edge drag handle (behind a 5px mouse-sensor distance). */}
+      {isDesktop && (
+        <DragHandle
+          ref={dragActivatorRef}
+          dragListeners={dragListeners}
+          dragAttributes={dragAttributes}
+          variant="desktop"
+          className="shrink-0"
+        />
+      )}
+
       {/* Left: icon + name + streak (line 1 on mobile, flex-left on desktop) */}
       <div className="flex min-w-0 items-center gap-3 md:flex-1">
         {Icon && (
