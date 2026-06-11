@@ -4,7 +4,12 @@ import { useTimerStore } from "@/lib/store/timerStore";
 import { DEFAULT_TIMER_SETTINGS } from "@/lib/types/timer";
 import { useTimerSync } from "@/lib/hooks/useTimerSync";
 import { getDeviceId } from "@/lib/store/deviceId";
-import { getServerOffset, setServerOffset } from "@/lib/store/serverClock";
+import {
+  getServerOffset,
+  setServerOffset,
+  resetServerClock,
+  isServerClockReady,
+} from "@/lib/store/serverClock";
 
 // ===== Hoisted mocks for module-level mocking =====
 
@@ -433,6 +438,56 @@ describe("useTimerSync", () => {
 
     // Offset should be ~+50s (allowing for RTT/timing slack), not 0.
     expect(getServerOffset()).toBeGreaterThan(40_000);
+  });
+
+  // --- Regression: probe failure must not strand a finished timer at 00:00 ---
+
+  it("falls back to the local clock when the probe keeps failing, so a finished session still completes", async () => {
+    // Repro of the v1.22.0 prod regression: the server_now_ms RPC was missing in
+    // production, so the probe always errored, isServerClockReady() never flipped,
+    // and reconcile() deferred completion forever — the timer hung at 00:00 and
+    // never logged or auto-started.
+    vi.useFakeTimers();
+    resetServerClock(); // clock starts unprobed (as it is after a fresh load)
+    mockRpc.mockImplementation(
+      async () =>
+        ({
+          data: null,
+          error: { message: "function public.server_now_ms() does not exist" },
+        }) as unknown as { data: number | string; error: null },
+    );
+
+    // A focus session whose deadline already passed, on a foregrounded device.
+    useTimerStore.setState((s) => ({
+      state: {
+        ...s.state,
+        mode: "focus",
+        isRunning: true,
+        remainingSeconds: 5,
+        completedSessions: 0,
+        activeTaskId: "task-1",
+        endsAt: Date.now() - 1000,
+        sourceDeviceId: null,
+      },
+    }));
+
+    // Mount first so the subscribe effect kicks off the probe chain, then drain
+    // the retries + their backoff timers.
+    renderHook(() => useTimerSync());
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    // The probe gave up and trusted the local clock instead of hanging.
+    expect(isServerClockReady()).toBe(true);
+
+    // The next tick now passes the readiness gate and completes the session.
+    act(() => {
+      useTimerStore.getState().reconcile();
+    });
+    const state = useTimerStore.getState().state;
+    expect(state.mode).toBe("shortBreak");
+    expect(state.completedSessions).toBe(1);
   });
 
   // --- Test 11: Re-hydrate from the DB on visibility change (H3) ---

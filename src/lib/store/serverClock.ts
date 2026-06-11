@@ -49,6 +49,16 @@ export function isServerClockReady(): boolean {
   return serverClockReady;
 }
 
+/**
+ * Reset the anchor to its unprobed state (offset 0, not ready). Test-only — the
+ * module-level flag otherwise has no path back to false, which the probe
+ * fallback regression needs to observe the false→true transition.
+ */
+export function resetServerClock(): void {
+  serverOffsetMs = 0;
+  serverClockReady = false;
+}
+
 /** serverNow — the current server time in epoch ms. */
 export function serverNow(): number {
   return Date.now() + serverOffsetMs;
