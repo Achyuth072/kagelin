@@ -5,6 +5,7 @@ import {
   MoreVertical,
   Timer,
   CheckCircle2,
+  Search,
   Settings as SettingsIcon,
   Sparkles,
 } from "lucide-react";
@@ -93,7 +94,13 @@ const HeaderTimer = React.memo(function HeaderTimer() {
   );
 });
 
-export const Header = React.memo(function Header() {
+interface HeaderProps {
+  setCommandOpen: (open: boolean) => void;
+}
+
+export const Header = React.memo(function Header({
+  setCommandOpen,
+}: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { openSheet } = useCompletedTasks();
@@ -152,6 +159,17 @@ export const Header = React.memo(function Header() {
         <SyncIndicator />
         {/* Isolated Timer Component to prevent Header re-renders */}
         <HeaderTimer />
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 bg-transparent hover:bg-accent/40 active:scale-95 transition-all"
+          onPointerDown={() => trigger("toggle")}
+          onClick={() => setCommandOpen(true)}
+          aria-label="Search"
+        >
+          <Search className="h-5 w-5" />
+        </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
