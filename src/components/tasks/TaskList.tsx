@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckSquare, Plus } from "lucide-react";
-import { useState, useMemo, useCallback, memo } from "react";
+import { useState, useMemo, useCallback, useEffect, memo } from "react";
 import { createPortal } from "react-dom";
 import {
   KeyboardSensor,
@@ -80,6 +80,8 @@ function TaskListBase({
   const setSortBy = useUiStore((state) => state.setSortBy);
   const viewMode = useUiStore((state) => state.viewMode);
   const isDesktop = useUiStore((state) => state.isDesktop);
+  const selectedTaskId = useUiStore((state) => state.selectedTaskId);
+  const setSelectedTaskId = useUiStore((state) => state.setSelectedTaskId);
   const { openAddTask } = useTaskActions();
   const { trigger: triggerHaptic } = useHaptic();
   const setActiveTaskId = useTimerStore((state) => state.setActiveTaskId);
@@ -138,6 +140,16 @@ function TaskListBase({
     (groupTitle: string) => getTaskUpdatesForGroup(groupTitle, projectsMap),
     [projectsMap],
   );
+
+  // Open-bridge for global search: when a task is selected from the command
+  // menu, open its edit sheet here (the sheet lives on the tasks page), then
+  // clear the id so the effect fires once and a later manual close won't reopen.
+  useEffect(() => {
+    if (!selectedTaskId) return;
+    const task = tasks.find((t) => t.id === selectedTaskId);
+    if (task) setSelectedTask(task);
+    setSelectedTaskId(null);
+  }, [selectedTaskId, tasks, setSelectedTaskId]);
 
   const handleTaskClick = useCallback(
     (task: Task) => {
