@@ -48,6 +48,16 @@ export const habitMutations = {
     const user = session?.user;
     if (!user) throw new Error("Not authenticated");
 
+    // Append to the bottom: new habit gets max(sort_order) + 1 for the user.
+    const { data: lastHabit } = await supabase
+      .from("habits")
+      .select("sort_order")
+      .eq("user_id", user.id)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextSortOrder = (lastHabit?.sort_order ?? -1) + 1;
+
     const { data, error } = await supabase
       .from("habits")
       .insert({
@@ -57,6 +67,7 @@ export const habitMutations = {
         color: input.color || "#4B6CB7",
         icon: input.icon || null,
         start_date: input.start_date || new Date().toISOString().split("T")[0],
+        sort_order: nextSortOrder,
       })
       .select()
       .single();
