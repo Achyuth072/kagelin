@@ -112,7 +112,7 @@ export function HabitCompactRow({
       {/* Rolling-7 strip (line 2 full-width on mobile, pinned right on desktop) */}
       <div
         ref={stripRef}
-        className="flex w-full justify-between gap-1.5 overflow-x-auto scrollbar-hide md:w-auto md:justify-normal md:shrink-0"
+        className="flex w-full justify-between gap-1.5 overflow-x-auto scrollbar-hide px-1.5 py-1.5 md:w-auto md:justify-normal md:shrink-0"
       >
         {days.map((day) => (
           <HabitStripCell
