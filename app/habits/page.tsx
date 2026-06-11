@@ -127,14 +127,14 @@ export default function HabitsPage() {
                 className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-7 border border-transparent data-[state=active]:border-brand/20"
               >
                 <LayoutGrid className="h-4 w-4" strokeWidth={2.25} />
-                <span>Grid</span>
+                <span className="hidden md:inline">Grid</span>
               </TabsTrigger>
               <TabsTrigger
                 value="compact"
                 className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-7 border border-transparent data-[state=active]:border-brand/20"
               >
                 <Rows3 className="h-4 w-4" strokeWidth={2.25} />
-                <span>Compact</span>
+                <span className="hidden md:inline">Compact</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
