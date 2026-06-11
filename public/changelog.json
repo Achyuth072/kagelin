@@ -3,7 +3,11 @@
     "version": "Unreleased",
     "date": null,
     "channel": "preview",
-    "sections": {}
+    "sections": {
+      "Fixed": [
+        "Focus timer no longer gets stuck at 00:00 if the server clock check fails"
+      ]
+    }
   },
   {
     "version": "1.22.0",
