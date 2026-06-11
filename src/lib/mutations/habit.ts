@@ -116,6 +116,34 @@ export const habitMutations = {
     if (error) throw new Error(error.message);
   },
 
+  // Accepts pre-computed {id, sort_order} pairs from computeReorderPairs in
+  // useReorderHabits.onMutate. Each habit receives the sort_order of the slot it
+  // is moving into, so the flat list stays stable after the DB-sorted refetch.
+  reorder: async (
+    pairs: { id: string; sort_order: number }[],
+  ): Promise<void> => {
+    const isGuest =
+      typeof window !== "undefined" &&
+      localStorage.getItem("kanso_guest_mode") === "true";
+
+    if (isGuest) {
+      pairs.forEach(({ id, sort_order }) => {
+        mockStore.updateHabit(id, { sort_order });
+      });
+      return;
+    }
+
+    const supabase = createClient();
+
+    for (const { id, sort_order } of pairs) {
+      const { error } = await supabase
+        .from("habits")
+        .update({ sort_order })
+        .eq("id", id);
+      if (error) throw new Error(error.message);
+    }
+  },
+
   markComplete: async (input: MarkHabitCompleteInput): Promise<HabitEntry> => {
     const isGuest =
       typeof window !== "undefined" &&
