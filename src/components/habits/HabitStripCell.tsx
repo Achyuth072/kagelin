@@ -26,7 +26,9 @@ export function HabitStripCell({
   const { date, weekdayLabel, value, isToday, isBeforeStart } = day;
   const complete = value === 1;
 
-  const sizing = coarse ? "h-11 w-11" : "h-9 w-9";
+  // Visual cell stays 36px regardless of pointer; coarse pointers get a 44px
+  // tap target via the button's hit area, with the visual cell centered inside.
+  const hitSizing = coarse ? "h-11 w-11" : "h-9 w-9";
 
   return (
     <div className="flex flex-none flex-col items-center gap-1.5">
@@ -34,7 +36,10 @@ export function HabitStripCell({
         {weekdayLabel}
       </span>
       {isBeforeStart ? (
-        <div aria-hidden className={cn("rounded-md bg-transparent", sizing)} />
+        <div
+          aria-hidden
+          className={cn("rounded-md bg-transparent", hitSizing)}
+        />
       ) : (
         <button
           type="button"
@@ -45,21 +50,29 @@ export function HabitStripCell({
           aria-pressed={complete}
           aria-label={`${date} — ${complete ? "completed" : "not completed"}, toggle`}
           className={cn(
-            "flex items-center justify-center rounded-md border transition-seijaku-fast",
-            complete
-              ? "border-transparent"
-              : "border-border bg-secondary/40 text-muted-foreground hover:bg-secondary",
-            isToday && "ring-2 ring-offset-2 ring-offset-background",
-            sizing,
+            "group flex items-center justify-center rounded-md transition-seijaku-fast",
+            hitSizing,
           )}
-          style={{
-            ...(complete ? { backgroundColor: color } : undefined),
-            ...(isToday
-              ? ({ "--tw-ring-color": color } as React.CSSProperties)
-              : undefined),
-          }}
         >
-          {complete && <Check className="h-4 w-4 text-black" strokeWidth={3} />}
+          <span
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-md border transition-seijaku-fast",
+              complete
+                ? "border-transparent"
+                : "border-border bg-secondary/40 text-muted-foreground group-hover:bg-secondary",
+              isToday && "ring-2 ring-offset-2 ring-offset-background",
+            )}
+            style={{
+              ...(complete ? { backgroundColor: color } : undefined),
+              ...(isToday
+                ? ({ "--tw-ring-color": color } as React.CSSProperties)
+                : undefined),
+            }}
+          >
+            {complete && (
+              <Check className="h-4 w-4 text-black" strokeWidth={3} />
+            )}
+          </span>
         </button>
       )}
     </div>
