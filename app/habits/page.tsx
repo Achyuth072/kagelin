@@ -113,7 +113,7 @@ export default function HabitsPage() {
           <h1 className="type-h1 mt-1 text-primary">Habits</h1>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 max-md:justify-between">
           <Tabs
             value={habitViewMode}
             onValueChange={(v) => {
