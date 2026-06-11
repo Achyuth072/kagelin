@@ -72,7 +72,7 @@ function TasksPageHeaderBase({
   const isFilterActive = currentSort !== "date" || currentGroup !== "none";
 
   return (
-    <div className="flex items-center gap-3 w-full min-w-0">
+    <div className="flex items-center gap-3 w-full min-w-0 overflow-x-auto scrollbar-hide">
       {/* Desktop only — on mobile the spinner lives in the top Header bar */}
       <span className="hidden md:flex items-center">
         <SyncIndicator />
