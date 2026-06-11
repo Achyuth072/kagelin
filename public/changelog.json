@@ -3,6 +3,12 @@
     "version": "Unreleased",
     "date": null,
     "channel": "preview",
+    "sections": {}
+  },
+  {
+    "version": "1.22.1",
+    "date": "2026-06-11",
+    "channel": "stable",
     "sections": {
       "Fixed": [
         "Focus timer no longer gets stuck at 00:00 if the server clock check fails"
@@ -628,29 +634,6 @@
         "Event overflow popover collision padding prevents clipping at viewport edges",
         "Day view date labels use a concise format on mobile to prevent overflow",
         "Month view limits to 2 visible events when an overflow indicator is present"
-      ]
-    }
-  },
-  {
-    "version": "1.13.0",
-    "date": "2026-03-30",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Enhanced visual differentiation between tasks and events across all calendar views",
-        "Unified project management menus: dropdowns on desktop, drawers on mobile",
-        "Location metadata on events with external map navigation links",
-        "High-contrast visual indicators for active task filter and sort states",
-        "Full interactivity for monthly event overflow popups"
-      ],
-      "Fixed": [
-        "Android focus issue preventing automatic keyboard popup in dialogs",
-        "Layout responsiveness on wide-aspect mobile devices",
-        "Calendar FAB behaviour stabilised; month view and grid line opacities harmonised",
-        "Project deletion visibility hardened across all views",
-        "Guest mode and settings pages aligned with brand styling",
-        "Sidebar touch interaction persistence on mobile",
-        "Metadata tag styling standardised for priorities and subtasks"
       ]
     }
   }
