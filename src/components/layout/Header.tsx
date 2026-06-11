@@ -85,7 +85,7 @@ const HeaderTimer = React.memo(function HeaderTimer() {
           {displayTime}
         </span>
         {activeTask && (
-          <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+          <span className="text-xs text-muted-foreground truncate max-w-[120px] max-[380px]:hidden">
             {activeTask.content}
           </span>
         )}
@@ -144,11 +144,10 @@ export const Header = React.memo(function Header({
           <button
             type="button"
             onClick={() => setChangelogOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground/70 hover:bg-accent/40 active:scale-95 transition-all"
+            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-foreground/70 hover:bg-accent/40 active:scale-95 transition-all"
             aria-label="What's New — new version available"
           >
             <Sparkles className="h-4 w-4 shrink-0" strokeWidth={2.25} />
-            <span>What&apos;s New</span>
             <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
           </button>
         )}
@@ -159,17 +158,6 @@ export const Header = React.memo(function Header({
         <SyncIndicator />
         {/* Isolated Timer Component to prevent Header re-renders */}
         <HeaderTimer />
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 bg-transparent hover:bg-accent/40 active:scale-95 transition-all"
-          onPointerDown={() => trigger("toggle")}
-          onClick={() => setCommandOpen(true)}
-          aria-label="Search"
-        >
-          <Search className="h-5 w-5" />
-        </Button>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -184,6 +172,16 @@ export const Header = React.memo(function Header({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={() => {
+                trigger("toggle");
+                setCommandOpen(true);
+              }}
+            >
+              <Search className="h-4 w-4 mr-2 text-foreground/70" />
+              Search
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             {isTasksPage && (
               <>
                 <DropdownMenuItem
