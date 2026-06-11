@@ -130,7 +130,7 @@ export function HabitCompactList({
       measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
     >
       <SortableContext items={habitIds} strategy={verticalListSortingStrategy}>
-        <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+        <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
           {displayHabits.map((habit) => (
             <SortableHabitCompactRow
               key={habit.id}
