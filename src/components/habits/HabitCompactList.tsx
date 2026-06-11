@@ -6,6 +6,7 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
+  MeasuringStrategy,
   MouseSensor,
   TouchSensor,
   closestCenter,
@@ -126,6 +127,7 @@ export function HabitCompactList({
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
     >
       <SortableContext items={habitIds} strategy={verticalListSortingStrategy}>
         <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
