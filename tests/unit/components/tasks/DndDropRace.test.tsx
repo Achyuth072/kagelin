@@ -236,6 +236,8 @@ describe("TaskList drop race condition (residual snap-back)", () => {
         setSortBy: vi.fn(),
         setGroupBy: vi.fn(),
         setViewMode: vi.fn(),
+        habitViewMode: "grid",
+        setHabitViewMode: vi.fn(),
         timeFormat: "system",
         setTimeFormat: vi.fn(),
         hapticsEnabled: true,
