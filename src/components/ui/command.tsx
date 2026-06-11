@@ -167,6 +167,9 @@ const CommandShortcut = ({
     <span
       className={cn(
         "ml-auto text-[13px] font-medium tracking-widest text-muted-foreground/60",
+        // Keyboard hints are meaningless without a physical keyboard — hide on
+        // non-desktop (the menu also drops to a drawer at this size).
+        "max-md:hidden",
         className,
       )}
       {...props}
