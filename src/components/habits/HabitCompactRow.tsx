@@ -96,7 +96,7 @@ export function HabitCompactRow({
       </div>
 
       {/* Rolling-7 strip (line 2 full-width on mobile, pinned right on desktop) */}
-      <div className="flex w-full gap-1.5 md:w-auto md:shrink-0">
+      <div className="flex w-full justify-between gap-1.5 md:w-auto md:justify-normal md:shrink-0">
         {days.map((day) => (
           <HabitStripCell
             key={day.date}

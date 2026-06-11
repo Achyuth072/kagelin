@@ -26,18 +26,15 @@ export function HabitStripCell({
   const { date, weekdayLabel, value, isToday, isBeforeStart } = day;
   const complete = value === 1;
 
-  const sizing = coarse ? "h-11 md:w-11" : "h-9 md:w-9";
+  const sizing = coarse ? "h-11 w-11" : "h-9 w-9";
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-1.5 md:flex-none">
+    <div className="flex flex-none flex-col items-center gap-1.5">
       <span className="text-[10px] font-bold uppercase tracking-wider leading-none text-foreground/50">
         {weekdayLabel}
       </span>
       {isBeforeStart ? (
-        <div
-          aria-hidden
-          className={cn("w-full rounded-md bg-transparent md:w-auto", sizing)}
-        />
+        <div aria-hidden className={cn("rounded-md bg-transparent", sizing)} />
       ) : (
         <button
           type="button"
@@ -48,7 +45,7 @@ export function HabitStripCell({
           aria-pressed={complete}
           aria-label={`${date} — ${complete ? "completed" : "not completed"}, toggle`}
           className={cn(
-            "flex w-full items-center justify-center rounded-md border transition-seijaku-fast md:w-auto",
+            "flex items-center justify-center rounded-md border transition-seijaku-fast",
             complete
               ? "border-transparent"
               : "border-border bg-secondary/40 text-muted-foreground hover:bg-secondary",
