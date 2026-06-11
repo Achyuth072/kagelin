@@ -142,12 +142,15 @@ function TaskListBase({
   );
 
   // Open-bridge for global search: when a task is selected from the command
-  // menu, open its edit sheet here (the sheet lives on the tasks page), then
-  // clear the id so the effect fires once and a later manual close won't reopen.
+  // menu, open its edit sheet here (the sheet lives on the tasks page). Clear
+  // the id only once the task is found and opened — when navigating in from
+  // another page the list is still loading on first run, so clearing early
+  // would drop the request before the data arrives.
   useEffect(() => {
     if (!selectedTaskId) return;
     const task = tasks.find((t) => t.id === selectedTaskId);
-    if (task) setSelectedTask(task);
+    if (!task) return;
+    setSelectedTask(task);
     setSelectedTaskId(null);
   }, [selectedTaskId, tasks, setSelectedTaskId]);
 
