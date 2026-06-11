@@ -461,16 +461,20 @@ CREATE TABLE IF NOT EXISTS public.habits (
   color TEXT DEFAULT '#4B6CB7',
   icon TEXT,
   start_date DATE,
+  sort_order INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   archived_at TIMESTAMPTZ,
-  
+
   CONSTRAINT habits_name_length_check CHECK (char_length(name) <= 100),
   CONSTRAINT habits_description_length_check CHECK (char_length(description) <= 500)
 );
 
 -- Index for faster user-scoped lookups
 CREATE INDEX IF NOT EXISTS habits_user_id_idx ON public.habits (user_id);
+
+-- Index for user-scoped ordered fetches (compact/grid views sort by sort_order)
+CREATE INDEX IF NOT EXISTS habits_user_sort_idx ON public.habits (user_id, sort_order);
 
 -- Updated At Trigger
 CREATE TRIGGER habits_updated_at
