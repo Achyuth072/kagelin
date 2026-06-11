@@ -107,7 +107,7 @@ export default function FocusPage() {
         "flex flex-col items-center justify-center p-6 bg-background relative select-none cursor-default overflow-y-auto",
         isFullscreen && isPhone
           ? "fixed inset-0 z-50 bg-background"
-          : "min-h-dvh",
+          : "absolute inset-0",
       )}
     >
       {/* Close Button */}
