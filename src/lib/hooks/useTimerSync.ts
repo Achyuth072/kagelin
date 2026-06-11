@@ -14,6 +14,11 @@ import { toast } from "sonner";
 
 const VALID_MODES: TimerMode[] = ["focus", "shortBreak", "longBreak"];
 
+// Server-time probe: how many attempts before trusting the local clock, and the
+// base backoff between them (grows linearly: 1×, 2×, …).
+const PROBE_MAX_ATTEMPTS = 3;
+const PROBE_RETRY_DELAY_MS = 200;
+
 /** Build the user_timer_state row payload shared by upsert and completion claim. */
 function timerStateToRow(
   userId: string,
@@ -147,21 +152,36 @@ export function useTimerSync() {
     [user],
   );
 
-  // Probe Postgres time once and store the RTT-corrected offset so serverNow()
-  // agrees with the database even when this device's clock is wrong or has
-  // jumped after sleep.
+  // Probe Postgres time and store the RTT-corrected offset so serverNow() agrees
+  // with the database even when this device's clock is wrong or has jumped after
+  // sleep. Retries a few times to ride out a transient blip, then — if every
+  // attempt fails — falls back to the local clock so the deadline timer can
+  // still complete. Leaving the clock permanently unprobed makes reconcile()
+  // defer completion forever, stranding a finished session at 00:00 (the v1.22.0
+  // regression when prod was missing the server_now_ms RPC). A later successful
+  // probe on resync replaces the fallback with the real offset.
   const probeServerOffset = useCallback(async () => {
-    try {
-      const t0 = Date.now();
-      const { data, error } = await supabase.rpc("server_now_ms");
-      const t1 = Date.now();
-      // PostgREST may serialize BIGINT as a string — coerce before using it.
-      const serverMs = Number(data);
-      if (error || !Number.isFinite(serverMs)) return;
-      setServerOffset(computeOffset(serverMs, t0, t1));
-    } catch {
-      // Best-effort: fall back to the local clock (offset 0).
+    for (let attempt = 1; attempt <= PROBE_MAX_ATTEMPTS; attempt++) {
+      try {
+        const t0 = Date.now();
+        const { data, error } = await supabase.rpc("server_now_ms");
+        const t1 = Date.now();
+        // PostgREST may serialize BIGINT as a string — coerce before using it.
+        const serverMs = Number(data);
+        if (!error && Number.isFinite(serverMs)) {
+          setServerOffset(computeOffset(serverMs, t0, t1));
+          return;
+        }
+      } catch {
+        // Network/transport error — retry below, then fall back.
+      }
+      if (attempt < PROBE_MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, PROBE_RETRY_DELAY_MS * attempt));
+      }
     }
+    // Every probe failed (most likely the RPC is missing in this environment).
+    // Trust the local clock rather than hang the timer forever.
+    setServerOffset(0);
   }, [supabase]);
 
   // Hydrate the current row on subscribe so a device opening mid-session shows
