@@ -261,6 +261,7 @@ class MockStore {
         updated_at: nowIso,
         archived_at: null,
         start_date: startOfHistory,
+        sort_order: 0,
       },
       {
         id: hExercise,
@@ -273,6 +274,7 @@ class MockStore {
         updated_at: nowIso,
         archived_at: null,
         start_date: startOfHistory,
+        sort_order: 1,
       },
       {
         id: hRead,
@@ -285,6 +287,7 @@ class MockStore {
         updated_at: nowIso,
         archived_at: null,
         start_date: startOfHistory,
+        sort_order: 2,
       },
     );
 
@@ -583,7 +586,10 @@ class MockStore {
   }
 
   addHabit(
-    habit: Omit<Habit, "id" | "user_id" | "created_at" | "updated_at">,
+    habit: Omit<
+      Habit,
+      "id" | "user_id" | "created_at" | "updated_at" | "sort_order"
+    >,
   ): Habit {
     const now = new Date().toISOString();
     const newHabit: Habit = {
@@ -593,6 +599,7 @@ class MockStore {
       created_at: now,
       updated_at: now,
       start_date: habit.start_date || now.split("T")[0],
+      sort_order: (this.data.habits || []).length,
     };
 
     if (!this.data.habits) this.data.habits = [];

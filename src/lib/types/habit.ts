@@ -9,6 +9,7 @@ export interface Habit {
   updated_at: string;
   archived_at: string | null;
   start_date: string;
+  sort_order: number;
 }
 
 export interface HabitEntry {

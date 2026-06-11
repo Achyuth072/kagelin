@@ -61,6 +61,7 @@ describe("Habit Views Footer Layout", () => {
     start_date: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    sort_order: 0,
   };
 
   const commonProps = {
