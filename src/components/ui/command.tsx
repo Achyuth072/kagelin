@@ -7,6 +7,8 @@ import { Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -25,15 +27,30 @@ Command.displayName = CommandPrimitive.displayName;
 
 type CommandDialogProps = DialogProps;
 
+const commandClassName =
+  "[&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-4 [&_[cmdk-input-wrapper]_svg]:w-4 [&_[cmdk-input]]:h-11";
+
 const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
+  const isMobile = useMediaQuery("(max-width: 640px)");
+
+  if (isMobile) {
+    return (
+      <Drawer {...props} repositionInputs={false}>
+        <DrawerContent className="max-h-[85vh] overflow-hidden p-0">
+          <DrawerTitle className="sr-only">Command Menu</DrawerTitle>
+          <Command loop className={commandClassName}>
+            {children}
+          </Command>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog {...props}>
       <DialogContent className="overflow-hidden p-0 shadow-none border-border/60 bg-background sm:max-w-[480px] sm:rounded-lg">
         <DialogTitle className="sr-only">Command Menu</DialogTitle>
-        <Command
-          loop
-          className="[&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-input-wrapper]_svg]:h-4 [&_[cmdk-input-wrapper]_svg]:w-4 [&_[cmdk-input]]:h-11"
-        >
+        <Command loop className={commandClassName}>
           {children}
         </Command>
       </DialogContent>
