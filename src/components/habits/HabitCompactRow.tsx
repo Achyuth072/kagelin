@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useLayoutEffect } from "react";
 import type { LucideIcon } from "lucide-react";
 import type {
   DraggableAttributes,
@@ -41,10 +42,23 @@ export function HabitCompactRow({
 }: HabitCompactRowProps) {
   const markComplete = useMarkHabitComplete();
   const coarse = useCoarsePointer();
+  const stripRef = useRef<HTMLDivElement>(null);
 
   const today = new Date();
   const streak = getCurrentStreak(habit.entries, today);
   const days = getRolling7Days(habit.entries, today, habit.start_date);
+
+  // Pin the strip to the current day (right end) synchronously before paint, so
+  // there's no left→right scroll flash on mount. useLayoutEffect runs after the
+  // strip is laid out but before the browser paints, so scrollWidth is final —
+  // deferring to rAF (as the grid does) lets the initial frame paint at the
+  // left edge first, which reads as a jump.
+  useLayoutEffect(() => {
+    const strip = stripRef.current;
+    if (strip) {
+      strip.scrollLeft = strip.scrollWidth;
+    }
+  }, []);
 
   const handleToggle = (date: string) => {
     const current = habit.entries.find((e) => e.date === date)?.value ?? 0;
@@ -96,7 +110,10 @@ export function HabitCompactRow({
       </div>
 
       {/* Rolling-7 strip (line 2 full-width on mobile, pinned right on desktop) */}
-      <div className="flex w-full justify-between gap-1.5 md:w-auto md:justify-normal md:shrink-0">
+      <div
+        ref={stripRef}
+        className="flex w-full justify-between gap-1.5 overflow-x-auto scrollbar-hide md:w-auto md:justify-normal md:shrink-0"
+      >
         {days.map((day) => (
           <HabitStripCell
             key={day.date}
