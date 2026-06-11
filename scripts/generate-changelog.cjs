@@ -26,14 +26,25 @@ const CC = /^(\w+)(?:\([^)]*\))?!?:\s*(.+)$/;
 
 function bucketCommits(headings) {
   const sections = { Added: [], Improved: [], Fixed: [] };
+  let currentBucket = null;
   for (const heading of headings) {
     const m = heading.match(CC);
-    if (!m) continue;
-    const [, type, message] = m;
-    if (SKIP.has(type)) continue;
-    const bucket = BUCKET[type];
-    if (!bucket) continue;
-    sections[bucket].push(message.trim());
+    if (m) {
+      const [, type, message] = m;
+      if (SKIP.has(type)) {
+        currentBucket = null;
+        continue;
+      }
+      currentBucket = BUCKET[type] || null;
+      if (currentBucket) {
+        sections[currentBucket].push(message.trim());
+      }
+      continue;
+    }
+    const bullet = heading.match(/^[-*]\s+(.+)$/);
+    if (bullet && currentBucket) {
+      sections[currentBucket].push(bullet[1].trim());
+    }
   }
   return Object.fromEntries(
     Object.entries(sections).filter(([, v]) => v.length > 0),
@@ -104,12 +115,13 @@ if (require.main === module) {
     }
     const range = lastTag ? `${lastTag}..HEAD` : "HEAD";
 
-    const rawSubjects = exec(
-      `git log "${range}" --format="%s" --no-merges` +
+    const rawOutput = exec(
+      `git log "${range}" --format="%s%n%b" --no-merges` +
         ` -- . ":(exclude).planning" ":(exclude).agent" ":(exclude).gemini" ":(exclude).husky" ":(exclude).vercelignore"`,
     );
-    const headings = rawSubjects
+    const headings = rawOutput
       .split("\n")
+      .map((l) => l.trim())
       .filter(Boolean)
       .filter(
         (s) => !/^chore: .*release/.test(s) && !/^merge: sync release/.test(s),
