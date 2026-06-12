@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
@@ -90,61 +91,73 @@ function CommandSearchResults({
   const { data: habits = [] } = useHabits();
   const events = useCalendarEventsList();
 
+  // Mapped independently of `search` — cmdk filters these items client-side,
+  // so re-deriving them on every keystroke would be wasted work.
+  const taskItems = useMemo(
+    () =>
+      tasks.map((task) => (
+        <CommandItem
+          key={task.id}
+          value={task.content}
+          onSelect={() =>
+            runCommand(() => {
+              setSelectedTaskId(task.id);
+              router.push("/");
+            })
+          }
+        >
+          <CheckCircle2 className="mr-2 h-5 w-5" />
+          <span>{task.content}</span>
+        </CommandItem>
+      )),
+    [tasks, runCommand, setSelectedTaskId, router],
+  );
+
+  const habitItems = useMemo(
+    () =>
+      habits.map((habit) => {
+        const Icon = getHabitIcon(habit.icon);
+        return (
+          <CommandItem
+            key={habit.id}
+            value={habit.name}
+            onSelect={() => runCommand(() => openEditHabit(habit))}
+          >
+            <Icon className="mr-2 h-5 w-5" />
+            <span>{habit.name}</span>
+          </CommandItem>
+        );
+      }),
+    [habits, runCommand, openEditHabit],
+  );
+
+  const eventItems = useMemo(
+    () =>
+      events.map((event) => (
+        <CommandItem
+          key={event.id}
+          value={event.title}
+          onSelect={() =>
+            runCommand(() => {
+              setDate(new Date(event.date));
+              router.push("/calendar");
+            })
+          }
+        >
+          <CalendarIcon className="mr-2 h-5 w-5" />
+          <span>{event.title}</span>
+        </CommandItem>
+      )),
+    [events, runCommand, setDate, router],
+  );
+
   if (search.length === 0) return null;
 
   return (
     <>
-      <CommandGroup heading="Tasks">
-        {tasks.map((task) => (
-          <CommandItem
-            key={task.id}
-            value={task.content}
-            onSelect={() =>
-              runCommand(() => {
-                setSelectedTaskId(task.id);
-                router.push("/");
-              })
-            }
-          >
-            <CheckCircle2 className="mr-2 h-5 w-5" />
-            <span>{task.content}</span>
-          </CommandItem>
-        ))}
-      </CommandGroup>
-
-      <CommandGroup heading="Habits">
-        {habits.map((habit) => {
-          const Icon = getHabitIcon(habit.icon);
-          return (
-            <CommandItem
-              key={habit.id}
-              value={habit.name}
-              onSelect={() => runCommand(() => openEditHabit(habit))}
-            >
-              <Icon className="mr-2 h-5 w-5" />
-              <span>{habit.name}</span>
-            </CommandItem>
-          );
-        })}
-      </CommandGroup>
-
-      <CommandGroup heading="Events">
-        {events.map((event) => (
-          <CommandItem
-            key={event.id}
-            value={event.title}
-            onSelect={() =>
-              runCommand(() => {
-                setDate(new Date(event.date));
-                router.push("/calendar");
-              })
-            }
-          >
-            <CalendarIcon className="mr-2 h-5 w-5" />
-            <span>{event.title}</span>
-          </CommandItem>
-        ))}
-      </CommandGroup>
+      <CommandGroup heading="Tasks">{taskItems}</CommandGroup>
+      <CommandGroup heading="Habits">{habitItems}</CommandGroup>
+      <CommandGroup heading="Events">{eventItems}</CommandGroup>
     </>
   );
 }

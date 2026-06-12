@@ -57,7 +57,10 @@ export function HabitCompactList({
   // displayHabits falls through to the source `habits`, so no effect sync.
   const [localHabits, setLocalHabits] = useState<HabitWithEntries[]>(habits);
 
-  const displayHabits = activeId || lockLocal ? localHabits : habits;
+  const displayHabits = useMemo(
+    () => (activeId || lockLocal ? localHabits : habits),
+    [activeId, lockLocal, localHabits, habits],
+  );
   const habitIds = useMemo(
     () => displayHabits.map((h) => h.id),
     [displayHabits],

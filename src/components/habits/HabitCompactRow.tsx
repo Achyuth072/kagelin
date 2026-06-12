@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import type { LucideIcon } from "lucide-react";
 import type {
   DraggableAttributes,
@@ -42,9 +43,17 @@ export function HabitCompactRow({
   const markComplete = useMarkHabitComplete();
   const coarse = useCoarsePointer();
 
-  const today = new Date();
-  const streak = getCurrentStreak(habit.entries, today);
-  const days = getRolling7Days(habit.entries, today, habit.start_date);
+  // `today` is fixed for the row's lifetime; a date rollover is picked up on
+  // the next list re-render rather than every render of every row.
+  const today = useMemo(() => new Date(), []);
+  const streak = useMemo(
+    () => getCurrentStreak(habit.entries, today),
+    [habit.entries, today],
+  );
+  const days = useMemo(
+    () => getRolling7Days(habit.entries, today, habit.start_date),
+    [habit.entries, today, habit.start_date],
+  );
 
   const handleToggle = (date: string) => {
     const current = habit.entries.find((e) => e.date === date)?.value ?? 0;

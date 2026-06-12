@@ -135,13 +135,13 @@ export const habitMutations = {
 
     const supabase = createClient();
 
-    for (const { id, sort_order } of pairs) {
-      const { error } = await supabase
-        .from("habits")
-        .update({ sort_order })
-        .eq("id", id);
-      if (error) throw new Error(error.message);
-    }
+    const results = await Promise.all(
+      pairs.map(({ id, sort_order }) =>
+        supabase.from("habits").update({ sort_order }).eq("id", id),
+      ),
+    );
+    const failed = results.find((r) => r.error);
+    if (failed?.error) throw new Error(failed.error.message);
   },
 
   markComplete: async (input: MarkHabitCompleteInput): Promise<HabitEntry> => {
