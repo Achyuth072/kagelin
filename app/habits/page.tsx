@@ -111,18 +111,19 @@ export default function HabitsPage() {
               trigger("toggle");
               setHabitViewMode(v as "grid" | "compact");
             }}
+            className="h-10"
           >
-            <TabsList className="bg-secondary/10 p-1 rounded-lg h-9 border border-border/40 shadow-none">
+            <TabsList className="bg-secondary/10 p-1 rounded-lg h-10 border border-border/40 shadow-none">
               <TabsTrigger
                 value="grid"
-                className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all motion-reduce:transition-none h-7 border border-transparent data-[state=active]:border-brand/20"
+                className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all motion-reduce:transition-none h-8 border border-transparent data-[state=active]:border-brand/20"
               >
                 <LayoutGrid className="h-4 w-4" strokeWidth={2.25} />
                 <span className="hidden md:inline">Grid</span>
               </TabsTrigger>
               <TabsTrigger
                 value="compact"
-                className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all motion-reduce:transition-none h-7 border border-transparent data-[state=active]:border-brand/20"
+                className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all motion-reduce:transition-none h-8 border border-transparent data-[state=active]:border-brand/20"
               >
                 <Rows3 className="h-4 w-4" strokeWidth={2.25} />
                 <span className="hidden md:inline">Compact</span>

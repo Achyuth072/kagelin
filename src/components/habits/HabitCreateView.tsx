@@ -2,11 +2,9 @@
 
 import { FieldErrors } from "react-hook-form";
 import { CreateHabitInput } from "@/lib/schemas/habit";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Send, CalendarIcon, Hash } from "lucide-react";
+import { Send, CalendarIcon, AlignLeft, Palette } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { HabitIconPicker } from "./shared/HabitIconPicker";
 import { ColorPicker } from "@/components/shared/ColorPicker";
@@ -34,6 +32,26 @@ interface HabitCreateViewProps {
   errors?: FieldErrors<CreateHabitInput>;
 }
 
+// Fixed-width icon cell — keeps text columns aligned across all rows.
+function IconCell({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "w-5 shrink-0 flex items-start justify-center pt-[3px]",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function HabitCreateView({
   name,
   setName,
@@ -59,97 +77,100 @@ export function HabitCreateView({
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full max-w-full">
-      {/* Header handled by parent HabitSheet */}
+      {/* Title — native input, bottom border only, no box */}
+      <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
+        <input
+          id="habit-name"
+          placeholder="Habit name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={onKeyDown}
+          autoFocus={isFinePointer}
+          className={cn(
+            "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none",
+            "placeholder:text-muted-foreground/50 text-foreground",
+            errors?.name && "placeholder:text-destructive/60",
+          )}
+          aria-invalid={!!errors?.name}
+          aria-describedby={errors?.name ? "habit-name-error" : undefined}
+        />
+        {errors?.name && (
+          <p id="habit-name-error" className="text-xs text-destructive mt-1">
+            {errors.name.message}
+          </p>
+        )}
+      </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-4 w-full scrollbar-none">
-        {/* Hero Icon Selection */}
-        <HabitIconPicker value={icon} onChange={setIcon} color={color} />
-
-        {/* Name & Description Inputs */}
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <Label
-              htmlFor="habit-name"
-              className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 flex items-center gap-1.5 px-1"
-            >
-              <Hash className="h-3 w-3" />
-              Habit Name
-            </Label>
-            <Textarea
-              id="habit-name"
-              placeholder="e.g. Morning Meditation"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={onKeyDown}
-              autoFocus={isFinePointer}
-              className={cn(
-                "text-xl sm:text-2xl font-semibold px-3 py-2 h-10 min-h-[40px] bg-transparent border-border focus-visible:ring-1 focus-visible:ring-ring shadow-none resize-none placeholder:text-muted-foreground/30 tracking-tight leading-tight rounded-md transition-all",
-                errors?.name &&
-                  "text-destructive placeholder:text-destructive/50 border-destructive/20",
-              )}
-              aria-invalid={!!errors?.name}
-              aria-describedby={errors?.name ? "habit-name-error" : undefined}
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto min-h-0 py-2">
+        {/* Icon & color */}
+        <div className="flex items-start gap-3 px-3 py-2.5 rounded-md mx-2">
+          <IconCell>
+            <Palette
+              className="h-4 w-4 text-muted-foreground"
+              strokeWidth={2.25}
             />
-            {errors?.name && (
-              <p
-                id="habit-name-error"
-                className="text-xs font-medium text-destructive mt-1 px-1"
-              >
-                {errors.name.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-1">
-            <Label
-              htmlFor="habit-description"
-              className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1"
-            >
-              Description
-            </Label>
-            <Textarea
-              id="habit-description"
-              placeholder="Add details (optional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="text-[15px] px-3 py-2 h-10 min-h-[40px] bg-transparent border-border focus-visible:ring-1 focus-visible:ring-ring shadow-none resize-none placeholder:text-muted-foreground/40 leading-relaxed rounded-md transition-all"
-            />
-          </div>
-
-          <div className="pt-2">
+          </IconCell>
+          <div className="flex-1 min-w-0 space-y-3">
+            <HabitIconPicker value={icon} onChange={setIcon} />
             <ColorPicker
               value={color}
               onChange={setColor}
-              label="Appearance"
               ariaLabel="Habit color"
             />
           </div>
         </div>
+
+        <div className="h-1" />
+
+        {/* Description */}
+        <div className="mx-2">
+          <div className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast">
+            <IconCell className="pt-[5px]">
+              <AlignLeft
+                className="h-4 w-4 text-muted-foreground"
+                strokeWidth={2.25}
+              />
+            </IconCell>
+            <textarea
+              id="habit-description"
+              placeholder="Add details (optional)"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              style={{ fontSize: "0.875rem" }}
+              className="flex-1 bg-transparent border-0 outline-none resize-none text-sm text-foreground placeholder:text-muted-foreground/50 leading-normal p-0 min-h-[48px]"
+            />
+          </div>
+        </div>
+
+        <div className="h-1" />
       </div>
 
       {/* Footer */}
-      <div className="shrink-0 flex items-center justify-between p-4 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide flex-nowrap min-w-0 pr-8 py-1">
-          <TaskDatePicker
-            date={startDate}
-            setDate={setStartDate}
-            isMobile={isMobile}
-            open={datePickerOpen}
-            onOpenChange={setDatePickerOpen}
-            variant="icon"
-            icon={CalendarIcon}
-            title="Start Date"
-            showTime={true}
-            allowPastDates={true}
-            side="top"
-            align="start"
-            sideOffset={15}
-          />
-        </div>
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
+        <TaskDatePicker
+          date={startDate}
+          setDate={setStartDate}
+          isMobile={isMobile}
+          open={datePickerOpen}
+          onOpenChange={setDatePickerOpen}
+          variant="icon"
+          icon={CalendarIcon}
+          title="Start Date"
+          showTime={true}
+          allowPastDates={true}
+          side="top"
+          align="start"
+          sideOffset={15}
+        />
+
+        <div className="flex-1" />
 
         <Button
+          type="button"
           size="sm"
-          className="h-10 w-10 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
+          className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
           onClick={() => {
             trigger("success");
             onSubmit();

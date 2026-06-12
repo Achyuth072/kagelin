@@ -1,3 +1,4 @@
+import type React from "react";
 import {
   render,
   screen,
@@ -22,10 +23,27 @@ vi.mock("@/lib/hooks/useHabitMutations", () => ({
 
 // Mock ResponsiveDialog and its subcomponents
 vi.mock("@/components/ui/responsive-dialog", () => ({
-  ResponsiveDialog: ({ children, open }: any) => (open ? children : null),
-  ResponsiveDialogContent: ({ children }: any) => <div>{children}</div>,
-  ResponsiveDialogTitle: ({ children }: any) => <h2>{children}</h2>,
-  ResponsiveDialogDescription: ({ children }: any) => <p>{children}</p>,
+  ResponsiveDialog: ({
+    children,
+    open,
+  }: {
+    children: React.ReactNode;
+    open: boolean;
+  }) => (open ? <div>{children}</div> : null),
+  ResponsiveDialogContent: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  ResponsiveDialogHeader: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  ResponsiveDialogTitle: ({ children }: { children: React.ReactNode }) => (
+    <h2>{children}</h2>
+  ),
+  ResponsiveDialogDescription: ({
+    children,
+  }: {
+    children: React.ReactNode;
+  }) => <p>{children}</p>,
 }));
 
 const mockHapticTrigger = vi.fn();
@@ -34,15 +52,6 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
     trigger: mockHapticTrigger,
     isPhone: false,
   }),
-}));
-
-// Mock ResponsiveDialog and its subcomponents
-vi.mock("@/components/ui/responsive-dialog", () => ({
-  ResponsiveDialog: ({ children, open }: any) =>
-    open ? <div>{children}</div> : null,
-  ResponsiveDialogContent: ({ children }: any) => <div>{children}</div>,
-  ResponsiveDialogTitle: ({ children }: any) => <h2>{children}</h2>,
-  ResponsiveDialogDescription: ({ children }: any) => <p>{children}</p>,
 }));
 
 // Mock TaskDatePicker as it's complex and might need more setup
@@ -107,7 +116,7 @@ describe("HabitSheet", () => {
   it("calls createHabit mutation when submitting a new habit", async () => {
     render(<HabitSheet open={true} onClose={() => {}} />);
 
-    const nameInput = screen.getByPlaceholderText("e.g. Morning Meditation");
+    const nameInput = screen.getByPlaceholderText("Habit name");
     await act(async () => {
       fireEvent.change(nameInput, { target: { value: "New Habit Name" } });
     });
@@ -144,7 +153,7 @@ describe("HabitSheet", () => {
       <HabitSheet open={true} onClose={() => {}} initialHabit={mockHabit} />,
     );
 
-    const deleteBtn = screen.getByTitle(/delete habit/i);
+    const deleteBtn = screen.getByLabelText(/delete habit/i);
     await act(async () => {
       fireEvent.click(deleteBtn);
     });

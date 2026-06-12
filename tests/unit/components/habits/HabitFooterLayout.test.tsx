@@ -93,7 +93,7 @@ describe("Habit Views Footer Layout", () => {
       />,
     );
 
-    const footer = screen.getByTitle(/save/i).closest("div")!;
+    const footer = screen.getByLabelText(/save/i).closest("div")!;
     const colorPicker = screen.getByTestId("color-picker");
     expect(footer.contains(colorPicker)).toBe(false);
   });
