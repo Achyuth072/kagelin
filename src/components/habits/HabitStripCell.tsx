@@ -26,19 +26,22 @@ export function HabitStripCell({
   const { date, weekdayLabel, value, isToday, isBeforeStart } = day;
   const complete = value === 1;
 
-  // Visual cell stays 36px regardless of pointer; coarse pointers get a 44px
-  // tap target via the button's hit area, with the visual cell centered inside.
-  const hitSizing = coarse ? "h-11 w-11" : "h-9 w-9";
+  // Mobile: each cell fills its grid column, capped at the desktop size and
+  // kept square via aspect-ratio, so all 7 days fit without scrolling even on
+  // narrow phones. Desktop (lg+): fixed 44px (coarse) / 36px (fine) cell.
+  const cellSizing = coarse
+    ? "aspect-square w-full max-w-11 lg:aspect-auto lg:h-11 lg:w-11 lg:max-w-none"
+    : "aspect-square w-full max-w-9 lg:aspect-auto lg:h-9 lg:w-9 lg:max-w-none";
 
   return (
-    <div className="flex flex-none flex-col items-center gap-1.5">
+    <div className="flex min-w-0 flex-col items-center gap-1 lg:flex-none lg:gap-1.5">
       <span className="text-[10px] font-bold uppercase tracking-wider leading-none text-foreground/50">
         {weekdayLabel}
       </span>
       {isBeforeStart ? (
         <div
           aria-hidden
-          className={cn("rounded-md bg-transparent", hitSizing)}
+          className={cn("rounded-md bg-transparent", cellSizing)}
         />
       ) : (
         <button
@@ -51,12 +54,12 @@ export function HabitStripCell({
           aria-label={`${date} — ${complete ? "completed" : "not completed"}, toggle`}
           className={cn(
             "group flex items-center justify-center rounded-md transition-seijaku-fast",
-            hitSizing,
+            cellSizing,
           )}
         >
           <span
             className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-md border transition-seijaku-fast",
+              "flex h-full w-full items-center justify-center rounded-md border transition-seijaku-fast",
               complete
                 ? "border-transparent"
                 : "border-border bg-secondary/40 text-muted-foreground group-hover:bg-secondary",

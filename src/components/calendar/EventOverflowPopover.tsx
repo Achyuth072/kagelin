@@ -9,6 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ export const EventOverflowPopover = memo(
   ({ remainingEvents, day, onEventClick }: EventOverflowPopoverProps) => {
     const { trigger } = useHaptic();
     const { formatTime } = useTimeFormat();
+    const isMobile = useIsMobile();
 
     if (remainingEvents.length === 0) return null;
 
@@ -33,9 +35,10 @@ export const EventOverflowPopover = memo(
               e.stopPropagation();
               trigger("toggle"); // Toggle haptic
             }}
-            className="text-[10px] md:text-xs text-muted-foreground px-1 md:px-2 hover:text-foreground transition-colors text-left"
+            className="text-[10px] md:text-xs text-muted-foreground px-1 md:px-2 hover:text-foreground transition-colors text-left whitespace-nowrap"
           >
-            +{remainingEvents.length} more
+            +{remainingEvents.length}
+            {isMobile ? "" : " more"}
           </button>
         </PopoverTrigger>
         <PopoverContent
