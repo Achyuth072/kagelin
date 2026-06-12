@@ -1,6 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { RollingDay } from "@/lib/utils/habit-rolling";
 
@@ -51,7 +52,7 @@ export function HabitStripCell({
             onToggle(date);
           }}
           aria-pressed={complete}
-          aria-label={`${date} — ${complete ? "completed" : "not completed"}, toggle`}
+          aria-label={`${format(parseISO(date), "EEEE MMM d")}, ${complete ? "completed" : "not completed"} — toggle`}
           className={cn(
             "group flex items-center justify-center rounded-md transition-seijaku-fast",
             cellSizing,

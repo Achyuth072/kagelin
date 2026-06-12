@@ -5,6 +5,7 @@ import type { LucideIcon } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
 import { cn } from "@/lib/utils";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { HabitCompactRow } from "./HabitCompactRow";
 
 interface SortableHabitCompactRowProps {
@@ -76,6 +77,7 @@ export function SortableHabitCompactRow({
     active,
     over,
   } = useSortable({ id: habit.id });
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   // Determine drop indicator position.
   let dropLine: "none" | "top" | "bottom" = "none";
@@ -95,7 +97,7 @@ export function SortableHabitCompactRow({
       : undefined,
     // Gate `transition` on transform != null: avoids the browser animating the
     // last drag offset back to translate3d(0,0,0) post-drop (the snap-back).
-    transition: transform ? transition : undefined,
+    transition: transform && !prefersReducedMotion ? transition : undefined,
   };
 
   return (
