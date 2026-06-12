@@ -1,8 +1,6 @@
 "use client";
 
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import {
@@ -19,6 +17,8 @@ import {
   Inbox,
   Moon,
   CalendarClock,
+  SlidersHorizontal,
+  AlignLeft,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -75,6 +75,26 @@ interface TaskEditViewProps {
   mode?: "sheet" | "panel";
 }
 
+// Fixed-width icon cell — keeps text columns aligned across all rows.
+function IconCell({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "w-5 shrink-0 flex items-start justify-center pt-[3px]",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function TaskEditView({
   initialTask,
   content,
@@ -125,99 +145,195 @@ export function TaskEditView({
         mode === "sheet" ? "h-auto" : "h-full",
       )}
     >
-      {/* Scrollable Content Area */}
-      <div className="flex-1 min-h-0 w-full overflow-y-auto px-4 py-4 space-y-4">
-        {/* Content Input */}
-        <div>
-          <Label htmlFor="task-content-edit" className="sr-only">
-            Task Content
-          </Label>
-          <Textarea
-            id="task-content-edit"
-            placeholder="What needs to be done?"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={onKeyDown}
-            autoFocus={isFinePointer}
-            className={cn(
-              "text-xl sm:text-2xl font-semibold px-3 py-2 min-h-[40px] bg-transparent border-border focus-visible:ring-1 focus-visible:ring-ring shadow-none resize-none placeholder:text-muted-foreground/30 tracking-tight leading-tight rounded-md transition-all",
-              errors?.content &&
-                "text-destructive placeholder:text-destructive/50 border-destructive/20",
-            )}
-            aria-invalid={!!errors?.content}
-            aria-describedby={
-              errors?.content ? "task-content-edit-error" : undefined
-            }
-          />
-          {errors?.content && (
-            <p
-              id="task-content-edit-error"
-              className="text-xs font-medium text-destructive mt-1"
-            >
-              {errors.content.message}
-            </p>
+      {/* Title — native textarea, bottom border only, no box */}
+      <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
+        <textarea
+          id="task-content-edit"
+          placeholder="What needs to be done?"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={onKeyDown}
+          autoFocus={isFinePointer}
+          rows={1}
+          className={cn(
+            "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none resize-none",
+            "placeholder:text-muted-foreground/50 text-foreground leading-tight",
+            errors?.content && "placeholder:text-destructive/60",
           )}
-        </div>
+          aria-invalid={!!errors?.content}
+          aria-describedby={
+            errors?.content ? "task-content-edit-error" : undefined
+          }
+        />
+        {errors?.content && (
+          <p
+            id="task-content-edit-error"
+            className="text-xs text-destructive mt-1"
+          >
+            {errors.content.message}
+          </p>
+        )}
+      </div>
 
-        {/* Description Input (Markdown) */}
-        <div className="grid gap-2">
-          <div className="flex items-center justify-between">
-            <Label>Description</Label>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-3 text-[10px] uppercase tracking-wider font-bold text-muted-foreground hover:text-foreground bg-background hover:bg-accent hover:text-accent-foreground border border-input shadow-none transition-all rounded-lg"
-              onClick={() => {
-                trigger("toggle");
-                setIsPreviewMode(!isPreviewMode);
-              }}
-              disabled={!description.trim() && !isPreviewMode}
-            >
-              {isPreviewMode ? "Edit" : "Preview"}
-            </Button>
-          </div>
-
-          {isPreviewMode ? (
-            <div className="min-h-[160px] p-4 text-[15px] prose prose-sm dark:prose-invert max-w-none bg-secondary/10 rounded-lg overflow-y-auto border border-border/40 scrollbar-hide">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {description || "_No description provided._"}
-              </ReactMarkdown>
-            </div>
-          ) : (
-            <Textarea
-              placeholder="Add details... (Markdown supported)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              onKeyDown={onKeyDown}
-              className="min-h-[200px] text-[15px] leading-relaxed px-3 py-2 bg-transparent border-border focus-visible:ring-1 focus-visible:ring-ring shadow-none resize-none placeholder:text-muted-foreground/40 rounded-md transition-all overflow-y-auto scrollbar-hide"
+      {/* Scrollable Body */}
+      <div className="flex-1 min-h-0 w-full overflow-y-auto py-2">
+        {/* Meta row — icon-led horizontal scroll strip */}
+        <div className="flex items-center gap-3 px-3 py-2.5 mx-2">
+          <div className="w-5 shrink-0 flex items-center justify-center">
+            <SlidersHorizontal
+              className="h-4 w-4 text-muted-foreground"
+              strokeWidth={2.25}
             />
-          )}
-        </div>
+          </div>
+          <div
+            ref={scrollRef}
+            className="flex items-center gap-3 overflow-x-auto scrollbar-hide min-w-0 flex-1 py-1 pr-3"
+          >
+            <TaskDatePicker
+              date={dueDate}
+              setDate={setDueDate}
+              isMobile={isMobile}
+              open={datePickerOpen}
+              onOpenChange={setDatePickerOpen}
+              variant="icon"
+              error={!!errors?.due_date}
+            />
 
-        {/* Subtasks / Checklist */}
-        <div className="grid gap-2 pt-2">
-          <div className="flex items-center justify-between">
-            <Label>Subtasks</Label>
+            <TaskDatePicker
+              date={doDate}
+              setDate={setDoDate}
+              isMobile={isMobile}
+              open={doDatePickerOpen}
+              onOpenChange={setDoDatePickerOpen}
+              variant="icon"
+              title="Start Date"
+              icon={CalendarClock}
+              error={!!errors?.do_date}
+            />
+
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                trigger("toggle");
-                setShowSubtasks(!showSubtasks);
-              }}
               className={cn(
-                "h-9 w-9 p-0 text-muted-foreground hover:text-foreground bg-background hover:bg-accent hover:text-accent-foreground border border-input shadow-none transition-all [&_svg]:!size-4 rounded-lg",
-                showSubtasks &&
+                "h-9 px-3 text-[13px] bg-background hover:bg-accent border border-input shadow-none hover:text-foreground shrink-0 gap-1.5 rounded-lg transition-all",
+                isEvening &&
                   "text-brand bg-brand/10 border-transparent hover:bg-brand/20 hover:text-brand",
               )}
-              title="Toggle subtasks"
+              onClick={() => {
+                const nextValue = !isEvening;
+                trigger("toggle");
+                setIsEvening(nextValue);
+                if (nextValue && !doDate) {
+                  setDoDate(new Date());
+                }
+              }}
+              title="This Evening"
             >
-              <ListChecks strokeWidth={2.25} />
+              <Moon className="h-4 w-4" strokeWidth={2.25} />
+              {!isMobile && <span className="font-medium">Evening</span>}
             </Button>
+
+            <div className="shrink-0">
+              <TaskPrioritySelect
+                priority={priority}
+                setPriority={setPriority}
+                variant="icon"
+              />
+            </div>
+
+            <div className="shrink-0">
+              <RecurrencePicker
+                value={recurrence}
+                onChange={setRecurrence}
+                variant="icon"
+              />
+            </div>
           </div>
+        </div>
+
+        {(errors?.due_date || errors?.do_date) && (
+          <div className="px-3 mx-2 text-[10px] font-bold text-destructive">
+            {errors?.due_date?.message || errors?.do_date?.message}
+          </div>
+        )}
+
+        <div className="h-1" />
+
+        {/* Description */}
+        <div className="mx-2">
+          <div className="flex items-start gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast hover:bg-muted/40">
+            <IconCell className="pt-[5px]">
+              <AlignLeft
+                className="h-4 w-4 text-muted-foreground"
+                strokeWidth={2.25}
+              />
+            </IconCell>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-end mb-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-3 text-[10px] uppercase tracking-wider font-bold text-muted-foreground hover:text-foreground bg-background hover:bg-accent hover:text-accent-foreground border border-input shadow-none transition-all rounded-lg"
+                  onClick={() => {
+                    trigger("toggle");
+                    setIsPreviewMode(!isPreviewMode);
+                  }}
+                  disabled={!description.trim() && !isPreviewMode}
+                >
+                  {isPreviewMode ? "Edit" : "Preview"}
+                </Button>
+              </div>
+
+              {isPreviewMode ? (
+                <div className="min-h-[160px] text-[15px] prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {description || "_No description provided._"}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <textarea
+                  placeholder="Add details... (Markdown supported)"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  rows={4}
+                  className="w-full min-h-[120px] text-sm leading-relaxed bg-transparent border-0 outline-none resize-none p-0 text-foreground placeholder:text-muted-foreground/50"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="h-1" />
+
+        {/* Subtasks row */}
+        <div className="mx-2">
+          <button
+            type="button"
+            onClick={() => {
+              trigger("toggle");
+              setShowSubtasks(!showSubtasks);
+            }}
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast text-left",
+              "hover:bg-muted/40",
+              showSubtasks && "text-brand",
+            )}
+          >
+            <IconCell>
+              <ListChecks
+                className={cn(
+                  "h-4 w-4",
+                  showSubtasks ? "text-brand" : "text-muted-foreground",
+                )}
+                strokeWidth={2.25}
+              />
+            </IconCell>
+            <span className="text-sm flex-1 text-foreground">Subtasks</span>
+          </button>
 
           {showSubtasks && (
-            <div className="pl-1">
+            <div className="pl-11 pr-3 pb-2">
               <SubtaskList
                 taskId={initialTask.id}
                 projectId={initialTask.project_id || inboxProjectId}
@@ -227,165 +343,82 @@ export function TaskEditView({
             </div>
           )}
         </div>
+
+        <div className="h-1" />
       </div>
 
-      {/* Fixed Footer - Actions Row */}
-      <div
-        className={cn(
-          "shrink-0 grid grid-cols-[1fr_auto] gap-4 p-4 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full",
-        )}
-      >
-        <div
-          ref={scrollRef}
-          className="flex items-center gap-3 overflow-x-auto scrollbar-hide pr-8 py-1 min-w-0"
+      {/* Footer */}
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
+        <Select
+          value={selectedProjectId || "inbox"}
+          onValueChange={(v) => {
+            trigger("toggle");
+            setSelectedProjectId(v === "inbox" ? null : v);
+          }}
         >
-          {/* Date & Time Picker (Due Date) */}
-          <TaskDatePicker
-            date={dueDate}
-            setDate={setDueDate}
-            isMobile={isMobile}
-            open={datePickerOpen}
-            onOpenChange={setDatePickerOpen}
-            variant="icon"
-            error={!!errors?.due_date}
-          />
-
-          {/* Start Date (Do Date) */}
-          <TaskDatePicker
-            date={doDate}
-            setDate={setDoDate}
-            isMobile={isMobile}
-            open={doDatePickerOpen}
-            onOpenChange={setDoDatePickerOpen}
-            variant="icon"
-            title="Start Date"
-            icon={CalendarClock}
-            error={!!errors?.do_date}
-          />
-
-          {/* This Evening Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-9 px-3 text-[13px] bg-background hover:bg-accent border border-input shadow-none hover:text-foreground shrink-0 gap-1.5 rounded-lg transition-all",
-              isEvening &&
-                "text-brand bg-brand/10 border-transparent hover:bg-brand/20 hover:text-brand",
-            )}
-            onClick={() => {
-              const nextValue = !isEvening;
-              trigger("toggle");
-              setIsEvening(nextValue);
-              if (nextValue && !doDate) {
-                setDoDate(new Date());
-              }
-            }}
-            title="This Evening"
+          <SelectTrigger
+            onPointerDown={() => trigger("toggle")}
+            className="h-9 w-auto min-w-[130px] max-w-[200px] type-ui border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none focus:ring-0 transition-all rounded-lg text-foreground [&_svg]:opacity-100 [&_svg]:text-foreground px-3 shrink-0"
           >
-            <Moon className="h-4 w-4" strokeWidth={2.25} />
-            {!isMobile && <span className="font-medium">Evening</span>}
-          </Button>
+            <SelectValue placeholder="Inbox" />
+          </SelectTrigger>
+          <SelectContent className="rounded-lg border-border/80 shadow-none">
+            <SelectItem value="inbox">
+              <div className="flex items-center gap-2">
+                <Inbox className="h-3.5 w-3.5" strokeWidth={2.25} />
+                <span className="font-medium">Inbox</span>
+              </div>
+            </SelectItem>
+            {projects
+              ?.filter((p) => !p.is_inbox)
+              .map((project) => (
+                <SelectItem key={project.id} value={project.id}>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-3 w-3 rounded-full shrink-0"
+                      style={{ backgroundColor: project.color }}
+                    />
+                    <span className="truncate font-medium">{project.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
 
-          {/* Priority Selector */}
-          <div className="shrink-0">
-            <TaskPrioritySelect
-              priority={priority}
-              setPriority={setPriority}
-              variant="icon"
-            />
-          </div>
+        <div className="flex-1" />
 
-          {/* Recurrence Picker */}
-          <div className="shrink-0">
-            <RecurrencePicker
-              value={recurrence}
-              onChange={setRecurrence}
-              variant="icon"
-            />
-          </div>
+        <Button
+          variant="destructive"
+          size="sm"
+          className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
+          onClick={() => {
+            trigger("thud");
+            onDelete();
+          }}
+          aria-label="Delete task"
+        >
+          <Trash2 strokeWidth={2.25} />
+        </Button>
 
-          {/* Project Selector */}
-          <Select
-            value={selectedProjectId || "inbox"}
-            onValueChange={(v) => {
-              trigger("toggle");
-              setSelectedProjectId(v === "inbox" ? null : v);
-            }}
-          >
-            <SelectTrigger
-              onPointerDown={() => trigger("toggle")}
-              className="h-9 w-auto min-w-[130px] max-w-[200px] type-ui border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none focus:ring-0 transition-all rounded-lg text-foreground [&_svg]:opacity-100 [&_svg]:text-foreground px-3"
-            >
-              <SelectValue placeholder="Inbox" />
-            </SelectTrigger>
-            <SelectContent className="rounded-lg border-border/80 shadow-none">
-              <SelectItem value="inbox">
-                <div className="flex items-center gap-2">
-                  <Inbox className="h-3.5 w-3.5" strokeWidth={2.25} />
-                  <span className="font-medium">Inbox</span>
-                </div>
-              </SelectItem>
-              {projects
-                ?.filter((p) => !p.is_inbox)
-                .map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="h-3 w-3 rounded-full shrink-0"
-                        style={{ backgroundColor: project.color }}
-                      />
-                      <span className="truncate font-medium">
-                        {project.name}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-          {(errors?.due_date || errors?.do_date) && (
-            <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-destructive/10 text-destructive text-[10px] font-bold px-3 py-1 rounded-md animate-in slide-in-from-top-1 fade-in duration-200">
-              {errors?.due_date?.message || errors?.do_date?.message}
-            </div>
+        <Button
+          size="sm"
+          variant={isPending ? "ghost" : "default"}
+          className={cn(
+            "h-9 w-9 p-0 rounded-lg transition-seijaku flex items-center justify-center",
+            !isPending &&
+              "bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10",
           )}
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          {/* Delete Button */}
-          <Button
-            variant="destructive"
-            size="sm"
-            className="h-9 w-9 p-0 [&_svg]:!size-4 rounded-lg"
-            onClick={() => {
-              trigger("thud");
-              onDelete();
-            }}
-            title="Delete task"
-          >
-            <Trash2 strokeWidth={2.25} />
-          </Button>
-
-          {/* Submit Button */}
-          <Button
-            size="sm"
-            variant={isPending ? "ghost" : "default"}
-            className={cn(
-              "h-9 w-9 p-0 rounded-lg [&_svg]:!size-4 transition-seijaku",
-              !isPending &&
-                "bg-brand hover:bg-brand/90 text-brand-foreground shadow-none",
-            )}
-            onClick={() => {
-              trigger("success");
-              onSubmit();
-            }}
-            disabled={!hasContent || isPending}
-            title="Save changes"
-          >
-            <Save
-              strokeWidth={2.25}
-              className={cn(isPending && "opacity-50")}
-            />
-          </Button>
-        </div>
+          onClick={() => {
+            trigger("success");
+            onSubmit();
+          }}
+          disabled={!hasContent || isPending}
+          aria-label="Save changes"
+        >
+          <Save
+            className={cn("h-5 w-5 stroke-[2.25px]", isPending && "opacity-50")}
+          />
+        </Button>
       </div>
     </div>
   );
