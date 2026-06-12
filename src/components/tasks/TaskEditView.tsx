@@ -140,7 +140,7 @@ export function TaskEditView({
             onKeyDown={onKeyDown}
             autoFocus={isFinePointer}
             className={cn(
-              "text-xl sm:text-2xl font-semibold px-3 py-2 h-10 min-h-[40px] bg-transparent border-border focus-visible:ring-1 focus-visible:ring-ring shadow-none resize-none placeholder:text-muted-foreground/30 tracking-tight leading-tight rounded-md transition-all",
+              "text-xl sm:text-2xl font-semibold px-3 py-2 min-h-[40px] bg-transparent border-border focus-visible:ring-1 focus-visible:ring-ring shadow-none resize-none placeholder:text-muted-foreground/30 tracking-tight leading-tight rounded-md transition-all",
               errors?.content &&
                 "text-destructive placeholder:text-destructive/50 border-destructive/20",
             )}

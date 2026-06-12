@@ -145,7 +145,7 @@ export function ListTaskCard({
             {task.due_date && (
               <span
                 className={cn(
-                  "type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider",
+                  "type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider whitespace-nowrap",
                   isOverdue(task.due_date)
                     ? "text-foreground font-bold"
                     : "text-muted-foreground/70",
@@ -158,7 +158,7 @@ export function ListTaskCard({
             {task.priority < 4 && (
               <span
                 className={cn(
-                  "type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider",
+                  "type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider whitespace-nowrap",
                   priorityTextClasses[task.priority as 1 | 2 | 3 | 4],
                 )}
               >
@@ -166,7 +166,7 @@ export function ListTaskCard({
               </span>
             )}
             {task.is_evening && (
-              <span className="type-ui flex items-center gap-1.5 text-[11px] font-medium text-foreground/80 uppercase tracking-wider">
+              <span className="type-ui flex items-center gap-1.5 text-[11px] font-medium text-foreground/80 uppercase tracking-wider whitespace-nowrap">
                 <Moon className="h-3 w-3 fill-current" strokeWidth={2.5} />
                 Evening
               </span>
