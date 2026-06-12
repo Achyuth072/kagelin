@@ -17,8 +17,6 @@ import { DialogTrigger } from "@/components/ui/dialog";
 import { DrawerTrigger } from "@/components/ui/drawer";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   CalendarSync,
   Network,
@@ -26,6 +24,10 @@ import {
   Trash2,
   Loader2,
   Calendars,
+  ArrowLeft,
+  User,
+  KeyRound,
+  CalendarDays,
 } from "lucide-react";
 import {
   CalendarProvider,
@@ -447,64 +449,86 @@ export function ConnectCalendarDialog({
         )}
 
         {step === "configure_caldav" && (
-          <form
-            onSubmit={handleCaldavConnect}
-            className="space-y-4 px-4 py-6 sm:px-6"
-          >
-            <div className="space-y-2">
-              <Label htmlFor="server_url">Server URL</Label>
-              <Input
+          <form onSubmit={handleCaldavConnect} className="px-2 py-4">
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-colors">
+              <div className="w-5 shrink-0 flex items-center justify-center">
+                <Network
+                  className="h-4 w-4 text-muted-foreground"
+                  strokeWidth={2.25}
+                />
+              </div>
+              <input
                 id="server_url"
-                placeholder="https://caldav.example.com"
+                placeholder="Server URL"
                 value={caldavForm.server_url}
                 onChange={(e) =>
                   setCaldavForm((f) => ({ ...f, server_url: e.target.value }))
                 }
                 required
+                className="flex-1 bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/50"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username / Email</Label>
-                <Input
-                  id="username"
-                  placeholder="user@example.com"
-                  value={caldavForm.username}
-                  onChange={(e) =>
-                    setCaldavForm((f) => ({ ...f, username: e.target.value }))
-                  }
-                  required
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-colors">
+              <div className="w-5 shrink-0 flex items-center justify-center">
+                <User
+                  className="h-4 w-4 text-muted-foreground"
+                  strokeWidth={2.25}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">App Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={caldavForm.password}
-                  onChange={(e) =>
-                    setCaldavForm((f) => ({ ...f, password: e.target.value }))
-                  }
-                  required
-                />
-              </div>
+              <input
+                id="username"
+                placeholder="Username / Email"
+                value={caldavForm.username}
+                onChange={(e) =>
+                  setCaldavForm((f) => ({ ...f, username: e.target.value }))
+                }
+                required
+                className="flex-1 bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/50"
+              />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">Calendar Name (Local)</Label>
-              <Input
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-colors">
+              <div className="w-5 shrink-0 flex items-center justify-center">
+                <KeyRound
+                  className="h-4 w-4 text-muted-foreground"
+                  strokeWidth={2.25}
+                />
+              </div>
+              <input
+                id="password"
+                type="password"
+                placeholder="App Password"
+                value={caldavForm.password}
+                onChange={(e) =>
+                  setCaldavForm((f) => ({ ...f, password: e.target.value }))
+                }
+                required
+                className="flex-1 bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/50"
+              />
+            </div>
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-colors">
+              <div className="w-5 shrink-0 flex items-center justify-center">
+                <CalendarDays
+                  className="h-4 w-4 text-muted-foreground"
+                  strokeWidth={2.25}
+                />
+              </div>
+              <input
                 id="name"
+                placeholder="Calendar Name (Local)"
                 value={caldavForm.name}
                 onChange={(e) =>
                   setCaldavForm((f) => ({ ...f, name: e.target.value }))
                 }
                 required
+                className="flex-1 bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/50"
               />
             </div>
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p className="text-sm text-destructive px-3 pt-2">{error}</p>
+            )}
             {discoveredCount !== null && (
-              <p className="text-sm text-green-600 dark:text-green-400">
+              <p className="text-sm text-green-600 dark:text-green-400 px-3 pt-2">
                 ✓ Connected —{" "}
                 {discoveredCount === 0
                   ? "no calendars found yet (server is reachable)"
@@ -512,15 +536,17 @@ export function ConnectCalendarDialog({
               </p>
             )}
 
-            <div className="flex justify-between items-center pt-4">
+            <div className="flex justify-between items-center pt-4 px-1">
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   variant="ghost"
-                  className="hover:bg-accent/50"
+                  size="icon"
+                  className="h-9 w-9"
                   onClick={() => setStep("select")}
+                  aria-label="Back"
                 >
-                  Back
+                  <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
                 </Button>
                 {(caldavForm.server_url || caldavForm.username) && (
                   <Button
@@ -593,10 +619,12 @@ export function ConnectCalendarDialog({
               <Button
                 type="button"
                 variant="ghost"
-                className="hover:bg-accent/50"
+                size="icon"
+                className="h-9 w-9"
                 onClick={() => setStep("select")}
+                aria-label="Back"
               >
-                Back
+                <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
               </Button>
               <Button
                 type="button"
