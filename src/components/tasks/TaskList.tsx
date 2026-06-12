@@ -18,7 +18,7 @@ import {
   DndContext,
   MeasuringStrategy,
 } from "@dnd-kit/core";
-import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useTaskActions } from "@/components/TaskActionsProvider";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useTasks } from "@/lib/hooks/useTasks";
@@ -598,29 +598,20 @@ function TaskListBase({
     processedTasks.completed.length === 0
   ) {
     return (
-      <div className="px-4 md:px-6 py-32 flex flex-col items-center justify-center text-center gap-6">
-        <div className="w-20 h-20 rounded-2xl bg-secondary/30 flex items-center justify-center mb-2">
-          <CheckSquare
-            strokeWidth={2.25}
-            className="h-10 w-10 text-muted-foreground/60"
-          />
-        </div>
-        <div className="space-y-2">
-          <h2 className="type-h2">No tasks yet</h2>
-          <p className="type-ui text-muted-foreground max-w-xs mx-auto">
-            Focus on what matters. Create your first task to start your journey.
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            triggerHaptic("toggle");
-            openAddTask();
+      <div className="px-4 md:px-6">
+        <EmptyState
+          icon={CheckSquare}
+          title="No tasks yet"
+          description="Focus on what matters. Create your first task to start your journey."
+          action={{
+            label: "Create Task",
+            onClick: () => {
+              triggerHaptic("toggle");
+              openAddTask();
+            },
+            icon: Plus,
           }}
-          className="h-10 px-6 rounded-lg bg-brand text-brand-foreground hover:bg-brand/90 shadow-none transition-seijaku gap-2"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2.25} />
-          <span>Create Task</span>
-        </Button>
+        />
       </div>
     );
   }

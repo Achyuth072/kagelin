@@ -26,7 +26,9 @@ import {
   PlusIcon,
   SettingsIcon,
   SunIcon,
+  SearchX,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 import {
   CommandDialog,
@@ -203,7 +205,14 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
           onValueChange={setSearch}
         />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>
+            <EmptyState
+              icon={SearchX}
+              title="No results found"
+              description="Try a different search term."
+              className="py-8 gap-3"
+            />
+          </CommandEmpty>
 
           <CommandGroup heading="Actions">
             <CommandItem onSelect={() => runCommand(() => openAddTask())}>
