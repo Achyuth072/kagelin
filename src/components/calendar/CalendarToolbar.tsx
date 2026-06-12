@@ -152,6 +152,7 @@ export function CalendarToolbar({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Previous period"
               className="h-9 w-9 shadow-none transition-seijaku-fast rounded-full"
               onClick={() => {
                 trigger("tick");
@@ -163,6 +164,7 @@ export function CalendarToolbar({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Next period"
               className="h-9 w-9 shadow-none transition-seijaku-fast rounded-full"
               onClick={() => {
                 trigger("tick");
@@ -179,6 +181,7 @@ export function CalendarToolbar({
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Go to today"
             className="h-9 w-9 bg-secondary/40 hover:bg-secondary/60 border border-border/50 shadow-none transition-seijaku-fast rounded-lg"
             onClick={() => {
               trigger("tick");

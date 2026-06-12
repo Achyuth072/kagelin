@@ -537,6 +537,7 @@ export function BackupSyncSettings() {
                     onClick={clearCredentials}
                     className="h-9 w-9"
                     title="Forget credentials"
+                    aria-label="Forget credentials"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

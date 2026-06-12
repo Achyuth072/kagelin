@@ -371,6 +371,7 @@ export function ConnectCalendarDialog({
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                     title={`Disconnect ${p}`}
+                    aria-label={`Disconnect ${p}`}
                     onClick={async () => {
                       await disconnect(p);
                       toast.success(
@@ -529,6 +530,7 @@ export function ConnectCalendarDialog({
                     className="h-9 w-9"
                     onClick={clearStoredCredentials}
                     title="Forget stored credentials"
+                    aria-label="Forget stored credentials"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
