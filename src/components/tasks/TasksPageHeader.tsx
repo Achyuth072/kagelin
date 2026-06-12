@@ -93,7 +93,7 @@ function TasksPageHeaderBase({
             title="List View (Shift+1)"
           >
             <List className="h-4 w-4" strokeWidth={2.25} />
-            <span className="hidden md:inline">List</span>
+            <span className="hidden lg:inline">List</span>
           </TabsTrigger>
           {isDesktop && (
             <TabsTrigger
@@ -102,7 +102,7 @@ function TasksPageHeaderBase({
               title="Board View (Shift+2)"
             >
               <KanbanSquare className="h-4 w-4" strokeWidth={2.25} />
-              <span className="hidden md:inline">Board</span>
+              <span className="hidden lg:inline">Board</span>
             </TabsTrigger>
           )}
           <TabsTrigger
@@ -111,7 +111,7 @@ function TasksPageHeaderBase({
             title="Grid View (Shift+3)"
           >
             <LayoutGrid className="h-4 w-4" strokeWidth={2.25} />
-            <span className="hidden md:inline">Grid</span>
+            <span className="hidden lg:inline">Grid</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -251,22 +251,22 @@ function TasksPageHeaderBase({
         variant="ghost"
         size="sm"
         onClick={openSheet}
-        className="hidden md:flex h-9 items-center gap-2 rounded-lg bg-secondary hover:bg-secondary/80 border border-border px-3 text-[13px] font-medium"
+        className="hidden md:flex h-9 items-center gap-2 rounded-lg bg-secondary hover:bg-secondary/80 border border-border px-2 lg:px-3 text-[13px] font-medium"
       >
         <CheckCircle2
           className="h-4 w-4 text-foreground/70"
           strokeWidth={2.25}
         />
-        <span>Completed</span>
+        <span className="hidden lg:inline">Completed</span>
       </Button>
 
       <Button
         size="sm"
         onClick={onNewTask}
-        className="hidden md:flex h-9 items-center gap-2 rounded-lg bg-brand text-brand-foreground hover:bg-brand/90 border-none shadow-sm shadow-brand/10 transition-seijaku shrink-0 px-4 text-[13px] font-semibold"
+        className="hidden md:flex h-9 items-center gap-2 rounded-lg bg-brand text-brand-foreground hover:bg-brand/90 border-none shadow-sm shadow-brand/10 transition-seijaku shrink-0 px-2.5 lg:px-4 text-[13px] font-semibold"
       >
         <Plus className="h-4 w-4" strokeWidth={2.5} />
-        <span>New Task</span>
+        <span className="hidden lg:inline">New Task</span>
       </Button>
     </div>
   );
