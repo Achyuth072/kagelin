@@ -84,7 +84,7 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
           description: initialHabit.description || "",
           color: initialHabit.color,
           icon: initialHabit.icon || "Flame",
-          start_date: initialHabit.start_date,
+          start_date: initialHabit.start_date ?? undefined,
         });
         void triggerValidation();
       } else {

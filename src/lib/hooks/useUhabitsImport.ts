@@ -90,7 +90,7 @@ export function useUhabitsImport() {
           description: habit.description || undefined,
           color: habit.color,
           icon: habit.icon || undefined,
-          start_date: habit.start_date,
+          start_date: habit.start_date ?? undefined,
         });
         habitIdMap.set(habit.id, created.id);
       }
