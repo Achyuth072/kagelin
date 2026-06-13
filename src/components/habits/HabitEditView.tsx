@@ -4,6 +4,7 @@ import { FieldErrors } from "react-hook-form";
 import { CreateHabitInput } from "@/lib/schemas/habit";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { IconCell } from "@/components/ui/IconCell";
 import { Save, Trash2, CalendarIcon, AlignLeft, Palette } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { HabitIconPicker } from "./shared/HabitIconPicker";
@@ -34,26 +35,6 @@ interface HabitEditViewProps {
   onDelete: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   errors?: FieldErrors<CreateHabitInput>;
-}
-
-// Fixed-width icon cell — keeps text columns aligned across all rows.
-function IconCell({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "w-5 shrink-0 flex items-start justify-center pt-[3px]",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
 }
 
 export function HabitEditView({

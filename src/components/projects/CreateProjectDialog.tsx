@@ -20,28 +20,9 @@ import { useCreateProject } from "@/lib/hooks/useProjectMutations";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { ColorPicker } from "@/components/shared/ColorPicker";
 import { cn } from "@/lib/utils";
+import { IconCell } from "@/components/ui/IconCell";
 import { DEFAULT_PROJECT_COLOR } from "@/lib/constants/colors";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
-
-// Fixed-width icon cell — keeps text columns aligned across all rows.
-function IconCell({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "w-5 shrink-0 flex items-start justify-center pt-[3px]",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
-}
 
 interface CreateProjectDialogProps {
   open: boolean;

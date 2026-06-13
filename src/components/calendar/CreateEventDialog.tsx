@@ -56,6 +56,7 @@ import {
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { parseEventInput } from "@/lib/utils/nlp-event";
 import { cn } from "@/lib/utils";
+import { IconCell } from "@/components/ui/IconCell";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useLocationHistoryStore } from "@/lib/store/locationHistoryStore";
@@ -124,26 +125,6 @@ function RecurringTooltip({
         </TooltipContent>
       )}
     </Tooltip>
-  );
-}
-
-// Fixed-width icon cell — keeps text columns aligned across all rows.
-function IconCell({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "w-5 shrink-0 flex items-start justify-center pt-[3px]",
-        className,
-      )}
-    >
-      {children}
-    </div>
   );
 }
 

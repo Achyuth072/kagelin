@@ -23,6 +23,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
+import { IconCell } from "@/components/ui/IconCell";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import SubtaskList from "./SubtaskList";
 import { TaskDatePicker } from "./shared/TaskDatePicker";
@@ -73,26 +74,6 @@ interface TaskEditViewProps {
   onKeyDown: (e: React.KeyboardEvent) => void;
   errors?: FieldErrors<CreateTaskInput>;
   mode?: "sheet" | "panel";
-}
-
-// Fixed-width icon cell — keeps text columns aligned across all rows.
-function IconCell({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "w-5 shrink-0 flex items-start justify-center pt-[3px]",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
 }
 
 export function TaskEditView({

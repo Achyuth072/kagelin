@@ -18,6 +18,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
+import { IconCell } from "@/components/ui/IconCell";
 import {
   Dialog,
   DialogContent,
@@ -51,15 +52,6 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FocusSettingsSchema } from "@/lib/schemas/settings";
 import { TimerSettings } from "@/lib/types/timer";
-
-// Fixed-width icon cell — keeps text columns aligned across all rows.
-function IconCell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="w-5 shrink-0 flex items-start justify-center pt-[3px]">
-      {children}
-    </div>
-  );
-}
 
 const rowCls =
   "flex items-start gap-3 px-3 py-2.5 rounded-md mx-2 hover:bg-muted/40 transition-seijaku-fast";

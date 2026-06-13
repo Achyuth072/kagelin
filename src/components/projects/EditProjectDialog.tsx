@@ -18,29 +18,10 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 
 import { ColorPicker } from "@/components/shared/ColorPicker";
 import { cn } from "@/lib/utils";
+import { IconCell } from "@/components/ui/IconCell";
 import { PROJECT_COLORS } from "@/lib/constants/colors";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import type { Project } from "@/lib/types/task";
-
-// Fixed-width icon cell — keeps text columns aligned across all rows.
-function IconCell({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "w-5 shrink-0 flex items-start justify-center pt-[3px]",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
-}
 
 const EditProjectSchema = z.object({
   name: z.string().min(1, "Name is required").max(50, "Name is too long"),
