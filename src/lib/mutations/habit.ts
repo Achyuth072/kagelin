@@ -135,13 +135,10 @@ export const habitMutations = {
 
     const supabase = createClient();
 
-    const results = await Promise.all(
-      pairs.map(({ id, sort_order }) =>
-        supabase.from("habits").update({ sort_order }).eq("id", id),
-      ),
-    );
-    const failed = results.find((r) => r.error);
-    if (failed?.error) throw new Error(failed.error.message);
+    // Single transactional RPC so the multi-row update commits atomically — a
+    // partial failure can't leave the DB in a half-reordered state.
+    const { error } = await supabase.rpc("reorder_habits", { updates: pairs });
+    if (error) throw new Error(error.message);
   },
 
   markComplete: async (input: MarkHabitCompleteInput): Promise<HabitEntry> => {
@@ -149,13 +146,13 @@ export const habitMutations = {
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
 
+    const { habitId, date, value = 1 } = input;
+
     if (isGuest) {
-      const { habitId, date } = input;
-      const entry = mockStore.toggleHabitEntry(habitId, date);
+      const entry = mockStore.setHabitEntry(habitId, date, value);
       return entry || ({ habit_id: habitId, date, value: 0 } as HabitEntry);
     }
 
-    const { habitId, date, value = 1 } = input;
     const supabase = createClient();
     const { data, error } = await supabase
       .from("habit_entries")

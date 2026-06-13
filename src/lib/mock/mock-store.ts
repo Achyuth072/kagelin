@@ -638,33 +638,53 @@ class MockStore {
     return true;
   }
 
-  toggleHabitEntry(habitId: string, date: string): HabitEntry | null {
+  // Idempotent value-set (mirrors the Supabase upsert): value 0 clears the day,
+  // value > 0 writes that exact value. Repeated calls with the same value
+  // converge instead of flipping, so optimistic double-taps don't desync the
+  // cache from the store.
+  setHabitEntry(
+    habitId: string,
+    date: string,
+    value: number,
+  ): HabitEntry | null {
     const existingIndex = this.data.habit_entries.findIndex(
       (e) => e.habit_id === habitId && e.date === date,
     );
 
+    if (value === 0) {
+      if (existingIndex !== -1) {
+        this.data.habit_entries = this.data.habit_entries.filter(
+          (_, i) => i !== existingIndex,
+        );
+        this.saveToStorage();
+      }
+      return null;
+    }
+
     if (existingIndex !== -1) {
-      // Remove entry
-      this.data.habit_entries = this.data.habit_entries.filter(
-        (_, i) => i !== existingIndex,
+      const updated: HabitEntry = {
+        ...this.data.habit_entries[existingIndex],
+        value,
+      };
+      this.data.habit_entries = this.data.habit_entries.map((e, i) =>
+        i === existingIndex ? updated : e,
       );
       this.saveToStorage();
-      return null;
-    } else {
-      // Add entry
-      const newEntry: HabitEntry = {
-        id: `guest-entry-${Date.now()}-${Math.random()
-          .toString(36)
-          .substr(2, 9)}`,
-        habit_id: habitId,
-        date,
-        value: 1,
-        created_at: new Date().toISOString(),
-      };
-      this.data.habit_entries = [...this.data.habit_entries, newEntry];
-      this.saveToStorage();
-      return newEntry;
+      return updated;
     }
+
+    const newEntry: HabitEntry = {
+      id: `guest-entry-${Date.now()}-${Math.random()
+        .toString(36)
+        .substr(2, 9)}`,
+      habit_id: habitId,
+      date,
+      value,
+      created_at: new Date().toISOString(),
+    };
+    this.data.habit_entries = [...this.data.habit_entries, newEntry];
+    this.saveToStorage();
+    return newEntry;
   }
 
   // Event Operations
