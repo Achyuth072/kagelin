@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
+import { getContrastingColor } from "@/lib/utils/color";
 import type { RollingDay } from "@/lib/utils/habit-rolling";
 
 interface HabitStripCellProps {
@@ -74,7 +75,11 @@ export function HabitStripCell({
             }}
           >
             {complete && (
-              <Check className="h-4 w-4 text-black" strokeWidth={3} />
+              <Check
+                className="h-4 w-4"
+                strokeWidth={3}
+                style={{ color: getContrastingColor(color) }}
+              />
             )}
           </span>
         </button>

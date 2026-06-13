@@ -10,6 +10,7 @@ import { Check, Plus, LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
+import { getContrastingColor } from "@/lib/utils/color";
 
 interface HabitCardProps {
   habit: HabitWithEntries;
@@ -160,7 +161,11 @@ export function HabitCard({
               }
             >
               {isCompletedToday ? (
-                <Check className="w-5 h-5 text-black" strokeWidth={3} />
+                <Check
+                  className="w-5 h-5"
+                  strokeWidth={3}
+                  style={{ color: getContrastingColor(habit.color) }}
+                />
               ) : (
                 <Plus className="w-5 h-5" />
               )}
@@ -178,7 +183,7 @@ export function HabitCard({
             color={habit.color}
             blockSize={isMobile ? 10 : 12}
             blockMargin={2}
-            startDate={habit.start_date}
+            startDate={habit.start_date ?? undefined}
           />
         </div>
       </div>
