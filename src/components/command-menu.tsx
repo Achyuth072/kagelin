@@ -4,6 +4,7 @@ import * as React from "react";
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { parseISO } from "date-fns";
 import {
   CalendarIcon,
   HomeIcon,
@@ -98,7 +99,10 @@ function CommandSearchResults({
       tasks.map((task) => (
         <CommandItem
           key={task.id}
-          value={task.content}
+          // cmdk keys filtering/selection by `value`; ids keep duplicate
+          // contents (e.g. two "Buy groceries") individually navigable.
+          value={`task-${task.id}`}
+          keywords={[task.content]}
           onSelect={() =>
             runCommand(() => {
               setSelectedTaskId(task.id);
@@ -120,7 +124,8 @@ function CommandSearchResults({
         return (
           <CommandItem
             key={habit.id}
-            value={habit.name}
+            value={`habit-${habit.id}`}
+            keywords={[habit.name]}
             onSelect={() => runCommand(() => openEditHabit(habit))}
           >
             <Icon className="mr-2 h-5 w-5" />
@@ -136,10 +141,14 @@ function CommandSearchResults({
       events.map((event) => (
         <CommandItem
           key={event.id}
-          value={event.title}
+          value={`event-${event.id}`}
+          keywords={[event.title]}
           onSelect={() =>
             runCommand(() => {
-              setDate(new Date(event.date));
+              // Parse the date-only portion in local time so an all-day event
+              // stored as ...T00:00:00Z doesn't land on the prior day in
+              // negative-UTC offsets.
+              setDate(parseISO(event.date.slice(0, 10)));
               router.push("/calendar");
             })
           }
