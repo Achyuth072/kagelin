@@ -481,6 +481,22 @@ CREATE TRIGGER habits_updated_at
   BEFORE UPDATE ON public.habits
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- Atomic reorder: one transactional UPDATE for all rows so a partial failure
+-- can't leave a half-reordered set. SECURITY INVOKER keeps RLS scoping in force.
+CREATE OR REPLACE FUNCTION public.reorder_habits(updates jsonb)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE public.habits AS h
+  SET sort_order = (u.value ->> 'sort_order')::int
+  FROM jsonb_array_elements(updates) AS u
+  WHERE h.id = (u.value ->> 'id')::uuid;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.reorder_habits(jsonb) TO authenticated;
+
 -- B. Habit Entries Table
 CREATE TABLE IF NOT EXISTS public.habit_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
