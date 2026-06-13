@@ -8,7 +8,7 @@ export interface Habit {
   created_at: string;
   updated_at: string;
   archived_at: string | null;
-  start_date: string;
+  start_date: string | null;
   sort_order: number;
 }
 

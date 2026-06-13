@@ -22,10 +22,12 @@ export interface RollingDay {
 export function getRolling7Days(
   entries: HabitEntry[],
   today: Date,
-  startDate: string,
+  startDate: string | null,
 ): RollingDay[] {
   const valueByDate = new Map(entries.map((e) => [e.date, e.value]));
-  const startDay = startDate.slice(0, 10);
+  // A null start_date (legacy / imported / direct-insert rows) means no
+  // before-start cutoff — every day in the window is active.
+  const startDay = startDate ? startDate.slice(0, 10) : null;
   const todayStr = format(today, "yyyy-MM-dd");
 
   return Array.from({ length: 7 }, (_, i) => {
@@ -36,7 +38,7 @@ export function getRolling7Days(
       weekdayLabel: format(date, "EEEEE"),
       value: valueByDate.get(dateStr) ?? 0,
       isToday: dateStr === todayStr,
-      isBeforeStart: dateStr < startDay,
+      isBeforeStart: startDay !== null && dateStr < startDay,
     };
   });
 }

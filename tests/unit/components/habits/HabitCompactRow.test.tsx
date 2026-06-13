@@ -8,8 +8,9 @@ import * as useCoarsePointerModule from "@/lib/hooks/useCoarsePointer";
 vi.mock("@/lib/hooks/useHabitMutations");
 vi.mock("@/lib/hooks/useCoarsePointer");
 
-describe("HabitCompactRow scroll initialization", () => {
+describe("HabitCompactRow rolling-7 strip", () => {
   let mockHabit: HabitWithEntries;
+  let yesterdayStr: string;
 
   beforeEach(() => {
     vi.mocked(useHabitMutationsModule.useMarkHabitComplete).mockReturnValue({
@@ -24,7 +25,7 @@ describe("HabitCompactRow scroll initialization", () => {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    yesterdayStr = yesterday.toISOString().split("T")[0];
 
     mockHabit = {
       id: "habit-test",
@@ -50,59 +51,34 @@ describe("HabitCompactRow scroll initialization", () => {
     };
   });
 
-  it("renders a scrollable rolling-7 strip container", () => {
+  it("renders a fixed 7-cell strip (one column per day, no scroll)", () => {
     const { container } = render(<HabitCompactRow habit={mockHabit} />);
-    const strip = container.querySelector(".overflow-x-auto");
+    const strip = container.querySelector(".grid-cols-7");
     expect(strip).toBeTruthy();
+    expect(strip).not.toHaveClass("overflow-x-auto");
+    expect(strip?.children).toHaveLength(7);
   });
 
-  it("pins the strip to the right end synchronously on mount (no rAF flash)", () => {
-    const originalScrollWidthDesc = Object.getOwnPropertyDescriptor(
-      Element.prototype,
-      "scrollWidth",
-    );
-    const originalScrollLeftDesc = Object.getOwnPropertyDescriptor(
-      Element.prototype,
-      "scrollLeft",
-    );
+  it("renders days before start_date as inert (no toggle button)", () => {
+    const { container } = render(<HabitCompactRow habit={mockHabit} />);
+    // start_date is yesterday → only yesterday + today are active buttons; the
+    // five earlier days render as inert transparent placeholders.
+    expect(container.querySelectorAll("button")).toHaveLength(2);
+    expect(container.querySelectorAll(".bg-transparent")).toHaveLength(5);
+  });
 
-    let mockScrollLeft = 0;
-    Object.defineProperty(Element.prototype, "scrollWidth", {
-      configurable: true,
-      get: () => 500,
-    });
-    Object.defineProperty(Element.prototype, "scrollLeft", {
-      configurable: true,
-      get: () => mockScrollLeft,
-      set: (v: number) => {
-        mockScrollLeft = v;
-      },
-    });
+  it("rings the rightmost (today) cell", () => {
+    const { container } = render(<HabitCompactRow habit={mockHabit} />);
+    const buttons = container.querySelectorAll("button");
+    const todayButton = buttons[buttons.length - 1];
+    expect(todayButton.querySelector(".ring-2")).toBeTruthy();
+  });
 
-    // The scroll is set inside useLayoutEffect (before paint), which React runs
-    // synchronously within render()'s act — no requestAnimationFrame needed.
-    const { container, unmount } = render(
-      <HabitCompactRow habit={mockHabit} />,
-    );
-
-    const strip = container.querySelector(".overflow-x-auto") as HTMLElement;
-    expect(strip.scrollLeft).toBe(500);
-
-    unmount();
-
-    if (originalScrollWidthDesc) {
-      Object.defineProperty(
-        Element.prototype,
-        "scrollWidth",
-        originalScrollWidthDesc,
-      );
-    }
-    if (originalScrollLeftDesc) {
-      Object.defineProperty(
-        Element.prototype,
-        "scrollLeft",
-        originalScrollLeftDesc,
-      );
-    }
+  it("treats a null start_date as no before-start cutoff", () => {
+    mockHabit.start_date = null;
+    const { container } = render(<HabitCompactRow habit={mockHabit} />);
+    // No inert placeholders — every one of the 7 days is an active button.
+    expect(container.querySelectorAll("button")).toHaveLength(7);
+    expect(container.querySelectorAll(".bg-transparent")).toHaveLength(0);
   });
 });
