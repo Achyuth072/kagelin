@@ -10,7 +10,6 @@ const BUCKET = {
   feat: "Added",
   fix: "Fixed",
   perf: "Improved",
-  refactor: "Improved",
 };
 const SKIP = new Set([
   "chore",
@@ -20,6 +19,7 @@ const SKIP = new Set([
   "build",
   "style",
   "revert",
+  "refactor",
 ]);
 // Captures:  type  scope?  !?  :  message
 const CC = /^(\w+)(?:\([^)]*\))?!?:\s*(.+)$/;
@@ -47,7 +47,9 @@ function bucketCommits(headings) {
     }
   }
   return Object.fromEntries(
-    Object.entries(sections).filter(([, v]) => v.length > 0),
+    Object.entries(sections)
+      .map(([k, v]) => [k, [...new Set(v)]])
+      .filter(([, v]) => v.length > 0),
   );
 }
 

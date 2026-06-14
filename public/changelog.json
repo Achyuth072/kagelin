@@ -52,23 +52,12 @@
         "Default to grid"
       ],
       "Improved": [
-        "extract shared useSortableRow hook",
-        "generalize computeReorderPairs into shared core",
-        "extract shared IconCell component",
-        "migrate habit dialogs to icon-led row form",
-        "Rewrite HabitCreateView/HabitEditView with Variant A layout",
-        "Move dialog header to sr-only, title becomes inline input",
-        "Align icon picker sizing with color swatches, rename label",
-        "Match habit view selector size to task view selector",
         "memoize habit row and search list computations",
         "Memoize streak/rolling-7 calc per HabitCompactRow",
         "Memoize displayHabits in HabitCompactList",
         "Drop redundant filter in useCalendarEventsList",
         "Memoize command-menu search result items",
-        "Parallelize habit reorder updates",
-        "apply EmptyState across empty surfaces",
-        "Habits, tasks list/board/grid, archived projects, search no-results, focus trend chart",
-        "declutter mobile header right cluster"
+        "Parallelize habit reorder updates"
       ],
       "Fixed": [
         "conform habit dialogs to FORM_PATTERNS scale",
@@ -111,7 +100,6 @@
         "TaskBoard column max-height",
         "TaskSheet/HabitSheet dialog max-height",
         "cap dialogs and drawers to viewport height",
-        "focus view scrolls instead of clipping in landscape",
         "replace no-op min-h-screen ternary with min-h-dvh + overflow-y-auto",
         "36px visual cell with 44px tap target for coarse pointers",
         "close event popover on back instead of whole drawer",
