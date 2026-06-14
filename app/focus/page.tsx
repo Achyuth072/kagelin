@@ -104,9 +104,10 @@ export default function FocusPage() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={cn(
-        "flex flex-col items-center justify-center p-6 bg-background relative select-none cursor-default",
-        isFullscreen && isPhone && "fixed inset-0 z-50 bg-background",
-        isFullscreen && !isPhone ? "min-h-screen" : "min-h-screen",
+        "flex flex-col items-center justify-center p-6 bg-background relative select-none cursor-default overflow-y-auto",
+        isFullscreen && isPhone
+          ? "fixed inset-0 z-50 bg-background"
+          : "absolute inset-0",
       )}
     >
       {/* Close Button */}

@@ -5,6 +5,7 @@ import { useTasks } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
 import { useAuth } from "@/components/AuthProvider";
 import { useUiStore } from "@/lib/store/uiStore";
+import type { Mock } from "vitest";
 
 // Mock hooks
 vi.mock("@/lib/hooks/useTasks", () => ({
@@ -47,17 +48,34 @@ describe("TaskList Performance Gaps", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useAuth as any).mockReturnValue({ isGuestMode: true, loading: false });
-    (useProjects as any).mockReturnValue({
+    vi.mocked(useAuth).mockReturnValue({
+      isGuestMode: true,
+      loading: false,
+    } as unknown as ReturnType<typeof useAuth>);
+    vi.mocked(useProjects).mockReturnValue({
       data: mockProjects,
       isLoading: false,
-    });
-    (useUiStore as any).mockReturnValue("list"); // default viewMode
+    } as unknown as ReturnType<typeof useProjects>);
+    (useUiStore as unknown as Mock).mockImplementation(
+      (selector: (s: Record<string, unknown>) => unknown) =>
+        selector({
+          viewMode: "list",
+          isDesktop: true,
+          sortBy: "date",
+          groupBy: "none",
+          selectedTaskId: null,
+          setSortBy: vi.fn(),
+          setSelectedTaskId: vi.fn(),
+        }),
+    );
   });
 
   it("PERF-01: Renders tasks on the first render (no empty flash)", () => {
     // Given: useTasks returns data immediately (cached state)
-    (useTasks as any).mockReturnValue({ data: mockTasks, isLoading: false });
+    vi.mocked(useTasks).mockReturnValue({
+      data: mockTasks,
+      isLoading: false,
+    } as unknown as ReturnType<typeof useTasks>);
 
     // When: Rendering TaskList
     render(<TaskList />);

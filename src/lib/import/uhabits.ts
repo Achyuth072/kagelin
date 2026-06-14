@@ -184,6 +184,7 @@ export function mapUhabitsToKanso(
       updated_at: new Date().toISOString(),
       archived_at: null,
       start_date: earliestDate.get(uh.id as number) ?? today,
+      sort_order: habits.length,
     });
   });
 

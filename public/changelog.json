@@ -3,7 +3,19 @@
     "version": "Unreleased",
     "date": null,
     "channel": "preview",
-    "sections": {}
+    "sections": {
+      "Added": [
+        "Compact list view for habits with a tappable weekly streak strip — toggle between Grid and Compact",
+        "Drag-and-drop reordering for habits in Compact view",
+        "Global search (Cmd+K) now finds tasks, habits, and events, with a search button in the mobile header"
+      ],
+      "Improved": [
+        "Habit, task, project, and other dialogs redesigned with a consistent icon-led layout",
+        "Tablet and landscape layouts fixed to avoid clipping on narrow or short screens",
+        "Empty states redesigned across tasks, habits, calendar, and search",
+        "Habit completion checkmarks stay legible on light habit colors"
+      ]
+    }
   },
   {
     "version": "1.22.1",

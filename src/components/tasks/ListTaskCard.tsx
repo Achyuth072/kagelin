@@ -117,6 +117,7 @@ export function ListTaskCard({
                 variant="ghost"
                 size="icon"
                 onClick={toggleExpand}
+                aria-label={isExpanded ? "Collapse task" : "Expand task"}
                 className="h-11 w-11 text-muted-foreground hover:text-foreground transition-colors shrink-0 flex items-center justify-center -mr-1"
               >
                 <ChevronRight
@@ -145,7 +146,7 @@ export function ListTaskCard({
             {task.due_date && (
               <span
                 className={cn(
-                  "type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider",
+                  "type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider whitespace-nowrap",
                   isOverdue(task.due_date)
                     ? "text-foreground font-bold"
                     : "text-muted-foreground/70",
@@ -158,7 +159,7 @@ export function ListTaskCard({
             {task.priority < 4 && (
               <span
                 className={cn(
-                  "type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider",
+                  "type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider whitespace-nowrap",
                   priorityTextClasses[task.priority as 1 | 2 | 3 | 4],
                 )}
               >
@@ -166,7 +167,7 @@ export function ListTaskCard({
               </span>
             )}
             {task.is_evening && (
-              <span className="type-ui flex items-center gap-1.5 text-[11px] font-medium text-foreground/80 uppercase tracking-wider">
+              <span className="type-ui flex items-center gap-1.5 text-[11px] font-medium text-foreground/80 uppercase tracking-wider whitespace-nowrap">
                 <Moon className="h-3 w-3 fill-current" strokeWidth={2.5} />
                 Evening
               </span>
@@ -178,6 +179,7 @@ export function ListTaskCard({
                 variant="ghost"
                 size="icon"
                 onClick={toggleExpand}
+                aria-label={isExpanded ? "Collapse task" : "Expand task"}
                 className={cn(
                   "h-6 w-6 text-muted-foreground hover:text-foreground transition-colors ml-1",
                   isExpanded && "text-brand",
@@ -203,6 +205,7 @@ export function ListTaskCard({
             variant="ghost"
             size="icon"
             onClick={onDeleteRequest}
+            aria-label="Delete task"
             className="h-7 w-7 text-muted-foreground hover:text-destructive transition-all opacity-0 group-hover:opacity-100 focus-within:opacity-100"
           >
             <Trash2 className="h-4 w-4" strokeWidth={2.5} />

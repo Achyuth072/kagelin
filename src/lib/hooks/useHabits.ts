@@ -22,7 +22,9 @@ export function useHabits(options: UseHabitsOptions = {}) {
     queryFn: async (): Promise<HabitWithEntries[]> => {
       // Guest Mode: Return mock data
       if (isGuestMode) {
-        const habits = mockStore.getHabits();
+        const habits = [...mockStore.getHabits()].sort(
+          (a, b) => a.sort_order - b.sort_order,
+        );
         const entries = mockStore.getHabitEntries();
 
         // Filter archived if requested
@@ -50,7 +52,7 @@ export function useHabits(options: UseHabitsOptions = {}) {
       let habitsQuery = supabase
         .from("habits")
         .select("*")
-        .order("created_at", { ascending: true });
+        .order("sort_order", { ascending: true });
 
       if (!includeArchived) {
         habitsQuery = habitsQuery.is("archived_at", null);

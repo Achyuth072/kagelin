@@ -15,12 +15,12 @@ import {
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
+import { Send, Palette } from "lucide-react";
 import { useCreateProject } from "@/lib/hooks/useProjectMutations";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { ColorPicker } from "@/components/shared/ColorPicker";
 import { cn } from "@/lib/utils";
+import { IconCell } from "@/components/ui/IconCell";
 import { DEFAULT_PROJECT_COLOR } from "@/lib/constants/colors";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
@@ -81,80 +81,83 @@ export function CreateProjectDialog({
           onSubmit={handleSubmit(onFormSubmit)}
           className="flex flex-col h-auto max-h-[90dvh]"
         >
-          <ResponsiveDialogHeader className="px-4 pt-6 shrink-0">
-            <ResponsiveDialogTitle className="type-h2">
-              Create Project
-            </ResponsiveDialogTitle>
-            <ResponsiveDialogDescription className="sr-only">
+          <ResponsiveDialogHeader className="sr-only">
+            <ResponsiveDialogTitle>Create Project</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               Organize your tasks into a new project.
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="project-name" className="sr-only">
-                Project Name
-              </Label>
-              <Textarea
-                {...register("name")}
-                id="project-name"
-                placeholder="Work, Personal, School..."
-                autoFocus={isFinePointer}
-                className={cn(
-                  "text-xl sm:text-2xl font-semibold px-3 py-2 h-10 min-h-[40px] bg-transparent border-border focus-visible:ring-1 focus-visible:ring-ring shadow-sm resize-none placeholder:text-muted-foreground/30 tracking-tight leading-tight rounded-md transition-all",
-                  errors.name &&
-                    "text-destructive placeholder:text-destructive/50 border-destructive/20 focus-visible:ring-destructive",
-                )}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    if (isValid) {
-                      handleSubmit(onFormSubmit)();
-                    }
-                  }
-                }}
-                aria-invalid={!!errors.name}
-                aria-describedby={
-                  errors.name ? "project-name-error" : undefined
-                }
-              />
-              {errors.name && (
-                <p
-                  id="project-name-error"
-                  className="text-xs font-medium text-destructive mt-1"
-                >
-                  {errors.name.message}
-                </p>
+          {/* Title — native input, bottom border only, no box */}
+          <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
+            <input
+              {...register("name")}
+              id="project-name"
+              placeholder="Work, Personal, School..."
+              autoFocus={isFinePointer}
+              className={cn(
+                "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none",
+                "placeholder:text-muted-foreground/50 text-foreground",
+                errors.name && "placeholder:text-destructive/60",
               )}
-            </div>
-
-            <ColorPicker
-              value={color}
-              onChange={(newColor) =>
-                setValue("color", newColor, { shouldValidate: true })
-              }
-              label="Color"
-              ariaLabel="Project color"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (isValid) {
+                    handleSubmit(onFormSubmit)();
+                  }
+                }
+              }}
+              aria-invalid={!!errors.name}
+              aria-describedby={errors.name ? "project-name-error" : undefined}
             />
+            {errors.name && (
+              <p
+                id="project-name-error"
+                className="text-xs text-destructive mt-1"
+              >
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
-          <div className="shrink-0 flex justify-end gap-3 p-4 border-t pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => {
-                trigger("tick");
-                onOpenChange(false);
-              }}
-            >
-              Cancel
-            </Button>
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto min-h-0 py-2">
+            <div className="flex items-start gap-3 px-3 py-2.5 rounded-md mx-2">
+              <IconCell>
+                <Palette
+                  className="h-4 w-4 text-muted-foreground"
+                  strokeWidth={2.25}
+                />
+              </IconCell>
+              <div className="flex-1 min-w-0">
+                <ColorPicker
+                  value={color}
+                  onChange={(newColor) =>
+                    setValue("color", newColor, { shouldValidate: true })
+                  }
+                  ariaLabel="Project color"
+                />
+              </div>
+            </div>
+
+            <div className="h-1" />
+          </div>
+
+          {/* Footer */}
+          <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
+            <div className="flex-1" />
             <Button
               type="submit"
+              size="sm"
+              className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
+              onClick={() => trigger("success")}
               disabled={!isValid || createProject.isPending}
-              className="bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku h-10 px-6"
+              aria-label={
+                createProject.isPending ? "Creating project" : "Create project"
+              }
             >
-              {createProject.isPending ? "Creating..." : "Create"}
+              <Send className="h-5 w-5 stroke-[2.25px]" />
             </Button>
           </div>
         </form>

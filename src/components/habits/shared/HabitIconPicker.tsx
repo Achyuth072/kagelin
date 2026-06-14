@@ -80,7 +80,6 @@ export function getHabitIcon(iconName: string | null | undefined) {
 interface HabitIconPickerProps {
   value: string;
   onChange: (value: string) => void;
-  color?: string;
   variant?: "grid" | "compact" | "hero";
 }
 
@@ -106,11 +105,11 @@ const IconButton = memo(
         aria-checked={isSelected}
         onClick={() => onSelect(item.name)}
         className={cn(
-          "h-10 transition-all shrink-0 border rounded-lg shadow-none flex items-center justify-center transform-gpu",
+          "h-9 w-9 px-0 transition-all shrink-0 border rounded-lg shadow-none flex items-center justify-center transform-gpu",
           isSelected
             ? "text-brand bg-brand/10 border-transparent font-semibold"
             : "border-border/50 bg-background hover:bg-secondary text-muted-foreground hover:text-foreground",
-          variant === "compact" ? "w-10 px-0" : "px-3 min-w-[40px]",
+          variant === "compact" && "w-10",
         )}
       >
         <Icon
@@ -127,7 +126,6 @@ export function HabitIconPicker({
   value,
   onChange,
   variant = "grid",
-  color = "#4B6CB7",
 }: HabitIconPickerProps) {
   const { trigger } = useHaptic();
   const scrollRef = useHorizontalScroll();
@@ -142,38 +140,13 @@ export function HabitIconPicker({
 
   return (
     <div className="grid gap-3 w-full overflow-hidden">
-      {/* Featured Icon Preview */}
-      <div>
-        <div className="flex flex-col items-center justify-center py-4 rounded-xl bg-secondary/10 border border-border/40 relative overflow-hidden group">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center transition-all bg-background border border-border shadow-none group-hover:scale-105"
-            style={{ color: color }}
-          >
-            {React.createElement(getHabitIcon(value), {
-              strokeWidth: 2.25,
-              className: "h-6 w-6",
-            })}
-          </div>
-          <div className="mt-2 flex flex-col items-center">
-            <span className="text-[9px] font-bold text-foreground/30 uppercase tracking-[0.2em]">
-              Selected
-            </span>
-            <span className="text-xs font-medium text-foreground capitalize tracking-tight">
-              {value || "Flame"}
-            </span>
-          </div>
-        </div>
-      </div>
-
       <div className="space-y-1.5 overflow-hidden">
         {variant !== "compact" && (
-          <Label className="text-[10px] font-bold text-foreground/40 uppercase tracking-[0.2em]">
-            Choose Symbol
-          </Label>
+          <Label className="text-xs text-muted-foreground/60">Icon</Label>
         )}
         <div
           ref={scrollRef}
-          className="flex flex-nowrap gap-2.5 overflow-x-auto scrollbar-hide py-1 px-4 -mx-4"
+          className="flex flex-nowrap gap-2.5 overflow-x-auto scrollbar-hide py-1 px-2 -mx-2"
           role="radiogroup"
           aria-label="Habit icon selection"
         >

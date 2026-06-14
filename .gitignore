@@ -77,3 +77,4 @@ tests/unit/*.txt
 CLAUDE.md
 docs/agents/
 .claude/
+AGENTS.md

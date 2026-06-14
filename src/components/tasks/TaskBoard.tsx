@@ -465,7 +465,7 @@ const KanbanColumn = memo(function KanbanColumn({
   return (
     <section
       ref={setNodeRef}
-      className="w-[85vw] md:w-[320px] snap-center bg-sidebar border border-border rounded-2xl flex flex-col p-0.5 max-h-[calc(100vh-200px)] md:max-h-full"
+      className="w-[85vw] md:w-[320px] snap-center bg-sidebar border border-border rounded-2xl flex flex-col p-0.5 max-h-[calc(100dvh-200px)] md:max-h-full"
     >
       <div className="px-3 py-2.5 flex items-center justify-between">
         <h3 className="type-h3 lowercase tracking-tight text-foreground/70">

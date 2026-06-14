@@ -9,6 +9,8 @@ import type { HabitWithEntries } from "@/lib/hooks/useHabits";
 import { Check, Plus, LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
+import { getCurrentStreak } from "@/lib/utils/habit-streak";
+import { getContrastingColor } from "@/lib/utils/color";
 
 interface HabitCardProps {
   habit: HabitWithEntries;
@@ -76,35 +78,7 @@ export function HabitCard({
 
   // Calculate stats
   const totalCompletions = habit.entries.filter((e) => e.value === 1).length;
-
-  // Calculate current streak
-  const calculateStreak = useCallback(() => {
-    const sortedEntries = [...habit.entries]
-      .filter((e) => e.value === 1)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    let streak = 0;
-    const todayDate = new Date();
-    todayDate.setHours(0, 0, 0, 0);
-
-    for (let i = 0; i < sortedEntries.length; i++) {
-      const entryDate = new Date(sortedEntries[i].date);
-      entryDate.setHours(0, 0, 0, 0);
-
-      const expectedDate = new Date(todayDate);
-      expectedDate.setDate(expectedDate.getDate() - streak);
-
-      if (entryDate.getTime() === expectedDate.getTime()) {
-        streak++;
-      } else {
-        break;
-      }
-    }
-
-    return streak;
-  }, [habit.entries]);
-
-  const currentStreak = calculateStreak();
+  const currentStreak = getCurrentStreak(habit.entries);
 
   const handleToggle = useCallback(() => {
     if (onToggle) {
@@ -187,7 +161,11 @@ export function HabitCard({
               }
             >
               {isCompletedToday ? (
-                <Check className="w-5 h-5 text-black" strokeWidth={3} />
+                <Check
+                  className="w-5 h-5"
+                  strokeWidth={3}
+                  style={{ color: getContrastingColor(habit.color) }}
+                />
               ) : (
                 <Plus className="w-5 h-5" />
               )}
@@ -205,7 +183,7 @@ export function HabitCard({
             color={habit.color}
             blockSize={isMobile ? 10 : 12}
             blockMargin={2}
-            startDate={habit.start_date}
+            startDate={habit.start_date ?? undefined}
           />
         </div>
       </div>

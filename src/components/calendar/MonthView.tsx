@@ -211,7 +211,7 @@ const MonthView = memo(
         {/* Calendar grid */}
         <div
           className={cn(
-            "flex-1 min-h-0 grid grid-cols-7 overflow-y-auto md:overflow-hidden divide-x divide-border/40 divide-y divide-border/40 border-b border-r border-border/40",
+            "flex-1 min-h-0 grid grid-cols-7 overflow-y-auto divide-x divide-border/40 divide-y divide-border/40 border-b border-r border-border/40",
           )}
           style={{ gridTemplateRows: `repeat(${numWeeks}, 1fr)` }}
         >

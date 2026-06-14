@@ -206,6 +206,7 @@ export default function SubtaskList({
                     <Button
                       variant="ghost"
                       size="icon"
+                      aria-label="Delete subtask"
                       className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-lg"
                       onClick={() => {
                         trigger("tick");

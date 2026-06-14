@@ -10,6 +10,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { LineChart as LineChartIcon } from "lucide-react";
 
 interface FocusTrendChartProps {
   data: Array<{
@@ -20,6 +22,8 @@ interface FocusTrendChartProps {
 }
 
 export function FocusTrendChart({ data, className }: FocusTrendChartProps) {
+  const hasData = data.some((d) => d.hours > 0);
+
   return (
     <Card className={cn("p-6 border-border/50", className)}>
       <div className="space-y-4">
@@ -32,41 +36,50 @@ export function FocusTrendChart({ data, className }: FocusTrendChartProps) {
           </p>
         </div>
 
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={data}>
-            <XAxis
-              dataKey="date"
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value) => `${value}h`}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "hsl(var(--background))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
-              labelStyle={{ color: "hsl(var(--foreground))" }}
-            />
-            <Line
-              type="monotone"
-              dataKey="hours"
-              stroke="hsl(var(--brand))"
-              strokeWidth={2}
-              dot={{ fill: "hsl(var(--brand))", r: 4 }}
-              activeDot={{ r: 6 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {!hasData ? (
+          <EmptyState
+            icon={LineChartIcon}
+            title="No focus sessions yet"
+            description="Complete a focus session to see your trend here."
+            className="py-8 gap-3"
+          />
+        ) : (
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={data}>
+              <XAxis
+                dataKey="date"
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `${value}h`}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "hsl(var(--background))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px",
+                  fontSize: "12px",
+                }}
+                labelStyle={{ color: "hsl(var(--foreground))" }}
+              />
+              <Line
+                type="monotone"
+                dataKey="hours"
+                stroke="hsl(var(--brand))"
+                strokeWidth={2}
+                dot={{ fill: "hsl(var(--brand))", r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </Card>
   );

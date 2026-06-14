@@ -131,7 +131,7 @@ export function CalendarToolbar({
     >
       {/* Left Cluster: Navigation on desktop / Nav Cluster on mobile */}
       <div
-        className={cn("flex-initial md:flex-1 flex items-center gap-2 min-w-0")}
+        className={cn("flex-initial lg:flex-1 flex items-center gap-2 min-w-0")}
       >
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-2">
@@ -142,16 +142,17 @@ export function CalendarToolbar({
               trigger("tick");
               goToToday();
             }}
-            className="h-9 bg-secondary/40 hover:bg-secondary/60 border border-border/50 shadow-none transition-seijaku-fast text-[13px] font-medium rounded-lg px-3"
+            className="h-9 bg-secondary/40 hover:bg-secondary/60 border border-border/50 shadow-none transition-seijaku-fast text-[13px] font-medium rounded-lg px-3 lg:px-3"
           >
-            <CalendarIcon className="h-4 w-4 mr-2" strokeWidth={2.25} />
-            <span>Today</span>
+            <CalendarIcon className="h-4 w-4 lg:mr-2" strokeWidth={2.25} />
+            <span className="hidden lg:inline">Today</span>
           </Button>
 
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Previous period"
               className="h-9 w-9 shadow-none transition-seijaku-fast rounded-full"
               onClick={() => {
                 trigger("tick");
@@ -163,6 +164,7 @@ export function CalendarToolbar({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Next period"
               className="h-9 w-9 shadow-none transition-seijaku-fast rounded-full"
               onClick={() => {
                 trigger("tick");
@@ -179,6 +181,7 @@ export function CalendarToolbar({
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Go to today"
             className="h-9 w-9 bg-secondary/40 hover:bg-secondary/60 border border-border/50 shadow-none transition-seijaku-fast rounded-lg"
             onClick={() => {
               trigger("tick");
@@ -193,14 +196,14 @@ export function CalendarToolbar({
       {/* Middle: Date Label - Centered between clusters on mobile, absolute on desktop */}
       <div
         className={cn(
-          "md:absolute md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2",
-          "flex-1 md:flex-none flex items-center justify-center min-w-0 px-2 z-10 pointer-events-none",
+          "lg:absolute lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2",
+          "flex-1 lg:flex-none flex items-center justify-center min-w-0 px-2 z-10 pointer-events-none",
         )}
       >
         <div
           className={cn(
             "font-semibold tracking-tight truncate",
-            "text-base font-bold md:text-[28px] md:tracking-[-0.03em] md:font-semibold",
+            "text-base font-bold lg:text-[28px] lg:tracking-[-0.03em] lg:font-semibold",
           )}
         >
           {renderDateLabel()}
@@ -208,7 +211,7 @@ export function CalendarToolbar({
       </div>
 
       {/* Right Cluster: View Select + Menu */}
-      <div className="flex-initial md:flex-1 flex items-center gap-1 md:gap-1.5 min-w-0 justify-end">
+      <div className="flex-initial lg:flex-1 flex items-center gap-1 md:gap-1.5 min-w-0 justify-end">
         <Select
           value={view}
           onValueChange={(v) => {

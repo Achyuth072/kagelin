@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
+  ResponsiveDialogHeader,
   ResponsiveDialogTitle,
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog";
@@ -83,7 +84,7 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
           description: initialHabit.description || "",
           color: initialHabit.color,
           icon: initialHabit.icon || "Flame",
-          start_date: initialHabit.start_date,
+          start_date: initialHabit.start_date ?? undefined,
         });
         void triggerValidation();
       } else {
@@ -152,17 +153,17 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
   return (
     <ResponsiveDialog open={open} onOpenChange={onClose}>
       <ResponsiveDialogContent className="w-full sm:max-w-lg gap-0 rounded-lg p-0 overflow-hidden outline-none">
-        <div className="flex flex-col max-h-[90vh]">
-          <div className="px-4 pt-6 pb-4 border-b border-border/10 shrink-0 bg-background">
-            <ResponsiveDialogTitle className="type-h2">
+        <div className="flex flex-col max-h-[90dvh]">
+          <ResponsiveDialogHeader className="sr-only">
+            <ResponsiveDialogTitle>
               {initialHabit ? "Edit Habit" : "New Habit"}
             </ResponsiveDialogTitle>
-            <ResponsiveDialogDescription className="sr-only">
+            <ResponsiveDialogDescription>
               {initialHabit
                 ? "Update your habit details and tracking frequency."
                 : "Create a new habit to start tracking your daily progress."}
             </ResponsiveDialogDescription>
-          </div>
+          </ResponsiveDialogHeader>
 
           <div className="flex-1 overflow-y-auto min-h-0">
             {isCreationMode ? (

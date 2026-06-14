@@ -1,10 +1,8 @@
 "use client";
 
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import {
   Select,
   SelectContent,
@@ -13,8 +11,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { ListChecks, Send, Inbox, Moon, CalendarClock } from "lucide-react";
+import {
+  ListChecks,
+  Send,
+  Inbox,
+  Moon,
+  CalendarClock,
+  SlidersHorizontal,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+import { IconCell } from "@/components/ui/IconCell";
 import SubtaskList from "./SubtaskList";
 import { TaskDatePicker } from "./shared/TaskDatePicker";
 import { TaskPrioritySelect } from "./shared/TaskPrioritySelect";
@@ -92,139 +98,156 @@ export function TaskCreateView({
 }: TaskCreateViewProps) {
   const { trigger } = useHaptic();
   const isFinePointer = useMediaQuery("(pointer: fine)");
+  const scrollRef = useHorizontalScroll();
 
   return (
     <div className="flex flex-col h-auto w-full max-w-full overflow-hidden">
-      <div className="flex-1 min-h-0 px-4 py-4 space-y-4 w-full">
-        {/* Task Name Input */}
-        <div>
-          <Label htmlFor="task-content" className="sr-only">
-            Task Content
-          </Label>
-          <Textarea
-            id="task-content"
-            placeholder="What needs to be done?"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={onKeyDown}
-            autoFocus={isFinePointer}
-            className={cn(
-              "text-xl sm:text-2xl font-semibold px-3 py-2 h-10 min-h-[40px] bg-transparent border-border focus-visible:ring-1 focus-visible:ring-ring shadow-sm resize-none placeholder:text-muted-foreground/30 tracking-tight leading-tight rounded-md transition-all",
-              errors?.content &&
-                "text-destructive placeholder:text-destructive/50 border-destructive/20",
-            )}
-            aria-invalid={!!errors?.content}
-            aria-describedby={
-              errors?.content ? "task-content-error" : undefined
-            }
-          />
-          {errors?.content && (
-            <p
-              id="task-content-error"
-              className="text-xs font-medium text-destructive mt-1"
-            >
-              {errors.content.message}
-            </p>
+      {/* Title — native textarea, bottom border only, no box */}
+      <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
+        <textarea
+          id="task-content"
+          placeholder="What needs to be done?"
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          onKeyDown={onKeyDown}
+          autoFocus={isFinePointer}
+          rows={1}
+          className={cn(
+            "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none resize-none",
+            "placeholder:text-muted-foreground/50 text-foreground leading-tight",
+            errors?.content && "placeholder:text-destructive/60",
           )}
+          aria-invalid={!!errors?.content}
+          aria-describedby={errors?.content ? "task-content-error" : undefined}
+        />
+        {errors?.content && (
+          <p id="task-content-error" className="text-xs text-destructive mt-1">
+            {errors.content.message}
+          </p>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 min-h-0 py-2">
+        {/* Meta row — icon-led horizontal scroll strip */}
+        <div className="flex items-center gap-3 px-3 py-2.5 mx-2">
+          <div className="w-5 shrink-0 flex items-center justify-center">
+            <SlidersHorizontal
+              className="h-4 w-4 text-muted-foreground"
+              strokeWidth={2.25}
+            />
+          </div>
+          <div
+            ref={scrollRef}
+            className="flex items-center gap-3 overflow-x-auto scrollbar-hide min-w-0 flex-1 py-1 pr-3"
+          >
+            <TaskDatePicker
+              date={dueDate}
+              setDate={setDueDate}
+              isMobile={isMobile}
+              open={datePickerOpen}
+              onOpenChange={setDatePickerOpen}
+              variant="icon"
+              side="right"
+              align="center"
+              sideOffset={15}
+              error={!!errors?.due_date}
+            />
+
+            <TaskDatePicker
+              date={doDate}
+              setDate={setDoDate}
+              isMobile={isMobile}
+              open={doDatePickerOpen}
+              onOpenChange={setDoDatePickerOpen}
+              variant="icon"
+              title={!isMobile ? "Start Date" : undefined}
+              icon={CalendarClock}
+              side="right"
+              align="center"
+              sideOffset={15}
+              error={!!errors?.do_date}
+            />
+
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-9 px-3 transition-all text-muted-foreground hover:text-foreground border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none gap-1.5 shrink-0 rounded-lg",
+                isEvening &&
+                  "text-brand bg-brand/10 border-transparent hover:bg-brand/20 hover:text-brand",
+              )}
+              onClick={() => {
+                const nextValue = !isEvening;
+                trigger("toggle");
+                setIsEvening(nextValue);
+                if (nextValue && !doDate) {
+                  setDoDate(new Date());
+                }
+              }}
+              title={!isMobile ? "This Evening" : undefined}
+              aria-label="This Evening"
+            >
+              <Moon strokeWidth={2.25} className="h-4 w-4" />
+              {!isMobile && <span className="type-ui">Evening</span>}
+            </Button>
+
+            <div className="shrink-0">
+              <TaskPrioritySelect
+                priority={priority}
+                setPriority={setPriority}
+                variant="icon"
+                isMobile={isMobile}
+              />
+            </div>
+
+            <div className="shrink-0">
+              <RecurrencePicker
+                value={recurrence}
+                onChange={setRecurrence}
+                variant="icon"
+                isMobile={isMobile}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Icon Row - Metadata Controls */}
-        <div className="flex items-center gap-3 pt-2 pb-4 overflow-x-auto scrollbar-hide flex-wrap">
-          <TaskDatePicker
-            date={dueDate}
-            setDate={setDueDate}
-            isMobile={isMobile}
-            open={datePickerOpen}
-            onOpenChange={setDatePickerOpen}
-            variant="icon"
-            side="right"
-            align="center"
-            sideOffset={15}
-            error={!!errors?.due_date}
-          />
+        {(errors?.due_date || errors?.do_date) && (
+          <div className="px-3 mx-2 text-[10px] font-bold text-destructive">
+            {errors?.due_date?.message || errors?.do_date?.message}
+          </div>
+        )}
 
-          <TaskDatePicker
-            date={doDate}
-            setDate={setDoDate}
-            isMobile={isMobile}
-            open={doDatePickerOpen}
-            onOpenChange={setDoDatePickerOpen}
-            variant="icon"
-            title={!isMobile ? "Start Date" : undefined}
-            icon={CalendarClock}
-            side="right"
-            align="center"
-            sideOffset={15}
-            error={!!errors?.do_date}
-          />
+        <div className="h-1" />
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn(
-              "h-9 px-3 transition-all text-muted-foreground hover:text-foreground border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none gap-1.5 shrink-0 rounded-lg",
-              isEvening &&
-                "text-brand bg-brand/10 border-transparent hover:bg-brand/20 hover:text-brand",
-            )}
-            onClick={() => {
-              const nextValue = !isEvening;
-              trigger("toggle");
-              setIsEvening(nextValue);
-              if (nextValue && !doDate) {
-                setDoDate(new Date());
-              }
-            }}
-            title={!isMobile ? "This Evening" : undefined}
-            aria-label="This Evening"
-          >
-            <Moon strokeWidth={2.25} className="h-4 w-4" />
-            {!isMobile && <span className="type-ui">Evening</span>}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
+        {/* Subtasks row */}
+        <div className="mx-2">
+          <button
+            type="button"
             onClick={() => {
               trigger("toggle");
               setShowSubtasks(!showSubtasks);
             }}
             className={cn(
-              "h-9 w-9 p-0 transition-all text-muted-foreground hover:text-foreground border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none group [&_svg]:!size-4 shrink-0 rounded-lg",
-              showSubtasks &&
-                "text-brand bg-brand/10 border-transparent hover:bg-brand/20 hover:text-brand",
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast text-left",
+              "hover:bg-muted/40",
+              showSubtasks && "text-brand",
             )}
-            title={!isMobile ? "Toggle subtasks" : undefined}
-            aria-label="Toggle subtasks"
           >
-            <ListChecks strokeWidth={2.25} className="transition-all" />
-          </Button>
+            <IconCell>
+              <ListChecks
+                className={cn(
+                  "h-4 w-4",
+                  showSubtasks ? "text-brand" : "text-muted-foreground",
+                )}
+                strokeWidth={2.25}
+              />
+            </IconCell>
+            <span className="text-sm flex-1 text-foreground">Subtasks</span>
+          </button>
 
-          <div className="shrink-0">
-            <TaskPrioritySelect
-              priority={priority}
-              setPriority={setPriority}
-              variant="icon"
-              isMobile={isMobile}
-            />
-          </div>
-
-          <div className="shrink-0">
-            <RecurrencePicker
-              value={recurrence}
-              onChange={setRecurrence}
-              variant="icon"
-              isMobile={isMobile}
-            />
-          </div>
-        </div>
-
-        {/* Subtasks Section - Collapsible */}
-        {showSubtasks && (
-          <div className="grid gap-2">
-            <div>
-              <Label>Subtasks</Label>
-            </div>
-            <div className="pl-1">
+          {showSubtasks && (
+            <div className="pl-11 pr-3 pb-2">
               <SubtaskList
                 taskId={undefined}
                 projectId={inboxProjectId}
@@ -232,12 +255,14 @@ export function TaskCreateView({
                 onDraftSubtasksChange={setDraftSubtasks}
               />
             </div>
-          </div>
-        )}
+          )}
+        </div>
+
+        <div className="h-1" />
       </div>
 
-      {/* Footer Row - Project & Send */}
-      <div className="shrink-0 flex items-center justify-between p-4 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background">
+      {/* Footer */}
+      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
         <Select
           value={selectedProjectId || "inbox"}
           onValueChange={(v) => {
@@ -247,7 +272,7 @@ export function TaskCreateView({
         >
           <SelectTrigger
             onPointerDown={() => trigger("toggle")}
-            className="h-9 w-auto min-w-[130px] max-w-[200px] type-ui border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none focus:ring-0 transition-all rounded-lg text-foreground [&_svg]:opacity-100 [&_svg]:text-foreground px-3"
+            className="h-9 w-auto min-w-[130px] max-w-[200px] type-ui border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none focus:ring-0 transition-all rounded-lg text-foreground [&_svg]:opacity-100 [&_svg]:text-foreground px-3 shrink-0"
           >
             <SelectValue placeholder="Inbox" />
           </SelectTrigger>
@@ -274,24 +299,18 @@ export function TaskCreateView({
           </SelectContent>
         </Select>
 
-        {(errors?.due_date || errors?.do_date) && (
-          <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-destructive/10 text-destructive text-[10px] font-bold px-3 py-1 rounded-md animate-in slide-in-from-top-1 fade-in duration-200 pointer-events-none text-center">
-            {errors?.due_date?.message || errors?.do_date?.message}
-          </div>
-        )}
-
+        <div className="flex-1" />
         <Button
           size="sm"
-          className="h-9 w-9 p-0 rounded-lg [&_svg]:size-4 bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku"
+          className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
           onClick={() => {
             trigger("success");
             onSubmit();
           }}
           disabled={!hasContent || isPending}
-          title={!isMobile ? "Create task" : undefined}
           aria-label="Create task"
         >
-          <Send className="stroke-[2.25px]" />
+          <Send className="h-5 w-5 stroke-[2.25px]" />
         </Button>
       </div>
     </div>

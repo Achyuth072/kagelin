@@ -10,12 +10,7 @@ describe("HabitIconPicker", () => {
   // Then: Should show the current icon prominently
   it("renders with a hero variant showing current icons", () => {
     render(
-      <HabitIconPicker
-        value="Flame"
-        onChange={mockOnChange}
-        color="#4B6CB7"
-        variant="hero"
-      />,
+      <HabitIconPicker value="Flame" onChange={mockOnChange} variant="hero" />,
     );
     expect(screen.getAllByRole("radio").length).toBeGreaterThan(1);
     const selectedIcon = screen.getByLabelText("Flame");
@@ -27,12 +22,7 @@ describe("HabitIconPicker", () => {
   // Then: onChange should be called with the icon name
   it("calls onChange when an icon is selected from the grid", () => {
     render(
-      <HabitIconPicker
-        value="Flame"
-        onChange={mockOnChange}
-        color="#4B6CB7"
-        variant="hero"
-      />,
+      <HabitIconPicker value="Flame" onChange={mockOnChange} variant="hero" />,
     );
     const heartButton = screen.getByLabelText("Heart");
     fireEvent.click(heartButton);
@@ -47,7 +37,6 @@ describe("HabitIconPicker", () => {
       <HabitIconPicker
         value="Flame"
         onChange={mockOnChange}
-        color="#4B6CB7"
         variant="compact"
       />,
     );

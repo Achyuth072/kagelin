@@ -61,6 +61,7 @@ describe("Habit Views Footer Layout", () => {
     start_date: new Date().toISOString(),
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    sort_order: 0,
   };
 
   const commonProps = {
@@ -92,7 +93,7 @@ describe("Habit Views Footer Layout", () => {
       />,
     );
 
-    const footer = screen.getByTitle(/save/i).closest("div")!;
+    const footer = screen.getByLabelText(/save/i).closest("div")!;
     const colorPicker = screen.getByTestId("color-picker");
     expect(footer.contains(colorPicker)).toBe(false);
   });

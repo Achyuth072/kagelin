@@ -16,6 +16,10 @@ interface UiState {
   setSortBy: (sort: SortOption) => void;
   setGroupBy: (group: GroupOption) => void;
   setViewMode: (mode: "list" | "grid" | "board") => void;
+
+  // Habit List State
+  habitViewMode: "grid" | "compact";
+  setHabitViewMode: (mode: "grid" | "compact") => void;
   // Global Settings
   timeFormat: "12h" | "24h" | "system";
   setTimeFormat: (format: "12h" | "24h" | "system") => void;
@@ -84,6 +88,10 @@ export const useUiStore = create<UiState>()(
       setSortBy: (sort) => set({ sortBy: sort }),
       setGroupBy: (group) => set({ groupBy: group }),
       setViewMode: (mode) => set({ viewMode: mode }),
+
+      // Habit List defaults
+      habitViewMode: "grid",
+      setHabitViewMode: (mode) => set({ habitViewMode: mode }),
 
       // Global Settings defaults
       timeFormat: "system",
