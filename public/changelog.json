@@ -18,6 +18,24 @@
     }
   },
   {
+    "version": "1.23.0-preview.1",
+    "date": "2026-06-14",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Compact list view for habits with a tappable weekly streak strip — toggle between Grid and Compact",
+        "Drag-and-drop reordering for habits in Compact view",
+        "Global search (Cmd+K) now finds tasks, habits, and events, with a search button in the mobile header"
+      ],
+      "Improved": [
+        "Habit, task, project, and other dialogs redesigned with a consistent icon-led layout",
+        "Tablet and landscape layouts fixed to avoid clipping on narrow or short screens",
+        "Empty states redesigned across tasks, habits, calendar, and search",
+        "Habit completion checkmarks stay legible on light habit colors"
+      ]
+    }
+  },
+  {
     "version": "1.23.0-preview.0",
     "date": "2026-06-14",
     "channel": "preview",
@@ -636,23 +654,6 @@
       "Improved": [
         "Mobile sidebar width locked to 62vw for stability on small screens",
         "Task view selector height, sidebar touch targets, and navigation trigger styles standardised"
-      ]
-    }
-  },
-  {
-    "version": "1.14.0",
-    "date": "2026-04-01",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Command menu action synchronisation and global keyboard shortcuts"
-      ],
-      "Improved": [
-        "Habits, Stats, and Settings views with fluid responsiveness across screen sizes",
-        "Calendar view selector spacing refined for mobile viewports",
-        "Kanban board shadows and header alignment polished",
-        "Guest mode experience and analytics dashboard harmonised",
-        "Sidebar animations and responsive triggers stabilised"
       ]
     }
   }
