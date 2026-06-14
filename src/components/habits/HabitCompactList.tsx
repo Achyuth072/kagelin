@@ -157,7 +157,7 @@ export function HabitCompactList({
             }}
           >
             {activeHabit && (
-              <div className="overflow-hidden rounded-xl border border-border bg-background opacity-90 shadow-lg">
+              <div className="overflow-hidden rounded-xl border border-border bg-background opacity-90 shadow-sm">
                 <HabitCompactRow
                   habit={activeHabit}
                   icon={getHabitIcon(activeHabit.icon)}

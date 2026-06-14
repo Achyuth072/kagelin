@@ -127,8 +127,7 @@ export function HabitEditView({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              style={{ fontSize: "0.875rem" }}
-              className="flex-1 bg-transparent border-0 outline-none resize-none text-sm text-foreground placeholder:text-muted-foreground/50 leading-normal p-0 min-h-[48px]"
+              className="flex-1 bg-transparent border-0 outline-none resize-none text-[15px] text-foreground placeholder:text-muted-foreground/60 leading-relaxed p-0 min-h-[48px]"
             />
           </div>
         </div>
