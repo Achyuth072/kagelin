@@ -27,11 +27,9 @@ function getCommitSubjectsSinceLastTag() {
     return [];
   }
 
-  return execFileSync(
-    "git",
-    ["log", `${lastTag}..HEAD`, "--format=%s"],
-    { encoding: "utf-8" },
-  )
+  return execFileSync("git", ["log", `${lastTag}..HEAD`, "--format=%s"], {
+    encoding: "utf-8",
+  })
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);

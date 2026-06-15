@@ -56,11 +56,13 @@ export function useCalendarEventsList(
 
   return useMemo(
     () =>
-      (data ?? []).map((e) => ({
-        id: e.id,
-        title: e.title,
-        date: e.start_time,
-      })),
+      (data ?? [])
+        .filter((e) => !e.is_archived)
+        .map((e) => ({
+          id: e.id,
+          title: e.title,
+          date: e.start_time,
+        })),
     [data],
   );
 }

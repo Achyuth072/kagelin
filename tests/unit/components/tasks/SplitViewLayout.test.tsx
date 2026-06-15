@@ -46,6 +46,10 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   }),
 }));
 
+vi.mock("@/lib/hooks/useMediaQuery", () => ({
+  useMediaQuery: () => true,
+}));
+
 describe("SplitViewLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();

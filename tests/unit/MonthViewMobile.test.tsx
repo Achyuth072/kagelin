@@ -75,13 +75,13 @@ describe("MonthView Mobile Visibility", () => {
     const visibleEvents = within(day10Cell as HTMLElement).queryAllByText(
       /Event \d/,
     );
-    const overflow = within(day10Cell as HTMLElement).queryByText(/\+\d more/);
+    const overflow = within(day10Cell as HTMLElement).queryByText(/^\+\d/);
 
     // Current buggy code shows 2 events AND overflow (Total 3)
     // We want: visibleEvents.length + (overflow ? 1 : 0) <= 2
     expect(visibleEvents.length).toBe(1);
     expect(overflow).toBeTruthy();
-    expect(overflow?.textContent).toBe("+2 more");
+    expect(overflow?.textContent).toBe("+2");
   });
 
   it("should show max 3 lines total (2 events + overflow) on mobile in normal month (5 weeks) when 4+ events exist", () => {
@@ -137,12 +137,12 @@ describe("MonthView Mobile Visibility", () => {
     const visibleEvents = within(day15Cell as HTMLElement).queryAllByText(
       /Event \d/,
     );
-    const overflow = within(day15Cell as HTMLElement).queryByText(/\+\d more/);
+    const overflow = within(day15Cell as HTMLElement).queryByText(/^\+\d/);
 
     // EXPECTATION: 2 events visible, +2 more
     // Total lines below date header should be 3.
     expect(visibleEvents.length).toBe(2);
     expect(overflow).toBeTruthy();
-    expect(overflow?.textContent).toBe("+2 more");
+    expect(overflow?.textContent).toBe("+2");
   });
 });

@@ -93,6 +93,7 @@ export function CreateProjectDialog({
             <input
               {...register("name")}
               id="project-name"
+              aria-label="Project Name"
               placeholder="Work, Personal, School..."
               autoFocus={isFinePointer}
               className={cn(

@@ -92,6 +92,7 @@ function SettingsForm() {
             <div className="flex items-center gap-1.5">
               <input
                 id="focus-duration-input"
+                aria-label="Focus Duration"
                 type="number"
                 {...register("focusDuration", { valueAsNumber: true })}
                 className={cn(
@@ -143,6 +144,7 @@ function SettingsForm() {
             <div className="flex items-center gap-1.5">
               <input
                 id="short-break-input"
+                aria-label="Short Break"
                 type="number"
                 {...register("shortBreakDuration", { valueAsNumber: true })}
                 className={cn(
