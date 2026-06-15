@@ -5,16 +5,20 @@
     "channel": "preview",
     "sections": {
       "Added": [
-        "Compact list view for habits with a tappable weekly streak strip — toggle between Grid and Compact",
+        "Compact list view for habits with a tappable weekly streak strip, toggle between Grid and Compact",
         "Drag-and-drop reordering for habits in Compact view",
-        "Global search (Cmd+K) now finds tasks, habits, and events, with a search button in the mobile header",
-        "Show active task on mobile header in guest mode"
+        "Global search (Ctrl/Cmd+K) now finds tasks, habits, and events, with a search option in the mobile header",
+        "Show active task on mobile header in guest mode(added back)",
+        "Notes editor for tasks with a markdown formatting toolbar and live preview"
       ],
       "Improved": [
         "Habit, task, project, and other dialogs redesigned with a consistent icon-led layout",
         "Tablet and landscape layouts fixed to avoid clipping on narrow or short screens",
         "Empty states redesigned across tasks, habits, calendar, and search",
-        "Habit completion checkmarks stay legible on light habit colors"
+        "Habit completion checkmarks stay legible on light habit colors",
+        "Improved contrast for muted, destructive, and border colors",
+        "Project dropdown now matches the width of its trigger",
+        "Location popover no longer gets clipped inside dialogs"
       ]
     }
   },
