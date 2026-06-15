@@ -343,7 +343,7 @@ export function TaskEditView({
           >
             <SelectValue placeholder="Inbox" />
           </SelectTrigger>
-          <SelectContent className="rounded-lg border-border/80 shadow-none">
+          <SelectContent className="w-(--radix-select-trigger-width) rounded-lg border-border/80 shadow-none [&_[role=option]]:text-[13px] [&_[role=option]]:font-medium [&_[role=option]>span:last-child]:min-w-0">
             <SelectItem value="inbox">
               <div className="flex items-center gap-2">
                 <Inbox className="h-3.5 w-3.5" strokeWidth={2.25} />
@@ -354,7 +354,7 @@ export function TaskEditView({
               ?.filter((p) => !p.is_inbox)
               .map((project) => (
                 <SelectItem key={project.id} value={project.id}>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0 w-full">
                     <div
                       className="h-3 w-3 rounded-full shrink-0"
                       style={{ backgroundColor: project.color }}

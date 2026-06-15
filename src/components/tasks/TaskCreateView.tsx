@@ -276,7 +276,7 @@ export function TaskCreateView({
           >
             <SelectValue placeholder="Inbox" />
           </SelectTrigger>
-          <SelectContent className="rounded-lg border-border/80 shadow-2xl">
+          <SelectContent className="w-(--radix-select-trigger-width) rounded-lg border-border/80 shadow-2xl [&_[role=option]]:text-[13px] [&_[role=option]]:font-medium [&_[role=option]>span:last-child]:min-w-0">
             <SelectItem value="inbox">
               <div className="flex items-center gap-2">
                 <Inbox strokeWidth={2.25} className="h-4 w-4" />
@@ -287,7 +287,7 @@ export function TaskCreateView({
               ?.filter((p) => !p.is_inbox)
               .map((project) => (
                 <SelectItem key={project.id} value={project.id}>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0 w-full">
                     <div
                       className="h-3 w-3 rounded-full shrink-0"
                       style={{ backgroundColor: project.color }}
