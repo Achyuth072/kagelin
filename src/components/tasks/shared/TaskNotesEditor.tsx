@@ -68,10 +68,16 @@ export function TaskNotesEditor({
     const { selectionStart, selectionEnd, value } = textarea;
     const selected = value.slice(selectionStart, selectionEnd);
     const replacement = action.apply(selected);
+    const cursor = selectionStart + replacement.length;
 
     setDescription(
       value.slice(0, selectionStart) + replacement + value.slice(selectionEnd),
     );
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(cursor, cursor);
+    });
   };
 
   return (

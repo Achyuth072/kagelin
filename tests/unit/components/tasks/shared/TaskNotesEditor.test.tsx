@@ -112,4 +112,21 @@ describe("TaskNotesEditor", () => {
 
     expect(defaultProps.setDescription).toHaveBeenCalledWith("**Hello** world");
   });
+
+  it("restores focus and places the caret after the inserted markdown", async () => {
+    render(<TaskNotesEditor {...defaultProps} />);
+
+    const textarea = screen.getByRole("textbox", {
+      name: /notes/i,
+    }) as HTMLTextAreaElement;
+    textarea.setSelectionRange(0, 5);
+
+    fireEvent.click(screen.getByRole("button", { name: /bold/i }));
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    expect(textarea).toHaveFocus();
+    expect(textarea.selectionStart).toBe("**Hello**".length);
+    expect(textarea.selectionEnd).toBe("**Hello**".length);
+  });
 });
