@@ -3,6 +3,12 @@
     "version": "Unreleased",
     "date": null,
     "channel": "preview",
+    "sections": {}
+  },
+  {
+    "version": "1.23.0",
+    "date": "2026-06-15",
+    "channel": "stable",
     "sections": {
       "Added": [
         "Compact list view for habits with a tappable rolling-7 day strip, toggle between Grid and Compact",
@@ -644,20 +650,6 @@
       "Improved": [
         "Mobile settings revamped with a cleaner matte tab layout",
         "Settings page sticky footer now docks correctly"
-      ]
-    }
-  },
-  {
-    "version": "1.14.3",
-    "date": "2026-04-02",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Data clearing dialog for secure account reset"
-      ],
-      "Fixed": [
-        "Calendar query cache isolated for guest mode to prevent cross-account leaks",
-        "Sidebar alignment and mobile icon sizing corrected"
       ]
     }
   }
