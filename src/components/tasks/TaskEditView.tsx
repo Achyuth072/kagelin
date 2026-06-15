@@ -135,7 +135,7 @@ export function TaskEditView({
           rows={1}
           className={cn(
             "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none resize-none",
-            "placeholder:text-muted-foreground/50 text-foreground leading-tight",
+            "placeholder:text-muted-foreground/70 text-foreground leading-tight",
             errors?.content && "placeholder:text-destructive/60",
           )}
           aria-invalid={!!errors?.content}
@@ -254,7 +254,7 @@ export function TaskEditView({
                   onChange={(e) => setDescription(e.target.value)}
                   onKeyDown={onKeyDown}
                   rows={4}
-                  className="w-full min-h-[120px] text-sm leading-relaxed bg-transparent border-0 outline-none resize-none p-0 text-foreground placeholder:text-muted-foreground/50"
+                  className="w-full min-h-[120px] text-sm leading-relaxed bg-transparent border-0 outline-none resize-none p-0 text-foreground placeholder:text-muted-foreground/70"
                 />
               )}
             </div>

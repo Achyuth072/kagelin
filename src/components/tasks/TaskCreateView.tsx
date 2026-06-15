@@ -111,7 +111,7 @@ export function TaskCreateView({
           rows={1}
           className={cn(
             "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none resize-none",
-            "placeholder:text-muted-foreground/50 text-foreground leading-tight",
+            "placeholder:text-muted-foreground/70 text-foreground leading-tight",
             errors?.content && "placeholder:text-destructive/60",
           )}
           aria-invalid={!!errors?.content}

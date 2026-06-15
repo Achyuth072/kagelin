@@ -173,7 +173,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   if (!task) {
     return (
       <div className="flex h-full items-center justify-center p-16 animate-in fade-in duration-500">
-        <p className="type-body text-muted-foreground/50 font-medium">
+        <p className="type-body text-muted-foreground font-medium">
           Select a task to view details
         </p>
       </div>

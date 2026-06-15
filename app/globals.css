@@ -121,13 +121,13 @@
   --secondary: 60 9% 96%; /* #F7F7F5 - Kept for sidebar */
   --secondary-foreground: 0 0% 18%;
   --muted: 60 9% 96%;
-  --muted-foreground: 0 0% 46%; /* #757575 - Adjusted */
+  --muted-foreground: 0 0% 43%; /* #6E6E6E - AA contrast on light backgrounds */
   --accent: 60 9% 96%;
   --accent-foreground: 0 0% 18%;
-  --destructive: 12 38% 53%; /* #B56C5A - Terracotta */
+  --destructive: 12 40% 45%; /* Darkened Terracotta for AA contrast */
   --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 80%; /* #CCCCCC - Significant increase for high visibility in Light Mode */
-  --input: 0 0% 80%;
+  --border: 0 0% 60%; /* AA non-text contrast (1.4.11) on light backgrounds */
+  --input: 0 0% 60%;
   --ring: 0 0% 18%;
   --brand: 220 44% 50%; /* #4B6CB7 - Kanso Blue */
   --brand-foreground: 0 0% 100%; /* White */
@@ -167,10 +167,10 @@
   --muted-foreground: 0 0% 63%; /* #A1A1A1 */
   --accent: 0 0% 13%;
   --accent-foreground: 0 0% 90%;
-  --destructive: 12 30% 45%; /* Deep Terracotta */
+  --destructive: 12 32% 52%; /* Lightened Terracotta for AA text contrast */
   --destructive-foreground: 0 0% 98%;
-  --border: 0 0% 26%; /* #424242 - Refined to 30% increase from original 20% */
-  --input: 0 0% 26%;
+  --border: 0 0% 34%; /* AA non-text contrast (1.4.11) on dark backgrounds */
+  --input: 0 0% 34%;
   --ring: 0 0% 90%;
   --brand: 220 44% 50%; /* #4B6CB7 - Kanso Blue */
   --brand-foreground: 0 0% 100%; /* White */
