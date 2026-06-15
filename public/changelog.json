@@ -19,6 +19,18 @@
     }
   },
   {
+    "version": "1.23.0-preview.2",
+    "date": "2026-06-15",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Improve contrast for muted/destructive/border tokens",
+        "Match project dropdown to trigger width",
+        "Stop dialog clipping location popover"
+      ]
+    }
+  },
+  {
     "version": "1.23.0-preview.1",
     "date": "2026-06-14",
     "channel": "preview",
@@ -636,17 +648,6 @@
     "sections": {
       "Fixed": [
         "Mobile sidebar footer settings padding adjusted for improved ergonomics"
-      ]
-    }
-  },
-  {
-    "version": "1.14.1",
-    "date": "2026-04-01",
-    "channel": "stable",
-    "sections": {
-      "Improved": [
-        "Mobile sidebar width locked to 62vw for stability on small screens",
-        "Task view selector height, sidebar touch targets, and navigation trigger styles standardised"
       ]
     }
   }
