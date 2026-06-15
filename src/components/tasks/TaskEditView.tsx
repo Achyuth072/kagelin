@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { type Dispatch, type SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -18,7 +18,6 @@ import {
   Inbox,
   CalendarClock,
   SlidersHorizontal,
-  AlignLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
@@ -26,7 +25,7 @@ import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import SubtaskList from "./SubtaskList";
 import { TaskDatePicker } from "./shared/TaskDatePicker";
 import { TaskPrioritySelect } from "./shared/TaskPrioritySelect";
-import { TaskNotesEditor } from "./shared/TaskNotesEditor";
+import { TaskNotesRow } from "./shared/TaskNotesRow";
 import RecurrencePicker from "./TaskSheet/RecurrencePicker";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import type { Task, Project } from "@/lib/types/task";
@@ -115,7 +114,6 @@ export function TaskEditView({
   const scrollRef = useHorizontalScroll();
   const { trigger } = useHaptic();
   const isFinePointer = useMediaQuery("(pointer: fine)");
-  const [notesEditorOpen, setNotesEditorOpen] = useState(false);
 
   return (
     <div
@@ -218,41 +216,12 @@ export function TaskEditView({
         <div className="h-1" />
 
         {/* Notes */}
-        <div className="mx-2">
-          <button
-            type="button"
-            onClick={() => {
-              trigger("toggle");
-              setIsPreviewMode(true);
-              setNotesEditorOpen(true);
-            }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast text-left hover:bg-muted/40"
-          >
-            <IconCell>
-              <AlignLeft
-                className="h-4 w-4 text-muted-foreground"
-                strokeWidth={2.25}
-              />
-            </IconCell>
-            <span className="text-sm flex-1 min-w-0 truncate text-foreground">
-              {description.trim() ? (
-                description
-              ) : (
-                <span className="text-muted-foreground">
-                  Add details... (Markdown supported)
-                </span>
-              )}
-            </span>
-          </button>
-        </div>
-
-        <TaskNotesEditor
-          open={notesEditorOpen}
-          onOpenChange={setNotesEditorOpen}
+        <TaskNotesRow
           description={description}
           setDescription={setDescription}
           isPreviewMode={isPreviewMode}
           setIsPreviewMode={setIsPreviewMode}
+          defaultPreviewOnOpen={true}
         />
 
         <div className="h-1" />

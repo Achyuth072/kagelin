@@ -1,5 +1,6 @@
 "use client";
 
+import { type Dispatch, type SetStateAction } from "react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
@@ -23,6 +24,7 @@ import { IconCell } from "@/components/ui/IconCell";
 import SubtaskList from "./SubtaskList";
 import { TaskDatePicker } from "./shared/TaskDatePicker";
 import { TaskPrioritySelect } from "./shared/TaskPrioritySelect";
+import { TaskNotesRow } from "./shared/TaskNotesRow";
 import RecurrencePicker from "./TaskSheet/RecurrencePicker";
 import type { Project } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
@@ -33,6 +35,10 @@ import type { CreateTaskInput } from "@/lib/schemas/task";
 interface TaskCreateViewProps {
   content: string;
   setContent: (value: string) => void;
+  description: string;
+  setDescription: (value: string) => void;
+  isPreviewMode: boolean;
+  setIsPreviewMode: Dispatch<SetStateAction<boolean>>;
   dueDate: Date | undefined;
   setDueDate: (value: Date | undefined) => void;
   doDate: Date | undefined;
@@ -65,6 +71,10 @@ interface TaskCreateViewProps {
 export function TaskCreateView({
   content,
   setContent,
+  description,
+  setDescription,
+  isPreviewMode,
+  setIsPreviewMode,
   dueDate,
   setDueDate,
   doDate,
@@ -192,6 +202,17 @@ export function TaskCreateView({
             {errors?.due_date?.message || errors?.do_date?.message}
           </div>
         )}
+
+        <div className="h-1" />
+
+        {/* Notes */}
+        <TaskNotesRow
+          description={description}
+          setDescription={setDescription}
+          isPreviewMode={isPreviewMode}
+          setIsPreviewMode={setIsPreviewMode}
+          defaultPreviewOnOpen={false}
+        />
 
         <div className="h-1" />
 

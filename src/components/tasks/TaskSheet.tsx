@@ -282,6 +282,12 @@ export default function TaskSheet({
                 setContent={(v) =>
                   setValue("content", v, { shouldValidate: true })
                 }
+                description={description}
+                setDescription={(v) =>
+                  setValue("description", v, { shouldValidate: true })
+                }
+                isPreviewMode={isPreviewMode}
+                setIsPreviewMode={setIsPreviewMode}
                 dueDate={dueDate}
                 setDueDate={(v) =>
                   setValue("due_date", v, { shouldValidate: true })
