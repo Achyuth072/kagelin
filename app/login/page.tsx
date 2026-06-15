@@ -53,7 +53,7 @@ function LoginContent() {
             <div className="text-center space-y-2">
               <h1 className="text-3xl font-bold tracking-tight">Kagelin</h1>
               <p className="text-[13px] font-medium text-muted-foreground/80 lowercase tracking-wide">
-                Zen-minimalist productivity suite
+                Work quietly. Own everything.
               </p>
             </div>
 

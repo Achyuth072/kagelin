@@ -10,17 +10,19 @@ An all-in-one productivity app combining tasks, deep focus, habits, and calendar
 
 ### Tasks & Organization
 
-- **Command Menu** (`Ctrl/Cmd+K`): instant search, navigation, and actions.
+- **Global Search** (`Ctrl/Cmd+K`): instant search across tasks, habits, and events, plus navigation and actions.
 - **Three views**: Masonry Grid, Board, and List — switch with `Shift+1/2/3`.
 - **Split View**: Desktop List opens a master-detail panel automatically.
 - **Projects**: multi-level project structure with archiving and mobile drawers.
 - **Group & Filter**: group by project, priority, or due date with drag-and-drop across groups.
 - **Recurring tasks**: per-task Strict (anchors to due date) or Flexible (anchors to completion) recurrence.
+- **Notes editor**: markdown formatting toolbar with live preview for task notes.
 
 ### Focus & Habits
 
 - **Focus Timer**: PiP-enabled Pomodoro engine with real-time sync across devices.
 - **Habit tracking**: standardized tracking with longevity streaks and uhabits `.db` import.
+- **Compact habit view**: tappable rolling-7 day strip with drag-and-drop reordering.
 - **Activity heatmap**: visualize focus minutes and habit completions over time.
 
 ### Calendar
