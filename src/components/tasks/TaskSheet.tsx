@@ -99,7 +99,6 @@ export default function TaskSheet({
     [watchedDoDate],
   );
 
-  const isEvening = useWatch({ control, name: "is_evening" }) ?? false;
   const priority = (useWatch({ control, name: "priority" }) ?? 4) as
     | 1
     | 2
@@ -291,7 +290,6 @@ export default function TaskSheet({
                 setDoDate={(v) =>
                   setValue("do_date", v, { shouldValidate: true })
                 }
-                isEvening={isEvening}
                 setIsEvening={(v) =>
                   setValue("is_evening", v, { shouldValidate: true })
                 }
@@ -345,7 +343,6 @@ export default function TaskSheet({
                 setDoDate={(v) =>
                   setValue("do_date", v, { shouldValidate: true })
                 }
-                isEvening={isEvening}
                 setIsEvening={(v) =>
                   setValue("is_evening", v, { shouldValidate: true })
                 }

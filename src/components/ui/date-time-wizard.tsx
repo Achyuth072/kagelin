@@ -20,6 +20,8 @@ interface DateTimeWizardProps {
   allowPastDates?: boolean;
   /** Constrain content height to fit inside a Popover using the Radix available-height CSS var */
   compact?: boolean;
+  /** Called when the "Evening" quick preset is selected */
+  onEveningSelect?: () => void;
 }
 
 export function DateTimeWizard({
@@ -29,6 +31,7 @@ export function DateTimeWizard({
   showTime = true,
   allowPastDates = false,
   compact = false,
+  onEveningSelect,
 }: DateTimeWizardProps) {
   const { trigger } = useHaptic();
   const { formatTime } = useTimeFormat();
@@ -190,6 +193,7 @@ export function DateTimeWizard({
                   const evening = new Date();
                   evening.setHours(18, 0, 0, 0); // 6 PM
                   setTempDate(evening);
+                  onEveningSelect?.();
                 }}
               >
                 Evening

@@ -36,6 +36,7 @@ interface TaskDatePickerProps {
   showTime?: boolean;
   allowPastDates?: boolean;
   error?: boolean;
+  onEveningSelect?: () => void;
 }
 
 export function TaskDatePicker({
@@ -55,6 +56,7 @@ export function TaskDatePicker({
   showTime = true,
   allowPastDates = false,
   error = false,
+  onEveningSelect,
 }: TaskDatePickerProps) {
   const isCompact = variant === "compact";
   const { trigger } = useHaptic();
@@ -161,6 +163,7 @@ export function TaskDatePicker({
             onClose={() => onOpenChange(false)}
             showTime={showTime}
             allowPastDates={allowPastDates}
+            onEveningSelect={onEveningSelect}
           />
         </ResponsiveDialogContent>
       </ResponsiveDialog>
@@ -210,6 +213,7 @@ export function TaskDatePicker({
           onClose={() => onOpenChange(false)}
           showTime={showTime}
           allowPastDates={allowPastDates}
+          onEveningSelect={onEveningSelect}
         />
       </PopoverContent>
     </Popover>

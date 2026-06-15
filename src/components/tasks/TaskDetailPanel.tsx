@@ -73,7 +73,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
     : undefined;
   const watchedDoDate = useWatch({ control, name: "do_date" });
   const doDate = watchedDoDate ? new Date(watchedDoDate as string) : undefined;
-  const isEvening = useWatch({ control, name: "is_evening" }) ?? false;
   const priority = (useWatch({ control, name: "priority" }) ?? 4) as
     | 1
     | 2
@@ -229,7 +228,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
             }
             doDate={doDate}
             setDoDate={(v) => setValue("do_date", v, { shouldValidate: true })}
-            isEvening={isEvening}
             setIsEvening={(v) =>
               setValue("is_evening", v, { shouldValidate: true })
             }

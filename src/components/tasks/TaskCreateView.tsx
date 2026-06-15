@@ -15,7 +15,6 @@ import {
   ListChecks,
   Send,
   Inbox,
-  Moon,
   CalendarClock,
   SlidersHorizontal,
 } from "lucide-react";
@@ -38,7 +37,6 @@ interface TaskCreateViewProps {
   setDueDate: (value: Date | undefined) => void;
   doDate: Date | undefined;
   setDoDate: (value: Date | undefined) => void;
-  isEvening: boolean;
   setIsEvening: (value: boolean) => void;
   priority: 1 | 2 | 3 | 4;
   setPriority: (value: 1 | 2 | 3 | 4) => void;
@@ -71,7 +69,6 @@ export function TaskCreateView({
   setDueDate,
   doDate,
   setDoDate,
-  isEvening,
   setIsEvening,
   priority,
   setPriority,
@@ -167,30 +164,8 @@ export function TaskCreateView({
               align="center"
               sideOffset={15}
               error={!!errors?.do_date}
+              onEveningSelect={() => setIsEvening(true)}
             />
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-9 px-3 transition-all text-muted-foreground hover:text-foreground border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none gap-1.5 shrink-0 rounded-lg",
-                isEvening &&
-                  "text-brand bg-brand/10 border-transparent hover:bg-brand/20 hover:text-brand",
-              )}
-              onClick={() => {
-                const nextValue = !isEvening;
-                trigger("toggle");
-                setIsEvening(nextValue);
-                if (nextValue && !doDate) {
-                  setDoDate(new Date());
-                }
-              }}
-              title={!isMobile ? "This Evening" : undefined}
-              aria-label="This Evening"
-            >
-              <Moon strokeWidth={2.25} className="h-4 w-4" />
-              {!isMobile && <span className="type-ui">Evening</span>}
-            </Button>
 
             <div className="shrink-0">
               <TaskPrioritySelect

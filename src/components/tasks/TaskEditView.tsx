@@ -15,7 +15,6 @@ import {
   Save,
   Trash2,
   Inbox,
-  Moon,
   CalendarClock,
   SlidersHorizontal,
   AlignLeft,
@@ -48,7 +47,6 @@ interface TaskEditViewProps {
   setDueDate: (value: Date | undefined) => void;
   doDate: Date | undefined;
   setDoDate: (value: Date | undefined) => void;
-  isEvening: boolean;
   setIsEvening: (value: boolean) => void;
   priority: 1 | 2 | 3 | 4;
   setPriority: (value: 1 | 2 | 3 | 4) => void;
@@ -88,7 +86,6 @@ export function TaskEditView({
   setDueDate,
   doDate,
   setDoDate,
-  isEvening,
   setIsEvening,
   priority,
   setPriority,
@@ -190,29 +187,8 @@ export function TaskEditView({
               title="Start Date"
               icon={CalendarClock}
               error={!!errors?.do_date}
+              onEveningSelect={() => setIsEvening(true)}
             />
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-9 px-3 text-[13px] bg-background hover:bg-accent border border-input shadow-none hover:text-foreground shrink-0 gap-1.5 rounded-lg transition-all",
-                isEvening &&
-                  "text-brand bg-brand/10 border-transparent hover:bg-brand/20 hover:text-brand",
-              )}
-              onClick={() => {
-                const nextValue = !isEvening;
-                trigger("toggle");
-                setIsEvening(nextValue);
-                if (nextValue && !doDate) {
-                  setDoDate(new Date());
-                }
-              }}
-              title="This Evening"
-            >
-              <Moon className="h-4 w-4" strokeWidth={2.25} />
-              {!isMobile && <span className="font-medium">Evening</span>}
-            </Button>
 
             <div className="shrink-0">
               <TaskPrioritySelect
