@@ -14,8 +14,8 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import dynamic from "next/dynamic";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 
-const TaskEditView = dynamic(
-  () => import("./TaskEditView").then((mod) => mod.TaskEditView),
+const TaskView = dynamic(
+  () => import("./TaskView").then((mod) => mod.TaskView),
   {
     ssr: false,
     loading: () => (
@@ -212,7 +212,8 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
           </div>
         )}
         <div className="flex-1 min-h-0 overflow-hidden">
-          <TaskEditView
+          <TaskView
+            mode="edit"
             initialTask={task}
             content={content}
             setContent={(v) => setValue("content", v, { shouldValidate: true })}
@@ -260,7 +261,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
             onDelete={handleDelete}
             onKeyDown={handleKeyDown}
             errors={errors}
-            mode="panel"
+            layout="panel"
           />
         </div>
       </div>
