@@ -17,6 +17,7 @@ import {
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
+import { useActiveTask } from "@/lib/hooks/useActiveTask";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
@@ -64,31 +65,9 @@ export function FocusTaskPicker() {
   const cancel = useTimerStore((s) => s.cancel);
   const setActiveTaskId = useTimerStore((s) => s.setActiveTaskId);
 
-  // Guest-mode fallback for active task detail (sync lookup, no network)
-  const guestActiveTask: Task | null = useMemo(() => {
-    if (!isGuestMode || !activeTaskId) return null;
-    const all = mockStore.getTasks();
-    return all.find((t) => t.id === activeTaskId) ?? null;
-  }, [isGuestMode, activeTaskId]);
-
-  // Fetch active task details (disabled for guest mode — guestActiveTask handles it)
-  const { data: activeTask, isLoading: activeTaskLoading } = useQuery({
-    queryKey: ["task", activeTaskId, isGuestMode],
-    queryFn: async () => {
-      if (!activeTaskId) return null;
-      const { data } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("id", activeTaskId)
-        .single();
-      return data as Task | null;
-    },
-    enabled: !!activeTaskId && !isGuestMode,
-  });
-
-  // Resolve active task: guest uses local memo, authed uses Supabase query
-  const resolvedActiveTask = isGuestMode ? guestActiveTask : activeTask;
-  const resolvedActiveTaskLoading = isGuestMode ? false : activeTaskLoading;
+  // Resolve active task: guest uses local mockStore lookup, authed uses Supabase
+  const { data: resolvedActiveTask, isLoading: resolvedActiveTaskLoading } =
+    useActiveTask(activeTaskId);
 
   const projectsMap = useMemo(() => {
     const map = new Map<string, string>();

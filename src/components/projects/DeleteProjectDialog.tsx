@@ -145,7 +145,7 @@ export function DeleteProjectDialog({
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Archive
-                  className="h-4 w-4 text-[#757575]"
+                  className="h-4 w-4 text-muted-foreground"
                   strokeWidth={2.25}
                 />
               )}
@@ -160,7 +160,10 @@ export function DeleteProjectDialog({
               {activeAction === "inbox" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Inbox className="h-4 w-4 text-[#757575]" strokeWidth={2.25} />
+                <Inbox
+                  className="h-4 w-4 text-muted-foreground"
+                  strokeWidth={2.25}
+                />
               )}
               Move to Inbox
             </Button>
@@ -213,7 +216,10 @@ export function DeleteProjectDialog({
             {activeAction === "inbox" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Inbox className="h-4 w-4 text-[#757575]" strokeWidth={2.25} />
+              <Inbox
+                className="h-4 w-4 text-muted-foreground"
+                strokeWidth={2.25}
+              />
             )}
             <span>Move to Inbox</span>
           </Button>
@@ -226,7 +232,10 @@ export function DeleteProjectDialog({
             {activeAction === "keep" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
-              <Archive className="h-4 w-4 text-[#757575]" strokeWidth={2.25} />
+              <Archive
+                className="h-4 w-4 text-muted-foreground"
+                strokeWidth={2.25}
+              />
             )}
             <span>Keep Archived</span>
           </Button>

@@ -175,7 +175,7 @@ describe("FocusSettingsDialog", () => {
       fireEvent.change(input, { target: { value: "30" } });
     });
 
-    const saveButton = screen.getByText("Save Changes");
+    const saveButton = screen.getByRole("button", { name: /save changes/i });
 
     // Wait for the form to be valid and button enabled
     await waitFor(() => {
@@ -206,14 +206,14 @@ describe("FocusSettingsDialog", () => {
     });
 
     // Save button should be enabled (valid form)
-    const saveButton = screen.getByText("Save Changes");
+    const saveButton = screen.getByRole("button", { name: /save changes/i });
     await waitFor(() => {
       expect(saveButton).not.toBeDisabled();
     });
 
     // Close dialog
     await act(async () => {
-      fireEvent.click(screen.getByText("Cancel"));
+      fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
     });
 
     // Re-open dialog

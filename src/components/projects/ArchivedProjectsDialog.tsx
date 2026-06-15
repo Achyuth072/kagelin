@@ -10,7 +10,8 @@ import {
 import { useArchivedProjects } from "@/lib/hooks/useProjects";
 import { useUnarchiveProject } from "@/lib/hooks/useProjectMutations";
 import { Button } from "@/components/ui/button";
-import { ArchiveRestore, Loader2 } from "lucide-react";
+import { Archive, ArchiveRestore, Loader2 } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface ArchivedProjectsDialogProps {
   open: boolean;
@@ -69,9 +70,12 @@ export function ArchivedProjectsDialog({
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No archived projects found.</p>
-            </div>
+            <EmptyState
+              icon={Archive}
+              title="No archived projects"
+              description="Projects you archive will show up here for restoring later."
+              className="py-8 gap-4"
+            />
           )}
         </div>
       </ResponsiveDialogContent>

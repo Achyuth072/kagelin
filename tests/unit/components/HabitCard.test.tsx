@@ -36,6 +36,7 @@ describe("HabitCard Scroll Initialization", () => {
       updated_at: today.toISOString(),
       archived_at: null,
       start_date: startDate.toISOString().split("T")[0],
+      sort_order: 0,
       entries: [],
     };
   });

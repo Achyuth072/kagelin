@@ -281,6 +281,7 @@ export function CompletedTasksSheet({
                   size="icon"
                   className="h-10 w-10 text-muted-foreground hover:text-foreground transition-seijaku-fast rounded-sm"
                   title="Close"
+                  aria-label="Close"
                 >
                   <X className="h-4 w-4" strokeWidth={2.25} />
                 </Button>
@@ -335,6 +336,7 @@ export function CompletedTasksSheet({
                 <Button
                   variant="destructive"
                   size="icon"
+                  aria-label="Clear history"
                   className="h-10 w-10 active:scale-95 transition-seijaku-fast rounded-md shadow-none"
                   onClick={() => {
                     trigger("thud");
@@ -348,6 +350,7 @@ export function CompletedTasksSheet({
                 <Button
                   variant="ghost"
                   size="icon"
+                  aria-label="Close"
                   className="h-10 w-10 text-muted-foreground active:scale-95 transition-seijaku-fast"
                 >
                   <X className="h-6 w-6" strokeWidth={2} />

@@ -301,7 +301,7 @@ function AppShellContent({ children }: AppShellProps) {
           commandOpen={commandOpen}
         />
         {/* Mobile Top Bar - hidden on Focus and Settings pages */}
-        {!hideMobileNav && <Header />}
+        {!hideMobileNav && <Header setCommandOpen={setCommandOpen} />}
 
         {/* Desktop Sidebar - hidden only on Focus page */}
         {!isFocus && <AppSidebar />}

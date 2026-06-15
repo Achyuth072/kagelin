@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
+  ResponsiveDialogHeader,
   ResponsiveDialogTitle,
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog";
@@ -19,8 +20,7 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 import type { Task } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
-import { TaskCreateView } from "./TaskCreateView";
-import { TaskEditView } from "./TaskEditView";
+import { TaskView } from "./TaskView";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
 interface TaskSheetProps {
@@ -98,7 +98,6 @@ export default function TaskSheet({
     [watchedDoDate],
   );
 
-  const isEvening = useWatch({ control, name: "is_evening" }) ?? false;
   const priority = (useWatch({ control, name: "priority" }) ?? 4) as
     | 1
     | 2
@@ -263,25 +262,32 @@ export default function TaskSheet({
   return (
     <ResponsiveDialog open={open} onOpenChange={onClose}>
       <ResponsiveDialogContent className="w-full sm:max-w-lg gap-0 rounded-lg p-0 overflow-hidden outline-none">
-        <div className="flex flex-col max-h-[90vh]">
-          <div className="px-4 pt-6 pb-4 border-b border-border/10 shrink-0 bg-background">
-            <ResponsiveDialogTitle className="type-h2">
+        <div className="flex flex-col max-h-[90dvh] min-w-0">
+          <ResponsiveDialogHeader className="sr-only">
+            <ResponsiveDialogTitle>
               {initialTask ? "Edit Task" : "New Task"}
             </ResponsiveDialogTitle>
-            <ResponsiveDialogDescription className="sr-only">
+            <ResponsiveDialogDescription>
               {initialTask
                 ? "Update existing task details"
                 : "Create a new task with content and metadata"}
             </ResponsiveDialogDescription>
-          </div>
+          </ResponsiveDialogHeader>
 
           <div className="overflow-y-auto scrollbar-thin flex-1 min-h-0">
             {isCreationMode ? (
-              <TaskCreateView
+              <TaskView
+                mode="create"
                 content={content}
                 setContent={(v) =>
                   setValue("content", v, { shouldValidate: true })
                 }
+                description={description}
+                setDescription={(v) =>
+                  setValue("description", v, { shouldValidate: true })
+                }
+                isPreviewMode={isPreviewMode}
+                setIsPreviewMode={setIsPreviewMode}
                 dueDate={dueDate}
                 setDueDate={(v) =>
                   setValue("due_date", v, { shouldValidate: true })
@@ -290,7 +296,6 @@ export default function TaskSheet({
                 setDoDate={(v) =>
                   setValue("do_date", v, { shouldValidate: true })
                 }
-                isEvening={isEvening}
                 setIsEvening={(v) =>
                   setValue("is_evening", v, { shouldValidate: true })
                 }
@@ -324,7 +329,8 @@ export default function TaskSheet({
                 errors={errors}
               />
             ) : (
-              <TaskEditView
+              <TaskView
+                mode="edit"
                 initialTask={effectiveTask!}
                 content={content}
                 setContent={(v) =>
@@ -344,7 +350,6 @@ export default function TaskSheet({
                 setDoDate={(v) =>
                   setValue("do_date", v, { shouldValidate: true })
                 }
-                isEvening={isEvening}
                 setIsEvening={(v) =>
                   setValue("is_evening", v, { shouldValidate: true })
                 }

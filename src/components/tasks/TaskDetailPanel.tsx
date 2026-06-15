@@ -14,8 +14,8 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import dynamic from "next/dynamic";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 
-const TaskEditView = dynamic(
-  () => import("./TaskEditView").then((mod) => mod.TaskEditView),
+const TaskView = dynamic(
+  () => import("./TaskView").then((mod) => mod.TaskView),
   {
     ssr: false,
     loading: () => (
@@ -73,7 +73,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
     : undefined;
   const watchedDoDate = useWatch({ control, name: "do_date" });
   const doDate = watchedDoDate ? new Date(watchedDoDate as string) : undefined;
-  const isEvening = useWatch({ control, name: "is_evening" }) ?? false;
   const priority = (useWatch({ control, name: "priority" }) ?? 4) as
     | 1
     | 2
@@ -174,7 +173,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   if (!task) {
     return (
       <div className="flex h-full items-center justify-center p-16 animate-in fade-in duration-500">
-        <p className="type-body text-muted-foreground/50 font-medium">
+        <p className="type-body text-muted-foreground font-medium">
           Select a task to view details
         </p>
       </div>
@@ -213,7 +212,8 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
           </div>
         )}
         <div className="flex-1 min-h-0 overflow-hidden">
-          <TaskEditView
+          <TaskView
+            mode="edit"
             initialTask={task}
             content={content}
             setContent={(v) => setValue("content", v, { shouldValidate: true })}
@@ -229,7 +229,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
             }
             doDate={doDate}
             setDoDate={(v) => setValue("do_date", v, { shouldValidate: true })}
-            isEvening={isEvening}
             setIsEvening={(v) =>
               setValue("is_evening", v, { shouldValidate: true })
             }
@@ -262,7 +261,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
             onDelete={handleDelete}
             onKeyDown={handleKeyDown}
             errors={errors}
-            mode="panel"
+            layout="panel"
           />
         </div>
       </div>

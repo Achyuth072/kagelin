@@ -971,6 +971,7 @@ export function KanbanBoardCardButton({
       onKeyDown={asChild ? undefined : handleKeyDown}
       role={asChild ? undefined : "button"}
       tabIndex={asChild ? undefined : 0}
+      aria-label={tooltip}
       ref={internalReference}
       {...props}
     />

@@ -5,6 +5,7 @@ import {
   MoreVertical,
   Timer,
   CheckCircle2,
+  Search,
   Settings as SettingsIcon,
   Sparkles,
 } from "lucide-react";
@@ -20,9 +21,7 @@ import {
 import { useRouter, usePathname } from "next/navigation";
 import { useTimer } from "@/components/TimerProvider";
 import { useCompletedTasks } from "@/components/CompletedTasksProvider";
-import { useQuery } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
-import type { Task } from "@/lib/types/task";
+import { useActiveTask } from "@/lib/hooks/useActiveTask";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import {
   prefetchChangelog,
@@ -39,22 +38,7 @@ const HeaderTimer = React.memo(function HeaderTimer() {
   const { state } = useTimer();
   const { trigger } = useHaptic();
   const router = useRouter();
-  const supabase = createClient();
-
-  // Fetch active task if one is set
-  const { data: activeTask } = useQuery({
-    queryKey: ["task", state.activeTaskId],
-    queryFn: async () => {
-      if (!state.activeTaskId) return null;
-      const { data } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("id", state.activeTaskId)
-        .single();
-      return data as Task | null;
-    },
-    enabled: !!state.activeTaskId,
-  });
+  const { data: activeTask } = useActiveTask(state.activeTaskId);
 
   const minutes = Math.floor(state.remainingSeconds / 60);
   const seconds = state.remainingSeconds % 60;
@@ -66,16 +50,16 @@ const HeaderTimer = React.memo(function HeaderTimer() {
       onClick={() => {
         router.push("/focus");
       }}
-      className="flex items-center gap-2 px-3 py-2 min-h-[40px] rounded-lg bg-transparent hover:bg-accent/40 active:scale-95 transition-all outline-none"
+      className="flex items-center gap-2 px-3 py-2 min-h-[40px] rounded-lg bg-transparent hover:bg-accent/40 active:scale-95 transition-all outline-none min-w-0"
     >
       <Timer
-        className={`h-5 w-5 ${
+        className={`h-5 w-5 shrink-0 ${
           state.isRunning
             ? "text-primary animate-pulse"
             : "text-muted-foreground"
         }`}
       />
-      <div className="flex flex-col items-start text-left">
+      <div className="flex flex-col items-start text-left min-w-0">
         <span
           className={`text-base font-mono font-semibold tabular-nums leading-none ${
             state.isRunning ? "text-primary" : "text-muted-foreground"
@@ -84,7 +68,7 @@ const HeaderTimer = React.memo(function HeaderTimer() {
           {displayTime}
         </span>
         {activeTask && (
-          <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+          <span className="text-xs text-muted-foreground truncate max-w-full">
             {activeTask.content}
           </span>
         )}
@@ -93,7 +77,13 @@ const HeaderTimer = React.memo(function HeaderTimer() {
   );
 });
 
-export const Header = React.memo(function Header() {
+interface HeaderProps {
+  setCommandOpen: (open: boolean) => void;
+}
+
+export const Header = React.memo(function Header({
+  setCommandOpen,
+}: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { openSheet } = useCompletedTasks();
@@ -131,69 +121,81 @@ export const Header = React.memo(function Header() {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-[calc(4rem+env(safe-area-inset-top,0px))] px-4 pt-[env(safe-area-inset-top,0px)] border-b bg-sidebar md:hidden">
       {/* Left group: Hamburger + What's New indicator */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 shrink-0">
         <SidebarTrigger className="h-9 w-9 active:scale-95 transition-all [&_svg]:stroke-[2.25px]" />
         {hasNewVersion && (
           <button
             type="button"
             onClick={() => setChangelogOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground/70 hover:bg-accent/40 active:scale-95 transition-all"
+            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-foreground/70 hover:bg-accent/40 active:scale-95 transition-all"
             aria-label="What's New — new version available"
           >
             <Sparkles className="h-4 w-4 shrink-0" strokeWidth={2.25} />
-            <span>What&apos;s New</span>
             <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
           </button>
         )}
       </div>
 
-      {/* Right: Sync indicator + Focus Timer + More Menu */}
-      <div className="flex items-center gap-2">
-        <SyncIndicator />
+      {/* Right: Focus Timer (flexible) + Sync indicator + More Menu */}
+      <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
         {/* Isolated Timer Component to prevent Header re-renders */}
         <HeaderTimer />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 bg-transparent hover:bg-accent/40 active:scale-95 transition-all"
-              onPointerDown={() => trigger("toggle")}
-            >
-              <MoreVertical className="h-5 w-5" />
-              <span className="sr-only">More options</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {isTasksPage && (
-              <>
-                <DropdownMenuItem
-                  onClick={() => {
-                    trigger("toggle");
-                    openSheet();
-                  }}
-                >
-                  <CheckCircle2
-                    className="h-4 w-4 mr-2 text-foreground/70"
-                    strokeWidth={2.5}
-                  />
-                  Completed Tasks
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-              </>
-            )}
-            <DropdownMenuItem
-              onClick={() => {
-                trigger("toggle");
-                router.push("/settings");
-              }}
-            >
-              <SettingsIcon className="h-4 w-4 mr-2" />
-              Settings
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2 shrink-0">
+          <SyncIndicator />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 bg-transparent hover:bg-accent/40 active:scale-95 transition-all"
+                onPointerDown={() => trigger("toggle")}
+              >
+                <MoreVertical className="h-5 w-5" />
+                <span className="sr-only">More options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => {
+                  trigger("toggle");
+                  setCommandOpen(true);
+                }}
+              >
+                <Search className="h-4 w-4 mr-2 text-foreground/70" />
+                Search
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {isTasksPage && (
+                <>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      trigger("toggle");
+                      openSheet();
+                    }}
+                  >
+                    <CheckCircle2
+                      className="h-4 w-4 mr-2 text-foreground/70"
+                      strokeWidth={2.5}
+                    />
+                    Completed Tasks
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+              <DropdownMenuItem
+                onClick={() => {
+                  trigger("toggle");
+                  router.push("/settings");
+                }}
+              >
+                <SettingsIcon className="h-4 w-4 mr-2" />
+                Settings
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );

@@ -75,6 +75,48 @@ export function useDeleteHabit() {
   });
 }
 
+export function useReorderHabits() {
+  const queryClient = useQueryClient();
+  const { isGuestMode } = useAuth();
+
+  return useMutation({
+    mutationKey: ["reorderHabits"],
+    mutationFn: habitMutations.reorder,
+    onMutate: async (pairs: { id: string; sort_order: number }[]) => {
+      await queryClient.cancelQueries({ queryKey: ["habits"] });
+
+      const queryKey = ["habits", { includeArchived: false, isGuestMode }];
+      const previousHabits =
+        queryClient.getQueryData<HabitWithEntries[]>(queryKey);
+
+      // Optimistically write the new sort_order into the cache and re-sort so the
+      // list reflects the drop immediately (survives the onSettled refetch).
+      queryClient.setQueryData<HabitWithEntries[]>(queryKey, (old) => {
+        if (!old) return old;
+        const sortOrderById = new Map(pairs.map((p) => [p.id, p.sort_order]));
+        return old
+          .map((habit) =>
+            sortOrderById.has(habit.id)
+              ? { ...habit, sort_order: sortOrderById.get(habit.id)! }
+              : habit,
+          )
+          .sort((a, b) => a.sort_order - b.sort_order);
+      });
+
+      return { previousHabits, queryKey };
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previousHabits) {
+        queryClient.setQueryData(context.queryKey, context.previousHabits);
+      }
+      handleMutationError(err);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["habits"] });
+    },
+  });
+}
+
 export function useMarkHabitComplete() {
   const queryClient = useQueryClient();
   const { isGuestMode } = useAuth();

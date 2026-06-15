@@ -1,8 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { parseISO } from "date-fns";
 import {
   CalendarIcon,
   HomeIcon,
@@ -26,7 +28,9 @@ import {
   PlusIcon,
   SettingsIcon,
   SunIcon,
+  SearchX,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 import {
   CommandDialog,
@@ -49,6 +53,11 @@ import { useDocumentPiP } from "@/lib/hooks/useDocumentPiP";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
 import { useCalendarStore } from "@/lib/calendar/store";
+import { useTasks } from "@/lib/hooks/useTasks";
+import { useHabits } from "@/lib/hooks/useHabits";
+import { useCalendarEventsList } from "@/lib/hooks/useCalendarEventsList";
+import { getHabitIcon } from "@/components/habits/shared/HabitIconPicker";
+import type { Habit } from "@/lib/types/habit";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getPlatformKey } from "@/lib/utils/platform";
@@ -58,6 +67,110 @@ interface CommandMenuProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface CommandSearchResultsProps {
+  search: string;
+  runCommand: (command: () => void) => void;
+  setSelectedTaskId: (id: string | null) => void;
+  openEditHabit: (habit: Habit) => void;
+  setDate: (date: Date) => void;
+}
+
+/**
+ * Content-search groups (Tasks, Habits, Events) for the command menu.
+ * Rendered only while the dialog is open so the data hooks fetch on open,
+ * not on every cold page load; returns null until the user types.
+ */
+function CommandSearchResults({
+  search,
+  runCommand,
+  setSelectedTaskId,
+  openEditHabit,
+  setDate,
+}: CommandSearchResultsProps) {
+  const router = useRouter();
+  const { data: tasks = [] } = useTasks();
+  const { data: habits = [] } = useHabits();
+  const events = useCalendarEventsList();
+
+  // Mapped independently of `search` — cmdk filters these items client-side,
+  // so re-deriving them on every keystroke would be wasted work.
+  const taskItems = useMemo(
+    () =>
+      tasks.map((task) => (
+        <CommandItem
+          key={task.id}
+          // cmdk keys filtering/selection by `value`; ids keep duplicate
+          // contents (e.g. two "Buy groceries") individually navigable.
+          value={`task-${task.id}`}
+          keywords={[task.content]}
+          onSelect={() =>
+            runCommand(() => {
+              setSelectedTaskId(task.id);
+              router.push("/");
+            })
+          }
+        >
+          <CheckCircle2 className="mr-2 h-5 w-5" />
+          <span>{task.content}</span>
+        </CommandItem>
+      )),
+    [tasks, runCommand, setSelectedTaskId, router],
+  );
+
+  const habitItems = useMemo(
+    () =>
+      habits.map((habit) => {
+        const Icon = getHabitIcon(habit.icon);
+        return (
+          <CommandItem
+            key={habit.id}
+            value={`habit-${habit.id}`}
+            keywords={[habit.name]}
+            onSelect={() => runCommand(() => openEditHabit(habit))}
+          >
+            <Icon className="mr-2 h-5 w-5" />
+            <span>{habit.name}</span>
+          </CommandItem>
+        );
+      }),
+    [habits, runCommand, openEditHabit],
+  );
+
+  const eventItems = useMemo(
+    () =>
+      events.map((event) => (
+        <CommandItem
+          key={event.id}
+          value={`event-${event.id}`}
+          keywords={[event.title]}
+          onSelect={() =>
+            runCommand(() => {
+              // Parse the date-only portion in local time so an all-day event
+              // stored as ...T00:00:00Z doesn't land on the prior day in
+              // negative-UTC offsets.
+              setDate(parseISO(event.date.slice(0, 10)));
+              router.push("/calendar");
+            })
+          }
+        >
+          <CalendarIcon className="mr-2 h-5 w-5" />
+          <span>{event.title}</span>
+        </CommandItem>
+      )),
+    [events, runCommand, setDate, router],
+  );
+
+  if (search.length === 0) return null;
+
+  return (
+    <>
+      <CommandGroup heading="Tasks">{taskItems}</CommandGroup>
+      <CommandGroup heading="Habits">{habitItems}</CommandGroup>
+      <CommandGroup heading="Events">{eventItems}</CommandGroup>
+    </>
+  );
+}
+
 export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -65,8 +178,8 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const { setTheme, resolvedTheme } = useTheme();
   const { openAddTask } = useTaskActions();
   const { openCreateProject } = useProjectActions();
-  const { openAddHabit } = useHabitActions();
-  const { openCreateEvent } = useCalendarStore();
+  const { openAddHabit, openEditHabit } = useHabitActions();
+  const { openCreateEvent, setDate } = useCalendarStore();
   const { openSheet: openCompletedSheet } = useCompletedTasks();
   const { user, signOut, isGuestMode } = useAuth();
   const { toggleSidebar } = useSidebar();
@@ -79,7 +192,9 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const setArchivedProjectsOpen = useUiStore(
     (state) => state.setArchivedProjectsOpen,
   );
+  const setSelectedTaskId = useUiStore((state) => state.setSelectedTaskId);
   const [copied, setCopied] = React.useState(false);
+  const [search, setSearch] = React.useState("");
 
   // Handle back navigation to close command menu instead of navigating away
   useBackNavigation(open, () => onOpenChange(false));
@@ -106,9 +221,20 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             Quick Actions & Navigation
           </p>
         </div>
-        <CommandInput placeholder="Type a command or search..." />
+        <CommandInput
+          placeholder="Type a command or search..."
+          value={search}
+          onValueChange={setSearch}
+        />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>
+            <EmptyState
+              icon={SearchX}
+              title="No results found"
+              description="Try a different search term."
+              className="py-8 gap-3"
+            />
+          </CommandEmpty>
 
           <CommandGroup heading="Actions">
             <CommandItem onSelect={() => runCommand(() => openAddTask())}>
@@ -177,6 +303,16 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
               <CommandShortcut>{getPlatformKey()}+B</CommandShortcut>
             </CommandItem>
           </CommandGroup>
+
+          {open && (
+            <CommandSearchResults
+              search={search}
+              runCommand={runCommand}
+              setSelectedTaskId={setSelectedTaskId}
+              openEditHabit={openEditHabit}
+              setDate={setDate}
+            />
+          )}
 
           <CommandSeparator />
 

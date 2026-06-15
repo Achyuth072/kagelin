@@ -1,56 +1,73 @@
 #!/usr/bin/env node
-const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-
-// ---------------------------------------------------------------------------
-// Shared bucketing logic — exported so tests can import without running CLI.
-// ---------------------------------------------------------------------------
-const BUCKET = {
-  feat: "Added",
-  fix: "Fixed",
-  perf: "Improved",
-  refactor: "Improved",
-};
-const SKIP = new Set([
-  "chore",
-  "docs",
-  "test",
-  "ci",
-  "build",
-  "style",
-  "revert",
-]);
-// Captures:  type  scope?  !?  :  message
-const CC = /^(\w+)(?:\([^)]*\))?!?:\s*(.+)$/;
-
-function bucketCommits(headings) {
-  const sections = { Added: [], Improved: [], Fixed: [] };
-  for (const heading of headings) {
-    const m = heading.match(CC);
-    if (!m) continue;
-    const [, type, message] = m;
-    if (SKIP.has(type)) continue;
-    const bucket = BUCKET[type];
-    if (!bucket) continue;
-    sections[bucket].push(message.trim());
-  }
-  return Object.fromEntries(
-    Object.entries(sections).filter(([, v]) => v.length > 0),
-  );
-}
+const { execFileSync } = require("child_process");
 
 function channelFromVersion(v) {
   return /-(preview|rc)/.test(v) ? "preview" : "stable";
 }
 
-module.exports = { bucketCommits, channelFromVersion };
+const COMMIT_TYPE_TO_SECTION = {
+  feat: "Added",
+  fix: "Fixed",
+  perf: "Improved",
+};
+
+const SECTION_ORDER = ["Added", "Improved", "Fixed"];
+
+const CONVENTIONAL_COMMIT_RE = /^(\w+)(?:\([^)]+\))?!?:\s*(.+)$/;
+
+function getCommitSubjectsSinceLastTag() {
+  let lastTag;
+  try {
+    lastTag = execFileSync("git", ["describe", "--tags", "--abbrev=0"], {
+      encoding: "utf-8",
+    }).trim();
+  } catch {
+    return [];
+  }
+
+  return execFileSync("git", ["log", `${lastTag}..HEAD`, "--format=%s"], {
+    encoding: "utf-8",
+  })
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function buildSectionsFromCommits(subjects) {
+  const sections = {};
+
+  for (const subject of subjects) {
+    const match = subject.match(CONVENTIONAL_COMMIT_RE);
+    if (!match) continue;
+
+    const [, type, description] = match;
+    const section = COMMIT_TYPE_TO_SECTION[type];
+    if (!section) continue;
+
+    const bullet = description[0].toUpperCase() + description.slice(1);
+    sections[section] ??= [];
+    if (!sections[section].includes(bullet)) {
+      sections[section].push(bullet);
+    }
+  }
+
+  const ordered = {};
+  for (const section of SECTION_ORDER) {
+    if (sections[section]?.length) ordered[section] = sections[section];
+  }
+  return ordered;
+}
+
+module.exports = { channelFromVersion, buildSectionsFromCommits };
 
 // ---------------------------------------------------------------------------
 // CLI entry — only runs when called directly, not when require()'d by tests.
 //
-// Preview releases: a new entry is auto-generated from conventional commits
-// since the last tag and inserted below "Unreleased", which is left untouched.
+// Preview releases: a new entry is created by copying the hand-written
+// "Unreleased" section (the same curated bullets destined for the next stable
+// release) and inserting it below "Unreleased", which is left untouched.
 //
 // Stable releases: the hand-written "Unreleased" entry is promoted to the new
 // version, and a fresh empty "Unreleased" entry is prepended.
@@ -89,36 +106,12 @@ if (require.main === module) {
   const MAX_ENTRIES = 50;
 
   if (resolvedChannel === "preview") {
-    function exec(cmd) {
-      return execSync(cmd, {
-        encoding: "utf-8",
-        maxBuffer: 10 * 1024 * 1024,
-      }).trim();
-    }
-
-    let lastTag = "";
-    try {
-      lastTag = exec("git describe --tags --abbrev=0");
-    } catch {
-      // No tags yet — fall back to the full history.
-    }
-    const range = lastTag ? `${lastTag}..HEAD` : "HEAD";
-
-    const rawSubjects = exec(
-      `git log "${range}" --format="%s" --no-merges` +
-        ` -- . ":(exclude).planning" ":(exclude).agent" ":(exclude).gemini" ":(exclude).husky" ":(exclude).vercelignore"`,
-    );
-    const headings = rawSubjects
-      .split("\n")
-      .filter(Boolean)
-      .filter(
-        (s) => !/^chore: .*release/.test(s) && !/^merge: sync release/.test(s),
-      );
-
-    const sections = bucketCommits(headings);
+    const unreleased = entries[0]?.version === "Unreleased" ? entries[0] : null;
+    const subjects = getCommitSubjectsSinceLastTag();
+    const sections = buildSectionsFromCommits(subjects);
 
     // Insert below "Unreleased" (index 0), which is left untouched.
-    const insertAt = entries[0]?.version === "Unreleased" ? 1 : 0;
+    const insertAt = unreleased ? 1 : 0;
     entries.splice(insertAt, 0, {
       version,
       date,
@@ -127,7 +120,7 @@ if (require.main === module) {
     });
 
     console.log(
-      `✓ Added preview entry for v${version} (${headings.length} commits → ${Object.values(sections).flat().length} visible items)`,
+      `✓ Added preview entry for v${version} (${Object.values(sections).flat().length} items from ${subjects.length} commits)`,
     );
   } else {
     const unreleased = entries.find((e) => e.version === "Unreleased");

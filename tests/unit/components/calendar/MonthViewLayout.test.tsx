@@ -30,10 +30,11 @@ describe("MonthView Mobile Layout Resolution", () => {
     const monthView = screen.getByTestId("month-view");
     const grid = monthView.querySelector(".grid.grid-cols-7.border-b.border-r");
 
-    // Then: It should have min-h-0 and overflow-hidden to prevent
-    // enforced minimum content height from causing clipping
+    // Then: It should have min-h-0 and overflow-y-auto to prevent
+    // enforced minimum content height from causing clipping while still
+    // allowing the grid to scroll on narrow/landscape viewports
     expect(grid?.className).toContain("min-h-0");
-    expect(grid?.className).toContain("overflow-hidden");
+    expect(grid?.className).toContain("overflow-y-auto");
   });
 
   it("Day cells should have h-full instead of enforced min-height on mobile", () => {

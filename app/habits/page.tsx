@@ -1,13 +1,17 @@
 "use client";
 
 import { HabitCard } from "@/components/habits/HabitCard";
+import { HabitCompactList } from "@/components/habits/HabitCompactList";
 import { useHabits, type HabitWithEntries } from "@/lib/hooks/useHabits";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Plus, Layers } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertCircle, Plus, Layers, LayoutGrid, Rows3 } from "lucide-react";
 import { format } from "date-fns";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useUiStore } from "@/lib/store/uiStore";
 import { getHabitIcon } from "@/components/habits/shared/HabitIconPicker";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 import { useHabitActions } from "@/components/habits/HabitActionsProvider";
 import { HabitOptionsMenu } from "@/components/habits/HabitOptionsMenu";
@@ -16,6 +20,8 @@ export default function HabitsPage() {
   const { data: habits, isLoading, error } = useHabits();
   const { openAddHabit, openEditHabit } = useHabitActions();
   const { trigger } = useHaptic();
+  const habitViewMode = useUiStore((s) => s.habitViewMode);
+  const setHabitViewMode = useUiStore((s) => s.setHabitViewMode);
 
   const handleOpenCreate = () => {
     trigger("toggle");
@@ -71,27 +77,17 @@ export default function HabitsPage() {
 
   if (!habits || habits.length === 0) {
     return (
-      <div className="container mx-auto py-32 flex flex-col items-center justify-center gap-6">
-        <div className="w-20 h-20 rounded-2xl bg-secondary/30 flex items-center justify-center mb-2">
-          <Layers
-            className="h-10 w-10 text-muted-foreground/60"
-            strokeWidth={2.25}
-          />
-        </div>
-        <div className="text-center space-y-2">
-          <h2 className="type-h2">No habits yet</h2>
-          <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-            Small changes lead to big results. Create your first habit to start
-            tracking.
-          </p>
-        </div>
-        <Button
-          onClick={handleOpenCreate}
-          className="h-10 px-6 rounded-lg bg-brand text-brand-foreground hover:bg-brand/90 shadow-sm shadow-brand/10 transition-seijaku gap-2"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2.25} />
-          <span>Create Habit</span>
-        </Button>
+      <div className="container mx-auto">
+        <EmptyState
+          icon={Layers}
+          title="No habits yet"
+          description="Small changes lead to big results. Create your first habit to start tracking."
+          action={{
+            label: "Create Habit",
+            onClick: handleOpenCreate,
+            icon: Plus,
+          }}
+        />
       </div>
     );
   }
@@ -100,7 +96,7 @@ export default function HabitsPage() {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-124px)] md:h-dvh overflow-hidden">
-      <div className="px-4 md:px-6 pt-4 pb-4 flex flex-row items-start justify-between gap-4">
+      <div className="px-4 md:px-6 pt-4 pb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
         <div>
           <p className="text-sm text-muted-foreground flex items-center gap-2">
             {format(today, "EEEE, MMMM d")}
@@ -108,7 +104,32 @@ export default function HabitsPage() {
           <h1 className="type-h1 mt-1 text-primary">Habits</h1>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 max-md:justify-between">
+          <Tabs
+            value={habitViewMode}
+            onValueChange={(v) => {
+              trigger("toggle");
+              setHabitViewMode(v as "grid" | "compact");
+            }}
+            className="h-10"
+          >
+            <TabsList className="bg-secondary/10 p-1 rounded-lg h-10 border border-border/40 shadow-none">
+              <TabsTrigger
+                value="grid"
+                className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all motion-reduce:transition-none h-8 border border-transparent data-[state=active]:border-brand/20"
+              >
+                <LayoutGrid className="h-4 w-4" strokeWidth={2.25} />
+                <span className="hidden md:inline">Grid</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="compact"
+                className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all motion-reduce:transition-none h-8 border border-transparent data-[state=active]:border-brand/20"
+              >
+                <Rows3 className="h-4 w-4" strokeWidth={2.25} />
+                <span className="hidden md:inline">Compact</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           <Button
             onClick={handleOpenCreate}
             className="hidden md:flex h-9 items-center gap-2 px-4 rounded-lg bg-brand text-brand-foreground hover:bg-brand/90 border-none shadow-sm shadow-brand/10 transition-seijaku text-[13px] font-semibold"
@@ -121,16 +142,22 @@ export default function HabitsPage() {
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 py-4 scrollbar-hide">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
-          {habits.map((habit) => (
-            <HabitCard
-              key={habit.id}
-              habit={habit}
-              icon={getHabitIcon(habit.icon)}
-              onEdit={() => handleEditHabit(habit)}
-            />
-          ))}
-        </div>
+        {habitViewMode === "compact" ? (
+          <div className="pb-12">
+            <HabitCompactList habits={habits} onEditHabit={handleEditHabit} />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
+            {habits.map((habit) => (
+              <HabitCard
+                key={habit.id}
+                habit={habit}
+                icon={getHabitIcon(habit.icon)}
+                onEdit={() => handleEditHabit(habit)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

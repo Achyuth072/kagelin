@@ -48,6 +48,16 @@ export const habitMutations = {
     const user = session?.user;
     if (!user) throw new Error("Not authenticated");
 
+    // Append to the bottom: new habit gets max(sort_order) + 1 for the user.
+    const { data: lastHabit } = await supabase
+      .from("habits")
+      .select("sort_order")
+      .eq("user_id", user.id)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextSortOrder = (lastHabit?.sort_order ?? -1) + 1;
+
     const { data, error } = await supabase
       .from("habits")
       .insert({
@@ -57,6 +67,7 @@ export const habitMutations = {
         color: input.color || "#4B6CB7",
         icon: input.icon || null,
         start_date: input.start_date || new Date().toISOString().split("T")[0],
+        sort_order: nextSortOrder,
       })
       .select()
       .single();
@@ -105,18 +116,43 @@ export const habitMutations = {
     if (error) throw new Error(error.message);
   },
 
-  markComplete: async (input: MarkHabitCompleteInput): Promise<HabitEntry> => {
+  // Accepts pre-computed {id, sort_order} pairs from computeReorderPairs in
+  // useReorderHabits.onMutate. Each habit receives the sort_order of the slot it
+  // is moving into, so the flat list stays stable after the DB-sorted refetch.
+  reorder: async (
+    pairs: { id: string; sort_order: number }[],
+  ): Promise<void> => {
     const isGuest =
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
 
     if (isGuest) {
-      const { habitId, date } = input;
-      const entry = mockStore.toggleHabitEntry(habitId, date);
+      pairs.forEach(({ id, sort_order }) => {
+        mockStore.updateHabit(id, { sort_order });
+      });
+      return;
+    }
+
+    const supabase = createClient();
+
+    // Single transactional RPC so the multi-row update commits atomically — a
+    // partial failure can't leave the DB in a half-reordered state.
+    const { error } = await supabase.rpc("reorder_habits", { updates: pairs });
+    if (error) throw new Error(error.message);
+  },
+
+  markComplete: async (input: MarkHabitCompleteInput): Promise<HabitEntry> => {
+    const isGuest =
+      typeof window !== "undefined" &&
+      localStorage.getItem("kanso_guest_mode") === "true";
+
+    const { habitId, date, value = 1 } = input;
+
+    if (isGuest) {
+      const entry = mockStore.setHabitEntry(habitId, date, value);
       return entry || ({ habit_id: habitId, date, value: 0 } as HabitEntry);
     }
 
-    const { habitId, date, value = 1 } = input;
     const supabase = createClient();
     const { data, error } = await supabase
       .from("habit_entries")

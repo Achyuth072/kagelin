@@ -61,6 +61,31 @@ auto-sync, and push notifications on top of the registered-free capabilities.
 
 ---
 
+## Habits
+
+### Habit
+
+A binary-daily intention the user tracks: for each day it is either done or
+not done (`entry.value` is `0` or `1`). A Habit has no frequency, target, or
+ratio — "three times a week" is not expressible in the current data model.
+_Avoid_: Goal, routine, task.
+
+### Entry
+
+The record that a Habit was (or wasn't) done on a specific date. The absence of
+an Entry and an Entry with `value: 0` both mean "not done that day"; only
+`value: 1` means done.
+
+### Streak
+
+The current unbroken run of done-days ending at the present. A **today that has
+not been logged yet is _pending_, not a break** — the streak counts through
+yesterday and only breaks when a day that has _already passed_ was missed. So a
+30-day run still reads "30" all morning before today is logged.
+_Avoid_: Chain, run length.
+
+---
+
 ## Calendar connection
 
 ### Connect Calendar (vs. login identity)

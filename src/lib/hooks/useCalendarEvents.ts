@@ -6,27 +6,15 @@ import type { CalendarEventUI } from "@/lib/calendar/types";
 import { toCalendarEventUI } from "@/lib/types/calendar-event";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
+import { useDedicatedCalendarEventsQuery } from "@/lib/hooks/useCalendarEventsList";
 
 export function useCalendarEvents() {
   const setEvents = useCalendarStore((state) => state.setEvents);
   const { isGuestMode } = useAuth();
 
-  // 1. Fetch Dedicated Calendar Events
-  const { data: dedicatedEvents, isLoading: eventsLoading } = useQuery({
-    queryKey: ["calendar-events", isGuestMode],
-    queryFn: async () => {
-      if (isGuestMode) return mockStore.getEvents();
-
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from("calendar_events")
-        .select("*")
-        .eq("is_archived", false);
-
-      if (error) throw error;
-      return data;
-    },
-  });
+  // 1. Fetch Dedicated Calendar Events (shared query with the command-menu search)
+  const { data: dedicatedEvents, isLoading: eventsLoading } =
+    useDedicatedCalendarEventsQuery();
 
   // 2. Fetch Tasks as Events
   const { data: tasks, isLoading: tasksLoading } = useQuery({

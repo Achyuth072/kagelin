@@ -1,10 +1,10 @@
 "use client";
 
 import React, { memo } from "react";
-import { useSortable } from "@dnd-kit/sortable";
 import TaskItem from "./TaskItem";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
+import { useSortableRow, dropLineClasses } from "@/lib/hooks/useSortableRow";
 
 interface SortableListTaskCardProps {
   task: Task;
@@ -98,40 +98,10 @@ export default function SortableListTaskCard({
     listeners,
     setNodeRef,
     setActivatorNodeRef,
-    transform,
-    transition,
     isDragging,
-    isOver,
-    active,
-    over,
-  } = useSortable({ id: task.id });
-
-  // Determine drop indicator position
-  let dropLine: "none" | "top" | "bottom" = "none";
-  if (isOver && !isDragging) {
-    const activeIndex = active?.data.current?.sortable?.index;
-    const overIndex = over?.data.current?.sortable?.index;
-
-    if (activeIndex !== undefined && overIndex !== undefined) {
-      dropLine = activeIndex < overIndex ? "bottom" : "top";
-    } else {
-      dropLine = "top";
-    }
-  }
-
-  const dndStyle = {
-    transform: transform
-      ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
-      : undefined,
-    // Bug A fix: gate `transition` on transform != null. useSortable returns a
-    // `transition: "transform Xms ease"` string whenever SortableContext.items
-    // mutates. If left active when transform becomes null (post-drop steady
-    // state), the browser animates transform from the last drag offset back to
-    // translate3d(0,0,0), producing the visible "snap-back" the user reported.
-    // Idiomatic dnd-kit pattern is to only apply transition while transform is
-    // present. See .planning/debug/dnd-audit-2026-05-14.md for full analysis.
-    transition: transform ? transition : undefined,
-  };
+    dropLine,
+    dndStyle,
+  } = useSortableRow(task.id);
 
   return (
     <div
@@ -144,11 +114,7 @@ export default function SortableListTaskCard({
         "last:[&_[data-task-row]]:border-b-transparent",
         isDragging ? "opacity-30 z-20" : "opacity-100 z-10",
         isDragging && "will-change-transform",
-        // Drop indicator line (like Kanban)
-        dropLine === "top" &&
-          "before:absolute before:top-0 before:left-0 before:right-0 before:h-[2px] before:bg-primary before:z-[50] before:rounded-full",
-        dropLine === "bottom" &&
-          "after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-primary after:z-[50] after:rounded-full",
+        dropLineClasses(dropLine),
       )}
     >
       <TaskItemContent

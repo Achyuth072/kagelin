@@ -461,10 +461,11 @@ CREATE TABLE IF NOT EXISTS public.habits (
   color TEXT DEFAULT '#4B6CB7',
   icon TEXT,
   start_date DATE,
+  sort_order INT NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   archived_at TIMESTAMPTZ,
-  
+
   CONSTRAINT habits_name_length_check CHECK (char_length(name) <= 100),
   CONSTRAINT habits_description_length_check CHECK (char_length(description) <= 500)
 );
@@ -472,10 +473,29 @@ CREATE TABLE IF NOT EXISTS public.habits (
 -- Index for faster user-scoped lookups
 CREATE INDEX IF NOT EXISTS habits_user_id_idx ON public.habits (user_id);
 
+-- Index for user-scoped ordered fetches (compact/grid views sort by sort_order)
+CREATE INDEX IF NOT EXISTS habits_user_sort_idx ON public.habits (user_id, sort_order);
+
 -- Updated At Trigger
 CREATE TRIGGER habits_updated_at
   BEFORE UPDATE ON public.habits
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Atomic reorder: one transactional UPDATE for all rows so a partial failure
+-- can't leave a half-reordered set. SECURITY INVOKER keeps RLS scoping in force.
+CREATE OR REPLACE FUNCTION public.reorder_habits(updates jsonb)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE public.habits AS h
+  SET sort_order = (u.value ->> 'sort_order')::int
+  FROM jsonb_array_elements(updates) AS u
+  WHERE h.id = (u.value ->> 'id')::uuid;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.reorder_habits(jsonb) TO authenticated;
 
 -- B. Habit Entries Table
 CREATE TABLE IF NOT EXISTS public.habit_entries (

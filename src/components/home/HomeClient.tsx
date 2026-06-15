@@ -100,7 +100,7 @@ export function HomeClient() {
           <h1 className="type-h1 mt-1 text-primary">{greeting}</h1>
         </div>
 
-        <div className="flex w-full md:w-auto md:justify-end">
+        <div className="flex w-full md:min-w-0 md:flex-1 md:justify-end">
           <TasksPageHeader
             currentSort={sortBy}
             currentGroup={groupBy}

@@ -66,6 +66,18 @@ describe("useHabitMutations", () => {
             single: vi.fn().mockResolvedValue({ data: newHabit, error: null }),
           })),
         }));
+        // create reads the current max sort_order before inserting (append).
+        const mockMaxSelect = vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({
+                maybeSingle: vi
+                  .fn()
+                  .mockResolvedValue({ data: { sort_order: 2 }, error: null }),
+              })),
+            })),
+          })),
+        }));
 
         mockCreateClient.mockReturnValue({
           auth: {
@@ -78,6 +90,7 @@ describe("useHabitMutations", () => {
               .mockResolvedValue({ data: { user: mockUser }, error: null }),
           },
           from: vi.fn(() => ({
+            select: mockMaxSelect,
             insert: mockInsert,
           })),
         } as any);
@@ -103,6 +116,7 @@ describe("useHabitMutations", () => {
           color: "#10b981",
           icon: null,
           start_date: expect.any(String),
+          sort_order: 3,
         });
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["habits"] });
       });
