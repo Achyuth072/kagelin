@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -19,14 +20,13 @@ import {
   SlidersHorizontal,
   AlignLeft,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import SubtaskList from "./SubtaskList";
 import { TaskDatePicker } from "./shared/TaskDatePicker";
 import { TaskPrioritySelect } from "./shared/TaskPrioritySelect";
+import { TaskNotesEditor } from "./shared/TaskNotesEditor";
 import RecurrencePicker from "./TaskSheet/RecurrencePicker";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import type { Task, Project } from "@/lib/types/task";
@@ -42,7 +42,7 @@ interface TaskEditViewProps {
   description: string;
   setDescription: (value: string) => void;
   isPreviewMode: boolean;
-  setIsPreviewMode: (value: boolean) => void;
+  setIsPreviewMode: Dispatch<SetStateAction<boolean>>;
   dueDate: Date | undefined;
   setDueDate: (value: Date | undefined) => void;
   doDate: Date | undefined;
@@ -115,6 +115,7 @@ export function TaskEditView({
   const scrollRef = useHorizontalScroll();
   const { trigger } = useHaptic();
   const isFinePointer = useMediaQuery("(pointer: fine)");
+  const [notesEditorOpen, setNotesEditorOpen] = useState(false);
 
   return (
     <div
@@ -216,50 +217,43 @@ export function TaskEditView({
 
         <div className="h-1" />
 
-        {/* Description */}
+        {/* Notes */}
         <div className="mx-2">
-          <div className="flex items-start gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast hover:bg-muted/40">
-            <IconCell className="pt-[5px]">
+          <button
+            type="button"
+            onClick={() => {
+              trigger("toggle");
+              setIsPreviewMode(true);
+              setNotesEditorOpen(true);
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast text-left hover:bg-muted/40"
+          >
+            <IconCell>
               <AlignLeft
                 className="h-4 w-4 text-muted-foreground"
                 strokeWidth={2.25}
               />
             </IconCell>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-end mb-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 px-3 text-[10px] uppercase tracking-wider font-bold text-muted-foreground hover:text-foreground bg-background hover:bg-accent hover:text-accent-foreground border border-input shadow-none transition-all rounded-lg"
-                  onClick={() => {
-                    trigger("toggle");
-                    setIsPreviewMode(!isPreviewMode);
-                  }}
-                  disabled={!description.trim() && !isPreviewMode}
-                >
-                  {isPreviewMode ? "Edit" : "Preview"}
-                </Button>
-              </div>
-
-              {isPreviewMode ? (
-                <div className="min-h-[160px] text-[15px] prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {description || "_No description provided._"}
-                  </ReactMarkdown>
-                </div>
+            <span className="text-sm flex-1 min-w-0 truncate text-foreground">
+              {description.trim() ? (
+                description
               ) : (
-                <textarea
-                  placeholder="Add details... (Markdown supported)"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  onKeyDown={onKeyDown}
-                  rows={4}
-                  className="w-full min-h-[120px] text-sm leading-relaxed bg-transparent border-0 outline-none resize-none p-0 text-foreground placeholder:text-muted-foreground/70"
-                />
+                <span className="text-muted-foreground">
+                  Add details... (Markdown supported)
+                </span>
               )}
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
+
+        <TaskNotesEditor
+          open={notesEditorOpen}
+          onOpenChange={setNotesEditorOpen}
+          description={description}
+          setDescription={setDescription}
+          isPreviewMode={isPreviewMode}
+          setIsPreviewMode={setIsPreviewMode}
+        />
 
         <div className="h-1" />
 
