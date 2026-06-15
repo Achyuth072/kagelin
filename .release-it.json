@@ -9,7 +9,8 @@
   },
   "github": {
     "release": true,
-    "preRelease": true
+    "preRelease": true,
+    "releaseNotes": "node scripts/release-notes.cjs ${version}"
   },
   "npm": {
     "publish": false
