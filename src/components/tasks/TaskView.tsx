@@ -1,5 +1,6 @@
 "use client";
 
+import { type Dispatch, type SetStateAction } from "react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
@@ -14,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import {
   ListChecks,
   Send,
+  Save,
+  Trash2,
   Inbox,
   CalendarClock,
   SlidersHorizontal,
@@ -23,16 +26,21 @@ import { IconCell } from "@/components/ui/IconCell";
 import SubtaskList from "./SubtaskList";
 import { TaskDatePicker } from "./shared/TaskDatePicker";
 import { TaskPrioritySelect } from "./shared/TaskPrioritySelect";
+import { TaskNotesRow } from "./shared/TaskNotesRow";
 import RecurrencePicker from "./TaskSheet/RecurrencePicker";
-import type { Project } from "@/lib/types/task";
+import type { Task, Project } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 
 import { FieldErrors } from "react-hook-form";
 import type { CreateTaskInput } from "@/lib/schemas/task";
 
-interface TaskCreateViewProps {
+interface TaskViewBaseProps {
   content: string;
   setContent: (value: string) => void;
+  description: string;
+  setDescription: (value: string) => void;
+  isPreviewMode: boolean;
+  setIsPreviewMode: Dispatch<SetStateAction<boolean>>;
   dueDate: Date | undefined;
   setDueDate: (value: Date | undefined) => void;
   doDate: Date | undefined;
@@ -62,47 +70,80 @@ interface TaskCreateViewProps {
   errors?: FieldErrors<CreateTaskInput>;
 }
 
-export function TaskCreateView({
-  content,
-  setContent,
-  dueDate,
-  setDueDate,
-  doDate,
-  setDoDate,
-  setIsEvening,
-  priority,
-  setPriority,
-  recurrence,
-  setRecurrence,
-  selectedProjectId,
-  setSelectedProjectId,
-  datePickerOpen,
-  setDatePickerOpen,
-  doDatePickerOpen,
-  setDoDatePickerOpen,
-  showSubtasks,
-  setShowSubtasks,
-  draftSubtasks,
-  setDraftSubtasks,
-  inboxProjectId,
-  projects,
-  isMobile,
-  hasContent,
-  isPending,
-  onSubmit,
-  onKeyDown,
-  errors,
-}: TaskCreateViewProps) {
+export type TaskViewProps =
+  | (TaskViewBaseProps & { mode: "create" })
+  | (TaskViewBaseProps & {
+      mode: "edit";
+      initialTask: Task;
+      onDelete: () => void;
+      layout?: "sheet" | "panel";
+    });
+
+export function TaskView(props: TaskViewProps) {
+  const { mode } = props;
+  const {
+    content,
+    setContent,
+    description,
+    setDescription,
+    isPreviewMode,
+    setIsPreviewMode,
+    dueDate,
+    setDueDate,
+    doDate,
+    setDoDate,
+    setIsEvening,
+    priority,
+    setPriority,
+    recurrence,
+    setRecurrence,
+    selectedProjectId,
+    setSelectedProjectId,
+    datePickerOpen,
+    setDatePickerOpen,
+    doDatePickerOpen,
+    setDoDatePickerOpen,
+    showSubtasks,
+    setShowSubtasks,
+    draftSubtasks,
+    setDraftSubtasks,
+    inboxProjectId,
+    projects,
+    isMobile,
+    hasContent,
+    isPending,
+    onSubmit,
+    onKeyDown,
+    errors,
+  } = props;
+
+  const layout = mode === "edit" ? (props.layout ?? "sheet") : "sheet";
+
   const { trigger } = useHaptic();
   const isFinePointer = useMediaQuery("(pointer: fine)");
   const scrollRef = useHorizontalScroll();
 
+  const contentId = mode === "create" ? "task-content" : "task-content-edit";
+  const contentErrorId =
+    mode === "create" ? "task-content-error" : "task-content-edit-error";
+  const createDatePickerPositioning =
+    mode === "create"
+      ? { side: "right" as const, align: "center" as const, sideOffset: 15 }
+      : {};
+
   return (
-    <div className="flex flex-col h-auto w-full max-w-full overflow-hidden">
+    <div
+      className={cn(
+        "flex flex-col w-full max-w-full overflow-hidden",
+        mode === "create"
+          ? "h-auto"
+          : cn("transition-all", layout === "sheet" ? "h-auto" : "h-full"),
+      )}
+    >
       {/* Title — native textarea, bottom border only, no box */}
       <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
         <textarea
-          id="task-content"
+          id={contentId}
           placeholder="What needs to be done?"
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -115,17 +156,22 @@ export function TaskCreateView({
             errors?.content && "placeholder:text-destructive/60",
           )}
           aria-invalid={!!errors?.content}
-          aria-describedby={errors?.content ? "task-content-error" : undefined}
+          aria-describedby={errors?.content ? contentErrorId : undefined}
         />
         {errors?.content && (
-          <p id="task-content-error" className="text-xs text-destructive mt-1">
+          <p id={contentErrorId} className="text-xs text-destructive mt-1">
             {errors.content.message}
           </p>
         )}
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-h-0 py-2">
+      <div
+        className={cn(
+          "flex-1 min-h-0 w-full py-2",
+          mode === "edit" && "overflow-y-auto",
+        )}
+      >
         {/* Meta row — icon-led horizontal scroll strip */}
         <div className="flex items-center gap-3 px-3 py-2.5 mx-2">
           <div className="w-5 shrink-0 flex items-center justify-center">
@@ -145,9 +191,7 @@ export function TaskCreateView({
               open={datePickerOpen}
               onOpenChange={setDatePickerOpen}
               variant="icon"
-              side="right"
-              align="center"
-              sideOffset={15}
+              {...createDatePickerPositioning}
               error={!!errors?.due_date}
             />
 
@@ -158,11 +202,15 @@ export function TaskCreateView({
               open={doDatePickerOpen}
               onOpenChange={setDoDatePickerOpen}
               variant="icon"
-              title={!isMobile ? "Start Date" : undefined}
+              title={
+                mode === "create"
+                  ? !isMobile
+                    ? "Start Date"
+                    : undefined
+                  : "Start Date"
+              }
               icon={CalendarClock}
-              side="right"
-              align="center"
-              sideOffset={15}
+              {...createDatePickerPositioning}
               error={!!errors?.do_date}
               onEveningSelect={() => setIsEvening(true)}
             />
@@ -172,7 +220,7 @@ export function TaskCreateView({
                 priority={priority}
                 setPriority={setPriority}
                 variant="icon"
-                isMobile={isMobile}
+                {...(mode === "create" ? { isMobile } : {})}
               />
             </div>
 
@@ -181,7 +229,7 @@ export function TaskCreateView({
                 value={recurrence}
                 onChange={setRecurrence}
                 variant="icon"
-                isMobile={isMobile}
+                {...(mode === "create" ? { isMobile } : {})}
               />
             </div>
           </div>
@@ -192,6 +240,17 @@ export function TaskCreateView({
             {errors?.due_date?.message || errors?.do_date?.message}
           </div>
         )}
+
+        <div className="h-1" />
+
+        {/* Notes */}
+        <TaskNotesRow
+          description={description}
+          setDescription={setDescription}
+          isPreviewMode={isPreviewMode}
+          setIsPreviewMode={setIsPreviewMode}
+          defaultPreviewOnOpen={mode === "edit"}
+        />
 
         <div className="h-1" />
 
@@ -224,8 +283,12 @@ export function TaskCreateView({
           {showSubtasks && (
             <div className="pl-11 pr-3 pb-2">
               <SubtaskList
-                taskId={undefined}
-                projectId={inboxProjectId}
+                taskId={mode === "edit" ? props.initialTask.id : undefined}
+                projectId={
+                  mode === "edit"
+                    ? props.initialTask.project_id || inboxProjectId
+                    : inboxProjectId
+                }
                 draftSubtasks={draftSubtasks}
                 onDraftSubtasksChange={setDraftSubtasks}
               />
@@ -251,10 +314,18 @@ export function TaskCreateView({
           >
             <SelectValue placeholder="Inbox" />
           </SelectTrigger>
-          <SelectContent className="w-(--radix-select-trigger-width) rounded-lg border-border/80 shadow-2xl [&_[role=option]]:text-[13px] [&_[role=option]]:font-medium [&_[role=option]>span:last-child]:min-w-0">
+          <SelectContent
+            className={cn(
+              "w-(--radix-select-trigger-width) rounded-lg border-border/80 [&_[role=option]]:text-[13px] [&_[role=option]]:font-medium [&_[role=option]>span:last-child]:min-w-0",
+              mode === "create" ? "shadow-2xl" : "shadow-none",
+            )}
+          >
             <SelectItem value="inbox">
               <div className="flex items-center gap-2">
-                <Inbox strokeWidth={2.25} className="h-4 w-4" />
+                <Inbox
+                  strokeWidth={2.25}
+                  className={mode === "create" ? "h-4 w-4" : "h-3.5 w-3.5"}
+                />
                 <span className="font-medium">Inbox</span>
               </div>
             </SelectItem>
@@ -275,17 +346,47 @@ export function TaskCreateView({
         </Select>
 
         <div className="flex-1" />
+
+        {mode === "edit" && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
+            onClick={() => {
+              trigger("thud");
+              props.onDelete();
+            }}
+            aria-label="Delete task"
+          >
+            <Trash2 strokeWidth={2.25} />
+          </Button>
+        )}
+
         <Button
           size="sm"
-          className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
+          variant={mode === "edit" && isPending ? "ghost" : "default"}
+          className={cn(
+            "h-9 w-9 p-0 rounded-lg transition-seijaku flex items-center justify-center",
+            !(mode === "edit" && isPending) &&
+              "bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10",
+          )}
           onClick={() => {
             trigger("success");
             onSubmit();
           }}
           disabled={!hasContent || isPending}
-          aria-label="Create task"
+          aria-label={mode === "create" ? "Create task" : "Save changes"}
         >
-          <Send className="h-5 w-5 stroke-[2.25px]" />
+          {mode === "create" ? (
+            <Send className="h-5 w-5 stroke-[2.25px]" />
+          ) : (
+            <Save
+              className={cn(
+                "h-5 w-5 stroke-[2.25px]",
+                isPending && "opacity-50",
+              )}
+            />
+          )}
         </Button>
       </div>
     </div>

@@ -20,8 +20,7 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 import type { Task } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
-import { TaskCreateView } from "./TaskCreateView";
-import { TaskEditView } from "./TaskEditView";
+import { TaskView } from "./TaskView";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
 interface TaskSheetProps {
@@ -277,11 +276,18 @@ export default function TaskSheet({
 
           <div className="overflow-y-auto scrollbar-thin flex-1 min-h-0">
             {isCreationMode ? (
-              <TaskCreateView
+              <TaskView
+                mode="create"
                 content={content}
                 setContent={(v) =>
                   setValue("content", v, { shouldValidate: true })
                 }
+                description={description}
+                setDescription={(v) =>
+                  setValue("description", v, { shouldValidate: true })
+                }
+                isPreviewMode={isPreviewMode}
+                setIsPreviewMode={setIsPreviewMode}
                 dueDate={dueDate}
                 setDueDate={(v) =>
                   setValue("due_date", v, { shouldValidate: true })
@@ -323,7 +329,8 @@ export default function TaskSheet({
                 errors={errors}
               />
             ) : (
-              <TaskEditView
+              <TaskView
+                mode="edit"
                 initialTask={effectiveTask!}
                 content={content}
                 setContent={(v) =>
