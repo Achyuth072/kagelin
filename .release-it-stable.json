@@ -15,6 +15,7 @@
     "publish": false
   },
   "hooks": {
+    "before:init": ["npm run ci:validate"],
     "after:bump": [
       "node scripts/generate-changelog.cjs ${version} --channel=stable",
       "git add public/changelog.json public/changelog-version.json"
