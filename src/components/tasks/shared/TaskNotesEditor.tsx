@@ -6,7 +6,6 @@ import remarkGfm from "remark-gfm";
 import { Bold, Italic, List, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 import {
   ResponsiveDialog,
@@ -60,7 +59,6 @@ export function TaskNotesEditor({
   setIsPreviewMode,
 }: TaskNotesEditorProps) {
   const { trigger } = useHaptic();
-  const isMobile = useMediaQuery("(max-width: 640px)");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const applyToolbarAction = (action: ToolbarAction) => {
@@ -80,12 +78,7 @@ export function TaskNotesEditor({
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
       <ResponsiveDialogContent className="flex flex-col h-auto max-h-[85dvh] overflow-hidden sm:h-[85vh] sm:max-w-2xl">
         <ResponsiveDialogHeader>
-          <div
-            className={cn(
-              "flex items-center justify-between gap-3",
-              !isMobile && "pr-10",
-            )}
-          >
+          <div className="flex items-center justify-between gap-3 sm:pr-10">
             <ResponsiveDialogTitle>Notes</ResponsiveDialogTitle>
             <Button
               variant="outline"
@@ -101,6 +94,10 @@ export function TaskNotesEditor({
           </div>
         </ResponsiveDialogHeader>
 
+        {/* Both panels stay mounted and toggle via `hidden` (kept in sync
+            with the `hidden` class for jsdom, which has no stylesheet to
+            apply it) so switching modes never mounts/unmounts the layout
+            and causes a flicker. */}
         <div className="flex-1 min-h-[40vh] flex flex-col px-4 pb-4">
           <div
             hidden={!isPreviewMode}
@@ -109,9 +106,11 @@ export function TaskNotesEditor({
               !isPreviewMode && "hidden",
             )}
           >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {description || "_No description provided._"}
-            </ReactMarkdown>
+            {isPreviewMode && (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {description || "_No description provided._"}
+              </ReactMarkdown>
+            )}
           </div>
           <div
             hidden={isPreviewMode}
