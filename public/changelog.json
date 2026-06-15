@@ -19,6 +19,22 @@
     }
   },
   {
+    "version": "1.23.0-preview.3",
+    "date": "2026-06-15",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Render markdown preview in notes row",
+        "Add fullscreen TaskNotesEditor with markdown toolbar",
+        "Generate GitHub release notes from changelog.json"
+      ],
+      "Fixed": [
+        "Resolve ci:validate failures from UI redesigns",
+        "Restore caret/focus after notes toolbar edits"
+      ]
+    }
+  },
+  {
     "version": "1.23.0-preview.2",
     "date": "2026-06-15",
     "channel": "preview",
@@ -638,16 +654,6 @@
       "Fixed": [
         "Calendar query cache isolated for guest mode to prevent cross-account leaks",
         "Sidebar alignment and mobile icon sizing corrected"
-      ]
-    }
-  },
-  {
-    "version": "1.14.2",
-    "date": "2026-04-01",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Mobile sidebar footer settings padding adjusted for improved ergonomics"
       ]
     }
   }
