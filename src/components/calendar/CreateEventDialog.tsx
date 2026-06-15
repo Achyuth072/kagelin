@@ -314,7 +314,7 @@ export function CreateEventDialog({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-[425px] p-0">
+      <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-visible">
         <form
           onSubmit={handleSubmit(onFormSubmit) as any}
           className="flex flex-col h-auto max-h-[85dvh]"
