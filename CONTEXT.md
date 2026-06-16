@@ -65,16 +65,55 @@ auto-sync, and push notifications on top of the registered-free capabilities.
 
 ### Habit
 
-A binary-daily intention the user tracks: for each day it is either done or
-not done (`entry.value` is `0` or `1`). A Habit has no frequency, target, or
-ratio — "three times a week" is not expressible in the current data model.
+An intention the user tracks day-by-day. The umbrella term covering two kinds —
+a Habit is always one or the other:
+
+- **Boolean Habit** — done / not-done per day. The original and (for now) only
+  kind with native tracking UX.
+- **Measurable Habit** — each Entry carries a real quantity (pages read, km run)
+  judged against a target. Schema and import only for now; no native entry UX yet.
+
+A Habit also carries a **frequency** — how often it is meant to be done
+(e.g. daily, or three times a week). "Three times a week" _is_ expressible.
 _Avoid_: Goal, routine, task.
 
 ### Entry
 
-The record that a Habit was (or wasn't) done on a specific date. The absence of
-an Entry and an Entry with `value: 0` both mean "not done that day"; only
-`value: 1` means done.
+The record of a Habit on a specific date. What counts as **done** depends on the
+Habit kind:
+
+- **Boolean Habit**: done iff `value: 1`. The absence of an Entry and `value: 0`
+  both mean "not done."
+- **Measurable Habit**: done iff the day **meets its target** — for an `at_least`
+  target, the logged quantity ≥ target; for `at_most`, ≤ target. An absent day
+  reads as quantity `0`.
+
+### Entry state (done / not done / skipped / unknown)
+
+The canonical vocabulary for a day's status, mirroring the source trackers we
+import from:
+
+- **Done** — the target was met (see Entry).
+- **Not done** — explicitly missed.
+- **Unknown** — never logged. Indistinguishable from "not done" in our model.
+- **Skipped** — deliberately not counted (a rest day): does not break a Streak
+  and is excluded from Score.
+
+Our store records only two of these — an Entry exists (with a `value`) or it
+doesn't. **Done** and **not done / unknown** map cleanly; **Skipped has no
+representation yet** and is collapsed to "not done" on import. Consequence:
+imported habits that used the source app's skip feature show a slightly lower
+Score and shorter Streaks than the original. Fidelity guarantees (and the Score
+verification tests) are therefore scoped to **skip-free** habits until native
+tracking introduces a real skipped state.
+
+### "Done"-counting vs strength metrics (Measurable Habits)
+
+The "absent reads as `0`" rule above feeds **Score** only (a continuous strength
+0..1). Day-counting metrics — Streak, Best Streak, total completions — count only
+days with a logged Entry that meets target, and for now are shown for **Boolean
+Habits only**. This prevents an `at_most` Measurable Habit (e.g. "≤ 1 coffee/day")
+from reading as an unbroken streak across every unlogged day.
 
 ### Streak
 
@@ -82,7 +121,101 @@ The current unbroken run of done-days ending at the present. A **today that has
 not been logged yet is _pending_, not a break** — the streak counts through
 yesterday and only breaks when a day that has _already passed_ was missed. So a
 30-day run still reads "30" all morning before today is logged.
+
+**Frequency-aware**: for a non-daily Habit (e.g. 3× / week), a streak is _not_ a
+run of consecutive calendar days the Habit was logged. The schedule first
+**fills in** the days between reps that satisfy the frequency, and the run is
+counted over those filled-in (computed) days — so flawless 3×/week adherence is
+one long streak, not a break every off-day. A daily Habit fills in nothing, so
+its streak is unchanged. (Mirrors the source tracker's interval interpolation.)
 _Avoid_: Chain, run length.
+
+### Best Streak
+
+The longest such run in the Habit's whole history (the top few are surfaced).
+Same frequency-aware, computed-day basis as Streak.
+
+### Score
+
+A Habit's **strength**: how consistently it has been kept, as a percentage. Unlike
+a Streak (a binary run that resets to zero on a single miss), Score **decays and
+recovers gradually**, is weighted toward recent days, and is normalized by the
+Habit's frequency (so a 3×/week habit isn't penalized for its four off-days). A
+Habit can hold a high Score with a Streak of zero — strong for months, missed
+yesterday. The exact computation is ported faithfully from the source tracker so
+an imported Habit shows the number the user remembers.
+_Displayed as_: "Strength" is the source tracker's UI label for the same number;
+**Score** is the canonical term here. _Avoid_: Streak (a different metric).
+
+### Frequency progress
+
+A Habit's `Frequency` rendered as week-to-date completion — "2 / 3 this week,"
+shown as a ring. It is **not a Goal**: a Habit has no Goal, only a Frequency, and
+this is just that Frequency drawn against the current period. _Avoid_: Goal.
+
+---
+
+## Goals
+
+### Goal
+
+A user-set target on a **global aggregate** — daily or weekly **focus-hours**, or
+daily or weekly **tasks-completed**. Stored in preferences, set in Settings →
+Goals, and shown as rings / bars on `/stats`. The word `Goal` names **only** these
+global targets. There is **no per-item Goal**, no Goal attached to a Habit (a
+Habit has a Frequency; see Frequency progress), and **no arbitrary-Goal entity** —
+the four globals are the whole feature. _Avoid_: using "goal" for a Habit's
+frequency or for any per-item target.
+
+---
+
+## Recurring tasks
+
+### Recurrence
+
+The rule on a task that makes it repeat ("every Monday"). A task either has a
+Recurrence or it is one-off.
+
+### Series
+
+The durable identity tying together every dated instance of one recurring task
+across time. The Series is what **survives a rename** — without it, occurrences
+are related only incidentally (by matching content + project + date), so renaming
+a task orphans its history. The Series is the fix for that.
+
+### Occurrence
+
+A single dated instance belonging to a Series. When a recurring task is completed,
+the next Occurrence is spawned and carries the same Series identity.
+_Avoid_: instance, spawn, **chain** (also banned for Streak).
+
+---
+
+## Analytics
+
+### Stats
+
+The **app-wide** analytics surface at `/stats`: everything aggregated across all
+habits, tasks, and focus — period selector, breakdowns, time-of-day heatmap,
+per-habit Score comparison. Global scope only.
+
+### Insights
+
+The **single-item** analytics surface, reached via the **Edit / Insights** toggle
+inside one Habit's or one recurring Task's edit sheet. Scoped to exactly one item.
+A Task has Insights only when it belongs to a Series. "Habit stats" is a misnomer —
+that surface is **Habit Insights**; `Stats` always means the global page.
+_Avoid_: "stats" for a per-item view.
+
+### Backup vs Stats export
+
+Two distinct things that both say "export":
+
+- **Backup** — full portability: the complete dataset as a ZIP (JSON + ICS),
+  round-trips with Import.
+- **Stats export** — a read-only analytics extract (CSV daily rollup / JSON stats
+  payload), scoped to the current period or one item's Insights. Not a backup;
+  does not round-trip.
 
 ---
 
