@@ -10,6 +10,16 @@
     }
   },
   {
+    "version": "1.24.0-preview.0",
+    "date": "2026-06-16",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add measurable habit data model (type, frequency, target)"
+      ]
+    }
+  },
+  {
     "version": "1.23.0",
     "date": "2026-06-15",
     "channel": "stable",
@@ -638,22 +648,6 @@
     "sections": {
       "Fixed": [
         "Invalid route exports removed to fix Vercel build failure"
-      ]
-    }
-  },
-  {
-    "version": "1.15.0",
-    "date": "2026-04-04",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "WebDAV backup sync for guest users",
-        "Universal ZIP backup and restore",
-        "Weekly backup reminders in guest mode"
-      ],
-      "Improved": [
-        "Mobile settings revamped with a cleaner matte tab layout",
-        "Settings page sticky footer now docks correctly"
       ]
     }
   }
