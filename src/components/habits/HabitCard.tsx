@@ -78,7 +78,7 @@ export function HabitCard({
 
   // Calculate stats
   const totalCompletions = habit.entries.filter((e) => e.value === 1).length;
-  const currentStreak = getCurrentStreak(habit.entries);
+  const currentStreak = getCurrentStreak(habit, habit.entries);
 
   const handleToggle = useCallback(() => {
     if (onToggle) {
