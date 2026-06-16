@@ -10,7 +10,7 @@ export interface Habit {
   archived_at: string | null;
   start_date: string | null;
   sort_order: number;
-  habit_type?: "boolean" | "numerical";
+  habit_type?: "boolean" | "measurable";
   frequency_count?: number | null;
   frequency_period?: "day" | "week" | "month" | null;
   target_type?: "at_least" | "at_most" | null;

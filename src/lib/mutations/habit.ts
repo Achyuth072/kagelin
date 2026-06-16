@@ -8,7 +8,7 @@ export interface CreateHabitInput {
   color?: string;
   icon?: string;
   start_date?: string;
-  habitType?: "boolean" | "numerical";
+  habitType?: "boolean" | "measurable";
   frequencyCount?: number;
   frequencyPeriod?: "day" | "week" | "month";
   targetType?: "at_least" | "at_most";
@@ -22,7 +22,7 @@ export interface UpdateHabitInput {
   description?: string;
   color?: string;
   icon?: string;
-  habitType?: "boolean" | "numerical";
+  habitType?: "boolean" | "measurable";
   frequencyCount?: number;
   frequencyPeriod?: "day" | "week" | "month";
   targetType?: "at_least" | "at_most";

@@ -262,7 +262,7 @@ class MockStore {
         archived_at: null,
         start_date: startOfHistory,
         sort_order: 0,
-        habit_type: "numerical",
+        habit_type: "measurable",
         frequency_count: 1,
         frequency_period: "day",
         target_type: "at_least",

@@ -25,7 +25,7 @@ describe("habitMutations.create", () => {
   it("creates a measurable habit with new fields", async () => {
     const habit = await habitMutations.create({
       name: "Drink Water",
-      habitType: "numerical",
+      habitType: "measurable",
       frequencyCount: 1,
       frequencyPeriod: "day",
       targetType: "at_least",
@@ -33,7 +33,7 @@ describe("habitMutations.create", () => {
       unit: "glasses",
     });
 
-    expect(habit.habit_type).toBe("numerical");
+    expect(habit.habit_type).toBe("measurable");
     expect(habit.frequency_count).toBe(1);
     expect(habit.frequency_period).toBe("day");
     expect(habit.target_type).toBe("at_least");
@@ -50,18 +50,18 @@ describe("habitMutations.update", () => {
 
     const updated = await habitMutations.update({
       id: habit.id,
-      habitType: "numerical",
+      habitType: "measurable",
       targetValue: 5,
     });
 
-    expect(updated.habit_type).toBe("numerical");
+    expect(updated.habit_type).toBe("measurable");
     expect(updated.target_value).toBe(5);
   });
 
   it("leaves unspecified new fields unchanged", async () => {
     const habit = await habitMutations.create({
       name: "Test Habit",
-      habitType: "numerical",
+      habitType: "measurable",
       targetValue: 8,
     });
 
@@ -71,7 +71,7 @@ describe("habitMutations.update", () => {
     });
 
     expect(updated.name).toBe("Renamed");
-    expect(updated.habit_type).toBe("numerical");
+    expect(updated.habit_type).toBe("measurable");
     expect(updated.target_value).toBe(8);
   });
 });

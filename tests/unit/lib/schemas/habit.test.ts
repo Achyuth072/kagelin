@@ -37,7 +37,7 @@ describe("HabitSchema", () => {
     const measurable = {
       ...baseHabit,
       name: "Drink Water",
-      habit_type: "numerical",
+      habit_type: "measurable",
       frequency_count: 1,
       frequency_period: "day",
       target_type: "at_least",
@@ -48,7 +48,7 @@ describe("HabitSchema", () => {
     const result = HabitSchema.safeParse(measurable);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.habit_type).toBe("numerical");
+      expect(result.data.habit_type).toBe("measurable");
       expect(result.data.frequency_count).toBe(1);
       expect(result.data.frequency_period).toBe("day");
       expect(result.data.target_type).toBe("at_least");
@@ -104,7 +104,7 @@ describe("CreateHabitSchema", () => {
   it("accepts a create input with all new fields", () => {
     const input = {
       name: "Drink Water",
-      habit_type: "numerical",
+      habit_type: "measurable",
       frequency_count: 3,
       frequency_period: "week",
       target_type: "at_most",
@@ -128,7 +128,7 @@ describe("UpdateHabitSchema", () => {
   it("accepts a partial update with new fields", () => {
     const input = {
       id: "123e4567-e89b-12d3-a456-426614174000",
-      habit_type: "numerical",
+      habit_type: "measurable",
       target_value: 8,
     };
     const result = UpdateHabitSchema.safeParse(input);
