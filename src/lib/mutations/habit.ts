@@ -8,6 +8,12 @@ export interface CreateHabitInput {
   color?: string;
   icon?: string;
   start_date?: string;
+  habitType?: "boolean" | "numerical";
+  frequencyCount?: number;
+  frequencyPeriod?: "day" | "week" | "month";
+  targetType?: "at_least" | "at_most";
+  targetValue?: number;
+  unit?: string;
 }
 
 export interface UpdateHabitInput {
@@ -16,6 +22,12 @@ export interface UpdateHabitInput {
   description?: string;
   color?: string;
   icon?: string;
+  habitType?: "boolean" | "numerical";
+  frequencyCount?: number;
+  frequencyPeriod?: "day" | "week" | "month";
+  targetType?: "at_least" | "at_most";
+  targetValue?: number;
+  unit?: string;
 }
 
 export interface MarkHabitCompleteInput {
@@ -30,15 +42,23 @@ export const habitMutations = {
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
 
+    const habitData = {
+      name: input.name,
+      description: input.description || null,
+      color: input.color || "#4B6CB7",
+      icon: input.icon || null,
+      archived_at: null,
+      start_date: input.start_date || new Date().toISOString().split("T")[0],
+      habit_type: input.habitType || "boolean",
+      frequency_count: input.frequencyCount ?? null,
+      frequency_period: input.frequencyPeriod || "day",
+      target_type: input.targetType || "at_least",
+      target_value: input.targetValue ?? null,
+      unit: input.unit || null,
+    };
+
     if (isGuest) {
-      return mockStore.addHabit({
-        name: input.name,
-        description: input.description || null,
-        color: input.color || "#4B6CB7",
-        icon: input.icon || null,
-        archived_at: null,
-        start_date: input.start_date || new Date().toISOString().split("T")[0],
-      });
+      return mockStore.addHabit(habitData);
     }
 
     const supabase = createClient();
@@ -62,11 +82,7 @@ export const habitMutations = {
       .from("habits")
       .insert({
         user_id: user.id,
-        name: input.name,
-        description: input.description || null,
-        color: input.color || "#4B6CB7",
-        icon: input.icon || null,
-        start_date: input.start_date || new Date().toISOString().split("T")[0],
+        ...habitData,
         sort_order: nextSortOrder,
       })
       .select()
@@ -80,7 +96,32 @@ export const habitMutations = {
     const isGuest =
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
-    const { id, ...updates } = input;
+    const {
+      id,
+      name,
+      description,
+      color,
+      icon,
+      habitType,
+      frequencyCount,
+      frequencyPeriod,
+      targetType,
+      targetValue,
+      unit,
+    } = input;
+
+    const updates: Partial<Habit> = {};
+    if (name !== undefined) updates.name = name;
+    if (description !== undefined) updates.description = description;
+    if (color !== undefined) updates.color = color;
+    if (icon !== undefined) updates.icon = icon;
+    if (habitType !== undefined) updates.habit_type = habitType;
+    if (frequencyCount !== undefined) updates.frequency_count = frequencyCount;
+    if (frequencyPeriod !== undefined)
+      updates.frequency_period = frequencyPeriod;
+    if (targetType !== undefined) updates.target_type = targetType;
+    if (targetValue !== undefined) updates.target_value = targetValue;
+    if (unit !== undefined) updates.unit = unit;
 
     if (isGuest) {
       const result = mockStore.updateHabit(id, updates);

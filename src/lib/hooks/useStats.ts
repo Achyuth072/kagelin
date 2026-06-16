@@ -53,7 +53,7 @@ export function calculateStats(
 
   for (let i = 6; i >= 0; i--) {
     const date = subDays(now, i);
-    const key = date.toISOString().split("T")[0];
+    const key = format(date, "yyyy-MM-dd");
     dailyTrendMap[key] = dailyTrend.length;
     dailyTrend.push({
       date: format(date, "EEE"),
@@ -82,7 +82,7 @@ export function calculateStats(
       prevFocusSec += seconds;
     }
 
-    const dateKey = log.start_time.split("T")[0];
+    const dateKey = format(new Date(log.start_time), "yyyy-MM-dd");
     activityDates.add(dateKey);
 
     const trendIdx = dailyTrendMap[dateKey];
@@ -113,7 +113,7 @@ export function calculateStats(
           prevTotal++;
         }
 
-        const dateKey = task.completed_at.split("T")[0];
+        const dateKey = format(new Date(task.completed_at), "yyyy-MM-dd");
         activityDates.add(dateKey);
 
         const trendIdx = dailyTrendMap[dateKey];
@@ -143,7 +143,7 @@ export function calculateStats(
   let currentStreak = 0;
   if (activityDates.size > 0) {
     const checkDate = new Date(now);
-    const getDateKey = (d: Date) => d.toISOString().split("T")[0];
+    const getDateKey = (d: Date) => format(d, "yyyy-MM-dd");
 
     // If no activity today, check yesterday
     if (!activityDates.has(getDateKey(checkDate))) {
