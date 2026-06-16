@@ -115,8 +115,15 @@ describe("useHabitMutations", () => {
           description: "Daily exercise",
           color: "#10b981",
           icon: null,
+          archived_at: null,
           start_date: expect.any(String),
           sort_order: 3,
+          habit_type: "boolean",
+          frequency_count: null,
+          frequency_period: "day",
+          target_type: "at_least",
+          target_value: null,
+          unit: null,
         });
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["habits"] });
       });

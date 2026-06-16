@@ -3,7 +3,11 @@
     "version": "Unreleased",
     "date": null,
     "channel": "preview",
-    "sections": {}
+    "sections": {
+      "Fixed": [
+        "Stats now bucket days by your local timezone, fixing off-by-one trends and streaks for non-UTC users"
+      ]
+    }
   },
   {
     "version": "1.23.0",

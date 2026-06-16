@@ -9,7 +9,7 @@ import type { FocusLog } from "@/lib/types/focus";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
 import type { BackupData } from "@/lib/backup/types";
 
-const STORAGE_KEY = "kanso_guest_data_v8";
+const STORAGE_KEY = "kanso_guest_data_v9";
 
 interface GuestData {
   tasks: Task[];
@@ -262,6 +262,12 @@ class MockStore {
         archived_at: null,
         start_date: startOfHistory,
         sort_order: 0,
+        habit_type: "measurable",
+        frequency_count: 1,
+        frequency_period: "day",
+        target_type: "at_least",
+        target_value: 8,
+        unit: "glasses",
       },
       {
         id: hExercise,
@@ -275,6 +281,12 @@ class MockStore {
         archived_at: null,
         start_date: startOfHistory,
         sort_order: 1,
+        habit_type: "boolean",
+        frequency_count: 5,
+        frequency_period: "week",
+        target_type: "at_least",
+        target_value: null,
+        unit: null,
       },
       {
         id: hRead,
@@ -288,6 +300,12 @@ class MockStore {
         archived_at: null,
         start_date: startOfHistory,
         sort_order: 2,
+        habit_type: "boolean",
+        frequency_count: 7,
+        frequency_period: "week",
+        target_type: "at_least",
+        target_value: null,
+        unit: null,
       },
     );
 
@@ -296,13 +314,13 @@ class MockStore {
       const date = new Date(now.getTime() + i * oneDay);
       const dateStr = date.toISOString().split("T")[0];
 
-      // Drink Water: 95% completion
+      // Drink Water (measurable): 95% completion with random value 4-10
       if (Math.random() < 0.95) {
         entries.push({
           id: `entry-${generateId()}`,
           habit_id: hWater,
           date: dateStr,
-          value: 1,
+          value: 4 + Math.floor(Math.random() * 7), // 4-10
           created_at: nowIso,
         });
       }
