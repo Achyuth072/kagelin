@@ -1,4 +1,10 @@
-import { format, startOfDay, subDays } from "date-fns";
+import {
+  format,
+  startOfDay,
+  subDays,
+  parseISO,
+  differenceInCalendarDays,
+} from "date-fns";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { interpolateDoneDays } from "@/lib/utils/habit-intervals";
 
@@ -62,22 +68,21 @@ export function getBestStreaks(
 
   const sortedDays = [...done].sort();
   const runs: number[] = [];
-  let runStart = sortedDays[0];
+  let prevDay = sortedDays[0];
   let runLen = 1;
 
   for (let i = 1; i < sortedDays.length; i++) {
-    const prev = new Date(runStart + "T00:00:00");
-    const curr = new Date(sortedDays[i] + "T00:00:00");
-    const diff =
-      (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24) - (runLen - 1);
-
-    if (diff === 1) {
+    const gap = differenceInCalendarDays(
+      parseISO(sortedDays[i]),
+      parseISO(prevDay),
+    );
+    if (gap === 1) {
       runLen++;
     } else {
       runs.push(runLen);
-      runStart = sortedDays[i];
       runLen = 1;
     }
+    prevDay = sortedDays[i];
   }
   runs.push(runLen);
 
@@ -131,7 +136,7 @@ function buildDoneSet(
 
   // Boolean: use frequency interpolation
   return interpolateDoneDays(
-    habit as Habit,
+    habit,
     entries.filter((e) => e.value >= 1),
     today,
   );

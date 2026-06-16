@@ -1,4 +1,10 @@
-import { format, addDays, startOfDay } from "date-fns";
+import {
+  format,
+  addDays,
+  startOfDay,
+  parseISO,
+  differenceInCalendarDays,
+} from "date-fns";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { periodDays } from "@/lib/utils/habit-score";
 
@@ -9,7 +15,7 @@ import { periodDays } from "@/lib/utils/habit-score";
  * the schedule using uhabits' interval algorithm.
  */
 export function interpolateDoneDays(
-  habit: Habit,
+  habit: Pick<Habit, "frequency_count" | "frequency_period">,
   entries: HabitEntry[],
   today: Date = new Date(),
 ): Set<string> {
@@ -38,19 +44,15 @@ export function interpolateDoneDays(
     const windowEnd = doneDates[i + freqCount - 1];
 
     // Check if all freqCount reps fit within `period` days
-    const startD = new Date(windowStart + "T00:00:00");
-    const endD = new Date(windowEnd + "T00:00:00");
-    const daySpan = (endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24);
+    const startD = parseISO(windowStart);
+    const daySpan = differenceInCalendarDays(parseISO(windowEnd), startD);
 
     if (daySpan < period) {
       // Anchor interval: from windowStart, extending `period` days, clamped to today
+      const rawEnd = addDays(startD, period - 1);
+      const clampEnd = startOfDay(today);
       const intervalEnd = format(
-        new Date(
-          Math.min(
-            addDays(startD, period - 1).getTime(),
-            startOfDay(today).getTime(),
-          ),
-        ),
+        rawEnd < clampEnd ? rawEnd : clampEnd,
         "yyyy-MM-dd",
       );
       intervals.push([windowStart, intervalEnd]);
@@ -63,8 +65,8 @@ export function interpolateDoneDays(
   // Union of all interval days
   const result = new Set<string>();
   for (const [start, end] of snapped) {
-    let cursor = new Date(start + "T00:00:00");
-    const endDate = new Date(end + "T00:00:00");
+    let cursor = parseISO(start);
+    const endDate = parseISO(end);
     while (cursor <= endDate) {
       const key = format(cursor, "yyyy-MM-dd");
       if (key <= todayKey) {
@@ -102,5 +104,5 @@ function snapIntervals(intervals: [string, string][]): [string, string][] {
 }
 
 function addOneDay(dateStr: string): string {
-  return format(addDays(new Date(dateStr + "T00:00:00"), 1), "yyyy-MM-dd");
+  return format(addDays(parseISO(dateStr), 1), "yyyy-MM-dd");
 }

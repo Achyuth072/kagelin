@@ -1,4 +1,4 @@
-import { format, eachDayOfInterval, startOfDay } from "date-fns";
+import { format, eachDayOfInterval, startOfDay, parseISO } from "date-fns";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 
 type FrequencyPeriod = "day" | "week" | "month";
@@ -10,6 +10,7 @@ export function periodDays(period: FrequencyPeriod | null): number {
     case "week":
       return 7;
     case "month":
+      // uhabits approximates a month as 30 days; kept for parity.
       return 30;
     default:
       return 1;
@@ -46,13 +47,14 @@ export function computeScores(
 
   const startDate = from
     ? startOfDay(from)
-    : startOfDay(new Date(entries[0].date));
+    : startOfDay(parseISO(entries[0].date));
   const endDate = startOfDay(to);
 
   if (startDate > endDate) return [];
 
   const freqCount = habit.frequency_count ?? 1;
   const freq = freqCount / periodDays(habit.frequency_period ?? null);
+  // Ported verbatim from uhabits Score.compute (0.5^(sqrt(freq)/13)); do not retune.
   const multiplier = Math.pow(0.5, Math.sqrt(freq) / 13.0);
 
   const days = eachDayOfInterval({ start: startDate, end: endDate });
