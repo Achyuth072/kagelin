@@ -47,8 +47,8 @@ export function HabitCompactRow({
   // the next list re-render rather than every render of every row.
   const today = useMemo(() => new Date(), []);
   const streak = useMemo(
-    () => getCurrentStreak(habit.entries, today),
-    [habit.entries, today],
+    () => getCurrentStreak(habit, habit.entries, today),
+    [habit, today],
   );
   const days = useMemo(
     () => getRolling7Days(habit.entries, today, habit.start_date),
