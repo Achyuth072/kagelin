@@ -10,6 +10,16 @@
     }
   },
   {
+    "version": "1.24.0-preview.1",
+    "date": "2026-06-16",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Port score and frequency-aware streak engine (#72)"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.0",
     "date": "2026-06-16",
     "channel": "preview",
@@ -638,16 +648,6 @@
     "sections": {
       "Fixed": [
         "Next.js 16 WebDAV route type constraints resolved"
-      ]
-    }
-  },
-  {
-    "version": "1.15.1",
-    "date": "2026-04-04",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Invalid route exports removed to fix Vercel build failure"
       ]
     }
   }
