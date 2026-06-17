@@ -87,4 +87,23 @@ describe("MockStore (Guest Mode Data)", () => {
     });
     expect(result).toBeNull();
   });
+
+  it("should seed a recurring task Series in initial data", () => {
+    mockStore.reset();
+
+    const seriesTasks = mockStore
+      .getTasks()
+      .filter((t) => t.recurring_series_id !== null);
+
+    // At least two Occurrences sharing one recurring_series_id
+    expect(seriesTasks.length).toBeGreaterThanOrEqual(2);
+    const seriesIds = new Set(seriesTasks.map((t) => t.recurring_series_id));
+    expect(seriesIds.size).toBe(1);
+
+    // The Series has both a completed past Occurrence and an active one,
+    // and every member carries a recurrence rule.
+    expect(seriesTasks.some((t) => t.is_completed)).toBe(true);
+    expect(seriesTasks.some((t) => !t.is_completed)).toBe(true);
+    expect(seriesTasks.every((t) => t.recurrence !== null)).toBe(true);
+  });
 });

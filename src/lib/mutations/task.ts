@@ -269,11 +269,7 @@ export const taskMutations = {
       const existing = mockStore.getTask(id);
       if (!existing) throw new Error("Task not found");
 
-      if (
-        updates.recurrence &&
-        updates.recurrence !== null &&
-        !existing.recurring_series_id
-      ) {
+      if (updates.recurrence && !existing.recurring_series_id) {
         updates.recurring_series_id = crypto.randomUUID();
       }
 
@@ -284,7 +280,7 @@ export const taskMutations = {
 
     const supabase = createClient();
 
-    if (updates.recurrence && updates.recurrence !== null) {
+    if (updates.recurrence) {
       const { data: current, error: fetchError } = await supabase
         .from("tasks")
         .select("recurring_series_id")
@@ -292,6 +288,7 @@ export const taskMutations = {
         .single();
 
       if (fetchError) throw new Error(fetchError.message);
+      if (!current) throw new Error("Task not found");
 
       if (!current.recurring_series_id) {
         updates.recurring_series_id = crypto.randomUUID();
