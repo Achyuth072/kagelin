@@ -33,7 +33,7 @@ export default function HabitsPage() {
     openEditHabit(habit);
   };
 
-  const handleViewStats = (habit: HabitWithEntries) => {
+  const handleViewInsights = (habit: HabitWithEntries) => {
     trigger("toggle");
     openHabitInsights(habit);
   };
@@ -152,7 +152,7 @@ export default function HabitsPage() {
             <HabitCompactList
               habits={habits}
               onEditHabit={handleEditHabit}
-              onViewStats={handleViewStats}
+              onViewInsights={handleViewInsights}
             />
           </div>
         ) : (
@@ -163,7 +163,7 @@ export default function HabitsPage() {
                 habit={habit}
                 icon={getHabitIcon(habit.icon)}
                 onEdit={() => handleEditHabit(habit)}
-                onViewStats={() => handleViewStats(habit)}
+                onViewInsights={() => handleViewInsights(habit)}
               />
             ))}
           </div>

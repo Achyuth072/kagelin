@@ -17,7 +17,7 @@ interface HabitCardProps {
   icon?: LucideIcon;
   onToggle?: () => void;
   onEdit?: () => void;
-  onViewStats?: () => void;
+  onViewInsights?: () => void;
 }
 
 /**
@@ -33,7 +33,7 @@ export function HabitCard({
   icon: Icon,
   onToggle,
   onEdit,
-  onViewStats,
+  onViewInsights,
 }: HabitCardProps) {
   const isMobile = useIsMobile();
   const markComplete = useMarkHabitComplete();
@@ -126,14 +126,14 @@ export function HabitCard({
 
           <div className="flex items-center gap-4 shrink-0">
             {/* Stats in Header */}
-            {onViewStats && (
+            {onViewInsights && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  onViewStats();
+                  onViewInsights();
                 }}
                 className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-secondary border border-border hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-seijaku-fast"
-                aria-label="View stats"
+                aria-label="View insights"
               >
                 <BarChart2 className="w-4 h-4" strokeWidth={2.25} />
               </button>

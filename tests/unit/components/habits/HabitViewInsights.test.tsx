@@ -11,7 +11,7 @@ vi.mock("@/lib/hooks/useIsMobile");
 vi.mock("@/lib/hooks/useHabitMutations");
 vi.mock("@/lib/hooks/useCoarsePointer");
 
-describe("View stats affordance", () => {
+describe("View insights affordance", () => {
   let mockHabit: HabitWithEntries;
 
   beforeEach(() => {
@@ -41,33 +41,37 @@ describe("View stats affordance", () => {
     };
   });
 
-  it("HabitCard: clicking View stats calls onViewStats, not onEdit", () => {
+  it("HabitCard: clicking View insights calls onViewInsights, not onEdit", () => {
     const onEdit = vi.fn();
-    const onViewStats = vi.fn();
+    const onViewInsights = vi.fn();
     render(
-      <HabitCard habit={mockHabit} onEdit={onEdit} onViewStats={onViewStats} />,
+      <HabitCard
+        habit={mockHabit}
+        onEdit={onEdit}
+        onViewInsights={onViewInsights}
+      />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /view stats/i }));
+    fireEvent.click(screen.getByRole("button", { name: /view insights/i }));
 
-    expect(onViewStats).toHaveBeenCalledTimes(1);
+    expect(onViewInsights).toHaveBeenCalledTimes(1);
     expect(onEdit).not.toHaveBeenCalled();
   });
 
-  it("HabitCompactRow: clicking View stats calls onViewStats, not onEdit", () => {
+  it("HabitCompactRow: clicking View insights calls onViewInsights, not onEdit", () => {
     const onEdit = vi.fn();
-    const onViewStats = vi.fn();
+    const onViewInsights = vi.fn();
     render(
       <HabitCompactRow
         habit={mockHabit}
         onEdit={onEdit}
-        onViewStats={onViewStats}
+        onViewInsights={onViewInsights}
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /view stats/i }));
+    fireEvent.click(screen.getByRole("button", { name: /view insights/i }));
 
-    expect(onViewStats).toHaveBeenCalledTimes(1);
+    expect(onViewInsights).toHaveBeenCalledTimes(1);
     expect(onEdit).not.toHaveBeenCalled();
   });
 });
