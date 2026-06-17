@@ -9,7 +9,7 @@ import type { FocusLog } from "@/lib/types/focus";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
 import type { BackupData } from "@/lib/backup/types";
 
-const STORAGE_KEY = "kanso_guest_data_v9";
+const STORAGE_KEY = "kanso_guest_data_v10";
 
 interface GuestData {
   tasks: Task[];
@@ -136,6 +136,7 @@ class MockStore {
         is_evening: isEvening,
         parent_id: parentId,
         recurrence: null,
+        recurring_series_id: null,
         google_event_id: null,
         google_etag: null,
       });
@@ -453,6 +454,7 @@ class MockStore {
       completed_at: task.completed_at ?? null,
       day_order: task.day_order ?? this.data.tasks.length,
       recurrence: task.recurrence ?? null,
+      recurring_series_id: task.recurring_series_id ?? null,
       google_event_id: task.google_event_id ?? null,
       google_etag: task.google_etag ?? null,
       content: task.content,

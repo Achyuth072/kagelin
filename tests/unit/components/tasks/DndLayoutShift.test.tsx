@@ -135,6 +135,7 @@ const tasks: Task[] = Array.from({ length: 24 }, (_, index) => ({
   is_evening: false,
   parent_id: null,
   recurrence: null,
+  recurring_series_id: null,
   google_event_id: null,
   google_etag: null,
 }));

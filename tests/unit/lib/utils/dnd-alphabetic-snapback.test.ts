@@ -35,6 +35,7 @@ const makeTask = (id: string, dayOrder: number, content: string): Task => ({
   completed_at: null,
   day_order: dayOrder,
   recurrence: null,
+  recurring_series_id: null,
   google_event_id: null,
   google_etag: null,
   created_at: new Date().toISOString(),

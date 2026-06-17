@@ -2,9 +2,15 @@
 
 > "Work quietly. Own everything."
 
-An all-in-one productivity app combining tasks, deep focus, habits, and calendar. Ink & matte design, offline-first, no account required.
+A focused workspace for tasks, habits, focus, and your calendar. Offline-first, no account required.
 
 **[kagelin.app](https://kagelin.app)**
+
+## Why Kagelin
+
+- **No account needed.** Full-featured guest mode in `localStorage` — sign up only if you want cloud sync.
+- **Your data, your rules.** WebDAV sync, encrypted ZIP backups, and full data export/delete for registered users.
+- **Offline-first.** Works without a connection via service worker with stale-while-revalidate caching.
 
 ## Features
 
@@ -75,3 +81,11 @@ npm install
 cp .env.example .env.local   # add your Supabase keys
 npm run dev
 ```
+
+## Contributing & Feedback
+
+Bug reports and feature requests go in [GitHub Issues](../../issues). For questions and discussion, use [GitHub Discussions](../../discussions).
+
+## License
+
+[AGPL-3.0](LICENSE)

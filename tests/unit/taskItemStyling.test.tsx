@@ -20,6 +20,7 @@ const mockTask: Task = {
   do_date: null,
   completed_at: null,
   recurrence: null,
+  recurring_series_id: null,
   google_event_id: null,
   google_etag: null,
 };
