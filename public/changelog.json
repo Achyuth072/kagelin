@@ -10,6 +10,16 @@
     }
   },
   {
+    "version": "1.24.0-preview.2",
+    "date": "2026-06-17",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add recurring_series_id for task series identity (#73)"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.1",
     "date": "2026-06-16",
     "channel": "preview",
@@ -638,16 +648,6 @@
         "Activity trend visualisation centred; DrumPicker interactions refined",
         "Settings page layout and typography standardised for visual hierarchy",
         "All remaining lint errors resolved; full CI validation achieved"
-      ]
-    }
-  },
-  {
-    "version": "1.15.2",
-    "date": "2026-04-04",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Next.js 16 WebDAV route type constraints resolved"
       ]
     }
   }
