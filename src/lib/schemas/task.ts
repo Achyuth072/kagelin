@@ -28,6 +28,7 @@ export const TaskSchema = z.object({
     })
     .nullable()
     .optional(),
+  recurring_series_id: z.string().uuid().nullable().optional(),
   google_event_id: z.string().max(255).nullable().optional(),
   google_etag: z.string().max(255).nullable().optional(),
   created_at: z.string().datetime(),
@@ -72,6 +73,16 @@ export const UpdateTaskSchema = z.object({
   is_completed: z.boolean().optional(),
   day_order: z.number().int().optional(),
   project_id: z.string().nullable().optional(),
+  recurrence: z
+    .object({
+      freq: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]),
+      interval: z.number(),
+      days: z.array(z.number()).optional(),
+      mode: z.enum(["strict", "flexible"]).optional(),
+    })
+    .nullable()
+    .optional(),
+  recurring_series_id: z.string().uuid().nullable().optional(),
 });
 
 export type Task = z.infer<typeof TaskSchema>;

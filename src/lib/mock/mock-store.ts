@@ -4,12 +4,13 @@
  */
 
 import type { Task, Project } from "@/lib/types/task";
+import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import type { FocusLog } from "@/lib/types/focus";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
 import type { BackupData } from "@/lib/backup/types";
 
-const STORAGE_KEY = "kanso_guest_data_v9";
+const STORAGE_KEY = "kanso_guest_data_v10";
 
 interface GuestData {
   tasks: Task[];
@@ -136,6 +137,7 @@ class MockStore {
         is_evening: isEvening,
         parent_id: parentId,
         recurrence: null,
+        recurring_series_id: null,
         google_event_id: null,
         google_etag: null,
       });
@@ -243,6 +245,62 @@ class MockStore {
       if (i % 3 === 0) createTask("Write Blog Post", i, pSide, 2);
       if (i % 7 === 0) createTask("Weekly Planning", i, pPersonal, 1);
     }
+
+    // Recurring task Series: one active Occurrence + a completed past Occurrence
+    // sharing a recurring_series_id, so guest-mode Task Insights has data.
+    const seriesId = `series-${generateId()}`;
+    const weeklyRecurrence: RecurrenceRule = { freq: "WEEKLY", interval: 1 };
+    const pastOccurrenceDate = new Date(now.getTime() - 7 * oneDay);
+    pastOccurrenceDate.setHours(9, 0, 0, 0);
+    const activeOccurrenceDate = new Date(now.getTime());
+    activeOccurrenceDate.setHours(9, 0, 0, 0);
+
+    tasks.push(
+      {
+        id: `task-${generateId()}`,
+        user_id: "guest",
+        content: "Weekly Review 🔄",
+        description: null,
+        is_completed: true,
+        completed_at: pastOccurrenceDate.toISOString(),
+        priority: 2,
+        project_id: pWork,
+        day_order: tasks.length,
+        created_at: new Date(
+          pastOccurrenceDate.getTime() - oneDay,
+        ).toISOString(),
+        updated_at: pastOccurrenceDate.toISOString(),
+        due_date: pastOccurrenceDate.toISOString(),
+        do_date: null,
+        is_evening: false,
+        parent_id: null,
+        recurrence: weeklyRecurrence,
+        recurring_series_id: seriesId,
+        google_event_id: null,
+        google_etag: null,
+      },
+      {
+        id: `task-${generateId()}`,
+        user_id: "guest",
+        content: "Weekly Review 🔄",
+        description: null,
+        is_completed: false,
+        completed_at: null,
+        priority: 2,
+        project_id: pWork,
+        day_order: tasks.length + 1,
+        created_at: nowIso,
+        updated_at: nowIso,
+        due_date: activeOccurrenceDate.toISOString(),
+        do_date: null,
+        is_evening: false,
+        parent_id: null,
+        recurrence: weeklyRecurrence,
+        recurring_series_id: seriesId,
+        google_event_id: null,
+        google_etag: null,
+      },
+    );
 
     // Generate Habits
     const hWater = "habit-water";
@@ -453,6 +511,7 @@ class MockStore {
       completed_at: task.completed_at ?? null,
       day_order: task.day_order ?? this.data.tasks.length,
       recurrence: task.recurrence ?? null,
+      recurring_series_id: task.recurring_series_id ?? null,
       google_event_id: task.google_event_id ?? null,
       google_etag: task.google_etag ?? null,
       content: task.content,
