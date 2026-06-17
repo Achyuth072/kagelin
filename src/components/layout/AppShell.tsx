@@ -189,7 +189,8 @@ function GlobalOverlays({
   onCommandOpenChange: (open: boolean) => void;
 }) {
   const { isAddTaskOpen, closeAddTask } = useTaskActions();
-  const { isHabitSheetOpen, editingHabit, closeHabitSheet } = useHabitActions();
+  const { isHabitSheetOpen, editingHabit, initialTab, closeHabitSheet } =
+    useHabitActions();
   const { isCreateEventOpen, closeCreateEvent, defaultDate, selectedEvent } =
     useCalendarStore();
   const { isCreateProjectOpen, closeCreateProject } = useProjectActions();
@@ -211,6 +212,7 @@ function GlobalOverlays({
         open={isHabitSheetOpen}
         onClose={closeHabitSheet}
         initialHabit={editingHabit}
+        initialTab={initialTab}
       />
       <CreateProjectDialog
         open={isCreateProjectOpen}

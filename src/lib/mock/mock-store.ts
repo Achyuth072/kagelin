@@ -259,7 +259,7 @@ class MockStore {
       {
         id: `task-${generateId()}`,
         user_id: "guest",
-        content: "Weekly Review 🔄",
+        content: "Weekly Review",
         description: null,
         is_completed: true,
         completed_at: pastOccurrenceDate.toISOString(),
@@ -282,7 +282,7 @@ class MockStore {
       {
         id: `task-${generateId()}`,
         user_id: "guest",
-        content: "Weekly Review 🔄",
+        content: "Weekly Review",
         description: null,
         is_completed: false,
         completed_at: null,

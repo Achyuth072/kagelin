@@ -34,6 +34,7 @@ import { SortableHabitCompactRow } from "./SortableHabitCompactRow";
 interface HabitCompactListProps {
   habits: HabitWithEntries[];
   onEditHabit: (habit: HabitWithEntries) => void;
+  onViewStats?: (habit: HabitWithEntries) => void;
 }
 
 /**
@@ -44,6 +45,7 @@ interface HabitCompactListProps {
 export function HabitCompactList({
   habits,
   onEditHabit,
+  onViewStats,
 }: HabitCompactListProps) {
   const isDesktop = useUiStore((s) => s.isDesktop);
   const { trigger: triggerHaptic } = useHaptic();
@@ -140,6 +142,7 @@ export function HabitCompactList({
               habit={habit}
               icon={getHabitIcon(habit.icon)}
               onEdit={() => onEditHabit(habit)}
+              onViewStats={onViewStats ? () => onViewStats(habit) : undefined}
               isDesktop={isDesktop}
             />
           ))}

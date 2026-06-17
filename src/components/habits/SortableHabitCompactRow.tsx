@@ -11,6 +11,7 @@ interface SortableHabitCompactRowProps {
   habit: HabitWithEntries;
   icon?: LucideIcon;
   onEdit?: () => void;
+  onViewStats?: () => void;
   isDesktop?: boolean;
 }
 
@@ -24,6 +25,7 @@ const HabitRowContent = memo(
     habit,
     icon,
     onEdit,
+    onViewStats,
     isDesktop,
     attributes,
     listeners,
@@ -38,6 +40,7 @@ const HabitRowContent = memo(
         habit={habit}
         icon={icon}
         onEdit={onEdit}
+        onViewStats={onViewStats}
         isDesktop={isDesktop}
         dragListeners={listeners}
         dragAttributes={attributes}
@@ -48,6 +51,7 @@ const HabitRowContent = memo(
   (prev, next) =>
     prev.habit === next.habit &&
     prev.icon === next.icon &&
+    prev.onViewStats === next.onViewStats &&
     prev.isDesktop === next.isDesktop,
 );
 
@@ -62,6 +66,7 @@ export function SortableHabitCompactRow({
   habit,
   icon,
   onEdit,
+  onViewStats,
   isDesktop,
 }: SortableHabitCompactRowProps) {
   const {
@@ -89,6 +94,7 @@ export function SortableHabitCompactRow({
         habit={habit}
         icon={icon}
         onEdit={onEdit}
+        onViewStats={onViewStats}
         isDesktop={isDesktop}
         attributes={attributes}
         listeners={listeners}

@@ -18,7 +18,7 @@ import { HabitOptionsMenu } from "@/components/habits/HabitOptionsMenu";
 
 export default function HabitsPage() {
   const { data: habits, isLoading, error } = useHabits();
-  const { openAddHabit, openEditHabit } = useHabitActions();
+  const { openAddHabit, openEditHabit, openHabitInsights } = useHabitActions();
   const { trigger } = useHaptic();
   const habitViewMode = useUiStore((s) => s.habitViewMode);
   const setHabitViewMode = useUiStore((s) => s.setHabitViewMode);
@@ -31,6 +31,11 @@ export default function HabitsPage() {
   const handleEditHabit = (habit: HabitWithEntries) => {
     trigger("toggle");
     openEditHabit(habit);
+  };
+
+  const handleViewStats = (habit: HabitWithEntries) => {
+    trigger("toggle");
+    openHabitInsights(habit);
   };
 
   if (isLoading) {
@@ -144,7 +149,11 @@ export default function HabitsPage() {
       <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 py-4 scrollbar-hide">
         {habitViewMode === "compact" ? (
           <div className="pb-12">
-            <HabitCompactList habits={habits} onEditHabit={handleEditHabit} />
+            <HabitCompactList
+              habits={habits}
+              onEditHabit={handleEditHabit}
+              onViewStats={handleViewStats}
+            />
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-12">
@@ -154,6 +163,7 @@ export default function HabitsPage() {
                 habit={habit}
                 icon={getHabitIcon(habit.icon)}
                 onEdit={() => handleEditHabit(habit)}
+                onViewStats={() => handleViewStats(habit)}
               />
             ))}
           </div>

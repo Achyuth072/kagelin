@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { BarChart2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type {
   DraggableAttributes,
@@ -18,6 +19,7 @@ interface HabitCompactRowProps {
   habit: HabitWithEntries;
   icon?: LucideIcon;
   onEdit?: () => void;
+  onViewStats?: () => void;
   // Drag wiring (compact view): desktop shows a left-edge handle, mobile spreads
   // the listeners on the whole row behind a long-press delay.
   isDesktop?: boolean;
@@ -35,6 +37,7 @@ export function HabitCompactRow({
   habit,
   icon: Icon,
   onEdit,
+  onViewStats,
   isDesktop,
   dragListeners,
   dragAttributes,
@@ -101,6 +104,18 @@ export function HabitCompactRow({
           <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/50">
             Streak
           </span>
+          {onViewStats && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewStats();
+              }}
+              className="ml-1.5 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-seijaku-fast hover:bg-secondary/60 hover:text-foreground"
+              aria-label="View stats"
+            >
+              <BarChart2 className="h-3.5 w-3.5" strokeWidth={2.25} />
+            </button>
+          )}
         </div>
       </div>
 

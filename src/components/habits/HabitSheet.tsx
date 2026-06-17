@@ -22,14 +22,23 @@ import { CreateHabitSchema, type CreateHabitInput } from "@/lib/schemas/habit";
 import type { Habit } from "@/lib/types/habit";
 import { HabitCreateView } from "./HabitCreateView";
 import { HabitEditView } from "./HabitEditView";
+import { HabitInsightsPanel } from "./HabitInsightsPanel";
+import { SheetTabToggle, type SheetTab } from "@/components/ui/SheetTabToggle";
+import { cn } from "@/lib/utils";
 
 interface HabitSheetProps {
   open: boolean;
   onClose: () => void;
   initialHabit?: Habit | null;
+  initialTab?: SheetTab;
 }
 
-export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
+export function HabitSheet({
+  open,
+  onClose,
+  initialHabit,
+  initialTab,
+}: HabitSheetProps) {
   // Logic to prevent flickering between Create/Edit modes during close animation
   const [preservedHabit, setPreservedHabit] = useState<
     Habit | null | undefined
@@ -40,6 +49,20 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
   }
 
   const effectiveHabit = open ? initialHabit : preservedHabit;
+
+  // Reset the tab on every open transition (not just when initialHabit
+  // changes) — reopening the same habit via "View stats" must still land on
+  // Insights even though the habit object reference is unchanged.
+  const [tab, setTab] = useState<SheetTab>(() =>
+    open && initialHabit ? (initialTab ?? "edit") : "edit",
+  );
+  const [prevOpenForTab, setPrevOpenForTab] = useState(open);
+  if (open !== prevOpenForTab) {
+    setPrevOpenForTab(open);
+    if (open) {
+      setTab(initialHabit ? (initialTab ?? "edit") : "edit");
+    }
+  }
 
   const {
     handleSubmit,
@@ -152,7 +175,12 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onClose}>
-      <ResponsiveDialogContent className="w-full sm:max-w-lg gap-0 rounded-lg p-0 overflow-hidden outline-none">
+      <ResponsiveDialogContent
+        className={cn(
+          "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none",
+          tab === "insights" ? "sm:max-w-2xl" : "sm:max-w-lg",
+        )}
+      >
         <div className="flex flex-col max-h-[90dvh]">
           <ResponsiveDialogHeader className="sr-only">
             <ResponsiveDialogTitle>
@@ -165,8 +193,16 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
+          {!isCreationMode && (
+            <div className="px-4 pt-3 pb-1 shrink-0">
+              <SheetTabToggle value={tab} onValueChange={setTab} />
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto min-h-0">
-            {isCreationMode ? (
+            {tab === "insights" && !isCreationMode ? (
+              <HabitInsightsPanel habit={effectiveHabit!} />
+            ) : isCreationMode ? (
               <HabitCreateView
                 name={name}
                 setName={(v) => setValue("name", v, { shouldValidate: true })}
