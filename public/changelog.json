@@ -10,6 +10,16 @@
     }
   },
   {
+    "version": "1.24.0-preview.3",
+    "date": "2026-06-17",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add Edit/Insights toggle shell for per-item Insights (#74)"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.2",
     "date": "2026-06-17",
     "channel": "preview",
@@ -634,20 +644,6 @@
     "sections": {
       "Fixed": [
         "Build failure from Uint8Array to BlobPart type mismatch resolved"
-      ]
-    }
-  },
-  {
-    "version": "1.16.0",
-    "date": "2026-04-07",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Mobile toast positioning and layout responsiveness",
-        "Habit heatmap scrolling during sidebar transitions stabilised",
-        "Activity trend visualisation centred; DrumPicker interactions refined",
-        "Settings page layout and typography standardised for visual hierarchy",
-        "All remaining lint errors resolved; full CI validation achieved"
       ]
     }
   }
