@@ -6,7 +6,7 @@ import { HabitHeatmap } from "./HabitHeatmap";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useMarkHabitComplete } from "@/lib/hooks/useHabitMutations";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
-import { Check, Plus, LucideIcon } from "lucide-react";
+import { BarChart2, Check, Plus, LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
@@ -17,6 +17,7 @@ interface HabitCardProps {
   icon?: LucideIcon;
   onToggle?: () => void;
   onEdit?: () => void;
+  onViewInsights?: () => void;
 }
 
 /**
@@ -32,6 +33,7 @@ export function HabitCard({
   icon: Icon,
   onToggle,
   onEdit,
+  onViewInsights,
 }: HabitCardProps) {
   const isMobile = useIsMobile();
   const markComplete = useMarkHabitComplete();
@@ -124,6 +126,18 @@ export function HabitCard({
 
           <div className="flex items-center gap-4 shrink-0">
             {/* Stats in Header */}
+            {onViewInsights && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewInsights();
+                }}
+                className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-secondary border border-border hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-seijaku-fast"
+                aria-label="View insights"
+              >
+                <BarChart2 className="w-4 h-4" strokeWidth={2.25} />
+              </button>
+            )}
             <div className="flex items-center gap-4 sm:gap-6 mr-1 sm:mr-2">
               <div className="text-right">
                 <div className="text-[9px] uppercase text-foreground/60 font-bold tracking-widest leading-none">
