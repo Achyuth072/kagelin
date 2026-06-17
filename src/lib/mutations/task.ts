@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
+import { calculateNextDueDate } from "@/lib/utils/recurrence";
 import type { Task, CreateTaskInput, UpdateTaskInput } from "@/lib/types/task";
 
 export const taskMutations = {
@@ -104,7 +105,6 @@ export const taskMutations = {
       }
 
       if (is_completed && recurrenceRule) {
-        const { calculateNextDueDate } = await import("../utils/recurrence");
         const now = new Date();
         const nextDueDateIso = calculateNextDueDate(
           now,
@@ -196,7 +196,6 @@ export const taskMutations = {
     }
 
     if (is_completed && recurrenceRule) {
-      const { calculateNextDueDate } = await import("../utils/recurrence");
       const now = new Date();
       const nextDueDateIso = calculateNextDueDate(
         now,
