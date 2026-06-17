@@ -194,7 +194,7 @@ export function HabitSheet({
           </ResponsiveDialogHeader>
 
           {!isCreationMode && (
-            <div className="px-4 pt-3 pb-1 shrink-0">
+            <div className="px-4 pt-3 pb-1 shrink-0 sm:pr-16">
               <SheetTabToggle value={tab} onValueChange={setTab} />
             </div>
           )}
