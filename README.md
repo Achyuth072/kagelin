@@ -2,15 +2,15 @@
 
 > "Work quietly. Own everything."
 
-A focused workspace for tasks, habits, focus, and your calendar. Offline-first, no account required.
+Most productivity apps want your email before you've written a single task, and keep your data on their servers either way. Kagelin doesn't. Use it fully offline with no account, sync it to your own server if you want, or just walk away with your data anytime.
 
 **[kagelin.app](https://kagelin.app)**
 
 ## Why Kagelin
 
-- **No account needed.** Full-featured guest mode in `localStorage` — sign up only if you want cloud sync.
-- **Your data, your rules.** WebDAV sync, encrypted ZIP backups, and full data export/delete for registered users.
-- **Offline-first.** Works without a connection via service worker with stale-while-revalidate caching.
+- **Nothing to sign up for.** Tasks, habits, focus tracking, and your calendar all work offline in guest mode. Make an account only if you want cloud sync.
+- **Sync without giving up your data.** Point it at your own Nextcloud, Synology, or any WebDAV server. No middleman.
+- **Take everything with you.** Encrypted ZIP export, full data deletion, and standard `.ics` calendar files. Leaving is always an option.
 
 ## Features
 
