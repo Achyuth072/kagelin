@@ -24,8 +24,8 @@ export function MetricCard({
 }: MetricCardProps) {
   return (
     <Card className={cn("p-4 md:p-6 border-border", className)}>
-      <div className="flex items-start justify-between">
-        <div className="space-y-1.5 md:space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1.5 md:space-y-2 min-w-0">
           <p className="type-ui uppercase text-[10px] md:text-xs text-foreground/60 font-semibold tracking-wider">
             {title}
           </p>
@@ -53,7 +53,7 @@ export function MetricCard({
           )}
         </div>
         {Icon && (
-          <div className="p-1.5 md:p-2 rounded-lg bg-secondary">
+          <div className="p-1.5 md:p-2 rounded-lg bg-secondary shrink-0">
             <Icon
               className="h-4 w-4 md:h-5 md:w-5 text-foreground/70"
               strokeWidth={2.25}

@@ -51,8 +51,28 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: vi.fn(), isPhone: false }),
 }));
 
+vi.mock("@/lib/hooks/useHabits", () => ({
+  useHabit: () => ({
+    data: { id: "1", entries: [] },
+    isLoading: false,
+  }),
+}));
+
 vi.mock("../tasks/shared/TaskDatePicker", () => ({
   TaskDatePicker: () => <div data-testid="date-picker">Date Picker</div>,
+}));
+
+vi.mock("recharts", () => ({
+  AreaChart: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  Area: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+  Tooltip: () => null,
+  ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
 }));
 
 const mockHabit = {

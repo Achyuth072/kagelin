@@ -96,6 +96,11 @@ export function HabitSheet({
   const updateMutation = useUpdateHabit();
   const deleteMutation = useDeleteHabit();
   const isMobile = useMediaQuery("(max-width: 768px)");
+  // Matches ResponsiveDialog's own Dialog/Drawer breakpoint exactly — the
+  // drawer is a true flex column so flex-1/min-h-0 sizes correctly, while
+  // the desktop dialog is a CSS grid where only an explicit max-height
+  // resolves (percentage/flex sizing against its auto-height box doesn't).
+  const isDrawer = useMediaQuery("(max-width: 640px)");
   const { trigger: triggerHaptic } = useHaptic();
 
   // Sync form with initialHabit on open
@@ -181,7 +186,12 @@ export function HabitSheet({
           tab === "insights" ? "sm:max-w-2xl" : "sm:max-w-lg",
         )}
       >
-        <div className="flex flex-col max-h-[90dvh]">
+        <div
+          className={cn(
+            "flex flex-col",
+            isDrawer ? "flex-1 min-h-0" : "max-h-[90dvh]",
+          )}
+        >
           <ResponsiveDialogHeader className="sr-only">
             <ResponsiveDialogTitle>
               {initialHabit ? "Edit Habit" : "New Habit"}
