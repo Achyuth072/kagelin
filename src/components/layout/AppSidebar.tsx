@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import packageJson from "../../../package.json";
 const { version } = packageJson;
@@ -116,10 +117,15 @@ export function AppSidebar() {
       <Sidebar variant="sidebar" collapsible="icon" className="h-screen">
         <SidebarHeader>
           <div className="flex items-center py-2 h-14 pl-0.5">
-            {/* K logo — always in-flow, left-aligned matching nav icons */}
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-semibold shrink-0">
-              K
-            </div>
+            {/* Logo — always in-flow, left-aligned matching nav icons */}
+            <Image
+              src="/kagelin-icon.png"
+              alt="Kagelin"
+              width={32}
+              height={32}
+              priority
+              className="h-8 w-8 rounded-lg shrink-0"
+            />
             {/* Label + trigger hidden when collapsed (matching nav item pattern) */}
             <div
               className={cn(
