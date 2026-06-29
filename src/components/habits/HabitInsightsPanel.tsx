@@ -1,7 +1,6 @@
 "use client";
 
 import { useHabit } from "@/lib/hooks/useHabits";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { HabitOverviewCards } from "@/components/habits/insights/HabitOverviewCards";
 import { HabitScoreChart } from "@/components/habits/insights/HabitScoreChart";
@@ -20,7 +19,7 @@ export function HabitInsightsPanel({ habit }: HabitInsightsPanelProps) {
 
   if (isLoading) {
     return (
-      <div className="px-4 pt-4 pb-4 md:px-6 space-y-4">
+      <div className="px-4 pt-4 pb-4 md:px-6 space-y-4 contain-layout">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
@@ -45,58 +44,42 @@ export function HabitInsightsPanel({ habit }: HabitInsightsPanelProps) {
   }
 
   return (
-    <div className="px-4 pt-4 pb-4 md:px-6 space-y-4">
+    <div className="px-4 pt-4 pb-4 md:px-6 space-y-4 contain-layout">
       <HabitOverviewCards habit={habit} entries={entries} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Score
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <HabitScoreChart habit={habit} entries={entries} />
-        </CardContent>
-      </Card>
+      <div className="border-t border-border/80 pt-4 space-y-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Score
+        </p>
+        <HabitScoreChart habit={habit} entries={entries} />
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            History
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="w-full overflow-x-auto pb-1 scrollbar-hide min-w-0">
-            <HabitHeatmap
-              entries={entries}
-              color={habit.color}
-              startDate={habit.start_date ?? undefined}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="border-t border-border/80 pt-4 space-y-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          History
+        </p>
+        <div className="w-full overflow-x-auto pb-1 scrollbar-hide min-w-0">
+          <HabitHeatmap
+            entries={entries}
+            color={habit.color}
+            startDate={habit.start_date ?? undefined}
+          />
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Best Streaks
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <HabitBestStreaksCard habit={habit} entries={entries} />
-        </CardContent>
-      </Card>
+      <div className="border-t border-border/80 pt-4 space-y-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Best Streaks
+        </p>
+        <HabitBestStreaksCard habit={habit} entries={entries} />
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Frequency
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <HabitFrequencyGrid habit={habit} entries={entries} />
-        </CardContent>
-      </Card>
+      <div className="border-t border-border/80 pt-4 space-y-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Frequency
+        </p>
+        <HabitFrequencyGrid habit={habit} entries={entries} />
+      </div>
     </div>
   );
 }

@@ -25,7 +25,7 @@ export function HabitOverviewCards({
   const totalCompletions = getTotalCompletions(habit, entries);
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3">
       <MetricCard title="Score" value={`${score}%`} icon={Target} />
       <MetricCard
         title="Current Streak"
