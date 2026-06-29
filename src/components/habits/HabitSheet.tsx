@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, startTransition } from "react";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -182,8 +182,7 @@ export function HabitSheet({
     <ResponsiveDialog open={open} onOpenChange={onClose}>
       <ResponsiveDialogContent
         className={cn(
-          "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none",
-          tab === "insights" ? "sm:max-w-2xl" : "sm:max-w-lg",
+          "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none sm:grid-cols-[minmax(0,1fr)] sm:max-w-lg",
         )}
       >
         <div
@@ -205,11 +204,14 @@ export function HabitSheet({
 
           {!isCreationMode && (
             <div className="px-4 pt-3 pb-1 shrink-0 sm:pr-16">
-              <SheetTabToggle value={tab} onValueChange={setTab} />
+              <SheetTabToggle
+                value={tab}
+                onValueChange={(next) => startTransition(() => setTab(next))}
+              />
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0 scrollbar-hide">
             {tab === "insights" && !isCreationMode ? (
               <HabitInsightsPanel habit={effectiveHabit!} />
             ) : isCreationMode ? (
