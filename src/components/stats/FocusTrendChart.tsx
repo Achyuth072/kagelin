@@ -76,6 +76,7 @@ export function FocusTrendChart({ data, className }: FocusTrendChartProps) {
                 strokeWidth={2}
                 dot={{ fill: "hsl(var(--brand))", r: 4 }}
                 activeDot={{ r: 6 }}
+                isAnimationActive={false}
               />
             </LineChart>
           </ResponsiveContainer>

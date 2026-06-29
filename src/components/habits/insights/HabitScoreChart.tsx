@@ -12,7 +12,6 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { computeScores } from "@/lib/utils/habit-score";
-import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { LineChart as LineChartIcon } from "lucide-react";
 
@@ -31,7 +30,6 @@ interface HabitScoreChartProps {
 
 export function HabitScoreChart({ habit, entries }: HabitScoreChartProps) {
   const [period, setPeriod] = useState<Period>("month");
-  const reduced = usePrefersReducedMotion();
 
   const fullSeries = computeScores(habit, entries);
   const slice = PERIOD_SLICE[period];
@@ -66,44 +64,46 @@ export function HabitScoreChart({ habit, entries }: HabitScoreChartProps) {
         <ToggleGroupItem value="year">Year</ToggleGroupItem>
       </ToggleGroup>
 
-      <ResponsiveContainer width="100%" height={200}>
-        <AreaChart data={data}>
-          <XAxis
-            dataKey="date"
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            domain={[0, 100]}
-            stroke="hsl(var(--muted-foreground))"
-            fontSize={12}
-            tickLine={false}
-            axisLine={false}
-            tickFormatter={(v) => `${v}%`}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "hsl(var(--background))",
-              border: "1px solid hsl(var(--border))",
-              borderRadius: "8px",
-              fontSize: "12px",
-            }}
-            labelStyle={{ color: "hsl(var(--foreground))" }}
-            formatter={(value) => [`${value}%`, "Score"]}
-          />
-          <Area
-            type="monotone"
-            dataKey="score"
-            stroke={habit.color}
-            fill={habit.color}
-            fillOpacity={0.15}
-            strokeWidth={2}
-            isAnimationActive={!reduced}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+      <div className="w-full min-w-0 overflow-hidden">
+        <ResponsiveContainer width="100%" height={200}>
+          <AreaChart data={data}>
+            <XAxis
+              dataKey="date"
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              domain={[0, 100]}
+              stroke="hsl(var(--muted-foreground))"
+              fontSize={12}
+              tickLine={false}
+              axisLine={false}
+              tickFormatter={(v) => `${v}%`}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "hsl(var(--background))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: "8px",
+                fontSize: "12px",
+              }}
+              labelStyle={{ color: "hsl(var(--foreground))" }}
+              formatter={(value) => [`${value}%`, "Score"]}
+            />
+            <Area
+              type="monotone"
+              dataKey="score"
+              stroke={habit.color}
+              fill={habit.color}
+              fillOpacity={0.15}
+              strokeWidth={2}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
