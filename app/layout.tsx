@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import QueryProvider from "@/components/QueryProvider";
@@ -43,11 +44,14 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const initialIsGuest = cookieStore.get("kanso_guest_mode")?.value === "true";
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -80,7 +84,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            <AuthProvider>
+            <AuthProvider initialIsGuest={initialIsGuest}>
               <TimerProvider>
                 <AppShell>{children}</AppShell>
               </TimerProvider>
