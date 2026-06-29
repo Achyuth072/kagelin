@@ -100,7 +100,7 @@ describe("HabitSheet — Insights tab", () => {
     });
   });
 
-  it("toggles to Insights: swaps body and widens the dialog", async () => {
+  it("toggles to Insights: swaps body, dialog width stays unified", async () => {
     // Given: edit mode, currently on the Edit tab
     await act(async () => {
       render(
@@ -116,10 +116,10 @@ describe("HabitSheet — Insights tab", () => {
       fireEvent.click(screen.getByRole("radio", { name: "Insights" }));
     });
 
-    // Then: the edit form is gone, Insights content is shown, dialog widened
+    // Then: the edit form is gone, Insights content is shown, width unchanged
     expect(screen.queryByPlaceholderText("Habit name")).not.toBeInTheDocument();
     expect(screen.getByTestId("dialog-content").className).toContain(
-      "sm:max-w-2xl",
+      "sm:max-w-lg",
     );
 
     // When: toggled back to Edit
@@ -127,7 +127,7 @@ describe("HabitSheet — Insights tab", () => {
       fireEvent.click(screen.getByRole("radio", { name: "Edit" }));
     });
 
-    // Then: edit form returns, dialog narrows back
+    // Then: edit form returns, width still unchanged
     expect(screen.getByPlaceholderText("Habit name")).toBeInTheDocument();
     expect(screen.getByTestId("dialog-content").className).toContain(
       "sm:max-w-lg",
