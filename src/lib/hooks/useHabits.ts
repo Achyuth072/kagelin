@@ -102,6 +102,7 @@ export function useHabit(habitId: string | null) {
 
   return useQuery({
     queryKey: ["habit", habitId, isGuestMode],
+    staleTime: 60000, // 1 minute — avoid refetching on every sheet open
     queryFn: async (): Promise<HabitWithEntries | null> => {
       if (!habitId) return null;
 
@@ -143,5 +144,6 @@ export function useHabit(habitId: string | null) {
       };
     },
     enabled: !!habitId,
+    placeholderData: (previousData) => previousData,
   });
 }
