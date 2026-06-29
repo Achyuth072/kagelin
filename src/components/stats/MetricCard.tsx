@@ -23,10 +23,10 @@ export function MetricCard({
   className,
 }: MetricCardProps) {
   return (
-    <Card className={cn("p-4 md:p-6 border-border", className)}>
+    <Card className={cn("h-full p-4 md:p-6 border-border", className)}>
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1.5 md:space-y-2 min-w-0">
-          <p className="type-ui uppercase text-[10px] md:text-xs text-foreground/60 font-semibold tracking-wider">
+          <p className="type-ui uppercase text-[10px] md:text-xs text-foreground/60 font-semibold tracking-wider wrap-break-word">
             {title}
           </p>
           <p className="text-2xl md:text-4xl font-semibold tracking-[-0.02em]">
