@@ -44,7 +44,7 @@ export function HabitBestStreaksCard({
               style={{
                 width: `${(run / maxRun) * 100}%`,
                 backgroundColor: habit.color,
-                transition: reduced ? "none" : "width 0.5s ease-out",
+                transition: reduced ? "none" : "width 0.5s var(--ease-seijaku)",
               }}
             />
           </div>
