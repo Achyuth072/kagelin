@@ -31,6 +31,7 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
 
 vi.mock("@/lib/hooks/useTasks", () => ({
   useInboxProject: vi.fn(),
+  useTaskSeries: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
 vi.mock("@/lib/hooks/useProjects", () => ({

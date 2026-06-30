@@ -246,31 +246,42 @@ class MockStore {
       if (i % 7 === 0) createTask("Weekly Planning", i, pPersonal, 1);
     }
 
-    // Recurring task Series: one active Occurrence + a completed past Occurrence
-    // sharing a recurring_series_id, so guest-mode Task Insights has data.
+    // Recurring task Series: ~16 weeks of history + one active Occurrence, all
+    // sharing a recurring_series_id, so guest-mode Task Insights (streaks,
+    // on-time %, History heatmap) has more than a single data point to chart.
     const seriesId = `series-${generateId()}`;
     const weeklyRecurrence: RecurrenceRule = { freq: "WEEKLY", interval: 1 };
-    const pastOccurrenceDate = new Date(now.getTime() - 7 * oneDay);
-    pastOccurrenceDate.setHours(9, 0, 0, 0);
-    const activeOccurrenceDate = new Date(now.getTime());
-    activeOccurrenceDate.setHours(9, 0, 0, 0);
+    const seriesWeeks = 16;
 
-    tasks.push(
-      {
+    for (let w = seriesWeeks; w >= 0; w--) {
+      const dueDate = new Date(now.getTime() - w * 7 * oneDay);
+      dueDate.setHours(9, 0, 0, 0);
+
+      const isActiveOccurrence = w === 0;
+      // ~80% completion rate for past Occurrences; the current one is pending.
+      const isCompleted = !isActiveOccurrence && Math.random() > 0.2;
+
+      let completedAt: string | null = null;
+      if (isCompleted) {
+        // ~25% of completions run up to 2 days late.
+        const lateMs =
+          Math.random() > 0.75 ? Math.floor(Math.random() * 2 * oneDay) : 0;
+        completedAt = new Date(dueDate.getTime() + lateMs).toISOString();
+      }
+
+      tasks.push({
         id: `task-${generateId()}`,
         user_id: "guest",
         content: "Weekly Review",
         description: null,
-        is_completed: true,
-        completed_at: pastOccurrenceDate.toISOString(),
+        is_completed: isCompleted,
+        completed_at: completedAt,
         priority: 2,
         project_id: pWork,
         day_order: tasks.length,
-        created_at: new Date(
-          pastOccurrenceDate.getTime() - oneDay,
-        ).toISOString(),
-        updated_at: pastOccurrenceDate.toISOString(),
-        due_date: pastOccurrenceDate.toISOString(),
+        created_at: new Date(dueDate.getTime() - oneDay).toISOString(),
+        updated_at: completedAt ?? dueDate.toISOString(),
+        due_date: dueDate.toISOString(),
         do_date: null,
         is_evening: false,
         parent_id: null,
@@ -278,29 +289,8 @@ class MockStore {
         recurring_series_id: seriesId,
         google_event_id: null,
         google_etag: null,
-      },
-      {
-        id: `task-${generateId()}`,
-        user_id: "guest",
-        content: "Weekly Review",
-        description: null,
-        is_completed: false,
-        completed_at: null,
-        priority: 2,
-        project_id: pWork,
-        day_order: tasks.length + 1,
-        created_at: nowIso,
-        updated_at: nowIso,
-        due_date: activeOccurrenceDate.toISOString(),
-        do_date: null,
-        is_evening: false,
-        parent_id: null,
-        recurrence: weeklyRecurrence,
-        recurring_series_id: seriesId,
-        google_event_id: null,
-        google_etag: null,
-      },
-    );
+      });
+    }
 
     // Generate Habits
     const hWater = "habit-water";

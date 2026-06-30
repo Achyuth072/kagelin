@@ -20,6 +20,9 @@ function invalidateTaskCaches(queryClient: QueryClient): void {
     queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
     queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] }),
     queryClient.invalidateQueries({ queryKey: ["focus-tasks"] }),
+    // Keep Task Insights (streaks, on-time %, History) fresh after a
+    // completion toggle — the panel reads occurrences via ["task-series", …].
+    queryClient.invalidateQueries({ queryKey: ["task-series"] }),
   ]);
 }
 

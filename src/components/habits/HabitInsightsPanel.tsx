@@ -1,8 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { useHabit } from "@/lib/hooks/useHabits";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { InsightSection } from "@/components/ui/InsightSection";
 import { HabitOverviewCards } from "@/components/habits/insights/HabitOverviewCards";
 import { HabitScoreChart } from "@/components/habits/insights/HabitScoreChart";
 import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
@@ -13,23 +13,6 @@ import { BarChart3 } from "lucide-react";
 
 interface HabitInsightsPanelProps {
   habit: Habit;
-}
-
-function InsightSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="border-t border-border/80 pt-4 space-y-3">
-      <p className="type-ui uppercase text-xs text-foreground/60 font-semibold tracking-wider">
-        {title}
-      </p>
-      {children}
-    </div>
-  );
 }
 
 export function HabitInsightsPanel({
