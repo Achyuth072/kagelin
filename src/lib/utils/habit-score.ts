@@ -17,9 +17,17 @@ export function periodDays(period: FrequencyPeriod | null): number {
   }
 }
 
-export function dayValue(entryValue: number, habit: Habit): number {
+export function dayValue(
+  entryValue: number,
+  habit: Pick<Habit, "habit_type" | "target_type" | "target_value">,
+): number {
   if (habit.habit_type === "measurable" && habit.target_value != null) {
     if (habit.target_type === "at_least") {
+      if (habit.target_value <= 0) {
+        // Degenerate target: fall back to boolean done-ness (avoids ÷0 → NaN
+        // poisoning the whole score series, mirroring the at_most guard below).
+        return entryValue >= 1 ? 1 : 0;
+      }
       return Math.min(1, entryValue / habit.target_value);
     }
     if (habit.target_type === "at_most") {

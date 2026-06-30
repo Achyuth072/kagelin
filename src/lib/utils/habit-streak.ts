@@ -7,6 +7,7 @@ import {
 } from "date-fns";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { interpolateDoneDays } from "@/lib/utils/habit-intervals";
+import { dayValue } from "@/lib/utils/habit-score";
 
 /**
  * Current unbroken run of done-days ending at the present.
@@ -90,8 +91,11 @@ export function getBestStreaks(
 }
 
 /**
- * Total completions: interpolated done-day count for boolean;
- * target-meeting logged-day count for measurable.
+ * Total completions: count of logged Entries that meet target.
+ *
+ * Per the domain spec, this counts only days with a real logged entry meeting
+ * target — NOT interpolated/filled off-days, which would inflate the count for
+ * frequency-aware habits and diverge from the habit card's raw completion count.
  */
 export function getTotalCompletions(
   habit: Pick<
@@ -103,9 +107,12 @@ export function getTotalCompletions(
     | "target_value"
   >,
   entries: HabitEntry[],
-  today: Date = new Date(),
+  _today: Date = new Date(),
 ): number {
-  return buildDoneSet(habit, entries, today).size;
+  if (habit.habit_type === "measurable") {
+    return entries.filter((e) => dayValue(e.value, habit) >= 1).length;
+  }
+  return entries.filter((e) => e.value >= 1).length;
 }
 
 function buildDoneSet(
@@ -121,13 +128,13 @@ function buildDoneSet(
   today: Date,
 ): Set<string> {
   if (habit.habit_type === "measurable") {
-    // Measurable: Boolean-only, no interpolation
-    const target = habit.target_value ?? 0;
+    // Measurable: Boolean-only, no interpolation. Use the shared dayValue
+    // predicate so the Score engine, Overview, and Frequency grid agree on
+    // "done" — and so a null/0 target can't mark every logged day (incl. value 0)
+    // as complete via the old `value >= (target ?? 0)` shortcut.
     const done = new Set<string>();
     for (const e of entries) {
-      if (habit.target_type === "at_least" && e.value >= target) {
-        done.add(e.date);
-      } else if (habit.target_type === "at_most" && e.value <= target) {
+      if (dayValue(e.value, habit) >= 1) {
         done.add(e.date);
       }
     }
