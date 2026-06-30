@@ -36,6 +36,10 @@ export function HabitFrequencyGrid({
 
     const months = monthStarts.map((m) => format(m, "MMM"));
 
+    // "yyyy-MM" → column index, computed once so the per-entry loop is O(1).
+    const monthIndexByKey = new Map<string, number>();
+    monthStarts.forEach((m, i) => monthIndexByKey.set(format(m, "yyyy-MM"), i));
+
     // Build count map: "weekdayIndex-monthIndex" → count
     // weekdayIndex: 0=Mon ... 6=Sun (ISO), monthIndex: 0..11
     // A day counts as "done" using the shared dayValue predicate so measurable
@@ -46,11 +50,8 @@ export function HabitFrequencyGrid({
       if (dayValue(e.value, habit) < 1) continue;
       const d = parseISO(e.date);
       const weekday = (d.getDay() + 6) % 7; // Mon=0, Sun=6
-      const monthKey = format(d, "yyyy-MM");
-      const monthIdx = monthStarts.findIndex(
-        (m) => format(m, "yyyy-MM") === monthKey,
-      );
-      if (monthIdx === -1) continue;
+      const monthIdx = monthIndexByKey.get(format(d, "yyyy-MM"));
+      if (monthIdx === undefined) continue;
       const key = `${weekday}-${monthIdx}`;
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }

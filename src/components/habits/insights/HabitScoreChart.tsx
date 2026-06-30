@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   AreaChart,
   Area,
@@ -31,7 +31,11 @@ interface HabitScoreChartProps {
 export function HabitScoreChart({ habit, entries }: HabitScoreChartProps) {
   const [period, setPeriod] = useState<Period>("month");
 
-  const fullSeries = computeScores(habit, entries);
+  // Compute the full daily series once; switching periods only reslices the tail.
+  const fullSeries = useMemo(
+    () => computeScores(habit, entries),
+    [habit, entries],
+  );
   const slice = PERIOD_SLICE[period];
   const data = fullSeries.slice(-slice).map((d) => ({
     date: d.date,
