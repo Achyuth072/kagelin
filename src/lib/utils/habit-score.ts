@@ -45,9 +45,14 @@ export function computeScores(
     entryMap.set(e.date, e.value);
   }
 
-  const startDate = from
-    ? startOfDay(from)
-    : startOfDay(parseISO(entries[0].date));
+  // Entries are not guaranteed to be sorted (Supabase returns rows without an
+  // ORDER BY, and the guest-mode store preserves insertion order), so derive
+  // the series start from the earliest entry rather than entries[0].
+  const earliest = entries.reduce(
+    (min, e) => (e.date < min ? e.date : min),
+    entries[0].date,
+  );
+  const startDate = from ? startOfDay(from) : startOfDay(parseISO(earliest));
   const endDate = startOfDay(to);
 
   if (startDate > endDate) return [];
