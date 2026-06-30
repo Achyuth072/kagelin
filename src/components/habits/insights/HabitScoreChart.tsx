@@ -103,6 +103,10 @@ export function HabitScoreChart({ habit, entries }: HabitScoreChartProps) {
               fill={habit.color}
               fillOpacity={0.15}
               strokeWidth={2}
+              // Entry animation is disabled outright (matching FocusTrendChart)
+              // to stop recharts replaying the sweep every time the Insights tab
+              // remounts. This is a stricter superset of reduced-motion: the chart
+              // never animates, so prefers-reduced-motion is honoured by default.
               isAnimationActive={false}
             />
           </AreaChart>
