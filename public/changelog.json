@@ -10,6 +10,39 @@
     }
   },
   {
+    "version": "1.24.0-preview.4",
+    "date": "2026-06-30",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Implement Habit Insights 5-card panel (Overview, Score, History, Best Streaks, Frequency)",
+        "Refine insights panel layout",
+        "Add Kagelin branding icons and fix maskable PWA cropping (#76)",
+        "Replace app icon with Kagelin branding (#75)",
+        "Implement habit Insights tab with 5-card layout"
+      ],
+      "Improved": [
+        "Memoize Insights score series and frequency month lookup"
+      ],
+      "Fixed": [
+        "Align Insights section labels with MetricCard styling",
+        "Bump Frequency grid labels to the Micro type floor",
+        "Use seijaku easing for Best Streaks bar transition",
+        "Hide day-counting metrics for measurable habits in Insights",
+        "Correct measurable target predicate and completion counts",
+        "Ensure start date derives from the earliest entry regardless of order",
+        "Resolve guest-mode hydration mismatch on app shell",
+        "Keep checkbox pinned right on mobile HabitCard",
+        "Equal-height metric cards with wrapping titles",
+        "Unify Edit/Insights dialog width",
+        "Disable chart entry animations to prevent replay on remount",
+        "Cache useHabit query to avoid refetch on reopen",
+        "Shrink masakable icon",
+        "Shrink maskable icon content to clear safe-zone circle (#77)"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.3",
     "date": "2026-06-17",
     "channel": "preview",
@@ -634,16 +667,6 @@
         "Date validation loosened to handle ISO strings with timezone offsets",
         "Task date picker now shows visual error feedback and surfaces hidden validation errors",
         "Silent form invalidation resolved in task create and edit views"
-      ]
-    }
-  },
-  {
-    "version": "1.16.1",
-    "date": "2026-04-07",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Build failure from Uint8Array to BlobPart type mismatch resolved"
       ]
     }
   }
