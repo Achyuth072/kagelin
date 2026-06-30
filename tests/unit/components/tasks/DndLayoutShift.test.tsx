@@ -163,6 +163,8 @@ describe("TaskList DnD layout shift protection", () => {
         setViewMode: vi.fn(),
         habitViewMode: "grid",
         setHabitViewMode: vi.fn(),
+        statsPeriod: "30d",
+        setStatsPeriod: vi.fn(),
         timeFormat: "system",
         setTimeFormat: vi.fn(),
         hapticsEnabled: true,
