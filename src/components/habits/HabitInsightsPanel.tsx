@@ -24,7 +24,7 @@ function InsightSection({
 }) {
   return (
     <div className="border-t border-border/80 pt-4 space-y-3">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      <p className="type-ui uppercase text-xs text-foreground/60 font-semibold tracking-wider">
         {title}
       </p>
       {children}
