@@ -95,7 +95,7 @@ export function HabitFrequencyGrid({
         {months.map((m) => (
           <div
             key={m}
-            className="text-center text-[10px] text-muted-foreground"
+            className="text-center text-[11px] text-muted-foreground"
           >
             {m}
           </div>
@@ -129,7 +129,7 @@ function FrequencyRow({
 }) {
   return (
     <>
-      <div className="flex items-center text-[10px] text-muted-foreground pr-1">
+      <div className="flex items-center text-[11px] text-muted-foreground pr-1">
         {weekday}
       </div>
       {counts.map((c, i) => {
