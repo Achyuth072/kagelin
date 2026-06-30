@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useHabit } from "@/lib/hooks/useHabits";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { HabitOverviewCards } from "@/components/habits/insights/HabitOverviewCards";
@@ -14,8 +15,27 @@ interface HabitInsightsPanelProps {
   habit: Habit;
 }
 
-export function HabitInsightsPanel({ habit }: HabitInsightsPanelProps) {
-  const { data, isLoading } = useHabit(habit.id);
+function InsightSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="border-t border-border/80 pt-4 space-y-3">
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+export function HabitInsightsPanel({
+  habit: habitProp,
+}: HabitInsightsPanelProps) {
+  const { data, isLoading } = useHabit(habitProp.id);
 
   if (isLoading) {
     return (
@@ -30,6 +50,10 @@ export function HabitInsightsPanel({ habit }: HabitInsightsPanelProps) {
     );
   }
 
+  // Prefer the freshly-fetched habit so its fields (frequency, target, color)
+  // stay consistent with the entries from the same query — the prop comes from
+  // the list cache and can lag behind an edit.
+  const habit = data ?? habitProp;
   const entries = data?.entries ?? [];
 
   if (entries.length === 0) {
@@ -47,17 +71,11 @@ export function HabitInsightsPanel({ habit }: HabitInsightsPanelProps) {
     <div className="px-4 pt-4 pb-4 md:px-6 space-y-4 contain-layout">
       <HabitOverviewCards habit={habit} entries={entries} />
 
-      <div className="border-t border-border/80 pt-4 space-y-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Score
-        </p>
+      <InsightSection title="Score">
         <HabitScoreChart habit={habit} entries={entries} />
-      </div>
+      </InsightSection>
 
-      <div className="border-t border-border/80 pt-4 space-y-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          History
-        </p>
+      <InsightSection title="History">
         <div className="w-full overflow-x-auto pb-1 scrollbar-hide min-w-0">
           <HabitHeatmap
             entries={entries}
@@ -65,21 +83,18 @@ export function HabitInsightsPanel({ habit }: HabitInsightsPanelProps) {
             startDate={habit.start_date ?? undefined}
           />
         </div>
-      </div>
+      </InsightSection>
 
-      <div className="border-t border-border/80 pt-4 space-y-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Best Streaks
-        </p>
-        <HabitBestStreaksCard habit={habit} entries={entries} />
-      </div>
+      {/* Best Streaks is a day-counting metric — Boolean Habits only (CONTEXT.md). */}
+      {habit.habit_type !== "measurable" && (
+        <InsightSection title="Best Streaks">
+          <HabitBestStreaksCard habit={habit} entries={entries} />
+        </InsightSection>
+      )}
 
-      <div className="border-t border-border/80 pt-4 space-y-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Frequency
-        </p>
+      <InsightSection title="Frequency">
         <HabitFrequencyGrid habit={habit} entries={entries} />
-      </div>
+      </InsightSection>
     </div>
   );
 }
