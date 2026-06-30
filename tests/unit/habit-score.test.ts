@@ -233,6 +233,27 @@ describe("computeScores — 3×/week boolean", () => {
   });
 });
 
+describe("computeScores — entry order independence", () => {
+  it("derives the start date from the earliest entry regardless of array order", () => {
+    // Entries supplied newest-first (e.g. as Supabase/mock-store may return them
+    // with no ORDER BY). The series must still span from the oldest entry.
+    const ascending = [
+      entry("2026-06-08", 1),
+      entry("2026-06-09", 1),
+      entry("2026-06-10", 1),
+    ];
+    const descending = [...ascending].reverse();
+    const to = new Date("2026-06-10T12:00:00");
+
+    const fromAscending = computeScores(dailyBoolean, ascending, { to });
+    const fromDescending = computeScores(dailyBoolean, descending, { to });
+
+    // A 3-day window, not collapsed to ~1 day by a bad start date.
+    expect(fromAscending).toHaveLength(3);
+    expect(fromDescending).toEqual(fromAscending);
+  });
+});
+
 describe("currentScore — daily boolean", () => {
   it("returns 0 with no entries", () => {
     expect(currentScore(dailyBoolean, [])).toBe(0);

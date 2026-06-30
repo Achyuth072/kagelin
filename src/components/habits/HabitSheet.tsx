@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, startTransition } from "react";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -96,6 +96,11 @@ export function HabitSheet({
   const updateMutation = useUpdateHabit();
   const deleteMutation = useDeleteHabit();
   const isMobile = useMediaQuery("(max-width: 768px)");
+  // Matches ResponsiveDialog's own Dialog/Drawer breakpoint exactly — the
+  // drawer is a true flex column so flex-1/min-h-0 sizes correctly, while
+  // the desktop dialog is a CSS grid where only an explicit max-height
+  // resolves (percentage/flex sizing against its auto-height box doesn't).
+  const isDrawer = useMediaQuery("(max-width: 640px)");
   const { trigger: triggerHaptic } = useHaptic();
 
   // Sync form with initialHabit on open
@@ -177,11 +182,15 @@ export function HabitSheet({
     <ResponsiveDialog open={open} onOpenChange={onClose}>
       <ResponsiveDialogContent
         className={cn(
-          "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none",
-          tab === "insights" ? "sm:max-w-2xl" : "sm:max-w-lg",
+          "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none sm:grid-cols-[minmax(0,1fr)] sm:max-w-lg",
         )}
       >
-        <div className="flex flex-col max-h-[90dvh]">
+        <div
+          className={cn(
+            "flex flex-col",
+            isDrawer ? "flex-1 min-h-0" : "max-h-[90dvh]",
+          )}
+        >
           <ResponsiveDialogHeader className="sr-only">
             <ResponsiveDialogTitle>
               {initialHabit ? "Edit Habit" : "New Habit"}
@@ -195,11 +204,14 @@ export function HabitSheet({
 
           {!isCreationMode && (
             <div className="px-4 pt-3 pb-1 shrink-0 sm:pr-16">
-              <SheetTabToggle value={tab} onValueChange={setTab} />
+              <SheetTabToggle
+                value={tab}
+                onValueChange={(next) => startTransition(() => setTab(next))}
+              />
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0 scrollbar-hide">
             {tab === "insights" && !isCreationMode ? (
               <HabitInsightsPanel habit={effectiveHabit!} />
             ) : isCreationMode ? (

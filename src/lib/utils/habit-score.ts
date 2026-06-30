@@ -17,9 +17,17 @@ export function periodDays(period: FrequencyPeriod | null): number {
   }
 }
 
-export function dayValue(entryValue: number, habit: Habit): number {
+export function dayValue(
+  entryValue: number,
+  habit: Pick<Habit, "habit_type" | "target_type" | "target_value">,
+): number {
   if (habit.habit_type === "measurable" && habit.target_value != null) {
     if (habit.target_type === "at_least") {
+      if (habit.target_value <= 0) {
+        // Degenerate target: fall back to boolean done-ness (avoids ÷0 → NaN
+        // poisoning the whole score series, mirroring the at_most guard below).
+        return entryValue >= 1 ? 1 : 0;
+      }
       return Math.min(1, entryValue / habit.target_value);
     }
     if (habit.target_type === "at_most") {
@@ -45,9 +53,14 @@ export function computeScores(
     entryMap.set(e.date, e.value);
   }
 
-  const startDate = from
-    ? startOfDay(from)
-    : startOfDay(parseISO(entries[0].date));
+  // Entries are not guaranteed to be sorted (Supabase returns rows without an
+  // ORDER BY, and the guest-mode store preserves insertion order), so derive
+  // the series start from the earliest entry rather than entries[0].
+  const earliest = entries.reduce(
+    (min, e) => (e.date < min ? e.date : min),
+    entries[0].date,
+  );
+  const startDate = from ? startOfDay(from) : startOfDay(parseISO(earliest));
   const endDate = startOfDay(to);
 
   if (startDate > endDate) return [];

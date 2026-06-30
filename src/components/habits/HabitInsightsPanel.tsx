@@ -1,15 +1,100 @@
 "use client";
 
+import type { ReactNode } from "react";
+import { useHabit } from "@/lib/hooks/useHabits";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { HabitOverviewCards } from "@/components/habits/insights/HabitOverviewCards";
+import { HabitScoreChart } from "@/components/habits/insights/HabitScoreChart";
+import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
+import { HabitBestStreaksCard } from "@/components/habits/insights/HabitBestStreaksCard";
+import { HabitFrequencyGrid } from "@/components/habits/insights/HabitFrequencyGrid";
 import type { Habit } from "@/lib/types/habit";
+import { BarChart3 } from "lucide-react";
 
 interface HabitInsightsPanelProps {
   habit: Habit;
 }
 
-export function HabitInsightsPanel({ habit: _habit }: HabitInsightsPanelProps) {
+function InsightSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
   return (
-    <div className="flex h-full flex-col items-center justify-center p-8 text-center text-sm text-muted-foreground">
-      Insights coming soon
+    <div className="border-t border-border/80 pt-4 space-y-3">
+      <p className="type-ui uppercase text-xs text-foreground/60 font-semibold tracking-wider">
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+export function HabitInsightsPanel({
+  habit: habitProp,
+}: HabitInsightsPanelProps) {
+  const { data, isLoading } = useHabit(habitProp.id);
+
+  if (isLoading) {
+    return (
+      <div className="px-4 pt-4 pb-4 md:px-6 space-y-4 contain-layout">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-32 rounded-xl border border-border/80 bg-card animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // Prefer the freshly-fetched habit so its fields (frequency, target, color)
+  // stay consistent with the entries from the same query — the prop comes from
+  // the list cache and can lag behind an edit.
+  const habit = data ?? habitProp;
+  const entries = data?.entries ?? [];
+
+  if (entries.length === 0) {
+    return (
+      <EmptyState
+        icon={BarChart3}
+        title="No data yet"
+        description="Log this habit to see insights."
+        className="px-4 py-12 md:px-6 gap-3"
+      />
+    );
+  }
+
+  return (
+    <div className="px-4 pt-4 pb-4 md:px-6 space-y-4 contain-layout">
+      <HabitOverviewCards habit={habit} entries={entries} />
+
+      <InsightSection title="Score">
+        <HabitScoreChart habit={habit} entries={entries} />
+      </InsightSection>
+
+      <InsightSection title="History">
+        <div className="w-full overflow-x-auto pb-1 scrollbar-hide min-w-0">
+          <HabitHeatmap
+            entries={entries}
+            color={habit.color}
+            startDate={habit.start_date ?? undefined}
+          />
+        </div>
+      </InsightSection>
+
+      {/* Best Streaks is a day-counting metric — Boolean Habits only (CONTEXT.md). */}
+      {habit.habit_type !== "measurable" && (
+        <InsightSection title="Best Streaks">
+          <HabitBestStreaksCard habit={habit} entries={entries} />
+        </InsightSection>
+      )}
+
+      <InsightSection title="Frequency">
+        <HabitFrequencyGrid habit={habit} entries={entries} />
+      </InsightSection>
     </div>
   );
 }

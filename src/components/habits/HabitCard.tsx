@@ -103,7 +103,7 @@ export function HabitCard({
     >
       <div className="flex flex-col gap-6">
         {/* Header: Title, Description + Toggle */}
-        <div className="flex justify-between items-start">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex gap-4 items-center min-w-0">
             <div className="min-w-0">
               <h3 className="text-[15px] font-semibold tracking-tight text-foreground flex items-center gap-2.5 min-w-0">

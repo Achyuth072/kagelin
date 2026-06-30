@@ -152,7 +152,7 @@ describe("getBestStreaks", () => {
 describe("getTotalCompletions", () => {
   const today = new Date("2026-06-11T10:00:00");
 
-  it("counts interpolated done-days for boolean", () => {
+  it("counts logged done-days for boolean", () => {
     // Daily boolean: raw count
     const entries = [
       entry("2026-06-01", 1),
@@ -160,6 +160,20 @@ describe("getTotalCompletions", () => {
       entry("2026-06-03", 0),
     ];
     expect(getTotalCompletions(dailyBoolean, entries, today)).toBe(2);
+  });
+
+  it("counts only logged completions for frequency-aware habits, not interpolated days", () => {
+    // Flawless 3×/week: June 1,3,5,8,10 interpolate to a ~11-day streak, but
+    // Total Completions must report the 5 real check-ins (CONTEXT.md: counts
+    // only days with a logged Entry that meets target).
+    const entries = [
+      entry("2026-06-01", 1),
+      entry("2026-06-03", 1),
+      entry("2026-06-05", 1),
+      entry("2026-06-08", 1),
+      entry("2026-06-10", 1),
+    ];
+    expect(getTotalCompletions(threePerWeek, entries, today)).toBe(5);
   });
 
   it("counts target-meeting days for measurable at_least", () => {
