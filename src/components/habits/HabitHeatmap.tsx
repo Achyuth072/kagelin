@@ -4,10 +4,9 @@ import React from "react";
 import { ActivityCalendar } from "react-activity-calendar";
 import "react-activity-calendar/tooltips.css";
 import { useTheme } from "next-themes";
-import type { HabitEntry } from "@/lib/hooks/useHabits";
 
 interface HabitHeatmapProps {
-  entries: HabitEntry[];
+  entries: Array<{ date: string; value: number }>;
   color: string;
   className?: string;
   blockSize?: number;
