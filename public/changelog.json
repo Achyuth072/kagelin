@@ -10,6 +10,18 @@
     }
   },
   {
+    "version": "1.24.0-preview.9",
+    "date": "2026-07-01",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Render Projections card on the stats page",
+        "Add Projections card component",
+        "Add pace projection and streak-at-risk utils"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.8",
     "date": "2026-07-01",
     "channel": "preview",
@@ -645,17 +657,6 @@
     "sections": {
       "Added": [
         "Global 12hr/24hr time format preference"
-      ]
-    }
-  },
-  {
-    "version": "1.19.1",
-    "date": "2026-05-10",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Focus timer sliders no longer reset when switching tabs or navigating away",
-        "Guest mode loads faster with no unnecessary network calls"
       ]
     }
   }
