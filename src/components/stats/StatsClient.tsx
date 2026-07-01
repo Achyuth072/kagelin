@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { Target, CheckCircle2, Flame, Clock, Zap, Repeat } from "lucide-react";
 import { MetricCard } from "@/components/stats/MetricCard";
 import { PeriodSelector } from "@/components/stats/PeriodSelector";
+import { StatsExportMenu } from "@/components/stats/StatsExportMenu";
 import { TimeOfDayHeatmap } from "@/components/stats/TimeOfDayHeatmap";
 import { HabitScoreComparison } from "@/components/stats/HabitScoreComparison";
 import { ProjectBreakdownCard } from "@/components/stats/breakdowns/ProjectBreakdownCard";
@@ -92,11 +93,14 @@ export function StatsClient() {
   return (
     <div className="px-4 md:px-6 py-6 pb-12 md:pb-6 scrollbar-hide">
       <div className="space-y-6 md:space-y-8">
-        <div>
-          <h1 className="type-h1 text-2xl md:text-3xl">Statistics</h1>
-          <p className="text-xs md:text-sm text-muted-foreground mt-1">
-            Track your productivity and progress
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="type-h1 text-2xl md:text-3xl">Statistics</h1>
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">
+              Track your productivity and progress
+            </p>
+          </div>
+          <StatsExportMenu stats={stats} period={statsPeriod} />
         </div>
 
         <PeriodSelector

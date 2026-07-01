@@ -1,20 +1,29 @@
 "use client";
 
-import { useHabit } from "@/lib/hooks/useHabits";
+import { useState } from "react";
+import { BarChart3, Download, Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InsightSection } from "@/components/ui/InsightSection";
+import { CircularProgress } from "@/components/ui/circular-progress";
 import { HabitOverviewCards } from "@/components/habits/insights/HabitOverviewCards";
 import { HabitScoreChart } from "@/components/habits/insights/HabitScoreChart";
 import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
 import { HabitBestStreaksCard } from "@/components/habits/insights/HabitBestStreaksCard";
 import { HabitFrequencyGrid } from "@/components/habits/insights/HabitFrequencyGrid";
-import { CircularProgress } from "@/components/ui/circular-progress";
+import { useHabit } from "@/lib/hooks/useHabits";
+import { useHaptic } from "@/lib/hooks/useHaptic";
 import {
   getFrequencyProgress,
   frequencyProgressLabel,
 } from "@/lib/utils/habit-frequency-progress";
+import {
+  analyticsFilename,
+  habitHistoryToCsv,
+  triggerDownload,
+} from "@/lib/utils/stats-export";
 import type { Habit } from "@/lib/types/habit";
-import { BarChart3 } from "lucide-react";
 
 interface HabitInsightsPanelProps {
   habit: Habit;
@@ -24,6 +33,8 @@ export function HabitInsightsPanel({
   habit: habitProp,
 }: HabitInsightsPanelProps) {
   const { data, isLoading } = useHabit(habitProp.id);
+  const { trigger } = useHaptic();
+  const [isExporting, setIsExporting] = useState(false);
 
   if (isLoading) {
     return (
@@ -43,6 +54,27 @@ export function HabitInsightsPanel({
   // the list cache and can lag behind an edit.
   const habit = data ?? habitProp;
   const entries = data?.entries ?? [];
+
+  const handleExportHistory = () => {
+    trigger("toggle");
+    setIsExporting(true);
+    try {
+      const csv = habitHistoryToCsv(habit, entries);
+      triggerDownload(
+        analyticsFilename("habit", "csv", { habitId: habit.id }),
+        csv,
+        "text/csv",
+      );
+      toast.success("Habit history exported as CSV");
+      trigger("success");
+    } catch (err) {
+      console.error("Habit history export failed:", err);
+      toast.error("Failed to export habit history");
+      trigger("thud");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Frequency progress ring — Boolean Habits only, same gate as HabitCard.
   const showFrequencyRing = habit.habit_type !== "measurable";
@@ -70,6 +102,25 @@ export function HabitInsightsPanel({
       </InsightSection>
 
       <InsightSection title="History">
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleExportHistory}
+            disabled={isExporting || entries.length === 0}
+            className="gap-1.5 h-7 text-xs text-muted-foreground hover:text-brand transition-colors"
+          >
+            {isExporting ? (
+              <Loader2
+                className="h-3.5 w-3.5 animate-spin"
+                strokeWidth={2.25}
+              />
+            ) : (
+              <Download className="h-3.5 w-3.5" strokeWidth={2.25} />
+            )}
+            Export history
+          </Button>
+        </div>
         <div className="w-full overflow-x-auto pb-1 scrollbar-hide min-w-0">
           <HabitHeatmap
             entries={entries}
