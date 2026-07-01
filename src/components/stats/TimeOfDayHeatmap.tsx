@@ -55,7 +55,7 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
         ) : (
           <div className="overflow-x-auto custom-scrollbar pb-2">
             <div
-              className="grid gap-1 w-max"
+              className="grid gap-1 w-full"
               style={{
                 gridTemplateColumns: "auto repeat(24, minmax(18px, 1fr))",
               }}
