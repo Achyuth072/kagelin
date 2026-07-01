@@ -19,11 +19,13 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
-import { useUiStore } from "@/lib/store/uiStore";
+import { useUiStore, type GoalsState } from "@/lib/store/uiStore";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Target } from "lucide-react";
 import { Vibrate } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useQueryClient } from "@tanstack/react-query";
@@ -55,8 +57,11 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const setHapticsEnabled = useUiStore((state) => state.setHapticsEnabled);
   const timeFormat = useUiStore((state) => state.timeFormat);
   const setTimeFormat = useUiStore((state) => state.setTimeFormat);
+  const goals = useUiStore((state) => state.goals);
+  const setGoals = useUiStore((state) => state.setGoals);
   const { user, signOut, isGuestMode } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -64,8 +69,13 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "appearance" | "preferences" | "account"
-  >("appearance");
+    "appearance" | "preferences" | "goals" | "account"
+  >(() => {
+    const tab = searchParams.get("tab");
+    return tab === "preferences" || tab === "goals" || tab === "account"
+      ? tab
+      : "appearance";
+  });
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { trigger } = useHaptic();
   const { clearCloudData } = useAccountData();
@@ -118,6 +128,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const sectionTabs = [
     { value: "appearance", label: "Appearance" },
     { value: "preferences", label: "Preferences" },
+    { value: "goals", label: "Goals" },
     { value: "account", label: "Account" },
   ] as const;
 
@@ -148,11 +159,13 @@ export function SettingsClient({ version }: SettingsClientProps) {
             value={activeTab}
             onValueChange={(v) => {
               trigger("toggle");
-              setActiveTab(v as "appearance" | "preferences" | "account");
+              setActiveTab(
+                v as "appearance" | "preferences" | "goals" | "account",
+              );
             }}
             className="w-full"
           >
-            <TabsList className="grid grid-cols-3 bg-secondary/10 p-1 rounded-lg h-11 border border-border/40 shadow-none">
+            <TabsList className="grid grid-cols-4 bg-secondary/10 p-1 rounded-lg h-11 border border-border/40 shadow-none">
               {sectionTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -316,6 +329,53 @@ export function SettingsClient({ version }: SettingsClientProps) {
                   </div>
 
                   <NotificationSettings />
+                </div>
+              </section>
+            )}
+
+            {activeTab === "goals" && (
+              <section className="space-y-4">
+                <div>
+                  <h2 className="type-micro font-medium uppercase">Goals</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Set daily and weekly targets. Leave a field empty to hide
+                    its ring on the Stats page.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-lg border border-border/50 bg-background space-y-4">
+                  <div className="flex items-center gap-3 pb-1">
+                    <div className="p-2 rounded-full bg-secondary/30">
+                      <Target className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Focus &amp; Tasks</p>
+                      <p className="text-xs text-muted-foreground">
+                        Shown as rings on the Stats page
+                      </p>
+                    </div>
+                  </div>
+
+                  <GoalField
+                    label="Daily focus hours"
+                    value={goals.dailyFocusHours}
+                    onCommit={(v) => setGoals({ dailyFocusHours: v })}
+                  />
+                  <GoalField
+                    label="Weekly focus hours"
+                    value={goals.weeklyFocusHours}
+                    onCommit={(v) => setGoals({ weeklyFocusHours: v })}
+                  />
+                  <GoalField
+                    label="Daily tasks completed"
+                    value={goals.dailyTasksCompleted}
+                    onCommit={(v) => setGoals({ dailyTasksCompleted: v })}
+                  />
+                  <GoalField
+                    label="Weekly tasks completed"
+                    value={goals.weeklyTasksCompleted}
+                    onCommit={(v) => setGoals({ weeklyTasksCompleted: v })}
+                  />
                 </div>
               </section>
             )}
@@ -490,5 +550,50 @@ export function SettingsClient({ version }: SettingsClientProps) {
 
       {isSigningOut && <LoaderOverlay message="Signing out..." />}
     </>
+  );
+}
+
+interface GoalFieldProps {
+  label: string;
+  value: GoalsState[keyof GoalsState];
+  onCommit: (value: number | null) => void;
+}
+
+/** Local draft text so keystrokes don't hit the store; commits on blur. */
+function GoalField({ label, value, onCommit }: GoalFieldProps) {
+  const [text, setText] = useState(value != null ? String(value) : "");
+  const [prevValue, setPrevValue] = useState(value);
+
+  // Resync the draft when the store value changes externally (e.g. reset
+  // demo data) — adjusted during render per React's "don't setState in an
+  // effect for derived state" guidance, not via useEffect.
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setText(value != null ? String(value) : "");
+  }
+
+  const commit = () => {
+    const trimmed = text.trim();
+    if (trimmed === "") {
+      onCommit(null);
+      return;
+    }
+    const parsed = Number(trimmed);
+    onCommit(Number.isFinite(parsed) && parsed >= 0 ? parsed : null);
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <label className="text-sm text-foreground">{label}</label>
+      <Input
+        type="number"
+        min={0}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        placeholder="Off"
+        className="w-24 text-right"
+      />
+    </div>
   );
 }
