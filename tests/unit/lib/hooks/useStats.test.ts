@@ -314,3 +314,36 @@ describe("calculateStats time-of-day heatmap", () => {
     result.timeOfDay.forEach((row) => expect(row).toHaveLength(24));
   });
 });
+
+describe("calculateStats daily habit-reps bucketing (for CSV export)", () => {
+  const NOW = new Date("2024-06-15T12:00:00.000Z");
+  let originalTz: string | undefined;
+
+  beforeAll(() => {
+    originalTz = process.env.TZ;
+    process.env.TZ = "UTC";
+  });
+  afterAll(() => {
+    process.env.TZ = originalTz;
+  });
+
+  it("counts habit entries into the day they fall on, inside the period", () => {
+    const habitEntries = [
+      { date: "2024-06-14" }, // inside 7d (June 9..15)
+      { date: "2024-06-14" }, // same day → 2 reps that day
+      { date: "2024-06-10" }, // another in-window day
+      { date: "2024-05-01" }, // outside the 7d window → excluded
+    ];
+
+    const result = calculateStats([], [], habitEntries, "7d", NOW);
+
+    // June 14 is index 5 (June 9..15 = 7 days); June 10 is index 1.
+    expect(result.dailyTrend[5].habitReps).toBe(2);
+    expect(result.dailyTrend[1].habitReps).toBe(1);
+    // Every other day stays at 0.
+    expect(result.dailyTrend[0].habitReps).toBe(0);
+    expect(result.dailyTrend[6].habitReps).toBe(0);
+    // The headline total still counts only in-window reps.
+    expect(result.habitReps).toBe(3);
+  });
+});
