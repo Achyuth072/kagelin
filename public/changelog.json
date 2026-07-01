@@ -10,6 +10,17 @@
     }
   },
   {
+    "version": "1.24.0-preview.10",
+    "date": "2026-07-01",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Give Trend chart axis labels breathing room on mobile",
+        "Thin Trend chart x-axis ticks on mobile to stop overlap"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.9",
     "date": "2026-07-01",
     "channel": "preview",
@@ -647,16 +658,6 @@
     "sections": {
       "Added": [
         "Strict vs flexible task recurrence modes"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.0",
-    "date": "2026-05-05",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Global 12hr/24hr time format preference"
       ]
     }
   }
