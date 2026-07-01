@@ -273,6 +273,13 @@ describe("TaskList drop race condition (residual snap-back)", () => {
         setIsSynced: vi.fn(),
         hasChangelogUpdate: false,
         setHasChangelogUpdate: vi.fn(),
+        goals: {
+          dailyFocusHours: null,
+          weeklyFocusHours: null,
+          dailyTasksCompleted: null,
+          weeklyTasksCompleted: null,
+        },
+        setGoals: vi.fn(),
       }),
     );
   });

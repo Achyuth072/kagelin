@@ -280,6 +280,13 @@ describe("TaskBoard — cross-group snap-back regression", () => {
         setIsSynced: vi.fn(),
         hasChangelogUpdate: false,
         setHasChangelogUpdate: vi.fn(),
+        goals: {
+          dailyFocusHours: null,
+          weeklyFocusHours: null,
+          dailyTasksCompleted: null,
+          weeklyTasksCompleted: null,
+        },
+        setGoals: vi.fn(),
       }),
     );
   });

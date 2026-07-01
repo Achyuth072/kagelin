@@ -37,6 +37,17 @@ const ActivityHeatmap = dynamic(
   },
 );
 
+const GoalsCard = dynamic(
+  () =>
+    import("@/components/stats/GoalsCard").then((mod) => ({
+      default: mod.GoalsCard,
+    })),
+  {
+    loading: () => <Skeleton className="h-48 w-full rounded-xl" />,
+    ssr: false,
+  },
+);
+
 const PERIOD_LABELS: Record<StatsPeriod, string> = {
   "7d": "Last 7 days",
   "30d": "Last 30 days",
@@ -129,6 +140,10 @@ export function StatsClient() {
             icon={Repeat}
             trend={hasComparison ? stats?.trends?.habitReps : undefined}
           />
+        </div>
+
+        <div>
+          <GoalsCard />
         </div>
 
         <div>

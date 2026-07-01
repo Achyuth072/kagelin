@@ -11,6 +11,11 @@ import { format } from "date-fns";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { getContrastingColor } from "@/lib/utils/color";
+import {
+  getFrequencyProgress,
+  frequencyProgressLabel,
+} from "@/lib/utils/habit-frequency-progress";
+import { CircularProgress } from "@/components/ui/circular-progress";
 
 interface HabitCardProps {
   habit: HabitWithEntries;
@@ -82,6 +87,14 @@ export function HabitCard({
   const totalCompletions = habit.entries.filter((e) => e.value === 1).length;
   const currentStreak = getCurrentStreak(habit, habit.entries);
 
+  // Frequency progress ring — Boolean Habits only (CONTEXT.md "Done"-counting
+  // vs strength metrics): an at_most Measurable Habit would read misleadingly
+  // against a raw frequency count.
+  const showFrequencyRing = habit.habit_type !== "measurable";
+  const frequencyProgress = showFrequencyRing
+    ? getFrequencyProgress(habit, habit.entries)
+    : null;
+
   const handleToggle = useCallback(() => {
     if (onToggle) {
       onToggle();
@@ -139,6 +152,20 @@ export function HabitCard({
               </button>
             )}
             <div className="flex items-center gap-4 sm:gap-6 mr-1 sm:mr-2">
+              {frequencyProgress && (
+                <CircularProgress
+                  value={frequencyProgress.completed}
+                  max={frequencyProgress.target}
+                  size={36}
+                  strokeWidth={3}
+                  color={habit.color}
+                  label={frequencyProgressLabel(frequencyProgress)}
+                >
+                  <span className="text-[10px] font-bold text-foreground tabular-nums">
+                    {frequencyProgress.completed}/{frequencyProgress.target}
+                  </span>
+                </CircularProgress>
+              )}
               <div className="text-right">
                 <div className="text-[9px] uppercase text-foreground/60 font-bold tracking-widest leading-none">
                   Streak

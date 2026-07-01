@@ -8,6 +8,11 @@ import { HabitScoreChart } from "@/components/habits/insights/HabitScoreChart";
 import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
 import { HabitBestStreaksCard } from "@/components/habits/insights/HabitBestStreaksCard";
 import { HabitFrequencyGrid } from "@/components/habits/insights/HabitFrequencyGrid";
+import { CircularProgress } from "@/components/ui/circular-progress";
+import {
+  getFrequencyProgress,
+  frequencyProgressLabel,
+} from "@/lib/utils/habit-frequency-progress";
 import type { Habit } from "@/lib/types/habit";
 import { BarChart3 } from "lucide-react";
 
@@ -38,6 +43,12 @@ export function HabitInsightsPanel({
   // the list cache and can lag behind an edit.
   const habit = data ?? habitProp;
   const entries = data?.entries ?? [];
+
+  // Frequency progress ring — Boolean Habits only, same gate as HabitCard.
+  const showFrequencyRing = habit.habit_type !== "measurable";
+  const frequencyProgress = showFrequencyRing
+    ? getFrequencyProgress(habit, entries)
+    : null;
 
   if (entries.length === 0) {
     return (
@@ -76,6 +87,25 @@ export function HabitInsightsPanel({
       )}
 
       <InsightSection title="Frequency">
+        {frequencyProgress && (
+          <div className="flex items-center gap-4 pb-1">
+            <CircularProgress
+              value={frequencyProgress.completed}
+              max={frequencyProgress.target}
+              size={64}
+              strokeWidth={6}
+              color={habit.color}
+              label={frequencyProgressLabel(frequencyProgress)}
+            >
+              <span className="text-sm font-bold text-foreground tabular-nums">
+                {frequencyProgress.completed}/{frequencyProgress.target}
+              </span>
+            </CircularProgress>
+            <p className="text-sm text-muted-foreground">
+              {frequencyProgressLabel(frequencyProgress)}
+            </p>
+          </div>
+        )}
         <HabitFrequencyGrid habit={habit} entries={entries} />
       </InsightSection>
     </div>
