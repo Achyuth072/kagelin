@@ -16,6 +16,7 @@ export interface DailyStats {
   hours: number;
   totalSessions: number;
   tasksCompleted: number;
+  habitReps: number;
 }
 
 export interface StatsTrend {
@@ -118,12 +119,22 @@ export function calculateStats(
 
   const dailyMap = new Map<
     string,
-    { hours: number; totalSessions: number; tasksCompleted: number }
+    {
+      hours: number;
+      totalSessions: number;
+      tasksCompleted: number;
+      habitReps: number;
+    }
   >();
   const getBucket = (key: string) => {
     let bucket = dailyMap.get(key);
     if (!bucket) {
-      bucket = { hours: 0, totalSessions: 0, tasksCompleted: 0 };
+      bucket = {
+        hours: 0,
+        totalSessions: 0,
+        tasksCompleted: 0,
+        habitReps: 0,
+      };
       dailyMap.set(key, bucket);
     }
     return bucket;
@@ -223,6 +234,10 @@ export function calculateStats(
     const entryMs = parseISO(entry.date).getTime();
     if (entryMs >= currentStartMs) {
       currentHabitReps++;
+      // Bucket into the day for the range-aware export rollup. entry.date is
+      // already a local yyyy-MM-dd key (see habit-streak.ts / useHeatmapData),
+      // so no reformatting is needed.
+      getBucket(entry.date).habitReps += 1;
     } else if (hasPrevWindow && entryMs >= prevStartMs!) {
       prevHabitReps++;
     }
@@ -274,6 +289,7 @@ export function calculateStats(
       hours: bucket ? Math.round(bucket.hours * 10) / 10 : 0,
       totalSessions: bucket ? bucket.totalSessions : 0,
       tasksCompleted: bucket ? bucket.tasksCompleted : 0,
+      habitReps: bucket ? bucket.habitReps : 0,
     };
   });
 
