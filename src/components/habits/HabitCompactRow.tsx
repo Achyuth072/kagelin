@@ -11,9 +11,14 @@ import { useMarkHabitComplete } from "@/lib/hooks/useHabitMutations";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { getRolling7Days } from "@/lib/utils/habit-rolling";
+import {
+  getFrequencyProgress,
+  frequencyProgressLabel,
+} from "@/lib/utils/habit-frequency-progress";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
 import { DragHandle } from "@/components/tasks/DragHandle";
 import { HabitStripCell } from "./HabitStripCell";
+import { CircularProgress } from "@/components/ui/circular-progress";
 
 interface HabitCompactRowProps {
   habit: HabitWithEntries;
@@ -58,6 +63,16 @@ export function HabitCompactRow({
     [habit.entries, today, habit.start_date],
   );
 
+  // Frequency progress ring — Boolean Habits only, same gate as HabitCard.
+  const showFrequencyRing = habit.habit_type !== "measurable";
+  const frequencyProgress = useMemo(
+    () =>
+      showFrequencyRing
+        ? getFrequencyProgress(habit, habit.entries, today)
+        : null,
+    [habit, showFrequencyRing, today],
+  );
+
   const handleToggle = (date: string) => {
     const current = habit.entries.find((e) => e.date === date)?.value ?? 0;
     markComplete.mutate({
@@ -98,6 +113,17 @@ export function HabitCompactRow({
           {habit.name}
         </span>
         <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-2 lg:ml-0">
+          {frequencyProgress && (
+            <CircularProgress
+              value={frequencyProgress.completed}
+              max={frequencyProgress.target}
+              size={22}
+              strokeWidth={2.5}
+              color={habit.color}
+              label={frequencyProgressLabel(frequencyProgress)}
+              className="mr-0.5"
+            />
+          )}
           <span className="text-sm font-bold tabular-nums text-foreground">
             {streak}
           </span>
