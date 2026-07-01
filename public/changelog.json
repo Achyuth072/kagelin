@@ -10,6 +10,18 @@
     }
   },
   {
+    "version": "1.24.0-preview.8",
+    "date": "2026-07-01",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add export entry points on stats and insights",
+        "Add analytics export utils (CSV and JSON)",
+        "Bucket habit reps per day for export"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.7",
     "date": "2026-07-01",
     "channel": "preview",
@@ -644,27 +656,6 @@
       "Fixed": [
         "Focus timer sliders no longer reset when switching tabs or navigating away",
         "Guest mode loads faster with no unnecessary network calls"
-      ]
-    }
-  },
-  {
-    "version": "1.19.0",
-    "date": "2026-05-04",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Task Continuity: completed tasks stay visible in the list until the end of the day"
-      ],
-      "Improved": [
-        "React Compiler integrated for optimised component rendering",
-        "Core data lookups refactored to Map-based O(1) complexity",
-        "High-frequency state isolated into dedicated Zustand micro-stores",
-        "Replaced Framer Motion with native CSS animations in dialogs",
-        "Mobile swipe physics recalibrated for a tighter, hardware-native feel",
-        "Task list rendering scales linearly — stays fast with 500+ tasks"
-      ],
-      "Fixed": [
-        "Redundant project tags removed across all views for a cleaner UI"
       ]
     }
   }
