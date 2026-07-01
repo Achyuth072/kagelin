@@ -14,6 +14,7 @@ import { getRolling7Days } from "@/lib/utils/habit-rolling";
 import {
   getFrequencyProgress,
   frequencyProgressLabel,
+  hasFrequencyTarget,
 } from "@/lib/utils/habit-frequency-progress";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
 import { DragHandle } from "@/components/tasks/DragHandle";
@@ -63,8 +64,10 @@ export function HabitCompactRow({
     [habit.entries, today, habit.start_date],
   );
 
-  // Frequency progress ring — Boolean Habits only, same gate as HabitCard.
-  const showFrequencyRing = habit.habit_type !== "measurable";
+  // Frequency progress ring — Boolean Habits with a non-trivial target only,
+  // same gate as HabitCard.
+  const showFrequencyRing =
+    habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
   const frequencyProgress = useMemo(
     () =>
       showFrequencyRing

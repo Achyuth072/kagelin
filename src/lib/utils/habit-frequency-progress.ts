@@ -15,6 +15,21 @@ export interface FrequencyProgress {
 }
 
 /**
+ * Whether a Habit carries a *non-trivial* Frequency target worth surfacing as a
+ * ring. Every Habit is implicitly daily (`1 / day`); that resting default is
+ * redundant next to the done/not-done toggle, so the ring is shown only when the
+ * target is more than once a day or spans a longer period. See CONTEXT.md
+ * "Frequency progress".
+ */
+export function hasFrequencyTarget(
+  habit: Pick<Habit, "frequency_count" | "frequency_period">,
+): boolean {
+  const count = habit.frequency_count ?? 1;
+  const period = habit.frequency_period ?? "day";
+  return count > 1 || period !== "day";
+}
+
+/**
  * A Habit's Frequency rendered as progress against the current period
  * (day/week/month), per CONTEXT.md "Frequency progress" — not a Goal.
  */

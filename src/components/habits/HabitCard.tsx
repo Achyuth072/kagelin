@@ -14,6 +14,7 @@ import { getContrastingColor } from "@/lib/utils/color";
 import {
   getFrequencyProgress,
   frequencyProgressLabel,
+  hasFrequencyTarget,
 } from "@/lib/utils/habit-frequency-progress";
 import { CircularProgress } from "@/components/ui/circular-progress";
 
@@ -89,8 +90,10 @@ export function HabitCard({
 
   // Frequency progress ring — Boolean Habits only (CONTEXT.md "Done"-counting
   // vs strength metrics): an at_most Measurable Habit would read misleadingly
-  // against a raw frequency count.
-  const showFrequencyRing = habit.habit_type !== "measurable";
+  // against a raw frequency count. Also requires a non-trivial target — a plain
+  // daily habit's "1/1" ring is redundant next to the toggle.
+  const showFrequencyRing =
+    habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
   const frequencyProgress = showFrequencyRing
     ? getFrequencyProgress(habit, habit.entries)
     : null;

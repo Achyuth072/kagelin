@@ -17,6 +17,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import {
   getFrequencyProgress,
   frequencyProgressLabel,
+  hasFrequencyTarget,
 } from "@/lib/utils/habit-frequency-progress";
 import {
   analyticsFilename,
@@ -76,8 +77,10 @@ export function HabitInsightsPanel({
     }
   };
 
-  // Frequency progress ring — Boolean Habits only, same gate as HabitCard.
-  const showFrequencyRing = habit.habit_type !== "measurable";
+  // Frequency progress ring — Boolean Habits with a non-trivial target only
+  // (a plain daily habit's "1/1" ring is noise). Same gate as HabitCard.
+  const showFrequencyRing =
+    habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
   const frequencyProgress = showFrequencyRing
     ? getFrequencyProgress(habit, entries)
     : null;
