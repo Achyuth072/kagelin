@@ -147,11 +147,23 @@ an imported Habit shows the number the user remembers.
 _Displayed as_: "Strength" is the source tracker's UI label for the same number;
 **Score** is the canonical term here. _Avoid_: Streak (a different metric).
 
-### Frequency progress
-
 A Habit's `Frequency` rendered as week-to-date completion — "2 / 3 this week,"
 shown as a ring. It is **not a Goal**: a Habit has no Goal, only a Frequency, and
 this is just that Frequency drawn against the current period. _Avoid_: Goal.
+
+Every Habit is implicitly **daily** (`1 / day`) — there is no "unset" state. The
+progress ring is shown only when the target is **non-trivial** (more than once a
+day, or a week/month period); a plain daily habit's "1 / 1" ring is redundant
+next to the done/not-done toggle and is suppressed. The Frequency ring is shown
+for **Boolean Habits only** (a Measurable `at_most` habit would read misleadingly
+against a raw count), matching the day-counting-metric gate.
+
+Frequency is authored as **times per day or week**; `month` is accepted in the
+model for import fidelity but is not offered in the create/edit control (it stays
+editable only on a Habit that already carries it). Frequency is **not
+effective-dated**: it is a single current value, so editing it recomputes the
+_entire_ Frequency grid and streak history against the new target — accepted as a
+known tradeoff rather than snapshotting frequency per period.
 
 ---
 
