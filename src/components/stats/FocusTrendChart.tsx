@@ -12,6 +12,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { computeTickInterval } from "@/lib/utils/chart-ticks";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LineChart as LineChartIcon } from "lucide-react";
 
@@ -31,9 +33,11 @@ export function FocusTrendChart({
   className,
 }: FocusTrendChartProps) {
   const hasData = data.some((d) => d.hours > 0 || d.tasksCompleted > 0);
+  const isMobile = useIsMobile();
 
   // Avoid an unreadable tick per day once the range grows (e.g. 1y/All).
-  const tickInterval = Math.max(0, Math.ceil(data.length / 8) - 1);
+  // Mobile has roughly half the plot width, so target half as many labels.
+  const tickInterval = computeTickInterval(data.length, isMobile ? 4 : 8);
 
   const chartData = useMemo(
     () => data.map((d) => ({ ...d, label: format(parseISO(d.date), "MMM d") })),
