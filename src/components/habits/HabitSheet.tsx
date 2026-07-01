@@ -79,6 +79,8 @@ export function HabitSheet({
       description: "",
       color: "#4B6CB7",
       icon: "Flame",
+      frequency_count: 1,
+      frequency_period: "day",
     },
   });
 
@@ -91,6 +93,9 @@ export function HabitSheet({
   const color = useWatch({ control, name: "color" }) || "#4B6CB7";
   const icon = useWatch({ control, name: "icon" }) || "Flame";
   const startDate = useWatch({ control, name: "start_date" });
+  const frequencyCount = useWatch({ control, name: "frequency_count" }) ?? 1;
+  const frequencyPeriod =
+    useWatch({ control, name: "frequency_period" }) ?? "day";
 
   const createMutation = useCreateHabit();
   const updateMutation = useUpdateHabit();
@@ -113,6 +118,8 @@ export function HabitSheet({
           color: initialHabit.color,
           icon: initialHabit.icon || "Flame",
           start_date: initialHabit.start_date ?? undefined,
+          frequency_count: initialHabit.frequency_count ?? 1,
+          frequency_period: initialHabit.frequency_period ?? "day",
         });
         void triggerValidation();
       } else {
@@ -122,6 +129,8 @@ export function HabitSheet({
           color: "#4B6CB7",
           icon: "Flame",
           start_date: undefined,
+          frequency_count: 1,
+          frequency_period: "day",
         });
       }
     }
@@ -132,11 +141,17 @@ export function HabitSheet({
       triggerHaptic("thud");
 
       const formattedData = {
-        ...data,
+        name: data.name,
+        description: data.description,
+        color: data.color,
+        icon: data.icon,
         start_date:
           data.start_date instanceof Date
             ? data.start_date.toISOString().split("T")[0]
             : data.start_date,
+        // The mutation layer keys these camelCase; the form/schema is snake_case.
+        frequencyCount: data.frequency_count,
+        frequencyPeriod: data.frequency_period,
       };
 
       if (initialHabit) {
@@ -203,7 +218,7 @@ export function HabitSheet({
           </ResponsiveDialogHeader>
 
           {!isCreationMode && (
-            <div className="px-4 pt-3 pb-1 shrink-0 sm:pr-16">
+            <div className="px-4 pt-3 pb-1 shrink-0">
               <SheetTabToggle
                 value={tab}
                 onValueChange={(next) => startTransition(() => setTab(next))}
@@ -234,6 +249,14 @@ export function HabitSheet({
                     shouldValidate: true,
                   })
                 }
+                frequencyCount={frequencyCount}
+                setFrequencyCount={(v) =>
+                  setValue("frequency_count", v, { shouldValidate: true })
+                }
+                frequencyPeriod={frequencyPeriod}
+                setFrequencyPeriod={(v) =>
+                  setValue("frequency_period", v, { shouldValidate: true })
+                }
                 datePickerOpen={datePickerOpen}
                 setDatePickerOpen={setDatePickerOpen}
                 isMobile={isMobile}
@@ -263,6 +286,14 @@ export function HabitSheet({
                   setValue("start_date", v?.toISOString().split("T")[0], {
                     shouldValidate: true,
                   })
+                }
+                frequencyCount={frequencyCount}
+                setFrequencyCount={(v) =>
+                  setValue("frequency_count", v, { shouldValidate: true })
+                }
+                frequencyPeriod={frequencyPeriod}
+                setFrequencyPeriod={(v) =>
+                  setValue("frequency_period", v, { shouldValidate: true })
                 }
                 datePickerOpen={datePickerOpen}
                 setDatePickerOpen={setDatePickerOpen}

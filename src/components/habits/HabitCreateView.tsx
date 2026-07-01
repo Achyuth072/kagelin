@@ -7,6 +7,10 @@ import { cn } from "@/lib/utils";
 import { Send, CalendarIcon, AlignLeft, Palette } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { HabitIconPicker } from "./shared/HabitIconPicker";
+import {
+  HabitFrequencyField,
+  type FrequencyPeriod,
+} from "./shared/HabitFrequencyField";
 import { ColorPicker } from "@/components/shared/ColorPicker";
 import { TaskDatePicker } from "../tasks/shared/TaskDatePicker";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -22,6 +26,10 @@ interface HabitCreateViewProps {
   setIcon: (value: string) => void;
   startDate: Date | undefined;
   setStartDate: (value: Date | undefined) => void;
+  frequencyCount: number;
+  setFrequencyCount: (value: number) => void;
+  frequencyPeriod: FrequencyPeriod;
+  setFrequencyPeriod: (value: FrequencyPeriod) => void;
   datePickerOpen: boolean;
   setDatePickerOpen: (value: boolean) => void;
   isMobile: boolean;
@@ -63,6 +71,10 @@ export function HabitCreateView({
   setIcon,
   startDate,
   setStartDate,
+  frequencyCount,
+  setFrequencyCount,
+  frequencyPeriod,
+  setFrequencyPeriod,
   datePickerOpen,
   setDatePickerOpen,
   isMobile,
@@ -120,6 +132,16 @@ export function HabitCreateView({
             />
           </div>
         </div>
+
+        <div className="h-1" />
+
+        {/* Frequency — "N times per Day/Week" */}
+        <HabitFrequencyField
+          count={frequencyCount}
+          period={frequencyPeriod}
+          onCountChange={setFrequencyCount}
+          onPeriodChange={setFrequencyPeriod}
+        />
 
         <div className="h-1" />
 
