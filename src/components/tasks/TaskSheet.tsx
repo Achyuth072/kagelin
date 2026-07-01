@@ -294,7 +294,7 @@ export default function TaskSheet({
           </ResponsiveDialogHeader>
 
           {!isCreationMode && hasSeries && (
-            <div className="px-4 pt-3 pb-1 shrink-0 sm:pr-16">
+            <div className="px-4 pt-3 pb-1 shrink-0">
               <SheetTabToggle
                 value={tab}
                 onValueChange={(next) => startTransition(() => setTab(next))}
