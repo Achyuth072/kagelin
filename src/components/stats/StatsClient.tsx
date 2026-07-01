@@ -49,6 +49,17 @@ const GoalsCard = dynamic(
   },
 );
 
+const ProjectionsCard = dynamic(
+  () =>
+    import("@/components/stats/ProjectionsCard").then((mod) => ({
+      default: mod.ProjectionsCard,
+    })),
+  {
+    loading: () => <Skeleton className="h-48 w-full rounded-xl" />,
+    ssr: false,
+  },
+);
+
 const PERIOD_LABELS: Record<StatsPeriod, string> = {
   "7d": "Last 7 days",
   "30d": "Last 30 days",
@@ -171,6 +182,10 @@ export function StatsClient() {
 
         <div>
           <HabitScoreComparison />
+        </div>
+
+        <div>
+          <ProjectionsCard />
         </div>
 
         <div>
