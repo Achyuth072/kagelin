@@ -50,18 +50,31 @@ export function TaskOverviewCards({ occurrences }: TaskOverviewCardsProps) {
         title="Completion Rate"
         value={formatRate(completionRate)}
         icon={Target}
+        size="compact"
       />
       <MetricCard
         title="On-Time"
         value={formatRate(onTimeRate)}
         icon={CalendarCheck}
+        size="compact"
       />
-      <MetricCard title="Current Streak" value={currentStreak} icon={Flame} />
-      <MetricCard title="Best Streak" value={bestStreak} icon={Trophy} />
+      <MetricCard
+        title="Current Streak"
+        value={currentStreak}
+        icon={Flame}
+        size="compact"
+      />
+      <MetricCard
+        title="Best Streak"
+        value={bestStreak}
+        icon={Trophy}
+        size="compact"
+      />
       <MetricCard
         title="Total Completions"
         value={totalCompletions}
         icon={CheckCircle2}
+        size="compact"
       />
     </div>
   );

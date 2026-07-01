@@ -39,23 +39,31 @@ export function HabitOverviewCards({
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      <MetricCard title="Score" value={`${score}%`} icon={Target} />
+      <MetricCard
+        title="Score"
+        value={`${score}%`}
+        icon={Target}
+        size="compact"
+      />
       {showDayCounts && (
         <>
           <MetricCard
             title="Current Streak"
             value={`${currentStreak} days`}
             icon={Flame}
+            size="compact"
           />
           <MetricCard
             title="Best Streak"
             value={`${bestStreak} days`}
             icon={Trophy}
+            size="compact"
           />
           <MetricCard
             title="Total Completions"
             value={totalCompletions}
             icon={CheckCircle2}
+            size="compact"
           />
         </>
       )}

@@ -12,6 +12,12 @@ interface MetricCardProps {
     value: number;
     isPositive: boolean;
   };
+  /**
+   * "compact" tightens padding and value scale for dense contexts like the
+   * task/habit insights panels inside the sheet; "default" keeps the larger
+   * stats-page scale.
+   */
+  size?: "default" | "compact";
   className?: string;
 }
 
@@ -20,16 +26,35 @@ export function MetricCard({
   value,
   icon: Icon,
   trend,
+  size = "default",
   className,
 }: MetricCardProps) {
+  const compact = size === "compact";
+
   return (
-    <Card className={cn("h-full p-4 md:p-6 border-border", className)}>
+    <Card
+      className={cn(
+        "h-full border-border",
+        compact ? "p-4" : "p-4 md:p-6",
+        className,
+      )}
+    >
       <div className="flex items-start justify-between gap-2">
-        <div className="space-y-1.5 md:space-y-2 min-w-0">
-          <p className="type-ui uppercase text-[10px] md:text-xs text-foreground/60 font-semibold tracking-wider wrap-break-word">
+        <div
+          className={cn(
+            "min-w-0",
+            compact ? "space-y-1.5" : "space-y-1.5 md:space-y-2",
+          )}
+        >
+          <p className="type-ui uppercase text-[10px] md:text-xs text-muted-foreground font-medium tracking-wider wrap-break-word">
             {title}
           </p>
-          <p className="text-2xl md:text-4xl font-semibold tracking-[-0.02em]">
+          <p
+            className={cn(
+              "font-semibold tracking-[-0.02em]",
+              compact ? "text-2xl" : "text-2xl md:text-4xl",
+            )}
+          >
             {value}
           </p>
           {trend && (
@@ -53,9 +78,17 @@ export function MetricCard({
           )}
         </div>
         {Icon && (
-          <div className="p-1.5 md:p-2 rounded-lg bg-secondary shrink-0">
+          <div
+            className={cn(
+              "rounded-lg bg-secondary shrink-0",
+              compact ? "p-1.5" : "p-1.5 md:p-2",
+            )}
+          >
             <Icon
-              className="h-4 w-4 md:h-5 md:w-5 text-foreground/70"
+              className={cn(
+                "text-foreground/70",
+                compact ? "h-4 w-4" : "h-4 w-4 md:h-5 md:w-5",
+              )}
               strokeWidth={2.25}
             />
           </div>
