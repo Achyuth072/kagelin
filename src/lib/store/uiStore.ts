@@ -5,6 +5,13 @@ import { persist } from "zustand/middleware";
 import { GroupOption, SortOption } from "@/lib/types/sorting";
 import { StatsPeriod } from "@/lib/types/stats";
 
+export interface GoalsState {
+  dailyFocusHours: number | null;
+  weeklyFocusHours: number | null;
+  dailyTasksCompleted: number | null;
+  weeklyTasksCompleted: number | null;
+}
+
 interface UiState {
   // Sidebar State
   isProjectsOpen: boolean;
@@ -32,6 +39,10 @@ interface UiState {
   setHapticsEnabled: (enabled: boolean) => void;
   notificationsEnabled: boolean;
   setNotificationsEnabled: (enabled: boolean) => void;
+
+  // Global Goals (aggregate targets, not per-item — see CONTEXT.md "Goals")
+  goals: GoalsState;
+  setGoals: (goals: Partial<GoalsState>) => void;
 
   // Shortcuts Help Dialog
   isShortcutsHelpOpen: boolean;
@@ -110,6 +121,15 @@ export const useUiStore = create<UiState>()(
       notificationsEnabled: false,
       setNotificationsEnabled: (enabled) =>
         set({ notificationsEnabled: enabled }),
+
+      // Global Goals defaults
+      goals: {
+        dailyFocusHours: null,
+        weeklyFocusHours: null,
+        dailyTasksCompleted: null,
+        weeklyTasksCompleted: null,
+      },
+      setGoals: (goals) => set((s) => ({ goals: { ...s.goals, ...goals } })),
 
       // Shortcuts Help defaults
       isShortcutsHelpOpen: false,
