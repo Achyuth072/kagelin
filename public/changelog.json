@@ -10,6 +10,25 @@
     }
   },
   {
+    "version": "1.24.0-preview.6",
+    "date": "2026-07-01",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Range-aware trend chart and wire up the page",
+        "Add per-habit score comparison",
+        "Add focus time-of-day heatmap",
+        "Add project and priority breakdown cards",
+        "Add period selector and shared bar list",
+        "Scope useStats to a selectable period with breakdowns",
+        "Add StatsPeriod type and persist it in uiStore"
+      ],
+      "Fixed": [
+        "Stretch time-of-day heatmap to card width"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.5",
     "date": "2026-06-30",
     "channel": "preview",
@@ -651,23 +670,6 @@
       "Fixed": [
         "Push notification ghost deliveries resolved",
         "CI validation regressions resolved and code formatting standardised"
-      ]
-    }
-  },
-  {
-    "version": "1.17.0",
-    "date": "2026-04-13",
-    "channel": "stable",
-    "sections": {
-      "Improved": [
-        "Unified Matte & Ink aesthetic: shadows and semantic colours replaced with a consistent design system",
-        "Sidebar and modal rendering optimised for zero-jank, zero-lag interactions",
-        "Global icon weight standardised and accent colour applied consistently",
-        "Tactile gestures, haptic signatures, and hold-to-drag unified across components",
-        "Guest mode resilience hardened with accessibility compliance improvements"
-      ],
-      "Fixed": [
-        "Desktop list layout clipping resolved"
       ]
     }
   }
