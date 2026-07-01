@@ -1,22 +1,37 @@
+<p align="center">
+  <a href="https://kagelin.app">
+    <img src="https://raw.githubusercontent.com/Achyuth072/kagelin/main/public/kagelin-icon.png" width="80" alt="Kagelin" />
+  </a>
+</p>
+
+<div align="center">
+
 # Kagelin
 
 > "Work quietly. Own everything."
 
+[![License: AGPL-3.0](https://img.shields.io/github/license/Achyuth072/kagelin?style=flat)](LICENSE)
+[![Release](https://img.shields.io/github/package-json/v/Achyuth072/kagelin/dev?style=flat&label=release&color=blue)](../../releases)
+
 Most productivity apps want your email before you've written a single task, and keep your data on their servers either way. Kagelin doesn't. Use it fully offline with no account, sync it to your own server if you want, or just walk away with your data anytime.
 
-**[kagelin.app](https://kagelin.app)**
+<h2 align="center">Use it</h2>
 
-## Why Kagelin
+**[kagelin.app](https://kagelin.app)** — installable as a PWA, works fully offline in guest mode. No account needed.
 
-- **Nothing to sign up for.** Tasks, habits, focus tracking, and your calendar all work offline in guest mode. Make an account only if you want cloud sync.
-- **Sync without giving up your data.** Point it at your own Nextcloud, Synology, or any WebDAV server. No middleman.
-- **Take everything with you.** Encrypted ZIP export, full data deletion, and standard `.ics` calendar files. Leaving is always an option.
+</div>
 
-## Features
+<h2 align="center">Why Kagelin</h2>
+
+- **Nothing to sign up for.** Tasks, habits, focus, and calendar — all offline in guest mode. Account only if you want cloud sync.
+- **Your data, your server.** Point it at Nextcloud, Synology, or any WebDAV server. No middleman.
+- **Take everything with you.** Encrypted ZIP export, full data deletion, and standard `.ics` files. Leaving is always an option.
+
+<h2 align="center">Features</h2>
 
 ### Tasks & Organization
 
-- **Global Search** (`Ctrl/Cmd+K`): instant search across tasks, habits, and events, plus navigation and actions.
+- **Search** (`Ctrl/Cmd+K`): instant search across tasks, habits, and events, plus navigation and actions.
 - **Three views**: Masonry Grid, Board, and List — switch with `Shift+1/2/3`.
 - **Split View**: Desktop List opens a master-detail panel automatically.
 - **Projects**: multi-level project structure with archiving and mobile drawers.
@@ -44,13 +59,20 @@ Most productivity apps want your email before you've written a single task, and 
 - **Backups**: encrypted `.zip` export/import. Registered users can export or permanently delete all cloud data.
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
 
+### Stats & Insights
+
+- **Stats page**: period selector, breakdowns by project and priority, time-of-day heatmap.
+- **Item insights**: per-habit and per-recurring-task stats — score history, streaks, frequency, on-time rate.
+- **Goal tracking**: progress rings on habit cards, global focus and task goals.
+- **Export**: analytics CSV and JSON from stats and insights panels.
+
 ### Preferences
 
 - **Time format**: system-wide 12h/24h toggle across all time displays.
 - **Keyboard accessible**: Esc closes all modals, full focus-trap and `aria-modal` compliance.
 - **Haptic feedback**: standardized haptic palette for precise mobile feedback.
 
-## Shortcuts
+<h2 align="center">Shortcuts</h2>
 
 | Shortcut          | Action                                                            |
 | ----------------- | ----------------------------------------------------------------- |
@@ -61,7 +83,8 @@ Most productivity apps want your email before you've written a single task, and 
 | `N / H / E / P`   | Create new (Task, Habit, Event, Project)                          |
 | `Shift+H`         | View all shortcuts                                                |
 
-## Stack
+<details>
+<summary><strong>Stack</strong></summary>
 
 - **Next.js 16.1.0** (App Router) + **React 19.2.3** (React Compiler)
 - **Supabase** (Postgres, Auth, Realtime)
@@ -71,7 +94,9 @@ Most productivity apps want your email before you've written a single task, and 
 - **Serwist** (typed service worker, offline-first PWA)
 - **tsdav** + **ical.js** (CalDAV/ICS sync)
 
-## Setup
+</details>
+
+<h2 align="center">Setup</h2>
 
 **Prerequisites**: Node.js 20+, a Supabase project with the schema from `supabase/schema.sql`.
 
@@ -82,10 +107,10 @@ cp .env.example .env.local   # add your Supabase keys
 npm run dev
 ```
 
-## Contributing & Feedback
+<h2 align="center">Contributing & Feedback</h2>
 
 Bug reports and feature requests go in [GitHub Issues](../../issues). For questions and discussion, use [GitHub Discussions](../../discussions).
 
-## License
+<h2 align="center">License</h2>
 
 [AGPL-3.0](LICENSE)
