@@ -77,7 +77,10 @@ export function FocusTrendChart({
           />
         ) : (
           <ResponsiveContainer width="100%" height={200}>
-            <ComposedChart data={chartData}>
+            <ComposedChart
+              data={chartData}
+              margin={{ top: 12, right: 0, bottom: 0, left: 0 }}
+            >
               <XAxis
                 dataKey="label"
                 stroke="hsl(var(--muted-foreground))"
@@ -85,9 +88,11 @@ export function FocusTrendChart({
                 tickLine={false}
                 axisLine={false}
                 interval={tickInterval}
+                tickMargin={10}
               />
               <YAxis
                 yAxisId="hours"
+                width={36}
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={12}
                 tickLine={false}
@@ -97,6 +102,7 @@ export function FocusTrendChart({
               <YAxis
                 yAxisId="tasks"
                 orientation="right"
+                width={28}
                 stroke="hsl(var(--muted-foreground))"
                 fontSize={12}
                 tickLine={false}
