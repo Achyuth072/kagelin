@@ -10,6 +10,18 @@
     }
   },
   {
+    "version": "1.24.0-preview.7",
+    "date": "2026-07-01",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add global Goals tab and stats card",
+        "Add frequency-progress rings",
+        "Add global Goals state to uiStore"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.6",
     "date": "2026-07-01",
     "channel": "preview",
@@ -653,23 +665,6 @@
       ],
       "Fixed": [
         "Redundant project tags removed across all views for a cleaner UI"
-      ]
-    }
-  },
-  {
-    "version": "1.18.0",
-    "date": "2026-04-20",
-    "channel": "stable",
-    "sections": {
-      "Improved": [
-        "Calendar Elastic Grid for better viewport stability and refined mobile navigation",
-        "Header heights standardised and matte sidebar styling refined",
-        "Project management flows and task view responsiveness improved",
-        "Push notification delivery telemetry added"
-      ],
-      "Fixed": [
-        "Push notification ghost deliveries resolved",
-        "CI validation regressions resolved and code formatting standardised"
       ]
     }
   }
