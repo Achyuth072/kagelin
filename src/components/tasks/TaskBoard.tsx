@@ -23,6 +23,7 @@ import {
   closestCorners,
   DragOverlay,
   defaultDropAnimationSideEffects,
+  defaultAnnouncements,
   useDroppable,
 } from "@dnd-kit/core";
 import {
@@ -45,6 +46,16 @@ import {
   computeReorderPairs,
   isDropBlockedGroup,
 } from "@/lib/utils/task-dnd";
+
+// dnd-kit's built-in Accessibility component calls announce() on every
+// onDragOver by default, thrashing the aria-live region at drag-over
+// frequency (60-120Hz). Suppress the per-tick announcement (returning
+// undefined is a no-op per @dnd-kit/accessibility's useAnnouncement) while
+// keeping start/end/cancel. Module-level so the object identity is stable.
+const dndAnnouncements = {
+  ...defaultAnnouncements,
+  onDragOver: () => undefined,
+};
 
 interface TaskBoardProps {
   processedTasks: ProcessedTasks;
@@ -416,6 +427,7 @@ export function TaskBoard({
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
+        accessibility={{ announcements: dndAnnouncements }}
         // WhileDragging (the dnd-kit default) measures the same as Always
         // during a drag; Always additionally re-measures on every droppable
         // registry mutation while idle, which is pure overhead here.
