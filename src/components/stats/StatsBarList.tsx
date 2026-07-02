@@ -15,9 +15,16 @@ export interface StatsBarListItem {
 interface StatsBarListProps {
   items: StatsBarListItem[];
   className?: string;
+  /** Tailwind width class for the label column. Wider cards can pass a larger
+   * value so long names aren't truncated; defaults to a compact width. */
+  labelWidthClassName?: string;
 }
 
-export function StatsBarList({ items, className }: StatsBarListProps) {
+export function StatsBarList({
+  items,
+  className,
+  labelWidthClassName = "w-28",
+}: StatsBarListProps) {
   const reduced = usePrefersReducedMotion();
 
   return (
@@ -25,17 +32,28 @@ export function StatsBarList({ items, className }: StatsBarListProps) {
       {items.map((item) => (
         <div key={item.key} className="flex items-center gap-3">
           <div
-            className="w-20 shrink-0 text-sm text-muted-foreground truncate"
-            title={item.label}
+            className={cn(
+              "flex shrink-0 items-center gap-2",
+              labelWidthClassName,
+            )}
           >
-            {item.label}
+            <span
+              aria-hidden
+              className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
+              style={{ backgroundColor: item.color }}
+            />
+            <span
+              className="truncate text-sm text-muted-foreground"
+              title={item.label}
+            >
+              {item.label}
+            </span>
           </div>
-          <div className="flex-1 h-6 rounded-md bg-secondary/50 overflow-hidden">
+          <div className="flex-1 h-5 rounded-[3px] bg-secondary/40 overflow-hidden">
             <div
-              className="h-full rounded-md"
+              className="h-full rounded-[3px] bg-foreground/70"
               style={{
                 width: `${Math.max(item.ratio * 100, 0)}%`,
-                backgroundColor: item.color,
                 transition: reduced ? "none" : "width 0.5s var(--ease-seijaku)",
               }}
             />

@@ -60,7 +60,7 @@ export function HabitScoreComparison({ className }: HabitScoreComparisonProps) {
             className="py-8 gap-3"
           />
         ) : (
-          <StatsBarList items={items} />
+          <StatsBarList items={items} labelWidthClassName="w-40 sm:w-56" />
         )}
       </div>
     </Card>
