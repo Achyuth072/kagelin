@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { Target } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -66,6 +65,24 @@ export function GoalsCard({ className }: GoalsCardProps) {
 
   const router = useRouter();
 
+  // Nothing to display yet: a slim one-line prompt instead of a tall empty
+  // card, so an unconfigured Goals section doesn't wedge a gap into the page.
+  if (!isLoading && rings.length === 0) {
+    return (
+      <button
+        type="button"
+        onClick={() => router.push("/settings?tab=preferences")}
+        className={cn(
+          "flex w-full items-center gap-2 rounded-xl border border-dashed border-border/60 px-4 py-3 text-left text-sm text-muted-foreground transition-seijaku-fast hover:border-border hover:text-foreground",
+          className,
+        )}
+      >
+        <Target className="h-4 w-4 shrink-0" strokeWidth={2.25} />
+        <span>Set a daily or weekly goal to track progress here</span>
+      </button>
+    );
+  }
+
   return (
     <Card className={cn("p-6 border-border/50", className)}>
       <div className="space-y-4">
@@ -80,18 +97,6 @@ export function GoalsCard({ className }: GoalsCardProps) {
 
         {isLoading ? (
           <Skeleton className="h-32 w-full rounded-lg" />
-        ) : rings.length === 0 ? (
-          <EmptyState
-            icon={Target}
-            title="No Goals set"
-            description="Set a daily or weekly focus or task target in Settings."
-            action={{
-              label: "Set Goals",
-              onClick: () => router.push("/settings?tab=goals"),
-              icon: Target,
-            }}
-            className="py-8 gap-3"
-          />
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {rings.map((ring) => {
