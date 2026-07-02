@@ -8,26 +8,28 @@
 
 # Kagelin
 
-> "Work quietly. Own everything."
+### Work quietly. Own everything.
 
 [![License: AGPL-3.0](https://img.shields.io/github/license/Achyuth072/kagelin?style=flat)](LICENSE)
 [![Release](https://img.shields.io/github/package-json/v/Achyuth072/kagelin/dev?style=flat&label=release&color=blue)](../../releases)
 
-Most productivity apps want your email before you've written a single task, and keep your data on their servers either way. Kagelin doesn't. Use it fully offline with no account, sync it to your own server if you want, or just walk away with your data anytime.
-
-<h2 align="center">Use it</h2>
+## Use it
 
 **[kagelin.app](https://kagelin.app)** — installable as a PWA, works fully offline in guest mode. No account needed.
 
+_Currently in preview — expect rough edges._
+
 </div>
 
-<h2 align="center">Why Kagelin</h2>
+## Why Kagelin
+
+Most productivity apps want your email before you've written a single task, and keep your data on their servers either way. Kagelin doesn't.
 
 - **Nothing to sign up for.** Tasks, habits, focus, and calendar — all offline in guest mode. Account only if you want cloud sync.
 - **Your data, your server.** Point it at Nextcloud, Synology, or any WebDAV server. No middleman.
 - **Take everything with you.** Encrypted ZIP export, full data deletion, and standard `.ics` files. Leaving is always an option.
 
-<h2 align="center">Features</h2>
+## Features
 
 ### Tasks & Organization
 
@@ -72,7 +74,7 @@ Most productivity apps want your email before you've written a single task, and 
 - **Keyboard accessible**: Esc closes all modals, full focus-trap and `aria-modal` compliance.
 - **Haptic feedback**: standardized haptic palette for precise mobile feedback.
 
-<h2 align="center">Shortcuts</h2>
+## Shortcuts
 
 | Shortcut          | Action                                                            |
 | ----------------- | ----------------------------------------------------------------- |
@@ -96,21 +98,21 @@ Most productivity apps want your email before you've written a single task, and 
 
 </details>
 
-<h2 align="center">Setup</h2>
+## Setup
 
 **Prerequisites**: Node.js 20+, a Supabase project with the schema from `supabase/schema.sql`.
 
 ```bash
-git clone <repo>
+git clone https://github.com/Achyuth072/Kanso.git
 npm install
 cp .env.example .env.local   # add your Supabase keys
 npm run dev
 ```
 
-<h2 align="center">Contributing & Feedback</h2>
+## Contributing & Feedback
 
 Bug reports and feature requests go in [GitHub Issues](../../issues). For questions and discussion, use [GitHub Discussions](../../discussions).
 
-<h2 align="center">License</h2>
+## License
 
 [AGPL-3.0](LICENSE)
