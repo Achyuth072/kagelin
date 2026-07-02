@@ -62,19 +62,20 @@ export function HabitFrequencyField({
       <IconCell className="pt-0 items-center">
         <Repeat className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
       </IconCell>
-      <div className="flex-1 min-w-0 flex flex-wrap items-center gap-x-2.5 gap-y-2">
+      {/* Single compact row — sized to fit narrow mobile drawers without wrapping */}
+      <div className="flex-1 min-w-0 flex items-center gap-2">
         {/* Count stepper */}
-        <div className="inline-flex items-center h-9 rounded-lg border border-border/40 bg-secondary/10">
+        <div className="inline-flex items-center h-8 rounded-lg border border-border/40 bg-secondary/10 shrink-0">
           <button
             type="button"
             onClick={() => setCount(count - 1)}
             disabled={count <= MIN_COUNT}
             aria-label="Fewer times"
-            className="h-9 w-9 flex items-center justify-center rounded-l-lg text-muted-foreground transition-seijaku-fast hover:text-foreground hover:bg-secondary/40 disabled:opacity-40 disabled:pointer-events-none"
+            className="h-8 w-8 flex items-center justify-center rounded-l-lg text-muted-foreground transition-seijaku-fast hover:text-foreground hover:bg-secondary/40 disabled:opacity-40 disabled:pointer-events-none"
           >
             <Minus className="h-4 w-4" strokeWidth={2.25} />
           </button>
-          <span className="w-7 text-center text-[13px] font-medium tabular-nums text-foreground">
+          <span className="w-6 text-center text-[13px] font-medium tabular-nums text-foreground">
             {count}
           </span>
           <button
@@ -82,7 +83,7 @@ export function HabitFrequencyField({
             onClick={() => setCount(count + 1)}
             disabled={count >= MAX_COUNT}
             aria-label="More times"
-            className="h-9 w-9 flex items-center justify-center rounded-r-lg text-muted-foreground transition-seijaku-fast hover:text-foreground hover:bg-secondary/40 disabled:opacity-40 disabled:pointer-events-none"
+            className="h-8 w-8 flex items-center justify-center rounded-r-lg text-muted-foreground transition-seijaku-fast hover:text-foreground hover:bg-secondary/40 disabled:opacity-40 disabled:pointer-events-none"
           >
             <Plus className="h-4 w-4" strokeWidth={2.25} />
           </button>
@@ -93,7 +94,7 @@ export function HabitFrequencyField({
         </span>
 
         {/* Period segmented toggle — matches SheetTabToggle */}
-        <div className="inline-flex h-9 p-1 rounded-lg bg-secondary/10 border border-border/40">
+        <div className="inline-flex h-8 p-0.5 rounded-lg bg-secondary/10 border border-border/40 shrink-0">
           {periods.map((p) => (
             <button
               key={p}
@@ -101,7 +102,7 @@ export function HabitFrequencyField({
               onClick={() => setPeriod(p)}
               aria-pressed={period === p}
               className={cn(
-                "rounded-md px-3 h-7 text-[13px] font-medium tracking-tight border border-transparent transition-seijaku-fast",
+                "rounded-md px-2.5 h-7 text-[13px] font-medium tracking-tight border border-transparent transition-seijaku-fast",
                 period === p
                   ? "bg-brand text-brand-foreground border-brand/20"
                   : "text-muted-foreground hover:text-foreground hover:bg-secondary/40",
