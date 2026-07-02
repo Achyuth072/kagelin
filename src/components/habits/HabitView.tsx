@@ -5,7 +5,14 @@ import { CreateHabitInput } from "@/lib/schemas/habit";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
-import { Save, Trash2, CalendarIcon, AlignLeft, Palette } from "lucide-react";
+import {
+  Send,
+  Save,
+  Trash2,
+  CalendarIcon,
+  AlignLeft,
+  Palette,
+} from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { HabitIconPicker } from "./shared/HabitIconPicker";
 import {
@@ -16,10 +23,7 @@ import { ColorPicker } from "@/components/shared/ColorPicker";
 import { TaskDatePicker } from "../tasks/shared/TaskDatePicker";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
-import type { Habit } from "@/lib/types/habit";
-
-interface HabitEditViewProps {
-  _initialHabit: Habit;
+interface HabitViewBaseProps {
   name: string;
   setName: (value: string) => void;
   description: string;
@@ -40,45 +44,59 @@ interface HabitEditViewProps {
   hasContent: boolean;
   isPending: boolean;
   onSubmit: () => void;
-  onDelete: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
   errors?: FieldErrors<CreateHabitInput>;
 }
 
-export function HabitEditView({
-  name,
-  setName,
-  description,
-  setDescription,
-  color,
-  setColor,
-  icon,
-  setIcon,
-  startDate,
-  setStartDate,
-  frequencyCount,
-  setFrequencyCount,
-  frequencyPeriod,
-  setFrequencyPeriod,
-  datePickerOpen,
-  setDatePickerOpen,
-  isMobile,
-  hasContent,
-  isPending,
-  onSubmit,
-  onDelete,
-  onKeyDown,
-  errors,
-}: HabitEditViewProps) {
+export type HabitViewProps =
+  | (HabitViewBaseProps & { mode: "create" })
+  | (HabitViewBaseProps & {
+      mode: "edit";
+      onDelete: () => void;
+    });
+
+export function HabitView(props: HabitViewProps) {
+  const { mode } = props;
+  const {
+    name,
+    setName,
+    description,
+    setDescription,
+    color,
+    setColor,
+    icon,
+    setIcon,
+    startDate,
+    setStartDate,
+    frequencyCount,
+    setFrequencyCount,
+    frequencyPeriod,
+    setFrequencyPeriod,
+    datePickerOpen,
+    setDatePickerOpen,
+    isMobile,
+    hasContent,
+    isPending,
+    onSubmit,
+    onKeyDown,
+    errors,
+  } = props;
+
   const { trigger } = useHaptic();
   const isFinePointer = useMediaQuery("(pointer: fine)");
+
+  const nameId = mode === "create" ? "habit-name" : "habit-name-edit";
+  const nameErrorId =
+    mode === "create" ? "habit-name-error" : "habit-name-edit-error";
+  const descriptionId =
+    mode === "create" ? "habit-description" : "habit-description-edit";
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full max-w-full">
       {/* Title — native input, bottom border only, no box */}
       <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
         <input
-          id="habit-name-edit"
+          id={nameId}
           placeholder="Habit name"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -90,13 +108,10 @@ export function HabitEditView({
             errors?.name && "placeholder:text-destructive/60",
           )}
           aria-invalid={!!errors?.name}
-          aria-describedby={errors?.name ? "habit-name-edit-error" : undefined}
+          aria-describedby={errors?.name ? nameErrorId : undefined}
         />
         {errors?.name && (
-          <p
-            id="habit-name-edit-error"
-            className="text-xs text-destructive mt-1"
-          >
+          <p id={nameErrorId} className="text-xs text-destructive mt-1">
             {errors.name.message}
           </p>
         )}
@@ -144,8 +159,8 @@ export function HabitEditView({
               />
             </IconCell>
             <textarea
-              id="habit-description-edit"
-              placeholder="Add details..."
+              id={descriptionId}
+              placeholder="Add details (optional)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
@@ -167,7 +182,7 @@ export function HabitEditView({
           onOpenChange={setDatePickerOpen}
           variant="icon"
           icon={CalendarIcon}
-          title="Start date"
+          title="Start Date"
           showTime={true}
           allowPastDates={true}
           side="top"
@@ -177,20 +192,22 @@ export function HabitEditView({
 
         <div className="flex-1" />
 
-        <Button
-          type="button"
-          variant="destructive"
-          size="sm"
-          className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
-          onClick={() => {
-            trigger("thud");
-            onDelete();
-          }}
-          disabled={isPending}
-          aria-label="Delete habit"
-        >
-          <Trash2 strokeWidth={2.25} />
-        </Button>
+        {mode === "edit" && (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
+            onClick={() => {
+              trigger("thud");
+              props.onDelete();
+            }}
+            disabled={isPending}
+            aria-label="Delete habit"
+          >
+            <Trash2 strokeWidth={2.25} />
+          </Button>
+        )}
 
         <Button
           type="button"
@@ -201,9 +218,21 @@ export function HabitEditView({
             onSubmit();
           }}
           disabled={!hasContent || isPending}
-          aria-label={isPending ? "Saving" : "Save changes"}
+          aria-label={
+            mode === "create"
+              ? isPending
+                ? "Creating habit"
+                : "Start habit"
+              : isPending
+                ? "Saving"
+                : "Save changes"
+          }
         >
-          <Save className="h-5 w-5 stroke-[2.25px]" />
+          {mode === "create" ? (
+            <Send className="h-5 w-5 stroke-[2.25px]" />
+          ) : (
+            <Save className="h-5 w-5 stroke-[2.25px]" />
+          )}
         </Button>
       </div>
     </div>

@@ -20,8 +20,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateHabitSchema, type CreateHabitInput } from "@/lib/schemas/habit";
 import type { Habit } from "@/lib/types/habit";
-import { HabitCreateView } from "./HabitCreateView";
-import { HabitEditView } from "./HabitEditView";
+import { HabitView } from "./HabitView";
 import { HabitInsightsPanel } from "./HabitInsightsPanel";
 import { SheetTabToggle, type SheetTab } from "@/components/ui/SheetTabToggle";
 import { cn } from "@/lib/utils";
@@ -230,7 +229,8 @@ export function HabitSheet({
             {tab === "insights" && !isCreationMode ? (
               <HabitInsightsPanel habit={effectiveHabit!} />
             ) : isCreationMode ? (
-              <HabitCreateView
+              <HabitView
+                mode="create"
                 name={name}
                 setName={(v) => setValue("name", v, { shouldValidate: true })}
                 description={description}
@@ -267,8 +267,9 @@ export function HabitSheet({
                 errors={errors}
               />
             ) : (
-              <HabitEditView
-                _initialHabit={effectiveHabit!}
+              <HabitView
+                mode="edit"
+                onDelete={handleDelete}
                 name={name}
                 setName={(v) => setValue("name", v, { shouldValidate: true })}
                 description={description}
@@ -301,7 +302,6 @@ export function HabitSheet({
                 hasContent={isValid}
                 isPending={isPending}
                 onSubmit={handleSubmit(onFormSubmit)}
-                onDelete={handleDelete}
                 onKeyDown={handleKeyDown}
                 errors={errors}
               />
