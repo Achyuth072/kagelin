@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { memo, useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -89,7 +89,7 @@ interface TaskListViewProps {
  * TaskListView rebuilt with a flat DOM hierarchy.
  * Optimized for dnd-kit performance by minimizing React reconciliation depth.
  */
-export function TaskListView({
+function TaskListViewBase({
   processedTasks,
   activeTasks,
   eveningTasks,
@@ -271,3 +271,5 @@ export function TaskListView({
     </div>
   );
 }
+
+export const TaskListView = memo(TaskListViewBase);
