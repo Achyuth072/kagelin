@@ -10,6 +10,16 @@
     }
   },
   {
+    "version": "1.24.0-preview.12",
+    "date": "2026-07-02",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Replace the empty goals card with a slim prompt"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.11",
     "date": "2026-07-02",
     "channel": "preview",
@@ -654,16 +664,6 @@
     "sections": {
       "Added": [
         "Enhance drag-and-drop with cross-group mutations and auto-scroll"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.2",
-    "date": "2026-05-05",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Data sovereignty for registered users — export, import, and delete cloud data"
       ]
     }
   }
