@@ -115,23 +115,22 @@ export function HabitCompactRow({
         <span className="truncate text-[15px] font-semibold tracking-tight text-foreground">
           {habit.name}
         </span>
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-2 lg:ml-0">
+        <div className="ml-auto flex shrink-0 items-center gap-2 pl-2 lg:ml-0">
           {frequencyProgress && (
             <CircularProgress
               value={frequencyProgress.completed}
               max={frequencyProgress.target}
-              size={22}
+              size={18}
               strokeWidth={2.5}
               color={habit.color}
               label={frequencyProgressLabel(frequencyProgress)}
               className="mr-0.5"
             />
           )}
-          <span className="text-sm font-bold tabular-nums text-foreground">
-            {streak}
-          </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/50">
-            Streak
+          {/* Quiet metadata, matched to HabitCard's strip (no caps label). */}
+          <span className="text-[13px] font-medium tabular-nums text-foreground/55">
+            <span className="font-semibold text-foreground/90">{streak}</span>{" "}
+            streak
           </span>
           {onViewInsights && (
             <button
@@ -139,7 +138,7 @@ export function HabitCompactRow({
                 e.stopPropagation();
                 onViewInsights();
               }}
-              className="ml-1.5 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-seijaku-fast hover:bg-secondary/60 hover:text-foreground"
+              className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-seijaku-fast hover:bg-secondary/60 hover:text-foreground"
               aria-label="View insights"
             >
               <BarChart2 className="h-3.5 w-3.5" strokeWidth={2.25} />
