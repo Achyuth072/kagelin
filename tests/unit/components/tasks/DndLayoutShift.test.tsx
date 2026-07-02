@@ -235,11 +235,11 @@ describe("TaskList DnD layout shift protection", () => {
     expect(canScroll(document.documentElement)).toBe(false);
   });
 
-  it("keeps list droppable measurements fresh during auto-scrolled drops", () => {
+  it("uses WhileDragging measuring to avoid re-measuring on every drag-over registry mutation", () => {
     render(<TaskList projectId="all" />);
 
     expect(
       dndKitMock.latestDndContextProps?.measuring?.droppable?.strategy,
-    ).toBe(MeasuringStrategy.Always);
+    ).toBe(MeasuringStrategy.WhileDragging);
   });
 });

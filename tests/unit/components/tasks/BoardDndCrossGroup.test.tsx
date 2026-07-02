@@ -337,25 +337,21 @@ describe("TaskBoard — cross-group snap-back regression", () => {
       });
     });
 
-    // Capture the onSettled callbacks from the two mutation calls
-    // updateMutation fires for the priority change (hasChanged=true)
-    // reorderMutation fires for the day_order update
+    // updateMutation fires for the priority change (hasChanged=true).
+    // The reorder mutation is skipped for this drop: t1 is already positioned
+    // immediately after t3 in the flat list, so no day_order change is needed.
     expect(updateMutateMock).toHaveBeenCalledOnce();
-    expect(reorderMutateMock).toHaveBeenCalledOnce();
+    expect(reorderMutateMock).not.toHaveBeenCalled();
 
     const updateOnSettled: (() => void) | undefined =
       updateMutateMock.mock.calls[0]?.[1]?.onSettled;
-    const reorderOnSettled: (() => void) | undefined =
-      reorderMutateMock.mock.calls[0]?.[1]?.onSettled;
 
     expect(updateOnSettled).toBeDefined();
-    expect(reorderOnSettled).toBeDefined();
 
     // --- Simulate stale refetch: re-render with stale processedTasks ---
-    // This mimics the race where reorderMutation.onSettled triggers
-    // invalidateQueries → a refetch returns OLD server data (t1 priority=2,
-    // still in High). The parent component re-renders TaskBoard with this
-    // stale processedTasks prop, overwriting boardColumns.
+    // This mimics the race where a background refetch returns OLD server data
+    // (t1 priority=2, still in High). The parent component re-renders TaskBoard
+    // with this stale processedTasks prop, overwriting boardColumns.
     act(() => {
       rerender(
         <TaskBoard processedTasks={staleProcessedTasks} {...defaultProps} />,
@@ -364,14 +360,6 @@ describe("TaskBoard — cross-group snap-back regression", () => {
 
     // At this point: lockLocal=true (still dragging), display shows localColumns
     // t1 must still appear in Critical regardless of the stale prop
-    expect(getTaskColumn("t1")).toBe("Critical");
-
-    // --- reorderMutation settles first (pendingCount 2 → 1) ---
-    act(() => {
-      reorderOnSettled?.();
-    });
-
-    // Lock must still be held (pendingCount=1 — updateMutation still pending)
     expect(getTaskColumn("t1")).toBe("Critical");
 
     // --- updateMutation settles (pendingCount 1 → 0) ---

@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckSquare, Plus } from "lucide-react";
-import { useState, useMemo, useCallback, useEffect, memo } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, memo } from "react";
 import { createPortal } from "react-dom";
 import {
   KeyboardSensor,
@@ -14,7 +14,7 @@ import {
   DragOverEvent,
   DragOverlay,
   defaultDropAnimationSideEffects,
-  rectIntersection,
+  closestCorners,
   DndContext,
   MeasuringStrategy,
 } from "@dnd-kit/core";
@@ -30,6 +30,7 @@ import type { TaskGroup } from "@/lib/hooks/useTaskViewData";
 import {
   getTaskUpdatesForGroup,
   computeReorderPairs,
+  isDropBlockedGroup,
 } from "@/lib/utils/task-dnd";
 import {
   useReorderTasks,
@@ -66,6 +67,10 @@ function TaskListBase({
   const { data: projectsData } = useProjects();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Snapshot of the dragged task, captured once at drag start and fed to the
+  // DragOverlay ghost. Deriving it from local state on every render would
+  // re-run flatMap + find over every task on each drag-over update.
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
   // Keeps displaying local DnD state after activeId clears, until the
   // reorder mutation's onSettled fires and the optimistic cache update is live.
   const [lockLocal, setLockLocal] = useState(false);
@@ -137,9 +142,16 @@ function TaskListBase({
     activeId || lockLocal ? localGroups : processedTasks.groups;
 
   const getTaskUpdates = useCallback(
-    (groupTitle: string) => getTaskUpdatesForGroup(groupTitle, projectsMap),
-    [projectsMap],
+    (groupTitle: string) =>
+      getTaskUpdatesForGroup(groupTitle, projectsMap, groupBy),
+    [projectsMap, groupBy],
   );
+
+  // Flat task list captured at drag start, fed to computeReorderPairs in
+  // handleDragEnd. Custom sort: authoritative day_order order. Derived sorts:
+  // display order, which the drop bakes into the custom order (the drop
+  // switches sortBy to "custom", so what's on screen must be persisted).
+  const preDragFlatTasksRef = useRef<Task[]>([]);
 
   // Open-bridge for global search: when a task is selected from the command
   // menu, open its edit sheet here (the sheet lives on the tasks page). Clear
@@ -173,10 +185,25 @@ function TaskListBase({
       setLocalActive(processedTasks.active);
       setLocalEvening(processedTasks.evening);
       setLocalGroups(processedTasks.groups);
-      setActiveId(event.active.id as string);
+      const id = event.active.id as string;
+      setActiveId(id);
+      setActiveTask(
+        processedTasks.active.find((t) => t.id === id) ||
+          processedTasks.evening.find((t) => t.id === id) ||
+          processedTasks.groups
+            ?.flatMap((g) => g.tasks)
+            .find((t) => t.id === id) ||
+          null,
+      );
+      preDragFlatTasksRef.current =
+        sortBy === "custom"
+          ? [...tasks].sort((a, b) => a.day_order - b.day_order)
+          : processedTasks.groups
+            ? processedTasks.groups.flatMap((g) => g.tasks)
+            : [...processedTasks.active, ...processedTasks.evening];
       triggerHaptic("toggle");
     },
-    [processedTasks, triggerHaptic],
+    [processedTasks, triggerHaptic, sortBy, tasks],
   );
 
   const handleDragOver = useCallback(
@@ -219,7 +246,7 @@ function TaskListBase({
             newIndex = group.tasks.findIndex((t) => t.id === over.id);
           }
 
-          if (oldIndex !== -1 && newIndex !== -1) {
+          if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
             const newTasks = arrayMove(group.tasks, oldIndex, newIndex);
             const newGroups = [...localGroups];
             newGroups[activeGroupIndex] = { ...group, tasks: newTasks };
@@ -227,6 +254,11 @@ function TaskListBase({
           }
         } else {
           // Move between groups
+          // Derived buckets like "Overdue" have no settable property — the
+          // drop could never stick, so don't let the drag enter the group.
+          if (isDropBlockedGroup(localGroups[overGroupIndex].title, groupBy)) {
+            return;
+          }
           setLocalGroups((prev) => {
             if (!prev) return prev;
             const newGroups = [...prev];
@@ -279,7 +311,7 @@ function TaskListBase({
             newIndex = list.findIndex((t: Task) => t.id === over.id);
           }
 
-          if (oldIndex !== -1 && newIndex !== -1) {
+          if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
             setList(arrayMove(list, oldIndex, newIndex));
           }
         } else {
@@ -323,7 +355,7 @@ function TaskListBase({
         }
       }
     },
-    [localActive, localEvening, localGroups, getTaskUpdates],
+    [localActive, localEvening, localGroups, getTaskUpdates, groupBy],
   );
 
   const handleDragEnd = useCallback(
@@ -341,6 +373,7 @@ function TaskListBase({
         setLocalEvening(processedTasks.evening);
         setLocalGroups(processedTasks.groups);
         setActiveId(null);
+        setActiveTask(null);
         return;
       }
 
@@ -353,6 +386,7 @@ function TaskListBase({
         // component in a half-committed state (activeId=null, lockLocal=false).
         if (!finalGroup) {
           setActiveId(null);
+          setActiveTask(null);
           return;
         }
         const activeTask = finalGroup.tasks.find(
@@ -360,8 +394,14 @@ function TaskListBase({
         );
         if (!activeTask) {
           setActiveId(null);
+          setActiveTask(null);
           return;
         }
+
+        const originalGroup = processedTasks.groups?.find((g: TaskGroup) =>
+          g.tasks.some((t: Task) => t.id === activeId),
+        );
+        const isSameSection = originalGroup?.title === finalGroup.title;
 
         // CRITICAL ORDERING:
         // setLockLocal(true) MUST be queued BEFORE setActiveId(null). React 18
@@ -411,17 +451,29 @@ function TaskListBase({
           );
         }
 
-        // 2. Commit reorder using slot-value-swap day_order pairs.
-        // `tasks` is the server-authoritative flat list (pre-drag).
+        // 2. Commit the reorder as a single-task move within the flat list
+        // captured at drag start. Empty pairs mean no order change — skip.
         // lockLocal released via tryReleaseLock once all mutations settle.
         const orderedIds = finalGroup.tasks.map((t: Task) => t.id);
-        const pairs = computeReorderPairs(orderedIds, tasks);
-        pendingCount++;
-        reorderMutation.mutate(pairs, {
-          onSettled: tryReleaseLock,
-        });
+        const pairs = computeReorderPairs(
+          activeId,
+          orderedIds,
+          preDragFlatTasksRef.current,
+          isSameSection,
+        );
+        if (pairs.length > 0) {
+          pendingCount++;
+          reorderMutation.mutate(pairs, {
+            onSettled: tryReleaseLock,
+          });
+        }
+        // Nothing to persist — release the lock now; onSettled never fires.
+        if (pendingCount === 0) {
+          setLockLocal(false);
+        }
         triggerHaptic("thud");
         setActiveId(null);
+        setActiveTask(null);
       } else {
         const findTaskInLocal = (id: string) =>
           localActive.find((t: Task) => t.id === id) ||
@@ -430,6 +482,7 @@ function TaskListBase({
         const activeTask = findTaskInLocal(active.id as string);
         if (!activeTask) {
           setActiveId(null);
+          setActiveTask(null);
           return;
         }
 
@@ -444,6 +497,7 @@ function TaskListBase({
         const wasInEveningBefore = processedTasks.evening.some(
           (t: Task) => t.id === active.id,
         );
+        const isSameSection = isInEveningNow === wasInEveningBefore;
 
         // Same pending-count guard as the groups branch above.
         let pendingCount = 0;
@@ -466,16 +520,29 @@ function TaskListBase({
           );
         }
 
-        // Commit the new order using slot-value-swap day_order pairs.
+        // Commit the reorder as a single-task move within the flat list
+        // captured at drag start. Empty pairs mean no order change — skip.
         triggerHaptic("thud");
         const currentList = isInEveningNow ? localEvening : localActive;
         const orderedIds = currentList.map((t: Task) => t.id);
-        const pairs = computeReorderPairs(orderedIds, tasks);
-        pendingCount++;
-        reorderMutation.mutate(pairs, {
-          onSettled: tryReleaseLock,
-        });
+        const pairs = computeReorderPairs(
+          activeTask.id,
+          orderedIds,
+          preDragFlatTasksRef.current,
+          isSameSection,
+        );
+        if (pairs.length > 0) {
+          pendingCount++;
+          reorderMutation.mutate(pairs, {
+            onSettled: tryReleaseLock,
+          });
+        }
+        // Nothing to persist — release the lock now; onSettled never fires.
+        if (pendingCount === 0) {
+          setLockLocal(false);
+        }
         setActiveId(null);
+        setActiveTask(null);
       }
     },
     [
@@ -556,27 +623,20 @@ function TaskListBase({
   });
 
   const overlayContent = useMemo(() => {
-    if (!activeId) return null;
-    const currentActiveId = activeId as string;
-    const draggingTask =
-      localActive.find((t) => t.id === currentActiveId) ||
-      localEvening.find((t) => t.id === currentActiveId) ||
-      tasks.find((t) => t.id === currentActiveId);
-
-    if (!draggingTask) return null;
-    const project = projectsMap.get(draggingTask.project_id || "inbox");
+    if (!activeTask) return null;
+    const project = projectsMap.get(activeTask.project_id || "inbox");
 
     return (
       <div className="opacity-90 pointer-events-none will-change-transform rotate-1 scale-[1.02]">
         <TaskGhost
-          task={draggingTask}
+          task={activeTask}
           isDesktop={isDesktop}
           viewMode="list"
           project={project}
         />
       </div>
     );
-  }, [activeId, localActive, localEvening, tasks, projectsMap, isDesktop]);
+  }, [activeTask, projectsMap, isDesktop]);
 
   if (isLoading) {
     return (
@@ -620,13 +680,20 @@ function TaskListBase({
     <>
       <DndContext
         sensors={sensors}
-        collisionDetection={rectIntersection}
+        // dnd-kit docs: for Kanban-style stacked droppables (a column + its
+        // items), rectIntersection can resolve to the whole column instead of
+        // an item within it — which dropped tasks at the bottom of sparse
+        // columns like Overdue. closestCorners is the documented choice.
+        collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        // WhileDragging measures the same as Always during a drag; Always
+        // additionally re-measures on every droppable registry mutation while
+        // idle, which is pure overhead here and hurts cross-column drags.
         measuring={{
           droppable: {
-            strategy: MeasuringStrategy.Always,
+            strategy: MeasuringStrategy.WhileDragging,
           },
         }}
         autoScroll={{

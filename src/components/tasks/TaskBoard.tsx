@@ -20,7 +20,7 @@ import {
   KeyboardSensor,
   useSensor,
   useSensors,
-  rectIntersection,
+  closestCorners,
   DragOverlay,
   defaultDropAnimationSideEffects,
   useDroppable,
@@ -34,6 +34,7 @@ import {
 import { useJsLoaded } from "@/lib/hooks/use-js-loaded";
 import type { ProcessedTasks, TaskGroup } from "@/lib/hooks/useTaskViewData";
 import type { Task, Project } from "@/lib/types/task";
+import type { GroupOption } from "@/lib/types/sorting";
 import { SortableBoardTaskCard } from "./SortableBoardTaskCard";
 import { TaskGhost } from "./TaskGhost";
 import { useUpdateTask, useReorderTasks } from "@/lib/hooks/useTaskMutations";
@@ -42,6 +43,7 @@ import { KanbanBoardProvider } from "@/components/kanban";
 import {
   getTaskUpdatesForGroup,
   computeReorderPairs,
+  isDropBlockedGroup,
 } from "@/lib/utils/task-dnd";
 
 interface TaskBoardProps {
@@ -51,6 +53,7 @@ interface TaskBoardProps {
   isDesktop: boolean;
   triggerHaptic: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   setActiveTaskId: (taskId: string) => void;
+  groupBy?: GroupOption;
 }
 
 export function TaskBoard({
@@ -60,6 +63,7 @@ export function TaskBoard({
   isDesktop,
   triggerHaptic,
   setActiveTaskId,
+  groupBy,
 }: TaskBoardProps) {
   const isJsLoaded = useJsLoaded();
   const { groups, active, evening } = processedTasks;
@@ -69,6 +73,10 @@ export function TaskBoard({
   const setSortBy = useUiStore((state) => state.setSortBy);
 
   const [activeId, setActiveId] = useState<string | null>(null);
+  // Snapshot of the dragged task, captured once at drag start and fed to the
+  // DragOverlay ghost. Deriving it from localColumns instead would recompute
+  // (flatMap + find over every task) on each drag-over state update.
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
   // Mirrors the list-view lockLocal pattern: while lockLocal=true (or activeId
   // is set), displayColumns reads from localColumns (local drag state) rather
   // than boardColumns (server-derived). The inline ternary is evaluated
@@ -143,20 +151,30 @@ export function TaskBoard({
   );
 
   const getTaskUpdates = useCallback(
-    (groupTitle: string) => getTaskUpdatesForGroup(groupTitle, projectsMap),
-    [projectsMap],
+    (groupTitle: string) =>
+      getTaskUpdatesForGroup(groupTitle, projectsMap, groupBy),
+    [projectsMap, groupBy],
   );
 
   const handleDragStart = (event: DragStartEvent) => {
     // 🚀 Performance: Sync local state only when drag starts
     setLocalColumns(boardColumns);
-    setActiveId(event.active.id as string);
-    // Capture the server-authoritative flat task list before any local reorder
-    // mutations. This snapshot is used in handleDragEnd to compute correct
-    // slot-value-swap day_order pairs via computeReorderPairs.
-    preDragFlatTasksRef.current = boardColumns
-      .flatMap((col) => col.tasks)
-      .sort((a, b) => a.day_order - b.day_order);
+    const id = event.active.id as string;
+    setActiveId(id);
+    setActiveTask(
+      boardColumns.flatMap((c) => c.tasks).find((t) => t.id === id) || null,
+    );
+    // Capture the flat task list before any local drag mutations; handleDragEnd
+    // feeds it to computeReorderPairs. In custom sort the display already
+    // follows day_order, so sort by it (columns interleave in the flatMap).
+    // Under a derived sort (date/priority/alphabetical) the drop converts the
+    // on-screen order into the custom order, so capture display order as-is
+    // and let computeMoveOrders bake it in.
+    const visibleTasks = boardColumns.flatMap((col) => col.tasks);
+    preDragFlatTasksRef.current =
+      sortBy === "custom"
+        ? [...visibleTasks].sort((a, b) => a.day_order - b.day_order)
+        : visibleTasks;
     triggerHaptic?.("toggle");
   };
 
@@ -177,6 +195,10 @@ export function TaskBoard({
     if (!activeColumn || !overColumn) return;
 
     if (activeColumn.title !== overColumn.title) {
+      // Derived buckets like "Overdue" have no settable property — the drop
+      // could never stick, so don't let the drag enter the column at all.
+      if (isDropBlockedGroup(overColumn.title, groupBy)) return;
+
       setLocalColumns((prev) => {
         const activeColIndex = prev.findIndex(
           (c) => c.title === activeColumn.title,
@@ -244,6 +266,9 @@ export function TaskBoard({
           newIndex = prevTasks.findIndex((t) => t.id === overId);
         }
         if (newIndex === undefined || newIndex === -1) return prev;
+        // Bail out when nothing moves — avoids a fresh column object (and the
+        // KanbanColumn + SortableContext re-render it causes) per drag-over.
+        if (newIndex === oldIndex) return prev;
 
         const newCols = [...prev];
         newCols[colIndex] = {
@@ -255,6 +280,12 @@ export function TaskBoard({
     }
   };
 
+  const handleDragCancel = () => {
+    setLocalColumns(boardColumns);
+    setActiveId(null);
+    setActiveTask(null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -262,6 +293,7 @@ export function TaskBoard({
     // displayColumns falls through to boardColumns when activeId=null && lockLocal=false.
     if (!over) {
       setActiveId(null);
+      setActiveTask(null);
       return;
     }
 
@@ -274,13 +306,20 @@ export function TaskBoard({
     // through to boardColumns before the drop position is committed).
     if (!finalColumn) {
       setActiveId(null);
+      setActiveTask(null);
       return;
     }
-    const activeTask = finalColumn.tasks.find((t) => t.id === activeId);
-    if (!activeTask) {
+    const draggedTask = finalColumn.tasks.find((t) => t.id === activeId);
+    if (!draggedTask) {
       setActiveId(null);
+      setActiveTask(null);
       return;
     }
+
+    const originalColumn = boardColumns.find((col) =>
+      col.tasks.some((t) => t.id === activeId),
+    );
+    const isSameSection = originalColumn?.title === finalColumn.title;
 
     // CRITICAL ORDERING: setLockLocal(true) MUST be queued BEFORE setActiveId(null).
     // React 18 batches both into one render, but ordering defends against any
@@ -335,27 +374,32 @@ export function TaskBoard({
       );
     }
 
-    // 2. Commit reorder using slot-value-swap day_order pairs.
-    // preDragFlatTasksRef.current holds the server-authoritative flat task list
-    // captured at handleDragStart — BEFORE any local reorder mutations.
+    // 2. Commit the reorder as a single-task move within the flat list
+    // captured at handleDragStart — BEFORE any local drag mutations. Empty
+    // pairs mean the drop needs no order change (dropped back in place, or
+    // into an empty column) — skip the mutation entirely.
     // lockLocal is released via tryReleaseLock once all mutations settle.
     const orderedIds = finalColumn.tasks.map((t) => t.id);
-    const pairs = computeReorderPairs(orderedIds, preDragFlatTasksRef.current);
-    pendingCount++;
-    reorderMutation.mutate(pairs, {
-      onSettled: tryReleaseLock,
-    });
+    const pairs = computeReorderPairs(
+      activeId,
+      orderedIds,
+      preDragFlatTasksRef.current,
+      isSameSection,
+    );
+    if (pairs.length > 0) {
+      pendingCount++;
+      reorderMutation.mutate(pairs, {
+        onSettled: tryReleaseLock,
+      });
+    }
+    // Nothing to persist at all — release the lock now; onSettled never fires.
+    if (pendingCount === 0) {
+      setLockLocal(false);
+    }
     triggerHaptic?.("thud");
     setActiveId(null);
+    setActiveTask(null);
   };
-
-  const activeTask = useMemo(() => {
-    if (!activeId) return null;
-    return (
-      localColumns.flatMap((c) => c.tasks).find((t) => t.id === activeId) ||
-      null
-    );
-  }, [activeId, localColumns]);
 
   if (!isJsLoaded) return null;
 
@@ -363,13 +407,21 @@ export function TaskBoard({
     <KanbanBoardProvider>
       <DndContext
         sensors={sensors}
-        collisionDetection={rectIntersection}
+        // dnd-kit docs: for Kanban-style stacked droppables (a column + its
+        // items), rectIntersection/closestCenter can resolve to the whole
+        // column instead of an item within it — which dropped tasks at the
+        // bottom of sparse columns. closestCorners is the documented choice.
+        collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+        // WhileDragging (the dnd-kit default) measures the same as Always
+        // during a drag; Always additionally re-measures on every droppable
+        // registry mutation while idle, which is pure overhead here.
         measuring={{
           droppable: {
-            strategy: MeasuringStrategy.Always,
+            strategy: MeasuringStrategy.WhileDragging,
           },
         }}
         autoScroll={{
