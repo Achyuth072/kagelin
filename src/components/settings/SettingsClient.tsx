@@ -69,12 +69,13 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    "appearance" | "preferences" | "goals" | "account"
+    "appearance" | "preferences" | "account"
   >(() => {
     const tab = searchParams.get("tab");
-    return tab === "preferences" || tab === "goals" || tab === "account"
-      ? tab
-      : "appearance";
+    // "goals" folded into Preferences — keep old deep links working.
+    if (tab === "goals" || tab === "preferences") return "preferences";
+    if (tab === "account") return "account";
+    return "appearance";
   });
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { trigger } = useHaptic();
@@ -128,7 +129,6 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const sectionTabs = [
     { value: "appearance", label: "Appearance" },
     { value: "preferences", label: "Preferences" },
-    { value: "goals", label: "Goals" },
     { value: "account", label: "Account" },
   ] as const;
 
@@ -159,13 +159,11 @@ export function SettingsClient({ version }: SettingsClientProps) {
             value={activeTab}
             onValueChange={(v) => {
               trigger("toggle");
-              setActiveTab(
-                v as "appearance" | "preferences" | "goals" | "account",
-              );
+              setActiveTab(v as "appearance" | "preferences" | "account");
             }}
             className="w-full"
           >
-            <TabsList className="grid grid-cols-4 bg-secondary/10 p-1 rounded-lg h-11 border border-border/40 shadow-none">
+            <TabsList className="grid grid-cols-3 bg-secondary/10 p-1 rounded-lg h-11 border border-border/40 shadow-none">
               {sectionTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
@@ -329,53 +327,42 @@ export function SettingsClient({ version }: SettingsClientProps) {
                   </div>
 
                   <NotificationSettings />
-                </div>
-              </section>
-            )}
 
-            {activeTab === "goals" && (
-              <section className="space-y-4">
-                <div>
-                  <h2 className="type-micro font-medium uppercase">Goals</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Set daily and weekly targets. Leave a field empty to hide
-                    its ring on the Stats page.
-                  </p>
-                </div>
+                  <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-background">
+                    <div className="flex items-center gap-3 pb-1">
+                      <div className="p-2 rounded-full bg-secondary/30">
+                        <Target className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Goals</p>
+                        <p className="text-xs text-muted-foreground">
+                          Daily and weekly targets shown as rings on the Stats
+                          page. Leave a field empty to hide its ring.
+                        </p>
+                      </div>
+                    </div>
 
-                <div className="p-4 rounded-lg border border-border/50 bg-background space-y-4">
-                  <div className="flex items-center gap-3 pb-1">
-                    <div className="p-2 rounded-full bg-secondary/30">
-                      <Target className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Focus &amp; Tasks</p>
-                      <p className="text-xs text-muted-foreground">
-                        Shown as rings on the Stats page
-                      </p>
-                    </div>
+                    <GoalField
+                      label="Daily focus hours"
+                      value={goals.dailyFocusHours}
+                      onCommit={(v) => setGoals({ dailyFocusHours: v })}
+                    />
+                    <GoalField
+                      label="Weekly focus hours"
+                      value={goals.weeklyFocusHours}
+                      onCommit={(v) => setGoals({ weeklyFocusHours: v })}
+                    />
+                    <GoalField
+                      label="Daily tasks completed"
+                      value={goals.dailyTasksCompleted}
+                      onCommit={(v) => setGoals({ dailyTasksCompleted: v })}
+                    />
+                    <GoalField
+                      label="Weekly tasks completed"
+                      value={goals.weeklyTasksCompleted}
+                      onCommit={(v) => setGoals({ weeklyTasksCompleted: v })}
+                    />
                   </div>
-
-                  <GoalField
-                    label="Daily focus hours"
-                    value={goals.dailyFocusHours}
-                    onCommit={(v) => setGoals({ dailyFocusHours: v })}
-                  />
-                  <GoalField
-                    label="Weekly focus hours"
-                    value={goals.weeklyFocusHours}
-                    onCommit={(v) => setGoals({ weeklyFocusHours: v })}
-                  />
-                  <GoalField
-                    label="Daily tasks completed"
-                    value={goals.dailyTasksCompleted}
-                    onCommit={(v) => setGoals({ dailyTasksCompleted: v })}
-                  />
-                  <GoalField
-                    label="Weekly tasks completed"
-                    value={goals.weeklyTasksCompleted}
-                    onCommit={(v) => setGoals({ weeklyTasksCompleted: v })}
-                  />
                 </div>
               </section>
             )}
