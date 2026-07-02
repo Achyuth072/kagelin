@@ -10,6 +10,16 @@
     }
   },
   {
+    "version": "1.24.0-preview.13",
+    "date": "2026-07-02",
+    "channel": "preview",
+    "sections": {
+      "Refactored": [
+        "Replace HabitEditView and HabitCreateView with a unified HabitView component"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.12",
     "date": "2026-07-02",
     "channel": "preview",
@@ -654,16 +664,6 @@
     "sections": {
       "Fixed": [
         "Align mobile and desktop list view spacing by removing inner rounded corners and fixing border overlap"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.3",
-    "date": "2026-05-05",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Enhance drag-and-drop with cross-group mutations and auto-scroll"
       ]
     }
   }
