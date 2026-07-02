@@ -14,6 +14,7 @@ import {
   DragOverEvent,
   DragOverlay,
   defaultDropAnimationSideEffects,
+  defaultAnnouncements,
   closestCorners,
   DndContext,
   MeasuringStrategy,
@@ -47,6 +48,35 @@ import { TaskMasonryGrid } from "./TaskMasonryGrid";
 import { TaskBoard } from "./TaskBoard";
 import { TaskGhost } from "./TaskGhost";
 import { useTimerStore } from "@/lib/store/timerStore";
+
+// dnd-kit's built-in Accessibility component calls announce() on every
+// onDragOver by default, thrashing the aria-live region and React's
+// transition queue at drag-over frequency (60-120Hz). Suppressing the
+// per-tick announcement (returning undefined = no-op, see
+// @dnd-kit/accessibility's useAnnouncement) while keeping start/end/cancel
+// matches how Trello-style UIs announce (pick-up and drop only). Defined
+// outside the component so the object identity is stable across renders.
+const dndAnnouncements = {
+  ...defaultAnnouncements,
+  onDragOver: () => undefined,
+};
+
+// Pure w.r.t. its argument (no component state), so hoisted to module scope
+// for a permanently stable reference — dnd-kit calls this on every
+// auto-scroll tick while a drag is active.
+function canScrollTaskListContainer(element: Element): boolean {
+  if (!(element instanceof HTMLElement)) {
+    return false;
+  }
+  if (
+    element.tagName === "BODY" ||
+    element.tagName === "HTML" ||
+    element.classList.contains("no-dnd-scroll")
+  ) {
+    return false;
+  }
+  return element.dataset.taskListScrollContainer === "true";
+}
 
 interface TaskListProps {
   sortBy?: SortOption;
@@ -688,6 +718,7 @@ function TaskListBase({
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
+        accessibility={{ announcements: dndAnnouncements }}
         // WhileDragging measures the same as Always during a drag; Always
         // additionally re-measures on every droppable registry mutation while
         // idle, which is pure overhead here and hurts cross-column drags.
@@ -703,19 +734,7 @@ function TaskListBase({
             y: 0.1,
           },
           acceleration: 10,
-          canScroll: (element: Element) => {
-            if (!(element instanceof HTMLElement)) {
-              return false;
-            }
-            if (
-              element.tagName === "BODY" ||
-              element.tagName === "HTML" ||
-              element.classList.contains("no-dnd-scroll")
-            ) {
-              return false;
-            }
-            return element.dataset.taskListScrollContainer === "true";
-          },
+          canScroll: canScrollTaskListContainer,
         }}
       >
         <div
