@@ -4,6 +4,7 @@ import { TrendingUp, Flame } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useHabits } from "@/lib/hooks/useHabits";
 import { useStats } from "@/lib/hooks/useStats";
 import {
@@ -37,7 +38,7 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
 
   return (
     <Card className={cn("p-6 border-border/50", className)}>
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Projections
@@ -48,7 +49,7 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
         </div>
 
         {isLoading ? (
-          <Skeleton className="h-32 w-full rounded-lg" />
+          <Skeleton className="h-24 w-full rounded-lg" />
         ) : !hasProjection && streaksAtRisk.length === 0 ? (
           <EmptyState
             icon={TrendingUp}
@@ -57,54 +58,31 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
             className="py-8 gap-3"
           />
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-6">
             {hasProjection && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="p-1.5 md:p-2 rounded-lg bg-secondary shrink-0">
-                    <TrendingUp
-                      className="h-4 w-4 md:h-5 md:w-5 text-foreground/70"
-                      strokeWidth={2.25}
-                    />
-                  </div>
-                  <div>
-                    <p className="text-xl font-semibold tracking-[-0.02em] tabular-nums">
-                      ~{Math.round(tasks.projected)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      tasks this month ({tasks.soFar} so far)
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="p-1.5 md:p-2 rounded-lg bg-secondary shrink-0">
-                    <TrendingUp
-                      className="h-4 w-4 md:h-5 md:w-5 text-foreground/70"
-                      strokeWidth={2.25}
-                    />
-                  </div>
-                  <div>
-                    <p className="text-xl font-semibold tracking-[-0.02em] tabular-nums">
-                      ~{Math.round(focusHours.projected * 10) / 10}h
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      focus this month ({Math.round(focusHours.soFar * 10) / 10}
-                      h so far)
-                    </p>
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 gap-x-10 gap-y-6 sm:grid-cols-2">
+                <ProjectionMetric
+                  label="Tasks this month"
+                  projected={`~${Math.round(tasks.projected)}`}
+                  soFar={tasks.soFar}
+                  projectedValue={tasks.projected}
+                  caption={`${tasks.soFar} completed so far`}
+                />
+                <ProjectionMetric
+                  label="Focus this month"
+                  projected={`~${Math.round(focusHours.projected * 10) / 10}h`}
+                  soFar={focusHours.soFar}
+                  projectedValue={focusHours.projected}
+                  caption={`${Math.round(focusHours.soFar * 10) / 10}h logged so far`}
+                />
               </div>
             )}
 
-            <div className="space-y-2">
-              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Streaks at risk
-              </h4>
-              {streaksAtRisk.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No streaks at risk right now.
-                </p>
-              ) : (
+            {streaksAtRisk.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Streaks at risk
+                </h4>
                 <ul className="space-y-1.5">
                   {streaksAtRisk.map((risk) => (
                     <li
@@ -122,11 +100,62 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
                     </li>
                   ))}
                 </ul>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
     </Card>
+  );
+}
+
+interface ProjectionMetricProps {
+  label: string;
+  /** Preformatted projected headline, e.g. "~38" or "~30.3h". */
+  projected: string;
+  soFar: number;
+  projectedValue: number;
+  caption: string;
+}
+
+/**
+ * One projection: label + projected headline on a row, a month-to-date pace
+ * bar (so-far ÷ projected) beneath, and a caption. The bar is the "contextual
+ * visual" that lets the metric fill its column instead of leaving a void.
+ */
+function ProjectionMetric({
+  label,
+  projected,
+  soFar,
+  projectedValue,
+  caption,
+}: ProjectionMetricProps) {
+  const reduced = usePrefersReducedMotion();
+  const pct =
+    projectedValue > 0
+      ? Math.min(Math.max((soFar / projectedValue) * 100, 0), 100)
+      : 0;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {label}
+        </span>
+        <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums">
+          {projected}
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-[3px] bg-secondary/40">
+        <div
+          className="h-full rounded-[3px] bg-foreground/70"
+          style={{
+            width: `${pct}%`,
+            transition: reduced ? "none" : "width 0.5s var(--ease-seijaku)",
+          }}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground">{caption}</p>
+    </div>
   );
 }
