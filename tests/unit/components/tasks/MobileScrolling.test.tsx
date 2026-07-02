@@ -20,13 +20,14 @@ vi.mock("@dnd-kit/core", () => ({
   MouseSensor: vi.fn(),
   TouchSensor: vi.fn(),
   KeyboardSensor: vi.fn(),
-  MeasuringStrategy: { Always: 0 },
+  MeasuringStrategy: { Always: 0, WhileDragging: 1, BeforeDragging: 2 },
   DragOverlay: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   useDroppable: vi.fn(() => ({
     setNodeRef: vi.fn(),
     isOver: false,
   })),
   defaultDropAnimationSideEffects: vi.fn(() => ({})),
+  defaultAnnouncements: {},
 }));
 
 // Mock DnD Kit Sortable
