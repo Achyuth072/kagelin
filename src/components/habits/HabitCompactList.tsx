@@ -11,6 +11,7 @@ import {
   TouchSensor,
   closestCenter,
   defaultDropAnimationSideEffects,
+  defaultAnnouncements,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -30,6 +31,13 @@ import { computeReorderPairs } from "@/lib/utils/habit-dnd";
 import { getHabitIcon } from "@/components/habits/shared/HabitIconPicker";
 import { HabitCompactRow } from "./HabitCompactRow";
 import { SortableHabitCompactRow } from "./SortableHabitCompactRow";
+
+// Suppress dnd-kit's built-in per-onDragOver a11y announcement (fires at
+// drag-over frequency by default) — keep start/end/cancel. See TaskList.tsx.
+const dndAnnouncements = {
+  ...defaultAnnouncements,
+  onDragOver: () => undefined,
+};
 
 interface HabitCompactListProps {
   habits: HabitWithEntries[];
@@ -132,7 +140,11 @@ export function HabitCompactList({
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+      accessibility={{ announcements: dndAnnouncements }}
+      // WhileDragging measures the same as Always during a drag; Always
+      // additionally re-measures on every droppable registry mutation while
+      // idle, which is pure overhead for this flat single-list case.
+      measuring={{ droppable: { strategy: MeasuringStrategy.WhileDragging } }}
     >
       <SortableContext items={habitIds} strategy={verticalListSortingStrategy}>
         <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
