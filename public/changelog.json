@@ -4,8 +4,24 @@
     "date": null,
     "channel": "preview",
     "sections": {
+      "Added": [
+        "Insights panel for habits and tasks with score, history, streaks, and frequency breakdowns",
+        "Frequency-based habits with weekly/monthly targets and a progress ring",
+        "Global Goals tab summarizing frequency progress across habits",
+        "Stats page: period selector, trend chart, per-habit score comparison, project/priority breakdowns, time-of-day heatmap, and pace projections",
+        "Export stats and insights data as CSV or JSON",
+        "Kagelin app branding and icons"
+      ],
+      "Improved": [
+        "Smoother drag-and-drop reordering on the task board and lists",
+        "Unified Edit/Insights dialog width and toggle styling"
+      ],
       "Fixed": [
-        "Stats now bucket days by your local timezone, fixing off-by-one trends and streaks for non-UTC users"
+        "Stats now bucket days by your local timezone, fixing off-by-one trends and streaks for non-UTC users",
+        "Guest-mode hydration mismatch on app shell",
+        "Trend chart axis labels overlapping on mobile",
+        "Maskable icon cropping in the installed PWA",
+        "Various mobile layout issues in the frequency editor, grid cards, and Insights sections"
       ]
     }
   },
