@@ -10,6 +10,22 @@
     }
   },
   {
+    "version": "1.24.0-preview.11",
+    "date": "2026-07-02",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add frequency target control to create/edit sheet",
+        "Gate frequency ring to non-trivial targets"
+      ],
+      "Fixed": [
+        "Keep frequency editor on one line in mobile drawers",
+        "Unsquish grid card name and slim the card on mobile",
+        "Restyle Edit/Insights tab toggle and fix header padding"
+      ]
+    }
+  },
+  {
     "version": "1.24.0-preview.10",
     "date": "2026-07-01",
     "channel": "preview",
@@ -648,16 +664,6 @@
     "sections": {
       "Added": [
         "Data sovereignty for registered users — export, import, and delete cloud data"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.1",
-    "date": "2026-05-05",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Strict vs flexible task recurrence modes"
       ]
     }
   }
