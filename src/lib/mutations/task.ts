@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
+import { calculateNextDueDate } from "@/lib/utils/recurrence";
 import type { Task, CreateTaskInput, UpdateTaskInput } from "@/lib/types/task";
 
 export const taskMutations = {
@@ -22,6 +23,7 @@ export const taskMutations = {
         project_id: input.project_id || null,
         parent_id: input.parent_id || null,
         recurrence: input.recurrence || null,
+        recurring_series_id: input.recurrence ? crypto.randomUUID() : null,
         is_completed: false,
         completed_at: null,
         day_order: 0,
@@ -38,6 +40,7 @@ export const taskMutations = {
     if (!user) throw new Error("Not authenticated");
 
     const taskId = input._clientId || crypto.randomUUID();
+    const seriesId = input.recurrence ? crypto.randomUUID() : null;
 
     const { data, error } = await supabase
       .from("tasks")
@@ -53,6 +56,7 @@ export const taskMutations = {
         project_id: input.project_id || null,
         parent_id: input.parent_id || null,
         recurrence: input.recurrence || null,
+        recurring_series_id: seriesId,
       })
       .select()
       .single();
@@ -101,7 +105,6 @@ export const taskMutations = {
       }
 
       if (is_completed && recurrenceRule) {
-        const { calculateNextDueDate } = await import("../utils/recurrence");
         const now = new Date();
         const nextDueDateIso = calculateNextDueDate(
           now,
@@ -115,6 +118,14 @@ export const taskMutations = {
               updatedTask.do_date,
             ).toISOString()
           : null;
+
+        // Self-heal: generate series id if parent lacks one (legacy row)
+        let seriesId = updatedTask.recurring_series_id;
+        if (!seriesId) {
+          seriesId = crypto.randomUUID();
+          mockStore.updateTask(id, { recurring_series_id: seriesId });
+          updatedTask.recurring_series_id = seriesId;
+        }
 
         // Prevent duplicate future instances in mock store
         const alreadyExists = mockStore
@@ -137,6 +148,7 @@ export const taskMutations = {
             do_date: nextDoDateIso,
             is_evening: updatedTask.is_evening || false,
             recurrence: recurrenceRule,
+            recurring_series_id: seriesId,
             is_completed: false,
             completed_at: null,
             day_order: 0,
@@ -184,7 +196,6 @@ export const taskMutations = {
     }
 
     if (is_completed && recurrenceRule) {
-      const { calculateNextDueDate } = await import("../utils/recurrence");
       const now = new Date();
       const nextDueDateIso = calculateNextDueDate(
         now,
@@ -198,6 +209,16 @@ export const taskMutations = {
             currentTask.do_date,
           ).toISOString()
         : null;
+
+      // Self-heal: generate series id if parent lacks one (legacy row)
+      let seriesId = currentTask.recurring_series_id;
+      if (!seriesId) {
+        seriesId = crypto.randomUUID();
+        await supabase
+          .from("tasks")
+          .update({ recurring_series_id: seriesId })
+          .eq("id", id);
+      }
 
       // Prevent duplicate future instances if already created
       const existingTasks = await supabase
@@ -222,6 +243,7 @@ export const taskMutations = {
             do_date: nextDoDateIso,
             is_evening: currentTask.is_evening || false,
             recurrence: recurrenceRule,
+            recurring_series_id: seriesId,
             is_completed: false,
           })
           .select()
@@ -243,12 +265,35 @@ export const taskMutations = {
     const { id, ...updates } = input;
 
     if (isGuest) {
+      const existing = mockStore.getTask(id);
+      if (!existing) throw new Error("Task not found");
+
+      if (updates.recurrence && !existing.recurring_series_id) {
+        updates.recurring_series_id = crypto.randomUUID();
+      }
+
       const result = mockStore.updateTask(id, updates);
       if (!result) throw new Error("Task not found");
       return result;
     }
 
     const supabase = createClient();
+
+    if (updates.recurrence) {
+      const { data: current, error: fetchError } = await supabase
+        .from("tasks")
+        .select("recurring_series_id")
+        .eq("id", id)
+        .single();
+
+      if (fetchError) throw new Error(fetchError.message);
+      if (!current) throw new Error("Task not found");
+
+      if (!current.recurring_series_id) {
+        updates.recurring_series_id = crypto.randomUUID();
+      }
+    }
+
     const { data, error } = await supabase
       .from("tasks")
       .update(updates)

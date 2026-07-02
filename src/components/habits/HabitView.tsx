@@ -4,14 +4,26 @@ import { FieldErrors } from "react-hook-form";
 import { CreateHabitInput } from "@/lib/schemas/habit";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Send, CalendarIcon, AlignLeft, Palette } from "lucide-react";
+import { IconCell } from "@/components/ui/IconCell";
+import {
+  Send,
+  Save,
+  Trash2,
+  CalendarIcon,
+  AlignLeft,
+  Palette,
+} from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { HabitIconPicker } from "./shared/HabitIconPicker";
+import {
+  HabitFrequencyField,
+  type FrequencyPeriod,
+} from "./shared/HabitFrequencyField";
 import { ColorPicker } from "@/components/shared/ColorPicker";
 import { TaskDatePicker } from "../tasks/shared/TaskDatePicker";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
-interface HabitCreateViewProps {
+interface HabitViewBaseProps {
   name: string;
   setName: (value: string) => void;
   description: string;
@@ -22,6 +34,10 @@ interface HabitCreateViewProps {
   setIcon: (value: string) => void;
   startDate: Date | undefined;
   setStartDate: (value: Date | undefined) => void;
+  frequencyCount: number;
+  setFrequencyCount: (value: number) => void;
+  frequencyPeriod: FrequencyPeriod;
+  setFrequencyPeriod: (value: FrequencyPeriod) => void;
   datePickerOpen: boolean;
   setDatePickerOpen: (value: boolean) => void;
   isMobile: boolean;
@@ -32,55 +48,55 @@ interface HabitCreateViewProps {
   errors?: FieldErrors<CreateHabitInput>;
 }
 
-// Fixed-width icon cell — keeps text columns aligned across all rows.
-function IconCell({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "w-5 shrink-0 flex items-start justify-center pt-[3px]",
-        className,
-      )}
-    >
-      {children}
-    </div>
-  );
-}
+export type HabitViewProps =
+  | (HabitViewBaseProps & { mode: "create" })
+  | (HabitViewBaseProps & {
+      mode: "edit";
+      onDelete: () => void;
+    });
 
-export function HabitCreateView({
-  name,
-  setName,
-  description,
-  setDescription,
-  color,
-  setColor,
-  icon,
-  setIcon,
-  startDate,
-  setStartDate,
-  datePickerOpen,
-  setDatePickerOpen,
-  isMobile,
-  hasContent,
-  isPending,
-  onSubmit,
-  onKeyDown,
-  errors,
-}: HabitCreateViewProps) {
+export function HabitView(props: HabitViewProps) {
+  const { mode } = props;
+  const {
+    name,
+    setName,
+    description,
+    setDescription,
+    color,
+    setColor,
+    icon,
+    setIcon,
+    startDate,
+    setStartDate,
+    frequencyCount,
+    setFrequencyCount,
+    frequencyPeriod,
+    setFrequencyPeriod,
+    datePickerOpen,
+    setDatePickerOpen,
+    isMobile,
+    hasContent,
+    isPending,
+    onSubmit,
+    onKeyDown,
+    errors,
+  } = props;
+
   const { trigger } = useHaptic();
   const isFinePointer = useMediaQuery("(pointer: fine)");
+
+  const nameId = mode === "create" ? "habit-name" : "habit-name-edit";
+  const nameErrorId =
+    mode === "create" ? "habit-name-error" : "habit-name-edit-error";
+  const descriptionId =
+    mode === "create" ? "habit-description" : "habit-description-edit";
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full max-w-full">
       {/* Title — native input, bottom border only, no box */}
       <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
         <input
-          id="habit-name"
+          id={nameId}
           placeholder="Habit name"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -92,10 +108,10 @@ export function HabitCreateView({
             errors?.name && "placeholder:text-destructive/60",
           )}
           aria-invalid={!!errors?.name}
-          aria-describedby={errors?.name ? "habit-name-error" : undefined}
+          aria-describedby={errors?.name ? nameErrorId : undefined}
         />
         {errors?.name && (
-          <p id="habit-name-error" className="text-xs text-destructive mt-1">
+          <p id={nameErrorId} className="text-xs text-destructive mt-1">
             {errors.name.message}
           </p>
         )}
@@ -123,6 +139,16 @@ export function HabitCreateView({
 
         <div className="h-1" />
 
+        {/* Frequency — "N times per Day/Week" */}
+        <HabitFrequencyField
+          count={frequencyCount}
+          period={frequencyPeriod}
+          onCountChange={setFrequencyCount}
+          onPeriodChange={setFrequencyPeriod}
+        />
+
+        <div className="h-1" />
+
         {/* Description */}
         <div className="mx-2">
           <div className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast">
@@ -133,7 +159,7 @@ export function HabitCreateView({
               />
             </IconCell>
             <textarea
-              id="habit-description"
+              id={descriptionId}
               placeholder="Add details (optional)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -166,6 +192,23 @@ export function HabitCreateView({
 
         <div className="flex-1" />
 
+        {mode === "edit" && (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
+            onClick={() => {
+              trigger("thud");
+              props.onDelete();
+            }}
+            disabled={isPending}
+            aria-label="Delete habit"
+          >
+            <Trash2 strokeWidth={2.25} />
+          </Button>
+        )}
+
         <Button
           type="button"
           size="sm"
@@ -175,9 +218,21 @@ export function HabitCreateView({
             onSubmit();
           }}
           disabled={!hasContent || isPending}
-          aria-label={isPending ? "Creating habit" : "Start habit"}
+          aria-label={
+            mode === "create"
+              ? isPending
+                ? "Creating habit"
+                : "Start habit"
+              : isPending
+                ? "Saving"
+                : "Save changes"
+          }
         >
-          <Send className="h-5 w-5 stroke-[2.25px]" />
+          {mode === "create" ? (
+            <Send className="h-5 w-5 stroke-[2.25px]" />
+          ) : (
+            <Save className="h-5 w-5 stroke-[2.25px]" />
+          )}
         </Button>
       </div>
     </div>

@@ -130,7 +130,12 @@ describe("useReorderTasks — cross-group reorder", () => {
     // Destination column post-drag order (as TaskBoard.handleDragEnd would compute):
     // user dragged c2 between h1 and h2 → orderedIds = ["h1", "c2", "h2", "h3"]
     const orderedIds = ["h1", "c2", "h2", "h3"];
-    const pairs = computeReorderPairs(orderedIds, initialTasks as Task[]);
+    const pairs = computeReorderPairs(
+      "c2",
+      orderedIds,
+      initialTasks as Task[],
+      false,
+    );
     result.current.mutate(pairs);
 
     await waitFor(() => {
@@ -174,7 +179,12 @@ describe("useReorderTasks — cross-group reorder", () => {
 
     // c2 dropped at end of High: orderedIds = ["h1", "h2", "c2"]
     const orderedIds = ["h1", "h2", "c2"];
-    const pairs = computeReorderPairs(orderedIds, initialTasks as Task[]);
+    const pairs = computeReorderPairs(
+      "c2",
+      orderedIds,
+      initialTasks as Task[],
+      false,
+    );
     result.current.mutate(pairs);
 
     await waitFor(() => {
@@ -208,7 +218,12 @@ describe("useReorderTasks — cross-group reorder", () => {
 
     // c2 dropped at start of High: orderedIds = ["c2", "h1", "h2"]
     const orderedIds = ["c2", "h1", "h2"];
-    const pairs = computeReorderPairs(orderedIds, initialTasks as Task[]);
+    const pairs = computeReorderPairs(
+      "c2",
+      orderedIds,
+      initialTasks as Task[],
+      false,
+    );
     result.current.mutate(pairs);
 
     await waitFor(() => {

@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  startTransition,
+} from "react";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -21,7 +27,10 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import type { Task } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import { TaskView } from "./TaskView";
+import { TaskInsightsPanel } from "./TaskInsightsPanel";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { SheetTabToggle, type SheetTab } from "@/components/ui/SheetTabToggle";
+import { cn } from "@/lib/utils";
 
 interface TaskSheetProps {
   open: boolean;
@@ -29,6 +38,7 @@ interface TaskSheetProps {
   initialTask?: Task | null;
   initialDate?: Date | null;
   initialContent?: string;
+  initialTab?: SheetTab;
 }
 
 import { useForm, useWatch } from "react-hook-form";
@@ -41,6 +51,7 @@ export default function TaskSheet({
   initialTask,
   initialDate,
   initialContent,
+  initialTab,
 }: TaskSheetProps) {
   // Use the preserved task for rendering during close animation
   const [preservedTask, setPreservedTask] = useState<Task | null | undefined>(
@@ -83,6 +94,7 @@ export default function TaskSheet({
   const [draftSubtasks, setDraftSubtasks] = useState<string[]>([]);
   const [showSubtasks, setShowSubtasks] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [tab, setTab] = useState<SheetTab>("edit");
 
   // Form values via useWatch
   const content = useWatch({ control, name: "content" });
@@ -123,12 +135,15 @@ export default function TaskSheet({
   const [prevOpen, setPrevOpen] = useState(open);
   const [prevTask, setPrevTask] = useState(initialTask);
 
+  const hasSeries = !!initialTask?.recurring_series_id;
+
   if (open !== prevOpen || initialTask !== prevTask) {
     setPrevOpen(open);
     setPrevTask(initialTask);
     if (open) {
       setDraftSubtasks([]);
       setIsPreviewMode(!!initialTask?.description);
+      setTab(initialTab === "insights" && hasSeries ? "insights" : "edit");
     }
   }
 
@@ -261,7 +276,11 @@ export default function TaskSheet({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onClose}>
-      <ResponsiveDialogContent className="w-full sm:max-w-lg gap-0 rounded-lg p-0 overflow-hidden outline-none">
+      <ResponsiveDialogContent
+        className={cn(
+          "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none sm:grid-cols-[minmax(0,1fr)] sm:max-w-lg",
+        )}
+      >
         <div className="flex flex-col max-h-[90dvh] min-w-0">
           <ResponsiveDialogHeader className="sr-only">
             <ResponsiveDialogTitle>
@@ -274,8 +293,19 @@ export default function TaskSheet({
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
+          {!isCreationMode && hasSeries && (
+            <div className="px-4 pt-3 pb-1 shrink-0">
+              <SheetTabToggle
+                value={tab}
+                onValueChange={(next) => startTransition(() => setTab(next))}
+              />
+            </div>
+          )}
+
           <div className="overflow-y-auto scrollbar-thin flex-1 min-h-0">
-            {isCreationMode ? (
+            {tab === "insights" && hasSeries ? (
+              <TaskInsightsPanel task={effectiveTask!} />
+            ) : isCreationMode ? (
               <TaskView
                 mode="create"
                 content={content}

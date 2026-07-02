@@ -168,6 +168,42 @@ export function useTask(taskId: string | null) {
   });
 }
 
+/**
+ * All Occurrences (Task rows) sharing one recurring_series_id, for Task
+ * Insights. Unlike useTasks(), this is unfiltered by completion/date so the
+ * full history feeds the streak/on-time/heatmap math.
+ */
+export function useTaskSeries(seriesId: string | null) {
+  const { isGuestMode } = useAuth();
+
+  return useQuery({
+    queryKey: ["task-series", seriesId, isGuestMode],
+    staleTime: 60000, // 1 minute — avoid refetching on every sheet open
+    queryFn: async (): Promise<Task[]> => {
+      if (!seriesId) return [];
+
+      if (isGuestMode) {
+        return mockStore
+          .getTasks()
+          .filter((t) => t.recurring_series_id === seriesId);
+      }
+
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("recurring_series_id", seriesId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data as Task[];
+    },
+    enabled: !!seriesId,
+  });
+}
+
 export function useInboxProject() {
   const { isGuestMode } = useAuth();
 

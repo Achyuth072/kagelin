@@ -225,9 +225,11 @@ function TaskItemBase({
         </SwipeableTaskContent>
       )}
 
-      {/* Expanded Subtasks */}
+      {/* Expanded Subtasks — skipped while dragging: the user can't expand a
+          row mid-drag anyway, so there's no reason to pay for the motion
+          layer's per-frame cost on every row during a drag. */}
       <AnimatePresence initial={false}>
-        {isExpanded && (
+        {isExpanded && !isDndActive && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}

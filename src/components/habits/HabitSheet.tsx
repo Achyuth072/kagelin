@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, startTransition } from "react";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -20,16 +20,24 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateHabitSchema, type CreateHabitInput } from "@/lib/schemas/habit";
 import type { Habit } from "@/lib/types/habit";
-import { HabitCreateView } from "./HabitCreateView";
-import { HabitEditView } from "./HabitEditView";
+import { HabitView } from "./HabitView";
+import { HabitInsightsPanel } from "./HabitInsightsPanel";
+import { SheetTabToggle, type SheetTab } from "@/components/ui/SheetTabToggle";
+import { cn } from "@/lib/utils";
 
 interface HabitSheetProps {
   open: boolean;
   onClose: () => void;
   initialHabit?: Habit | null;
+  initialTab?: SheetTab;
 }
 
-export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
+export function HabitSheet({
+  open,
+  onClose,
+  initialHabit,
+  initialTab,
+}: HabitSheetProps) {
   // Logic to prevent flickering between Create/Edit modes during close animation
   const [preservedHabit, setPreservedHabit] = useState<
     Habit | null | undefined
@@ -40,6 +48,20 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
   }
 
   const effectiveHabit = open ? initialHabit : preservedHabit;
+
+  // Reset the tab on every open transition (not just when initialHabit
+  // changes) — reopening the same habit via "View stats" must still land on
+  // Insights even though the habit object reference is unchanged.
+  const [tab, setTab] = useState<SheetTab>(() =>
+    open && initialHabit ? (initialTab ?? "edit") : "edit",
+  );
+  const [prevOpenForTab, setPrevOpenForTab] = useState(open);
+  if (open !== prevOpenForTab) {
+    setPrevOpenForTab(open);
+    if (open) {
+      setTab(initialHabit ? (initialTab ?? "edit") : "edit");
+    }
+  }
 
   const {
     handleSubmit,
@@ -56,6 +78,8 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
       description: "",
       color: "#4B6CB7",
       icon: "Flame",
+      frequency_count: 1,
+      frequency_period: "day",
     },
   });
 
@@ -68,11 +92,19 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
   const color = useWatch({ control, name: "color" }) || "#4B6CB7";
   const icon = useWatch({ control, name: "icon" }) || "Flame";
   const startDate = useWatch({ control, name: "start_date" });
+  const frequencyCount = useWatch({ control, name: "frequency_count" }) ?? 1;
+  const frequencyPeriod =
+    useWatch({ control, name: "frequency_period" }) ?? "day";
 
   const createMutation = useCreateHabit();
   const updateMutation = useUpdateHabit();
   const deleteMutation = useDeleteHabit();
   const isMobile = useMediaQuery("(max-width: 768px)");
+  // Matches ResponsiveDialog's own Dialog/Drawer breakpoint exactly — the
+  // drawer is a true flex column so flex-1/min-h-0 sizes correctly, while
+  // the desktop dialog is a CSS grid where only an explicit max-height
+  // resolves (percentage/flex sizing against its auto-height box doesn't).
+  const isDrawer = useMediaQuery("(max-width: 640px)");
   const { trigger: triggerHaptic } = useHaptic();
 
   // Sync form with initialHabit on open
@@ -85,6 +117,8 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
           color: initialHabit.color,
           icon: initialHabit.icon || "Flame",
           start_date: initialHabit.start_date ?? undefined,
+          frequency_count: initialHabit.frequency_count ?? 1,
+          frequency_period: initialHabit.frequency_period ?? "day",
         });
         void triggerValidation();
       } else {
@@ -94,6 +128,8 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
           color: "#4B6CB7",
           icon: "Flame",
           start_date: undefined,
+          frequency_count: 1,
+          frequency_period: "day",
         });
       }
     }
@@ -104,11 +140,17 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
       triggerHaptic("thud");
 
       const formattedData = {
-        ...data,
+        name: data.name,
+        description: data.description,
+        color: data.color,
+        icon: data.icon,
         start_date:
           data.start_date instanceof Date
             ? data.start_date.toISOString().split("T")[0]
             : data.start_date,
+        // The mutation layer keys these camelCase; the form/schema is snake_case.
+        frequencyCount: data.frequency_count,
+        frequencyPeriod: data.frequency_period,
       };
 
       if (initialHabit) {
@@ -152,8 +194,17 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onClose}>
-      <ResponsiveDialogContent className="w-full sm:max-w-lg gap-0 rounded-lg p-0 overflow-hidden outline-none">
-        <div className="flex flex-col max-h-[90dvh]">
+      <ResponsiveDialogContent
+        className={cn(
+          "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none sm:grid-cols-[minmax(0,1fr)] sm:max-w-lg",
+        )}
+      >
+        <div
+          className={cn(
+            "flex flex-col",
+            isDrawer ? "flex-1 min-h-0" : "max-h-[90dvh]",
+          )}
+        >
           <ResponsiveDialogHeader className="sr-only">
             <ResponsiveDialogTitle>
               {initialHabit ? "Edit Habit" : "New Habit"}
@@ -165,9 +216,21 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {isCreationMode ? (
-              <HabitCreateView
+          {!isCreationMode && (
+            <div className="px-4 pt-3 pb-1 shrink-0">
+              <SheetTabToggle
+                value={tab}
+                onValueChange={(next) => startTransition(() => setTab(next))}
+              />
+            </div>
+          )}
+
+          <div className="flex-1 overflow-y-auto min-h-0 scrollbar-hide">
+            {tab === "insights" && !isCreationMode ? (
+              <HabitInsightsPanel habit={effectiveHabit!} />
+            ) : isCreationMode ? (
+              <HabitView
+                mode="create"
                 name={name}
                 setName={(v) => setValue("name", v, { shouldValidate: true })}
                 description={description}
@@ -185,6 +248,14 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
                   setValue("start_date", v?.toISOString().split("T")[0], {
                     shouldValidate: true,
                   })
+                }
+                frequencyCount={frequencyCount}
+                setFrequencyCount={(v) =>
+                  setValue("frequency_count", v, { shouldValidate: true })
+                }
+                frequencyPeriod={frequencyPeriod}
+                setFrequencyPeriod={(v) =>
+                  setValue("frequency_period", v, { shouldValidate: true })
                 }
                 datePickerOpen={datePickerOpen}
                 setDatePickerOpen={setDatePickerOpen}
@@ -196,8 +267,9 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
                 errors={errors}
               />
             ) : (
-              <HabitEditView
-                _initialHabit={effectiveHabit!}
+              <HabitView
+                mode="edit"
+                onDelete={handleDelete}
                 name={name}
                 setName={(v) => setValue("name", v, { shouldValidate: true })}
                 description={description}
@@ -216,13 +288,20 @@ export function HabitSheet({ open, onClose, initialHabit }: HabitSheetProps) {
                     shouldValidate: true,
                   })
                 }
+                frequencyCount={frequencyCount}
+                setFrequencyCount={(v) =>
+                  setValue("frequency_count", v, { shouldValidate: true })
+                }
+                frequencyPeriod={frequencyPeriod}
+                setFrequencyPeriod={(v) =>
+                  setValue("frequency_period", v, { shouldValidate: true })
+                }
                 datePickerOpen={datePickerOpen}
                 setDatePickerOpen={setDatePickerOpen}
                 isMobile={isMobile}
                 hasContent={isValid}
                 isPending={isPending}
                 onSubmit={handleSubmit(onFormSubmit)}
-                onDelete={handleDelete}
                 onKeyDown={handleKeyDown}
                 errors={errors}
               />

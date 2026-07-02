@@ -15,6 +15,7 @@ export interface Task {
   completed_at: string | null;
   day_order: number;
   recurrence: RecurrenceRule | null;
+  recurring_series_id: string | null;
   google_event_id: string | null;
   google_etag: string | null;
   created_at: string;
@@ -57,6 +58,7 @@ export interface UpdateTaskInput {
   day_order?: number;
   project_id?: string | null;
   recurrence?: RecurrenceRule | null;
+  recurring_series_id?: string | null;
 }
 
 export interface ParsedTask {

@@ -135,6 +135,7 @@ const tasks: Task[] = Array.from({ length: 24 }, (_, index) => ({
   is_evening: false,
   parent_id: null,
   recurrence: null,
+  recurring_series_id: null,
   google_event_id: null,
   google_etag: null,
 }));
@@ -162,6 +163,8 @@ describe("TaskList DnD layout shift protection", () => {
         setViewMode: vi.fn(),
         habitViewMode: "grid",
         setHabitViewMode: vi.fn(),
+        statsPeriod: "30d",
+        setStatsPeriod: vi.fn(),
         timeFormat: "system",
         setTimeFormat: vi.fn(),
         hapticsEnabled: true,
@@ -194,6 +197,13 @@ describe("TaskList DnD layout shift protection", () => {
         setIsSynced: vi.fn(),
         hasChangelogUpdate: false,
         setHasChangelogUpdate: vi.fn(),
+        goals: {
+          dailyFocusHours: null,
+          weeklyFocusHours: null,
+          dailyTasksCompleted: null,
+          weeklyTasksCompleted: null,
+        },
+        setGoals: vi.fn(),
       }),
     );
   });
@@ -225,11 +235,11 @@ describe("TaskList DnD layout shift protection", () => {
     expect(canScroll(document.documentElement)).toBe(false);
   });
 
-  it("keeps list droppable measurements fresh during auto-scrolled drops", () => {
+  it("uses WhileDragging measuring to avoid re-measuring on every drag-over registry mutation", () => {
     render(<TaskList projectId="all" />);
 
     expect(
       dndKitMock.latestDndContextProps?.measuring?.droppable?.strategy,
-    ).toBe(MeasuringStrategy.Always);
+    ).toBe(MeasuringStrategy.WhileDragging);
   });
 });

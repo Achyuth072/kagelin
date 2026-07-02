@@ -74,7 +74,6 @@ tests/unit/*.txt
 .vercel/
 
 .planning/
-CLAUDE.md
 docs/agents/
 .claude/
 AGENTS.md

@@ -11,6 +11,7 @@ import {
   TouchSensor,
   closestCenter,
   defaultDropAnimationSideEffects,
+  defaultAnnouncements,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -31,9 +32,17 @@ import { getHabitIcon } from "@/components/habits/shared/HabitIconPicker";
 import { HabitCompactRow } from "./HabitCompactRow";
 import { SortableHabitCompactRow } from "./SortableHabitCompactRow";
 
+// Suppress dnd-kit's built-in per-onDragOver a11y announcement (fires at
+// drag-over frequency by default) — keep start/end/cancel. See TaskList.tsx.
+const dndAnnouncements = {
+  ...defaultAnnouncements,
+  onDragOver: () => undefined,
+};
+
 interface HabitCompactListProps {
   habits: HabitWithEntries[];
   onEditHabit: (habit: HabitWithEntries) => void;
+  onViewInsights?: (habit: HabitWithEntries) => void;
 }
 
 /**
@@ -44,6 +53,7 @@ interface HabitCompactListProps {
 export function HabitCompactList({
   habits,
   onEditHabit,
+  onViewInsights,
 }: HabitCompactListProps) {
   const isDesktop = useUiStore((s) => s.isDesktop);
   const { trigger: triggerHaptic } = useHaptic();
@@ -130,7 +140,11 @@ export function HabitCompactList({
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
+      accessibility={{ announcements: dndAnnouncements }}
+      // WhileDragging measures the same as Always during a drag; Always
+      // additionally re-measures on every droppable registry mutation while
+      // idle, which is pure overhead for this flat single-list case.
+      measuring={{ droppable: { strategy: MeasuringStrategy.WhileDragging } }}
     >
       <SortableContext items={habitIds} strategy={verticalListSortingStrategy}>
         <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
@@ -140,6 +154,9 @@ export function HabitCompactList({
               habit={habit}
               icon={getHabitIcon(habit.icon)}
               onEdit={() => onEditHabit(habit)}
+              onViewInsights={
+                onViewInsights ? () => onViewInsights(habit) : undefined
+              }
               isDesktop={isDesktop}
             />
           ))}

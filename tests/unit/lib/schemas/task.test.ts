@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { CreateTaskSchema } from "@/lib/schemas/task";
+import {
+  CreateTaskSchema,
+  UpdateTaskSchema,
+  TaskSchema,
+} from "@/lib/schemas/task";
 
 describe("CreateTaskSchema", () => {
   it("validates a correct task input", () => {
@@ -67,6 +71,17 @@ describe("CreateTaskSchema", () => {
     const result = CreateTaskSchema.safeParse(input);
     expect(result.success).toBe(false);
   });
+
+  it("validates with a date-only string for due_date and do_date", () => {
+    const input = {
+      content: "Test Task",
+      due_date: "2026-07-02",
+      do_date: "2026-07-02",
+    };
+    const result = CreateTaskSchema.safeParse(input);
+    expect(result.success).toBe(true);
+  });
+
   it("validates with a valid recurrence object", () => {
     const input = {
       content: "Recurring Task",
@@ -76,6 +91,37 @@ describe("CreateTaskSchema", () => {
       },
     };
     const result = CreateTaskSchema.safeParse(input);
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("UpdateTaskSchema", () => {
+  it("validates with a date-only string for due_date and do_date", () => {
+    const input = {
+      id: "task-1",
+      due_date: "2026-07-02",
+      do_date: "2026-07-02",
+    };
+    const result = UpdateTaskSchema.safeParse(input);
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("TaskSchema", () => {
+  it("validates a task with date-only due_date and do_date", () => {
+    const input = {
+      id: "task-1",
+      user_id: "user-1",
+      content: "Test Task",
+      priority: 4,
+      due_date: "2026-07-02",
+      do_date: "2026-07-02",
+      is_completed: false,
+      day_order: 0,
+      created_at: "2026-07-02T00:00:00.000Z",
+      updated_at: "2026-07-02T00:00:00.000Z",
+    };
+    const result = TaskSchema.safeParse(input);
     expect(result.success).toBe(true);
   });
 });

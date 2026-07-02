@@ -71,6 +71,7 @@ const makeTask = (id: string, dayOrder: number): Task => ({
   is_evening: false,
   parent_id: null,
   recurrence: null,
+  recurring_series_id: null,
   google_event_id: null,
   google_etag: null,
 });

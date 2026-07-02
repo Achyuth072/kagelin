@@ -20,6 +20,9 @@ function invalidateTaskCaches(queryClient: QueryClient): void {
     queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
     queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] }),
     queryClient.invalidateQueries({ queryKey: ["focus-tasks"] }),
+    // Keep Task Insights (streaks, on-time %, History) fresh after a
+    // completion toggle — the panel reads occurrences via ["task-series", …].
+    queryClient.invalidateQueries({ queryKey: ["task-series"] }),
   ]);
 }
 
@@ -66,6 +69,7 @@ export function useCreateTask() {
         completed_at: null,
         day_order: 0,
         recurrence: null,
+        recurring_series_id: null,
         google_event_id: null,
         google_etag: null,
         created_at: new Date().toISOString(),
@@ -314,61 +318,24 @@ export function useReorderTasks() {
         queryKey: ["tasks"],
       });
 
+      const pairById = new Map(pairs.map((p) => [p.id, p.day_order]));
+
       for (const [queryKey] of allTaskQueries) {
         queryClient.setQueryData<Task[]>(queryKey, (old) => {
           if (!old) return old;
 
-          // Positional-swap reorder: replace the slots occupied by the reordered
-          // tasks (in their original positions) with those same tasks in the new
-          // order, also updating their day_order to the slot-value-swap values.
-          //
-          // The pairs carry pre-computed day_order values via computeReorderPairs()
-          // in task-dnd.ts. Each task gets the day_order of the slot it moves into,
-          // so the global set of day_order values in the affected slots is preserved.
-          // This prevents tasks from other sections/groups (which share the same flat
-          // cache) from being reordered when the DB sorts by day_order after settle.
-          //
-          // Why this matters:
-          //   Old approach: assigned sequential 0,1,2... to orderedIds. Any other
-          //   section whose tasks had day_order 0,1,2 would interleave with the
-          //   reordered section after invalidateQueries triggered a DB-sorted refetch.
-          //
-          //   New approach: day_order values swap among the affected tasks only.
-          //   Unaffected tasks keep their day_order. The DB sort produces the same
-          //   relative ordering as the local optimistic state.
-
-          const pairById = new Map(pairs.map((p) => [p.id, p]));
-          const reorderedIds = pairs.map((p) => p.id);
-          const reorderedIdSet = new Set(reorderedIds);
-
-          // Collect the flat-array positions occupied by the reordered tasks,
-          // in the order they appear in `old` (their current relative order).
-          const slots: number[] = [];
-          for (let i = 0; i < old.length; i++) {
-            if (reorderedIdSet.has(old[i].id)) {
-              slots.push(i);
-            }
-          }
-
-          // Build a lookup for the task objects we need to place.
-          const taskById = new Map<string, Task>(old.map((t) => [t.id, t]));
-
-          // Produce the new array: copy old, then overwrite each slot with the
-          // task at the corresponding position in orderedIds, updated with its
-          // new day_order value from the pair.
-          const result = [...old];
-          slots.forEach((slotIndex, i) => {
-            const newTaskId = reorderedIds[i];
-            if (newTaskId !== undefined) {
-              const task = taskById.get(newTaskId);
-              const pair = pairById.get(newTaskId);
-              if (task && pair) {
-                result[slotIndex] = { ...task, day_order: pair.day_order };
-              }
-            }
+          // The pairs now come from computeMoveOrders (see reorder.ts / task-dnd.ts):
+          // they describe a single task move within the shared flat list, and each
+          // pair already carries the task's final day_order value. We just apply
+          // those day_order updates in place. Consumers that care about order sort
+          // by day_order (e.g. useTaskViewData), so the visual order is correct
+          // without reshuffling the cache array here.
+          return old.map((task) => {
+            const newOrder = pairById.get(task.id);
+            return newOrder === undefined || task.day_order === newOrder
+              ? task
+              : { ...task, day_order: newOrder };
           });
-
-          return result;
         });
       }
 

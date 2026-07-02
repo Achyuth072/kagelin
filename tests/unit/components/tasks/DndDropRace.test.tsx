@@ -189,6 +189,7 @@ const makeTasks = (): Task[] =>
     is_evening: false,
     parent_id: null,
     recurrence: null,
+    recurring_series_id: null,
     google_event_id: null,
     google_etag: null,
   }));
@@ -238,6 +239,8 @@ describe("TaskList drop race condition (residual snap-back)", () => {
         setViewMode: vi.fn(),
         habitViewMode: "grid",
         setHabitViewMode: vi.fn(),
+        statsPeriod: "30d",
+        setStatsPeriod: vi.fn(),
         timeFormat: "system",
         setTimeFormat: vi.fn(),
         hapticsEnabled: true,
@@ -270,6 +273,13 @@ describe("TaskList drop race condition (residual snap-back)", () => {
         setIsSynced: vi.fn(),
         hasChangelogUpdate: false,
         setHasChangelogUpdate: vi.fn(),
+        goals: {
+          dailyFocusHours: null,
+          weeklyFocusHours: null,
+          dailyTasksCompleted: null,
+          weeklyTasksCompleted: null,
+        },
+        setGoals: vi.fn(),
       }),
     );
   });

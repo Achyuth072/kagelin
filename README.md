@@ -1,16 +1,39 @@
+<p align="center">
+  <a href="https://kagelin.app">
+    <img src="https://raw.githubusercontent.com/Achyuth072/kagelin/main/public/kagelin-icon.png" width="80" alt="Kagelin" />
+  </a>
+</p>
+
+<div align="center">
+
 # Kagelin
 
-> "Work quietly. Own everything."
+### Work quietly. Own everything.
 
-An all-in-one productivity app combining tasks, deep focus, habits, and calendar. Ink & matte design, offline-first, no account required.
+[![License: AGPL-3.0](https://img.shields.io/github/license/Achyuth072/kagelin?style=flat)](LICENSE)
+[![Release](https://img.shields.io/github/package-json/v/Achyuth072/kagelin/dev?style=flat&label=release&color=blue)](../../releases)
 
-**[kagelin.app](https://kagelin.app)**
+## Use it
+
+**[kagelin.app](https://kagelin.app)** — installable as a PWA, works fully offline in guest mode. No account needed.
+
+_Currently in preview — expect rough edges._
+
+</div>
+
+## Why Kagelin
+
+Most productivity apps want your email before you've written a single task, and keep your data on their servers either way. Kagelin doesn't.
+
+- **Nothing to sign up for.** Tasks, habits, focus, and calendar — all offline in guest mode. Account only if you want cloud sync.
+- **Your data, your server.** Point it at Nextcloud, Synology, or any WebDAV server. No middleman.
+- **Take everything with you.** Encrypted ZIP export, full data deletion, and standard `.ics` files. Leaving is always an option.
 
 ## Features
 
 ### Tasks & Organization
 
-- **Global Search** (`Ctrl/Cmd+K`): instant search across tasks, habits, and events, plus navigation and actions.
+- **Search** (`Ctrl/Cmd+K`): instant search across tasks, habits, and events, plus navigation and actions.
 - **Three views**: Masonry Grid, Board, and List — switch with `Shift+1/2/3`.
 - **Split View**: Desktop List opens a master-detail panel automatically.
 - **Projects**: multi-level project structure with archiving and mobile drawers.
@@ -38,6 +61,13 @@ An all-in-one productivity app combining tasks, deep focus, habits, and calendar
 - **Backups**: encrypted `.zip` export/import. Registered users can export or permanently delete all cloud data.
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
 
+### Stats & Insights
+
+- **Stats page**: period selector, breakdowns by project and priority, time-of-day heatmap.
+- **Item insights**: per-habit and per-recurring-task stats — score history, streaks, frequency, on-time rate.
+- **Goal tracking**: progress rings on habit cards, global focus and task goals.
+- **Export**: analytics CSV and JSON from stats and insights panels.
+
 ### Preferences
 
 - **Time format**: system-wide 12h/24h toggle across all time displays.
@@ -55,7 +85,8 @@ An all-in-one productivity app combining tasks, deep focus, habits, and calendar
 | `N / H / E / P`   | Create new (Task, Habit, Event, Project)                          |
 | `Shift+H`         | View all shortcuts                                                |
 
-## Stack
+<details>
+<summary><strong>Stack</strong></summary>
 
 - **Next.js 16.1.0** (App Router) + **React 19.2.3** (React Compiler)
 - **Supabase** (Postgres, Auth, Realtime)
@@ -65,13 +96,23 @@ An all-in-one productivity app combining tasks, deep focus, habits, and calendar
 - **Serwist** (typed service worker, offline-first PWA)
 - **tsdav** + **ical.js** (CalDAV/ICS sync)
 
+</details>
+
 ## Setup
 
 **Prerequisites**: Node.js 20+, a Supabase project with the schema from `supabase/schema.sql`.
 
 ```bash
-git clone <repo>
+git clone https://github.com/Achyuth072/Kanso.git
 npm install
 cp .env.example .env.local   # add your Supabase keys
 npm run dev
 ```
+
+## Contributing & Feedback
+
+Bug reports and feature requests go in [GitHub Issues](../../issues). For questions and discussion, use [GitHub Discussions](../../discussions).
+
+## License
+
+[AGPL-3.0](LICENSE)

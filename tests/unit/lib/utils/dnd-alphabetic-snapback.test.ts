@@ -35,6 +35,7 @@ const makeTask = (id: string, dayOrder: number, content: string): Task => ({
   completed_at: null,
   day_order: dayOrder,
   recurrence: null,
+  recurring_series_id: null,
   google_event_id: null,
   google_etag: null,
   created_at: new Date().toISOString(),
@@ -61,7 +62,12 @@ describe("computeReorderPairs — alphabetic snap-back regression", () => {
     ];
 
     const orderedIds = ["cherry", "apple", "banana"];
-    const pairs = computeReorderPairs(orderedIds, flatTasksByDayOrder);
+    const pairs = computeReorderPairs(
+      "cherry",
+      orderedIds,
+      flatTasksByDayOrder,
+      true,
+    );
 
     expect(pairs.find((p) => p.id === "cherry")?.day_order).toBe(0);
     expect(pairs.find((p) => p.id === "apple")?.day_order).toBe(1);
@@ -99,7 +105,12 @@ describe("computeReorderPairs — alphabetic snap-back regression", () => {
     ];
 
     const orderedIds = ["cherry", "apple", "banana"];
-    const pairs = computeReorderPairs(orderedIds, flatTasksAlphabetical);
+    const pairs = computeReorderPairs(
+      "cherry",
+      orderedIds,
+      flatTasksAlphabetical,
+      true,
+    );
 
     // slotDayOrders [2, 0, 1] is not strictly increasing → uses slot indices [0, 1, 2]
     // Assignment: cherry→0, apple→1, banana→2
@@ -140,7 +151,12 @@ describe("computeReorderPairs — alphabetic snap-back regression", () => {
     // flatTasksSorted: [banana(0), cherry(1), apple(2)]
 
     const orderedIds = ["cherry", "apple", "banana"];
-    const pairs = computeReorderPairs(orderedIds, flatTasksSorted);
+    const pairs = computeReorderPairs(
+      "cherry",
+      orderedIds,
+      flatTasksSorted,
+      true,
+    );
 
     expect(pairs.find((p) => p.id === "cherry")?.day_order).toBe(0);
     expect(pairs.find((p) => p.id === "apple")?.day_order).toBe(1);
@@ -187,7 +203,12 @@ describe("computeReorderPairs — alphabetic snap-back regression", () => {
     const orderedIds = ["taskC", "taskD", "taskB"];
 
     // slotDayOrders [2, 3, 1] not strictly increasing → slot indices [0, 2, 3]
-    const pairs = computeReorderPairs(orderedIds, flatTasksDisplayOrder);
+    const pairs = computeReorderPairs(
+      "taskC",
+      orderedIds,
+      flatTasksDisplayOrder,
+      true,
+    );
     expect(pairs.find((p) => p.id === "taskC")?.day_order).toBe(0);
     expect(pairs.find((p) => p.id === "taskD")?.day_order).toBe(2);
     expect(pairs.find((p) => p.id === "taskB")?.day_order).toBe(3);
@@ -203,7 +224,12 @@ describe("computeReorderPairs — alphabetic snap-back regression", () => {
       (a, b) => a.day_order - b.day_order,
     );
     // [taskA(0), taskB(1), taskC(2), taskD(3)] — strictly increasing → uses swap
-    const pairsSorted = computeReorderPairs(orderedIds, flatTasksSorted);
+    const pairsSorted = computeReorderPairs(
+      "taskC",
+      orderedIds,
+      flatTasksSorted,
+      true,
+    );
     expect(pairsSorted.find((p) => p.id === "taskC")?.day_order).toBe(1);
     expect(pairsSorted.find((p) => p.id === "taskD")?.day_order).toBe(2);
     expect(pairsSorted.find((p) => p.id === "taskB")?.day_order).toBe(3);

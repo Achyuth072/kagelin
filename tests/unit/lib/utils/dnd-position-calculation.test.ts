@@ -18,6 +18,7 @@ describe("DND Position Calculation", () => {
     completed_at: null,
     day_order: order,
     recurrence: null,
+    recurring_series_id: null,
     google_event_id: null,
     google_etag: null,
     created_at: new Date().toISOString(),

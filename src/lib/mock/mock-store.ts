@@ -4,12 +4,13 @@
  */
 
 import type { Task, Project } from "@/lib/types/task";
+import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import type { FocusLog } from "@/lib/types/focus";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
 import type { BackupData } from "@/lib/backup/types";
 
-const STORAGE_KEY = "kanso_guest_data_v8";
+const STORAGE_KEY = "kanso_guest_data_v10";
 
 interface GuestData {
   tasks: Task[];
@@ -136,6 +137,7 @@ class MockStore {
         is_evening: isEvening,
         parent_id: parentId,
         recurrence: null,
+        recurring_series_id: null,
         google_event_id: null,
         google_etag: null,
       });
@@ -244,6 +246,52 @@ class MockStore {
       if (i % 7 === 0) createTask("Weekly Planning", i, pPersonal, 1);
     }
 
+    // Recurring task Series: ~16 weeks of history + one active Occurrence, all
+    // sharing a recurring_series_id, so guest-mode Task Insights (streaks,
+    // on-time %, History heatmap) has more than a single data point to chart.
+    const seriesId = `series-${generateId()}`;
+    const weeklyRecurrence: RecurrenceRule = { freq: "WEEKLY", interval: 1 };
+    const seriesWeeks = 16;
+
+    for (let w = seriesWeeks; w >= 0; w--) {
+      const dueDate = new Date(now.getTime() - w * 7 * oneDay);
+      dueDate.setHours(9, 0, 0, 0);
+
+      const isActiveOccurrence = w === 0;
+      // ~80% completion rate for past Occurrences; the current one is pending.
+      const isCompleted = !isActiveOccurrence && Math.random() > 0.2;
+
+      let completedAt: string | null = null;
+      if (isCompleted) {
+        // ~25% of completions run up to 2 days late.
+        const lateMs =
+          Math.random() > 0.75 ? Math.floor(Math.random() * 2 * oneDay) : 0;
+        completedAt = new Date(dueDate.getTime() + lateMs).toISOString();
+      }
+
+      tasks.push({
+        id: `task-${generateId()}`,
+        user_id: "guest",
+        content: "Weekly Review",
+        description: null,
+        is_completed: isCompleted,
+        completed_at: completedAt,
+        priority: 2,
+        project_id: pWork,
+        day_order: tasks.length,
+        created_at: new Date(dueDate.getTime() - oneDay).toISOString(),
+        updated_at: completedAt ?? dueDate.toISOString(),
+        due_date: dueDate.toISOString(),
+        do_date: null,
+        is_evening: false,
+        parent_id: null,
+        recurrence: weeklyRecurrence,
+        recurring_series_id: seriesId,
+        google_event_id: null,
+        google_etag: null,
+      });
+    }
+
     // Generate Habits
     const hWater = "habit-water";
     const hExercise = "habit-exercise";
@@ -262,6 +310,12 @@ class MockStore {
         archived_at: null,
         start_date: startOfHistory,
         sort_order: 0,
+        habit_type: "measurable",
+        frequency_count: 1,
+        frequency_period: "day",
+        target_type: "at_least",
+        target_value: 8,
+        unit: "glasses",
       },
       {
         id: hExercise,
@@ -275,6 +329,12 @@ class MockStore {
         archived_at: null,
         start_date: startOfHistory,
         sort_order: 1,
+        habit_type: "boolean",
+        frequency_count: 5,
+        frequency_period: "week",
+        target_type: "at_least",
+        target_value: null,
+        unit: null,
       },
       {
         id: hRead,
@@ -288,6 +348,12 @@ class MockStore {
         archived_at: null,
         start_date: startOfHistory,
         sort_order: 2,
+        habit_type: "boolean",
+        frequency_count: 7,
+        frequency_period: "week",
+        target_type: "at_least",
+        target_value: null,
+        unit: null,
       },
     );
 
@@ -296,13 +362,13 @@ class MockStore {
       const date = new Date(now.getTime() + i * oneDay);
       const dateStr = date.toISOString().split("T")[0];
 
-      // Drink Water: 95% completion
+      // Drink Water (measurable): 95% completion with random value 4-10
       if (Math.random() < 0.95) {
         entries.push({
           id: `entry-${generateId()}`,
           habit_id: hWater,
           date: dateStr,
-          value: 1,
+          value: 4 + Math.floor(Math.random() * 7), // 4-10
           created_at: nowIso,
         });
       }
@@ -435,6 +501,7 @@ class MockStore {
       completed_at: task.completed_at ?? null,
       day_order: task.day_order ?? this.data.tasks.length,
       recurrence: task.recurrence ?? null,
+      recurring_series_id: task.recurring_series_id ?? null,
       google_event_id: task.google_event_id ?? null,
       google_etag: task.google_etag ?? null,
       content: task.content,

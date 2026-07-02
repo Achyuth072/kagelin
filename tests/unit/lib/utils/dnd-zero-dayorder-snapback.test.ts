@@ -30,6 +30,7 @@ const makeTask = (id: string, dayOrder: number): Task => ({
   completed_at: null,
   day_order: dayOrder,
   recurrence: null,
+  recurring_series_id: null,
   google_event_id: null,
   google_etag: null,
   created_at: new Date().toISOString(),
@@ -43,7 +44,7 @@ describe("computeReorderPairs — all-zero day_order snap-back bug", () => {
 
     // User drags C to the top: [C, A, B]
     const orderedIds = ["C", "A", "B"];
-    const pairs = computeReorderPairs(orderedIds, flatTasks);
+    const pairs = computeReorderPairs("C", orderedIds, flatTasks, true);
 
     // The pairs should produce DISTINCT ascending day_orders matching the
     // intended order. When server sorts by day_order ASC, it should give
@@ -63,7 +64,7 @@ describe("computeReorderPairs — all-zero day_order snap-back bug", () => {
 
     // User reorders to [C, B, A]
     const orderedIds = ["C", "B", "A"];
-    const pairs = computeReorderPairs(orderedIds, flatTasks);
+    const pairs = computeReorderPairs("C", orderedIds, flatTasks, true);
 
     const sorted = [...pairs].sort((a, b) => a.day_order - b.day_order);
     expect(sorted[0].id).toBe("C");
@@ -86,7 +87,7 @@ describe("computeReorderPairs — all-zero day_order snap-back bug", () => {
 
     // User reorders groupB to [D, C]
     const orderedIds = ["D", "C"];
-    const pairs = computeReorderPairs(orderedIds, flatTasks);
+    const pairs = computeReorderPairs("D", orderedIds, flatTasks, true);
 
     const sorted = [...pairs].sort((a, b) => a.day_order - b.day_order);
     expect(sorted[0].id).toBe("D");
@@ -100,7 +101,7 @@ describe("computeReorderPairs — all-zero day_order snap-back bug", () => {
 
     // Reverse: [C, B, A]
     const orderedIds = ["C", "B", "A"];
-    const pairs = computeReorderPairs(orderedIds, flatTasks);
+    const pairs = computeReorderPairs("C", orderedIds, flatTasks, true);
 
     // Swap: C gets d=0, B gets d=1, A gets d=2
     expect(pairs.find((p) => p.id === "C")!.day_order).toBe(0);

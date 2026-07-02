@@ -1,9 +1,7 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
-import { HabitEditView } from "@/components/habits/HabitEditView";
-import { HabitCreateView } from "@/components/habits/HabitCreateView";
-import type { Habit } from "@/lib/types/habit";
+import { HabitView } from "@/components/habits/HabitView";
 
 // Mock haptics
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -50,20 +48,6 @@ vi.mock("@/components/tasks/shared/TaskDatePicker", () => ({
 }));
 
 describe("Habit Views Footer Layout", () => {
-  const mockHabit: Habit = {
-    id: "1",
-    name: "Test Habit",
-    color: "#ff0000",
-    icon: "Flame",
-    user_id: "test-user-123",
-    description: "",
-    archived_at: null,
-    start_date: new Date().toISOString(),
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    sort_order: 0,
-  };
-
   const commonProps = {
     name: "Test",
     setName: vi.fn(),
@@ -75,6 +59,10 @@ describe("Habit Views Footer Layout", () => {
     setIcon: vi.fn(),
     startDate: undefined,
     setStartDate: vi.fn(),
+    frequencyCount: 1,
+    setFrequencyCount: vi.fn(),
+    frequencyPeriod: "day" as const,
+    setFrequencyPeriod: vi.fn(),
     datePickerOpen: false,
     setDatePickerOpen: vi.fn(),
     isMobile: false,
@@ -84,22 +72,16 @@ describe("Habit Views Footer Layout", () => {
     onKeyDown: vi.fn(),
   };
 
-  it("HabitEditView footer should not contain color picker", () => {
-    render(
-      <HabitEditView
-        {...commonProps}
-        _initialHabit={mockHabit}
-        onDelete={vi.fn()}
-      />,
-    );
+  it("HabitView edit footer should not contain color picker", () => {
+    render(<HabitView {...commonProps} mode="edit" onDelete={vi.fn()} />);
 
     const footer = screen.getByLabelText(/save/i).closest("div")!;
     const colorPicker = screen.getByTestId("color-picker");
     expect(footer.contains(colorPicker)).toBe(false);
   });
 
-  it("HabitCreateView footer should not contain color picker", () => {
-    render(<HabitCreateView {...commonProps} />);
+  it("HabitView create footer should not contain color picker", () => {
+    render(<HabitView {...commonProps} mode="create" />);
 
     const footer = screen.getByLabelText(/start habit/i).closest("div")!;
     const colorPicker = screen.getByTestId("color-picker");
@@ -107,7 +89,7 @@ describe("Habit Views Footer Layout", () => {
   });
 
   it("Color picker should be in the view (structural verification)", () => {
-    render(<HabitCreateView {...commonProps} />);
+    render(<HabitView {...commonProps} mode="create" />);
 
     const colorPicker = screen.getByTestId("color-picker");
     expect(colorPicker).toBeDefined();
