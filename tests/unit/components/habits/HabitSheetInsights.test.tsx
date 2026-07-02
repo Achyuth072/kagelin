@@ -113,7 +113,7 @@ describe("HabitSheet — Insights tab", () => {
 
     // When: the Insights tab is clicked
     await act(async () => {
-      fireEvent.click(screen.getByRole("radio", { name: "Insights" }));
+      fireEvent.mouseDown(screen.getByRole("tab", { name: "Insights" }));
     });
 
     // Then: the edit form is gone, Insights content is shown, width unchanged
@@ -124,7 +124,7 @@ describe("HabitSheet — Insights tab", () => {
 
     // When: toggled back to Edit
     await act(async () => {
-      fireEvent.click(screen.getByRole("radio", { name: "Edit" }));
+      fireEvent.mouseDown(screen.getByRole("tab", { name: "Edit" }));
     });
 
     // Then: edit form returns, width still unchanged
@@ -144,7 +144,7 @@ describe("HabitSheet — Insights tab", () => {
 
     // Then: no Insights/Edit toggle renders, and the create form is shown
     expect(
-      screen.queryByRole("radio", { name: "Insights" }),
+      screen.queryByRole("tab", { name: "Insights" }),
     ).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Habit name")).toBeInTheDocument();
     expect(screen.getByTestId("dialog-content").className).toContain(
@@ -166,8 +166,8 @@ describe("HabitSheet — Insights tab", () => {
     });
 
     // Then: Insights is already active, edit form is not shown
-    expect(screen.getByRole("radio", { name: "Insights" })).toHaveAttribute(
-      "aria-checked",
+    expect(screen.getByRole("tab", { name: "Insights" })).toHaveAttribute(
+      "aria-selected",
       "true",
     );
     expect(screen.queryByPlaceholderText("Habit name")).not.toBeInTheDocument();

@@ -9,7 +9,7 @@ describe("SheetTabToggle", () => {
     render(<SheetTabToggle value="edit" onValueChange={onValueChange} />);
 
     // When: Insights is clicked
-    fireEvent.click(screen.getByRole("radio", { name: "Insights" }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Insights" }));
 
     // Then: onValueChange fires with "insights"
     expect(onValueChange).toHaveBeenCalledWith("insights");
@@ -21,7 +21,7 @@ describe("SheetTabToggle", () => {
     render(<SheetTabToggle value="insights" onValueChange={onValueChange} />);
 
     // When: the already-active Insights item is clicked again
-    fireEvent.click(screen.getByRole("radio", { name: "Insights" }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Insights" }));
 
     // Then: onValueChange is never called with an empty value
     expect(onValueChange).not.toHaveBeenCalledWith("");

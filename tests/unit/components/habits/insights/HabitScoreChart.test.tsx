@@ -70,17 +70,17 @@ describe("HabitScoreChart", () => {
     const entries = [entry("2026-06-10", 1)];
     render(<HabitScoreChart habit={dailyHabit} entries={entries} />);
 
-    expect(screen.getByRole("radio", { name: "Week" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Month" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: "Year" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Week" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Month" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Year" })).toBeInTheDocument();
   });
 
   it("defaults to Month period", () => {
     const entries = [entry("2026-06-10", 1)];
     render(<HabitScoreChart habit={dailyHabit} entries={entries} />);
 
-    expect(screen.getByRole("radio", { name: "Month" })).toHaveAttribute(
-      "aria-checked",
+    expect(screen.getByRole("tab", { name: "Month" })).toHaveAttribute(
+      "aria-selected",
       "true",
     );
   });
@@ -89,14 +89,14 @@ describe("HabitScoreChart", () => {
     const entries = [entry("2026-06-10", 1)];
     render(<HabitScoreChart habit={dailyHabit} entries={entries} />);
 
-    fireEvent.click(screen.getByRole("radio", { name: "Week" }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Week" }));
 
-    expect(screen.getByRole("radio", { name: "Week" })).toHaveAttribute(
-      "aria-checked",
+    expect(screen.getByRole("tab", { name: "Week" })).toHaveAttribute(
+      "aria-selected",
       "true",
     );
-    expect(screen.getByRole("radio", { name: "Month" })).toHaveAttribute(
-      "aria-checked",
+    expect(screen.getByRole("tab", { name: "Month" })).toHaveAttribute(
+      "aria-selected",
       "false",
     );
   });

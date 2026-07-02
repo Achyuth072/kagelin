@@ -105,7 +105,7 @@ describe("TaskSheet — Insights tab gating", () => {
     });
 
     expect(
-      await screen.findByRole("radio", { name: "Insights" }),
+      await screen.findByRole("tab", { name: "Insights" }),
     ).toBeInTheDocument();
   });
 
@@ -118,7 +118,7 @@ describe("TaskSheet — Insights tab gating", () => {
 
     expect(await screen.findByText("Edit Task")).toBeInTheDocument();
     expect(
-      screen.queryByRole("radio", { name: "Insights" }),
+      screen.queryByRole("tab", { name: "Insights" }),
     ).not.toBeInTheDocument();
   });
 
@@ -147,14 +147,14 @@ describe("TaskSheet — Insights tab gating", () => {
     });
 
     await act(async () => {
-      fireEvent.click(await screen.findByRole("radio", { name: "Insights" }));
+      fireEvent.mouseDown(await screen.findByRole("tab", { name: "Insights" }));
     });
     expect(
       screen.queryByPlaceholderText("What needs to be done?"),
     ).not.toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("radio", { name: "Edit" }));
+      fireEvent.mouseDown(screen.getByRole("tab", { name: "Edit" }));
     });
     expect(
       await screen.findByPlaceholderText("What needs to be done?"),
