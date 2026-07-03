@@ -76,75 +76,77 @@ export function FocusTrendChart({
             className="py-8 gap-3"
           />
         ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <ComposedChart
-              data={chartData}
-              margin={{ top: 12, right: 0, bottom: 0, left: 0 }}
-            >
-              <XAxis
-                dataKey="label"
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                interval={tickInterval}
-                tickMargin={10}
-              />
-              <YAxis
-                yAxisId="hours"
-                width={36}
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => `${value}h`}
-              />
-              <YAxis
-                yAxisId="tasks"
-                orientation="right"
-                width={28}
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--background))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                }}
-                labelStyle={{ color: "hsl(var(--foreground))" }}
-                formatter={(value, name) => [
-                  value,
-                  name === "hours" ? "Focus hours" : "Tasks completed",
-                ]}
-              />
-              <Line
-                yAxisId="hours"
-                type="monotone"
-                dataKey="hours"
-                stroke="hsl(var(--brand))"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 5 }}
-                isAnimationActive={false}
-              />
-              <Line
-                yAxisId="tasks"
-                type="monotone"
-                dataKey="tasksCompleted"
-                stroke="hsl(var(--muted-foreground))"
-                strokeWidth={2}
-                strokeDasharray="4 4"
-                dot={false}
-                activeDot={{ r: 5 }}
-                isAnimationActive={false}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
+          <div className="w-full min-w-0 overflow-hidden">
+            <ResponsiveContainer width="100%" height={200}>
+              <ComposedChart
+                data={chartData}
+                margin={{ top: 12, right: 0, bottom: 0, left: 0 }}
+              >
+                <XAxis
+                  dataKey="label"
+                  stroke="hsl(var(--muted-foreground))"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  interval={tickInterval}
+                  tickMargin={10}
+                />
+                <YAxis
+                  yAxisId="hours"
+                  width={36}
+                  stroke="hsl(var(--muted-foreground))"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(value) => `${value}h`}
+                />
+                <YAxis
+                  yAxisId="tasks"
+                  orientation="right"
+                  width={28}
+                  stroke="hsl(var(--muted-foreground))"
+                  fontSize={12}
+                  tickLine={false}
+                  axisLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--background))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                  }}
+                  labelStyle={{ color: "hsl(var(--foreground))" }}
+                  formatter={(value, name) => [
+                    value,
+                    name === "hours" ? "Focus hours" : "Tasks completed",
+                  ]}
+                />
+                <Line
+                  yAxisId="hours"
+                  type="monotone"
+                  dataKey="hours"
+                  stroke="hsl(var(--brand))"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 5 }}
+                  isAnimationActive={false}
+                />
+                <Line
+                  yAxisId="tasks"
+                  type="monotone"
+                  dataKey="tasksCompleted"
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  dot={false}
+                  activeDot={{ r: 5 }}
+                  isAnimationActive={false}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
     </Card>
