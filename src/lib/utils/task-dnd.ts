@@ -120,6 +120,25 @@ export function getTaskUpdatesForGroup(
  *                    day_order when sortBy is "custom"; in display order when
  *                    a derived sort is being converted to custom by the drop.
  */
+/**
+ * Computes {id, day_order} pairs that bake a currently-visible order into
+ * day_order, omitting entries that already match. Used when sortBy switches
+ * to "custom" from a derived sort via the sort menu (not a drag): the list
+ * must freeze in place rather than jump to whatever day_order previously
+ * held from before the derived sort was applied.
+ */
+export function computeFreezeOrderPairs(
+  visibleTasks: Task[],
+): { id: string; day_order: number }[] {
+  const pairs: { id: string; day_order: number }[] = [];
+  visibleTasks.forEach((t, i) => {
+    if (t.day_order !== i) {
+      pairs.push({ id: t.id, day_order: i });
+    }
+  });
+  return pairs;
+}
+
 export function computeReorderPairs(
   movedId: string,
   orderedIds: string[],

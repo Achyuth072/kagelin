@@ -242,6 +242,8 @@ describe("TaskBoard — cross-group snap-back regression", () => {
         setSortBy: vi.fn(),
         setGroupBy: vi.fn(),
         setViewMode: vi.fn(),
+        customSortEnteredViaDrag: false,
+        setCustomSortEnteredViaDrag: vi.fn(),
         habitViewMode: "grid",
         setHabitViewMode: vi.fn(),
         statsPeriod: "30d",

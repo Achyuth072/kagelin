@@ -24,6 +24,14 @@ interface UiState {
   setSortBy: (sort: SortOption) => void;
   setGroupBy: (group: GroupOption) => void;
   setViewMode: (mode: "list" | "grid" | "board") => void;
+  // Set by TaskList/TaskBoard's drag handlers right before setSortBy("custom"),
+  // so the effect that freezes the visible order into day_order (for a
+  // menu-driven switch to Custom) can tell a drag-driven switch apart and skip
+  // — the drag path already bakes its own, more precise single-move order.
+  // Shared via the store (not a local ref) because TaskList and TaskBoard are
+  // separate components with independent drag handlers.
+  customSortEnteredViaDrag: boolean;
+  setCustomSortEnteredViaDrag: (value: boolean) => void;
 
   // Habit List State
   habitViewMode: "grid" | "compact";
@@ -104,6 +112,9 @@ export const useUiStore = create<UiState>()(
       setSortBy: (sort) => set({ sortBy: sort }),
       setGroupBy: (group) => set({ groupBy: group }),
       setViewMode: (mode) => set({ viewMode: mode }),
+      customSortEnteredViaDrag: false,
+      setCustomSortEnteredViaDrag: (value) =>
+        set({ customSortEnteredViaDrag: value }),
 
       // Habit List defaults
       habitViewMode: "grid",
@@ -203,6 +214,8 @@ export const useUiStore = create<UiState>()(
           setIsSynced: _setIsSynced,
           hasChangelogUpdate: _hasChangelogUpdate,
           setHasChangelogUpdate: _setHasChangelogUpdate,
+          customSortEnteredViaDrag: _customSortEnteredViaDrag,
+          setCustomSortEnteredViaDrag: _setCustomSortEnteredViaDrag,
           ...rest
         } = state;
         return rest;
