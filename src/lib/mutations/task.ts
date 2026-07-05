@@ -12,6 +12,9 @@ export const taskMutations = {
       localStorage.getItem("kanso_guest_mode") === "true";
 
     if (isGuest) {
+      // day_order intentionally omitted: mockStore.addTask() defaults it to
+      // append-at-the-end (current task count), matching the Supabase max+1
+      // below. A hardcoded 0 here would tie every new task at the top slot.
       return mockStore.addTask({
         id: input._clientId,
         content: input.content,
@@ -26,7 +29,6 @@ export const taskMutations = {
         recurring_series_id: input.recurrence ? crypto.randomUUID() : null,
         is_completed: false,
         completed_at: null,
-        day_order: 0,
         google_event_id: null,
         google_etag: null,
       });
@@ -41,6 +43,18 @@ export const taskMutations = {
 
     const taskId = input._clientId || crypto.randomUUID();
     const seriesId = input.recurrence ? crypto.randomUUID() : null;
+
+    // Append to the bottom: new task gets max(day_order) + 1 for the user.
+    // The column DEFAULTs to 0, which would tie every new task at the very
+    // top of custom sort once other tasks have been dragged to real values.
+    const { data: lastTask } = await supabase
+      .from("tasks")
+      .select("day_order")
+      .eq("user_id", user.id)
+      .order("day_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextDayOrder = (lastTask?.day_order ?? -1) + 1;
 
     const { data, error } = await supabase
       .from("tasks")
@@ -57,6 +71,7 @@ export const taskMutations = {
         parent_id: input.parent_id || null,
         recurrence: input.recurrence || null,
         recurring_series_id: seriesId,
+        day_order: nextDayOrder,
       })
       .select()
       .single();
@@ -151,7 +166,6 @@ export const taskMutations = {
             recurring_series_id: seriesId,
             is_completed: false,
             completed_at: null,
-            day_order: 0,
             google_event_id: null,
             google_etag: null,
             parent_id: null,
@@ -231,6 +245,18 @@ export const taskMutations = {
         .eq("is_completed", false);
 
       if (!existingTasks.data?.length) {
+        // Append to the bottom, same as a manually created task — otherwise
+        // the DB's day_order default of 0 ties the recurring instance at the
+        // top of custom sort.
+        const { data: lastTask } = await supabase
+          .from("tasks")
+          .select("day_order")
+          .eq("user_id", currentTask.user_id)
+          .order("day_order", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const nextDayOrder = (lastTask?.day_order ?? -1) + 1;
+
         const { data: newTask, error: createError } = await supabase
           .from("tasks")
           .insert({
@@ -245,6 +271,7 @@ export const taskMutations = {
             recurrence: recurrenceRule,
             recurring_series_id: seriesId,
             is_completed: false,
+            day_order: nextDayOrder,
           })
           .select()
           .single();

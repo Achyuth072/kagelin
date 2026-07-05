@@ -67,10 +67,16 @@ export function useTasks(options: UseTasksOptions = {}) {
           });
         }
 
-        // Exclude subtasks and sort
+        // Exclude subtasks and sort. Tie-break matches the Supabase query
+        // below (newest first) so guest and real fetch paths agree on order
+        // whenever day_order is tied.
         tasks = tasks
           .filter((t) => !t.parent_id)
-          .sort((a, b) => a.day_order - b.day_order);
+          .sort((a, b) => {
+            const diff = a.day_order - b.day_order;
+            if (diff !== 0) return diff;
+            return b.created_at.localeCompare(a.created_at);
+          });
 
         return tasks;
       }
