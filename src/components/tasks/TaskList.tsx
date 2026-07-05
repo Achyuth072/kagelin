@@ -1,7 +1,16 @@
 "use client";
 
 import { CheckSquare, Plus } from "lucide-react";
-import { useState, useMemo, useCallback, useEffect, useRef, memo } from "react";
+import {
+  useState,
+  useMemo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  memo,
+} from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import {
   KeyboardSensor,
@@ -31,6 +40,7 @@ import type { TaskGroup } from "@/lib/hooks/useTaskViewData";
 import {
   getTaskUpdatesForGroup,
   computeReorderPairs,
+  computeFreezeOrderPairs,
   isDropBlockedGroup,
 } from "@/lib/utils/task-dnd";
 import {
@@ -108,11 +118,18 @@ function TaskListBase({
     null,
   );
 
+  const queryClient = useQueryClient();
   const reorderMutation = useReorderTasks();
   const updateMutation = useUpdateTask();
   const deleteMutation = useDeleteTask();
   const toggleMutation = useToggleTask();
   const setSortBy = useUiStore((state) => state.setSortBy);
+  const customSortEnteredViaDrag = useUiStore(
+    (state) => state.customSortEnteredViaDrag,
+  );
+  const setCustomSortEnteredViaDrag = useUiStore(
+    (state) => state.setCustomSortEnteredViaDrag,
+  );
   const viewMode = useUiStore((state) => state.viewMode);
   const isDesktop = useUiStore((state) => state.isDesktop);
   const selectedTaskId = useUiStore((state) => state.selectedTaskId);
@@ -183,6 +200,70 @@ function TaskListBase({
   // switches sortBy to "custom", so what's on screen must be persisted).
   const preDragFlatTasksRef = useRef<Task[]>([]);
 
+  // Switching sortBy to "custom" from the sort menu only changes which field
+  // useTaskViewData reads for display; day_order still holds whatever the last
+  // drag (or creation order) left it at, unrelated to the derived sort the user
+  // was just looking at. Without this, the list visibly jumps to day_order
+  // order on switch. Freeze the order that was on screen UNDER THE PREVIOUS
+  // (derived) sort into day_order so the view stays put.
+  //
+  // Critically, we read `prevDisplayedFlatRef` — the flat display order captured
+  // on the render BEFORE the switch — NOT the current `processedTasks`, which
+  // the memo has ALREADY re-sorted by day_order on this very render (reading it
+  // would just re-freeze the jumped order, a no-op — the original bug).
+  //
+  // This is a LAYOUT effect that writes the frozen day_order into the query
+  // cache SYNCHRONOUSLY (before paint). A plain passive effect corrects the
+  // order only after the browser has already painted the jumped custom render,
+  // producing a visible rearrange-then-revert flash; running before paint makes
+  // the very first custom-sorted paint already reflect the pre-switch order.
+  // reorderMutation then persists the same values (guest path writes the mock
+  // store; onSettled reconciles with the server).
+  //
+  // Skipped when the switch came from a drag (TaskList's or TaskBoard's handler
+  // sets customSortEnteredViaDrag) since the drag path already bakes its own,
+  // more precise single-move order via computeReorderPairs.
+  const prevSortByRef = useRef(sortBy);
+  const prevDisplayedFlatRef = useRef<Task[]>([]);
+  useLayoutEffect(() => {
+    const prevSortBy = prevSortByRef.current;
+    prevSortByRef.current = sortBy;
+
+    // Read the snapshot captured under the OLD sort, then refresh the ref to
+    // the current sort's order for the next transition.
+    const prevDisplayed = prevDisplayedFlatRef.current;
+    prevDisplayedFlatRef.current = processedTasks.groups
+      ? processedTasks.groups.flatMap((g) => g.tasks)
+      : [...processedTasks.active, ...processedTasks.evening];
+
+    if (sortBy !== "custom" || prevSortBy === "custom") return;
+    if (customSortEnteredViaDrag) {
+      setCustomSortEnteredViaDrag(false);
+      return;
+    }
+    const pairs = computeFreezeOrderPairs(prevDisplayed);
+    if (pairs.length === 0) return;
+
+    // Synchronous, pre-paint cache write so the jumped order never paints.
+    const orderById = new Map(pairs.map((p) => [p.id, p.day_order]));
+    queryClient.setQueriesData<Task[]>({ queryKey: ["tasks"] }, (old) =>
+      old?.map((t) =>
+        orderById.has(t.id)
+          ? { ...t, day_order: orderById.get(t.id) as number }
+          : t,
+      ),
+    );
+    // Persist (guest path writes the mock store; onSettled refetch reconciles).
+    reorderMutation.mutate(pairs);
+  }, [
+    sortBy,
+    processedTasks,
+    reorderMutation,
+    queryClient,
+    customSortEnteredViaDrag,
+    setCustomSortEnteredViaDrag,
+  ]);
+
   // Open-bridge for global search: when a task is selected from the command
   // menu, open its edit sheet here (the sheet lives on the tasks page). Clear
   // the id only once the task is found and opened — when navigating in from
@@ -225,15 +306,22 @@ function TaskListBase({
             .find((t) => t.id === id) ||
           null,
       );
+      // Captured from processedTasks (what's actually rendered), not the raw
+      // `tasks` prop — the two can diverge (filtering, tied day_order values
+      // resolved differently), which corrupted the reorder math computed from
+      // this snapshot. In custom sort, group flattening can interleave
+      // cross-group day_order values, so re-sort to restore a single global
+      // order (mirrors TaskBoard.tsx's handleDragStart).
+      const visibleTasks = processedTasks.groups
+        ? processedTasks.groups.flatMap((g) => g.tasks)
+        : [...processedTasks.active, ...processedTasks.evening];
       preDragFlatTasksRef.current =
         sortBy === "custom"
-          ? [...tasks].sort((a, b) => a.day_order - b.day_order)
-          : processedTasks.groups
-            ? processedTasks.groups.flatMap((g) => g.tasks)
-            : [...processedTasks.active, ...processedTasks.evening];
+          ? [...visibleTasks].sort((a, b) => a.day_order - b.day_order)
+          : visibleTasks;
       triggerHaptic("toggle");
     },
-    [processedTasks, triggerHaptic, sortBy, tasks],
+    [processedTasks, triggerHaptic, sortBy],
   );
 
   const handleDragOver = useCallback(
@@ -445,7 +533,10 @@ function TaskListBase({
         // applies the optimistic cache update). See debug session
         // dnd-residual-race-condition.md for the full analysis.
         setLockLocal(true);
-        if (sortBy !== "custom") setSortBy("custom");
+        if (sortBy !== "custom") {
+          setCustomSortEnteredViaDrag(true);
+          setSortBy("custom");
+        }
 
         // 1. Commit property updates (cross-group only)
         const updates = getTaskUpdates(finalGroup.title);
@@ -481,16 +572,27 @@ function TaskListBase({
           );
         }
 
-        // 2. Commit the reorder as a single-task move within the flat list
-        // captured at drag start. Empty pairs mean no order change — skip.
+        // 2. Commit the reorder. In custom sort day_order is authoritative, so
+        // model the drop as a single-task move (only the dragged span changes).
+        // But when this drop CONVERTS a derived/grouped view to custom, every
+        // other group's day_order is stale (derived order, not what's shown), so
+        // a single-move would leave them to re-sort and jump on the switch. Then
+        // freeze the ENTIRE post-drop visible order (localGroups already
+        // reflects the move) so untouched groups stay exactly as shown.
+        // Empty pairs mean no order change — skip.
         // lockLocal released via tryReleaseLock once all mutations settle.
-        const orderedIds = finalGroup.tasks.map((t: Task) => t.id);
-        const pairs = computeReorderPairs(
-          activeId,
-          orderedIds,
-          preDragFlatTasksRef.current,
-          isSameSection,
-        );
+        let pairs: { id: string; day_order: number }[];
+        if (sortBy === "custom") {
+          const orderedIds = finalGroup.tasks.map((t: Task) => t.id);
+          pairs = computeReorderPairs(
+            activeId,
+            orderedIds,
+            preDragFlatTasksRef.current,
+            isSameSection,
+          );
+        } else {
+          pairs = computeFreezeOrderPairs(localGroups.flatMap((g) => g.tasks));
+        }
         if (pairs.length > 0) {
           pendingCount++;
           reorderMutation.mutate(pairs, {
@@ -518,7 +620,10 @@ function TaskListBase({
 
         // CRITICAL ORDERING: lockLocal BEFORE activeId — see comment above.
         setLockLocal(true);
-        if (sortBy !== "custom") setSortBy("custom");
+        if (sortBy !== "custom") {
+          setCustomSortEnteredViaDrag(true);
+          setSortBy("custom");
+        }
 
         // Check if it's now in evening vs active
         const isInEveningNow = localEvening.some(
@@ -550,17 +655,24 @@ function TaskListBase({
           );
         }
 
-        // Commit the reorder as a single-task move within the flat list
-        // captured at drag start. Empty pairs mean no order change — skip.
+        // Commit the reorder. Single-task move when already in custom sort;
+        // full freeze of the post-drop order when this drop converts a derived
+        // sort to custom (so the untouched section — e.g. evening — doesn't
+        // re-sort by its stale day_order and jump). Empty pairs — skip.
         triggerHaptic("thud");
-        const currentList = isInEveningNow ? localEvening : localActive;
-        const orderedIds = currentList.map((t: Task) => t.id);
-        const pairs = computeReorderPairs(
-          activeTask.id,
-          orderedIds,
-          preDragFlatTasksRef.current,
-          isSameSection,
-        );
+        let pairs: { id: string; day_order: number }[];
+        if (sortBy === "custom") {
+          const currentList = isInEveningNow ? localEvening : localActive;
+          const orderedIds = currentList.map((t: Task) => t.id);
+          pairs = computeReorderPairs(
+            activeTask.id,
+            orderedIds,
+            preDragFlatTasksRef.current,
+            isSameSection,
+          );
+        } else {
+          pairs = computeFreezeOrderPairs([...localActive, ...localEvening]);
+        }
         if (pairs.length > 0) {
           pendingCount++;
           reorderMutation.mutate(pairs, {
@@ -586,6 +698,7 @@ function TaskListBase({
       updateMutation,
       sortBy,
       setSortBy,
+      setCustomSortEnteredViaDrag,
       reorderMutation,
       tasks,
       getTaskUpdates,

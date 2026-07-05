@@ -1,8 +1,16 @@
 import type { ReactNode } from "react";
 import { render } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { MeasuringStrategy } from "@dnd-kit/core";
 import TaskList from "@/components/tasks/TaskList";
+
+// TaskList calls useQueryClient(); provide a bare client (data hooks are mocked
+// so no real queries run).
+const testQueryClient = new QueryClient();
+const Providers = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={testQueryClient}>{children}</QueryClientProvider>
+);
 import { useTasks } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -161,6 +169,8 @@ describe("TaskList DnD layout shift protection", () => {
         setSortBy: vi.fn(),
         setGroupBy: vi.fn(),
         setViewMode: vi.fn(),
+        customSortEnteredViaDrag: false,
+        setCustomSortEnteredViaDrag: vi.fn(),
         habitViewMode: "grid",
         setHabitViewMode: vi.fn(),
         statsPeriod: "30d",
@@ -209,7 +219,9 @@ describe("TaskList DnD layout shift protection", () => {
   });
 
   it("confines desktop list auto-scroll to the dedicated list scroller", () => {
-    const { container } = render(<TaskList projectId="all" />);
+    const { container } = render(<TaskList projectId="all" />, {
+      wrapper: Providers,
+    });
     const props = dndKitMock.latestDndContextProps;
     const canScroll = props?.autoScroll?.canScroll;
 
@@ -236,7 +248,7 @@ describe("TaskList DnD layout shift protection", () => {
   });
 
   it("uses WhileDragging measuring to avoid re-measuring on every drag-over registry mutation", () => {
-    render(<TaskList projectId="all" />);
+    render(<TaskList projectId="all" />, { wrapper: Providers });
 
     expect(
       dndKitMock.latestDndContextProps?.measuring?.droppable?.strategy,

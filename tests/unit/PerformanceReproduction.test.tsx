@@ -1,4 +1,6 @@
+import type { ReactNode } from "react";
 import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import TaskList from "@/components/tasks/TaskList";
 import { useTasks } from "@/lib/hooks/useTasks";
@@ -6,6 +8,13 @@ import { useProjects } from "@/lib/hooks/useProjects";
 import { useAuth } from "@/components/AuthProvider";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Mock } from "vitest";
+
+// TaskList calls useQueryClient(); provide a bare client (data hooks are mocked
+// so no real queries run).
+const testQueryClient = new QueryClient();
+const Providers = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={testQueryClient}>{children}</QueryClientProvider>
+);
 
 // Mock hooks
 vi.mock("@/lib/hooks/useTasks", () => ({
@@ -78,7 +87,7 @@ describe("TaskList Performance Gaps", () => {
     } as unknown as ReturnType<typeof useTasks>);
 
     // When: Rendering TaskList
-    render(<TaskList />);
+    render(<TaskList />, { wrapper: Providers });
 
     // Then: Task 1 should be in the document immediately
     // If it's empty on first render, this will fail if we don't wait

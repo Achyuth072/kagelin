@@ -23,6 +23,7 @@
 import type { ReactNode } from "react";
 
 import { act, render } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import TaskList from "@/components/tasks/TaskList";
 import { useTasks } from "@/lib/hooks/useTasks";
@@ -35,6 +36,13 @@ import {
   useToggleTask,
 } from "@/lib/hooks/useTaskMutations";
 import type { Task } from "@/lib/types/task";
+
+// TaskList calls useQueryClient(); provide a bare client (data hooks are mocked
+// so no real queries run).
+const testQueryClient = new QueryClient();
+const Providers = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={testQueryClient}>{children}</QueryClientProvider>
+);
 
 // --- Capture DndContext props so the test can invoke handlers directly ---
 type DndHandlers = {
@@ -237,6 +245,8 @@ describe("TaskList drop race condition (residual snap-back)", () => {
         setSortBy: vi.fn(),
         setGroupBy: vi.fn(),
         setViewMode: vi.fn(),
+        customSortEnteredViaDrag: false,
+        setCustomSortEnteredViaDrag: vi.fn(),
         habitViewMode: "grid",
         setHabitViewMode: vi.fn(),
         statsPeriod: "30d",
@@ -285,7 +295,9 @@ describe("TaskList drop race condition (residual snap-back)", () => {
   });
 
   it("preserves local order through drag-over → drag-end (no fallback to processedTasks)", () => {
-    render(<TaskList projectId="all" sortBy="custom" />);
+    render(<TaskList projectId="all" sortBy="custom" />, {
+      wrapper: Providers,
+    });
 
     // Initial render: TaskListView received the source-of-truth order
     const initial = taskListViewRenders.at(-1);
@@ -373,7 +385,9 @@ describe("TaskList drop race condition (residual snap-back)", () => {
   });
 
   it("locks local state synchronously on drop so no render exposes stale processedTasks", () => {
-    render(<TaskList projectId="all" sortBy="custom" />);
+    render(<TaskList projectId="all" sortBy="custom" />, {
+      wrapper: Providers,
+    });
 
     act(() => {
       captured.handlers.onDragStart?.({ active: { id: "task-0" } });
@@ -432,7 +446,9 @@ describe("TaskList drop race condition (residual snap-back)", () => {
       isPending: false,
     } as unknown as ReturnType<typeof useReorderTasks>);
 
-    render(<TaskList projectId="all" sortBy="custom" />);
+    render(<TaskList projectId="all" sortBy="custom" />, {
+      wrapper: Providers,
+    });
 
     act(() => {
       captured.handlers.onDragStart?.({ active: { id: "task-0" } });
@@ -477,7 +493,9 @@ describe("TaskList drop race condition (residual snap-back)", () => {
     // If the displayTasks fallback to processedTasks.active happens for
     // even one render here, it manifests as the residual snap-back.
 
-    const { rerender } = render(<TaskList projectId="all" sortBy="custom" />);
+    const { rerender } = render(<TaskList projectId="all" sortBy="custom" />, {
+      wrapper: Providers,
+    });
 
     act(() => {
       captured.handlers.onDragStart?.({ active: { id: "task-0" } });

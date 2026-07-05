@@ -44,6 +44,7 @@ import { KanbanBoardProvider } from "@/components/kanban";
 import {
   getTaskUpdatesForGroup,
   computeReorderPairs,
+  computeFreezeOrderPairs,
   isDropBlockedGroup,
 } from "@/lib/utils/task-dnd";
 
@@ -82,6 +83,9 @@ export function TaskBoard({
   const reorderMutation = useReorderTasks();
   const sortBy = useUiStore((state) => state.sortBy);
   const setSortBy = useUiStore((state) => state.setSortBy);
+  const setCustomSortEnteredViaDrag = useUiStore(
+    (state) => state.setCustomSortEnteredViaDrag,
+  );
 
   const [activeId, setActiveId] = useState<string | null>(null);
   // Snapshot of the dragged task, captured once at drag start and fed to the
@@ -338,7 +342,13 @@ export function TaskBoard({
     // lockLocal=true, displayColumns reads localColumns (new order) — not
     // boardColumns — so no stale server state can overwrite the drop position.
     setLockLocal(true);
-    if (sortBy !== "custom") setSortBy("custom");
+    if (sortBy !== "custom") {
+      // TaskList's freeze-on-menu-switch effect watches this flag to tell a
+      // drag-driven switch to Custom apart from a menu-driven one — this
+      // drag's own reorder mutation below already computes the precise order.
+      setCustomSortEnteredViaDrag(true);
+      setSortBy("custom");
+    }
 
     // 1. Commit property updates (if any)
     const updates = getTaskUpdates(finalColumn.title);
@@ -385,18 +395,27 @@ export function TaskBoard({
       );
     }
 
-    // 2. Commit the reorder as a single-task move within the flat list
-    // captured at handleDragStart — BEFORE any local drag mutations. Empty
-    // pairs mean the drop needs no order change (dropped back in place, or
-    // into an empty column) — skip the mutation entirely.
-    // lockLocal is released via tryReleaseLock once all mutations settle.
-    const orderedIds = finalColumn.tasks.map((t) => t.id);
-    const pairs = computeReorderPairs(
-      activeId,
-      orderedIds,
-      preDragFlatTasksRef.current,
-      isSameSection,
-    );
+    // 2. Commit the reorder.
+    // When ALREADY in custom sort, day_order is authoritative, so model the
+    // drop as a single-task move (only the dragged span changes; other columns
+    // keep their day_order). But when this drop CONVERTS a derived sort to
+    // custom, every other column's day_order is stale (derived/creation order,
+    // not what's shown) — a single-move would leave them to re-sort and jump on
+    // the switch. So freeze the ENTIRE post-drop visible order (localColumns
+    // already reflects the move) so untouched columns stay exactly as shown.
+    // Empty pairs mean nothing to persist — skip the mutation entirely.
+    let pairs: { id: string; day_order: number }[];
+    if (sortBy === "custom") {
+      const orderedIds = finalColumn.tasks.map((t) => t.id);
+      pairs = computeReorderPairs(
+        activeId,
+        orderedIds,
+        preDragFlatTasksRef.current,
+        isSameSection,
+      );
+    } else {
+      pairs = computeFreezeOrderPairs(localColumns.flatMap((c) => c.tasks));
+    }
     if (pairs.length > 0) {
       pendingCount++;
       reorderMutation.mutate(pairs, {
