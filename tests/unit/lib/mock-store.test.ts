@@ -42,7 +42,7 @@ describe("MockStore (Guest Mode Data)", () => {
 
     // Verify localStorage
     const stored = JSON.parse(
-      localStorage.getItem("kanso_guest_data_v8") || "{}",
+      localStorage.getItem("kanso_guest_data_v10") || "{}",
     );
     expect(stored.tasks).toHaveLength(1);
     expect(stored.tasks[0].content).toBe("Test Task");
@@ -76,7 +76,7 @@ describe("MockStore (Guest Mode Data)", () => {
 
     // Verify localStorage
     const stored = JSON.parse(
-      localStorage.getItem("kanso_guest_data_v8") || "{}",
+      localStorage.getItem("kanso_guest_data_v10") || "{}",
     );
     expect(stored.tasks[0].content).toBe("Updated Content");
   });
@@ -86,5 +86,24 @@ describe("MockStore (Guest Mode Data)", () => {
       content: "New Content",
     });
     expect(result).toBeNull();
+  });
+
+  it("should seed a recurring task Series in initial data", () => {
+    mockStore.reset();
+
+    const seriesTasks = mockStore
+      .getTasks()
+      .filter((t) => t.recurring_series_id !== null);
+
+    // At least two Occurrences sharing one recurring_series_id
+    expect(seriesTasks.length).toBeGreaterThanOrEqual(2);
+    const seriesIds = new Set(seriesTasks.map((t) => t.recurring_series_id));
+    expect(seriesIds.size).toBe(1);
+
+    // The Series has both a completed past Occurrence and an active one,
+    // and every member carries a recurrence rule.
+    expect(seriesTasks.some((t) => t.is_completed)).toBe(true);
+    expect(seriesTasks.some((t) => !t.is_completed)).toBe(true);
+    expect(seriesTasks.every((t) => t.recurrence !== null)).toBe(true);
   });
 });

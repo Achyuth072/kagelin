@@ -7,6 +7,15 @@ const PrioritySchema = z.union([
   z.literal(4),
 ]);
 
+// DnD writes plain dates ("yyyy-MM-dd") while recurrence and some APIs write
+// full ISO datetimes. Accept either format so validation doesn't reject
+// DnD-moved tasks when they are later opened in a form.
+const DateOrDateTimeString = z.union([
+  z.string().date(),
+  z.string().datetime(),
+  z.string().datetime({ offset: true }),
+]);
+
 export const TaskSchema = z.object({
   id: z.string(),
   user_id: z.string(),
@@ -15,7 +24,8 @@ export const TaskSchema = z.object({
   content: z.string().min(1, "Task content is required").max(500),
   description: z.string().max(5000).nullable().optional(),
   priority: PrioritySchema.default(4),
-  due_date: z.string().datetime().nullable().optional(),
+  due_date: DateOrDateTimeString.nullable().optional(),
+  do_date: DateOrDateTimeString.nullable().optional(),
   is_completed: z.boolean().default(false),
   completed_at: z.string().datetime().nullable().optional(),
   day_order: z.number().int().default(0),
@@ -28,6 +38,7 @@ export const TaskSchema = z.object({
     })
     .nullable()
     .optional(),
+  recurring_series_id: z.string().uuid().nullable().optional(),
   google_event_id: z.string().max(255).nullable().optional(),
   google_etag: z.string().max(255).nullable().optional(),
   created_at: z.string().datetime(),
@@ -38,14 +49,8 @@ export const CreateTaskSchema = z.object({
   content: z.string().min(1, "Task content is required").max(500),
   description: z.string().max(5000).optional(),
   priority: PrioritySchema.optional(),
-  due_date: z
-    .union([z.date(), z.string().datetime({ offset: true })])
-    .nullable()
-    .optional(),
-  do_date: z
-    .union([z.date(), z.string().datetime({ offset: true })])
-    .nullable()
-    .optional(),
+  due_date: z.union([z.date(), DateOrDateTimeString]).nullable().optional(),
+  do_date: z.union([z.date(), DateOrDateTimeString]).nullable().optional(),
   is_evening: z.boolean().default(false).optional(),
   project_id: z.string().nullable().optional(),
   parent_id: z.string().optional(),
@@ -65,13 +70,21 @@ export const UpdateTaskSchema = z.object({
   content: z.string().min(1, "Task content is required").max(500).optional(),
   description: z.string().max(5000).optional(),
   priority: PrioritySchema.optional(),
-  due_date: z
-    .union([z.date(), z.string().datetime({ offset: true })])
-    .nullable()
-    .optional(),
+  due_date: z.union([z.date(), DateOrDateTimeString]).nullable().optional(),
+  do_date: z.union([z.date(), DateOrDateTimeString]).nullable().optional(),
   is_completed: z.boolean().optional(),
   day_order: z.number().int().optional(),
   project_id: z.string().nullable().optional(),
+  recurrence: z
+    .object({
+      freq: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]),
+      interval: z.number(),
+      days: z.array(z.number()).optional(),
+      mode: z.enum(["strict", "flexible"]).optional(),
+    })
+    .nullable()
+    .optional(),
+  recurring_series_id: z.string().uuid().nullable().optional(),
 });
 
 export type Task = z.infer<typeof TaskSchema>;

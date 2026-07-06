@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { BarChart2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type {
   DraggableAttributes,
@@ -10,14 +11,21 @@ import { useMarkHabitComplete } from "@/lib/hooks/useHabitMutations";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { getRolling7Days } from "@/lib/utils/habit-rolling";
+import {
+  getFrequencyProgress,
+  frequencyProgressLabel,
+  hasFrequencyTarget,
+} from "@/lib/utils/habit-frequency-progress";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
 import { DragHandle } from "@/components/tasks/DragHandle";
 import { HabitStripCell } from "./HabitStripCell";
+import { CircularProgress } from "@/components/ui/circular-progress";
 
 interface HabitCompactRowProps {
   habit: HabitWithEntries;
   icon?: LucideIcon;
   onEdit?: () => void;
+  onViewInsights?: () => void;
   // Drag wiring (compact view): desktop shows a left-edge handle, mobile spreads
   // the listeners on the whole row behind a long-press delay.
   isDesktop?: boolean;
@@ -35,6 +43,7 @@ export function HabitCompactRow({
   habit,
   icon: Icon,
   onEdit,
+  onViewInsights,
   isDesktop,
   dragListeners,
   dragAttributes,
@@ -47,12 +56,24 @@ export function HabitCompactRow({
   // the next list re-render rather than every render of every row.
   const today = useMemo(() => new Date(), []);
   const streak = useMemo(
-    () => getCurrentStreak(habit.entries, today),
-    [habit.entries, today],
+    () => getCurrentStreak(habit, habit.entries, today),
+    [habit, today],
   );
   const days = useMemo(
     () => getRolling7Days(habit.entries, today, habit.start_date),
     [habit.entries, today, habit.start_date],
+  );
+
+  // Frequency progress ring — Boolean Habits with a non-trivial target only,
+  // same gate as HabitCard.
+  const showFrequencyRing =
+    habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
+  const frequencyProgress = useMemo(
+    () =>
+      showFrequencyRing
+        ? getFrequencyProgress(habit, habit.entries, today)
+        : null,
+    [habit, showFrequencyRing, today],
   );
 
   const handleToggle = (date: string) => {
@@ -94,13 +115,35 @@ export function HabitCompactRow({
         <span className="truncate text-[15px] font-semibold tracking-tight text-foreground">
           {habit.name}
         </span>
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 pl-2 lg:ml-0">
-          <span className="text-sm font-bold tabular-nums text-foreground">
-            {streak}
+        <div className="ml-auto flex shrink-0 items-center gap-2 pl-2 lg:ml-0">
+          {frequencyProgress && (
+            <CircularProgress
+              value={frequencyProgress.completed}
+              max={frequencyProgress.target}
+              size={18}
+              strokeWidth={2.5}
+              color={habit.color}
+              label={frequencyProgressLabel(frequencyProgress)}
+              className="mr-0.5"
+            />
+          )}
+          {/* Quiet metadata, matched to HabitCard's strip (no caps label). */}
+          <span className="text-[13px] font-medium tabular-nums text-foreground/55">
+            <span className="font-semibold text-foreground/90">{streak}</span>{" "}
+            streak
           </span>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-foreground/50">
-            Streak
-          </span>
+          {onViewInsights && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewInsights();
+              }}
+              className="ml-1 flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-seijaku-fast hover:bg-secondary/60 hover:text-foreground"
+              aria-label="View insights"
+            >
+              <BarChart2 className="h-3.5 w-3.5" strokeWidth={2.25} />
+            </button>
+          )}
         </div>
       </div>
 

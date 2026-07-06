@@ -23,35 +23,50 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("kanso_guest_mode") === "true";
-    }
-    return false;
-  });
-  const [user, setUser] = useState<User | null>(() => {
-    if (
-      typeof window !== "undefined" &&
-      localStorage.getItem("kanso_guest_mode") === "true"
-    ) {
-      return {
-        id: "guest",
-        email: "guest@demo.kanso",
-        app_metadata: {},
-        user_metadata: { display_name: "Guest User" },
-        aud: "authenticated",
-        created_at: new Date().toISOString(),
-      } as User;
-    }
-    return null;
-  });
+function makeGuestUser(): User {
+  return {
+    id: "guest",
+    email: "guest@demo.kanso",
+    app_metadata: {},
+    user_metadata: { display_name: "Guest User" },
+    aud: "authenticated",
+    created_at: new Date().toISOString(),
+  } as User;
+}
+
+export function AuthProvider({
+  children,
+  initialIsGuest = false,
+}: {
+  children: React.ReactNode;
+  // Mirrors the `kanso_guest_mode` cookie, read server-side by the root
+  // layout, so the first client render agrees with the SSR output instead
+  // of branching on `typeof window` and diverging from it (hydration error).
+  initialIsGuest?: boolean;
+}) {
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(initialIsGuest);
+  const [user, setUser] = useState<User | null>(() =>
+    initialIsGuest ? makeGuestUser() : null,
+  );
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(!isGuestMode);
   const supabase = createClient();
 
   useEffect(() => {
-    if (isGuestMode) return;
+    // The `kanso_guest_mode` cookie (read server-side for `initialIsGuest`)
+    // can lag localStorage — e.g. cleared separately, or stale. Re-check
+    // here so a real guest session isn't sent through the Supabase path.
+    if (isGuestMode || localStorage.getItem("kanso_guest_mode") === "true") {
+      const syncGuestState = async () => {
+        if (!isGuestMode) {
+          setUser(makeGuestUser());
+          setIsGuestMode(true);
+        }
+        setLoading(false);
+      };
+      void syncGuestState();
+      return;
+    }
 
     const getSession = async () => {
       const {
@@ -126,16 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signInAsGuest = useCallback(() => {
-    const mockUser = {
-      id: "guest",
-      email: "guest@demo.kanso",
-      app_metadata: {},
-      user_metadata: { display_name: "Guest User" },
-      aud: "authenticated",
-      created_at: new Date().toISOString(),
-    } as User;
-
-    setUser(mockUser);
+    setUser(makeGuestUser());
     setIsGuestMode(true);
   }, []);
 

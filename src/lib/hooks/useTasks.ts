@@ -67,10 +67,16 @@ export function useTasks(options: UseTasksOptions = {}) {
           });
         }
 
-        // Exclude subtasks and sort
+        // Exclude subtasks and sort. Tie-break matches the Supabase query
+        // below (newest first) so guest and real fetch paths agree on order
+        // whenever day_order is tied.
         tasks = tasks
           .filter((t) => !t.parent_id)
-          .sort((a, b) => a.day_order - b.day_order);
+          .sort((a, b) => {
+            const diff = a.day_order - b.day_order;
+            if (diff !== 0) return diff;
+            return b.created_at.localeCompare(a.created_at);
+          });
 
         return tasks;
       }
@@ -165,6 +171,42 @@ export function useTask(taskId: string | null) {
       return data as Task;
     },
     enabled: !!taskId,
+  });
+}
+
+/**
+ * All Occurrences (Task rows) sharing one recurring_series_id, for Task
+ * Insights. Unlike useTasks(), this is unfiltered by completion/date so the
+ * full history feeds the streak/on-time/heatmap math.
+ */
+export function useTaskSeries(seriesId: string | null) {
+  const { isGuestMode } = useAuth();
+
+  return useQuery({
+    queryKey: ["task-series", seriesId, isGuestMode],
+    staleTime: 60000, // 1 minute — avoid refetching on every sheet open
+    queryFn: async (): Promise<Task[]> => {
+      if (!seriesId) return [];
+
+      if (isGuestMode) {
+        return mockStore
+          .getTasks()
+          .filter((t) => t.recurring_series_id === seriesId);
+      }
+
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("recurring_series_id", seriesId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data as Task[];
+    },
+    enabled: !!seriesId,
   });
 }
 

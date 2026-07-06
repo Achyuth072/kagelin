@@ -63,6 +63,12 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
         className="w-full h-full"
         onClick={() => onSelect?.(task)}
       >
+        {/* Drag activation lives on the wrapper div above (it spreads
+            attributes+listeners). BoardTaskCard never consumes dragListeners/
+            dragAttributes, so forwarding them here only poisoned TaskItem's
+            React.memo — dnd-kit hands back fresh identities each reorder,
+            forcing every card's TaskItem subtree to re-render on every
+            drag-over. Omitting them lets the memo hold. */}
         <TaskItem
           task={task}
           project={project}
@@ -71,8 +77,6 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
           triggerHaptic={triggerHaptic}
           setActiveTaskId={setActiveTaskId}
           viewMode="board"
-          dragListeners={listeners}
-          dragAttributes={attributes}
         />
       </div>
     </div>

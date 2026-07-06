@@ -152,7 +152,14 @@ export function useTaskViewData({
 
     // Sorting Helper - uses the pre-parsed dates from dateCache indirectly
     const sortFn = (a: Task, b: Task) => {
-      if (sortBy === "custom") return 0;
+      if (sortBy === "custom") {
+        const diff = a.day_order - b.day_order;
+        if (diff !== 0) return diff;
+        // Ties (e.g. not-yet-backfilled rows) break newest-first, matching
+        // the Supabase fetch order so display doesn't depend on which path
+        // fetched the data.
+        return b.created_at.localeCompare(a.created_at);
+      }
 
       if (sortBy === "priority") {
         const diff = a.priority - b.priority;
@@ -182,17 +189,14 @@ export function useTaskViewData({
       return compareAsc(aDate, bDate);
     };
 
-    // Only sort if needed
-    if (sortBy !== "custom") {
-      active.sort(sortFn);
-      evening.sort(sortFn);
-      allActive.sort(sortFn);
+    active.sort(sortFn);
+    evening.sort(sortFn);
+    allActive.sort(sortFn);
 
-      // Sort tasks within groups as well
-      if (groupBy !== "none") {
-        for (const key of groupOrder) {
-          groupMap[key].sort(sortFn);
-        }
+    // Sort tasks within groups as well
+    if (groupBy !== "none") {
+      for (const key of groupOrder) {
+        groupMap[key].sort(sortFn);
       }
     }
 

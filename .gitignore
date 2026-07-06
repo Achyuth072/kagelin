@@ -74,7 +74,7 @@ tests/unit/*.txt
 .vercel/
 
 .planning/
-CLAUDE.md
-docs/agents/
-.claude/
-AGENTS.md
+.claude/*
+!.claude/settings.json
+!.claude/hooks/
+!.claude/hooks/**

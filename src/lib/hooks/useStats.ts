@@ -1,19 +1,37 @@
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { subDays, format } from "date-fns";
+import {
+  subDays,
+  startOfDay,
+  format,
+  eachDayOfInterval,
+  parseISO,
+} from "date-fns";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
+import { PERIOD_DAY_COUNT, type StatsPeriod } from "@/lib/types/stats";
 
 export interface DailyStats {
-  date: string;
+  date: string; // ISO 'yyyy-MM-dd' (local)
   hours: number;
   totalSessions: number;
   tasksCompleted: number;
+  habitReps: number;
 }
 
 export interface StatsTrend {
   value: number;
   isPositive: boolean;
+}
+
+export interface ProjectBreakdownCount {
+  projectId: string | null;
+  count: number;
+}
+
+export interface PriorityBreakdownCount {
+  priority: 1 | 2 | 3 | 4;
+  count: number;
 }
 
 export interface StatsData {
@@ -30,122 +48,207 @@ export interface StatsData {
     rate: StatsTrend;
     habitReps: StatsTrend;
   };
+  byProject: ProjectBreakdownCount[];
+  byPriority: PriorityBreakdownCount[];
+  /** Minutes of focus, indexed [weekday][hour]. weekday 0=Mon..6=Sun (local). */
+  timeOfDay: number[][];
+}
+
+interface StatsLog {
+  start_time: string;
+  duration_seconds: number | null;
+}
+
+interface StatsTask {
+  is_completed: boolean;
+  completed_at: string | null;
+  project_id?: string | null;
+  priority?: 1 | 2 | 3 | 4;
+}
+
+interface StatsHabitEntry {
+  date: string;
 }
 
 /**
- * Processes raw stats data in a single pass to optimize performance.
- * Goal: Iteration time < 5ms for 1,000 tasks.
+ * Returns the lower bound (inclusive) for the data this period's UI displays,
+ * or null for "all" (no lower bound).
+ */
+function periodStart(period: StatsPeriod, now: Date): Date | null {
+  if (period === "all") return null;
+  return startOfDay(subDays(now, PERIOD_DAY_COUNT[period] - 1));
+}
+
+/**
+ * Returns the lower bound (inclusive) for the prior period used to compute
+ * trend deltas, or null when there's no meaningful "previous" window (period
+ * is "all", or the period has no fixed length).
+ */
+function prevPeriodStart(period: StatsPeriod, now: Date): Date | null {
+  if (period === "all") return null;
+  return startOfDay(subDays(now, PERIOD_DAY_COUNT[period] * 2 - 1));
+}
+
+/**
+ * The lower bound to actually fetch from the data source: current period +
+ * an equal-length prior period (for trend deltas). Null = fetch everything.
+ */
+export function fetchLowerBound(
+  period: StatsPeriod,
+  now: Date = new Date(),
+): Date | null {
+  return prevPeriodStart(period, now);
+}
+
+/**
+ * Processes raw stats data in a single pass per collection to optimize
+ * performance (Phase 52 perf goal: O(n), no nested loops over the inputs).
  */
 export function calculateStats(
-  logs: { start_time: string; duration_seconds: number | null }[],
-  tasks: { is_completed: boolean; completed_at: string | null }[],
-  habitEntries: { date: string }[],
+  logs: StatsLog[],
+  tasks: StatsTask[],
+  habitEntries: StatsHabitEntry[],
+  period: StatsPeriod = "30d",
+  now: Date = new Date(),
 ): StatsData {
-  const now = new Date();
-  const sevenDaysAgo = subDays(now, 7);
-  const fourteenDaysAgo = subDays(now, 14);
-  const sevenDaysAgoMs = sevenDaysAgo.getTime();
-  const fourteenDaysAgoMs = fourteenDaysAgo.getTime();
+  const currentStart = periodStart(period, now);
+  const currentStartMs = currentStart ? currentStart.getTime() : -Infinity;
+  const prevStart = prevPeriodStart(period, now);
+  const prevStartMs = prevStart ? prevStart.getTime() : null;
+  const hasPrevWindow = prevStartMs !== null;
 
-  // Pre-allocate daily trend structure for the last 7 days
-  const dailyTrend: DailyStats[] = [];
-  const dailyTrendMap: Record<string, number> = {};
+  const dailyMap = new Map<
+    string,
+    {
+      hours: number;
+      totalSessions: number;
+      tasksCompleted: number;
+      habitReps: number;
+    }
+  >();
+  const getBucket = (key: string) => {
+    let bucket = dailyMap.get(key);
+    if (!bucket) {
+      bucket = {
+        hours: 0,
+        totalSessions: 0,
+        tasksCompleted: 0,
+        habitReps: 0,
+      };
+      dailyMap.set(key, bucket);
+    }
+    return bucket;
+  };
 
-  for (let i = 6; i >= 0; i--) {
-    const date = subDays(now, i);
-    const key = date.toISOString().split("T")[0];
-    dailyTrendMap[key] = dailyTrend.length;
-    dailyTrend.push({
-      date: format(date, "EEE"),
-      hours: 0,
-      totalSessions: 0,
-      tasksCompleted: 0,
-    });
-  }
+  let minActivityMs: number | null = null;
+  const trackMin = (ms: number) => {
+    if (minActivityMs === null || ms < minActivityMs) minActivityMs = ms;
+  };
 
   const activityDates = new Set<string>();
+  const timeOfDay: number[][] = Array.from({ length: 7 }, () =>
+    new Array(24).fill(0),
+  );
 
   // 1. Process Focus Logs
-  let totalFocusSeconds = 0;
   let currentFocusSec = 0;
+  let currentSessions = 0;
   let prevFocusSec = 0;
 
   for (let i = 0; i < logs.length; i++) {
     const log = logs[i];
     const seconds = log.duration_seconds || 0;
-    totalFocusSeconds += seconds;
-
-    const startTimeMs = Date.parse(log.start_time);
-    if (startTimeMs >= sevenDaysAgoMs) {
-      currentFocusSec += seconds;
-    } else if (startTimeMs >= fourteenDaysAgoMs) {
-      prevFocusSec += seconds;
-    }
-
-    const dateKey = log.start_time.split("T")[0];
+    const startMs = Date.parse(log.start_time);
+    const localDate = new Date(startMs);
+    const dateKey = format(localDate, "yyyy-MM-dd");
     activityDates.add(dateKey);
 
-    const trendIdx = dailyTrendMap[dateKey];
-    if (trendIdx !== undefined) {
-      dailyTrend[trendIdx].hours += seconds / 3600;
-      dailyTrend[trendIdx].totalSessions += 1;
+    if (startMs >= currentStartMs) {
+      currentFocusSec += seconds;
+      currentSessions += 1;
+      trackMin(startMs);
+
+      const bucket = getBucket(dateKey);
+      bucket.hours += seconds / 3600;
+      bucket.totalSessions += 1;
+
+      const weekday = (localDate.getDay() + 6) % 7; // Mon=0..Sun=6
+      timeOfDay[weekday][localDate.getHours()] += seconds / 60;
+    } else if (hasPrevWindow && startMs >= prevStartMs!) {
+      prevFocusSec += seconds;
     }
   }
 
   // 2. Process Tasks
-  let completedTasksCount = 0;
   let currentCompleted = 0;
   let prevCompleted = 0;
-  let currentTotal = 0;
-  let prevTotal = 0;
+  let incompleteCount = 0;
+  const byProjectMap = new Map<string | null, number>();
+  const byPriorityCounts: Record<1 | 2 | 3 | 4, number> = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+  };
 
   for (let i = 0; i < tasks.length; i++) {
     const task = tasks[i];
-    if (task.is_completed) {
-      completedTasksCount++;
-      if (task.completed_at) {
-        const completedAtMs = Date.parse(task.completed_at);
-        if (completedAtMs >= sevenDaysAgoMs) {
-          currentCompleted++;
-          currentTotal++;
-        } else if (completedAtMs >= fourteenDaysAgoMs) {
-          prevCompleted++;
-          prevTotal++;
-        }
+    if (!task.is_completed) {
+      incompleteCount++;
+      continue;
+    }
+    if (!task.completed_at) continue;
 
-        const dateKey = task.completed_at.split("T")[0];
-        activityDates.add(dateKey);
+    const completedMs = Date.parse(task.completed_at);
+    const dateKey = format(new Date(completedMs), "yyyy-MM-dd");
+    activityDates.add(dateKey);
 
-        const trendIdx = dailyTrendMap[dateKey];
-        if (trendIdx !== undefined) {
-          dailyTrend[trendIdx].tasksCompleted += 1;
-        }
+    if (completedMs >= currentStartMs) {
+      currentCompleted++;
+      trackMin(completedMs);
+
+      const bucket = getBucket(dateKey);
+      bucket.tasksCompleted += 1;
+
+      const projectKey = task.project_id ?? null;
+      byProjectMap.set(projectKey, (byProjectMap.get(projectKey) ?? 0) + 1);
+      if (task.priority) {
+        byPriorityCounts[task.priority] += 1;
       }
-    } else {
-      currentTotal++;
+    } else if (hasPrevWindow && completedMs >= prevStartMs!) {
+      prevCompleted++;
     }
   }
+
+  const currentTotal = currentCompleted + incompleteCount;
+  const prevTotal = prevCompleted + incompleteCount;
 
   // 3. Process Habit Entries
   let currentHabitReps = 0;
   let prevHabitReps = 0;
   for (let i = 0; i < habitEntries.length; i++) {
     const entry = habitEntries[i];
-    const entryMs = Date.parse(entry.date);
-    if (entryMs >= sevenDaysAgoMs) {
+    // Parse the bare yyyy-MM-dd as local midnight (not UTC, which Date.parse
+    // would do) so window classification stays consistent with the local-time
+    // bucketing used for focus logs and tasks above.
+    const entryMs = parseISO(entry.date).getTime();
+    if (entryMs >= currentStartMs) {
       currentHabitReps++;
-    } else if (entryMs >= fourteenDaysAgoMs) {
+      // Bucket into the day for the range-aware export rollup. entry.date is
+      // already a local yyyy-MM-dd key (see habit-streak.ts / useHeatmapData),
+      // so no reformatting is needed.
+      getBucket(entry.date).habitReps += 1;
+    } else if (hasPrevWindow && entryMs >= prevStartMs!) {
       prevHabitReps++;
     }
   }
 
-  // 4. Calculate Streak
+  // 4. Calculate Streak (walks back from today over every fetched activity date)
   let currentStreak = 0;
   if (activityDates.size > 0) {
     const checkDate = new Date(now);
-    const getDateKey = (d: Date) => d.toISOString().split("T")[0];
+    const getDateKey = (d: Date) => format(d, "yyyy-MM-dd");
 
-    // If no activity today, check yesterday
     if (!activityDates.has(getDateKey(checkDate))) {
       checkDate.setDate(checkDate.getDate() - 1);
     }
@@ -157,7 +260,6 @@ export function calculateStats(
     }
   }
 
-  // Helper for trend calculation
   const calculateTrend = (curr: number, prev: number): StatsTrend => {
     if (prev === 0) return { value: curr > 0 ? 100 : 0, isPositive: curr > 0 };
     const diff = ((curr - prev) / prev) * 100;
@@ -167,70 +269,116 @@ export function calculateStats(
     };
   };
 
-  // Final rounding for daily trend
-  for (let i = 0; i < dailyTrend.length; i++) {
-    dailyTrend[i].hours = Math.round(dailyTrend[i].hours * 10) / 10;
-  }
+  // 5. Build the range-aware daily trend, spanning the current period only.
+  const trendStart =
+    currentStart ??
+    (minActivityMs !== null
+      ? startOfDay(new Date(minActivityMs))
+      : startOfDay(now));
+  const trendEnd = startOfDay(now);
+  const trendDays =
+    trendStart > trendEnd
+      ? [trendEnd]
+      : eachDayOfInterval({ start: trendStart, end: trendEnd });
+
+  const dailyTrend: DailyStats[] = trendDays.map((d) => {
+    const key = format(d, "yyyy-MM-dd");
+    const bucket = dailyMap.get(key);
+    return {
+      date: key,
+      hours: bucket ? Math.round(bucket.hours * 10) / 10 : 0,
+      totalSessions: bucket ? bucket.totalSessions : 0,
+      tasksCompleted: bucket ? bucket.tasksCompleted : 0,
+      habitReps: bucket ? bucket.habitReps : 0,
+    };
+  });
 
   const currentRate =
     currentTotal > 0 ? (currentCompleted / currentTotal) * 100 : 0;
   const prevRate = prevTotal > 0 ? (prevCompleted / prevTotal) * 100 : 0;
 
+  const byProject: ProjectBreakdownCount[] = Array.from(
+    byProjectMap.entries(),
+  ).map(([projectId, count]) => ({ projectId, count }));
+
+  const byPriority: PriorityBreakdownCount[] = ([1, 2, 3, 4] as const).map(
+    (priority) => ({ priority, count: byPriorityCounts[priority] }),
+  );
+
   return {
-    totalFocusHours: Math.round((totalFocusSeconds / 3600) * 10) / 10,
-    totalSessions: logs.length,
-    tasksCompleted: completedTasksCount,
-    completionRate:
-      tasks.length > 0
-        ? Math.round((completedTasksCount / tasks.length) * 100)
-        : 0,
+    totalFocusHours: Math.round((currentFocusSec / 3600) * 10) / 10,
+    totalSessions: currentSessions,
+    tasksCompleted: currentCompleted,
+    completionRate: Math.round(currentRate),
     currentStreak,
     dailyTrend,
-    habitReps: habitEntries.length,
+    habitReps: currentHabitReps,
     trends: {
       focus: calculateTrend(currentFocusSec, prevFocusSec),
       tasks: calculateTrend(currentCompleted, prevCompleted),
       rate: calculateTrend(currentRate, prevRate),
       habitReps: calculateTrend(currentHabitReps, prevHabitReps),
     },
+    byProject,
+    byPriority,
+    timeOfDay: timeOfDay.map((row) => row.map((m) => Math.round(m))),
   };
 }
 
-export function useStats() {
+export function useStats(period: StatsPeriod = "30d") {
   const { isGuestMode } = useAuth();
 
   return useQuery({
-    queryKey: ["stats-dashboard", isGuestMode],
+    queryKey: ["stats-dashboard", isGuestMode, period],
     staleTime: 60000, // Cache for 1 minute
+    placeholderData: (previousData) => previousData,
     queryFn: async (): Promise<StatsData> => {
       let rawLogs, rawTasks, rawHabits;
+      const now = new Date();
+      const lowerBound = fetchLowerBound(period, now);
 
       if (isGuestMode) {
-        rawLogs = mockStore.getFocusLogs();
+        rawLogs = lowerBound
+          ? mockStore
+              .getFocusLogs()
+              .filter((log) => log.start_time >= lowerBound.toISOString())
+          : mockStore.getFocusLogs();
         rawTasks = mockStore.getTasks();
-        rawHabits = mockStore.getHabitEntries();
+        rawHabits = lowerBound
+          ? mockStore
+              .getHabitEntries()
+              .filter((entry) => entry.date >= format(lowerBound, "yyyy-MM-dd"))
+          : mockStore.getHabitEntries();
       } else {
         const supabase = createClient();
-        const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
+
+        let logsQuery = supabase
+          .from("focus_logs")
+          .select("start_time, duration_seconds");
+        let habitsQuery = supabase.from("habit_entries").select("date");
+
+        if (lowerBound) {
+          logsQuery = logsQuery.gte("start_time", lowerBound.toISOString());
+          habitsQuery = habitsQuery.gte(
+            "date",
+            format(lowerBound, "yyyy-MM-dd"),
+          );
+        }
 
         // Parallel fetch for better performance
         const [logsRes, tasksRes, habitsRes] = await Promise.all([
-          supabase
-            .from("focus_logs")
-            .select("start_time, duration_seconds")
-            .gte("start_time", thirtyDaysAgo),
+          logsQuery,
           supabase.auth.getSession().then(({ data: { session } }) => {
             const userId = session?.user?.id;
             if (!userId) throw new Error("Not authenticated");
             return supabase
               .from("tasks")
-              .select("is_completed, completed_at, user_id")
+              .select(
+                "is_completed, completed_at, project_id, priority, user_id",
+              )
               .eq("user_id", userId);
           }),
-          supabase
-            .from("habit_entries")
-            .select("date")
-            .gte("date", thirtyDaysAgo),
+          habitsQuery,
         ]);
 
         if (logsRes.error) throw logsRes.error;
@@ -242,7 +390,7 @@ export function useStats() {
         rawHabits = habitsRes.data || [];
       }
 
-      return calculateStats(rawLogs, rawTasks, rawHabits);
+      return calculateStats(rawLogs, rawTasks, rawHabits, period, now);
     },
   });
 }

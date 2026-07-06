@@ -1,8 +1,16 @@
 import type { ReactNode } from "react";
 import { render } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { MeasuringStrategy } from "@dnd-kit/core";
 import TaskList from "@/components/tasks/TaskList";
+
+// TaskList calls useQueryClient(); provide a bare client (data hooks are mocked
+// so no real queries run).
+const testQueryClient = new QueryClient();
+const Providers = ({ children }: { children: ReactNode }) => (
+  <QueryClientProvider client={testQueryClient}>{children}</QueryClientProvider>
+);
 import { useTasks } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -135,6 +143,7 @@ const tasks: Task[] = Array.from({ length: 24 }, (_, index) => ({
   is_evening: false,
   parent_id: null,
   recurrence: null,
+  recurring_series_id: null,
   google_event_id: null,
   google_etag: null,
 }));
@@ -160,8 +169,12 @@ describe("TaskList DnD layout shift protection", () => {
         setSortBy: vi.fn(),
         setGroupBy: vi.fn(),
         setViewMode: vi.fn(),
+        customSortEnteredViaDrag: false,
+        setCustomSortEnteredViaDrag: vi.fn(),
         habitViewMode: "grid",
         setHabitViewMode: vi.fn(),
+        statsPeriod: "30d",
+        setStatsPeriod: vi.fn(),
         timeFormat: "system",
         setTimeFormat: vi.fn(),
         hapticsEnabled: true,
@@ -194,12 +207,21 @@ describe("TaskList DnD layout shift protection", () => {
         setIsSynced: vi.fn(),
         hasChangelogUpdate: false,
         setHasChangelogUpdate: vi.fn(),
+        goals: {
+          dailyFocusHours: null,
+          weeklyFocusHours: null,
+          dailyTasksCompleted: null,
+          weeklyTasksCompleted: null,
+        },
+        setGoals: vi.fn(),
       }),
     );
   });
 
   it("confines desktop list auto-scroll to the dedicated list scroller", () => {
-    const { container } = render(<TaskList projectId="all" />);
+    const { container } = render(<TaskList projectId="all" />, {
+      wrapper: Providers,
+    });
     const props = dndKitMock.latestDndContextProps;
     const canScroll = props?.autoScroll?.canScroll;
 
@@ -225,11 +247,11 @@ describe("TaskList DnD layout shift protection", () => {
     expect(canScroll(document.documentElement)).toBe(false);
   });
 
-  it("keeps list droppable measurements fresh during auto-scrolled drops", () => {
-    render(<TaskList projectId="all" />);
+  it("uses WhileDragging measuring to avoid re-measuring on every drag-over registry mutation", () => {
+    render(<TaskList projectId="all" />, { wrapper: Providers });
 
     expect(
       dndKitMock.latestDndContextProps?.measuring?.droppable?.strategy,
-    ).toBe(MeasuringStrategy.Always);
+    ).toBe(MeasuringStrategy.WhileDragging);
   });
 });

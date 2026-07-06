@@ -6,17 +6,24 @@ import { HabitHeatmap } from "./HabitHeatmap";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useMarkHabitComplete } from "@/lib/hooks/useHabitMutations";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
-import { Check, Plus, LucideIcon } from "lucide-react";
+import { BarChart2, Check, Plus, LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { getContrastingColor } from "@/lib/utils/color";
+import {
+  getFrequencyProgress,
+  frequencyProgressLabel,
+  hasFrequencyTarget,
+} from "@/lib/utils/habit-frequency-progress";
+import { CircularProgress } from "@/components/ui/circular-progress";
 
 interface HabitCardProps {
   habit: HabitWithEntries;
   icon?: LucideIcon;
   onToggle?: () => void;
   onEdit?: () => void;
+  onViewInsights?: () => void;
 }
 
 /**
@@ -32,6 +39,7 @@ export function HabitCard({
   icon: Icon,
   onToggle,
   onEdit,
+  onViewInsights,
 }: HabitCardProps) {
   const isMobile = useIsMobile();
   const markComplete = useMarkHabitComplete();
@@ -78,7 +86,17 @@ export function HabitCard({
 
   // Calculate stats
   const totalCompletions = habit.entries.filter((e) => e.value === 1).length;
-  const currentStreak = getCurrentStreak(habit.entries);
+  const currentStreak = getCurrentStreak(habit, habit.entries);
+
+  // Frequency progress ring — Boolean Habits only (CONTEXT.md "Done"-counting
+  // vs strength metrics): an at_most Measurable Habit would read misleadingly
+  // against a raw frequency count. Also requires a non-trivial target — a plain
+  // daily habit's "1/1" ring is redundant next to the toggle.
+  const showFrequencyRing =
+    habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
+  const frequencyProgress = showFrequencyRing
+    ? getFrequencyProgress(habit, habit.entries)
+    : null;
 
   const handleToggle = useCallback(() => {
     if (onToggle) {
@@ -97,12 +115,14 @@ export function HabitCard({
   return (
     <Card
       onClick={onEdit}
-      className="bg-card border border-border dark:border-border/40 p-6 rounded-xl overflow-hidden shadow-none transition-seijaku-fast hover:border-border/60 hover:shadow-sm cursor-pointer active:scale-[0.995] min-w-0"
+      className="bg-card border border-border dark:border-border/40 p-4 sm:p-5 rounded-xl overflow-hidden shadow-none transition-seijaku-fast hover:border-border/60 hover:shadow-sm cursor-pointer active:scale-[0.995] min-w-0"
     >
-      <div className="flex flex-col gap-6">
-        {/* Header: Title, Description + Toggle */}
-        <div className="flex justify-between items-start">
-          <div className="flex gap-4 items-center min-w-0">
+      <div className="flex flex-col gap-4">
+        {/* Header: two-row — identity + actions on top, quiet metadata below.
+            Unified across sizes so the name owns the width the truncated
+            single-row header used to starve it of. */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h3 className="text-[15px] font-semibold tracking-tight text-foreground flex items-center gap-2.5 min-w-0">
                 {Icon && (
@@ -120,56 +140,93 @@ export function HabitCard({
                 </p>
               )}
             </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {onViewInsights && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewInsights();
+                  }}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-secondary border border-border hover:bg-secondary/80 text-muted-foreground hover:text-foreground transition-seijaku-fast"
+                  aria-label="View insights"
+                >
+                  <BarChart2 className="w-4 h-4" strokeWidth={2.25} />
+                </button>
+              )}
+              {/* Primary action: sleek 36px visual, but an invisible
+                  before:-inset-1 halo expands the tap area to the 44px mobile
+                  touch-target minimum. */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggle();
+                }}
+                className={`relative h-9 w-9 rounded-lg flex items-center justify-center transition-seijaku-fast shrink-0 before:absolute before:-inset-1 before:content-[''] ${
+                  isCompletedToday
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary border border-border hover:bg-secondary/80 text-muted-foreground hover:text-foreground"
+                }`}
+                style={
+                  isCompletedToday
+                    ? { backgroundColor: habit.color }
+                    : undefined
+                }
+                aria-label={
+                  isCompletedToday ? "Mark incomplete" : "Mark complete"
+                }
+              >
+                {isCompletedToday ? (
+                  <Check
+                    className="w-5 h-5"
+                    strokeWidth={3}
+                    style={{ color: getContrastingColor(habit.color) }}
+                  />
+                ) : (
+                  <Plus className="w-5 h-5" />
+                )}
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4 shrink-0">
-            {/* Stats in Header */}
-            <div className="flex items-center gap-4 sm:gap-6 mr-1 sm:mr-2">
-              <div className="text-right">
-                <div className="text-[9px] uppercase text-foreground/60 font-bold tracking-widest leading-none">
-                  Streak
-                </div>
-                <div className="text-sm font-bold text-foreground mt-1">
-                  {currentStreak}
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-[9px] uppercase text-foreground/60 font-bold tracking-widest leading-none">
-                  Total
-                </div>
-                <div className="text-sm font-bold text-foreground mt-1">
-                  {totalCompletions}
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggle();
-              }}
-              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-seijaku-fast shrink-0 ${
-                isCompletedToday
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary border border-border hover:bg-secondary/80 text-muted-foreground hover:text-foreground"
-              }`}
-              style={
-                isCompletedToday ? { backgroundColor: habit.color } : undefined
-              }
-              aria-label={
-                isCompletedToday ? "Mark incomplete" : "Mark complete"
-              }
-            >
-              {isCompletedToday ? (
-                <Check
-                  className="w-5 h-5"
-                  strokeWidth={3}
-                  style={{ color: getContrastingColor(habit.color) }}
-                />
-              ) : (
-                <Plus className="w-5 h-5" />
-              )}
-            </button>
+          {/* Quiet metadata strip — muted, inline, dot-separated. Reads as
+              secondary data, not a competing row. */}
+          <div className="flex items-center gap-2 text-[13px] font-medium tabular-nums text-foreground/55">
+            {frequencyProgress && (
+              <>
+                <span className="flex items-center gap-1.5">
+                  <CircularProgress
+                    value={frequencyProgress.completed}
+                    max={frequencyProgress.target}
+                    size={18}
+                    strokeWidth={2.5}
+                    color={habit.color}
+                    label={frequencyProgressLabel(frequencyProgress)}
+                  />
+                  <span className="font-semibold text-foreground/90">
+                    {frequencyProgress.completed}/{frequencyProgress.target}
+                  </span>
+                </span>
+                <span className="text-foreground/25" aria-hidden="true">
+                  ·
+                </span>
+              </>
+            )}
+            <span>
+              <span className="font-semibold text-foreground/90">
+                {currentStreak}
+              </span>{" "}
+              streak
+            </span>
+            <span className="text-foreground/25" aria-hidden="true">
+              ·
+            </span>
+            <span>
+              <span className="font-semibold text-foreground/90">
+                {totalCompletions}
+              </span>{" "}
+              total
+            </span>
           </div>
         </div>
 
@@ -181,7 +238,7 @@ export function HabitCard({
           <HabitHeatmap
             entries={habit.entries}
             color={habit.color}
-            blockSize={isMobile ? 10 : 12}
+            blockSize={isMobile ? 10 : 14}
             blockMargin={2}
             startDate={habit.start_date ?? undefined}
           />

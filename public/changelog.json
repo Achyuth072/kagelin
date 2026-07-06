@@ -6,6 +6,242 @@
     "sections": {}
   },
   {
+    "version": "1.24.0",
+    "date": "2026-07-06",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Insights panel for habits and tasks with score, history, streaks, and frequency breakdowns",
+        "Frequency-based habits with weekly/monthly targets and a progress ring",
+        "Global Goals tab summarizing frequency progress across habits",
+        "Stats page: period selector, trend chart, per-habit score comparison, project/priority breakdowns, time-of-day heatmap, and pace projections",
+        "Export stats and insights data as CSV or JSON",
+        "Kagelin app branding and icons"
+      ],
+      "Improved": [
+        "Smoother drag-and-drop reordering on the task board and lists",
+        "Unified Edit/Insights dialog width and toggle styling"
+      ],
+      "Fixed": [
+        "Stats now bucket days by your local timezone, fixing off-by-one trends and streaks for non-UTC users",
+        "Guest-mode hydration mismatch on app shell",
+        "Trend chart axis labels overlapping on mobile",
+        "Maskable icon cropping in the installed PWA",
+        "Various mobile layout issues in the frequency editor, grid cards, and Insights sections",
+        "Custom task order no longer resets when reordering via drag or the sort menu",
+        "Focus trend chart overflowing its container on some layouts"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.14",
+    "date": "2026-07-02",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Memoize TaskListView",
+        "Skip subtask AnimatePresence while a drag is active"
+      ],
+      "Fixed": [
+        "Stop forwarding dead drag props into board TaskItem, which was breaking its memo and re-rendering every card on each drag-over",
+        "Suppress a11y announcement spam and use WhileDragging measuring in HabitCompactList",
+        "Suppress dnd-kit's per-drag-over a11y announcement spam in TaskBoard",
+        "Suppress dnd-kit's per-drag-over a11y announcement spam and hoist canScroll in TaskList",
+        "ClosestCorners collision, WhileDragging measuring, activeTask snapshot, drag-over bail-outs",
+        "Use move-based reorder for cross-section drops, slot-swap for same-section",
+        "Accept date-only strings in task schema date fields"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.13",
+    "date": "2026-07-02",
+    "channel": "preview",
+    "sections": {
+      "Refactored": [
+        "Replace HabitEditView and HabitCreateView with a unified HabitView component"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.12",
+    "date": "2026-07-02",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Replace the empty goals card with a slim prompt"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.11",
+    "date": "2026-07-02",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add frequency target control to create/edit sheet",
+        "Gate frequency ring to non-trivial targets"
+      ],
+      "Fixed": [
+        "Keep frequency editor on one line in mobile drawers",
+        "Unsquish grid card name and slim the card on mobile",
+        "Restyle Edit/Insights tab toggle and fix header padding"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.10",
+    "date": "2026-07-01",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Give Trend chart axis labels breathing room on mobile",
+        "Thin Trend chart x-axis ticks on mobile to stop overlap"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.9",
+    "date": "2026-07-01",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Render Projections card on the stats page",
+        "Add Projections card component",
+        "Add pace projection and streak-at-risk utils"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.8",
+    "date": "2026-07-01",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add export entry points on stats and insights",
+        "Add analytics export utils (CSV and JSON)",
+        "Bucket habit reps per day for export"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.7",
+    "date": "2026-07-01",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add global Goals tab and stats card",
+        "Add frequency-progress rings",
+        "Add global Goals state to uiStore"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.6",
+    "date": "2026-07-01",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Range-aware trend chart and wire up the page",
+        "Add per-habit score comparison",
+        "Add focus time-of-day heatmap",
+        "Add project and priority breakdown cards",
+        "Add period selector and shared bar list",
+        "Scope useStats to a selectable period with breakdowns",
+        "Add StatsPeriod type and persist it in uiStore"
+      ],
+      "Fixed": [
+        "Stretch time-of-day heatmap to card width"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.5",
+    "date": "2026-06-30",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Create Task Insights panel"
+      ],
+      "Fixed": [
+        "Unify Edit/Insights dialog width"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.4",
+    "date": "2026-06-30",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Implement Habit Insights 5-card panel (Overview, Score, History, Best Streaks, Frequency)",
+        "Refine insights panel layout",
+        "Add Kagelin branding icons and fix maskable PWA cropping (#76)",
+        "Replace app icon with Kagelin branding (#75)",
+        "Implement habit Insights tab with 5-card layout"
+      ],
+      "Improved": [
+        "Memoize Insights score series and frequency month lookup"
+      ],
+      "Fixed": [
+        "Align Insights section labels with MetricCard styling",
+        "Bump Frequency grid labels to the Micro type floor",
+        "Use seijaku easing for Best Streaks bar transition",
+        "Hide day-counting metrics for measurable habits in Insights",
+        "Correct measurable target predicate and completion counts",
+        "Ensure start date derives from the earliest entry regardless of order",
+        "Resolve guest-mode hydration mismatch on app shell",
+        "Keep checkbox pinned right on mobile HabitCard",
+        "Equal-height metric cards with wrapping titles",
+        "Unify Edit/Insights dialog width",
+        "Disable chart entry animations to prevent replay on remount",
+        "Cache useHabit query to avoid refetch on reopen",
+        "Shrink masakable icon",
+        "Shrink maskable icon content to clear safe-zone circle (#77)"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.3",
+    "date": "2026-06-17",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add Edit/Insights toggle shell for per-item Insights (#74)"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.2",
+    "date": "2026-06-17",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add recurring_series_id for task series identity (#73)"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.1",
+    "date": "2026-06-16",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Port score and frequency-aware streak engine (#72)"
+      ]
+    }
+  },
+  {
+    "version": "1.24.0-preview.0",
+    "date": "2026-06-16",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add measurable habit data model (type, frequency, target)"
+      ]
+    }
+  },
+  {
     "version": "1.23.0",
     "date": "2026-06-15",
     "channel": "stable",
@@ -448,208 +684,6 @@
     "sections": {
       "Added": [
         "Harden modal accessibility and refine view-specific task visuals"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.5",
-    "date": "2026-05-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Refine DnD autoScroll canScroll logic"
-      ],
-      "Fixed": [
-        "Resolve desktop list DnD layout shift by hardening container boundaries",
-        "Apply strict containment to task list scroll container"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.4",
-    "date": "2026-05-06",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Align mobile and desktop list view spacing by removing inner rounded corners and fixing border overlap"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.3",
-    "date": "2026-05-05",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Enhance drag-and-drop with cross-group mutations and auto-scroll"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.2",
-    "date": "2026-05-05",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Data sovereignty for registered users — export, import, and delete cloud data"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.1",
-    "date": "2026-05-05",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Strict vs flexible task recurrence modes"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.0",
-    "date": "2026-05-05",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Global 12hr/24hr time format preference"
-      ]
-    }
-  },
-  {
-    "version": "1.19.1",
-    "date": "2026-05-10",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Focus timer sliders no longer reset when switching tabs or navigating away",
-        "Guest mode loads faster with no unnecessary network calls"
-      ]
-    }
-  },
-  {
-    "version": "1.19.0",
-    "date": "2026-05-04",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Task Continuity: completed tasks stay visible in the list until the end of the day"
-      ],
-      "Improved": [
-        "React Compiler integrated for optimised component rendering",
-        "Core data lookups refactored to Map-based O(1) complexity",
-        "High-frequency state isolated into dedicated Zustand micro-stores",
-        "Replaced Framer Motion with native CSS animations in dialogs",
-        "Mobile swipe physics recalibrated for a tighter, hardware-native feel",
-        "Task list rendering scales linearly — stays fast with 500+ tasks"
-      ],
-      "Fixed": [
-        "Redundant project tags removed across all views for a cleaner UI"
-      ]
-    }
-  },
-  {
-    "version": "1.18.0",
-    "date": "2026-04-20",
-    "channel": "stable",
-    "sections": {
-      "Improved": [
-        "Calendar Elastic Grid for better viewport stability and refined mobile navigation",
-        "Header heights standardised and matte sidebar styling refined",
-        "Project management flows and task view responsiveness improved",
-        "Push notification delivery telemetry added"
-      ],
-      "Fixed": [
-        "Push notification ghost deliveries resolved",
-        "CI validation regressions resolved and code formatting standardised"
-      ]
-    }
-  },
-  {
-    "version": "1.17.0",
-    "date": "2026-04-13",
-    "channel": "stable",
-    "sections": {
-      "Improved": [
-        "Unified Matte & Ink aesthetic: shadows and semantic colours replaced with a consistent design system",
-        "Sidebar and modal rendering optimised for zero-jank, zero-lag interactions",
-        "Global icon weight standardised and accent colour applied consistently",
-        "Tactile gestures, haptic signatures, and hold-to-drag unified across components",
-        "Guest mode resilience hardened with accessibility compliance improvements"
-      ],
-      "Fixed": [
-        "Desktop list layout clipping resolved"
-      ]
-    }
-  },
-  {
-    "version": "1.16.2",
-    "date": "2026-04-07",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Date validation loosened to handle ISO strings with timezone offsets",
-        "Task date picker now shows visual error feedback and surfaces hidden validation errors",
-        "Silent form invalidation resolved in task create and edit views"
-      ]
-    }
-  },
-  {
-    "version": "1.16.1",
-    "date": "2026-04-07",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Build failure from Uint8Array to BlobPart type mismatch resolved"
-      ]
-    }
-  },
-  {
-    "version": "1.16.0",
-    "date": "2026-04-07",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Mobile toast positioning and layout responsiveness",
-        "Habit heatmap scrolling during sidebar transitions stabilised",
-        "Activity trend visualisation centred; DrumPicker interactions refined",
-        "Settings page layout and typography standardised for visual hierarchy",
-        "All remaining lint errors resolved; full CI validation achieved"
-      ]
-    }
-  },
-  {
-    "version": "1.15.2",
-    "date": "2026-04-04",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Next.js 16 WebDAV route type constraints resolved"
-      ]
-    }
-  },
-  {
-    "version": "1.15.1",
-    "date": "2026-04-04",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Invalid route exports removed to fix Vercel build failure"
-      ]
-    }
-  },
-  {
-    "version": "1.15.0",
-    "date": "2026-04-04",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "WebDAV backup sync for guest users",
-        "Universal ZIP backup and restore",
-        "Weekly backup reminders in guest mode"
-      ],
-      "Improved": [
-        "Mobile settings revamped with a cleaner matte tab layout",
-        "Settings page sticky footer now docks correctly"
       ]
     }
   }

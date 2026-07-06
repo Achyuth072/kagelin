@@ -71,6 +71,7 @@ const makeTask = (id: string, dayOrder: number): Task => ({
   is_evening: false,
   parent_id: null,
   recurrence: null,
+  recurring_series_id: null,
   google_event_id: null,
   google_etag: null,
 });
@@ -185,12 +186,13 @@ describe("useTaskViewData — deferred value flicker regression", () => {
 
     shouldDefer = true;
 
-    // Reorder evening tasks
+    // Reorder evening tasks — day_order (the source of truth for custom
+    // sort) swaps along with array position, as a real drag reorder would.
     const reordered = [
       makeTask("a1", 0),
       makeTask("a2", 1),
-      { ...makeTask("e2", 3), is_evening: true },
-      { ...makeTask("e1", 2), is_evening: true },
+      { ...makeTask("e2", 2), is_evening: true },
+      { ...makeTask("e1", 3), is_evening: true },
     ];
 
     rerender({ tasks: reordered });

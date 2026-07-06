@@ -80,16 +80,24 @@ describe("useReorderTasks", () => {
       wrapper: createWrapper(queryClient),
     });
 
-    // Reorder: move Task 3 to first position using slot-value-swap pairs
-    const pairs = computeReorderPairs(["3", "1", "2"], initialTasks as Task[]);
+    // Reorder: move Task 3 to first position
+    const pairs = computeReorderPairs(
+      "3",
+      ["3", "1", "2"],
+      initialTasks as Task[],
+      true,
+    );
     result.current.mutate(pairs);
 
-    // Check cache was updated optimistically
+    // Check cache was updated optimistically (consumers sort by day_order)
     await waitFor(() => {
       const cached = queryClient.getQueryData<Partial<Task>[]>(["tasks"]);
-      expect(cached?.[0]?.id).toBe("3");
-      expect(cached?.[1]?.id).toBe("1");
-      expect(cached?.[2]?.id).toBe("2");
+      const sorted = [...(cached || [])].sort(
+        (a, b) => (a.day_order ?? 0) - (b.day_order ?? 0),
+      );
+      expect(sorted[0]?.id).toBe("3");
+      expect(sorted[1]?.id).toBe("1");
+      expect(sorted[2]?.id).toBe("2");
     });
   });
 
@@ -108,7 +116,12 @@ describe("useReorderTasks", () => {
     });
 
     // Attempt reorder that will fail
-    const pairs = computeReorderPairs(["2", "1"], initialTasks as Task[]);
+    const pairs = computeReorderPairs(
+      "2",
+      ["2", "1"],
+      initialTasks as Task[],
+      true,
+    );
     result.current.mutate(pairs);
 
     // Wait for error handling
@@ -139,23 +152,28 @@ describe("useReorderTasks", () => {
     });
 
     // Reorder: C, A, B  (3→slot0, 1→slot1, 2→slot2)
-    const pairs = computeReorderPairs(["3", "1", "2"], initialTasks as Task[]);
+    const pairs = computeReorderPairs(
+      "3",
+      ["3", "1", "2"],
+      initialTasks as Task[],
+      true,
+    );
     result.current.mutate(pairs);
 
     await waitFor(() => {
       const cached = queryClient.getQueryData<Partial<Task>[]>(["tasks"]);
-      // Visual order is correct
-      expect(cached?.[0]?.id).toBe("3");
-      expect(cached?.[1]?.id).toBe("1");
-      expect(cached?.[2]?.id).toBe("2");
+      const sorted = [...(cached || [])].sort(
+        (a, b) => (a.day_order ?? 0) - (b.day_order ?? 0),
+      );
+      // Visual order (sorted by day_order) is correct
+      expect(sorted[0]?.id).toBe("3");
+      expect(sorted[1]?.id).toBe("1");
+      expect(sorted[2]?.id).toBe("2");
       // day_order values follow the slot-value-swap: each task gets the
       // day_order of the slot it moved into.
-      // Task 3 moved into slot 0 (day_order was 0) → day_order = 0
-      expect(cached?.[0]?.day_order).toBe(0);
-      // Task 1 moved into slot 1 (day_order was 1) → day_order = 1
-      expect(cached?.[1]?.day_order).toBe(1);
-      // Task 2 moved into slot 2 (day_order was 2) → day_order = 2
-      expect(cached?.[2]?.day_order).toBe(2);
+      expect(sorted[0]?.day_order).toBe(0);
+      expect(sorted[1]?.day_order).toBe(1);
+      expect(sorted[2]?.day_order).toBe(2);
     });
   });
 
@@ -184,28 +202,31 @@ describe("useReorderTasks", () => {
     });
 
     // User drags h2 above h1 within the High group only
-    const pairs = computeReorderPairs(["h2", "h1"], initialTasks as Task[]);
+    const pairs = computeReorderPairs(
+      "h2",
+      ["h2", "h1"],
+      initialTasks as Task[],
+      true,
+    );
     result.current.mutate(pairs);
 
     await waitFor(() => {
       const cached = queryClient.getQueryData<Partial<Task>[]>(["tasks"]);
       expect(cached).toBeDefined();
 
-      // Critical tasks must remain at positions 0 and 1, untouched
-      expect(cached?.[0]?.id).toBe("c1");
-      expect(cached?.[1]?.id).toBe("c2");
+      // Critical tasks must remain untouched
+      const c1 = cached?.find((t) => t.id === "c1");
+      const c2 = cached?.find((t) => t.id === "c2");
+      expect(c1?.day_order).toBe(0);
+      expect(c2?.day_order).toBe(1);
 
-      // High tasks must be reordered: h2 before h1 (positions 2 and 3)
-      expect(cached?.[2]?.id).toBe("h2");
-      expect(cached?.[3]?.id).toBe("h1");
-
-      // Critical tasks' day_order values unchanged
-      expect(cached?.[0]?.day_order).toBe(0);
-      expect(cached?.[1]?.day_order).toBe(1);
-      // High tasks receive the day_order values of the slots they moved into
-      // h2 moves into slot 2 (day_order=2), h1 moves into slot 3 (day_order=3)
-      expect(cached?.[2]?.day_order).toBe(2);
-      expect(cached?.[3]?.day_order).toBe(3);
+      // High tasks must be reordered by day_order: h2 before h1
+      const high = [...(cached || [])]
+        .filter((t) => t.priority === 2)
+        .sort((a, b) => (a.day_order ?? 0) - (b.day_order ?? 0));
+      expect(high.map((t) => t.id)).toEqual(["h2", "h1"]);
+      expect(high[0]?.day_order).toBe(2);
+      expect(high[1]?.day_order).toBe(3);
     });
   });
 
@@ -226,7 +247,12 @@ describe("useReorderTasks", () => {
     });
 
     // Reorder only group-2 tasks: swap g2-b before g2-a
-    const pairs = computeReorderPairs(["g2-b", "g2-a"], initialTasks as Task[]);
+    const pairs = computeReorderPairs(
+      "g2-b",
+      ["g2-b", "g2-a"],
+      initialTasks as Task[],
+      true,
+    );
     result.current.mutate(pairs);
 
     await waitFor(() => {
@@ -234,13 +260,16 @@ describe("useReorderTasks", () => {
       expect(cached).toBeDefined();
 
       // Group 1 and group 3 tasks must be untouched
-      expect(cached?.[0]?.id).toBe("g1-a");
-      expect(cached?.[1]?.id).toBe("g1-b");
-      // Group 2 tasks reordered in their original slots (positions 2 and 3)
-      expect(cached?.[2]?.id).toBe("g2-b");
-      expect(cached?.[3]?.id).toBe("g2-a");
+      expect(cached?.find((t) => t.id === "g1-a")?.day_order).toBe(0);
+      expect(cached?.find((t) => t.id === "g1-b")?.day_order).toBe(0);
+      // Group 2 tasks reordered by day_order
+      const g2 = [...(cached || [])]
+        .filter((t) => t.priority === 2)
+        .sort((a, b) => (a.day_order ?? 0) - (b.day_order ?? 0));
+      expect(g2.map((t) => t.id)).toEqual(["g2-b", "g2-a"]);
+      expect(g2[0]?.day_order).toBeLessThan(g2[1]?.day_order ?? 0);
       // Group 3 task untouched
-      expect(cached?.[4]?.id).toBe("g3-a");
+      expect(cached?.find((t) => t.id === "g3-a")?.day_order).toBe(0);
     });
   });
 });
@@ -253,7 +282,7 @@ describe("computeReorderPairs", () => {
       makeTask("c", 30) as Task,
     ];
     // Move c to front: [c, a, b]
-    const pairs = computeReorderPairs(["c", "a", "b"], flatTasks);
+    const pairs = computeReorderPairs("c", ["c", "a", "b"], flatTasks, true);
     // c moves into slot 0 (day_order=10), a into slot 1 (day_order=20), b into slot 2 (day_order=30)
     expect(pairs).toEqual([
       { id: "c", day_order: 10 },
@@ -270,7 +299,7 @@ describe("computeReorderPairs", () => {
       makeTask("b", 20) as Task,
     ];
     // Reorder only a and b (not x and y)
-    const pairs = computeReorderPairs(["b", "a"], flatTasks);
+    const pairs = computeReorderPairs("b", ["b", "a"], flatTasks, true);
     // a is at flat index 1 (day_order=10), b is at flat index 3 (day_order=20)
     // b moves into slot index 1 (day_order=10), a moves into slot index 3 (day_order=20)
     expect(pairs).toEqual([
@@ -289,7 +318,7 @@ describe("computeReorderPairs", () => {
       makeTask("r", 300) as Task,
     ];
     // Reverse the order: [r, q, p]
-    const pairs = computeReorderPairs(["r", "q", "p"], flatTasks);
+    const pairs = computeReorderPairs("r", ["r", "q", "p"], flatTasks, true);
     // r moves into slot 0 (day_order=100), q into slot 1 (200), p into slot 2 (300)
     expect(pairs).toEqual([
       { id: "r", day_order: 100 },
