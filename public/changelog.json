@@ -21,7 +21,9 @@
         "Guest-mode hydration mismatch on app shell",
         "Trend chart axis labels overlapping on mobile",
         "Maskable icon cropping in the installed PWA",
-        "Various mobile layout issues in the frequency editor, grid cards, and Insights sections"
+        "Various mobile layout issues in the frequency editor, grid cards, and Insights sections",
+        "Custom task order no longer resets when reordering via drag or the sort menu",
+        "Focus trend chart overflowing its container on some layouts"
       ]
     }
   },
