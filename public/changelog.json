@@ -3,6 +3,12 @@
     "version": "Unreleased",
     "date": null,
     "channel": "preview",
+    "sections": {}
+  },
+  {
+    "version": "1.24.0",
+    "date": "2026-07-06",
+    "channel": "stable",
     "sections": {
       "Added": [
         "Insights panel for habits and tasks with score, history, streaks, and frequency breakdowns",
@@ -678,20 +684,6 @@
     "sections": {
       "Added": [
         "Harden modal accessibility and refine view-specific task visuals"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.5",
-    "date": "2026-05-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Refine DnD autoScroll canScroll logic"
-      ],
-      "Fixed": [
-        "Resolve desktop list DnD layout shift by hardening container boundaries",
-        "Apply strict containment to task list scroll container"
       ]
     }
   }
