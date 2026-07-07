@@ -39,11 +39,25 @@ vi.mock("@/lib/push", () => ({
   },
 }));
 
+const mockCheckRateLimit = vi.fn();
+
+vi.mock("@/lib/rate-limit", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/rate-limit")>(
+      "@/lib/rate-limit",
+    );
+  return {
+    ...actual,
+    checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
+  };
+});
+
 describe("Push Notification API Routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.VAPID_PRIVATE_KEY = "test-private-key";
     process.env.VAPID_SUBJECT = "mailto:test@example.com";
+    mockCheckRateLimit.mockResolvedValue({ allowed: true });
   });
 
   describe("POST /api/push/subscribe", () => {
@@ -344,6 +358,32 @@ describe("Push Notification API Routes", () => {
         "user_id",
         "sender-123",
       );
+    });
+
+    it("TC-SND-06 (H-5): returns 429 when the per-user rate limit is exceeded", async () => {
+      mockAuthGetUser.mockResolvedValue({
+        data: { user: { id: "sender-123" } },
+      });
+      mockCheckRateLimit.mockResolvedValue({
+        allowed: false,
+        limit: 10,
+        remaining: 0,
+        reset: Date.now() + 1000,
+      });
+
+      const request = new Request("http://localhost/api/push/send", {
+        method: "POST",
+        body: JSON.stringify({ endpoint: "https://test.com" }),
+      });
+
+      const response = await sendPOST(request);
+      expect(response.status).toBe(429);
+      expect(mockCheckRateLimit).toHaveBeenCalledWith(
+        "push-send",
+        "sender-123",
+        expect.objectContaining({ maxRequests: 10 }),
+      );
+      expect(mockFrom).not.toHaveBeenCalled();
     });
   });
 });

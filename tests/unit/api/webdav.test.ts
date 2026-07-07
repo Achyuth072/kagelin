@@ -25,6 +25,19 @@ vi.mock("@/lib/webdav/ssrf-guard", async () => {
   };
 });
 
+const mockCheckRateLimit = vi.fn();
+
+vi.mock("@/lib/rate-limit", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/rate-limit")>(
+      "@/lib/rate-limit",
+    );
+  return {
+    ...actual,
+    checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
+  };
+});
+
 import { POST, OPTIONS } from "@/../app/api/webdav/[[...path]]/route";
 import { SsrfBlockedError } from "@/lib/webdav/ssrf-guard";
 
@@ -44,7 +57,24 @@ describe("WebDAV proxy route (C-3)", () => {
     mockUndiciFetch.mockReset();
     mockAgentClose.mockReset();
     mockResolveSafeTarget.mockReset();
+    mockCheckRateLimit.mockReset();
+    mockCheckRateLimit.mockResolvedValue({ allowed: true });
     lastAgentOptions = undefined;
+  });
+
+  it("returns 429 when the IP rate limit is exceeded", async () => {
+    mockCheckRateLimit.mockResolvedValue({
+      allowed: false,
+      limit: 60,
+      remaining: 0,
+      reset: Date.now() + 1000,
+    });
+
+    const request = makeRequest("OPTIONS");
+    const response = await OPTIONS(request, { params: Promise.resolve({}) });
+
+    expect(response.status).toBe(429);
+    expect(mockResolveSafeTarget).not.toHaveBeenCalled();
   });
 
   it("rejects methods outside the WebDAV allowlist", async () => {

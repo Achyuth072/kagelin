@@ -5,6 +5,11 @@ import {
   resolveSafeTarget,
   SsrfBlockedError,
 } from "@/lib/webdav/ssrf-guard";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitResponseHeaders,
+} from "@/lib/rate-limit";
 
 /**
  * WebDAV Proxy Route
@@ -107,6 +112,18 @@ async function proxyWebDAV(
     return NextResponse.json(
       { error: "Cross-site requests are not allowed" },
       { status: 403 },
+    );
+  }
+
+  // H-5 / N-3: unauthenticated route, so rate limit by IP.
+  const rateLimit = await checkRateLimit("webdav", getClientIp(request), {
+    maxRequests: 60,
+    window: "1 m",
+  });
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: rateLimitResponseHeaders(rateLimit) },
     );
   }
 
