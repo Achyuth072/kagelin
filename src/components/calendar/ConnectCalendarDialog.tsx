@@ -174,25 +174,15 @@ export function ConnectCalendarDialog({
   const [error, setError] = useState<string | null>(null);
   const [discoveredCount, setDiscoveredCount] = useState<number | null>(null);
 
-  // Load stored credentials when the dialog opens
+  // C-2: CalDAV providers are hidden from this dialog pre-beta (the connect
+  // flow is a facade — nothing persists server-side yet). Purge any
+  // credentials a previous version wrote to localStorage in plaintext; with
+  // the providers hidden there's no UI path left to load or clear them.
   React.useEffect(() => {
-    if (open && typeof window !== "undefined") {
-      const stored = localStorage.getItem(CALDAV_STORAGE_KEY);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setCaldavForm((f) => ({
-            ...f,
-            server_url: parsed.server_url || "",
-            username: parsed.username || "",
-            password: parsed.password || "",
-          }));
-        } catch {
-          console.error("Failed to parse stored CalDAV credentials");
-        }
-      }
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(CALDAV_STORAGE_KEY);
     }
-  }, [open]);
+  }, []);
 
   // Resume after OAuth redirect: /calendar?connected=:provider → open the dialog
   // straight at the calendar picker so there's no "did it connect?" gap.
@@ -276,11 +266,6 @@ export function ConnectCalendarDialog({
         username: caldavForm.username,
         password: caldavForm.password,
       });
-
-      // Save credentials locally upon successful connection
-      if (typeof window !== "undefined") {
-        localStorage.setItem(CALDAV_STORAGE_KEY, JSON.stringify(caldavForm));
-      }
 
       setDiscoveredCount(calendars.length);
       // Give the user 1.5s to read the success state then close
@@ -426,24 +411,6 @@ export function ConnectCalendarDialog({
                 </svg>
               }
               onClick={() => handleProviderSelect("outlook")}
-            />
-            <ProviderButton
-              name="iCloud"
-              icon={
-                <svg
-                  viewBox="0 0 17 20"
-                  className="w-full h-full fill-current text-[#000] dark:text-white"
-                >
-                  <path d="M15.035 15.353c-.767 1.118-1.586 2.227-2.73 2.247-1.127.02-1.492-.663-2.783-.663-1.29 0-1.693.642-2.762.682-1.11.04-2.016-1.198-2.788-2.316-1.58-2.288-2.787-6.452-1.154-9.284.811-1.406 2.254-2.296 3.824-2.319 1.192-.018 2.316.804 3.045.804.722 0 2.071-.986 3.493-.843 1.455.059 2.115.545 2.62 1.284-3.134 1.84-2.636 5.922.563 7.25-.632 1.564-1.42 3.123-2.328 4.158zm-3.109-12.898c.636-.77 1.05-1.847.933-2.455-.514.022-1.137.345-1.505.77-.33.38-.633.882-.556 1.428.57.043 1.128-.312 1.128-.312z"></path>
-                </svg>
-              }
-              onClick={() => handleProviderSelect("icloud")}
-            />
-            <ProviderButton
-              name="CalDAV"
-              subtitle="Nextcloud, etc."
-              icon={<Network className="text-muted-foreground" />}
-              onClick={() => handleProviderSelect("caldav")}
             />
           </div>
         )}
