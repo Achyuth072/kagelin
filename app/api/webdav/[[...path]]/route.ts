@@ -1,4 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { Agent, fetch as undiciFetch } from "undici";
+import {
+  pinnedLookup,
+  resolveSafeTarget,
+  SsrfBlockedError,
+} from "@/lib/webdav/ssrf-guard";
 
 /**
  * WebDAV Proxy Route
@@ -14,6 +20,13 @@ import { type NextRequest, NextResponse } from "next/server";
  *  with headers:
  *    X-WebDAV-URL: <full base url of their webdav server>
  *    Authorization: Basic <base64 credentials>
+ *
+ * Deliberately unauthenticated (guest backup depends on it), so it is its
+ * own last line of defense against SSRF: the target host is resolved once,
+ * checked against private/link-local/metadata ranges, and the connection is
+ * pinned to that exact IP (see `ssrf-guard.ts`) rather than re-resolved —
+ * closing the DNS-rebinding TOCTOU a plain allow/deny-by-hostname check has.
+ * Redirects are never auto-followed, for the same reason.
  */
 
 const ALLOWED_METHODS = [
@@ -78,6 +91,25 @@ async function proxyWebDAV(
     return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
   }
 
+  // Same-origin guard: this route is unauthenticated by design, so it must
+  // not act as an open proxy for other sites' scripts. Browsers set these
+  // headers on fetches whenever possible; if either is present it must say
+  // the request came from our own origin.
+  const origin = request.headers.get("origin");
+  if (origin && origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "Cross-origin requests are not allowed" },
+      { status: 403 },
+    );
+  }
+  const secFetchSite = request.headers.get("sec-fetch-site");
+  if (secFetchSite && secFetchSite !== "same-origin") {
+    return NextResponse.json(
+      { error: "Cross-site requests are not allowed" },
+      { status: 403 },
+    );
+  }
+
   // The client passes the WebDAV server base URL via a custom header
   const webdavBaseUrl = request.headers.get("X-WebDAV-URL");
   if (!webdavBaseUrl) {
@@ -85,6 +117,16 @@ async function proxyWebDAV(
       { error: "Missing X-WebDAV-URL header" },
       { status: 400 },
     );
+  }
+
+  let safeTarget;
+  try {
+    safeTarget = await resolveSafeTarget(webdavBaseUrl);
+  } catch (err) {
+    if (err instanceof SsrfBlockedError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    throw err;
   }
 
   // Reconstruct the target URL
@@ -111,12 +153,23 @@ async function proxyWebDAV(
       ? await request.arrayBuffer()
       : undefined;
 
+  // Pin the connection to the exact IP validated above — never re-resolve
+  // the hostname, or a DNS-rebinding attacker can swap in a private/metadata
+  // address between the check and the actual connect.
+  const dispatcher = new Agent({
+    connect: { lookup: pinnedLookup(safeTarget.pinnedIp, safeTarget.family) },
+  });
+
   try {
-    const response = await fetch(targetUrl, {
+    const response = await undiciFetch(targetUrl, {
       method,
       headers: forwardHeaders,
       body: body ?? null,
-      // @ts-expect-error — Node 18+ fetch supports duplex
+      dispatcher,
+      // Never auto-follow redirects: a redirect response could point at a
+      // private/metadata address, and following it would re-resolve DNS
+      // (and lose the pin above). Pass 3xx responses straight through.
+      redirect: "manual",
       duplex: "half",
     });
 
@@ -138,5 +191,7 @@ async function proxyWebDAV(
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown proxy error";
     return NextResponse.json({ error: message }, { status: 502 });
+  } finally {
+    await dispatcher.close();
   }
 }
