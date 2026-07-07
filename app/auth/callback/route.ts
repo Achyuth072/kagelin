@@ -1,12 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const errorDescription = searchParams.get("error_description");
-  const next = searchParams.get("next") ?? "/";
+  const next = sanitizeNextPath(searchParams.get("next"));
 
   if (errorDescription) {
     return NextResponse.redirect(
