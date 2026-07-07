@@ -17,13 +17,12 @@ export async function POST(request: Request) {
       throw new Error("VAPID configuration missing");
     }
 
-    const { userId, endpoint, title, body, data } = await request.json();
-    const targetUserId = userId || currentUser.id;
+    const { endpoint, title, body, data } = await request.json();
 
     let subscriptionsQuery = supabase
       .from("push_subscriptions")
       .select("id, subscription")
-      .eq("user_id", targetUserId);
+      .eq("user_id", currentUser.id);
 
     if (endpoint) {
       subscriptionsQuery = subscriptionsQuery.eq("endpoint", endpoint);
@@ -47,11 +46,6 @@ export async function POST(request: Request) {
       body: body || "New notification",
       data: data || {},
     });
-
-    console.log(
-      `[Push Send] Attempting to send to ${subscriptions.length} subscriptions for user ${targetUserId}`,
-    );
-    console.log(`[Push Send] Payload:`, payload);
 
     let sentCount = 0;
     let failedCount = 0;

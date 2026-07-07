@@ -185,7 +185,6 @@ describe("Push Notification API Routes", () => {
       const request = new Request("http://localhost/api/push/send", {
         method: "POST",
         body: JSON.stringify({
-          userId: "target-456",
           endpoint: "https://test.com",
           title: "Hello",
           body: "World",
@@ -205,7 +204,7 @@ describe("Push Notification API Routes", () => {
       expect(selectBuilder.eq).toHaveBeenNthCalledWith(
         1,
         "user_id",
-        "target-456",
+        "sender-123",
       );
       expect(selectBuilder.eq).toHaveBeenNthCalledWith(
         2,
@@ -238,7 +237,7 @@ describe("Push Notification API Routes", () => {
 
       const request = new Request("http://localhost/api/push/send", {
         method: "POST",
-        body: JSON.stringify({ userId: "missing-user" }),
+        body: JSON.stringify({}),
       });
 
       const response = await sendPOST(request);
@@ -272,7 +271,6 @@ describe("Push Notification API Routes", () => {
       const request = new Request("http://localhost/api/push/send", {
         method: "POST",
         body: JSON.stringify({
-          userId: "expired-user",
           endpoint: "https://old.com",
         }),
       });
@@ -296,7 +294,7 @@ describe("Push Notification API Routes", () => {
 
       const request = new Request("http://localhost/api/push/send", {
         method: "POST",
-        body: JSON.stringify({ userId: "target-456" }),
+        body: JSON.stringify({}),
       });
 
       try {
@@ -308,6 +306,44 @@ describe("Push Notification API Routes", () => {
       } finally {
         process.env = originalEnv;
       }
+    });
+
+    it("TC-SND-05 (H-4): ignores a body-supplied userId and only ever targets the authenticated caller", async () => {
+      mockAuthGetUser.mockResolvedValue({
+        data: { user: { id: "sender-123" } },
+      });
+
+      const selectBuilder = createThenableBuilder({
+        data: [{ id: "sub-1", subscription: { endpoint: "https://test.com" } }],
+        error: null,
+      });
+      mockFrom.mockReturnValue({
+        select: vi.fn(() => selectBuilder),
+      });
+
+      vi.mocked(webpush.sendNotification).mockResolvedValue({
+        statusCode: 201,
+        headers: {},
+        body: "",
+      });
+
+      const request = new Request("http://localhost/api/push/send", {
+        method: "POST",
+        body: JSON.stringify({
+          userId: "victim-456",
+          endpoint: "https://test.com",
+          title: "Hello",
+          body: "World",
+        }),
+      });
+
+      const response = await sendPOST(request);
+      expect(response.status).toBe(200);
+      expect(selectBuilder.eq).toHaveBeenNthCalledWith(
+        1,
+        "user_id",
+        "sender-123",
+      );
     });
   });
 });
