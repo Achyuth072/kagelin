@@ -51,8 +51,10 @@ Most productivity apps want your email before you've written a single task, and 
 ### Calendar
 
 - **Event creation**: native calendar events with NLP-assisted time parsing.
-- **Multi-provider sync**: Google Calendar, Microsoft Outlook, and any CalDAV server (Nextcloud, iCloud, Fastmail).
+- **Multi-provider sync**: Google Calendar and Microsoft Outlook.
 - **ICS portability**: universal `.ics` (RFC 5545) import and export.
+
+> CalDAV (Nextcloud, iCloud, Fastmail) is on pause for now — the old connect flow was half-built and didn't handle credentials carefully enough, so it's pulled until it's rebuilt properly server-side.
 
 ### Data Ownership
 
@@ -88,13 +90,13 @@ Most productivity apps want your email before you've written a single task, and 
 <details>
 <summary><strong>Stack</strong></summary>
 
-- **Next.js 16.1.0** (App Router) + **React 19.2.3** (React Compiler)
+- **Next.js 16.2.10** (App Router) + **React 19.2.3** (React Compiler)
 - **Supabase** (Postgres, Auth, Realtime)
 - **TanStack Query v5** (IndexedDB persistence) + **Zustand v5**
 - **Tailwind CSS v4** + **Shadcn UI** (Radix)
 - **Framer Motion** + **@dnd-kit** (flat-DOM drag-and-drop)
 - **Serwist** (typed service worker, offline-first PWA)
-- **tsdav** + **ical.js** (CalDAV/ICS sync)
+- **tsdav** (WebDAV sync) + **ical.js** (ICS import/export)
 
 </details>
 
