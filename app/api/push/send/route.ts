@@ -1,29 +1,27 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/api/require-user";
 import { webpush } from "@/lib/push";
 import { NextResponse } from "next/server";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user: currentUser },
-    } = await supabase.auth.getUser();
+    const { user, supabase, error: authError } = await requireUser();
+    if (authError) return authError;
 
-    if (!currentUser) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // H-5 / N-3: authenticated route — rate limit per user.
+    const limited = await enforceRateLimit("push-send", user.id);
+    if (limited) return limited;
 
     if (!process.env.VAPID_PRIVATE_KEY || !process.env.VAPID_SUBJECT) {
       throw new Error("VAPID configuration missing");
     }
 
-    const { userId, endpoint, title, body, data } = await request.json();
-    const targetUserId = userId || currentUser.id;
+    const { endpoint, title, body, data } = await request.json();
 
     let subscriptionsQuery = supabase
       .from("push_subscriptions")
       .select("id, subscription")
-      .eq("user_id", targetUserId);
+      .eq("user_id", user.id);
 
     if (endpoint) {
       subscriptionsQuery = subscriptionsQuery.eq("endpoint", endpoint);
@@ -47,11 +45,6 @@ export async function POST(request: Request) {
       body: body || "New notification",
       data: data || {},
     });
-
-    console.log(
-      `[Push Send] Attempting to send to ${subscriptions.length} subscriptions for user ${targetUserId}`,
-    );
-    console.log(`[Push Send] Payload:`, payload);
 
     let sentCount = 0;
     let failedCount = 0;

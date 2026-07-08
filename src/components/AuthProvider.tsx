@@ -16,7 +16,10 @@ type AuthContextType = {
   loading: boolean;
   isGuestMode: boolean;
   signInWithGoogle: () => Promise<void>;
-  signInWithMagicLink: (email: string) => Promise<{ error: AuthError | null }>;
+  signInWithMagicLink: (
+    email: string,
+    captchaToken: string,
+  ) => Promise<{ error: AuthError | null }>;
   signInAsGuest: () => void;
   signOut: () => Promise<void>;
 };
@@ -128,11 +131,12 @@ export function AuthProvider({
   }, [supabase.auth]);
 
   const signInWithMagicLink = useCallback(
-    async (email: string) => {
+    async (email: string, captchaToken: string) => {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
+          captchaToken,
         },
       });
       return { error };

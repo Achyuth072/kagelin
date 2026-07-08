@@ -2,7 +2,12 @@
 
 /**
  * Connect Calendar Dialog
- * Supports: CalDAV, Google OAuth, Outlook OAuth
+ * Supports: Google OAuth, Outlook OAuth
+ *
+ * C-2: the CalDAV connect flow was removed pre-beta — it was a facade
+ * (nothing persisted server-side) and it wrote credentials to localStorage
+ * in plaintext. See git history to revive it; the legacy-credential purge
+ * lives in `src/lib/storage-cleanup.ts`.
  */
 
 import React, { useState, useCallback } from "react";
@@ -19,15 +24,11 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Button } from "@/components/ui/button";
 import {
   CalendarSync,
-  Network,
   CheckCircle2,
   Trash2,
   Loader2,
   Calendars,
   ArrowLeft,
-  User,
-  KeyRound,
-  CalendarDays,
 } from "lucide-react";
 import {
   CalendarProvider,
@@ -35,7 +36,6 @@ import {
   DiscoveredCalendar,
 } from "@/lib/types/external-calendar";
 import { cn } from "@/lib/utils";
-import { discoverCalendars } from "@/lib/caldav/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   useConnectedCalendarProviders,
@@ -43,8 +43,6 @@ import {
 } from "@/lib/hooks/useConnectedCalendarProviders";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-
-const CALDAV_STORAGE_KEY = "kanso_caldav_credentials";
 
 interface ConnectCalendarDialogProps {
   onSuccess?: () => void;
@@ -69,9 +67,7 @@ export function ConnectCalendarDialog({
     },
     [isControlled, onOpenChange],
   );
-  const [step, setStep] = useState<
-    "select" | "configure_caldav" | "pick_calendars"
-  >("select");
+  const [step, setStep] = useState<"select" | "pick_calendars">("select");
   const { data: connectedProviders = [] } = useConnectedCalendarProviders();
   const disconnect = useDisconnectCalendarProvider();
   const queryClient = useQueryClient();
@@ -162,38 +158,6 @@ export function ConnectCalendarDialog({
     }
   };
 
-  // CalDAV Configuration Form
-  const [caldavForm, setCaldavForm] = useState({
-    server_url: "",
-    username: "",
-    password: "",
-    name: "My Calendar",
-  });
-
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [discoveredCount, setDiscoveredCount] = useState<number | null>(null);
-
-  // Load stored credentials when the dialog opens
-  React.useEffect(() => {
-    if (open && typeof window !== "undefined") {
-      const stored = localStorage.getItem(CALDAV_STORAGE_KEY);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          setCaldavForm((f) => ({
-            ...f,
-            server_url: parsed.server_url || "",
-            username: parsed.username || "",
-            password: parsed.password || "",
-          }));
-        } catch {
-          console.error("Failed to parse stored CalDAV credentials");
-        }
-      }
-    }
-  }, [open]);
-
   // Resume after OAuth redirect: /calendar?connected=:provider → open the dialog
   // straight at the calendar picker so there's no "did it connect?" gap.
   React.useEffect(() => {
@@ -214,89 +178,17 @@ export function ConnectCalendarDialog({
     openCalendarPicker(connected as CalendarProvider);
   }, [openCalendarPicker, queryClient, setOpen]);
 
-  const clearStoredCredentials = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(CALDAV_STORAGE_KEY);
-      setCaldavForm({
-        server_url: "",
-        username: "",
-        password: "",
-        name: "My Calendar",
-      });
-      setError(null);
-      setDiscoveredCount(null);
-    }
-  };
-
   const resetDialog = () => {
     setStep("select");
     setSelectedProvider(null);
-    setError(null);
-    setDiscoveredCount(null);
     setPickerCalendars([]);
     setPickerSelected(new Set());
     setPickerError(null);
-    setCaldavForm({
-      server_url: "",
-      username: "",
-      password: "",
-      name: "My Calendar",
-    });
   };
 
   const handleProviderSelect = (provider: CalendarProvider) => {
-    setSelectedProvider(provider);
-    if (CALDAV_PROVIDERS.includes(provider)) {
-      setStep("configure_caldav");
-      if (provider === "icloud")
-        setCaldavForm((f) => ({
-          ...f,
-          server_url: "https://caldav.icloud.com",
-        }));
-      if (provider === "fastmail")
-        setCaldavForm((f) => ({
-          ...f,
-          server_url: "https://caldav.fastmail.com",
-        }));
-    } else {
-      // Google / Outlook — redirect to server-side OAuth initiation
-      window.location.href = `/api/calendar/connect/${provider}`;
-    }
-  };
-
-  const handleCaldavConnect = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsConnecting(true);
-    setError(null);
-    setDiscoveredCount(null);
-
-    try {
-      const calendars = await discoverCalendars({
-        serverUrl: caldavForm.server_url,
-        username: caldavForm.username,
-        password: caldavForm.password,
-      });
-
-      // Save credentials locally upon successful connection
-      if (typeof window !== "undefined") {
-        localStorage.setItem(CALDAV_STORAGE_KEY, JSON.stringify(caldavForm));
-      }
-
-      setDiscoveredCount(calendars.length);
-      // Give the user 1.5s to read the success state then close
-      setTimeout(() => {
-        setOpen(false);
-        onSuccess?.();
-      }, 1500);
-    } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to connect to CalDAV server",
-      );
-    } finally {
-      setIsConnecting(false);
-    }
+    // Google / Outlook — redirect to server-side OAuth initiation
+    window.location.href = `/api/calendar/connect/${provider}`;
   };
 
   const isMobile = useMediaQuery("(max-width: 640px)");
@@ -328,13 +220,10 @@ export function ConnectCalendarDialog({
         <ResponsiveDialogHeader className="px-4 pt-6 sm:px-6 text-left">
           <ResponsiveDialogTitle className="text-xl font-semibold tracking-tight capitalize">
             {step === "select" && "Connect Calendar"}
-            {step === "configure_caldav" && `Configure ${selectedProvider}`}
             {step === "pick_calendars" && `${selectedProvider} Calendars`}
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="text-sm text-muted-foreground/80">
             {step === "select" && "Sync your events from external providers."}
-            {step === "configure_caldav" &&
-              "Enter your server details and app-specific password."}
             {step === "pick_calendars" &&
               "Choose which calendars to sync with Kagelin."}
           </ResponsiveDialogDescription>
@@ -427,154 +316,7 @@ export function ConnectCalendarDialog({
               }
               onClick={() => handleProviderSelect("outlook")}
             />
-            <ProviderButton
-              name="iCloud"
-              icon={
-                <svg
-                  viewBox="0 0 17 20"
-                  className="w-full h-full fill-current text-[#000] dark:text-white"
-                >
-                  <path d="M15.035 15.353c-.767 1.118-1.586 2.227-2.73 2.247-1.127.02-1.492-.663-2.783-.663-1.29 0-1.693.642-2.762.682-1.11.04-2.016-1.198-2.788-2.316-1.58-2.288-2.787-6.452-1.154-9.284.811-1.406 2.254-2.296 3.824-2.319 1.192-.018 2.316.804 3.045.804.722 0 2.071-.986 3.493-.843 1.455.059 2.115.545 2.62 1.284-3.134 1.84-2.636 5.922.563 7.25-.632 1.564-1.42 3.123-2.328 4.158zm-3.109-12.898c.636-.77 1.05-1.847.933-2.455-.514.022-1.137.345-1.505.77-.33.38-.633.882-.556 1.428.57.043 1.128-.312 1.128-.312z"></path>
-                </svg>
-              }
-              onClick={() => handleProviderSelect("icloud")}
-            />
-            <ProviderButton
-              name="CalDAV"
-              subtitle="Nextcloud, etc."
-              icon={<Network className="text-muted-foreground" />}
-              onClick={() => handleProviderSelect("caldav")}
-            />
           </div>
-        )}
-
-        {step === "configure_caldav" && (
-          <form onSubmit={handleCaldavConnect} className="px-2 py-4">
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-colors">
-              <div className="w-5 shrink-0 flex items-center justify-center">
-                <Network
-                  className="h-4 w-4 text-muted-foreground"
-                  strokeWidth={2.25}
-                />
-              </div>
-              <input
-                id="server_url"
-                placeholder="Server URL"
-                value={caldavForm.server_url}
-                onChange={(e) =>
-                  setCaldavForm((f) => ({ ...f, server_url: e.target.value }))
-                }
-                required
-                className="flex-1 bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/50"
-              />
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-colors">
-              <div className="w-5 shrink-0 flex items-center justify-center">
-                <User
-                  className="h-4 w-4 text-muted-foreground"
-                  strokeWidth={2.25}
-                />
-              </div>
-              <input
-                id="username"
-                placeholder="Username / Email"
-                value={caldavForm.username}
-                onChange={(e) =>
-                  setCaldavForm((f) => ({ ...f, username: e.target.value }))
-                }
-                required
-                className="flex-1 bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/50"
-              />
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-colors">
-              <div className="w-5 shrink-0 flex items-center justify-center">
-                <KeyRound
-                  className="h-4 w-4 text-muted-foreground"
-                  strokeWidth={2.25}
-                />
-              </div>
-              <input
-                id="password"
-                type="password"
-                placeholder="App Password"
-                value={caldavForm.password}
-                onChange={(e) =>
-                  setCaldavForm((f) => ({ ...f, password: e.target.value }))
-                }
-                required
-                className="flex-1 bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/50"
-              />
-            </div>
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-colors">
-              <div className="w-5 shrink-0 flex items-center justify-center">
-                <CalendarDays
-                  className="h-4 w-4 text-muted-foreground"
-                  strokeWidth={2.25}
-                />
-              </div>
-              <input
-                id="name"
-                placeholder="Calendar Name (Local)"
-                value={caldavForm.name}
-                onChange={(e) =>
-                  setCaldavForm((f) => ({ ...f, name: e.target.value }))
-                }
-                required
-                className="flex-1 bg-transparent border-0 outline-none text-sm text-foreground placeholder:text-muted-foreground/50"
-              />
-            </div>
-
-            {error && (
-              <p className="text-sm text-destructive px-3 pt-2">{error}</p>
-            )}
-            {discoveredCount !== null && (
-              <p className="text-sm text-green-600 dark:text-green-400 px-3 pt-2">
-                ✓ Connected —{" "}
-                {discoveredCount === 0
-                  ? "no calendars found yet (server is reachable)"
-                  : `${discoveredCount} calendar${discoveredCount === 1 ? "" : "s"} discovered`}
-              </p>
-            )}
-
-            <div className="flex justify-between items-center pt-4 px-1">
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={() => setStep("select")}
-                  aria-label="Back"
-                >
-                  <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
-                </Button>
-                {(caldavForm.server_url || caldavForm.username) && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    className="h-9 w-9"
-                    onClick={clearStoredCredentials}
-                    title="Forget stored credentials"
-                    aria-label="Forget stored credentials"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              <Button
-                type="submit"
-                disabled={isConnecting || discoveredCount !== null}
-                className="bg-brand text-white shadow-brand/10 hover:bg-brand/90"
-              >
-                {isConnecting
-                  ? "Connecting..."
-                  : discoveredCount !== null
-                    ? "Connected ✓"
-                    : "Connect Calendar"}
-              </Button>
-            </div>
-          </form>
         )}
 
         {step === "pick_calendars" && (
