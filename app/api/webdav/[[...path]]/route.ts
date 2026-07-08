@@ -1,15 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { Agent, fetch as undiciFetch } from "undici";
-import {
-  pinnedLookup,
-  resolveSafeTarget,
-  SsrfBlockedError,
-} from "@/lib/webdav/ssrf-guard";
-import {
-  checkRateLimit,
-  getClientIp,
-  rateLimitResponseHeaders,
-} from "@/lib/rate-limit";
+import { SsrfBlockedError, ssrfSafeFetch } from "@/lib/webdav/ssrf-guard";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * WebDAV Proxy Route
@@ -27,11 +18,11 @@ import {
  *    Authorization: Basic <base64 credentials>
  *
  * Deliberately unauthenticated (guest backup depends on it), so it is its
- * own last line of defense against SSRF: the target host is resolved once,
- * checked against private/link-local/metadata ranges, and the connection is
- * pinned to that exact IP (see `ssrf-guard.ts`) rather than re-resolved —
- * closing the DNS-rebinding TOCTOU a plain allow/deny-by-hostname check has.
- * Redirects are never auto-followed, for the same reason.
+ * own last line of defense against SSRF: every upstream fetch goes through
+ * `ssrfSafeFetch` (see `ssrf-guard.ts`), which resolves the target once,
+ * checks it against private/link-local/metadata ranges, pins the connection
+ * to that exact IP, and never auto-follows redirects — closing the
+ * DNS-rebinding TOCTOU a plain allow/deny-by-hostname check has.
  */
 
 const ALLOWED_METHODS = [
@@ -116,16 +107,8 @@ async function proxyWebDAV(
   }
 
   // H-5 / N-3: unauthenticated route, so rate limit by IP.
-  const rateLimit = await checkRateLimit("webdav", getClientIp(request), {
-    maxRequests: 60,
-    window: "1 m",
-  });
-  if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: "Too many requests" },
-      { status: 429, headers: rateLimitResponseHeaders(rateLimit) },
-    );
-  }
+  const limited = await enforceRateLimit("webdav", getClientIp(request));
+  if (limited) return limited;
 
   // The client passes the WebDAV server base URL via a custom header
   const webdavBaseUrl = request.headers.get("X-WebDAV-URL");
@@ -134,16 +117,6 @@ async function proxyWebDAV(
       { error: "Missing X-WebDAV-URL header" },
       { status: 400 },
     );
-  }
-
-  let safeTarget;
-  try {
-    safeTarget = await resolveSafeTarget(webdavBaseUrl);
-  } catch (err) {
-    if (err instanceof SsrfBlockedError) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
-    }
-    throw err;
   }
 
   // Reconstruct the target URL
@@ -170,24 +143,11 @@ async function proxyWebDAV(
       ? await request.arrayBuffer()
       : undefined;
 
-  // Pin the connection to the exact IP validated above — never re-resolve
-  // the hostname, or a DNS-rebinding attacker can swap in a private/metadata
-  // address between the check and the actual connect.
-  const dispatcher = new Agent({
-    connect: { lookup: pinnedLookup(safeTarget.pinnedIp, safeTarget.family) },
-  });
-
   try {
-    const response = await undiciFetch(targetUrl, {
+    const response = await ssrfSafeFetch(targetUrl, {
       method,
       headers: forwardHeaders,
-      body: body ?? null,
-      dispatcher,
-      // Never auto-follow redirects: a redirect response could point at a
-      // private/metadata address, and following it would re-resolve DNS
-      // (and lose the pin above). Pass 3xx responses straight through.
-      redirect: "manual",
-      duplex: "half",
+      body,
     });
 
     const responseBody = await response.arrayBuffer();
@@ -206,9 +166,10 @@ async function proxyWebDAV(
       headers: responseHeaders,
     });
   } catch (err) {
+    if (err instanceof SsrfBlockedError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     const message = err instanceof Error ? err.message : "Unknown proxy error";
     return NextResponse.json({ error: message }, { status: 502 });
-  } finally {
-    await dispatcher.close();
   }
 }

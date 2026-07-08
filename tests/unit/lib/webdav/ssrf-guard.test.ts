@@ -6,9 +6,21 @@ vi.mock("node:dns/promises", () => ({
   default: { lookup: (...args: unknown[]) => mockLookup(...args) },
 }));
 
+const mockUndiciFetch = vi.fn();
+const agentOptions: unknown[] = [];
+
+vi.mock("undici", () => ({
+  fetch: (...args: unknown[]) => mockUndiciFetch(...args),
+  Agent: vi.fn().mockImplementation(function (this: unknown, options: unknown) {
+    agentOptions.push(options);
+    return { close: vi.fn(() => Promise.resolve()) };
+  }),
+}));
+
 import {
   resolveSafeTarget,
   pinnedLookup,
+  ssrfSafeFetch,
   SsrfBlockedError,
 } from "@/lib/webdav/ssrf-guard";
 
@@ -100,6 +112,75 @@ describe("ssrf-guard", () => {
       lookup("attacker-controlled-hostname.example", {}, callback);
 
       expect(callback).toHaveBeenCalledWith(null, "93.184.216.34", 4);
+    });
+  });
+
+  describe("ssrfSafeFetch", () => {
+    beforeEach(() => {
+      mockUndiciFetch.mockReset();
+    });
+
+    it("fetches the validated URL through an agent pinned to the resolved IP, never following redirects", async () => {
+      mockLookup.mockResolvedValue({ address: "93.184.216.34", family: 4 });
+      mockUndiciFetch.mockResolvedValue(new Response("ok"));
+
+      await ssrfSafeFetch("https://pin-one.example.com/dav/file", {
+        method: "PROPFIND",
+        headers: new Headers({ Depth: "1" }),
+      });
+
+      const [url, init] = mockUndiciFetch.mock.calls[0] as [
+        URL,
+        { method: string; redirect: string },
+      ];
+      expect(String(url)).toBe("https://pin-one.example.com/dav/file");
+      expect(init.method).toBe("PROPFIND");
+      expect(init.redirect).toBe("manual");
+
+      // The agent's lookup must ignore DNS at connect time and answer with
+      // the pinned IP — that's what closes the rebinding TOCTOU.
+      const { connect } = agentOptions.at(-1) as {
+        connect: {
+          lookup: (
+            hostname: string,
+            options: unknown,
+            cb: (err: Error | null, address: string, family: number) => void,
+          ) => void;
+        };
+      };
+      const callback = vi.fn();
+      connect.lookup("attacker-controlled.example", {}, callback);
+      expect(callback).toHaveBeenCalledWith(null, "93.184.216.34", 4);
+    });
+
+    it("reuses the pooled agent across requests to the same host + IP", async () => {
+      mockLookup.mockResolvedValue({ address: "93.184.216.34", family: 4 });
+      mockUndiciFetch.mockResolvedValue(new Response("ok"));
+
+      const agentsBefore = agentOptions.length;
+      await ssrfSafeFetch("https://pin-two.example.com/a", {
+        method: "GET",
+        headers: new Headers(),
+      });
+      await ssrfSafeFetch("https://pin-two.example.com/b", {
+        method: "GET",
+        headers: new Headers(),
+      });
+
+      expect(agentOptions.length).toBe(agentsBefore + 1);
+      expect(mockUndiciFetch).toHaveBeenCalledTimes(2);
+    });
+
+    it("throws before fetching when the target is unsafe", async () => {
+      mockLookup.mockResolvedValue({ address: "169.254.169.254", family: 4 });
+
+      await expect(
+        ssrfSafeFetch("http://sneaky.example.com/", {
+          method: "GET",
+          headers: new Headers(),
+        }),
+      ).rejects.toThrow(SsrfBlockedError);
+      expect(mockUndiciFetch).not.toHaveBeenCalled();
     });
   });
 });
