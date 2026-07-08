@@ -35,6 +35,7 @@ import { LoaderOverlay } from "@/components/ui/loader-overlay";
 
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
+import { purgeLegacyStorage } from "@/lib/storage-cleanup";
 import {
   prefetchChangelog,
   invalidateChangelogCache,
@@ -362,6 +363,10 @@ export default function AppShell({ children }: AppShellProps) {
   const { isMigrating } = useMigrationStrategy();
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
+
+  useEffect(() => {
+    purgeLegacyStorage();
+  }, []);
 
   return (
     <ProjectActionsProvider>
