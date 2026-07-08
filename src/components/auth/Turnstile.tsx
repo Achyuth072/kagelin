@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useImperativeHandle, useRef } from "react";
 import Script from "next/script";
+import { useTheme } from "next-themes";
 
 const TURNSTILE_SCRIPT_SRC =
   "https://challenges.cloudflare.com/turnstile/v0/api.js";
@@ -12,6 +13,7 @@ interface TurnstileRenderOptions {
   "expired-callback"?: () => void;
   "error-callback"?: () => void;
   theme?: "light" | "dark" | "auto";
+  size?: "normal" | "compact" | "flexible";
 }
 
 declare global {
@@ -55,6 +57,11 @@ export function Turnstile({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  // resolvedTheme (not the OS-level "auto") so the widget matches the app's
+  // own light/dark toggle, not just system preference — Turnstile's built-in
+  // "auto" only tracks prefers-color-scheme and would desync whenever the
+  // user overrides the theme manually.
+  const { resolvedTheme } = useTheme();
 
   useImperativeHandle(
     handleRef,
@@ -76,10 +83,18 @@ export function Turnstile({
       sitekey: siteKey,
       callback: onVerify,
       "expired-callback": onExpire,
-      theme: "auto",
+      theme: resolvedTheme === "dark" ? "dark" : "light",
+      // Stretches to the width of the email input/button above and below it
+      // instead of floating as a fixed-width island — matches the ink & matte
+      // system's flush, structural alignment over centered decorative blocks.
+      size: "flexible",
     });
-  }, [siteKey, onVerify, onExpire]);
+  }, [siteKey, onVerify, onExpire, resolvedTheme]);
 
+  // `renderWidget` picks up a new identity whenever `resolvedTheme` changes,
+  // so this effect's cleanup (remove) + re-run (render) also doubles as the
+  // theme-change handler — Turnstile has no way to update an existing
+  // widget's theme in place.
   useEffect(() => {
     renderWidget();
     return () => {
@@ -98,7 +113,7 @@ export function Turnstile({
         strategy="afterInteractive"
         onReady={renderWidget}
       />
-      <div className="flex justify-center" ref={containerRef} />
+      <div ref={containerRef} />
     </>
   );
 }
