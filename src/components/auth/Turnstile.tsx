@@ -57,10 +57,8 @@ export function Turnstile({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
-  // resolvedTheme (not the OS-level "auto") so the widget matches the app's
-  // own light/dark toggle, not just system preference — Turnstile's built-in
-  // "auto" only tracks prefers-color-scheme and would desync whenever the
-  // user overrides the theme manually.
+  // resolvedTheme, not Turnstile's own "auto" — "auto" only tracks
+  // prefers-color-scheme and would desync from a manual theme override.
   const { resolvedTheme } = useTheme();
 
   useImperativeHandle(
@@ -84,17 +82,13 @@ export function Turnstile({
       callback: onVerify,
       "expired-callback": onExpire,
       theme: resolvedTheme === "dark" ? "dark" : "light",
-      // Stretches to the width of the email input/button above and below it
-      // instead of floating as a fixed-width island — matches the ink & matte
-      // system's flush, structural alignment over centered decorative blocks.
       size: "flexible",
     });
   }, [siteKey, onVerify, onExpire, resolvedTheme]);
 
-  // `renderWidget` picks up a new identity whenever `resolvedTheme` changes,
-  // so this effect's cleanup (remove) + re-run (render) also doubles as the
-  // theme-change handler — Turnstile has no way to update an existing
-  // widget's theme in place.
+  // Turnstile can't update an existing widget's theme in place, so a
+  // resolvedTheme change gives renderWidget a new identity, which tears
+  // down and re-renders the widget below.
   useEffect(() => {
     renderWidget();
     return () => {
