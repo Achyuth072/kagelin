@@ -25,6 +25,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import {
   createBackupZip,
@@ -45,7 +46,186 @@ import { useAuth } from "@/components/AuthProvider";
 import { useAccountData } from "@/lib/hooks/useAccountData";
 import { ImportDialog } from "./ImportDialog";
 
-const WEBDAV_STORAGE_KEY = "kanso_webdav_credentials";
+interface CloudSyncCardProps {
+  credentials: WebDAVCredentials;
+  onCredentialsChange: (
+    updater: (prev: WebDAVCredentials) => WebDAVCredentials,
+  ) => void;
+  isTestingConnection: boolean;
+  connectionStatus: "idle" | "success" | "error";
+  isSyncing: boolean;
+  onTestConnection: () => void;
+  onResetCredentials: () => void;
+  onSyncUpload: () => void;
+  onSyncDownload: () => void;
+}
+
+function CloudSyncCard({
+  credentials,
+  onCredentialsChange,
+  isTestingConnection,
+  connectionStatus,
+  isSyncing,
+  onTestConnection,
+  onResetCredentials,
+  onSyncUpload,
+  onSyncDownload,
+}: CloudSyncCardProps) {
+  return (
+    <TabsContent value="cloud" className="mt-0 outline-none">
+      {/* WebDAV Sync Section */}
+      <Card className="border-border/50 shadow-none bg-background/50">
+        <CardHeader className="pb-3 px-4 pt-5">
+          <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
+            <Cloud className="h-4 w-4 text-brand" strokeWidth={2.25} />
+            WebDAV Sync
+          </CardTitle>
+          <CardDescription className="text-xs text-muted-foreground/80 lowercase">
+            Sync across devices using your own cloud server.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5 px-4 pb-5 pt-0">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="webdav-url"
+                className="text-[11px] uppercase tracking-wider text-muted-foreground/60"
+              >
+                Server URL
+              </Label>
+              <Input
+                id="webdav-url"
+                placeholder="https://cloud.example.com/remote.php/dav/files/..."
+                value={credentials.serverUrl}
+                onChange={(e) =>
+                  onCredentialsChange((prev) => ({
+                    ...prev,
+                    serverUrl: e.target.value,
+                  }))
+                }
+                className="h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="webdav-user"
+                  className="text-[11px] uppercase tracking-wider text-muted-foreground/60"
+                >
+                  Username
+                </Label>
+                <Input
+                  id="webdav-user"
+                  placeholder="name"
+                  value={credentials.username}
+                  onChange={(e) =>
+                    onCredentialsChange((prev) => ({
+                      ...prev,
+                      username: e.target.value,
+                    }))
+                  }
+                  className="h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="webdav-pass"
+                  className="text-[11px] uppercase tracking-wider text-muted-foreground/60"
+                >
+                  Password
+                </Label>
+                <Input
+                  id="webdav-pass"
+                  type="password"
+                  placeholder="••••••••"
+                  value={credentials.password}
+                  onChange={(e) =>
+                    onCredentialsChange((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
+                  }
+                  className="h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={onTestConnection}
+              disabled={isTestingConnection}
+              className="gap-2 h-9 text-xs border-border/50 hover:bg-secondary/30 transition-all"
+            >
+              {isTestingConnection ? (
+                <Loader2
+                  className="h-3.5 w-3.5 animate-spin"
+                  strokeWidth={2.25}
+                />
+              ) : connectionStatus === "success" ? (
+                <Check className="h-3.5 w-3.5 text-green-500" strokeWidth={3} />
+              ) : connectionStatus === "error" ? (
+                <X className="h-3.5 w-3.5 text-red-500" strokeWidth={3} />
+              ) : (
+                <Server className="h-3.5 w-3.5" strokeWidth={2.25} />
+              )}
+              Test Connection
+            </Button>
+            {(credentials.serverUrl || credentials.username) && (
+              <Button
+                variant="destructive"
+                size="icon"
+                onClick={onResetCredentials}
+                className="h-9 w-9"
+                title="Forget credentials"
+                aria-label="Forget credentials"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          <Separator className="bg-border/30" />
+
+          <div className="flex gap-3">
+            <Button
+              variant="default"
+              onClick={onSyncUpload}
+              disabled={isSyncing || !credentials.serverUrl}
+              className="flex-1 gap-2 h-10 bg-brand hover:bg-brand/90 text-white transition-all active:scale-[0.98] font-semibold"
+            >
+              {isSyncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+              ) : (
+                <Upload className="h-4 w-4" strokeWidth={2.25} />
+              )}
+              Push
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onSyncDownload}
+              disabled={isSyncing || !credentials.serverUrl}
+              className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
+            >
+              {isSyncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+              ) : (
+                <Download className="h-4 w-4" strokeWidth={2.25} />
+              )}
+              Pull
+            </Button>
+          </div>
+
+          <p className="text-[10px] text-muted-foreground/50 text-center leading-relaxed">
+            Your credentials are used only for this session — they aren&apos;t
+            stored, and re-entering them is required after a reload.
+          </p>
+        </CardContent>
+      </Card>
+    </TabsContent>
+  );
+}
 
 export function BackupSyncSettings() {
   const { trigger } = useHaptic();
@@ -59,22 +239,21 @@ export function BackupSyncSettings() {
   const [isImporting, setIsImporting] = useState(false);
   const [showExternalImport, setShowExternalImport] = useState(false);
 
-  // WebDAV state
+  // WebDAV state — kept in memory only, cleared on reload. Not persisted to
+  // localStorage, which used to store server URL + username + password in
+  // plaintext (same pattern the CalDAV flow used to have).
   const [webdavCredentials, setWebdavCredentials] = useState<WebDAVCredentials>(
-    () => {
-      if (typeof window === "undefined")
-        return { serverUrl: "", username: "", password: "" };
-      const stored = localStorage.getItem(WEBDAV_STORAGE_KEY);
-      return stored
-        ? JSON.parse(stored)
-        : { serverUrl: "", username: "", password: "" };
-    },
+    { serverUrl: "", username: "", password: "" },
   );
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<
     "idle" | "success" | "error"
   >("idle");
   const [isSyncing, setIsSyncing] = useState(false);
+
+  // WebDAV sync is a registered-user feature; guests keep credential-free
+  // ZIP export/import only.
+  const showCloudSync = !isGuestMode;
 
   const invalidateGuestDataQueries = async () => {
     await Promise.all([
@@ -193,24 +372,15 @@ export function BackupSyncSettings() {
 
   // --- WebDAV Functions ---
 
-  const saveCredentials = (creds: WebDAVCredentials) => {
-    setWebdavCredentials(creds);
-    if (typeof window !== "undefined") {
-      localStorage.setItem(WEBDAV_STORAGE_KEY, JSON.stringify(creds));
-    }
-  };
-
-  const clearCredentials = () => {
+  const resetCredentials = () => {
     trigger("toggle");
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(WEBDAV_STORAGE_KEY);
-      setWebdavCredentials({ serverUrl: "", username: "", password: "" });
-      setConnectionStatus("idle");
-      toast.success("Credentials cleared");
-    }
+    setWebdavCredentials({ serverUrl: "", username: "", password: "" });
+    setConnectionStatus("idle");
+    toast.success("Credentials cleared");
   };
 
   const handleTestConnection = async () => {
+    if (isGuestMode) return;
     if (
       !webdavCredentials.serverUrl ||
       !webdavCredentials.username ||
@@ -229,7 +399,6 @@ export function BackupSyncSettings() {
 
       if (result.success) {
         setConnectionStatus("success");
-        saveCredentials(webdavCredentials);
         toast.success("Connected successfully");
         trigger("success");
       } else {
@@ -247,6 +416,7 @@ export function BackupSyncSettings() {
   };
 
   const handleSyncUpload = async () => {
+    if (isGuestMode) return;
     if (!webdavCredentials.serverUrl) {
       toast.error("Configure WebDAV settings first");
       return;
@@ -296,6 +466,7 @@ export function BackupSyncSettings() {
   };
 
   const handleSyncDownload = async () => {
+    if (isGuestMode) return;
     if (!webdavCredentials.serverUrl) {
       toast.error("Configure WebDAV settings first");
       return;
@@ -343,7 +514,12 @@ export function BackupSyncSettings() {
       />
 
       <Tabs defaultValue="local" className="space-y-4">
-        <TabsList className="grid grid-cols-2 bg-secondary/10 p-1 rounded-lg h-11 border border-border/40 shadow-none">
+        <TabsList
+          className={cn(
+            "grid bg-secondary/10 p-1 rounded-lg h-11 border border-border/40 shadow-none",
+            showCloudSync ? "grid-cols-2" : "grid-cols-1",
+          )}
+        >
           <TabsTrigger
             value="local"
             onClick={() => trigger("toggle")}
@@ -352,14 +528,16 @@ export function BackupSyncSettings() {
             <HardDrive className="h-3.5 w-3.5" />
             Local Storage
           </TabsTrigger>
-          <TabsTrigger
-            value="cloud"
-            onClick={() => trigger("toggle")}
-            className="rounded-md gap-2 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-9 border border-transparent data-[state=active]:border-brand/20"
-          >
-            <Cloud className="h-3.5 w-3.5" />
-            Cloud Sync
-          </TabsTrigger>
+          {showCloudSync && (
+            <TabsTrigger
+              value="cloud"
+              onClick={() => trigger("toggle")}
+              className="rounded-md gap-2 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-9 border border-transparent data-[state=active]:border-brand/20"
+            >
+              <Cloud className="h-3.5 w-3.5" />
+              Cloud Sync
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="local" className="mt-0 outline-none">
@@ -426,169 +604,19 @@ export function BackupSyncSettings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="cloud" className="mt-0 outline-none">
-          {/* WebDAV Sync Section */}
-          <Card className="border-border/50 shadow-none bg-background/50">
-            <CardHeader className="pb-3 px-4 pt-5">
-              <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
-                <Cloud className="h-4 w-4 text-brand" strokeWidth={2.25} />
-                WebDAV Sync
-              </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground/80 lowercase">
-                Sync across devices using your own cloud server.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5 px-4 pb-5 pt-0">
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor="webdav-url"
-                    className="text-[11px] uppercase tracking-wider text-muted-foreground/60"
-                  >
-                    Server URL
-                  </Label>
-                  <Input
-                    id="webdav-url"
-                    placeholder="https://cloud.example.com/remote.php/dav/files/..."
-                    value={webdavCredentials.serverUrl}
-                    onChange={(e) =>
-                      setWebdavCredentials((prev) => ({
-                        ...prev,
-                        serverUrl: e.target.value,
-                      }))
-                    }
-                    className="h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label
-                      htmlFor="webdav-user"
-                      className="text-[11px] uppercase tracking-wider text-muted-foreground/60"
-                    >
-                      Username
-                    </Label>
-                    <Input
-                      id="webdav-user"
-                      placeholder="name"
-                      value={webdavCredentials.username}
-                      onChange={(e) =>
-                        setWebdavCredentials((prev) => ({
-                          ...prev,
-                          username: e.target.value,
-                        }))
-                      }
-                      className="h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label
-                      htmlFor="webdav-pass"
-                      className="text-[11px] uppercase tracking-wider text-muted-foreground/60"
-                    >
-                      Password
-                    </Label>
-                    <Input
-                      id="webdav-pass"
-                      type="password"
-                      placeholder="••••••••"
-                      value={webdavCredentials.password}
-                      onChange={(e) =>
-                        setWebdavCredentials((prev) => ({
-                          ...prev,
-                          password: e.target.value,
-                        }))
-                      }
-                      className="h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={handleTestConnection}
-                  disabled={isTestingConnection}
-                  className="gap-2 h-9 text-xs border-border/50 hover:bg-secondary/30 transition-all"
-                >
-                  {isTestingConnection ? (
-                    <Loader2
-                      className="h-3.5 w-3.5 animate-spin"
-                      strokeWidth={2.25}
-                    />
-                  ) : connectionStatus === "success" ? (
-                    <Check
-                      className="h-3.5 w-3.5 text-green-500"
-                      strokeWidth={3}
-                    />
-                  ) : connectionStatus === "error" ? (
-                    <X className="h-3.5 w-3.5 text-red-500" strokeWidth={3} />
-                  ) : (
-                    <Server className="h-3.5 w-3.5" strokeWidth={2.25} />
-                  )}
-                  Test Connection
-                </Button>
-                {(webdavCredentials.serverUrl ||
-                  webdavCredentials.username) && (
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={clearCredentials}
-                    className="h-9 w-9"
-                    title="Forget credentials"
-                    aria-label="Forget credentials"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-
-              <Separator className="bg-border/30" />
-
-              <div className="flex gap-3">
-                <Button
-                  variant="default"
-                  onClick={handleSyncUpload}
-                  disabled={isSyncing || !webdavCredentials.serverUrl}
-                  className="flex-1 gap-2 h-10 bg-brand hover:bg-brand/90 text-white transition-all active:scale-[0.98] font-semibold"
-                >
-                  {isSyncing ? (
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      strokeWidth={2.25}
-                    />
-                  ) : (
-                    <Upload className="h-4 w-4" strokeWidth={2.25} />
-                  )}
-                  Push
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleSyncDownload}
-                  disabled={isSyncing || !webdavCredentials.serverUrl}
-                  className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
-                >
-                  {isSyncing ? (
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      strokeWidth={2.25}
-                    />
-                  ) : (
-                    <Download className="h-4 w-4" strokeWidth={2.25} />
-                  )}
-                  Pull
-                </Button>
-              </div>
-
-              <p className="text-[10px] text-muted-foreground/50 text-center leading-relaxed">
-                Your credentials are stored locally via{" "}
-                <span className="font-mono">localStorage</span> and never sent
-                to Kagelin servers.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {showCloudSync && (
+          <CloudSyncCard
+            credentials={webdavCredentials}
+            onCredentialsChange={setWebdavCredentials}
+            isTestingConnection={isTestingConnection}
+            connectionStatus={connectionStatus}
+            isSyncing={isSyncing}
+            onTestConnection={handleTestConnection}
+            onResetCredentials={resetCredentials}
+            onSyncUpload={handleSyncUpload}
+            onSyncDownload={handleSyncDownload}
+          />
+        )}
       </Tabs>
 
       <ImportDialog

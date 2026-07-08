@@ -59,8 +59,8 @@ Most productivity apps want your email before you've written a single task, and 
 ### Data Ownership
 
 - **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed.
-- **WebDAV sync**: sync guest data with personal servers (Nextcloud, Synology) without an account.
-- **Backups**: encrypted `.zip` export/import. Registered users can export or permanently delete all cloud data.
+- **WebDAV sync**: registered users can sync with personal servers (Nextcloud, Synology). Credentials are session-only for now — not yet persisted.
+- **Backups**: encrypted `.zip` export/import for everyone, guest or registered. Registered users can also permanently delete all cloud data.
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
 
 ### Stats & Insights
