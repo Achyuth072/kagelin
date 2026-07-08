@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextResponse } from "next/server";
 import {
   DELETE as unsubscribeDELETE,
   POST as subscribePOST,
@@ -39,7 +40,7 @@ vi.mock("@/lib/push", () => ({
   },
 }));
 
-const mockCheckRateLimit = vi.fn();
+const mockEnforceRateLimit = vi.fn();
 
 vi.mock("@/lib/rate-limit", async () => {
   const actual =
@@ -48,7 +49,7 @@ vi.mock("@/lib/rate-limit", async () => {
     );
   return {
     ...actual,
-    checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
+    enforceRateLimit: (...args: unknown[]) => mockEnforceRateLimit(...args),
   };
 });
 
@@ -57,7 +58,7 @@ describe("Push Notification API Routes", () => {
     vi.clearAllMocks();
     process.env.VAPID_PRIVATE_KEY = "test-private-key";
     process.env.VAPID_SUBJECT = "mailto:test@example.com";
-    mockCheckRateLimit.mockResolvedValue({ allowed: true });
+    mockEnforceRateLimit.mockResolvedValue(null);
   });
 
   describe("POST /api/push/subscribe", () => {
@@ -364,12 +365,9 @@ describe("Push Notification API Routes", () => {
       mockAuthGetUser.mockResolvedValue({
         data: { user: { id: "sender-123" } },
       });
-      mockCheckRateLimit.mockResolvedValue({
-        allowed: false,
-        limit: 10,
-        remaining: 0,
-        reset: Date.now() + 1000,
-      });
+      mockEnforceRateLimit.mockResolvedValue(
+        NextResponse.json({ error: "Too many requests" }, { status: 429 }),
+      );
 
       const request = new Request("http://localhost/api/push/send", {
         method: "POST",
@@ -378,10 +376,9 @@ describe("Push Notification API Routes", () => {
 
       const response = await sendPOST(request);
       expect(response.status).toBe(429);
-      expect(mockCheckRateLimit).toHaveBeenCalledWith(
+      expect(mockEnforceRateLimit).toHaveBeenCalledWith(
         "push-send",
         "sender-123",
-        expect.objectContaining({ maxRequests: 10 }),
       );
       expect(mockFrom).not.toHaveBeenCalled();
     });

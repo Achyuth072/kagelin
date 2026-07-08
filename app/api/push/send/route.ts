@@ -1,30 +1,16 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/api/require-user";
 import { webpush } from "@/lib/push";
 import { NextResponse } from "next/server";
-import { checkRateLimit, rateLimitResponseHeaders } from "@/lib/rate-limit";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user: currentUser },
-    } = await supabase.auth.getUser();
-
-    if (!currentUser) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { user, supabase, error: authError } = await requireUser();
+    if (authError) return authError;
 
     // H-5 / N-3: authenticated route — rate limit per user.
-    const rateLimit = await checkRateLimit("push-send", currentUser.id, {
-      maxRequests: 10,
-      window: "1 m",
-    });
-    if (!rateLimit.allowed) {
-      return NextResponse.json(
-        { error: "Too many requests" },
-        { status: 429, headers: rateLimitResponseHeaders(rateLimit) },
-      );
-    }
+    const limited = await enforceRateLimit("push-send", user.id);
+    if (limited) return limited;
 
     if (!process.env.VAPID_PRIVATE_KEY || !process.env.VAPID_SUBJECT) {
       throw new Error("VAPID configuration missing");
@@ -35,7 +21,7 @@ export async function POST(request: Request) {
     let subscriptionsQuery = supabase
       .from("push_subscriptions")
       .select("id, subscription")
-      .eq("user_id", currentUser.id);
+      .eq("user_id", user.id);
 
     if (endpoint) {
       subscriptionsQuery = subscriptionsQuery.eq("endpoint", endpoint);
