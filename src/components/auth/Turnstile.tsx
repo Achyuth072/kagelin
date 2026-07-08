@@ -98,7 +98,7 @@ export function Turnstile({
         strategy="afterInteractive"
         onReady={renderWidget}
       />
-      <div ref={containerRef} />
+      <div className="flex justify-center" ref={containerRef} />
     </>
   );
 }
