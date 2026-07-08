@@ -12,7 +12,8 @@
     "**/*.test.{ts,tsx}",
     "**/*.spec.{ts,tsx}",
     "tests/**",
-    "src/lib/mock/**"
+    "src/lib/mock/**",
+    "src/components/ui/**"
   ],
   "ignoreDependencies": [
     "@serwist/next",
