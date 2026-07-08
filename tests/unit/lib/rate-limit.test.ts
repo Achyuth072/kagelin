@@ -38,10 +38,7 @@ describe("rate-limit (H-5 / N-3)", () => {
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
 
     const { checkRateLimit } = await import("@/lib/rate-limit");
-    const result = await checkRateLimit("test", "id-1", {
-      maxRequests: 5,
-      window: "1 m",
-    });
+    const result = await checkRateLimit("webdav", "id-1");
 
     expect(result.allowed).toBe(true);
     expect(mockLimit).not.toHaveBeenCalled();
@@ -53,19 +50,18 @@ describe("rate-limit (H-5 / N-3)", () => {
     process.env.UPSTASH_REDIS_REST_TOKEN = "token";
     mockLimit.mockResolvedValue({
       success: false,
-      limit: 5,
+      limit: 60,
       remaining: 0,
       reset: Date.now() + 30_000,
     });
 
     const { checkRateLimit } = await import("@/lib/rate-limit");
-    const result = await checkRateLimit("test", "id-1", {
-      maxRequests: 5,
-      window: "1 m",
-    });
+    const result = await checkRateLimit("webdav", "id-1");
 
     expect(result.allowed).toBe(false);
-    expect(result.remaining).toBe(0);
+    if (!result.allowed) {
+      expect(result.remaining).toBe(0);
+    }
     expect(mockLimit).toHaveBeenCalledWith("id-1");
   });
 
@@ -91,17 +87,36 @@ describe("rate-limit (H-5 / N-3)", () => {
     expect(getClientIp(new Request("http://localhost"))).toBe("unknown");
   });
 
-  it("rateLimitResponseHeaders exposes limit/remaining/retry-after", async () => {
-    const { rateLimitResponseHeaders } = await import("@/lib/rate-limit");
-    const headers = rateLimitResponseHeaders({
-      allowed: false,
-      limit: 5,
+  it("enforceRateLimit returns null when the request is allowed", async () => {
+    process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+    mockLimit.mockResolvedValue({
+      success: true,
+      limit: 60,
+      remaining: 59,
+      reset: Date.now() + 30_000,
+    });
+
+    const { enforceRateLimit } = await import("@/lib/rate-limit");
+    expect(await enforceRateLimit("webdav", "id-1")).toBeNull();
+  });
+
+  it("enforceRateLimit returns a 429 with limit headers when exceeded", async () => {
+    process.env.UPSTASH_REDIS_REST_URL = "https://example.upstash.io";
+    process.env.UPSTASH_REDIS_REST_TOKEN = "token";
+    mockLimit.mockResolvedValue({
+      success: false,
+      limit: 60,
       remaining: 0,
       reset: Date.now() + 10_000,
     });
 
-    expect(headers["X-RateLimit-Limit"]).toBe("5");
-    expect(headers["X-RateLimit-Remaining"]).toBe("0");
-    expect(Number(headers["Retry-After"])).toBeGreaterThan(0);
+    const { enforceRateLimit } = await import("@/lib/rate-limit");
+    const response = await enforceRateLimit("webdav", "id-1");
+
+    expect(response?.status).toBe(429);
+    expect(response?.headers.get("X-RateLimit-Limit")).toBe("60");
+    expect(response?.headers.get("X-RateLimit-Remaining")).toBe("0");
+    expect(Number(response?.headers.get("Retry-After"))).toBeGreaterThan(0);
   });
 });

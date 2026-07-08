@@ -1,5 +1,6 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { NextResponse } from "next/server";
 
 /**
  * Rate limiting for beta (H-5 / addendum N-3).
@@ -15,22 +16,36 @@ import { Redis } from "@upstash/redis";
  * than taking the app down over an unconfigured optional dependency.
  */
 
-export interface RateLimitResult {
-  allowed: boolean;
-  limit?: number;
-  remaining?: number;
-  /** Unix ms timestamp when the window resets. */
-  reset?: number;
-}
+type Window = `${number} ${"s" | "m" | "h" | "d"}`;
+
+/**
+ * Per-route limits live here, not at call sites: limiters are cached by
+ * name, so two call sites configuring the same name differently would
+ * silently diverge — a single table makes that impossible.
+ */
+const LIMITS = {
+  /** Unauthenticated proxy — limited per IP. */
+  webdav: { maxRequests: 60, window: "1 m" },
+  /** Authenticated push sends — limited per user. */
+  "push-send": { maxRequests: 10, window: "1 m" },
+} as const satisfies Record<string, { maxRequests: number; window: Window }>;
+
+export type RateLimitName = keyof typeof LIMITS;
+
+export type RateLimitResult =
+  | { allowed: true }
+  | {
+      allowed: false;
+      limit: number;
+      remaining: number;
+      /** Unix ms timestamp when the window resets. */
+      reset: number;
+    };
 
 let warnedNotConfigured = false;
-const limiters = new Map<string, Ratelimit>();
+const limiters = new Map<RateLimitName, Ratelimit>();
 
-function getLimiter(
-  name: string,
-  maxRequests: number,
-  window: `${number} ${"s" | "m" | "h" | "d"}`,
-): Ratelimit | null {
+function getLimiter(name: RateLimitName): Ratelimit | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -47,6 +62,7 @@ function getLimiter(
   const cached = limiters.get(name);
   if (cached) return cached;
 
+  const { maxRequests, window } = LIMITS[name];
   const limiter = new Ratelimit({
     redis: new Redis({ url, token }),
     limiter: Ratelimit.slidingWindow(maxRequests, window),
@@ -62,17 +78,48 @@ function getLimiter(
  * Fails open (allowed: true) if Upstash isn't configured.
  */
 export async function checkRateLimit(
-  name: string,
+  name: RateLimitName,
   identifier: string,
-  opts: { maxRequests: number; window: `${number} ${"s" | "m" | "h" | "d"}` },
 ): Promise<RateLimitResult> {
-  const limiter = getLimiter(name, opts.maxRequests, opts.window);
+  const limiter = getLimiter(name);
   if (!limiter) {
     return { allowed: true };
   }
 
   const { success, limit, remaining, reset } = await limiter.limit(identifier);
-  return { allowed: success, limit, remaining, reset };
+  return success
+    ? { allowed: true }
+    : { allowed: false, limit, remaining, reset };
+}
+
+/**
+ * Route-level guard: returns a ready-to-return 429 when the named limit is
+ * exceeded, or null when the request may proceed.
+ *
+ * Usage:
+ *   const limited = await enforceRateLimit("webdav", getClientIp(request));
+ *   if (limited) return limited;
+ */
+export async function enforceRateLimit(
+  name: RateLimitName,
+  identifier: string,
+): Promise<NextResponse | null> {
+  const result = await checkRateLimit(name, identifier);
+  if (result.allowed) return null;
+
+  return NextResponse.json(
+    { error: "Too many requests" },
+    {
+      status: 429,
+      headers: {
+        "X-RateLimit-Limit": String(result.limit),
+        "X-RateLimit-Remaining": String(result.remaining),
+        "Retry-After": String(
+          Math.max(0, Math.ceil((result.reset - Date.now()) / 1000)),
+        ),
+      },
+    },
+  );
 }
 
 /** Best-effort client IP extraction behind Vercel's proxy. */
@@ -82,20 +129,4 @@ export function getClientIp(request: Request): string {
     return forwardedFor.split(",")[0].trim();
   }
   return request.headers.get("x-real-ip") ?? "unknown";
-}
-
-export function rateLimitResponseHeaders(
-  result: RateLimitResult,
-): Record<string, string> {
-  const headers: Record<string, string> = {};
-  if (result.limit !== undefined)
-    headers["X-RateLimit-Limit"] = String(result.limit);
-  if (result.remaining !== undefined)
-    headers["X-RateLimit-Remaining"] = String(result.remaining);
-  if (result.reset !== undefined) {
-    headers["Retry-After"] = String(
-      Math.max(0, Math.ceil((result.reset - Date.now()) / 1000)),
-    );
-  }
-  return headers;
 }
