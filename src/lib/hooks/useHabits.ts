@@ -6,7 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 import type { Habit, HabitEntry, HabitWithEntries } from "@/lib/types/habit";
 
-export type { Habit, HabitEntry, HabitWithEntries };
+export type { HabitEntry, HabitWithEntries };
 
 interface UseHabitsOptions {
   includeArchived?: boolean;

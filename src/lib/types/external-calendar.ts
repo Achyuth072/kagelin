@@ -67,22 +67,6 @@ export interface ExternalCalendar {
   updated_at: string;
 }
 
-export interface CreateExternalCalendarInput {
-  provider: CalendarProvider;
-  name: string;
-  color?: string;
-
-  // CalDAV-specific (required for caldav/icloud/fastmail/nextcloud)
-  server_url?: string;
-  username?: string;
-
-  // OAuth-specific (for google/outlook — populated from Supabase Auth)
-  oauth_provider_token_id?: string;
-  remote_calendar_id?: string;
-
-  sync_direction?: SyncDirection;
-}
-
 export interface UpdateExternalCalendarInput {
   id: string;
   name?: string;

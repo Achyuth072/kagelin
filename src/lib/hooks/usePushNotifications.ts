@@ -5,13 +5,13 @@ import { useUiStore } from "@/lib/store/uiStore";
 import { removePushSubscription, syncPushSubscription } from "@/lib/push-api";
 import { useAuth } from "@/components/AuthProvider";
 
-export type NotificationPermission = "default" | "granted" | "denied";
+type NotificationPermission = "default" | "granted" | "denied";
 
 interface SubscribeOptions {
   forceRefresh?: boolean;
 }
 
-export interface PushPermissionResult {
+interface PushPermissionResult {
   permission: NotificationPermission;
   subscription: PushSubscription | null;
 }
@@ -264,7 +264,6 @@ export function usePushNotifications() {
     getServiceWorkerRegistration,
   ]);
 
-  // Update the subscription endpoint ref whenever the subscription changes
   useEffect(() => {
     if (subscription) {
       subscriptionEndpointRef.current = subscription.endpoint;

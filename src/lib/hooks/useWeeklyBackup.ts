@@ -73,7 +73,6 @@ export function useWeeklyBackup() {
     if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_KEY))
       return;
 
-    // Check if backup is stale
     const isStale =
       !lastBackupDate || Date.now() - lastBackupDate.getTime() > SEVEN_DAYS_MS;
 

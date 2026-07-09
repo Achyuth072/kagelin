@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  // 🚀 Performance: Check for guest mode cookie FIRST to avoid unnecessary Supabase calls.
+  // Check the guest mode cookie first to avoid unnecessary Supabase calls.
   const isGuest = request.cookies.get("kanso_guest_mode")?.value === "true";
   if (isGuest) {
     return supabaseResponse;
@@ -44,7 +44,7 @@ export async function updateSession(request: NextRequest) {
   // Handle auth errors (e.g., "Refresh Token Not Found")
   // Only redirect to login if NOT already on a public route
   if (error && !isPublicRoute && !isGuest) {
-    // 🛡️ Network Resilience: If offline, don't redirect to login.
+    // If offline, don't redirect to login.
     // Redirecting while offline creates an infinite loop.
     const isNetworkError =
       error.message?.toLowerCase().includes("fetch") ||

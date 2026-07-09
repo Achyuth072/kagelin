@@ -21,5 +21,3 @@ export const FocusSettingsSchema = z.object({
   autoStartFocus: z.boolean(),
   taskSwitchBehavior: z.enum(["keepRunning", "pauseOnSwitch", "resetOnSwitch"]),
 });
-
-export type FocusSettingsInput = z.infer<typeof FocusSettingsSchema>;

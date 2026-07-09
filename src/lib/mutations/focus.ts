@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
 import type { TimerSettings } from "@/lib/types/timer";
 
-export interface LogFocusSessionInput {
+interface LogFocusSessionInput {
   task_id: string;
   durationSeconds: number;
 }
@@ -20,7 +20,7 @@ export interface UpsertTimerStateInput {
   updated_at?: string;
 }
 
-export interface ClaimTimerCompletionInput extends UpsertTimerStateInput {
+interface ClaimTimerCompletionInput extends UpsertTimerStateInput {
   // The deadline (ISO) of the session being completed. The write only succeeds
   // if the DB row still shows that running session — so among several devices
   // finishing the same session at once, exactly one wins.

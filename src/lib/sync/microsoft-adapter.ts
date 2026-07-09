@@ -25,7 +25,7 @@ import { registerAdapter } from "./adapter-interface";
 
 const MS_GRAPH_API = "https://graph.microsoft.com/v1.0";
 
-export class MicrosoftGraphAdapter implements SyncAdapter {
+class MicrosoftGraphAdapter implements SyncAdapter {
   readonly provider: CalendarProvider = "outlook";
 
   private accessToken: string | null = null;

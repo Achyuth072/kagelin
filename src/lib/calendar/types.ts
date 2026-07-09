@@ -1,6 +1,5 @@
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
 export type { CalendarEventUI } from "@/lib/types/calendar-event";
-export { toCalendarEventUI } from "@/lib/types/calendar-event";
 
 // Alias for backward compatibility with existing views
 export type CalendarEvent = CalendarEventUI;

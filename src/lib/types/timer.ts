@@ -19,22 +19,6 @@ export interface TimerSettings {
   taskSwitchBehavior: TaskSwitchBehavior; // Behavior when switching tasks during active timer
 }
 
-/**
- * TimerSyncState mirrors the user_timer_state DB row.
- * Uses snake_case to match the DB column names.
- * Used for upsert and sync operations.
- */
-export interface TimerSyncState {
-  mode: TimerMode;
-  remaining_seconds: number;
-  is_running: boolean;
-  active_task_id: string | null;
-  ends_at: string | null; // ISO timestamp deadline while running; null when paused/idle
-  source_device_id: string | null;
-  completed_sessions: number;
-  updated_at: string; // ISO timestamp
-}
-
 export interface TimerState {
   mode: TimerMode;
   isRunning: boolean;
@@ -54,6 +38,3 @@ export const DEFAULT_TIMER_SETTINGS: TimerSettings = {
   autoStartFocus: false,
   taskSwitchBehavior: "keepRunning",
 };
-
-export const TIMER_STATE_KEY = "kanso-timer-state";
-export const TIMER_SETTINGS_KEY = "kanso-timer-settings";

@@ -2,12 +2,12 @@ import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
 import type { Project } from "@/lib/types/task";
 
-export interface CreateProjectInput {
+interface CreateProjectInput {
   name: string;
   color: string;
 }
 
-export interface UpdateProjectInput {
+interface UpdateProjectInput {
   id: string;
   name?: string;
   color?: string;

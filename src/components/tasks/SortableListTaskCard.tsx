@@ -1,7 +1,7 @@
 "use client";
 
 import React, { memo } from "react";
-import TaskItem from "./TaskItem";
+import { TaskItem } from "./TaskItem";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
 import { useSortableRow, dropLineClasses } from "@/lib/hooks/useSortableRow";

@@ -65,7 +65,6 @@ export function EditProjectDialog({
 
   const updateProject = useUpdateProject();
   const { trigger } = useHaptic();
-  // const scrollRef = useHorizontalScroll();
   const isFinePointer = useMediaQuery("(pointer: fine)");
 
   // Sync form with project when opened

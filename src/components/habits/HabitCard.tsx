@@ -79,12 +79,10 @@ export function HabitCard({
     return () => cancelAnimationFrame(frame);
   }, [habit.entries]);
 
-  // Check if today's entry exists
   const today = format(new Date(), "yyyy-MM-dd");
   const todayEntry = habit.entries.find((e) => e.date === today);
   const isCompletedToday = todayEntry?.value === 1;
 
-  // Calculate stats
   const totalCompletions = habit.entries.filter((e) => e.value === 1).length;
   const currentStreak = getCurrentStreak(habit, habit.entries);
 

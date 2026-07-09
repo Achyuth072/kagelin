@@ -117,7 +117,7 @@ export function HomeClient() {
         className="flex-1 min-h-0 transition-opacity duration-150"
         style={{ opacity: isTaskListPending ? 0.6 : 1 }}
       >
-        {/* 🚀 Performance: Conditionally render views instead of CSS hiding to prevent double-rendering TaskList instances. */}
+        {/* Conditionally render views instead of CSS hiding to prevent double-rendering TaskList instances. */}
         {viewMode === "list" && !isMobile ? (
           <SplitViewLayout
             sortBy={sortBy}
