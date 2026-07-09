@@ -93,7 +93,7 @@ function prevPeriodStart(period: StatsPeriod, now: Date): Date | null {
  * The lower bound to actually fetch from the data source: current period +
  * an equal-length prior period (for trend deltas). Null = fetch everything.
  */
-export function fetchLowerBound(
+function fetchLowerBound(
   period: StatsPeriod,
   now: Date = new Date(),
 ): Date | null {

@@ -60,11 +60,3 @@ export interface UpdateTaskInput {
   recurrence?: RecurrenceRule | null;
   recurring_series_id?: string | null;
 }
-
-export interface ParsedTask {
-  content: string;
-  due_date: Date | null;
-  priority: 1 | 2 | 3 | 4;
-  project: string | null;
-  labels: string[];
-}

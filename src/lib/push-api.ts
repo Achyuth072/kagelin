@@ -42,7 +42,7 @@ export interface SendPushParams {
   data?: Record<string, unknown>;
 }
 
-export interface SendPushResult {
+interface SendPushResult {
   success: boolean;
   sentCount: number;
   failedCount: number;

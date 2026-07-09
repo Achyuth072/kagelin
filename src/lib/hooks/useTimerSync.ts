@@ -54,7 +54,7 @@ function parseMode(raw: unknown, fallback: TimerMode): TimerMode {
  * the receiver's local clock — so a freshly-applied snapshot can't spuriously
  * complete or auto-start.
  */
-export function remoteRowToState(
+function remoteRowToState(
   remote: Record<string, unknown>,
   current: TimerState,
 ): TimerState {
@@ -90,7 +90,7 @@ export function remoteRowToState(
  * progress, and session labels. Falls back to the local settings for older rows
  * with no synced settings.
  */
-export function remoteRowToSettings(
+function remoteRowToSettings(
   remote: Record<string, unknown>,
   current: TimerSettings,
 ): TimerSettings {

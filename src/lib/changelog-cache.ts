@@ -67,7 +67,7 @@ export function prefetchChangelog(): Promise<ChangelogEntry[]> {
   return fetchPromise;
 }
 
-export function parseVersion(v: string): number[] {
+function parseVersion(v: string): number[] {
   return v.split(/[.-]/).map((p) => {
     const n = parseInt(p, 10);
     return isNaN(n) ? 0 : n;

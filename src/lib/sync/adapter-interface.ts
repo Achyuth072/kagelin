@@ -132,16 +132,10 @@ export interface SyncAdapter {
 }
 
 /**
- * Factory function type for creating adapters
- */
-export type SyncAdapterFactory = (provider: CalendarProvider) => SyncAdapter;
-
-/**
  * Registry of available sync adapters
  */
-export const ADAPTER_REGISTRY: Partial<
-  Record<CalendarProvider, () => SyncAdapter>
-> = {};
+const ADAPTER_REGISTRY: Partial<Record<CalendarProvider, () => SyncAdapter>> =
+  {};
 
 /**
  * Register a sync adapter for a provider

@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useMediaQuery } from "./useMediaQuery";
 
-export type HapticSignature = "tick" | "toggle" | "thud" | "success";
+type HapticSignature = "tick" | "toggle" | "thud" | "success";
 
 const SIGNATURES: Record<HapticSignature, number | number[]> = {
   tick: 10,
