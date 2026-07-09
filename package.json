@@ -98,7 +98,6 @@
     "tsdav": "^2.1.8",
     "undici": "^8.7.0",
     "vaul": "^1.1.2",
-    "vercel": "^53.3.2",
     "web-push": "^3.6.7",
     "zod": "^4.2.1",
     "zustand": "^5.0.9"
@@ -107,7 +106,6 @@
     "@next/bundle-analyzer": "^16.2.1",
     "@playwright/test": "^1.57.0",
     "@poupe/eslint-plugin-tailwindcss": "^0.3.1",
-    "@release-it/conventional-changelog": "^11.0.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
