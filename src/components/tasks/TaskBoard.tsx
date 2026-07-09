@@ -40,7 +40,6 @@ import { SortableBoardTaskCard } from "./SortableBoardTaskCard";
 import { TaskGhost } from "./TaskGhost";
 import { useUpdateTask, useReorderTasks } from "@/lib/hooks/useTaskMutations";
 import { useUiStore } from "@/lib/store/uiStore";
-import { KanbanBoardProvider } from "@/components/kanban";
 import {
   getTaskUpdatesForGroup,
   computeReorderPairs,
@@ -434,95 +433,91 @@ export function TaskBoard({
   if (!isJsLoaded) return null;
 
   return (
-    <KanbanBoardProvider>
-      <DndContext
-        sensors={sensors}
-        // dnd-kit docs: for Kanban-style stacked droppables (a column + its
-        // items), rectIntersection/closestCenter can resolve to the whole
-        // column instead of an item within it — which dropped tasks at the
-        // bottom of sparse columns. closestCorners is the documented choice.
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-        accessibility={{ announcements: dndAnnouncements }}
-        // WhileDragging (the dnd-kit default) measures the same as Always
-        // during a drag; Always additionally re-measures on every droppable
-        // registry mutation while idle, which is pure overhead here.
-        measuring={{
-          droppable: {
-            strategy: MeasuringStrategy.WhileDragging,
-          },
-        }}
-        autoScroll={{
-          layoutShiftCompensation: false,
-          threshold: {
-            x: 0.1,
-            y: 0.1,
-          },
-          acceleration: 10,
-        }}
+    <DndContext
+      sensors={sensors}
+      // dnd-kit docs: for Kanban-style stacked droppables (a column + its
+      // items), rectIntersection/closestCenter can resolve to the whole
+      // column instead of an item within it — which dropped tasks at the
+      // bottom of sparse columns. closestCorners is the documented choice.
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+      accessibility={{ announcements: dndAnnouncements }}
+      // WhileDragging (the dnd-kit default) measures the same as Always
+      // during a drag; Always additionally re-measures on every droppable
+      // registry mutation while idle, which is pure overhead here.
+      measuring={{
+        droppable: {
+          strategy: MeasuringStrategy.WhileDragging,
+        },
+      }}
+      autoScroll={{
+        layoutShiftCompensation: false,
+        threshold: {
+          x: 0.1,
+          y: 0.1,
+        },
+        acceleration: 10,
+      }}
+    >
+      <div
+        className="flex items-start h-full overflow-x-auto pb-12 md:pb-6 px-4 md:px-6 gap-6 snap-x snap-mandatory scrollbar-hide"
+        data-testid="task-board-container"
       >
-        <div
-          className="flex items-start h-full overflow-x-auto pb-12 md:pb-6 px-4 md:px-6 gap-6 snap-x snap-mandatory scrollbar-hide"
-          data-testid="task-board-container"
-        >
-          {displayColumns.map((group) => (
-            <KanbanColumn
-              key={group.title}
-              group={group}
-              projectsMap={projectsMap}
-              isDesktop={isDesktop}
-              onSelect={onSelect}
-              setActiveTaskId={setActiveTaskId}
-              triggerHaptic={triggerHaptic}
-              isDndActive={!!activeId}
-            />
-          ))}
-        </div>
+        {displayColumns.map((group) => (
+          <KanbanColumn
+            key={group.title}
+            group={group}
+            projectsMap={projectsMap}
+            isDesktop={isDesktop}
+            onSelect={onSelect}
+            setActiveTaskId={setActiveTaskId}
+            triggerHaptic={triggerHaptic}
+            isDndActive={!!activeId}
+          />
+        ))}
+      </div>
 
-        {typeof document !== "undefined" &&
-          createPortal(
-            <DragOverlay
-              // dropAnimation duration is 0 here (matching TaskList) to
-              // eliminate the residual "overlay animates to original
-              // position then snaps to new" glitch. The drop animation
-              // measures the active node's DOM rect AFTER React renders
-              // the post-drop state, but BEFORE the optimistic cache
-              // update from React Query's async onMutate has propagated.
-              // When duration is 0, dnd-kit short-circuits the animation
-              // entirely (see createDefaultDropAnimation: `if (!duration)
-              // return`), so the overlay simply disappears at the same
-              // instant the source item snaps into place — which is
-              // already in the correct (new) position because displayColumns
-              // is gated by lockLocal until onSettled fires.
-              dropAnimation={{
-                duration: 0,
-                sideEffects: defaultDropAnimationSideEffects({
-                  styles: {
-                    active: { opacity: "0.5" },
-                  },
-                }),
-              }}
-            >
-              {activeTask ? (
-                <div className="opacity-90 pointer-events-none will-change-transform rotate-1 scale-[1.02]">
-                  <TaskGhost
-                    task={activeTask}
-                    isDesktop={isDesktop}
-                    viewMode="board"
-                    project={projectsMap?.get?.(
-                      activeTask.project_id || "inbox",
-                    )}
-                  />
-                </div>
-              ) : null}
-            </DragOverlay>,
-            document.body,
-          )}
-      </DndContext>
-    </KanbanBoardProvider>
+      {typeof document !== "undefined" &&
+        createPortal(
+          <DragOverlay
+            // dropAnimation duration is 0 here (matching TaskList) to
+            // eliminate the residual "overlay animates to original
+            // position then snaps to new" glitch. The drop animation
+            // measures the active node's DOM rect AFTER React renders
+            // the post-drop state, but BEFORE the optimistic cache
+            // update from React Query's async onMutate has propagated.
+            // When duration is 0, dnd-kit short-circuits the animation
+            // entirely (see createDefaultDropAnimation: `if (!duration)
+            // return`), so the overlay simply disappears at the same
+            // instant the source item snaps into place — which is
+            // already in the correct (new) position because displayColumns
+            // is gated by lockLocal until onSettled fires.
+            dropAnimation={{
+              duration: 0,
+              sideEffects: defaultDropAnimationSideEffects({
+                styles: {
+                  active: { opacity: "0.5" },
+                },
+              }),
+            }}
+          >
+            {activeTask ? (
+              <div className="opacity-90 pointer-events-none will-change-transform rotate-1 scale-[1.02]">
+                <TaskGhost
+                  task={activeTask}
+                  isDesktop={isDesktop}
+                  viewMode="board"
+                  project={projectsMap?.get?.(activeTask.project_id || "inbox")}
+                />
+              </div>
+            ) : null}
+          </DragOverlay>,
+          document.body,
+        )}
+    </DndContext>
   );
 }
 
