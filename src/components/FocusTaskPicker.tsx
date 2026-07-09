@@ -162,13 +162,8 @@ export function FocusTaskPicker() {
           break;
       }
 
-      // Set the new active task
       setActiveTaskId(task.id);
-
-      // Close picker
       setOpen(false);
-
-      // Show confirmation toast
       toast("Now focusing on " + task.content);
     },
     [taskSwitchBehavior, pause, cancel, setActiveTaskId, trigger],

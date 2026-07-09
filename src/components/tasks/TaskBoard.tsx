@@ -171,7 +171,7 @@ export function TaskBoard({
   );
 
   const handleDragStart = (event: DragStartEvent) => {
-    // 🚀 Performance: Sync local state only when drag starts
+    // Sync local state only when drag starts
     setLocalColumns(boardColumns);
     const id = event.active.id as string;
     setActiveId(id);
@@ -227,10 +227,10 @@ export function TaskBoard({
         const activeIndex = activeTasks.findIndex((t) => t.id === activeId);
         if (activeIndex === -1) return prev;
 
-        // FIX: Use dnd-kit's provided index for reliable positioning
+        // dnd-kit's sortable index reflects DOM state; findIndex on React
+        // state can be off-by-one during rapid drag-over events.
         let overIndex = over.data?.current?.sortable?.index;
         if (overIndex === undefined) {
-          // Fallback to findIndex if dnd-kit doesn't provide it
           overIndex = overTasks.findIndex((t) => t.id === overId);
         }
 
