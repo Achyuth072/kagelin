@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api/require-user";
 import { generatePKCE } from "@/lib/calendar-oauth/pkce";
+import { getOAuthRedirectUri } from "@/lib/calendar-oauth/app-url";
 
 const PROVIDER_AUTH_URLS: Record<string, string> = {
   google: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -53,8 +54,7 @@ export async function GET(
     path: "/",
   });
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
-  const redirectUri = `${appUrl}/api/calendar/oauth/callback`;
+  const redirectUri = getOAuthRedirectUri(request);
   const url = new URL(PROVIDER_AUTH_URLS[provider]);
   url.searchParams.set(
     "client_id",
