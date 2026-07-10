@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
+import { withSentryConfig } from "@sentry/nextjs";
 import { version } from "./package.json";
 
 import bundleAnalyzer from "@next/bundle-analyzer";
@@ -60,6 +61,22 @@ const nextConfig: NextConfig = {
 };
 
 // Only wrap with Serwist when using Webpack (dev:pwa, build)
-export default withBundleAnalyzer(
+const config = withBundleAnalyzer(
   isTurbopack ? nextConfig : withSerwist(nextConfig),
 );
+
+// no-ops (no source map upload) unless SENTRY_AUTH_TOKEN + org/project are set
+export default withSentryConfig(config, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  // Uploads source maps once after the full build instead of once per
+  // compiler pass (client/server/edge) — faster in CI when a token is set.
+  useRunAfterProductionCompileHook: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+});

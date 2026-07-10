@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * Catches errors thrown by the root layout itself (providers, fonts, etc.) —
  * `error.tsx` can't, since it renders *inside* the layout. Next.js requires
  * this file to render its own <html>/<body>; kept deliberately dependency-free
  * (no Tailwind tokens, providers, or app components) since those are exactly
- * what may have just crashed.
+ * what may have just crashed. Sentry is the one exception — it's a monitoring
+ * SDK, not an app dependency, and is the only way to see root-layout crashes.
  */
 export default function GlobalError({
   error,
@@ -18,6 +20,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("Unhandled root layout error:", error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (
