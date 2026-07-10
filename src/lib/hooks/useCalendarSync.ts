@@ -41,6 +41,12 @@ export function useCalendarSync() {
       } finally {
         runningRef.current = false;
         queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
+        // A revoked token is deleted server-side during the sync attempt; refresh
+        // the connected-providers query so the reconnect banner (#57) surfaces
+        // without waiting for a manual reload.
+        queryClient.invalidateQueries({
+          queryKey: ["calendar-connected-providers"],
+        });
       }
     },
     [isGuestMode, queryClient],

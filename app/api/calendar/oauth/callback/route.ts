@@ -4,22 +4,28 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { exchangeAuthCode } from "@/lib/calendar-oauth/auth-code-exchange";
 import { encryptRefreshToken } from "@/lib/calendar-oauth/token-crypto";
+import { getAppBaseUrl } from "@/lib/calendar-oauth/app-url";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  // Pin to the canonical app URL, not the request origin: behind Vercel's proxy
+  // the origin can be an internal host, which both breaks the token exchange
+  // (redirect_uri must match the connect route) and would bounce the user to a
+  // domain where their session cookie is absent.
+  const baseUrl = getAppBaseUrl(request);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
   const errorParam = searchParams.get("error");
 
   if (errorParam) {
     return NextResponse.redirect(
-      `${origin}/calendar?oauth_error=${encodeURIComponent(errorParam)}`,
+      `${baseUrl}/calendar?oauth_error=${encodeURIComponent(errorParam)}`,
     );
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      `${origin}/calendar?oauth_error=missing_params`,
+      `${baseUrl}/calendar?oauth_error=missing_params`,
     );
   }
 
@@ -30,7 +36,7 @@ export async function GET(request: Request) {
 
   if (!storedState || storedState !== state || !codeVerifier || !provider) {
     return NextResponse.redirect(
-      `${origin}/calendar?oauth_error=invalid_state`,
+      `${baseUrl}/calendar?oauth_error=invalid_state`,
     );
   }
 
@@ -44,11 +50,11 @@ export async function GET(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.redirect(`${origin}/login`);
+    return NextResponse.redirect(`${baseUrl}/login`);
   }
 
   try {
-    const redirectUri = `${origin}/api/calendar/oauth/callback`;
+    const redirectUri = `${baseUrl}/api/calendar/oauth/callback`;
     const { refreshToken } = await exchangeAuthCode({
       provider,
       code,
@@ -77,12 +83,12 @@ export async function GET(request: Request) {
     if (upsertError)
       throw new Error(`Token upsert failed: ${upsertError.message}`);
 
-    return NextResponse.redirect(`${origin}/calendar?connected=${provider}`);
+    return NextResponse.redirect(`${baseUrl}/calendar?connected=${provider}`);
   } catch (e) {
     console.error("[calendar-oauth-callback] connect failed:", e);
     const reason = e instanceof Error ? e.message : "exchange_failed";
     return NextResponse.redirect(
-      `${origin}/calendar?oauth_error=${encodeURIComponent(reason)}`,
+      `${baseUrl}/calendar?oauth_error=${encodeURIComponent(reason)}`,
     );
   }
 }
