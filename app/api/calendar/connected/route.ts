@@ -1,8 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-
-const OAUTH_PROVIDERS = ["google", "outlook"];
+import { OAUTH_PROVIDERS } from "@/lib/types/external-calendar";
 
 export async function GET() {
   const supabase = await createClient();
@@ -33,14 +32,12 @@ export async function GET() {
   // on invalid_grant, and Google auto-revokes after 7 days while the app is in
   // "Testing". A deliberate disconnect deletes the external_calendars rows too,
   // so this only ever flags a genuine "reconnect needed" state, never that.
-  const connected = new Set(providers);
-  const needsReconnect = [
-    ...new Set(
-      (calendarRows ?? [])
-        .map((r: { provider: string }) => r.provider)
-        .filter((p) => OAUTH_PROVIDERS.includes(p) && !connected.has(p)),
-    ),
-  ];
+  const calendarProviders = new Set(
+    (calendarRows ?? []).map((r: { provider: string }) => r.provider),
+  );
+  const needsReconnect = OAUTH_PROVIDERS.filter(
+    (p) => calendarProviders.has(p) && !providers.includes(p),
+  );
 
   return NextResponse.json({ providers, needsReconnect });
 }

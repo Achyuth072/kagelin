@@ -28,6 +28,9 @@ export const CALDAV_PROVIDERS: CalendarProvider[] = [
   "nextcloud",
 ];
 
+/** Providers that use native OAuth (registered users only — needs auth.uid()) */
+export const OAUTH_PROVIDERS: CalendarProvider[] = ["google", "outlook"];
+
 export interface ExternalCalendar {
   id: string;
   user_id: string;

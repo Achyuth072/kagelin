@@ -3,6 +3,7 @@
 import { TriangleAlert, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useConnectedCalendarProviders } from "@/lib/hooks/useConnectedCalendarProviders";
+import { capitalize } from "@/lib/utils";
 
 /**
  * Persistent "reconnect needed" banner (#57).
@@ -22,7 +23,7 @@ export function CalendarReconnectBanner() {
   return (
     <div className="flex flex-col gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5">
       {needsReconnect.map((provider) => {
-        const name = provider.charAt(0).toUpperCase() + provider.slice(1);
+        const name = capitalize(provider);
         return (
           <div
             key={provider}

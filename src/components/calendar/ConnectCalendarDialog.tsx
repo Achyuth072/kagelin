@@ -35,7 +35,7 @@ import {
   CALDAV_PROVIDERS,
   DiscoveredCalendar,
 } from "@/lib/types/external-calendar";
-import { cn } from "@/lib/utils";
+import { cn, capitalize } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   useConnectedCalendarProviders,
@@ -168,8 +168,7 @@ export function ConnectCalendarDialog({
     if (!connected || CALDAV_PROVIDERS.includes(connected as CalendarProvider))
       return;
 
-    const name = connected.charAt(0).toUpperCase() + connected.slice(1);
-    toast.success(`${name} Calendar connected`);
+    toast.success(`${capitalize(connected)} Calendar connected`);
     // Refresh the connected-providers list so the "Connected" section is ready
     queryClient.invalidateQueries({
       queryKey: ["calendar-connected-providers"],
@@ -266,9 +265,7 @@ export function ConnectCalendarDialog({
                     aria-label={`Disconnect ${p}`}
                     onClick={async () => {
                       await disconnect(p);
-                      toast.success(
-                        `${p.charAt(0).toUpperCase() + p.slice(1)} disconnected`,
-                      );
+                      toast.success(`${capitalize(p)} disconnected`);
                     }}
                   >
                     <Trash2 className="w-3.5 h-3.5" strokeWidth={2.25} />
