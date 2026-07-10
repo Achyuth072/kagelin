@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
 import { slideUp } from "@/lib/motion";
+import * as Sentry from "@sentry/nextjs";
 
 export default function ErrorBoundary({
   error,
@@ -18,6 +19,7 @@ export default function ErrorBoundary({
 
   useEffect(() => {
     console.error("Unhandled render error:", error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (
