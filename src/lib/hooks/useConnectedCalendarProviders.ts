@@ -2,11 +2,21 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-async function fetchConnectedProviders(): Promise<string[]> {
+export interface ConnectedCalendarState {
+  /** Providers with a live token row (actually connected). */
+  providers: string[];
+  /** Providers the user opted into whose token was revoked — reconnect needed. */
+  needsReconnect: string[];
+}
+
+async function fetchConnectedProviders(): Promise<ConnectedCalendarState> {
   const res = await fetch("/api/calendar/connected");
-  if (!res.ok) return [];
+  if (!res.ok) return { providers: [], needsReconnect: [] };
   const data = await res.json();
-  return data.providers ?? [];
+  return {
+    providers: data.providers ?? [],
+    needsReconnect: data.needsReconnect ?? [],
+  };
 }
 
 export function useConnectedCalendarProviders() {

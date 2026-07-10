@@ -68,7 +68,8 @@ export function ConnectCalendarDialog({
     [isControlled, onOpenChange],
   );
   const [step, setStep] = useState<"select" | "pick_calendars">("select");
-  const { data: connectedProviders = [] } = useConnectedCalendarProviders();
+  const { data: connectedState } = useConnectedCalendarProviders();
+  const connectedProviders = connectedState?.providers ?? [];
   const disconnect = useDisconnectCalendarProvider();
   const queryClient = useQueryClient();
   const [selectedProvider, setSelectedProvider] =

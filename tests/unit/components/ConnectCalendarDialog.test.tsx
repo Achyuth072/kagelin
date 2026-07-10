@@ -3,7 +3,9 @@ import { describe, it, expect, vi } from "vitest";
 import { ConnectCalendarDialog } from "@/components/calendar/ConnectCalendarDialog";
 
 vi.mock("@/lib/hooks/useConnectedCalendarProviders", () => ({
-  useConnectedCalendarProviders: () => ({ data: [] }),
+  useConnectedCalendarProviders: () => ({
+    data: { providers: [], needsReconnect: [] },
+  }),
   useDisconnectCalendarProvider: () => vi.fn(),
 }));
 

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { startOfWeek } from "date-fns";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { CalendarToolbar } from "@/components/calendar/CalendarToolbar";
+import { CalendarReconnectBanner } from "@/components/calendar/CalendarReconnectBanner";
 import { TimeGrid } from "@/components/calendar/TimeGrid";
 import { YearView } from "@/components/calendar/YearView";
 import { MonthView } from "@/components/calendar/MonthView";
@@ -159,6 +160,7 @@ export default function CalendarPage() {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-124px)] md:h-dvh">
+      <CalendarReconnectBanner />
       <CalendarToolbar
         events={events}
         onCreateEvent={() => {
