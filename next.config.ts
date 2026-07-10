@@ -71,6 +71,9 @@ export default withSentryConfig(config, {
   project: process.env.SENTRY_PROJECT,
   silent: !process.env.CI,
   widenClientFileUpload: true,
+  // Uploads source maps once after the full build instead of once per
+  // compiler pass (client/server/edge) — faster in CI when a token is set.
+  useRunAfterProductionCompileHook: true,
   webpack: {
     treeshake: {
       removeDebugLogging: true,

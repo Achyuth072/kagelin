@@ -1,7 +1,4 @@
 import * as Sentry from "@sentry/nextjs";
+import { sentryOptions } from "./sentry.shared";
 
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  environment: process.env.NEXT_PUBLIC_RELEASE_CHANNEL,
-  enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
-});
+Sentry.init(sentryOptions);
