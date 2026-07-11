@@ -19,6 +19,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
 import { useActiveTask } from "@/lib/hooks/useActiveTask";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { useTimer } from "@/components/TimerProvider";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -61,8 +62,10 @@ export function FocusTaskPicker() {
   const taskSwitchBehavior = useTimerStore(
     (s) => s.settings.taskSwitchBehavior,
   );
-  const pause = useTimerStore((s) => s.pause);
-  const cancel = useTimerStore((s) => s.cancel);
+  // Wrapped actions (not the raw store) so pauseOnSwitch/resetOnSwitch sync to
+  // the DB — otherwise a resync-on-visibility elsewhere reapplies the stale
+  // pre-pause row and the timer appears to auto-start (#70).
+  const { pause, cancel } = useTimer();
   const setActiveTaskId = useTimerStore((s) => s.setActiveTaskId);
 
   // Resolve active task: guest uses local mockStore lookup, authed uses Supabase
