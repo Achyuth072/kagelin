@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { exchangeAuthCode } from "@/lib/calendar-oauth/auth-code-exchange";
 import { encryptRefreshToken } from "@/lib/calendar-oauth/token-crypto";
 import { getAppBaseUrl } from "@/lib/calendar-oauth/app-url";
+import * as Sentry from "@sentry/nextjs";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -86,6 +87,9 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${baseUrl}/calendar?connected=${provider}`);
   } catch (e) {
     console.error("[calendar-oauth-callback] connect failed:", e);
+    // This is caught and redirected, not rethrown — error.tsx/global-error.tsx
+    // never see it, so it must be reported explicitly or it's invisible to Sentry.
+    Sentry.captureException(e, { tags: { route: "calendar-oauth-callback" } });
     const reason = e instanceof Error ? e.message : "exchange_failed";
     return NextResponse.redirect(
       `${baseUrl}/calendar?oauth_error=${encodeURIComponent(reason)}`,
