@@ -3,31 +3,12 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useTimerStore } from "@/lib/store/timerStore";
-import { useTimer } from "@/components/TimerProvider";
+import { useTimerActions } from "@/components/TimerProvider";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
 
-/**
- * Cancel Session Button
- *
- * Discreet text link below the main timer controls that allows users
- * to abandon a session without logging it to focus history.
- *
- * Per D-05: cancel() preserves completedSessions.
- * Per D-06: styled as muted text link, NOT a button variant.
- * Per UI-SPEC CANCEL-01: Not destructive color. Hover underline only.
- *
- * Visibility: Only shown when a session is active (running or paused mid-session).
- *
- * DESIGN TOKENS — INK & MATTE ALIGNMENT:
- * - Typography (text-[11px] font-medium uppercase tracking-widest) mirrors the
- *   MODE_LABELS badge in app/focus/page.tsx so both read as siblings in the
- *   same typographic system.
- * - Color (text-muted-foreground/70 → text-muted-foreground on hover) uses
- *   opacity to reveal the link on hover rather than jumping to text-foreground,
- *   keeping the feel ink & matte (subdued, no accent color, no destructive red).
- */
-
+// Intentionally not destructive-colored (muted text, not a button variant) —
+// typography mirrors the MODE_LABELS badge in app/focus/page.tsx.
 const ACTIVE_CLASSES =
   "text-[11px] font-medium uppercase tracking-widest text-muted-foreground/70 hover:text-muted-foreground hover:underline underline-offset-4 transition-colors duration-150 cursor-pointer";
 
@@ -45,10 +26,7 @@ export function CancelSessionButton() {
         return settings.longBreakDuration * 60;
     }
   });
-  // Wrapped action (not the raw store) so cancelling here syncs to the DB —
-  // otherwise a resync-on-visibility elsewhere reapplies the stale pre-cancel
-  // row and the timer appears to auto-start (#70).
-  const { cancel } = useTimer();
+  const { cancel } = useTimerActions();
   const { trigger } = useHaptic();
 
   const handleClick = useCallback(() => {

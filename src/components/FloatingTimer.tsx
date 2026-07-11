@@ -22,9 +22,8 @@ export const FloatingTimer = memo(function FloatingTimer() {
   const isRunning = useTimerStore((s) => s.state.isRunning);
   const remainingSeconds = useTimerStore((s) => s.state.remainingSeconds);
   const completedSessions = useTimerStore((s) => s.state.completedSessions);
-  // Wrapped actions (not the raw store) so play/pause here syncs to the DB —
-  // otherwise a resync-on-visibility elsewhere reapplies the stale pre-pause
-  // row and the timer appears to auto-start (#70).
+  // useTimer(), not useTimerActions(): needs `start`, which isn't in the
+  // stable actions-only slice.
   const { start, pause } = useTimer();
 
   const pathname = usePathname();

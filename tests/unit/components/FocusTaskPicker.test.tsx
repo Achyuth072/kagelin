@@ -11,21 +11,14 @@ interface MockQueryOptions {
 
 // ===== Hoisted mocks =====
 
-const {
-  mockStart,
-  mockPause,
-  mockCancel,
-  mockToast,
-  mockUseQuery,
-  mockCreateClient,
-} = vi.hoisted(() => ({
-  mockStart: vi.fn(),
-  mockPause: vi.fn(),
-  mockCancel: vi.fn(),
-  mockToast: vi.fn(),
-  mockUseQuery: vi.fn(),
-  mockCreateClient: vi.fn(),
-}));
+const { mockPause, mockCancel, mockToast, mockUseQuery, mockCreateClient } =
+  vi.hoisted(() => ({
+    mockPause: vi.fn(),
+    mockCancel: vi.fn(),
+    mockToast: vi.fn(),
+    mockUseQuery: vi.fn(),
+    mockCreateClient: vi.fn(),
+  }));
 
 // ===== Mock state control =====
 
@@ -54,9 +47,6 @@ interface MockTimerStoreState {
     longBreakDuration: number;
     taskSwitchBehavior: string;
   };
-  start: typeof mockStart;
-  pause: typeof mockPause;
-  cancel: typeof mockCancel;
   updateSettings: () => void;
   setActiveTaskId: () => void;
 }
@@ -77,9 +67,6 @@ vi.mock("@/lib/store/timerStore", () => ({
         longBreakDuration: 15,
         taskSwitchBehavior: mockTaskSwitchBehavior,
       },
-      start: mockStart,
-      pause: mockPause,
-      cancel: mockCancel,
       updateSettings: vi.fn(),
       setActiveTaskId: vi.fn(),
     };
@@ -89,10 +76,12 @@ vi.mock("@/lib/store/timerStore", () => ({
 
 // pause/cancel must come from the synced TimerProvider wrapper, not the raw
 // store (see #70 — a raw-store bypass here never persists to the DB, so a
-// later resync-on-visibility silently resumes the "paused" timer).
+// later resync-on-visibility silently resumes the "paused" timer). Dropping
+// pause/cancel from the raw-store mock above (rather than just adding this
+// one) ensures a regression back to useTimerStore((s) => s.pause) fails the
+// tests instead of silently passing against the same mock fn.
 vi.mock("@/components/TimerProvider", () => ({
-  useTimer: () => ({
-    start: mockStart,
+  useTimerActions: () => ({
     pause: mockPause,
     cancel: mockCancel,
   }),
