@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { useTimer } from "@/components/TimerProvider";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +45,10 @@ export function CancelSessionButton() {
         return settings.longBreakDuration * 60;
     }
   });
-  const cancel = useTimerStore((state) => state.cancel);
+  // Wrapped action (not the raw store) so cancelling here syncs to the DB —
+  // otherwise a resync-on-visibility elsewhere reapplies the stale pre-cancel
+  // row and the timer appears to auto-start (#70).
+  const { cancel } = useTimer();
   const { trigger } = useHaptic();
 
   const handleClick = useCallback(() => {
