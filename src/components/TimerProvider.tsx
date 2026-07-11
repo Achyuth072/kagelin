@@ -18,7 +18,21 @@ interface TimerContextValue {
   updateSettings: (newSettings: Partial<TimerSettings>) => void;
 }
 
+// Wraps the raw timerStore actions with DB sync (#70) — call these, not
+// useTimerStore((s) => s.pause) etc. Excludes `start`, which closes over
+// per-tick state and so can't be made referentially stable.
+interface TimerActionsContextValue {
+  pause: () => void;
+  stop: () => void;
+  cancel: () => void;
+  skip: () => void;
+  updateSettings: (newSettings: Partial<TimerSettings>) => void;
+}
+
 const TimerContext = createContext<TimerContextValue | null>(null);
+const TimerActionsContext = createContext<TimerActionsContextValue | null>(
+  null,
+);
 
 /**
  * TimerProvider now acts as the side-effect manager and provides stable actions.
@@ -29,37 +43,35 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   // This hook handles intervals and side-effects centrally
   const timer = useFocusTimer();
 
-  // We memoize the context value, but 'timer.state' still changes every second.
-  // To truly prevent broadcast re-renders, we would need to remove 'state' from context
-  // or use a more advanced pattern. For now, we provide it but move high-frequency
-  // components to use the store directly (Task 2).
-  const value = useMemo(
+  // `timer.state` changes every second, so `value` below churns on every tick.
+  // Memoizing `actions` separately keeps it stable for useTimerActions()
+  // callers who don't need to re-render on tick.
+  const actions = useMemo(
     () => ({
-      state: timer.state,
-      settings: timer.settings,
-      isLoaded: timer.isLoaded,
-      start: timer.start,
       pause: timer.pause,
       stop: timer.stop,
       cancel: timer.cancel,
       skip: timer.skip,
       updateSettings: timer.updateSettings,
     }),
-    [
-      timer.state,
-      timer.settings,
-      timer.isLoaded,
-      timer.start,
-      timer.pause,
-      timer.stop,
-      timer.cancel,
-      timer.skip,
-      timer.updateSettings,
-    ],
+    [timer.pause, timer.stop, timer.cancel, timer.skip, timer.updateSettings],
+  );
+
+  const value = useMemo(
+    () => ({
+      state: timer.state,
+      settings: timer.settings,
+      isLoaded: timer.isLoaded,
+      start: timer.start,
+      ...actions,
+    }),
+    [timer.state, timer.settings, timer.isLoaded, timer.start, actions],
   );
 
   return (
-    <TimerContext.Provider value={value}>{children}</TimerContext.Provider>
+    <TimerActionsContext.Provider value={actions}>
+      <TimerContext.Provider value={value}>{children}</TimerContext.Provider>
+    </TimerActionsContext.Provider>
   );
 }
 
@@ -67,6 +79,15 @@ export function useTimer() {
   const context = useContext(TimerContext);
   if (!context) {
     throw new Error("useTimer must be used within a TimerProvider");
+  }
+  return context;
+}
+
+/** See TimerActionsContextValue for why this exists instead of useTimer(). */
+export function useTimerActions() {
+  const context = useContext(TimerActionsContext);
+  if (!context) {
+    throw new Error("useTimerActions must be used within a TimerProvider");
   }
   return context;
 }

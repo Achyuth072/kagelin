@@ -19,6 +19,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
 import { useActiveTask } from "@/lib/hooks/useActiveTask";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { useTimerActions } from "@/components/TimerProvider";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
@@ -61,8 +62,7 @@ export function FocusTaskPicker() {
   const taskSwitchBehavior = useTimerStore(
     (s) => s.settings.taskSwitchBehavior,
   );
-  const pause = useTimerStore((s) => s.pause);
-  const cancel = useTimerStore((s) => s.cancel);
+  const { pause, cancel } = useTimerActions();
   const setActiveTaskId = useTimerStore((s) => s.setActiveTaskId);
 
   // Resolve active task: guest uses local mockStore lookup, authed uses Supabase

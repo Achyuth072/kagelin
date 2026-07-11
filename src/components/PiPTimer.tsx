@@ -2,6 +2,7 @@
 
 import React, { memo, useEffect } from "react";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { useTimer } from "@/components/TimerProvider";
 import { Play, Pause, X } from "lucide-react";
 
 function formatTime(seconds: number): string {
@@ -21,8 +22,10 @@ export const PiPTimer = memo(function PiPTimer({ onClose }: PiPTimerProps) {
   const isRunning = useTimerStore((s) => s.state.isRunning);
   const remainingSeconds = useTimerStore((s) => s.state.remainingSeconds);
   const completedSessions = useTimerStore((s) => s.state.completedSessions);
-  const start = useTimerStore((s) => s.start);
-  const pause = useTimerStore((s) => s.pause);
+  // Wrapped actions (not the raw store) so play/pause here syncs to the DB —
+  // otherwise a resync-on-visibility elsewhere reapplies the stale pre-pause
+  // row and the timer appears to auto-start (#70).
+  const { start, pause } = useTimer();
 
   const handlePlayPause = () => {
     if (isRunning) {
