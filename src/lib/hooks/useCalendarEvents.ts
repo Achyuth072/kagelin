@@ -64,7 +64,7 @@ export function useCalendarEvents() {
     },
   });
 
-  // Define the shape of the data returned by Supabase tasks select
+  // Shape of the Supabase tasks select result
   type CalendarTaskData = {
     id: string;
     content: string;

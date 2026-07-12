@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
-export const priorities: {
+const priorities: {
   value: 1 | 2 | 3 | 4;
   label: string;
   color: string;

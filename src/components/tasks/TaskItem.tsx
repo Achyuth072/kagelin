@@ -264,4 +264,3 @@ function TaskItemBase({
 }
 
 export const TaskItem = React.memo(TaskItemBase);
-export default TaskItem;

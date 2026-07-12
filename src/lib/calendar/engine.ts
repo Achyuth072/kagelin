@@ -37,16 +37,11 @@ function clampToDay(event: CalendarEvent, day: Date): CalendarEvent {
 }
 
 /**
- * Group overlapping events together
- * This is critical for calculating column widths
- */
-
-/**
  * Position events for a single day
  * Renders events as thin row strips that strictly fit within their time slot
  * Dynamic compression reduces height if many events overlap
  */
-export function layoutDayEvents(
+function layoutDayEvents(
   events: CalendarEvent[],
   day: Date,
 ): PositionedEvent[] {

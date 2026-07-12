@@ -19,9 +19,22 @@ const TOTAL_SECONDS = 1500;
 
 // ===== Module mocks =====
 
+interface MockTimerStoreState {
+  state: {
+    isRunning: boolean;
+    remainingSeconds: number;
+    mode: string;
+  };
+  settings: {
+    focusDuration: number;
+    shortBreakDuration: number;
+    longBreakDuration: number;
+  };
+}
+
 vi.mock("@/lib/store/timerStore", () => ({
-  useTimerStore: (selector: (state: any) => any) => {
-    const state = {
+  useTimerStore: (selector: (state: MockTimerStoreState) => unknown) => {
+    const state: MockTimerStoreState = {
       state: {
         isRunning: mockIsRunning,
         remainingSeconds: mockRemainingSeconds,
@@ -32,10 +45,18 @@ vi.mock("@/lib/store/timerStore", () => ({
         shortBreakDuration: 5,
         longBreakDuration: 15,
       },
-      cancel: mockCancel,
     };
     return selector(state);
   },
+}));
+
+// cancel must come from the synced TimerProvider wrapper, not the raw store
+// (see #70 — a raw-store bypass here never persists to the DB, so a later
+// resync-on-visibility silently resumes the "cancelled" timer).
+vi.mock("@/components/TimerProvider", () => ({
+  useTimerActions: () => ({
+    cancel: mockCancel,
+  }),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({

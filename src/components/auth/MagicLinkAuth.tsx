@@ -1,28 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Loader2, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Turnstile, type TurnstileHandle } from "@/components/auth/Turnstile";
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export function MagicLinkAuth() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileHandle>(null);
   const { signInWithMagicLink } = useAuth();
+  const handleCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if (!email || !captchaToken) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const { error: signInError } = await signInWithMagicLink(email);
+      const { error: signInError } = await signInWithMagicLink(
+        email,
+        captchaToken,
+      );
       if (signInError) {
         setError(signInError.message || "Failed to send magic link");
       } else {
@@ -32,6 +41,10 @@ export function MagicLinkAuth() {
       setError("An unexpected error occurred");
       console.error(err);
     } finally {
+      // Turnstile tokens are single-use — reset so the next attempt gets a
+      // fresh one, whether this attempt succeeded or failed.
+      setCaptchaToken(null);
+      turnstileRef.current?.reset();
       setLoading(false);
     }
   };
@@ -73,6 +86,15 @@ export function MagicLinkAuth() {
               </div>
             </div>
 
+            {TURNSTILE_SITE_KEY && (
+              <Turnstile
+                siteKey={TURNSTILE_SITE_KEY}
+                onVerify={setCaptchaToken}
+                onExpire={handleCaptchaExpire}
+                handleRef={turnstileRef}
+              />
+            )}
+
             {error && (
               <p className="text-sm text-destructive font-medium">{error}</p>
             )}
@@ -80,7 +102,9 @@ export function MagicLinkAuth() {
             <Button
               type="submit"
               className="w-full h-11 text-base font-medium transition-all"
-              disabled={loading || !email}
+              disabled={
+                loading || !email || (!!TURNSTILE_SITE_KEY && !captchaToken)
+              }
             >
               {loading ? (
                 <>

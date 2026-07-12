@@ -291,7 +291,7 @@ function TaskListBase({
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      // 🚀 Performance: Initialize local DnD state only when drag starts
+      // Initialize local DnD state only when drag starts
       // This prevents expensive state syncing during every re-sort/re-group.
       setLocalActive(processedTasks.active);
       setLocalEvening(processedTasks.evening);
@@ -355,12 +355,10 @@ function TaskListBase({
           const group = localGroups[activeGroupIndex];
           const oldIndex = group.tasks.findIndex((t) => t.id === active.id);
 
-          // FIX: Use dnd-kit's provided sortable index for reliable positioning
-          // The index from dnd-kit is based on DOM state, not React state
-          // This prevents off-by-one errors from rapid drag-over events
+          // dnd-kit's sortable index reflects DOM state; findIndex on React
+          // state can be off-by-one during rapid drag-over events.
           let newIndex = over.data.current?.sortable?.index;
           if (newIndex === undefined) {
-            // Fallback to findIndex if dnd-kit doesn't provide it
             newIndex = group.tasks.findIndex((t) => t.id === over.id);
           }
 
@@ -392,10 +390,8 @@ function TaskListBase({
             const updates = getTaskUpdates(targetGroup.title);
             const updatedTask = { ...task, ...updates };
 
-            // FIX: Use dnd-kit's provided index for cross-group positioning
             let newIndex = over.data.current?.sortable?.index;
             if (newIndex === undefined) {
-              // Fallback to findIndex logic
               const overIndex = targetGroup.tasks.findIndex(
                 (t: Task) => t.id === over.id,
               );
@@ -422,10 +418,8 @@ function TaskListBase({
 
           const oldIndex = list.findIndex((t: Task) => t.id === active.id);
 
-          // FIX: Use dnd-kit's provided index
           let newIndex = over.data.current?.sortable?.index;
           if (newIndex === undefined) {
-            // Fallback to findIndex
             newIndex = list.findIndex((t: Task) => t.id === over.id);
           }
 
@@ -445,15 +439,12 @@ function TaskListBase({
           const activeTask = sourceList.find((t: Task) => t.id === active.id);
           if (!activeTask) return;
 
-          // FIX: Use dnd-kit's provided index when available
           const dndKitIndex = over.data.current?.sortable?.index;
           let newIndex: number;
 
           if (dndKitIndex !== undefined) {
-            // Use dnd-kit's index directly, clamped to valid range
             newIndex = dndKitIndex >= 0 ? dndKitIndex : targetList.length;
           } else {
-            // Fallback to original logic
             const overIndex = targetList.findIndex(
               (t: Task) => t.id === over.id,
             );

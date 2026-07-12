@@ -28,6 +28,9 @@ export const CALDAV_PROVIDERS: CalendarProvider[] = [
   "nextcloud",
 ];
 
+/** Providers that use native OAuth (registered users only — needs auth.uid()) */
+export const OAUTH_PROVIDERS: CalendarProvider[] = ["google", "outlook"];
+
 export interface ExternalCalendar {
   id: string;
   user_id: string;
@@ -65,22 +68,6 @@ export interface ExternalCalendar {
   // Timestamps
   created_at: string;
   updated_at: string;
-}
-
-export interface CreateExternalCalendarInput {
-  provider: CalendarProvider;
-  name: string;
-  color?: string;
-
-  // CalDAV-specific (required for caldav/icloud/fastmail/nextcloud)
-  server_url?: string;
-  username?: string;
-
-  // OAuth-specific (for google/outlook — populated from Supabase Auth)
-  oauth_provider_token_id?: string;
-  remote_calendar_id?: string;
-
-  sync_direction?: SyncDirection;
 }
 
 export interface UpdateExternalCalendarInput {

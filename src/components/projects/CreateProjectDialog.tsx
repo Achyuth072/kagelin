@@ -64,7 +64,6 @@ export function CreateProjectDialog({
   });
   const createProject = useCreateProject();
   const { trigger } = useHaptic();
-  // const scrollRef = useHorizontalScroll();
   const isFinePointer = useMediaQuery("(pointer: fine)");
 
   const onFormSubmit = (data: CreateProjectInput) => {

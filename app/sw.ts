@@ -76,7 +76,7 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: false,
   runtimeCaching: finalCache,
-  // 🛡️ Offline Fallback: Serve the precached /~offline page when navigations fail.
+  // Serve the precached /~offline page when navigations fail.
   // Content is served directly (no redirect) to avoid infinite loops.
   fallbacks: {
     entries: [

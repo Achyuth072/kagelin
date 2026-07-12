@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextResponse } from "next/server";
 import {
   DELETE as unsubscribeDELETE,
   POST as subscribePOST,
@@ -39,11 +40,25 @@ vi.mock("@/lib/push", () => ({
   },
 }));
 
+const mockEnforceRateLimit = vi.fn();
+
+vi.mock("@/lib/rate-limit", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/rate-limit")>(
+      "@/lib/rate-limit",
+    );
+  return {
+    ...actual,
+    enforceRateLimit: (...args: unknown[]) => mockEnforceRateLimit(...args),
+  };
+});
+
 describe("Push Notification API Routes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.VAPID_PRIVATE_KEY = "test-private-key";
     process.env.VAPID_SUBJECT = "mailto:test@example.com";
+    mockEnforceRateLimit.mockResolvedValue(null);
   });
 
   describe("POST /api/push/subscribe", () => {
@@ -185,7 +200,6 @@ describe("Push Notification API Routes", () => {
       const request = new Request("http://localhost/api/push/send", {
         method: "POST",
         body: JSON.stringify({
-          userId: "target-456",
           endpoint: "https://test.com",
           title: "Hello",
           body: "World",
@@ -205,7 +219,7 @@ describe("Push Notification API Routes", () => {
       expect(selectBuilder.eq).toHaveBeenNthCalledWith(
         1,
         "user_id",
-        "target-456",
+        "sender-123",
       );
       expect(selectBuilder.eq).toHaveBeenNthCalledWith(
         2,
@@ -238,7 +252,7 @@ describe("Push Notification API Routes", () => {
 
       const request = new Request("http://localhost/api/push/send", {
         method: "POST",
-        body: JSON.stringify({ userId: "missing-user" }),
+        body: JSON.stringify({}),
       });
 
       const response = await sendPOST(request);
@@ -272,7 +286,6 @@ describe("Push Notification API Routes", () => {
       const request = new Request("http://localhost/api/push/send", {
         method: "POST",
         body: JSON.stringify({
-          userId: "expired-user",
           endpoint: "https://old.com",
         }),
       });
@@ -296,7 +309,7 @@ describe("Push Notification API Routes", () => {
 
       const request = new Request("http://localhost/api/push/send", {
         method: "POST",
-        body: JSON.stringify({ userId: "target-456" }),
+        body: JSON.stringify({}),
       });
 
       try {
@@ -308,6 +321,66 @@ describe("Push Notification API Routes", () => {
       } finally {
         process.env = originalEnv;
       }
+    });
+
+    it("TC-SND-05 (H-4): ignores a body-supplied userId and only ever targets the authenticated caller", async () => {
+      mockAuthGetUser.mockResolvedValue({
+        data: { user: { id: "sender-123" } },
+      });
+
+      const selectBuilder = createThenableBuilder({
+        data: [{ id: "sub-1", subscription: { endpoint: "https://test.com" } }],
+        error: null,
+      });
+      mockFrom.mockReturnValue({
+        select: vi.fn(() => selectBuilder),
+      });
+
+      vi.mocked(webpush.sendNotification).mockResolvedValue({
+        statusCode: 201,
+        headers: {},
+        body: "",
+      });
+
+      const request = new Request("http://localhost/api/push/send", {
+        method: "POST",
+        body: JSON.stringify({
+          userId: "victim-456",
+          endpoint: "https://test.com",
+          title: "Hello",
+          body: "World",
+        }),
+      });
+
+      const response = await sendPOST(request);
+      expect(response.status).toBe(200);
+      expect(selectBuilder.eq).toHaveBeenNthCalledWith(
+        1,
+        "user_id",
+        "sender-123",
+      );
+    });
+
+    it("TC-SND-06 (H-5): returns 429 when the per-user rate limit is exceeded", async () => {
+      mockAuthGetUser.mockResolvedValue({
+        data: { user: { id: "sender-123" } },
+      });
+      mockEnforceRateLimit.mockResolvedValue(
+        NextResponse.json({ error: "Too many requests" }, { status: 429 }),
+      );
+
+      const request = new Request("http://localhost/api/push/send", {
+        method: "POST",
+        body: JSON.stringify({ endpoint: "https://test.com" }),
+      });
+
+      const response = await sendPOST(request);
+      expect(response.status).toBe(429);
+      expect(mockEnforceRateLimit).toHaveBeenCalledWith(
+        "push-send",
+        "sender-123",
+      );
+      expect(mockFrom).not.toHaveBeenCalled();
     });
   });
 });

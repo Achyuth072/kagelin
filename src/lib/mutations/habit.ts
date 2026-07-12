@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 
-export interface CreateHabitInput {
+interface CreateHabitInput {
   name: string;
   description?: string;
   color?: string;
@@ -16,7 +16,7 @@ export interface CreateHabitInput {
   unit?: string;
 }
 
-export interface UpdateHabitInput {
+interface UpdateHabitInput {
   id: string;
   name?: string;
   description?: string;
@@ -30,7 +30,7 @@ export interface UpdateHabitInput {
   unit?: string;
 }
 
-export interface MarkHabitCompleteInput {
+interface MarkHabitCompleteInput {
   habitId: string;
   date: string;
   value?: number;

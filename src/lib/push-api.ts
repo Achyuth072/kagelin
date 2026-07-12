@@ -36,14 +36,13 @@ export async function removePushSubscription(endpoint: string) {
 }
 
 export interface SendPushParams {
-  userId?: string;
   endpoint?: string;
   title: string;
   body: string;
   data?: Record<string, unknown>;
 }
 
-export interface SendPushResult {
+interface SendPushResult {
   success: boolean;
   sentCount: number;
   failedCount: number;

@@ -1,7 +1,7 @@
 "use client";
 
 import { format, isSameDay } from "date-fns";
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useSwipe } from "@/lib/hooks/useSwipe";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
@@ -230,5 +230,3 @@ export function TimeGrid({
     </div>
   );
 }
-
-export default memo(TimeGrid);

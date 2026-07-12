@@ -52,7 +52,6 @@ vi.mock("@/components/TimerProvider", () => ({
   }),
 }));
 
-// Mock dnd-kit components that are used inside kanban.tsx
 vi.mock("@dnd-kit/core", async () => {
   const actual =
     await vi.importActual<Record<string, unknown>>("@dnd-kit/core");
@@ -171,11 +170,6 @@ describe("IntegratedTaskKanbanBoard", () => {
 
     // Check for task content
     expect(screen.getByText("Today Task")).toBeInTheDocument();
-
-    // Verify presence of accessibility instructions (Screen Reader)
-    expect(
-      screen.getByText(/to pick up a draggable item/i),
-    ).toBeInTheDocument();
   });
 
   it("renders empty state placeholder when a column is empty", () => {

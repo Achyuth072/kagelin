@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export interface FocusSession {
+interface FocusSession {
   id: string;
   taskId: string | null;
   duration: number; // in seconds

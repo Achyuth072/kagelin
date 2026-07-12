@@ -6,6 +6,31 @@
     "sections": {}
   },
   {
+    "version": "1.25.0",
+    "date": "2026-07-12",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Cloudflare Turnstile bot protection on the magic-link sign-in form",
+        "Persistent reconnect banner when a Google Calendar connection is revoked",
+        "Root and global error boundaries so unexpected errors show a recovery screen instead of a blank page"
+      ],
+      "Improved": [
+        "Rate limiting added to the WebDAV and push notification routes to prevent abuse",
+        "WebDAV proxy hardened against SSRF with a DNS-pinned guard",
+        "Focus timer play/pause/cancel controls now sync reliably to the server instead of only updating locally",
+        "Next.js upgraded to patch known security advisories"
+      ],
+      "Fixed": [
+        "Focus timer no longer auto-starts again after being paused",
+        "WebDAV credentials no longer persisted to browser storage, and gated to registered users",
+        "Google Calendar connect/callback redirect mismatch that could break the OAuth flow",
+        "Auth callback no longer accepts unsafe redirect values",
+        "Unfinished CalDAV providers hidden from the connect flow"
+      ]
+    }
+  },
+  {
     "version": "1.24.0",
     "date": "2026-07-06",
     "channel": "stable",
@@ -674,16 +699,6 @@
     "sections": {
       "Fixed": [
         "Resolve task DnD grouping and meta tag sync issues"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.6",
-    "date": "2026-05-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Harden modal accessibility and refine view-specific task visuals"
       ]
     }
   }

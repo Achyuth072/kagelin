@@ -32,7 +32,7 @@ import {
 import { parseICS } from "@/lib/utils/ics-parser";
 import { generateICS } from "@/lib/utils/ics-generator";
 
-export class CalDAVAdapter implements SyncAdapter {
+class CalDAVAdapter implements SyncAdapter {
   readonly provider: CalendarProvider = "caldav";
 
   private client: DAVClient | null = null;

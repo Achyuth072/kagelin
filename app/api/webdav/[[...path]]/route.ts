@@ -1,4 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { SsrfBlockedError, ssrfSafeFetch } from "@/lib/webdav/ssrf-guard";
+import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * WebDAV Proxy Route
@@ -14,6 +16,13 @@ import { type NextRequest, NextResponse } from "next/server";
  *  with headers:
  *    X-WebDAV-URL: <full base url of their webdav server>
  *    Authorization: Basic <base64 credentials>
+ *
+ * Deliberately unauthenticated (guest backup depends on it), so it is its
+ * own last line of defense against SSRF: every upstream fetch goes through
+ * `ssrfSafeFetch` (see `ssrf-guard.ts`), which resolves the target once,
+ * checks it against private/link-local/metadata ranges, pins the connection
+ * to that exact IP, and never auto-follows redirects — closing the
+ * DNS-rebinding TOCTOU a plain allow/deny-by-hostname check has.
  */
 
 const ALLOWED_METHODS = [
@@ -78,6 +87,29 @@ async function proxyWebDAV(
     return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
   }
 
+  // Same-origin guard: this route is unauthenticated by design, so it must
+  // not act as an open proxy for other sites' scripts. Browsers set these
+  // headers on fetches whenever possible; if either is present it must say
+  // the request came from our own origin.
+  const origin = request.headers.get("origin");
+  if (origin && origin !== request.nextUrl.origin) {
+    return NextResponse.json(
+      { error: "Cross-origin requests are not allowed" },
+      { status: 403 },
+    );
+  }
+  const secFetchSite = request.headers.get("sec-fetch-site");
+  if (secFetchSite && secFetchSite !== "same-origin") {
+    return NextResponse.json(
+      { error: "Cross-site requests are not allowed" },
+      { status: 403 },
+    );
+  }
+
+  // H-5 / N-3: unauthenticated route, so rate limit by IP.
+  const limited = await enforceRateLimit("webdav", getClientIp(request));
+  if (limited) return limited;
+
   // The client passes the WebDAV server base URL via a custom header
   const webdavBaseUrl = request.headers.get("X-WebDAV-URL");
   if (!webdavBaseUrl) {
@@ -112,12 +144,10 @@ async function proxyWebDAV(
       : undefined;
 
   try {
-    const response = await fetch(targetUrl, {
+    const response = await ssrfSafeFetch(targetUrl, {
       method,
       headers: forwardHeaders,
-      body: body ?? null,
-      // @ts-expect-error — Node 18+ fetch supports duplex
-      duplex: "half",
+      body,
     });
 
     const responseBody = await response.arrayBuffer();
@@ -136,6 +166,9 @@ async function proxyWebDAV(
       headers: responseHeaders,
     });
   } catch (err) {
+    if (err instanceof SsrfBlockedError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     const message = err instanceof Error ? err.message : "Unknown proxy error";
     return NextResponse.json({ error: message }, { status: 502 });
   }

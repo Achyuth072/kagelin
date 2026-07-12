@@ -1,4 +1,4 @@
-export interface ProjectColor {
+interface ProjectColor {
   name: string;
   hex: string;
 }

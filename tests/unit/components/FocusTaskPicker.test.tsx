@@ -2,24 +2,23 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import React from "react";
 import { FocusTaskPicker } from "@/components/FocusTaskPicker";
+import type { Task } from "@/lib/types/task";
+
+interface MockQueryOptions {
+  queryKey: readonly unknown[];
+  enabled?: boolean;
+}
 
 // ===== Hoisted mocks =====
 
-const {
-  mockStart,
-  mockPause,
-  mockCancel,
-  mockToast,
-  mockUseQuery,
-  mockCreateClient,
-} = vi.hoisted(() => ({
-  mockStart: vi.fn(),
-  mockPause: vi.fn(),
-  mockCancel: vi.fn(),
-  mockToast: vi.fn(),
-  mockUseQuery: vi.fn(),
-  mockCreateClient: vi.fn(),
-}));
+const { mockPause, mockCancel, mockToast, mockUseQuery, mockCreateClient } =
+  vi.hoisted(() => ({
+    mockPause: vi.fn(),
+    mockCancel: vi.fn(),
+    mockToast: vi.fn(),
+    mockUseQuery: vi.fn(),
+    mockCreateClient: vi.fn(),
+  }));
 
 // ===== Mock state control =====
 
@@ -29,14 +28,32 @@ let mockMode: string = "focus";
 let mockTaskSwitchBehavior: string = "keepRunning";
 let mockIsDesktop = false;
 let mockIsGuestMode = false;
-let mockTasks: any[] = [];
-let mockStoreTasks: any[] = [];
+let mockTasks: Task[] = [];
+let mockStoreTasks: Task[] = [];
 
 // ===== Module mocks =====
 
+interface MockTimerStoreState {
+  state: {
+    activeTaskId: string | null;
+    isRunning: boolean;
+    mode: string;
+    remainingSeconds: number;
+    completedSessions: number;
+  };
+  settings: {
+    focusDuration: number;
+    shortBreakDuration: number;
+    longBreakDuration: number;
+    taskSwitchBehavior: string;
+  };
+  updateSettings: () => void;
+  setActiveTaskId: () => void;
+}
+
 vi.mock("@/lib/store/timerStore", () => ({
-  useTimerStore: (selector: (state: any) => any) => {
-    const state = {
+  useTimerStore: (selector: (state: MockTimerStoreState) => unknown) => {
+    const state: MockTimerStoreState = {
       state: {
         activeTaskId: mockActiveTaskId,
         isRunning: mockIsRunning,
@@ -50,14 +67,24 @@ vi.mock("@/lib/store/timerStore", () => ({
         longBreakDuration: 15,
         taskSwitchBehavior: mockTaskSwitchBehavior,
       },
-      start: mockStart,
-      pause: mockPause,
-      cancel: mockCancel,
       updateSettings: vi.fn(),
       setActiveTaskId: vi.fn(),
     };
     return selector(state);
   },
+}));
+
+// pause/cancel must come from the synced TimerProvider wrapper, not the raw
+// store (see #70 — a raw-store bypass here never persists to the DB, so a
+// later resync-on-visibility silently resumes the "paused" timer). Dropping
+// pause/cancel from the raw-store mock above (rather than just adding this
+// one) ensures a regression back to useTimerStore((s) => s.pause) fails the
+// tests instead of silently passing against the same mock fn.
+vi.mock("@/components/TimerProvider", () => ({
+  useTimerActions: () => ({
+    pause: mockPause,
+    cancel: mockCancel,
+  }),
 }));
 
 vi.mock("@/components/AuthProvider", () => ({
@@ -97,7 +124,7 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("@tanstack/react-query", () => ({
-  useQuery: (options: any) => mockUseQuery(options),
+  useQuery: (options: MockQueryOptions) => mockUseQuery(options),
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -105,40 +132,61 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 vi.mock("lucide-react", () => ({
-  Target: (props: any) => <svg data-testid="target-icon" {...props} />,
-  Check: (props: any) => <svg data-testid="check-icon" {...props} />,
-  X: (props: any) => <svg data-testid="x-icon" {...props} />,
+  Target: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg data-testid="target-icon" {...props} />
+  ),
+  Check: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg data-testid="check-icon" {...props} />
+  ),
+  X: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg data-testid="x-icon" {...props} />
+  ),
 }));
 
 // Mock shadcn Dialog
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: ({ children, open }: any) =>
+  Dialog: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
     open ? <div data-testid="dialog">{children}</div> : null,
-  DialogContent: ({ children }: any) => (
+  DialogContent: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="dialog-content">{children}</div>
   ),
-  DialogHeader: ({ children }: any) => <div>{children}</div>,
-  DialogTitle: ({ children }: any) => <div>{children}</div>,
-  DialogTrigger: ({ children }: any) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DialogTitle: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DialogTrigger: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
 }));
 
 // Mock shadcn Drawer
 vi.mock("@/components/ui/drawer", () => ({
-  Drawer: ({ children, open }: any) =>
+  Drawer: ({ children, open }: { children: React.ReactNode; open: boolean }) =>
     open ? <div data-testid="drawer">{children}</div> : null,
-  DrawerContent: ({ children }: any) => (
+  DrawerContent: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="drawer-content">{children}</div>
   ),
-  DrawerHeader: ({ children }: any) => <div>{children}</div>,
-  DrawerTitle: ({ children }: any) => <div>{children}</div>,
+  DrawerHeader: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DrawerTitle: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
 }));
 
 vi.mock("@/components/ui/skeleton", () => ({
-  Skeleton: (props: any) => <div data-testid="skeleton" {...props} />,
+  Skeleton: (props: React.HTMLAttributes<HTMLDivElement>) => (
+    <div data-testid="skeleton" {...props} />
+  ),
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: ({ children, ...props }: any) => (
+  Button: ({
+    children,
+    ...props
+  }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
   ),
   buttonVariants: () => "",
@@ -148,7 +196,7 @@ vi.mock("@/components/ui/button", () => ({
 
 const TODAY = new Date().toISOString().split("T")[0];
 
-function createMockTask(overrides: any = {}) {
+function createMockTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "task-1",
     user_id: "user-1",
@@ -164,6 +212,7 @@ function createMockTask(overrides: any = {}) {
     completed_at: null,
     day_order: 1,
     recurrence: null,
+    recurring_series_id: null,
     google_event_id: null,
     google_etag: null,
     created_at: new Date().toISOString(),
@@ -186,7 +235,7 @@ describe("FocusTaskPicker", () => {
     mockUseQuery.mockReset();
 
     // Default useQuery mock — returns idle/no-data state
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       // Active task query
       if (options.queryKey?.[0] === "task") {
         if (options.enabled === false) return { data: null, isLoading: false };
@@ -214,7 +263,7 @@ describe("FocusTaskPicker", () => {
   // Test 1: Chip renders task name when activeTaskId is set
   it("renders task name on chip when activeTaskId is set", () => {
     mockActiveTaskId = "task-1";
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (
         options.queryKey?.[0] === "task" &&
         options.queryKey?.[1] === "task-1"
@@ -280,7 +329,7 @@ describe("FocusTaskPicker", () => {
 
     // When the picker opens, tasks query returns data
     let tasksQueryEnabled = false;
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (options.queryKey?.[0] === "focus-tasks") {
         tasksQueryEnabled = options.enabled ?? false;
         if (tasksQueryEnabled) {
@@ -314,7 +363,7 @@ describe("FocusTaskPicker", () => {
     mockIsRunning = true;
 
     // Mock the active task query
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (options.queryKey?.[0] === "task") {
         return {
           data: createMockTask({ id: "task-1", content: "Current task" }),
@@ -352,7 +401,7 @@ describe("FocusTaskPicker", () => {
     mockTaskSwitchBehavior = "pauseOnSwitch";
     mockIsRunning = true;
 
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (options.queryKey?.[0] === "task") {
         return {
           data: createMockTask({ id: "task-1", content: "Current task" }),
@@ -387,7 +436,7 @@ describe("FocusTaskPicker", () => {
     mockTaskSwitchBehavior = "resetOnSwitch";
     mockIsRunning = true;
 
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (options.queryKey?.[0] === "task") {
         return {
           data: createMockTask({ id: "task-1", content: "Current task" }),
@@ -425,7 +474,7 @@ describe("FocusTaskPicker", () => {
       is_completed: true,
     });
 
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (options.queryKey?.[0] === "focus-tasks") {
         return {
           data: [completedTask],
@@ -456,7 +505,7 @@ describe("FocusTaskPicker", () => {
   it("shows empty state message when no tasks", () => {
     mockActiveTaskId = null;
 
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (options.queryKey?.[0] === "focus-tasks") {
         return { data: [], isLoading: false };
       }
@@ -485,8 +534,8 @@ describe("FocusTaskPicker", () => {
     mockIsGuestMode = false;
     mockActiveTaskId = null;
 
-    const callArgs: any[] = [];
-    mockUseQuery.mockImplementation((options: any) => {
+    const callArgs: MockQueryOptions[] = [];
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       callArgs.push(options);
       if (options.queryKey?.[0] === "task")
         return { data: null, isLoading: false };
@@ -502,7 +551,7 @@ describe("FocusTaskPicker", () => {
       (opts) => opts.queryKey?.[0] === "focus-tasks",
     );
     expect(focusTaskCall).toBeDefined();
-    const [, today, guestFlag] = focusTaskCall.queryKey;
+    const [, today, guestFlag] = focusTaskCall!.queryKey;
     // Verify date string format: YYYY-MM-DD
     expect(today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(guestFlag).toBe(false);
@@ -531,7 +580,7 @@ describe("FocusTaskPicker", () => {
     ];
 
     // Mock useQuery to return the two relevant tasks when guest mode is detected
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (
         options.queryKey?.[0] === "focus-tasks" &&
         options.queryKey?.[2] === true
@@ -558,7 +607,7 @@ describe("FocusTaskPicker", () => {
     mockIsGuestMode = true;
     mockActiveTaskId = null;
 
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (
         options.queryKey?.[0] === "focus-tasks" &&
         options.queryKey?.[2] === true
@@ -580,8 +629,8 @@ describe("FocusTaskPicker", () => {
     mockIsGuestMode = true;
     mockActiveTaskId = null;
 
-    const callArgs: any[] = [];
-    mockUseQuery.mockImplementation((options: any) => {
+    const callArgs: MockQueryOptions[] = [];
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       callArgs.push(options);
       if (options.queryKey?.[0] === "task")
         return { data: null, isLoading: false };
@@ -611,7 +660,7 @@ describe("FocusTaskPicker", () => {
     mockStoreTasks = [createMockTask({ id: "g-1", content: "Write report" })];
 
     // Task query is disabled for guests, mockStore fallback handles it
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (options.queryKey?.[0] === "task") {
         return { data: null, isLoading: false };
       }
@@ -630,7 +679,7 @@ describe("FocusTaskPicker", () => {
     mockIsGuestMode = false;
     mockActiveTaskId = "task-123";
 
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (
         options.queryKey?.[0] === "task" &&
         options.queryKey?.[1] === "task-123"
@@ -655,7 +704,7 @@ describe("FocusTaskPicker", () => {
     mockIsGuestMode = false;
     mockActiveTaskId = null;
 
-    mockUseQuery.mockImplementation((options: any) => {
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       if (options.queryKey?.[0] === "task")
         return { data: null, isLoading: false };
       if (options.queryKey?.[0] === "focus-tasks")
@@ -682,8 +731,8 @@ describe("FocusTaskPicker", () => {
       createMockTask({ id: "g-1", content: "Guest chip task" }),
     ];
 
-    const callArgs: any[] = [];
-    mockUseQuery.mockImplementation((options: any) => {
+    const callArgs: MockQueryOptions[] = [];
+    mockUseQuery.mockImplementation((options: MockQueryOptions) => {
       callArgs.push(options);
       return { data: null, isLoading: false };
     });
@@ -698,6 +747,6 @@ describe("FocusTaskPicker", () => {
       (opts) => opts.queryKey?.[0] === "task" && opts.queryKey?.[2] === true,
     );
     expect(guestTaskQuery).toBeDefined();
-    expect(guestTaskQuery.enabled).toBe(false);
+    expect(guestTaskQuery!.enabled).toBe(false);
   });
 });

@@ -7,6 +7,7 @@ import { Play, Pause, X, Maximize2 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { useTimer } from "@/components/TimerProvider";
 
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
@@ -21,8 +22,9 @@ export const FloatingTimer = memo(function FloatingTimer() {
   const isRunning = useTimerStore((s) => s.state.isRunning);
   const remainingSeconds = useTimerStore((s) => s.state.remainingSeconds);
   const completedSessions = useTimerStore((s) => s.state.completedSessions);
-  const start = useTimerStore((s) => s.start);
-  const pause = useTimerStore((s) => s.pause);
+  // useTimer(), not useTimerActions(): needs `start`, which isn't in the
+  // stable actions-only slice.
+  const { start, pause } = useTimer();
 
   const pathname = usePathname();
   const router = useRouter();
