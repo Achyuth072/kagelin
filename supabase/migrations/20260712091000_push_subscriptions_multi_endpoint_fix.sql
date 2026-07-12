@@ -37,7 +37,9 @@ END $$;
 -- 3. Replace the unique index with a concrete UNIQUE CONSTRAINT (required for PostgREST UPSERT)
 DROP INDEX IF EXISTS public.push_subscriptions_user_endpoint_key;
 
-ALTER TABLE public.push_subscriptions 
+ALTER TABLE public.push_subscriptions
+  DROP CONSTRAINT IF EXISTS push_subscriptions_user_endpoint_key;
+ALTER TABLE public.push_subscriptions
   ADD CONSTRAINT push_subscriptions_user_endpoint_key UNIQUE (user_id, endpoint);
 
 -- 4. Force PostgREST schema cache to reload so the new endpoint column is visible to the API
