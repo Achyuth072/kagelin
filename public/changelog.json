@@ -3,6 +3,12 @@
     "version": "Unreleased",
     "date": null,
     "channel": "preview",
+    "sections": {}
+  },
+  {
+    "version": "1.25.0",
+    "date": "2026-07-12",
+    "channel": "stable",
     "sections": {
       "Added": [
         "Cloudflare Turnstile bot protection on the magic-link sign-in form",
@@ -693,16 +699,6 @@
     "sections": {
       "Fixed": [
         "Resolve task DnD grouping and meta tag sync issues"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.6",
-    "date": "2026-05-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Harden modal accessibility and refine view-specific task visuals"
       ]
     }
   }
