@@ -133,12 +133,15 @@ CREATE INDEX IF NOT EXISTS notification_queue_user_id_idx ON public.notification
 -- 8. TRIGGERS: Auto-update updated_at
 -- =============================================================================
 CREATE OR REPLACE FUNCTION update_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 CREATE TRIGGER profiles_updated_at
   BEFORE UPDATE ON profiles
@@ -176,7 +179,12 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+
+-- handle_new_user runs only as an AFTER INSERT trigger on auth.users; trigger
+-- firing does not check EXECUTE, so drop the implicit PUBLIC grant that would
+-- otherwise expose it on /rest/v1/rpc/*.
+REVOKE EXECUTE ON FUNCTION handle_new_user() FROM PUBLIC;
 
 -- Grant necessary permissions to the function
 GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
@@ -195,23 +203,24 @@ CREATE TRIGGER on_auth_user_created
 
 -- A. Morning Briefing Helper
 CREATE OR REPLACE FUNCTION get_users_for_morning_briefing()
-RETURNS TABLE (id UUID, timezone TEXT) 
+RETURNS TABLE (id UUID, timezone TEXT)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 BEGIN
   RETURN QUERY
   SELECT p.id, p.timezone
-  FROM profiles p
-  WHERE 
+  FROM public.profiles p
+  WHERE
     -- Is it 8 AM in their timezone?
-    (now() AT TIME ZONE p.timezone)::time >= '08:00:00' 
+    (now() AT TIME ZONE p.timezone)::time >= '08:00:00'
     AND (now() AT TIME ZONE p.timezone)::time < '09:00:00'
     -- Haven't received a briefing in the last 20 hours
     AND NOT EXISTS (
-      SELECT 1 FROM notification_queue n 
-      WHERE n.user_id = p.id 
-      AND n.type = 'briefing' 
+      SELECT 1 FROM public.notification_queue n
+      WHERE n.user_id = p.id
+      AND n.type = 'briefing'
       AND n.created_at > now() - interval '20 hours'
     );
 END;
@@ -219,31 +228,43 @@ $$;
 
 -- B. Evening Plan Helper
 CREATE OR REPLACE FUNCTION get_users_for_evening_plan()
-RETURNS TABLE (id UUID, timezone TEXT) 
+RETURNS TABLE (id UUID, timezone TEXT)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 BEGIN
   RETURN QUERY
   SELECT p.id, p.timezone
-  FROM profiles p
-  WHERE 
+  FROM public.profiles p
+  WHERE
     -- Is it 6 PM in their timezone? (18:00)
-    (now() AT TIME ZONE p.timezone)::time >= '18:00:00' 
+    (now() AT TIME ZONE p.timezone)::time >= '18:00:00'
     AND (now() AT TIME ZONE p.timezone)::time < '19:00:00'
     -- Haven't received an evening plan in the last 20 hours
     AND NOT EXISTS (
-      SELECT 1 FROM notification_queue n 
-      WHERE n.user_id = p.id 
-      AND n.type = 'evening' 
+      SELECT 1 FROM public.notification_queue n
+      WHERE n.user_id = p.id
+      AND n.type = 'evening'
       AND n.created_at > now() - interval '20 hours'
     );
 END;
 $$;
 
+-- Briefing helpers are called only by the daily-briefing edge function as
+-- service_role; drop the implicit PUBLIC grant so anon/authenticated can't
+-- reach them over /rest/v1/rpc/*.
+REVOKE EXECUTE ON FUNCTION get_users_for_morning_briefing() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION get_users_for_evening_plan()     FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION get_users_for_morning_briefing() TO service_role;
+GRANT EXECUTE ON FUNCTION get_users_for_evening_plan()     TO service_role;
+
 -- C. Task Notification Sync Trigger Function
 CREATE OR REPLACE FUNCTION handle_task_notification_sync()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
 DECLARE
   payload_title TEXT;
   payload_body TEXT;
@@ -300,7 +321,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- D. Sync Trigger on Tasks
 DROP TRIGGER IF EXISTS sync_task_notifications ON public.tasks;
@@ -486,6 +507,7 @@ CREATE TRIGGER habits_updated_at
 CREATE OR REPLACE FUNCTION public.reorder_habits(updates jsonb)
 RETURNS void
 LANGUAGE plpgsql
+SET search_path = ''
 AS $$
 BEGIN
   UPDATE public.habits AS h
