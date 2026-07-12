@@ -47,6 +47,7 @@ CREATE INDEX IF NOT EXISTS calendar_events_start_time_idx ON public.calendar_eve
 CREATE INDEX IF NOT EXISTS calendar_events_remote_id_idx ON public.calendar_events (remote_id) WHERE remote_id IS NOT NULL;
 
 -- Updated At Trigger
+DROP TRIGGER IF EXISTS calendar_events_updated_at ON public.calendar_events;
 CREATE TRIGGER calendar_events_updated_at
   BEFORE UPDATE ON public.calendar_events
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
@@ -54,11 +55,15 @@ CREATE TRIGGER calendar_events_updated_at
 -- ROW LEVEL SECURITY
 ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can view own calendar_events" ON public.calendar_events;
 CREATE POLICY "Users can view own calendar_events" ON public.calendar_events
   FOR SELECT USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can insert own calendar_events" ON public.calendar_events;
 CREATE POLICY "Users can insert own calendar_events" ON public.calendar_events
   FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own calendar_events" ON public.calendar_events;
 CREATE POLICY "Users can update own calendar_events" ON public.calendar_events
   FOR UPDATE USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can delete own calendar_events" ON public.calendar_events;
 CREATE POLICY "Users can delete own calendar_events" ON public.calendar_events
   FOR DELETE USING (auth.uid() = user_id);
