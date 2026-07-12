@@ -35,8 +35,6 @@ BEGIN
 END $$;
 
 -- 3. Replace the unique index with a concrete UNIQUE CONSTRAINT (required for PostgREST UPSERT)
-DROP INDEX IF EXISTS public.push_subscriptions_user_endpoint_key;
-
 ALTER TABLE public.push_subscriptions
   DROP CONSTRAINT IF EXISTS push_subscriptions_user_endpoint_key;
 ALTER TABLE public.push_subscriptions
