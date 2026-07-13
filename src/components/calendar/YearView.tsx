@@ -59,13 +59,13 @@ const YearMonth = memo(
             months: "flex flex-col",
             month: "space-y-3",
             nav: "hidden",
-            caption:
+            month_caption:
               "flex justify-center pt-2 relative items-center text-sm font-bold tracking-tight text-foreground mb-1",
-            head_row: "flex gap-1 mb-1",
-            head_cell:
+            weekdays: "flex gap-1 mb-1",
+            weekday:
               "text-muted-foreground/40 w-8 font-bold text-[0.65rem] uppercase tracking-tighter",
-            row: "flex w-full gap-1",
-            cell: "relative p-0 text-center text-xs focus-within:relative focus-within:z-20",
+            week: "flex w-full gap-1",
+            day: "relative p-0 text-center text-xs focus-within:relative focus-within:z-20",
             outside: "invisible",
             disabled: "text-muted-foreground opacity-20",
           }}

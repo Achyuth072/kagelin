@@ -140,18 +140,18 @@ export function DateTimeWizard({
                   : { before: new Date(new Date().setHours(0, 0, 0, 0)) }
               }
               captionLayout="label"
-              fromYear={new Date().getFullYear() - 1}
-              toYear={new Date().getFullYear() + 5}
-              initialFocus
+              startMonth={new Date(new Date().getFullYear() - 1, 0)}
+              endMonth={new Date(new Date().getFullYear() + 5, 11)}
+              autoFocus
               className="rounded-md border-0 w-full flex justify-center p-3"
               classNames={{
                 month: "space-y-4 w-full",
-                table: "w-full border-collapse space-y-1",
-                head_row: "flex w-full justify-between",
-                row: "flex w-full justify-between mt-2",
+                month_grid: "w-full border-collapse space-y-1",
+                weekdays: "flex w-full justify-between",
+                week: "flex w-full justify-between mt-2",
 
                 day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-md hover:bg-accent hover:text-accent-foreground",
-                head_cell:
+                weekday:
                   "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
               }}
             />
