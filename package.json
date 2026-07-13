@@ -133,7 +133,7 @@
     "supabase": "^2.109.1",
     "tailwindcss": "^4.1.18",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5",
+    "typescript": "^7",
     "vitest": "^4.0.16"
   }
 }
