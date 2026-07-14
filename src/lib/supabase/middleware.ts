@@ -39,7 +39,10 @@ export async function updateSession(request: NextRequest) {
   const isPublicRoute =
     request.nextUrl.pathname === "/login" ||
     request.nextUrl.pathname === "/access-denied" ||
-    request.nextUrl.pathname.startsWith("/auth/");
+    request.nextUrl.pathname.startsWith("/auth/") ||
+    // External uptime monitors send no session/guest cookie — without this,
+    // every check gets redirected to /login before the health route runs.
+    request.nextUrl.pathname === "/api/health";
 
   // Handle auth errors (e.g., "Refresh Token Not Found")
   // Only redirect to login if NOT already on a public route
