@@ -74,7 +74,7 @@
     "date-fns": "^4.4.0",
     "fflate": "^0.8.3",
     "framer-motion": "^12.42.2",
-    "ical-generator": "^10.1.0",
+    "ical-generator": "^11.0.0",
     "ical.js": "^2.2.1",
     "idb-keyval": "^6.3.0",
     "ipaddr.js": "^2.4.0",
