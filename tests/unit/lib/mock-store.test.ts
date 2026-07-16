@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mockStore } from "@/lib/mock/mock-store";
+import { mockStore, STORAGE_KEY } from "@/lib/mock/mock-store";
 
 describe("MockStore (Guest Mode Data)", () => {
   beforeEach(() => {
@@ -41,9 +41,7 @@ describe("MockStore (Guest Mode Data)", () => {
     expect(mockStore.getTasks()[0].content).toBe("Test Task");
 
     // Verify localStorage
-    const stored = JSON.parse(
-      localStorage.getItem("kanso_guest_data_v10") || "{}",
-    );
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     expect(stored.tasks).toHaveLength(1);
     expect(stored.tasks[0].content).toBe("Test Task");
   });
@@ -75,9 +73,7 @@ describe("MockStore (Guest Mode Data)", () => {
     expect(mockStore.getTask(task.id)?.content).toBe("Updated Content");
 
     // Verify localStorage
-    const stored = JSON.parse(
-      localStorage.getItem("kanso_guest_data_v10") || "{}",
-    );
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     expect(stored.tasks[0].content).toBe("Updated Content");
   });
 

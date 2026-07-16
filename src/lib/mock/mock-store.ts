@@ -3,6 +3,7 @@
  * Provides in-memory CRUD operations with localStorage persistence
  */
 
+import { isWeekend } from "date-fns";
 import type { Task, Project } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
@@ -10,7 +11,7 @@ import type { FocusLog } from "@/lib/types/focus";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
 import type { BackupData } from "@/lib/backup/types";
 
-const STORAGE_KEY = "kanso_guest_data_v10";
+export const STORAGE_KEY = "kanso_guest_data_v11";
 
 interface GuestData {
   tasks: Task[];
@@ -54,7 +55,7 @@ class MockStore {
       {
         id: pWork,
         user_id: "guest",
-        name: "Work 💼",
+        name: "Work",
         color: "#4B6CB7", // Kagelin Blue
         view_style: "list",
         is_inbox: false,
@@ -65,7 +66,7 @@ class MockStore {
       {
         id: pPersonal,
         user_id: "guest",
-        name: "Personal 🏠",
+        name: "Personal",
         color: "#839B82", // Muted Sage
         view_style: "list",
         is_inbox: false,
@@ -76,7 +77,7 @@ class MockStore {
       {
         id: pSide,
         user_id: "guest",
-        name: "Side Hustle 🚀",
+        name: "Side Project",
         color: "#8B6B80", // Plum
         view_style: "board",
         is_inbox: false,
@@ -94,16 +95,90 @@ class MockStore {
 
     // Generators
     const generateId = () => Math.random().toString(36).substr(2, 9);
+    const pick = <T>(options: readonly T[]) =>
+      options[Math.floor(Math.random() * options.length)];
+    const dayAt = (dayOffset: number) =>
+      new Date(now.getTime() + dayOffset * oneDay);
+    const randomPriority = (min: 1 | 2 | 3, max: 3 | 4) =>
+      (min + Math.floor(Math.random() * (max - min + 1))) as 1 | 2 | 3 | 4;
+
+    const deepWork = [
+      "Deep work: checkout refactor",
+      "Deep work: search indexing",
+      "Deep work: API rate limiting",
+      "Ship feature flag rollout",
+      "Trace latency regression",
+      "Fix flaky integration test",
+      "Write RFC for caching layer",
+      "Break down the sync epic",
+    ] as const;
+
+    const collabWork = [
+      "Daily standup",
+      "Review pull requests",
+      "Pair on onboarding bug",
+      "Sprint planning",
+      "Backlog grooming",
+      "1:1 with manager",
+      "Update the design doc",
+      "Triage incoming bugs",
+      "Team retro",
+    ] as const;
+
+    const eveningLife = [
+      "Side project: an hour on the sync engine",
+      "Read through a library's source",
+      "Sketch practice",
+      "Figure drawing study",
+      "Ink a page",
+      "Co-op session with friends",
+      "Ranked matches",
+      "Finish the campaign chapter",
+      "Call parents",
+      "Cook dinner together",
+      "Board game night",
+      "Read a chapter",
+    ] as const;
+
+    const sideProject = [
+      "Draft the next blog post",
+      "Refactor the plugin API",
+      "Fix the issue a user filed",
+      "Redraw the app icon",
+      "Write release notes",
+      "Cut a release",
+    ] as const;
+
+    const weekendLife = [
+      "Long walk with family",
+      "Brunch with friends",
+      "Sketch at the park",
+      "Side project: ship a small feature",
+      "Game night",
+      "Farmers market run",
+      "Tidy the flat",
+      "Family video call",
+    ] as const;
 
     const createTask = (
       content: string,
       dayOffset: number,
       projectId: string,
-      priority: 1 | 2 | 3 | 4 = 4,
-      isEvening = false,
-      parentId: string | null = null,
+      options: {
+        priority?: 1 | 2 | 3 | 4;
+        isEvening?: boolean;
+        parentId?: string | null;
+        // Only consulted for past days; future tasks are always pending.
+        completionRate?: number;
+      } = {},
     ) => {
-      const date = new Date(now.getTime() + dayOffset * oneDay);
+      const {
+        priority = 4,
+        isEvening = false,
+        parentId = null,
+        completionRate = 0,
+      } = options;
+      const date = dayAt(dayOffset);
 
       // Randomize start time
       const randomHour = isEvening
@@ -114,9 +189,7 @@ class MockStore {
 
       const dueDate = date.toISOString();
       const isPast = dayOffset < 0;
-      // 85% chance of completion if in past for "Deep Work", 60% for others
-      const isCompleted =
-        isPast && Math.random() > (content.includes("Deep Work") ? 0.15 : 0.4);
+      const isCompleted = isPast && Math.random() < completionRate;
 
       const taskId = `task-${generateId()}`;
 
@@ -163,8 +236,7 @@ class MockStore {
 
     // Generate Past 365 Days (History for Stats)
     for (let i = -365; i < 0; i++) {
-      const date = new Date(now.getTime() + i * oneDay);
-      const dayOfWeek = date.getDay();
+      const date = dayAt(i);
       const monthOffset = Math.abs(i) / 30;
 
       // Higher probability of activity overall to fill heatmap
@@ -175,29 +247,44 @@ class MockStore {
       // Special case: Very High density in the last 30 days
       if (Math.abs(i) <= 30) probability = 0.92;
 
-      // Weekends still have less activity but not empty
-      if (dayOfWeek === 0 || dayOfWeek === 6) {
-        probability *= 0.6; // More weekend work recorded
-      }
-
       if (Math.random() > probability) continue;
 
-      // On active days, generate 1-3 tasks, but more in recent month
-      const maxTasks = Math.abs(i) <= 30 ? 6 : 3;
-      const taskCount = Math.floor(Math.random() * maxTasks) + 1;
-      for (let t = 0; t < taskCount; t++) {
-        const isEvening = Math.random() > 0.7;
-        createTask(
-          t === 0
-            ? "Deep Work Session"
-            : Math.random() > 0.5
-              ? "Review & Refactor"
-              : "Learning & Research",
-          i,
-          isEvening ? pPersonal : pWork,
-          (Math.floor(Math.random() * 3) + 1) as 1 | 2 | 3 | 4,
-          isEvening,
-        );
+      if (isWeekend(date)) {
+        const count = Math.random() > 0.4 ? 2 : 1;
+        for (let t = 0; t < count; t++) {
+          createTask(
+            pick(weekendLife),
+            i,
+            Math.random() > 0.75 ? pSide : pPersonal,
+            {
+              priority: randomPriority(3, 4),
+              isEvening: Math.random() > 0.5,
+              completionRate: 0.85,
+            },
+          );
+        }
+        continue;
+      }
+
+      createTask(pick(deepWork), i, pWork, {
+        priority: 2,
+        completionRate: 0.85,
+      });
+
+      const collabCount = Math.abs(i) <= 30 ? 3 : 2;
+      for (let t = 0; t < collabCount; t++) {
+        if (Math.random() > 0.7) continue;
+        createTask(pick(collabWork), i, pWork, {
+          priority: randomPriority(1, 3),
+          completionRate: 0.75,
+        });
+      }
+
+      if (Math.random() < 0.8) {
+        createTask(pick(eveningLife), i, pPersonal, {
+          isEvening: true,
+          completionRate: 0.8,
+        });
       }
     }
 
@@ -205,45 +292,72 @@ class MockStore {
     for (let i = 0; i <= 30; i++) {
       // Today specific
       if (i === 0) {
-        const parentId = createTask("Big Project Launch 🚀", 0, pWork, 1);
-        createTask("Feature Cleanup", 0, pWork, 2, false, parentId);
-        const subtaskId = createTask(
-          "UI Polishing",
+        const parentId = createTask(
+          "Ship search filters to staging",
           0,
           pWork,
-          3,
-          false,
-          parentId,
+          {
+            priority: 1,
+          },
         );
-        createTask("Typography refinement", 0, pWork, 3, false, subtaskId);
-        createTask("Color palette audit", 0, pWork, 4, false, subtaskId);
-        createTask("Mobile Testing", 0, pWork, 2, false, parentId);
+        createTask("Wire up the query params", 0, pWork, {
+          priority: 2,
+          parentId,
+        });
+        const subtaskId = createTask("Polish the empty state", 0, pWork, {
+          priority: 3,
+          parentId,
+        });
+        createTask("Copy review", 0, pWork, {
+          priority: 3,
+          parentId: subtaskId,
+        });
+        createTask("Loading skeleton", 0, pWork, {
+          priority: 4,
+          parentId: subtaskId,
+        });
+        createTask("Cross-browser check", 0, pWork, { priority: 2, parentId });
 
-        createTask("Review PRs", 0, pWork, 1);
-        createTask("Team Sync", 0, pWork, 2);
-        createTask("Call Mom", 0, pPersonal, 3, true);
-        createTask("Workout @ Gym", 0, pPersonal, 2);
-        createTask("Grocery Shopping", 0, pPersonal, 4);
-        createTask("Water Plants", 0, pPersonal, 4, true);
+        createTask("Review pull requests", 0, pWork, { priority: 1 });
+        createTask("Daily standup", 0, pWork, { priority: 2 });
+        createTask("Call parents", 0, pPersonal, {
+          priority: 3,
+          isEvening: true,
+        });
+        createTask("Gym session", 0, pPersonal, { priority: 2 });
+        createTask("Grocery run", 0, pPersonal, { priority: 4 });
+        createTask("Sketch practice", 0, pPersonal, {
+          priority: 4,
+          isEvening: true,
+        });
         continue;
       }
 
-      // Random high density days in the next 30 days
-      const isHighDensity = Math.random() > 0.8;
-      const count = isHighDensity ? 7 : Math.random() > 0.4 ? 2 : 0;
+      if (isWeekend(dayAt(i))) {
+        const count = Math.random() > 0.5 ? 2 : 1;
+        for (let t = 0; t < count; t++) {
+          createTask(pick(weekendLife), i, pPersonal, {
+            isEvening: Math.random() > 0.5,
+          });
+        }
+      } else {
+        const isHighDensity = Math.random() > 0.8;
+        const count = isHighDensity ? 4 : Math.random() > 0.4 ? 2 : 0;
 
-      for (let t = 0; t < count; t++) {
-        createTask(
-          t % 2 === 0 ? "Project Task" : "Personal Goal",
-          i,
-          t % 2 === 0 ? pWork : pPersonal,
-          (Math.floor(Math.random() * 3) + 1) as 1 | 2 | 3 | 4,
-          Math.random() > 0.7,
-        );
+        for (let t = 0; t < count; t++) {
+          createTask(t === 0 ? pick(deepWork) : pick(collabWork), i, pWork, {
+            priority: randomPriority(1, 3),
+          });
+        }
+
+        if (Math.random() < 0.7) {
+          createTask(pick(eveningLife), i, pPersonal, { isEvening: true });
+        }
       }
 
-      if (i % 3 === 0) createTask("Write Blog Post", i, pSide, 2);
-      if (i % 7 === 0) createTask("Weekly Planning", i, pPersonal, 1);
+      if (i % 3 === 0) createTask(pick(sideProject), i, pSide, { priority: 2 });
+      if (i % 7 === 0)
+        createTask("Weekly planning", i, pPersonal, { priority: 1 });
     }
 
     // Recurring task Series: ~16 weeks of history + one active Occurrence, all
@@ -296,12 +410,15 @@ class MockStore {
     const hWater = "habit-water";
     const hExercise = "habit-exercise";
     const hRead = "habit-read";
+    const hSketch = "habit-sketch";
+    const hSideCode = "habit-side-code";
+    const hLogOff = "habit-log-off";
 
     habits.push(
       {
         id: hWater,
         user_id: "guest",
-        name: "Drink Water 💧",
+        name: "Drink Water",
         description: "8 glasses a day",
         color: "#5B7C99", // Earthy Blue
         icon: "Droplet",
@@ -320,7 +437,7 @@ class MockStore {
       {
         id: hExercise,
         user_id: "guest",
-        name: "Morning Exercise 🏃‍♂️",
+        name: "Morning Exercise",
         description: "30 mins activity",
         color: "#A3B18A", // Muted Mint
         icon: "Dumbbell",
@@ -339,7 +456,7 @@ class MockStore {
       {
         id: hRead,
         user_id: "guest",
-        name: "Read 📚",
+        name: "Read",
         description: "20 pages",
         color: "#9F8189", // Lavender
         icon: "Book",
@@ -355,44 +472,100 @@ class MockStore {
         target_value: null,
         unit: null,
       },
+      {
+        id: hSketch,
+        user_id: "guest",
+        name: "Sketch",
+        description: "Fill a page",
+        color: "#8B6B80", // Plum
+        icon: "Pencil",
+        created_at: nowIso,
+        updated_at: nowIso,
+        archived_at: null,
+        start_date: startOfHistory,
+        sort_order: 3,
+        habit_type: "boolean",
+        frequency_count: 3,
+        frequency_period: "week",
+        target_type: "at_least",
+        target_value: null,
+        unit: null,
+      },
+      {
+        id: hSideCode,
+        user_id: "guest",
+        name: "Code for Fun",
+        description: "Commit something small",
+        color: "#6B8E8A", // Muted Teal
+        icon: "Code",
+        created_at: nowIso,
+        updated_at: nowIso,
+        archived_at: null,
+        start_date: startOfHistory,
+        sort_order: 4,
+        habit_type: "boolean",
+        frequency_count: 3,
+        frequency_period: "week",
+        target_type: "at_least",
+        target_value: null,
+        unit: null,
+      },
+      {
+        id: hLogOff,
+        user_id: "guest",
+        name: "Log Off by 18:00",
+        description: "Close the laptop, start the evening",
+        color: "#A48C7A", // Warm Taupe
+        icon: "Moon",
+        created_at: nowIso,
+        updated_at: nowIso,
+        archived_at: null,
+        start_date: startOfHistory,
+        sort_order: 5,
+        habit_type: "boolean",
+        frequency_count: 4,
+        frequency_period: "week",
+        target_type: "at_least",
+        target_value: null,
+        unit: null,
+      },
     );
+
+    // Marked often enough to clear each habit's frequency_count (ADR-0004
+    // streaks read those fields), but patchy day to day.
+    const habitPatterns: {
+      habitId: string;
+      weekday: number;
+      weekend: number;
+      value?: () => number;
+    }[] = [
+      {
+        habitId: hWater,
+        weekday: 0.9,
+        weekend: 0.8,
+        value: () => 4 + Math.floor(Math.random() * 7), // 4-10 glasses
+      },
+      { habitId: hExercise, weekday: 0.85, weekend: 0.45 },
+      { habitId: hRead, weekday: 0.6, weekend: 0.7 },
+      { habitId: hSketch, weekday: 0.4, weekend: 0.6 },
+      { habitId: hSideCode, weekday: 0.4, weekend: 0.65 },
+      { habitId: hLogOff, weekday: 0.85, weekend: 0 },
+    ];
 
     // Generate Habit Entries for the last 365 days
     for (let i = -365; i <= 0; i++) {
-      const date = new Date(now.getTime() + i * oneDay);
+      const date = dayAt(i);
       const dateStr = date.toISOString().split("T")[0];
 
-      // Drink Water (measurable): 95% completion with random value 4-10
-      if (Math.random() < 0.95) {
-        entries.push({
-          id: `entry-${generateId()}`,
-          habit_id: hWater,
-          date: dateStr,
-          value: 4 + Math.floor(Math.random() * 7), // 4-10
-          created_at: nowIso,
-        });
-      }
+      for (const pattern of habitPatterns) {
+        const probability = isWeekend(date) ? pattern.weekend : pattern.weekday;
+        if (Math.random() >= probability) continue;
 
-      // Exercise: 75% completion, higher on weekdays
-      const dayOfWeek = date.getDay();
-      const exerciseProb = dayOfWeek === 0 || dayOfWeek === 6 ? 0.5 : 0.85;
-      if (Math.random() < exerciseProb) {
         entries.push({
           id: `entry-${generateId()}`,
-          habit_id: hExercise,
+          habit_id: pattern.habitId,
           date: dateStr,
-          value: 1,
-          created_at: nowIso,
-        });
-      }
-
-      // Read: 65% completion
-      if (Math.random() < 0.65) {
-        entries.push({
-          id: `entry-${generateId()}`,
-          habit_id: hRead,
-          date: dateStr,
-          value: 1,
+          value: pattern.value ? pattern.value() : 1,
           created_at: nowIso,
         });
       }
@@ -400,25 +573,44 @@ class MockStore {
 
     // Generate Mock Events (Past and Future)
     const mockLocations = ["Coffee Shop", "Office", "Zoom", "Gym", "Home"];
+    const workdayEvents = [
+      "Design review",
+      "Sprint planning",
+      "1:1 with manager",
+      "Team retro",
+      "Architecture sync",
+      "Product demo",
+      "Incident postmortem",
+    ] as const;
+    const weekendEvents = [
+      "Coffee with a friend",
+      "Family lunch",
+      "Life drawing class",
+      "Raid night",
+      "Football with the team",
+    ] as const;
+
     for (let i = -7; i <= 14; i++) {
-      const date = new Date(now.getTime() + i * oneDay);
+      const date = dayAt(i);
+      const weekend = isWeekend(date);
+
       // Add random event
       if (Math.random() > 0.4) {
-        const randomHour = 9 + Math.floor(Math.random() * 8); // 9am to 4pm
+        const randomHour = weekend
+          ? 11 + Math.floor(Math.random() * 8) // 11am to 6pm
+          : 9 + Math.floor(Math.random() * 8); // 9am to 4pm
         const startTime = new Date(date);
         startTime.setHours(randomHour, 0, 0, 0);
         const endTime = new Date(startTime.getTime() + 3600000); // 1 hour
 
         const id = `event-${generateId()}`;
+        const title = weekend ? pick(weekendEvents) : pick(workdayEvents);
         events.push({
           id,
           user_id: "guest",
-          title: i === 0 ? "Team Catch Up" : `Meeting ${id}`,
-          description: "Mock event generated for guest mode",
-          location:
-            Math.random() > 0.5
-              ? mockLocations[Math.floor(Math.random() * mockLocations.length)]
-              : null,
+          title: i === 0 && !weekend ? "Team catch up" : title,
+          description: null,
+          location: Math.random() > 0.5 ? pick(mockLocations) : null,
           start_time: startTime.toISOString(),
           end_time: endTime.toISOString(),
           all_day: false,
