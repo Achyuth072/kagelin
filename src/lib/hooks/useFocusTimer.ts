@@ -190,9 +190,7 @@ export function useFocusTimer() {
 
         if (document.hidden || (!isOnFocusPage && !isPipActive)) {
           showNotification(
-            prevState.mode === "focus"
-              ? "Focus Complete 🎯"
-              : "Break Complete ☕",
+            prevState.mode === "focus" ? "Focus Complete" : "Break Complete",
             {
               body:
                 prevState.mode === "focus"

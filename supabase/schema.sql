@@ -286,7 +286,7 @@ BEGIN
     -- i. Handle Due Date
     IF (user_settings->'notifications'->>'due_date_alerts')::boolean IS NOT FALSE 
        AND NEW.due_date IS NOT NULL AND NEW.due_date > now() THEN
-      payload_title := 'Task Due Soon 🔔';
+      payload_title := 'Task Due Soon';
       payload_body := 'Your task "' || NEW.content || '" is due now.';
       
       INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
@@ -302,7 +302,7 @@ BEGIN
     -- ii. Handle Do Date
     IF (user_settings->'notifications'->>'do_date_alerts')::boolean IS NOT FALSE 
        AND NEW.do_date IS NOT NULL AND NEW.do_date > now() THEN
-      payload_title := 'Time to focus 🚀';
+      payload_title := 'Time to focus';
       payload_body := 'Scheduled: ' || NEW.content;
 
       INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)

@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     // Determine notification content based on mode and task
-    const title = mode === "focus" ? "Focus Complete 🎯" : "Break Complete ☕";
+    const title = mode === "focus" ? "Focus Complete" : "Break Complete";
     const body = taskContent
       ? `Finished your "${taskContent}" session. Great work!`
       : mode === "focus"
