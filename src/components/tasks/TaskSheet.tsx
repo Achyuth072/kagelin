@@ -111,10 +111,7 @@ export default function TaskSheet({
   );
 
   const priority = (useWatch({ control, name: "priority" }) ?? 4) as
-    | 1
-    | 2
-    | 3
-    | 4;
+    1 | 2 | 3 | 4;
   const recurrence = useWatch({
     control,
     name: "recurrence",

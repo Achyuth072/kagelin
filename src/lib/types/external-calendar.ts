@@ -13,12 +13,7 @@ export type SyncDirection = "bidirectional" | "pull" | "push";
  * - Native OAuth: 'google', 'outlook' (registered users only — needs auth.uid())
  */
 export type CalendarProvider =
-  | "caldav"
-  | "google"
-  | "outlook"
-  | "icloud"
-  | "fastmail"
-  | "nextcloud";
+  "caldav" | "google" | "outlook" | "icloud" | "fastmail" | "nextcloud";
 
 /** Providers that use CalDAV protocol */
 export const CALDAV_PROVIDERS: CalendarProvider[] = [

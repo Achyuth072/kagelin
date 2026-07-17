@@ -4,6 +4,7 @@
  */
 
 import { isWeekend } from "date-fns";
+import * as Sentry from "@sentry/nextjs";
 import type { Task, Project } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
@@ -655,11 +656,19 @@ class MockStore {
   private saveToStorage(): void {
     if (typeof window === "undefined") return;
 
+    this.data.lastUpdated = new Date().toISOString();
     try {
-      this.data.lastUpdated = new Date().toISOString();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
     } catch (error) {
-      console.warn("Failed to save guest data to localStorage:", error);
+      // Never swallow: a failed write means the guest's data is gone on
+      // reload, and a silent success toast is worse than a visible error.
+      // Reported here rather than at the call sites: this is the only place
+      // guest data reaches storage, so every write is covered once.
+      Sentry.captureException(error);
+      throw new Error(
+        "Failed to save guest data — browser storage may be full.",
+        { cause: error },
+      );
     }
   }
 
@@ -1041,8 +1050,14 @@ class MockStore {
   }
 
   addHabitEntry(entry: HabitEntry): void {
+    this.addHabitEntries([entry]);
+  }
+
+  /** Bulk insert with a single write — imports add thousands of entries. */
+  addHabitEntries(entries: HabitEntry[]): void {
+    if (entries.length === 0) return;
     if (!this.data.habit_entries) this.data.habit_entries = [];
-    this.data.habit_entries.push(entry);
+    this.data.habit_entries = this.data.habit_entries.concat(entries);
     this.saveToStorage();
   }
 
