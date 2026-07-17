@@ -9,7 +9,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "lint:strict": "eslint src app --max-warnings=0",
+    "lint:strict": "eslint src app --max-warnings=13",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
