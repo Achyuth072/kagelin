@@ -4,6 +4,7 @@
  */
 
 import { isWeekend } from "date-fns";
+import * as Sentry from "@sentry/nextjs";
 import type { Task, Project } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
@@ -661,6 +662,9 @@ class MockStore {
     } catch (error) {
       // Never swallow: a failed write means the guest's data is gone on
       // reload, and a silent success toast is worse than a visible error.
+      // Reported here rather than at the call sites: this is the only place
+      // guest data reaches storage, so every write is covered once.
+      Sentry.captureException(error);
       throw new Error(
         "Failed to save guest data — browser storage may be full.",
         { cause: error },
