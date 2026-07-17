@@ -133,8 +133,7 @@ export class GoogleCalendarAdapter implements SyncAdapter {
         updatedAt: item.updated ? new Date(item.updated as string) : undefined,
         kansoId: (
           item.extendedProperties as
-            | Record<string, Record<string, string>>
-            | undefined
+            Record<string, Record<string, string>> | undefined
         )?.private?.kansoId,
       })),
       syncToken,
@@ -193,8 +192,7 @@ export class GoogleCalendarAdapter implements SyncAdapter {
               : undefined,
             kansoId: (
               item.extendedProperties as
-                | Record<string, Record<string, string>>
-                | undefined
+                Record<string, Record<string, string>> | undefined
             )?.private?.kansoId,
           });
         }
@@ -324,8 +322,7 @@ export class GoogleCalendarAdapter implements SyncAdapter {
     // Recurring instances carry recurringEventId — persist the series id so the UI
     // can gate edit/delete (recurring events are read-only this phase).
     const recurringSeriesId = googleEvent.recurringEventId as
-      | string
-      | undefined;
+      string | undefined;
 
     return {
       title: (googleEvent.summary as string) || "Untitled Event",

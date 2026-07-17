@@ -74,10 +74,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   const watchedDoDate = useWatch({ control, name: "do_date" });
   const doDate = watchedDoDate ? new Date(watchedDoDate as string) : undefined;
   const priority = (useWatch({ control, name: "priority" }) ?? 4) as
-    | 1
-    | 2
-    | 3
-    | 4;
+    1 | 2 | 3 | 4;
   const recurrence = useWatch({
     control,
     name: "recurrence",

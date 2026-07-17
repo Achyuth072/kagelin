@@ -19,10 +19,4 @@ export type DayColumn = {
 };
 
 export type CalendarView =
-  | "year"
-  | "month"
-  | "week"
-  | "day"
-  | "4day"
-  | "3day"
-  | "schedule";
+  "year" | "month" | "week" | "day" | "4day" | "3day" | "schedule";

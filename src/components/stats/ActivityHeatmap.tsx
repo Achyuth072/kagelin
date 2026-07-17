@@ -65,11 +65,7 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
           combined === 0
             ? 0
             : (Math.min(Math.ceil((combined / maxVal) * 4), 4) as
-                | 0
-                | 1
-                | 2
-                | 3
-                | 4),
+                0 | 1 | 2 | 3 | 4),
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [data, maxValue?.combined]);

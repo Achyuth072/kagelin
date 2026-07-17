@@ -26,11 +26,7 @@ function calculateUpdatedTaskProperty(
       Low: 4,
     };
     const newPriority = priorityMap[overContainerId] as
-      | 1
-      | 2
-      | 3
-      | 4
-      | undefined;
+      1 | 2 | 3 | 4 | undefined;
     if (newPriority !== undefined) {
       return { priority: newPriority };
     }
