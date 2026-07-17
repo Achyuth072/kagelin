@@ -1,8 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { parseUhabitsFile } from "@/lib/import/uhabits";
-import { classifyUhabitsError } from "@/lib/import/uhabitsErrors";
+import {
+  classifyUhabitsError,
+  SAVE_ERROR_MESSAGE,
+} from "@/lib/import/uhabitsErrors";
+import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { toast } from "sonner";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useCreateHabit } from "@/lib/hooks/useHabitMutations";
@@ -25,8 +30,21 @@ export function useUhabitsImport() {
     trigger("toggle");
     const loadingToastId = toast.loading(`Parsing ${file.name}...`);
 
+    const reportImportFailure = (err: unknown, message: string) => {
+      Sentry.captureException(err);
+      toast.error(message, { id: loadingToastId });
+      trigger("thud");
+      return false;
+    };
+
     try {
-      const { habits, entries } = await parseUhabitsFile(file);
+      let habits: Habit[];
+      let entries: HabitEntry[];
+      try {
+        ({ habits, entries } = await parseUhabitsFile(file));
+      } catch (err) {
+        return reportImportFailure(err, classifyUhabitsError(err));
+      }
 
       if (habits.length === 0) {
         toast.error("No compatible habits found in the database", {
@@ -116,9 +134,7 @@ export function useUhabitsImport() {
           );
 
         if (isGuest) {
-          for (const entry of remapped) {
-            mockStore.addHabitEntry(entry);
-          }
+          mockStore.addHabitEntries(remapped);
         } else {
           const supabase = createClient();
           for (let i = 0; i < remapped.length; i += ENTRY_CHUNK_SIZE) {
@@ -142,11 +158,9 @@ export function useUhabitsImport() {
       trigger("success");
       return true;
     } catch (err) {
-      console.error("Import failed:", err);
-      const message = classifyUhabitsError(err);
-      toast.error(message, { id: loadingToastId });
-      trigger("thud");
-      return false;
+      // Parsing already succeeded here, so this is a save failure on our
+      // side — never blame the user's file for it.
+      return reportImportFailure(err, SAVE_ERROR_MESSAGE);
     } finally {
       setIsImporting(false);
     }
