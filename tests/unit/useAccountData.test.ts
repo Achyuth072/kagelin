@@ -11,6 +11,7 @@ const mockQuery = {
   in: vi.fn().mockResolvedValue({ error: null }),
   is: vi.fn().mockReturnThis(),
   order: vi.fn().mockReturnThis(),
+  range: vi.fn().mockResolvedValue({ data: [], error: null }),
 };
 mockQuery.select.mockReturnValue(mockQuery);
 mockQuery.delete.mockReturnValue(mockQuery);

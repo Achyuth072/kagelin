@@ -107,8 +107,7 @@ describe("useHabits", () => {
   describe("TC-N-01b: pagination past the 1000-row PostgREST cap", () => {
     it("fetches every page of entries, not just the first 1000", async () => {
       const mockHabitsData = [{ id: "habit-1", archived_at: null }];
-      // 1000 on the first page (== cap) forces a second request; 500 on the
-      // second page (< cap) ends the loop. Total must be 1500, not 1000.
+      // page1 == cap forces a second request; page2 < cap ends the loop
       const page1 = Array.from({ length: 1000 }, (_, i) => ({
         id: `e${i}`,
         habit_id: "habit-1",

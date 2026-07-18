@@ -8,6 +8,7 @@ import {
   downloadBackup,
 } from "@/lib/backup/export-import";
 import type { BackupData, BackupMetadata } from "@/lib/backup/types";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { toast } from "sonner";
 import pkg from "../../../package.json";
 
@@ -25,39 +26,26 @@ export function useAccountData() {
     }
 
     const promise = async () => {
-      // 1. Fetch all data in parallel
-      const [
-        tasksRes,
-        projectsRes,
-        habitsRes,
-        habitEntriesRes,
-        focusLogsRes,
-        eventsRes,
-      ] = await Promise.all([
-        supabase.from("tasks").select("*"),
-        supabase.from("projects").select("*"),
-        supabase.from("habits").select("*"),
-        supabase.from("habit_entries").select("*"),
-        supabase.from("focus_logs").select("*"),
-        supabase.from("calendar_events").select("*"),
-      ]);
+      // Order by id (unique PK on every table) so .range() pages deterministically
+      const fetchTable = <T>(table: string) =>
+        fetchAllRows<T>((from, to) =>
+          supabase
+            .from(table)
+            .select("*")
+            .order("id", { ascending: true })
+            .range(from, to),
+        );
 
-      // Check for errors
-      const errors = [
-        tasksRes.error,
-        projectsRes.error,
-        habitsRes.error,
-        habitEntriesRes.error,
-        focusLogsRes.error,
-        eventsRes.error,
-      ].filter(Boolean);
+      const [tasks, projects, habits, habit_entries, focus_logs, events] =
+        await Promise.all([
+          fetchTable<BackupData["tasks"][number]>("tasks"),
+          fetchTable<BackupData["projects"][number]>("projects"),
+          fetchTable<BackupData["habits"][number]>("habits"),
+          fetchTable<BackupData["habit_entries"][number]>("habit_entries"),
+          fetchTable<BackupData["focus_logs"][number]>("focus_logs"),
+          fetchTable<BackupData["events"][number]>("calendar_events"),
+        ]);
 
-      if (errors.length > 0) {
-        console.error("Export fetch errors:", errors);
-        throw new Error("Failed to fetch some user data from the cloud");
-      }
-
-      // 2. Build BackupData
       const metadata: BackupMetadata = {
         version: 1,
         appVersion: pkg.version,
@@ -66,15 +54,14 @@ export function useAccountData() {
 
       const data: BackupData = {
         metadata,
-        tasks: tasksRes.data || [],
-        projects: projectsRes.data || [],
-        habits: habitsRes.data || [],
-        habit_entries: habitEntriesRes.data || [],
-        focus_logs: focusLogsRes.data || [],
-        events: eventsRes.data || [],
+        tasks,
+        projects,
+        habits,
+        habit_entries,
+        focus_logs,
+        events,
       };
 
-      // 3. Generate ZIP and Download
       const blob = await createBackupZip(data);
       downloadBackup(blob);
 

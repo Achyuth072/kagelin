@@ -4,35 +4,25 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import type { Habit, HabitEntry, HabitWithEntries } from "@/lib/types/habit";
 
 export type { HabitEntry, HabitWithEntries };
 
-// PostgREST caps a response at 1000 rows, so a user with long history silently
-// loses their newest entries (breaks heatmaps, streaks, totals). Page through
-// with .range() to fetch them all.
-const ENTRIES_PAGE_SIZE = 1000;
-
-async function fetchAllHabitEntries(
+function fetchAllHabitEntries(
   supabase: ReturnType<typeof createClient>,
   habitIds: string[],
 ): Promise<HabitEntry[]> {
-  if (habitIds.length === 0) return [];
-  const all: HabitEntry[] = [];
-  for (let from = 0; ; from += ENTRIES_PAGE_SIZE) {
-    const { data, error } = await supabase
+  if (habitIds.length === 0) return Promise.resolve([]);
+  return fetchAllRows<HabitEntry>((from, to) =>
+    supabase
       .from("habit_entries")
       .select("*")
       .in("habit_id", habitIds)
       .order("date", { ascending: true })
       .order("id", { ascending: true })
-      .range(from, from + ENTRIES_PAGE_SIZE - 1);
-    if (error) throw new Error(error.message);
-    if (!data || data.length === 0) break;
-    all.push(...(data as HabitEntry[]));
-    if (data.length < ENTRIES_PAGE_SIZE) break;
-  }
-  return all;
+      .range(from, to),
+  );
 }
 
 interface UseHabitsOptions {

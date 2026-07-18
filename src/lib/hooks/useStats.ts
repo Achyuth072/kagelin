@@ -9,6 +9,7 @@ import {
 } from "date-fns";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { PERIOD_DAY_COUNT, type StatsPeriod } from "@/lib/types/stats";
 
 export interface DailyStats {
@@ -355,18 +356,12 @@ export function useStats(period: StatsPeriod = "30d") {
         let logsQuery = supabase
           .from("focus_logs")
           .select("start_time, duration_seconds");
-        let habitsQuery = supabase.from("habit_entries").select("date");
-
         if (lowerBound) {
           logsQuery = logsQuery.gte("start_time", lowerBound.toISOString());
-          habitsQuery = habitsQuery.gte(
-            "date",
-            format(lowerBound, "yyyy-MM-dd"),
-          );
         }
 
         // Parallel fetch for better performance
-        const [logsRes, tasksRes, habitsRes] = await Promise.all([
+        const [logsRes, tasksRes, habits] = await Promise.all([
           logsQuery,
           supabase.auth.getSession().then(({ data: { session } }) => {
             const userId = session?.user?.id;
@@ -378,16 +373,27 @@ export function useStats(period: StatsPeriod = "30d") {
               )
               .eq("user_id", userId);
           }),
-          habitsQuery,
+          fetchAllRows<{ date: string }>((from, to) => {
+            // date alone isn't unique across habits (schema only guarantees
+            // UNIQUE(habit_id, date)) — order by id too so .range() pages deterministically
+            let q = supabase
+              .from("habit_entries")
+              .select("date")
+              .order("date", { ascending: true })
+              .order("id", { ascending: true });
+            if (lowerBound) {
+              q = q.gte("date", format(lowerBound, "yyyy-MM-dd"));
+            }
+            return q.range(from, to);
+          }),
         ]);
 
         if (logsRes.error) throw logsRes.error;
         if (tasksRes.error) throw tasksRes.error;
-        if (habitsRes.error) throw habitsRes.error;
 
         rawLogs = logsRes.data || [];
         rawTasks = tasksRes.data || [];
-        rawHabits = habitsRes.data || [];
+        rawHabits = habits;
       }
 
       return calculateStats(rawLogs, rawTasks, rawHabits, period, now);
