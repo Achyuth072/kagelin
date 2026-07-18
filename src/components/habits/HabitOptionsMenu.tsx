@@ -60,7 +60,7 @@ export function HabitOptionsMenu() {
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="end"
-          className="w-48 shadow-lg border-border/40"
+          className="w-56 shadow-lg border-border/40"
         >
           <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Habit Data
@@ -74,6 +74,9 @@ export function HabitOptionsMenu() {
           >
             <Database className="h-4 w-4 text-brand" />
             <span>Loop Habit Tracker</span>
+            <span className="ml-auto px-1.5 py-0.5 rounded-md bg-brand/10 text-brand text-[9px] font-bold uppercase tracking-widest border border-brand/20 leading-none">
+              Beta
+            </span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

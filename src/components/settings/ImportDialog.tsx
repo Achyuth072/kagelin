@@ -74,7 +74,12 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                   <Database className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">Loop Habit Tracker</p>
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    Loop Habit Tracker
+                    <span className="px-1.5 py-0.5 rounded-md bg-brand/10 text-brand text-[9px] font-bold uppercase tracking-widest border border-brand/20 leading-none">
+                      Beta
+                    </span>
+                  </p>
                   <p className="text-xs text-muted-foreground lowercase">
                     Import from .db file (Android)
                   </p>

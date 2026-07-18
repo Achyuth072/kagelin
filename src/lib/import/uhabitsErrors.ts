@@ -6,7 +6,7 @@
  */
 
 export const WASM_ERROR_MESSAGE =
-  "Failed to load the SQLite engine. This is a browser or network configuration issue, not a problem with your .db file. Please try again or use a different browser.";
+  "Failed to load the SQLite engine. This is a browser or network configuration issue, not a problem with your .db file. Refresh the page and try again.";
 
 export const SCHEMA_ERROR_MESSAGE =
   "Failed to import Loop Habit Tracker data. Ensure it is a valid .db file.";
