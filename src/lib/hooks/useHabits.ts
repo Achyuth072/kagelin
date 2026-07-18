@@ -8,6 +8,33 @@ import type { Habit, HabitEntry, HabitWithEntries } from "@/lib/types/habit";
 
 export type { HabitEntry, HabitWithEntries };
 
+// PostgREST caps a response at 1000 rows, so a user with long history silently
+// loses their newest entries (breaks heatmaps, streaks, totals). Page through
+// with .range() to fetch them all.
+const ENTRIES_PAGE_SIZE = 1000;
+
+async function fetchAllHabitEntries(
+  supabase: ReturnType<typeof createClient>,
+  habitIds: string[],
+): Promise<HabitEntry[]> {
+  if (habitIds.length === 0) return [];
+  const all: HabitEntry[] = [];
+  for (let from = 0; ; from += ENTRIES_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("habit_entries")
+      .select("*")
+      .in("habit_id", habitIds)
+      .order("date", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + ENTRIES_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    if (!data || data.length === 0) break;
+    all.push(...(data as HabitEntry[]));
+    if (data.length < ENTRIES_PAGE_SIZE) break;
+  }
+  return all;
+}
+
 interface UseHabitsOptions {
   includeArchived?: boolean;
 }
@@ -70,14 +97,7 @@ export function useHabits(options: UseHabitsOptions = {}) {
 
       // Fetch habit entries for all habits
       const habitIds = habits.map((h) => h.id);
-      const { data: entries, error: entriesError } = await supabase
-        .from("habit_entries")
-        .select("*")
-        .in("habit_id", habitIds);
-
-      if (entriesError) {
-        throw new Error(entriesError.message);
-      }
+      const entries = await fetchAllHabitEntries(supabase, habitIds);
 
       // Group entries by habit_id
       const entriesByHabit = new Map<string, HabitEntry[]>();
@@ -129,18 +149,11 @@ export function useHabit(habitId: string | null) {
         throw new Error(habitError.message);
       }
 
-      const { data: entries, error: entriesError } = await supabase
-        .from("habit_entries")
-        .select("*")
-        .eq("habit_id", habitId);
-
-      if (entriesError) {
-        throw new Error(entriesError.message);
-      }
+      const entries = await fetchAllHabitEntries(supabase, [habitId]);
 
       return {
         ...(habit as Habit),
-        entries: (entries || []) as HabitEntry[],
+        entries,
       };
     },
     enabled: !!habitId,

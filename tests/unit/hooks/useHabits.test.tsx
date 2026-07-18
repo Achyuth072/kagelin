@@ -78,7 +78,9 @@ describe("useHabits", () => {
         if (table === "habit_entries") {
           return {
             select: vi.fn().mockReturnThis(),
-            in: vi
+            in: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            range: vi
               .fn()
               .mockResolvedValue({ data: mockEntriesData, error: null }),
           };
@@ -99,6 +101,60 @@ describe("useHabits", () => {
         expect(result.current.data?.[0].entries).toHaveLength(1);
         expect(result.current.isLoading).toBe(false);
       });
+    });
+  });
+
+  describe("TC-N-01b: pagination past the 1000-row PostgREST cap", () => {
+    it("fetches every page of entries, not just the first 1000", async () => {
+      const mockHabitsData = [{ id: "habit-1", archived_at: null }];
+      // 1000 on the first page (== cap) forces a second request; 500 on the
+      // second page (< cap) ends the loop. Total must be 1500, not 1000.
+      const page1 = Array.from({ length: 1000 }, (_, i) => ({
+        id: `e${i}`,
+        habit_id: "habit-1",
+        date: "2024-01-01",
+        value: 1,
+      }));
+      const page2 = Array.from({ length: 500 }, (_, i) => ({
+        id: `e${1000 + i}`,
+        habit_id: "habit-1",
+        date: "2025-01-01",
+        value: 1,
+      }));
+
+      mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
+
+      const rangeMock = vi
+        .fn()
+        .mockResolvedValueOnce({ data: page1, error: null })
+        .mockResolvedValueOnce({ data: page2, error: null });
+
+      const mockFrom = vi.fn((table: string) => {
+        if (table === "habits") {
+          return {
+            select: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            is: vi
+              .fn()
+              .mockResolvedValue({ data: mockHabitsData, error: null }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          in: vi.fn().mockReturnThis(),
+          order: vi.fn().mockReturnThis(),
+          range: rangeMock,
+        };
+      });
+
+      mockCreateClient.mockReturnValue({ from: mockFrom } as any);
+
+      const { result } = renderHook(() => useHabits(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.data?.[0].entries).toHaveLength(1500);
+      });
+      expect(rangeMock).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -125,7 +181,9 @@ describe("useHabits", () => {
         if (table === "habit_entries") {
           return {
             select: vi.fn().mockReturnThis(),
-            in: vi.fn().mockResolvedValue({ data: [], error: null }),
+            in: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            range: vi.fn().mockResolvedValue({ data: [], error: null }),
           };
         }
         return {};
@@ -261,7 +319,9 @@ describe("useHabits", () => {
         if (table === "habit_entries") {
           return {
             select: vi.fn().mockReturnThis(),
-            eq: vi
+            in: vi.fn().mockReturnThis(),
+            order: vi.fn().mockReturnThis(),
+            range: vi
               .fn()
               .mockResolvedValue({ data: mockEntriesData, error: null }),
           };
