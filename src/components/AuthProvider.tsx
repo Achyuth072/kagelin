@@ -26,6 +26,21 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function setGuestFlag() {
+  localStorage.setItem("kanso_guest_mode", "true");
+  document.cookie =
+    "kanso_guest_mode=true; path=/; max-age=31536000; SameSite=Lax";
+}
+
+function clearGuestFlag() {
+  localStorage.removeItem("kanso_guest_mode");
+  document.cookie = "kanso_guest_mode=; path=/; max-age=0";
+}
+
+function hasGuestFlag() {
+  return localStorage.getItem("kanso_guest_mode") === "true";
+}
+
 function makeGuestUser(): User {
   return {
     id: "guest",
@@ -56,72 +71,45 @@ export function AuthProvider({
   const supabase = createClient();
 
   useEffect(() => {
-    // The `kanso_guest_mode` cookie (read server-side for `initialIsGuest`)
-    // can lag localStorage — e.g. cleared separately, or stale. Re-check
-    // here so a real guest session isn't sent through the Supabase path.
-    if (isGuestMode || localStorage.getItem("kanso_guest_mode") === "true") {
-      const syncGuestState = async () => {
-        if (!isGuestMode) {
-          setUser(makeGuestUser());
-          setIsGuestMode(true);
-        }
-        setLoading(false);
-      };
-      void syncGuestState();
-      return;
-    }
+    // A real session always wins — a stale guest flag must not shadow it.
+    const applyRealSession = (s: Session) => {
+      clearGuestFlag();
+      setSession(s);
+      setUser(s.user);
+      setIsGuestMode(false);
+    };
 
-    const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session) {
-        setSession(session);
-        setUser(session.user);
-        setIsGuestMode(false);
+    const applyNoRealSession = () => {
+      if (hasGuestFlag()) {
+        setUser(makeGuestUser());
+        setIsGuestMode(true);
       } else {
+        clearGuestFlag();
         setSession(null);
         setUser(null);
         setIsGuestMode(false);
       }
-      setLoading(false);
     };
 
-    getSession();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) applyRealSession(session);
+      else applyNoRealSession();
+      setLoading(false);
+    });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (newSession) {
-        setSession(newSession);
-        setUser(newSession.user);
-        setIsGuestMode(false);
-      } else {
-        setSession(null);
-        setUser(null);
-        setIsGuestMode(false);
-      }
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // getSession() above already resolved this snapshot.
+      if (event === "INITIAL_SESSION") return;
+
+      if (session) applyRealSession(session);
+      else applyNoRealSession();
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase.auth, isGuestMode]);
-
-  useEffect(() => {
-    if (isGuestMode) {
-      localStorage.setItem("kanso_guest_mode", "true");
-      document.cookie =
-        "kanso_guest_mode=true; path=/; max-age=31536000; SameSite=Lax";
-    } else {
-      const isActuallyGuest =
-        localStorage.getItem("kanso_guest_mode") === "true";
-      if (isActuallyGuest) {
-        localStorage.removeItem("kanso_guest_mode");
-        document.cookie = "kanso_guest_mode=; path=/; max-age=0";
-      }
-    }
-  }, [isGuestMode]);
+  }, [supabase.auth]);
 
   const signInWithGoogle = useCallback(async () => {
     await supabase.auth.signInWithOAuth({
@@ -145,12 +133,14 @@ export function AuthProvider({
   );
 
   const signInAsGuest = useCallback(() => {
+    setGuestFlag();
     setUser(makeGuestUser());
     setIsGuestMode(true);
   }, []);
 
   const signOut = useCallback(async () => {
     if (isGuestMode) {
+      clearGuestFlag();
       setUser(null);
       setIsGuestMode(false);
     } else {
