@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --turbo",
     "dev:pwa": "next dev --webpack",
+    "prebuild": "npm run copy-wasm",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
