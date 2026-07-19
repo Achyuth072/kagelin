@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import * as Sentry from "@sentry/nextjs";
-import { parseUhabitsFile } from "@/lib/import/uhabits";
+import { parseUhabitsFile, toCreateHabitInput } from "@/lib/import/uhabits";
 import {
   classifyUhabitsError,
   SAVE_ERROR_MESSAGE,
@@ -103,13 +103,9 @@ export function useUhabitsImport() {
       const habitIdMap = new Map<string, string>();
 
       for (const habit of habitsToImport) {
-        const created = await createHabit.mutateAsync({
-          name: habit.name,
-          description: habit.description || undefined,
-          color: habit.color,
-          icon: habit.icon || undefined,
-          start_date: habit.start_date ?? undefined,
-        });
+        const created = await createHabit.mutateAsync(
+          toCreateHabitInput(habit),
+        );
         habitIdMap.set(habit.id, created.id);
       }
 

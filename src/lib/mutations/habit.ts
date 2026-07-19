@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 
-interface CreateHabitInput {
+export interface CreateHabitInput {
   name: string;
   description?: string;
   color?: string;

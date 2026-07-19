@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { mapUhabitsToKanso } from "../../src/lib/import/uhabits";
+import {
+  mapUhabitsToKanso,
+  toCreateHabitInput,
+} from "../../src/lib/import/uhabits";
+import type { Habit } from "../../src/lib/types/habit";
+import { getCurrentStreak } from "../../src/lib/utils/habit-streak";
 import {
   classifyUhabitsError,
   WASM_ERROR_MESSAGE,
@@ -160,6 +165,136 @@ describe("uhabitsImport", () => {
     expect(result.habits).toHaveLength(1);
     expect(result.entries).toHaveLength(1);
     expect(result.entries[0].habit_id).toBe(result.habits[0].id);
+  });
+});
+
+describe("uhabitsImport frequency mapping", () => {
+  it("maps exact denominators to day/week/month with count = freq_num", () => {
+    const mockHabits = [
+      { id: 1, name: "Daily", archived: 0, freq_num: 1, freq_den: 1 },
+      { id: 2, name: "Thrice weekly", archived: 0, freq_num: 3, freq_den: 7 },
+      { id: 3, name: "Monthly", archived: 0, freq_num: 1, freq_den: 30 },
+      { id: 4, name: "Monthly31", archived: 0, freq_num: 2, freq_den: 31 },
+    ];
+    const result = mapUhabitsToKanso(mockHabits, []);
+
+    expect(result.habits[0].frequency_count).toBe(1);
+    expect(result.habits[0].frequency_period).toBe("day");
+    expect(result.habits[1].frequency_count).toBe(3);
+    expect(result.habits[1].frequency_period).toBe("week");
+    expect(result.habits[2].frequency_count).toBe(1);
+    expect(result.habits[2].frequency_period).toBe("month");
+    expect(result.habits[3].frequency_count).toBe(2);
+    expect(result.habits[3].frequency_period).toBe("month");
+  });
+
+  it("approximates inexpressible fractions to weekly, half-up", () => {
+    const mockHabits = [
+      { id: 1, name: "Every other day", archived: 0, freq_num: 1, freq_den: 2 },
+      { id: 2, name: "Every 3 days", archived: 0, freq_num: 1, freq_den: 3 },
+      { id: 3, name: "Every 5 days", archived: 0, freq_num: 1, freq_den: 5 },
+      { id: 4, name: "Custom 5/10", archived: 0, freq_num: 5, freq_den: 10 },
+    ];
+    const result = mapUhabitsToKanso(mockHabits, []);
+
+    // count = max(1, round(freq_num * 7 / freq_den)), period = week
+    expect(result.habits[0].frequency_period).toBe("week");
+    expect(result.habits[0].frequency_count).toBe(4); // round(3.5)
+    expect(result.habits[1].frequency_count).toBe(2); // round(2.33)
+    expect(result.habits[2].frequency_count).toBe(1); // round(1.4)
+    expect(result.habits[3].frequency_count).toBe(4); // round(3.5)
+  });
+
+  it("leaves frequency unset for absent or invalid freq columns", () => {
+    const mockHabits = [
+      { id: 1, name: "No freq", archived: 0 },
+      { id: 2, name: "NaN freq", archived: 0, freq_num: NaN, freq_den: 7 },
+      { id: 3, name: "Zero den", archived: 0, freq_num: 1, freq_den: 0 },
+    ];
+    const result = mapUhabitsToKanso(mockHabits, []);
+    for (const habit of result.habits) {
+      expect(habit.frequency_count).toBeUndefined();
+      expect(habit.frequency_period).toBeUndefined();
+    }
+  });
+});
+
+describe("toCreateHabitInput", () => {
+  const baseHabit: Habit = {
+    id: "h1",
+    user_id: "",
+    name: "Exercise",
+    description: "Stay fit",
+    color: "#4A8A8A",
+    icon: "Dumbbell",
+    created_at: "2024-01-01T00:00:00.000Z",
+    updated_at: "2024-01-01T00:00:00.000Z",
+    archived_at: null,
+    start_date: "2024-01-01",
+    sort_order: 0,
+  };
+
+  it("forwards core fields and frequency to the create-habit input", () => {
+    const input = toCreateHabitInput({
+      ...baseHabit,
+      frequency_count: 3,
+      frequency_period: "week",
+    });
+
+    expect(input.name).toBe("Exercise");
+    expect(input.description).toBe("Stay fit");
+    expect(input.color).toBe("#4A8A8A");
+    expect(input.icon).toBe("Dumbbell");
+    expect(input.start_date).toBe("2024-01-01");
+    expect(input.frequencyCount).toBe(3);
+    expect(input.frequencyPeriod).toBe("week");
+  });
+
+  it("omits frequency when the habit has none", () => {
+    const input = toCreateHabitInput(baseHabit);
+    expect(input.frequencyCount).toBeUndefined();
+    expect(input.frequencyPeriod).toBeUndefined();
+  });
+});
+
+describe("uhabitsImport streak fidelity (integration)", () => {
+  // Mon/Wed/Fri across four weeks, ending on today (Fri 2024-05-31).
+  const threePerWeekReps = [
+    "2024-05-06",
+    "2024-05-08",
+    "2024-05-10",
+    "2024-05-13",
+    "2024-05-15",
+    "2024-05-17",
+    "2024-05-20",
+    "2024-05-22",
+    "2024-05-24",
+    "2024-05-27",
+    "2024-05-29",
+    "2024-05-31",
+  ].map((d) => ({ habit: 1, timestamp: Date.parse(d), value: 2 }));
+
+  const today = new Date(2024, 4, 31); // local Fri 2024-05-31
+
+  it("interpolates a 3×/week habit into one continuous run", () => {
+    const { habits, entries } = mapUhabitsToKanso(
+      [{ id: 1, name: "Gym", archived: 0, freq_num: 3, freq_den: 7 }],
+      threePerWeekReps,
+    );
+
+    // 12 logged reps, but the schedule fills the gaps: 2024-05-06..05-31 = 26 days.
+    expect(getCurrentStreak(habits[0], entries, today)).toBe(26);
+  });
+
+  it("would collapse to a 1-day streak without the frequency (the bug)", () => {
+    const { entries } = mapUhabitsToKanso(
+      [{ id: 1, name: "Gym", archived: 0, freq_num: 3, freq_den: 7 }],
+      threePerWeekReps,
+    );
+
+    // Frequency stripped → treated as daily → breaks on every off-day.
+    const asDaily = { frequency_count: undefined, frequency_period: undefined };
+    expect(getCurrentStreak(asDaily, entries, today)).toBe(1);
   });
 });
 
