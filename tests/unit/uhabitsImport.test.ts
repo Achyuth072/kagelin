@@ -168,6 +168,22 @@ describe("uhabitsImport", () => {
   });
 });
 
+describe("uhabitsImport source provenance", () => {
+  it("stamps source_uuid from the uhabits uuid column", () => {
+    const mockHabits = [
+      { id: 1, name: "Water", archived: 0, uuid: "abc-123-uuid" },
+    ];
+    const result = mapUhabitsToKanso(mockHabits, []);
+    expect(result.habits[0].source_uuid).toBe("abc-123-uuid");
+  });
+
+  it("leaves source_uuid null when the uuid column is absent", () => {
+    const mockHabits = [{ id: 1, name: "Water", archived: 0 }];
+    const result = mapUhabitsToKanso(mockHabits, []);
+    expect(result.habits[0].source_uuid).toBeNull();
+  });
+});
+
 describe("uhabitsImport frequency mapping", () => {
   it("maps exact denominators to day/week/month with count = freq_num", () => {
     const mockHabits = [
@@ -254,6 +270,14 @@ describe("toCreateHabitInput", () => {
     const input = toCreateHabitInput(baseHabit);
     expect(input.frequencyCount).toBeUndefined();
     expect(input.frequencyPeriod).toBeUndefined();
+  });
+
+  it("forwards source_uuid so the origin link survives persist", () => {
+    const input = toCreateHabitInput({
+      ...baseHabit,
+      source_uuid: "abc-123-uuid",
+    });
+    expect(input.source_uuid).toBe("abc-123-uuid");
   });
 });
 
