@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import * as Sentry from "@sentry/nextjs";
-import { parseUhabitsFile, toCreateHabitInput } from "@/lib/import/uhabits";
+import {
+  parseUhabitsFile,
+  toCreateHabitInput,
+  type UhabitsRawSource,
+} from "@/lib/import/uhabits";
+import { persistImportSource } from "@/lib/mutations/importSource";
 import {
   classifyUhabitsError,
   SAVE_ERROR_MESSAGE,
@@ -40,8 +45,9 @@ export function useUhabitsImport() {
     try {
       let habits: Habit[];
       let entries: HabitEntry[];
+      let source: UhabitsRawSource;
       try {
-        ({ habits, entries } = await parseUhabitsFile(file));
+        ({ habits, entries, source } = await parseUhabitsFile(file));
       } catch (err) {
         return reportImportFailure(err, classifyUhabitsError(err));
       }
@@ -56,6 +62,13 @@ export function useUhabitsImport() {
       const isGuest =
         typeof window !== "undefined" &&
         localStorage.getItem("kanso_guest_mode") === "true";
+
+      // Best-effort capture for round-trip export; runs in the background and
+      // never blocks or fails the import (ADR 0006).
+      void persistImportSource(
+        { source_app: "uhabits", file_name: file.name, raw: source },
+        { isGuest },
+      ).catch((err) => Sentry.captureException(err));
 
       // Detect duplicate habits by name to avoid re-importing
       let habitsToImport = habits;
