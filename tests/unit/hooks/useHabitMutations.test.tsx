@@ -124,6 +124,7 @@ describe("useHabitMutations", () => {
           target_type: "at_least",
           target_value: null,
           unit: null,
+          source_uuid: null,
         });
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["habits"] });
       });

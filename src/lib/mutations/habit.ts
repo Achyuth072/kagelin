@@ -14,6 +14,7 @@ export interface CreateHabitInput {
   targetType?: "at_least" | "at_most";
   targetValue?: number;
   unit?: string;
+  source_uuid?: string;
 }
 
 interface UpdateHabitInput {
@@ -55,6 +56,7 @@ export const habitMutations = {
       target_type: input.targetType || "at_least",
       target_value: input.targetValue ?? null,
       unit: input.unit || null,
+      source_uuid: input.source_uuid ?? null,
     };
 
     if (isGuest) {
