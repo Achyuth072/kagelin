@@ -486,6 +486,8 @@ CREATE TABLE IF NOT EXISTS public.habits (
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   archived_at TIMESTAMPTZ,
+  -- Links to its raw record in habit_imports for round-trip export (ADR 0006).
+  source_uuid TEXT,
 
   CONSTRAINT habits_name_length_check CHECK (char_length(name) <= 100),
   CONSTRAINT habits_description_length_check CHECK (char_length(description) <= 500)
@@ -561,6 +563,27 @@ CREATE POLICY "Users can delete own habit_entries" ON public.habit_entries
   FOR DELETE USING (
     EXISTS (SELECT 1 FROM public.habits WHERE public.habits.id = habit_entries.habit_id AND public.habits.user_id = auth.uid())
   );
+
+-- D. Habit Imports: raw provenance for round-trip export, write-once/immutable (ADR 0006)
+CREATE TABLE IF NOT EXISTS public.habit_imports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  source_app TEXT NOT NULL DEFAULT 'uhabits',
+  file_name TEXT,
+  raw JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS habit_imports_user_id_idx ON public.habit_imports (user_id);
+
+ALTER TABLE public.habit_imports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own habit_imports" ON public.habit_imports
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own habit_imports" ON public.habit_imports
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own habit_imports" ON public.habit_imports
+  FOR DELETE USING (auth.uid() = user_id);
 
 
 -- =============================================================================
