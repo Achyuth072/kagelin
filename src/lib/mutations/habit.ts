@@ -15,6 +15,7 @@ export interface CreateHabitInput {
   targetValue?: number;
   unit?: string;
   source_uuid?: string;
+  sort_order?: number;
 }
 
 interface UpdateHabitInput {
@@ -71,14 +72,18 @@ export const habitMutations = {
     if (!user) throw new Error("Not authenticated");
 
     // Append to the bottom: new habit gets max(sort_order) + 1 for the user.
-    const { data: lastHabit } = await supabase
-      .from("habits")
-      .select("sort_order")
-      .eq("user_id", user.id)
-      .order("sort_order", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const nextSortOrder = (lastHabit?.sort_order ?? -1) + 1;
+    // Bulk callers (e.g. import) can pass sort_order to skip this lookup.
+    let nextSortOrder = input.sort_order;
+    if (nextSortOrder === undefined) {
+      const { data: lastHabit } = await supabase
+        .from("habits")
+        .select("sort_order")
+        .eq("user_id", user.id)
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      nextSortOrder = (lastHabit?.sort_order ?? -1) + 1;
+    }
 
     const { data, error } = await supabase
       .from("habits")

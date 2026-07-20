@@ -15,7 +15,7 @@ import {
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { toast } from "sonner";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useCreateHabit } from "@/lib/hooks/useHabitMutations";
+import { habitMutations } from "@/lib/mutations/habit";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
@@ -25,7 +25,6 @@ const ENTRY_CHUNK_SIZE = 500;
 export function useUhabitsImport() {
   const [isImporting, setIsImporting] = useState(false);
   const { trigger } = useHaptic();
-  const createHabit = useCreateHabit();
   const queryClient = useQueryClient();
 
   const importUhabits = async (file: File) => {
@@ -73,9 +72,12 @@ export function useUhabitsImport() {
       // Detect duplicate habits by name to avoid re-importing
       let habitsToImport = habits;
       let skippedCount = 0;
+      let nextSortOrder = 0;
       if (!isGuest) {
         const supabase = createClient();
-        const { data: existing } = await supabase.from("habits").select("name");
+        const { data: existing } = await supabase
+          .from("habits")
+          .select("name, sort_order");
         if (existing && existing.length > 0) {
           const existingNames = new Set(
             existing.map((h) => h.name.toLowerCase()),
@@ -84,6 +86,7 @@ export function useUhabitsImport() {
             (h) => !existingNames.has(h.name.toLowerCase()),
           );
           skippedCount = habits.length - habitsToImport.length;
+          nextSortOrder = Math.max(...existing.map((h) => h.sort_order)) + 1;
         }
       } else {
         const existingNames = new Set(
@@ -115,10 +118,12 @@ export function useUhabitsImport() {
       // Track tempId (from parseUhabitsFile) → actualId (from DB / mock store)
       const habitIdMap = new Map<string, string>();
 
+      // Raw create avoids invalidating the habits query once per habit.
       for (const habit of habitsToImport) {
-        const created = await createHabit.mutateAsync(
-          toCreateHabitInput(habit),
-        );
+        const created = await habitMutations.create({
+          ...toCreateHabitInput(habit),
+          sort_order: isGuest ? undefined : nextSortOrder++,
+        });
         habitIdMap.set(habit.id, created.id);
       }
 
