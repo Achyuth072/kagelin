@@ -22,3 +22,34 @@ edge-case bugs.
   the raw done-set to operating on the interpolated done-set.
 - Streak semantics are now harder to reverse — once users see frequency-aware
   numbers, reverting to daily-only would silently shrink everyone's streaks.
+
+## Amendment (2026-07-20): current-streak liveness + known interpolation gap
+
+`getCurrentStreak` gated the run on reaching today (with a 1-day "pending today"
+grace). For a frequency Habit whose current period isn't met yet, the interpolated
+run legitimately ends a day or two before today, so the gate zeroed the streak —
+until the user logged today, at which point it snapped to the full run. This
+surfaced right after uhabits import (habits with older history), reading as "the
+streak only appears after I mark the habit complete."
+
+uhabits' `StreakList.recompute` has **no reach-today gate** — it reports the most
+recent run at full length regardless of when it ended. We matched that within a
+bounded **pending window**: the streak is the run ending at the most recent
+done-day found within that window of today. To keep Kagelin's inline "N streak"
+reading as _currently ongoing_ (uhabits shows streaks in a historical chart
+instead), the window is one frequency period, after which the streak lapses to 0 —
+the one **deliberate deviation** from uhabits, which would report it forever. This
+is display-only: export writes raw entries, which uhabits recomputes, so
+round-trip fidelity is unaffected. Daily habits keep the exact 1-day window, and
+Measurable habits keep it too (they interpolate nothing, so a longer window would
+credit days never logged).
+
+**Known gap (tracked, not yet fixed):** Kagelin's `interpolateDoneDays` does not
+port uhabits' `snapIntervalsTogether` backward slide, nor its unclamped intervals.
+As a result Kagelin's streak numbers run ~1–2 short of uhabits (e.g. 27 vs 28,
+11 vs 13 on the fixtures in `uhabitsStreakParity.test.ts`). This is acceptable for
+the display bug fixed here, but **true import/export round-trip parity requires
+porting the faithful interpolation.** A validated uhabits oracle
+(`tests/unit/support/uhabitsReference.ts`, checked against uhabits' own
+`testComputeBoolean` fixture) and a differential suite are in place as the golden
+target for that follow-up.
