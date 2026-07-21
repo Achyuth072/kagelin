@@ -5,13 +5,12 @@ const { getLastTag, getCommitSubjectsSince } = require("./lib/git-commits.cjs");
 const {
   CONVENTIONAL_COMMIT_RE,
   COMMIT_TYPES,
+  orderSections,
 } = require("./lib/commit-types.cjs");
 
 function channelFromVersion(v) {
   return /-(preview|rc)/.test(v) ? "preview" : "stable";
 }
-
-const SECTION_ORDER = ["Added", "Improved", "Fixed"];
 
 function buildSectionsFromCommits(subjects, { channel } = {}) {
   const sections = {};
@@ -32,25 +31,14 @@ function buildSectionsFromCommits(subjects, { channel } = {}) {
     }
   }
 
-  const ordered = {};
-  for (const section of SECTION_ORDER) {
-    if (sections[section]?.length) ordered[section] = sections[section];
-  }
-  return ordered;
+  return orderSections(sections);
 }
 
 module.exports = { channelFromVersion, buildSectionsFromCommits };
 
-// ---------------------------------------------------------------------------
-// CLI entry — only runs when called directly, not when require()'d by tests.
-//
-// Both channels are fully commit-driven: the entry's sections are built by
-// parsing conventional-commit subjects since the last relevant tag.
-//   - preview: since the last tag of any kind (continues the current cycle).
-//   - stable:  since the last *stable* tag (skips over every preview tag cut
-//     during that cycle, so a stable release aggregates the whole cycle).
-// There is no hand-written "Unreleased" entry to promote or accumulate into.
-// ---------------------------------------------------------------------------
+// preview: since the last tag of any kind (continues the current cycle).
+// stable: since the last *stable* tag, skipping preview tags cut mid-cycle,
+// so a stable release aggregates the whole cycle.
 if (require.main === module) {
   const channelArg = process.argv.find((a) =>
     /^--channel=(preview|stable)$/.test(a),

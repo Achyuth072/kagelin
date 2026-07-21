@@ -18,6 +18,7 @@
     "before:init": ["npm run ci:validate"],
     "after:bump": [
       "node scripts/generate-changelog.cjs ${version} --channel=stable",
+      "node scripts/curate-changelog.cjs ${version}",
       "git add public/changelog.json public/changelog-version.json"
     ]
   }
