@@ -25,7 +25,10 @@ export function usePushNotifications() {
     (state) => state.setNotificationsEnabled,
   );
   const [permission, setPermission] = useState<NotificationPermission>(() => {
-    if (typeof window === "undefined") return "default";
+    // `Notification` is absent in iOS Safari/Chrome tabs (only present in an
+    // installed home-screen PWA) — reading `.permission` there throws.
+    if (typeof window === "undefined" || !("Notification" in window))
+      return "default";
     return (Notification.permission as NotificationPermission) || "default";
   });
   const [isSupported] = useState(() => {
