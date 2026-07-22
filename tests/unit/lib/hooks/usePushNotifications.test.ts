@@ -40,6 +40,7 @@ describe("usePushNotifications", () => {
         requestPermission: vi.fn().mockResolvedValue("granted"),
       },
       writable: true,
+      configurable: true,
     });
 
     Object.defineProperty(navigator, "serviceWorker", {
@@ -69,6 +70,19 @@ describe("usePushNotifications", () => {
   });
 
   it("TC-HOOK-01: should not throw on mount", async () => {
+    await act(async () => {
+      expect(() => {
+        renderHook(() => usePushNotifications());
+      }).not.toThrow();
+    });
+  });
+
+  it("TC-HOOK-01b: should not throw when Notification is undefined (iOS Safari tab)", async () => {
+    // On iOS, `window.Notification` only exists in an installed home-screen PWA,
+    // never in a regular Safari/Chrome tab — reading `Notification.permission`
+    // there throws `ReferenceError: Can't find variable: Notification`.
+    delete (window as unknown as { Notification?: unknown }).Notification;
+
     await act(async () => {
       expect(() => {
         renderHook(() => usePushNotifications());
