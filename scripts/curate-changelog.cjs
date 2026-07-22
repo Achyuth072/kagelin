@@ -1,16 +1,8 @@
 #!/usr/bin/env node
-// generate-changelog.cjs writes one bullet per commit, so a feature
-// spanning several commits shows up as several bullets. Offers a choice
-// per release: curate via antigravity-cli (agy), keep the raw bullets, or
-// edit them by hand. Wired into .release-it-stable.json only — preview
-// stays fast and raw for testers; only the stable, general-audience
-// changelog gets this treatment.
-//
-// The choice is prompted in scripts/release.cjs, not here: release-it runs
-// this as an after:bump hook via child_process.exec, which never has a TTY
-// (release.cjs does, since it inherits stdio when it invokes release-it).
-// The choice arrives via CURATE_CHOICE; missing/unset defaults to "raw".
+// runCurationLoop needs a TTY, so release.cjs runs it and passes the
+// result here via CURATED_SECTIONS — release-it's after:bump hook has none.
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const readline = require("readline");
 const { execFileSync } = require("child_process");
@@ -63,45 +55,72 @@ function resolveChoice(answer) {
   return "antigravity";
 }
 
-function promptChoice() {
+function curateWithAntigravity(sections) {
+  const raw = execFileSync(
+    "agy",
+    [
+      "-p",
+      buildCurationPrompt(sections),
+      "--model",
+      "gemini-3.5-flash",
+      "--effort",
+      "medium",
+      "--dangerously-skip-permissions",
+    ],
+    { encoding: "utf-8", timeout: 90_000, stdio: ["ignore", "pipe", "pipe"] },
+  );
+  return parseCuratedSections(raw);
+}
+
+function editSections(sections) {
+  const tmpFile = path.join(os.tmpdir(), `changelog-curate-${Date.now()}.json`);
+  fs.writeFileSync(tmpFile, JSON.stringify(sections, null, 2) + "\n");
+  try {
+    const editor = process.env.EDITOR || process.env.VISUAL || "vi";
+    execFileSync(editor, [tmpFile], { stdio: "inherit" });
+    return parseCuratedSections(fs.readFileSync(tmpFile, "utf-8"));
+  } finally {
+    fs.rmSync(tmpFile, { force: true });
+  }
+}
+
+async function runCurationLoop(initialSections) {
+  let sections = initialSections;
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
-  return new Promise((resolve) => {
-    rl.question(
-      "Changelog curation — [a] antigravity curate  [r] raw  [e] edit (default a): ",
-      (answer) => {
-        rl.close();
-        resolve(resolveChoice(answer));
-      },
-    );
-  });
-}
+  // Async iterator, not rl.question(), so buffered input can't be dropped
+  // between prompts.
+  const lines = rl[Symbol.asyncIterator]();
 
-function curateWithAntigravity(changelogFile, entries, entry, version) {
   try {
-    const raw = execFileSync(
-      "agy",
-      [
-        "-p",
-        buildCurationPrompt(entry.sections),
-        "--model",
-        "gemini-3.5-flash",
-        "--effort",
-        "medium",
-        "--dangerously-skip-permissions",
-      ],
-      { encoding: "utf-8", timeout: 90_000, stdio: ["ignore", "pipe", "pipe"] },
-    );
+    for (;;) {
+      console.log("\nChangelog bullets:");
+      console.log(JSON.stringify(sections, null, 2));
+      process.stdout.write(
+        "[a] antigravity curate  [r] accept as-is  [e] edit (default a): ",
+      );
 
-    entry.sections = parseCuratedSections(raw);
-    fs.writeFileSync(changelogFile, JSON.stringify(entries, null, 2) + "\n");
-    console.log(`✓ Curated changelog entry for v${version}`);
-  } catch (err) {
-    console.warn(
-      `⚠ Antigravity curation failed for v${version} (${err.message}) — keeping raw commit-derived bullets. Edit "${version}" in ${changelogFile} by hand and push a follow-up commit if needed.`,
-    );
+      const { value: answer, done } = await lines.next();
+      if (done) return sections;
+
+      const choice = resolveChoice(answer);
+      if (choice === "raw") return sections;
+
+      try {
+        sections =
+          choice === "edit"
+            ? editSections(sections)
+            : curateWithAntigravity(sections);
+      } catch (err) {
+        console.warn(
+          `⚠ ${choice} failed (${err.message}) — bullets unchanged.`,
+        );
+      }
+    }
+  } finally {
+    rl.close();
   }
 }
 
@@ -109,34 +128,47 @@ module.exports = {
   buildCurationPrompt,
   parseCuratedSections,
   resolveChoice,
-  promptChoice,
+  runCurationLoop,
 };
 
 if (require.main === module) {
-  const version = process.argv[2];
-  if (!version) {
-    console.error("Usage: curate-changelog.cjs <version>");
-    process.exit(1);
-  }
+  (async () => {
+    const version = process.argv[2];
+    if (!version) {
+      console.error("Usage: curate-changelog.cjs <version>");
+      process.exit(1);
+    }
 
-  const changelogFile = path.join(process.cwd(), "public", "changelog.json");
-  const entries = JSON.parse(fs.readFileSync(changelogFile, "utf-8"));
-  const entry = entries.find((e) => e.version === version);
+    const changelogFile = path.join(process.cwd(), "public", "changelog.json");
+    const entries = JSON.parse(fs.readFileSync(changelogFile, "utf-8"));
+    const entry = entries.find((e) => e.version === version);
 
-  if (!entry || Object.keys(entry.sections).length === 0) {
-    process.exit(0);
-  }
+    if (!entry || Object.keys(entry.sections).length === 0) {
+      return;
+    }
 
-  const choice = process.env.CURATE_CHOICE ?? "raw";
+    if (process.env.CURATED_SECTIONS) {
+      try {
+        entry.sections = parseCuratedSections(process.env.CURATED_SECTIONS);
+        fs.writeFileSync(
+          changelogFile,
+          JSON.stringify(entries, null, 2) + "\n",
+        );
+        console.log(`✓ Applied curated changelog for v${version}`);
+      } catch (err) {
+        console.warn(
+          `⚠ Could not apply curated sections for v${version} (${err.message}) — keeping raw bullets.`,
+        );
+      }
+      return;
+    }
 
-  if (choice === "raw") {
-    process.exit(0);
-  }
-  if (choice === "edit") {
-    console.warn(
-      `Edit chosen — update "${version}" in ${changelogFile} by hand and push a follow-up commit if needed.`,
-    );
-    process.exit(0);
-  }
-  curateWithAntigravity(changelogFile, entries, entry, version);
+    if (!process.stdin.isTTY) {
+      return;
+    }
+
+    entry.sections = await runCurationLoop(entry.sections);
+    fs.writeFileSync(changelogFile, JSON.stringify(entries, null, 2) + "\n");
+    console.log(`✓ Updated changelog entry for v${version}`);
+  })();
 }

@@ -1,13 +1,12 @@
 #!/usr/bin/env node
-// Continuing an existing prerelease series needs no explicit increment —
-// release-it's own documented behavior for consecutive pre-releases. Only
-// starting a *new* series (first preview after a stable cut) needs a
-// pre-prefixed increment (preminor/prepatch/premajor).
+// Only the first preview after a stable cut needs a pre-prefixed increment;
+// release-it continues an existing prerelease series on its own.
 const { execFileSync } = require("child_process");
 const path = require("path");
 const { getLastTag, getCommitSubjectsSince } = require("./lib/git-commits.cjs");
 const { determineBump } = require("./lib/determine-bump.cjs");
-const { promptChoice } = require("./curate-changelog.cjs");
+const { buildSectionsFromCommits } = require("./generate-changelog.cjs");
+const { runCurationLoop } = require("./curate-changelog.cjs");
 
 const BUMP_TO_PRE_INCREMENT = {
   patch: "prepatch",
@@ -15,9 +14,11 @@ const BUMP_TO_PRE_INCREMENT = {
   major: "premajor",
 };
 
-function computeBump(tagOptions) {
-  const lastTag = getLastTag(tagOptions);
-  const subjects = getCommitSubjectsSince(lastTag);
+function subjectsSince(tagOptions) {
+  return getCommitSubjectsSince(getLastTag(tagOptions));
+}
+
+function computeBump(subjects) {
   return determineBump(subjects) ?? "patch";
 }
 
@@ -46,7 +47,7 @@ async function main() {
         "--preRelease=preview",
       );
     } else {
-      const bump = computeBump();
+      const bump = computeBump(subjectsSince());
       releaseItArgs.push(
         "--config",
         ".release-it.json",
@@ -55,10 +56,20 @@ async function main() {
       );
     }
   } else {
-    const increment = override ?? computeBump({ excludePreRelease: true });
-    const curateChoice = process.stdin.isTTY ? await promptChoice() : "raw";
+    const subjects = subjectsSince({ excludePreRelease: true });
+    const increment = override ?? computeBump(subjects);
+    const rawSections = buildSectionsFromCommits(subjects, {
+      channel: "stable",
+    });
+    const curatedSections = process.stdin.isTTY
+      ? await runCurationLoop(rawSections)
+      : rawSections;
+
     releaseItArgs.push("--config", ".release-it-stable.json", increment);
-    env = { ...process.env, CURATE_CHOICE: curateChoice };
+    env = {
+      ...process.env,
+      CURATED_SECTIONS: JSON.stringify(curatedSections),
+    };
   }
 
   console.log(`→ release-it ${releaseItArgs.join(" ")}`);
