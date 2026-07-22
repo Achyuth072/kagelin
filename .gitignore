@@ -13,6 +13,8 @@
 # testing
 /coverage
 
+*.db
+
 
 # next.js
 /.next/
@@ -51,7 +53,7 @@ next-env.d.ts
 /public/workbox-*.js.map
 /public/tsbuildinfo
 
-# sql.js WASM binary (copied from node_modules by `npm run copy-wasm` / prepare)
+# sql.js WASM binary
 /public/sql-wasm.wasm
 
 # Playwright

@@ -1,77 +1,44 @@
 #!/usr/bin/env node
 const fs = require("fs");
 const path = require("path");
-const { execFileSync } = require("child_process");
+const { getLastTag, getCommitSubjectsSince } = require("./lib/git-commits.cjs");
+const {
+  CONVENTIONAL_COMMIT_RE,
+  COMMIT_TYPES,
+  orderSections,
+} = require("./lib/commit-types.cjs");
 
 function channelFromVersion(v) {
   return /-(preview|rc)/.test(v) ? "preview" : "stable";
 }
 
-const COMMIT_TYPE_TO_SECTION = {
-  feat: "Added",
-  fix: "Fixed",
-  perf: "Improved",
-};
-
-const SECTION_ORDER = ["Added", "Improved", "Fixed"];
-
-const CONVENTIONAL_COMMIT_RE = /^(\w+)(?:\([^)]+\))?!?:\s*(.+)$/;
-
-function getCommitSubjectsSinceLastTag() {
-  let lastTag;
-  try {
-    lastTag = execFileSync("git", ["describe", "--tags", "--abbrev=0"], {
-      encoding: "utf-8",
-    }).trim();
-  } catch {
-    return [];
-  }
-
-  return execFileSync("git", ["log", `${lastTag}..HEAD`, "--format=%s"], {
-    encoding: "utf-8",
-  })
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-}
-
-function buildSectionsFromCommits(subjects) {
+function buildSectionsFromCommits(subjects, { channel } = {}) {
   const sections = {};
 
   for (const subject of subjects) {
     const match = subject.match(CONVENTIONAL_COMMIT_RE);
     if (!match) continue;
 
-    const [, type, description] = match;
-    const section = COMMIT_TYPE_TO_SECTION[type];
-    if (!section) continue;
+    const [, type, , description] = match;
+    const meta = COMMIT_TYPES[type];
+    if (!meta) continue;
+    if (channel === "stable" && meta.stableVisible === false) continue;
 
     const bullet = description[0].toUpperCase() + description.slice(1);
-    sections[section] ??= [];
-    if (!sections[section].includes(bullet)) {
-      sections[section].push(bullet);
+    sections[meta.section] ??= [];
+    if (!sections[meta.section].includes(bullet)) {
+      sections[meta.section].push(bullet);
     }
   }
 
-  const ordered = {};
-  for (const section of SECTION_ORDER) {
-    if (sections[section]?.length) ordered[section] = sections[section];
-  }
-  return ordered;
+  return orderSections(sections);
 }
 
 module.exports = { channelFromVersion, buildSectionsFromCommits };
 
-// ---------------------------------------------------------------------------
-// CLI entry — only runs when called directly, not when require()'d by tests.
-//
-// Preview releases: a new entry is created by copying the hand-written
-// "Unreleased" section (the same curated bullets destined for the next stable
-// release) and inserting it below "Unreleased", which is left untouched.
-//
-// Stable releases: the hand-written "Unreleased" entry is promoted to the new
-// version, and a fresh empty "Unreleased" entry is prepended.
-// ---------------------------------------------------------------------------
+// preview: since the last tag of any kind (continues the current cycle).
+// stable: since the last *stable* tag, skipping preview tags cut mid-cycle,
+// so a stable release aggregates the whole cycle.
 if (require.main === module) {
   const channelArg = process.argv.find((a) =>
     /^--channel=(preview|stable)$/.test(a),
@@ -105,45 +72,24 @@ if (require.main === module) {
   );
   const MAX_ENTRIES = 50;
 
-  if (resolvedChannel === "preview") {
-    const unreleased = entries[0]?.version === "Unreleased" ? entries[0] : null;
-    const subjects = getCommitSubjectsSinceLastTag();
-    const sections = buildSectionsFromCommits(subjects);
+  const lastTag = getLastTag({
+    excludePreRelease: resolvedChannel === "stable",
+  });
+  const subjects = getCommitSubjectsSince(lastTag);
+  const sections = buildSectionsFromCommits(subjects, {
+    channel: resolvedChannel,
+  });
 
-    // Insert below "Unreleased" (index 0), which is left untouched.
-    const insertAt = unreleased ? 1 : 0;
-    entries.splice(insertAt, 0, {
-      version,
-      date,
-      channel: resolvedChannel,
-      sections,
-    });
+  entries.unshift({
+    version,
+    date,
+    channel: resolvedChannel,
+    sections,
+  });
 
-    console.log(
-      `✓ Added preview entry for v${version} (${Object.values(sections).flat().length} items from ${subjects.length} commits)`,
-    );
-  } else {
-    const unreleased = entries.find((e) => e.version === "Unreleased");
-    if (!unreleased) {
-      console.error(
-        'No "Unreleased" entry found in public/changelog.json — add one with the notes for this release before bumping.',
-      );
-      process.exit(1);
-    }
-
-    unreleased.version = version;
-    unreleased.date = date;
-    unreleased.channel = resolvedChannel;
-
-    entries.unshift({
-      version: "Unreleased",
-      date: null,
-      channel: "preview",
-      sections: {},
-    });
-
-    console.log(`✓ Promoted Unreleased → ${resolvedChannel} v${version}`);
-  }
+  console.log(
+    `✓ Added ${resolvedChannel} entry for v${version} (${Object.values(sections).flat().length} items from ${subjects.length} commits since ${lastTag ?? "the beginning"})`,
+  );
 
   const trimmed = entries.slice(0, MAX_ENTRIES);
 

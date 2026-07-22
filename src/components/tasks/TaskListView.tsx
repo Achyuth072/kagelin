@@ -1,6 +1,7 @@
 "use client";
 
 import React, { memo, useMemo } from "react";
+import { Moon } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -58,7 +59,9 @@ function SectionHeader({
             : "text-foreground/70",
         )}
       >
-        {icon && <span className="mr-1.5 inline-block">{icon}</span>}
+        {icon && (
+          <span className="mr-1.5 inline-flex align-middle">{icon}</span>
+        )}
         {title}
       </h3>
       {count !== undefined && (
@@ -200,7 +203,7 @@ function TaskListViewBase({
           <SectionHeader
             title="This Evening"
             count={evening.length > 0 ? evening.length : undefined}
-            icon="🌙"
+            icon={<Moon className="h-4 w-4" />}
           />
           <SortableContext
             id="evening-section"

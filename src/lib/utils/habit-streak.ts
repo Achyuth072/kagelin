@@ -7,7 +7,15 @@ import {
 } from "date-fns";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { interpolateDoneDays } from "@/lib/utils/habit-intervals";
-import { dayValue } from "@/lib/utils/habit-score";
+import { dayValue, periodDays } from "@/lib/utils/habit-score";
+
+/** Measurable habits interpolate nothing, so they keep the one-day window. */
+function pendingWindowDays(
+  habit: Pick<Habit, "frequency_period" | "habit_type">,
+): number {
+  if (habit.habit_type === "measurable") return 1;
+  return periodDays(habit.frequency_period ?? null);
+}
 
 /**
  * Current unbroken run of done-days ending at the present.
@@ -16,9 +24,9 @@ import { dayValue } from "@/lib/utils/habit-score";
  * For frequency-aware habits: runs over the interpolated done-set.
  * For measurable habits: counts only logged days meeting target (no interpolation).
  *
- * An unlogged today is _pending_, not a break: the streak counts through
- * yesterday and only breaks on a day that has already passed. So a live run
- * reads its true length all morning before today is logged.
+ * The trailing gap up to today is _pending_, not a break, for one pending
+ * window — a frequency Habit's interpolated run legitimately ends before today
+ * while the current period is still open. See ADR 0004.
  */
 export function getCurrentStreak(
   habit: Pick<
@@ -33,15 +41,24 @@ export function getCurrentStreak(
   today: Date = new Date(),
 ): number {
   const done = buildDoneSet(habit, entries, today);
+  if (done.size === 0) return 0;
 
-  let cursor = startOfDay(today);
-  // Pending today: start the walk-back from yesterday so it doesn't read as a break.
-  if (!done.has(format(cursor, "yyyy-MM-dd"))) {
-    cursor = subDays(cursor, 1);
+  const key = (d: Date) => format(d, "yyyy-MM-dd");
+  const todayStart = startOfDay(today);
+  const window = pendingWindowDays(habit);
+
+  let cursor: Date | null = null;
+  for (let gap = 0; gap <= window; gap++) {
+    const day = subDays(todayStart, gap);
+    if (done.has(key(day))) {
+      cursor = day;
+      break;
+    }
   }
+  if (!cursor) return 0;
 
   let streak = 0;
-  while (done.has(format(cursor, "yyyy-MM-dd"))) {
+  while (done.has(key(cursor))) {
     streak++;
     cursor = subDays(cursor, 1);
   }

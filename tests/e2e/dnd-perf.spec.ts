@@ -17,7 +17,7 @@ import { test, expect, type Page } from "@playwright/test";
  * Compiler is applied and there is no StrictMode double-render.
  */
 
-const GUEST_DATA_KEY = "kanso_guest_data_v10";
+const GUEST_DATA_KEY = "kanso_guest_data_v11";
 const UI_KEY = "kanso-ui-state";
 
 type ViewCfg = {

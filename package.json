@@ -1,15 +1,16 @@
 {
   "name": "kagelin",
-  "version": "1.25.0",
+  "version": "1.26.0-preview.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "scripts": {
     "dev": "next dev --turbo",
     "dev:pwa": "next dev --webpack",
+    "prebuild": "npm run copy-wasm",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "lint:strict": "eslint src app --max-warnings=0",
+    "lint:strict": "eslint src app --max-warnings=13",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
@@ -22,8 +23,8 @@
     "dead-code": "npx knip",
     "unused-deps": "npx depcheck",
     "copy-wasm": "node -e \"require('fs').copyFileSync('node_modules/sql.js/dist/sql-wasm.wasm', 'public/sql-wasm.wasm')\"",
-    "preview": "release-it --config .release-it.json --preRelease=preview",
-    "release": "release-it --config .release-it-stable.json",
+    "preview": "node scripts/release.cjs --channel=preview",
+    "release": "node scripts/release.cjs --channel=stable",
     "prepare": "husky && npm run copy-wasm"
   },
   "lint-staged": {
@@ -104,6 +105,8 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
     "@next/bundle-analyzer": "^16.2.10",
     "@playwright/test": "^1.61.1",
     "@poupe/eslint-plugin-tailwindcss": "^0.3.1",

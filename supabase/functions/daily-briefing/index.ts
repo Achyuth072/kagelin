@@ -69,7 +69,7 @@ serve(async (req) => {
           type: "briefing",
           scheduled_at: new Date().toISOString(),
           payload: {
-            title: "Morning Briefing ☕",
+            title: "Morning Briefing",
             body: body,
             data: { url: "/today" },
           },
@@ -110,7 +110,7 @@ serve(async (req) => {
           type: "evening",
           scheduled_at: new Date().toISOString(),
           payload: {
-            title: "Evening Plan 🌙",
+            title: "Evening Plan",
             body: body,
             data: { url: "/focus" },
           },

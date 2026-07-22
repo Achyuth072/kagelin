@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import { format } from "date-fns";
+import { MapPin } from "lucide-react";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import {
   Popover,
@@ -102,7 +103,7 @@ export const EventOverflowPopover = memo(
                               : "text-white/70",
                           )}
                         >
-                          <span>📍</span>
+                          <MapPin className="h-2.5 w-2.5 shrink-0" />
                           {event.location}
                         </span>
                       )}

@@ -117,10 +117,17 @@ from reading as an unbroken streak across every unlogged day.
 
 ### Streak
 
-The current unbroken run of done-days ending at the present. A **today that has
-not been logged yet is _pending_, not a break** — the streak counts through
-yesterday and only breaks when a day that has _already passed_ was missed. So a
-30-day run still reads "30" all morning before today is logged.
+The current unbroken run of done-days ending at the present. A **trailing gap up
+to today is _pending_, not a break** — the streak counts through the last done-day
+and only breaks once the schedule has actually lapsed. So a 30-day run still reads
+"30" all morning before today is logged.
+
+The **pending window** is the Habit's own period: one day for a daily Habit (only
+today is pending, exactly as before), one week for a 3×/week Habit. A frequency
+Habit's computed run legitimately ends before today while the current period is
+still open, so zeroing the streak there would be wrong. Once a full period passes
+with no credited day, the streak lapses to 0. Measurable Habits fill in nothing
+(see below), so they keep the one-day window. See ADR 0004.
 
 **Frequency-aware**: for a non-daily Habit (e.g. 3× / week), a streak is _not_ a
 run of consecutive calendar days the Habit was logged. The schedule first

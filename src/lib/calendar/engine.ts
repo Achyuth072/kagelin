@@ -53,8 +53,8 @@ function layoutDayEvents(
 
   if (dayEvents.length === 0) return [];
 
-  const MAX_ROW_HEIGHT_PERCENT = 1.94; // ~28px max height
-  const MIN_ROW_HEIGHT_PERCENT = 1.0; // ~14px min height
+  const MAX_ROW_HEIGHT_PERCENT = 1.94; // % of the 24h day — ~56px at TimeGrid's HOUR_HEIGHT=120
+  const MIN_ROW_HEIGHT_PERCENT = 1.0; // ~29px at that same scale
   const SLOT_HEIGHT_PERCENT = 4.16; // 1 hour (60/1440 * 100)
 
   const positioned: PositionedEvent[] = [];

@@ -1,10 +1,18 @@
 import initSqlJs from "sql.js";
 import type { Habit, HabitEntry } from "../types/habit";
+import type { CreateHabitInput } from "../mutations/habit";
 import { PROJECT_COLORS } from "../constants/colors";
 
-export async function parseUhabitsFile(
-  file: File,
-): Promise<{ habits: Habit[]; entries: HabitEntry[] }> {
+export interface UhabitsRawSource {
+  habits: Record<string, unknown>[];
+  repetitions: Record<string, unknown>[];
+}
+
+export async function parseUhabitsFile(file: File): Promise<{
+  habits: Habit[];
+  entries: HabitEntry[];
+  source: UhabitsRawSource;
+}> {
   // Use the locally served WASM binary so the import works in all environments
   // (including offline / PWA) without depending on an external CDN.
   // The file is copied to public/sql-wasm.wasm by `npm run copy-wasm` (prepare).
@@ -18,7 +26,9 @@ export async function parseUhabitsFile(
   const habitsResult = db.exec("SELECT * FROM habits");
   const repetitionsResult = db.exec("SELECT * FROM Repetitions");
 
-  if (!habitsResult.length) return { habits: [], entries: [] };
+  if (!habitsResult.length) {
+    return { habits: [], entries: [], source: { habits: [], repetitions: [] } };
+  }
 
   const habitsData = resultToObjects(habitsResult[0]);
   const repetitionsData = repetitionsResult.length
@@ -27,7 +37,11 @@ export async function parseUhabitsFile(
 
   db.close();
 
-  return mapUhabitsToKanso(habitsData, repetitionsData);
+  // Raw parse, kept verbatim for round-trip export (ADR 0006).
+  return {
+    ...mapUhabitsToKanso(habitsData, repetitionsData),
+    source: { habits: habitsData, repetitions: repetitionsData },
+  };
 }
 
 function resultToObjects(result: {
@@ -135,12 +149,45 @@ function paletteToHex(colorIndex: number): string {
   return findClosestKansoColor(loopHex);
 }
 
+// uhabits frequency is a fraction freq_num/freq_den; Kagelin has only
+// day/week/month, so inexpressible denominators are approximated. See ADR 0005.
+function mapFrequency(
+  freqNum: number,
+  freqDen: number,
+): { count: number; period: "day" | "week" | "month" } | null {
+  if (!Number.isFinite(freqNum) || !Number.isFinite(freqDen)) return null;
+  if (freqDen <= 0 || freqNum <= 0) return null;
+
+  if (freqDen === 1) return { count: freqNum, period: "day" };
+  if (freqDen === 7) return { count: freqNum, period: "week" };
+  if (freqDen === 30 || freqDen === 31)
+    return { count: freqNum, period: "month" };
+
+  const count = Math.max(1, Math.round((freqNum * 7) / freqDen));
+  return { count, period: "week" };
+}
+
 function inferIcon(habitName: string, description?: string): string {
   const text = description ? `${habitName} ${description}` : habitName;
   for (const [pattern, icon] of ICON_KEYWORDS) {
     if (pattern.test(text)) return icon;
   }
   return "Flame";
+}
+
+// Habit → createHabit payload; carries frequency through so it isn't dropped
+// between parse and persist. See ADR 0005.
+export function toCreateHabitInput(habit: Habit): CreateHabitInput {
+  return {
+    name: habit.name,
+    description: habit.description || undefined,
+    color: habit.color,
+    icon: habit.icon || undefined,
+    start_date: habit.start_date ?? undefined,
+    frequencyCount: habit.frequency_count ?? undefined,
+    frequencyPeriod: habit.frequency_period ?? undefined,
+    source_uuid: habit.source_uuid ?? undefined,
+  };
 }
 
 export function mapUhabitsToKanso(
@@ -169,6 +216,11 @@ export function mapUhabitsToKanso(
     const id = crypto.randomUUID();
     idMap.set(uh.id as number, id);
 
+    const frequency = mapFrequency(
+      uh.freq_num as number,
+      uh.freq_den as number,
+    );
+
     habits.push({
       id,
       user_id: "",
@@ -185,6 +237,11 @@ export function mapUhabitsToKanso(
       archived_at: null,
       start_date: earliestDate.get(uh.id as number) ?? today,
       sort_order: habits.length,
+      source_uuid: (uh.uuid as string | undefined) ?? null,
+      ...(frequency && {
+        frequency_count: frequency.count,
+        frequency_period: frequency.period,
+      }),
     });
   });
 

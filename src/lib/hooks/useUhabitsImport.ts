@@ -1,11 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { parseUhabitsFile } from "@/lib/import/uhabits";
-import { classifyUhabitsError } from "@/lib/import/uhabitsErrors";
+import * as Sentry from "@sentry/nextjs";
+import {
+  parseUhabitsFile,
+  toCreateHabitInput,
+  type UhabitsRawSource,
+} from "@/lib/import/uhabits";
+import { persistImportSource } from "@/lib/mutations/importSource";
+import {
+  classifyUhabitsError,
+  SAVE_ERROR_MESSAGE,
+} from "@/lib/import/uhabitsErrors";
+import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { toast } from "sonner";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useCreateHabit } from "@/lib/hooks/useHabitMutations";
+import { habitMutations } from "@/lib/mutations/habit";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
@@ -15,7 +25,6 @@ const ENTRY_CHUNK_SIZE = 500;
 export function useUhabitsImport() {
   const [isImporting, setIsImporting] = useState(false);
   const { trigger } = useHaptic();
-  const createHabit = useCreateHabit();
   const queryClient = useQueryClient();
 
   const importUhabits = async (file: File) => {
@@ -25,8 +34,22 @@ export function useUhabitsImport() {
     trigger("toggle");
     const loadingToastId = toast.loading(`Parsing ${file.name}...`);
 
+    const reportImportFailure = (err: unknown, message: string) => {
+      Sentry.captureException(err);
+      toast.error(message, { id: loadingToastId });
+      trigger("thud");
+      return false;
+    };
+
     try {
-      const { habits, entries } = await parseUhabitsFile(file);
+      let habits: Habit[];
+      let entries: HabitEntry[];
+      let source: UhabitsRawSource;
+      try {
+        ({ habits, entries, source } = await parseUhabitsFile(file));
+      } catch (err) {
+        return reportImportFailure(err, classifyUhabitsError(err));
+      }
 
       if (habits.length === 0) {
         toast.error("No compatible habits found in the database", {
@@ -39,12 +62,22 @@ export function useUhabitsImport() {
         typeof window !== "undefined" &&
         localStorage.getItem("kanso_guest_mode") === "true";
 
+      // Best-effort capture for round-trip export; runs in the background and
+      // never blocks or fails the import (ADR 0006).
+      void persistImportSource(
+        { source_app: "uhabits", file_name: file.name, raw: source },
+        { isGuest },
+      ).catch((err) => Sentry.captureException(err));
+
       // Detect duplicate habits by name to avoid re-importing
       let habitsToImport = habits;
       let skippedCount = 0;
+      let nextSortOrder = 0;
       if (!isGuest) {
         const supabase = createClient();
-        const { data: existing } = await supabase.from("habits").select("name");
+        const { data: existing } = await supabase
+          .from("habits")
+          .select("name, sort_order");
         if (existing && existing.length > 0) {
           const existingNames = new Set(
             existing.map((h) => h.name.toLowerCase()),
@@ -53,6 +86,7 @@ export function useUhabitsImport() {
             (h) => !existingNames.has(h.name.toLowerCase()),
           );
           skippedCount = habits.length - habitsToImport.length;
+          nextSortOrder = Math.max(...existing.map((h) => h.sort_order)) + 1;
         }
       } else {
         const existingNames = new Set(
@@ -84,13 +118,11 @@ export function useUhabitsImport() {
       // Track tempId (from parseUhabitsFile) → actualId (from DB / mock store)
       const habitIdMap = new Map<string, string>();
 
+      // Raw create avoids invalidating the habits query once per habit.
       for (const habit of habitsToImport) {
-        const created = await createHabit.mutateAsync({
-          name: habit.name,
-          description: habit.description || undefined,
-          color: habit.color,
-          icon: habit.icon || undefined,
-          start_date: habit.start_date ?? undefined,
+        const created = await habitMutations.create({
+          ...toCreateHabitInput(habit),
+          sort_order: isGuest ? undefined : nextSortOrder++,
         });
         habitIdMap.set(habit.id, created.id);
       }
@@ -116,9 +148,7 @@ export function useUhabitsImport() {
           );
 
         if (isGuest) {
-          for (const entry of remapped) {
-            mockStore.addHabitEntry(entry);
-          }
+          mockStore.addHabitEntries(remapped);
         } else {
           const supabase = createClient();
           for (let i = 0; i < remapped.length; i += ENTRY_CHUNK_SIZE) {
@@ -142,11 +172,9 @@ export function useUhabitsImport() {
       trigger("success");
       return true;
     } catch (err) {
-      console.error("Import failed:", err);
-      const message = classifyUhabitsError(err);
-      toast.error(message, { id: loadingToastId });
-      trigger("thud");
-      return false;
+      // Parsing already succeeded here, so this is a save failure on our
+      // side — never blame the user's file for it.
+      return reportImportFailure(err, SAVE_ERROR_MESSAGE);
     } finally {
       setIsImporting(false);
     }

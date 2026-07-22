@@ -4,9 +4,26 @@ import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import type { Habit, HabitEntry, HabitWithEntries } from "@/lib/types/habit";
 
 export type { HabitEntry, HabitWithEntries };
+
+function fetchAllHabitEntries(
+  supabase: ReturnType<typeof createClient>,
+  habitIds: string[],
+): Promise<HabitEntry[]> {
+  if (habitIds.length === 0) return Promise.resolve([]);
+  return fetchAllRows<HabitEntry>((from, to) =>
+    supabase
+      .from("habit_entries")
+      .select("*")
+      .in("habit_id", habitIds)
+      .order("date", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+}
 
 interface UseHabitsOptions {
   includeArchived?: boolean;
@@ -70,14 +87,7 @@ export function useHabits(options: UseHabitsOptions = {}) {
 
       // Fetch habit entries for all habits
       const habitIds = habits.map((h) => h.id);
-      const { data: entries, error: entriesError } = await supabase
-        .from("habit_entries")
-        .select("*")
-        .in("habit_id", habitIds);
-
-      if (entriesError) {
-        throw new Error(entriesError.message);
-      }
+      const entries = await fetchAllHabitEntries(supabase, habitIds);
 
       // Group entries by habit_id
       const entriesByHabit = new Map<string, HabitEntry[]>();
@@ -129,18 +139,11 @@ export function useHabit(habitId: string | null) {
         throw new Error(habitError.message);
       }
 
-      const { data: entries, error: entriesError } = await supabase
-        .from("habit_entries")
-        .select("*")
-        .eq("habit_id", habitId);
-
-      if (entriesError) {
-        throw new Error(entriesError.message);
-      }
+      const entries = await fetchAllHabitEntries(supabase, [habitId]);
 
       return {
         ...(habit as Habit),
-        entries: (entries || []) as HabitEntry[],
+        entries,
       };
     },
     enabled: !!habitId,

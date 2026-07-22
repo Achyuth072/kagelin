@@ -4,34 +4,10 @@ import {
   getBestStreaks,
   getTotalCompletions,
 } from "@/lib/utils/habit-streak";
-import type { Habit, HabitEntry } from "@/lib/types/habit";
+import type { Habit } from "@/lib/types/habit";
+import { entry, makeHabit } from "./support/habitFixtures";
 
-function entry(date: string, value: number): HabitEntry {
-  return {
-    id: `e-${date}`,
-    habit_id: "h1",
-    date,
-    value,
-    created_at: `${date}T00:00:00.000Z`,
-  };
-}
-
-const dailyBoolean: Habit = {
-  id: "h1",
-  user_id: "u1",
-  name: "Exercise",
-  description: null,
-  color: "#ff0000",
-  icon: null,
-  created_at: "2026-01-01T00:00:00.000Z",
-  updated_at: "2026-01-01T00:00:00.000Z",
-  archived_at: null,
-  start_date: null,
-  sort_order: 0,
-  habit_type: "boolean",
-  frequency_count: 1,
-  frequency_period: "day",
-};
+const dailyBoolean = makeHabit();
 
 describe("getCurrentStreak", () => {
   // Thursday, 2026-06-11
@@ -78,11 +54,10 @@ describe("getCurrentStreak", () => {
   });
 });
 
-const threePerWeek: Habit = {
-  ...dailyBoolean,
+const threePerWeek = makeHabit({
   frequency_count: 3,
   frequency_period: "week",
-};
+});
 
 describe("getCurrentStreak — 3×/week (frequency-aware)", () => {
   const today = new Date("2026-06-11T10:00:00");
@@ -99,18 +74,38 @@ describe("getCurrentStreak — 3×/week (frequency-aware)", () => {
     expect(getCurrentStreak(threePerWeek, entries, today)).toBe(11); // June 1-11
   });
 
-  it("breaks when a gap exceeds the schedule", () => {
-    // Last reps: June 1,3,5 (interval June 1-7), then nothing until June 10
-    // June 8,9 are off-days that break the streak since they're past & not interpolated
+  it("stays live through a pending period, then lapses", () => {
+    // Run ends 4 days ago, still within the 7-day pending window.
     const entries = [
       entry("2026-06-01", 1),
       entry("2026-06-03", 1),
       entry("2026-06-05", 1),
     ];
-    // Interpolated set: June 1-7. Streak walks back from today (June 11).
-    // June 11 not in set → pending → start from June 10.
-    // June 10,9,8 not in set → streak = 0
-    expect(getCurrentStreak(threePerWeek, entries, today)).toBe(0);
+    expect(getCurrentStreak(threePerWeek, entries, today)).toBe(7);
+  });
+
+  it("keeps the one-day window for measurable habits (no interpolation)", () => {
+    // No interpolation, so a 7-day window would credit unlogged days.
+    const measurableWeekly: Habit = {
+      ...threePerWeek,
+      habit_type: "measurable",
+      target_type: "at_least",
+      target_value: 3,
+    };
+    expect(
+      getCurrentStreak(measurableWeekly, [entry("2026-06-06", 5)], today),
+    ).toBe(0);
+  });
+
+  it("lapses to 0 once a full period passes with no credited day", () => {
+    // 8 days past the run's end — beyond the 7-day window.
+    const lateToday = new Date("2026-06-15T10:00:00");
+    const entries = [
+      entry("2026-06-01", 1),
+      entry("2026-06-03", 1),
+      entry("2026-06-05", 1),
+    ];
+    expect(getCurrentStreak(threePerWeek, entries, lateToday)).toBe(0);
   });
 });
 

@@ -191,32 +191,17 @@ export function TimeGrid({
                         {event.title}
                       </div>
 
-                      {/* Time & Location - Only show if enough height */}
+                      {/* Time - Only show if enough height */}
                       {heightPx > 40 && (
-                        <div className="flex flex-col gap-0.5">
-                          <div
-                            className={cn(
-                              "text-[9px] md:text-[10px] leading-tight font-medium",
-                              isTask
-                                ? "text-muted-foreground/70"
-                                : "text-white/80",
-                            )}
-                          >
-                            {formatTime(event.start)}
-                          </div>
-                          {heightPx > 60 && event.location && (
-                            <div
-                              className={cn(
-                                "text-[8px] md:text-[9px] leading-tight flex items-center gap-0.5 mt-0.5",
-                                isTask
-                                  ? "text-muted-foreground/60"
-                                  : "text-white/70",
-                              )}
-                            >
-                              <span className="shrink-0 opacity-80">📍</span>
-                              <span className="truncate">{event.location}</span>
-                            </div>
+                        <div
+                          className={cn(
+                            "text-[9px] md:text-[10px] leading-tight font-medium",
+                            isTask
+                              ? "text-muted-foreground/70"
+                              : "text-white/80",
                           )}
+                        >
+                          {formatTime(event.start)}
                         </div>
                       )}
                     </div>
