@@ -24,18 +24,19 @@ export function usePushNotifications() {
   const setNotificationsEnabled = useUiStore(
     (state) => state.setNotificationsEnabled,
   );
-  const [permission, setPermission] = useState<NotificationPermission>(() => {
-    if (typeof window === "undefined") return "default";
-    return (Notification.permission as NotificationPermission) || "default";
-  });
-  const [isSupported] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return (
-      "Notification" in window &&
-      "serviceWorker" in navigator &&
-      "PushManager" in window
-    );
-  });
+  // iOS Safari/Chrome tabs lack `Notification` (only present when installed
+  // as a home-screen PWA) — reading `.permission` there throws.
+  const supportsNotificationApi =
+    typeof window !== "undefined" &&
+    "Notification" in window &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window;
+  const [permission, setPermission] = useState<NotificationPermission>(() =>
+    supportsNotificationApi
+      ? (Notification.permission as NotificationPermission)
+      : "default",
+  );
+  const [isSupported] = useState(() => supportsNotificationApi);
   const [subscription, setSubscription] = useState<PushSubscription | null>(
     null,
   );
@@ -44,9 +45,8 @@ export function usePushNotifications() {
   // Track last-known subscription endpoint for detecting auto-rotation (Chrome Android)
   const subscriptionEndpointRef = useRef<string | null>(null);
 
-  // Helper to wait for service worker with timeout
   const getServiceWorkerRegistration = useCallback(async () => {
-    // Fast-fail if no SW is registered at all (e.g. dev mode without ENABLE_PWA=true)
+    // Fail fast in dev without ENABLE_PWA=true, instead of hanging on `ready`
     const existing = await navigator.serviceWorker.getRegistration();
     if (!existing) {
       throw new Error("No service worker registered");
@@ -170,7 +170,6 @@ export function usePushNotifications() {
         let sub: PushSubscription | null = null;
 
         if (result === "granted") {
-          // Note: subscribeToPush now handles setNotificationsEnabled(true) on success
           sub = await subscribeToPush(
             result as NotificationPermission,
             options,
@@ -270,9 +269,7 @@ export function usePushNotifications() {
     }
   }, [subscription]);
 
-  // Re-validate push subscription on visibility change (tab regains focus)
-  // This catches Chrome Android's auto-rotated subscriptions and ensures
-  // the server always has a fresh endpoint
+  // Re-validate on tab focus to catch Chrome Android's auto-rotated subscriptions
   useEffect(() => {
     if (isGuestMode || !isSupported || !notificationsEnabled) return;
 
@@ -284,20 +281,17 @@ export function usePushNotifications() {
         const currentSub = await registration.pushManager.getSubscription();
 
         if (currentSub) {
-          // Detect endpoint change (Chrome auto-rotation) for logging
           if (currentSub.endpoint !== subscriptionEndpointRef.current) {
             console.log(
               "[Push] Subscription endpoint changed, syncing new endpoint",
             );
           }
 
-          // Always sync the subscription to backend for freshness,
-          // even if the endpoint hasn't changed
+          // Sync unconditionally — freshness matters even if unchanged
           setSubscription(currentSub);
           await sendSubscriptionToBackend(currentSub);
           subscriptionEndpointRef.current = currentSub.endpoint;
         } else if (permission === "granted") {
-          // Subscription was lost, re-subscribe
           await subscribeToPush();
         }
       } catch (error) {
@@ -333,7 +327,6 @@ export function usePushNotifications() {
   };
 }
 
-// Helper function to convert VAPID key
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");

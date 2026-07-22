@@ -66,7 +66,7 @@ function curateWithAntigravity(sections) {
       "-p",
       buildCurationPrompt(sections),
       "--model",
-      "gemini-3.5-flash",
+      "gemini-3.6-flash",
       "--effort",
       "medium",
       "--dangerously-skip-permissions",
