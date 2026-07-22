@@ -18,9 +18,14 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Ignore generated service worker
     "public/sw.js",
-    // Ignore CJS scripts (require() is expected in CommonJS)
-    "scripts/generate-changelog.cjs",
   ]),
+  // CJS files: require() is expected in CommonJS
+  {
+    files: ["**/*.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
   // Custom rule overrides
   {
     rules: {

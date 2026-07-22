@@ -9,6 +9,7 @@ import {
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
+import { BetaBadge } from "@/components/ui/beta-badge";
 import { Database, Loader2, Calendar, FileUp } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
@@ -76,9 +77,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                 <div>
                   <p className="text-sm font-medium flex items-center gap-1.5">
                     Loop Habit Tracker
-                    <span className="px-1.5 py-0.5 rounded-md bg-brand/10 text-brand text-[9px] font-bold uppercase tracking-widest border border-brand/20 leading-none">
-                      Beta
-                    </span>
+                    <BetaBadge />
                   </p>
                   <p className="text-xs text-muted-foreground lowercase">
                     Import from .db file (Android)

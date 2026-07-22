@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { BetaBadge } from "@/components/ui/beta-badge";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
 
@@ -74,9 +75,7 @@ export function HabitOptionsMenu() {
           >
             <Database className="h-4 w-4 text-brand" />
             <span>Loop Habit Tracker</span>
-            <span className="ml-auto px-1.5 py-0.5 rounded-md bg-brand/10 text-brand text-[9px] font-bold uppercase tracking-widest border border-brand/20 leading-none">
-              Beta
-            </span>
+            <BetaBadge className="ml-auto" />
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

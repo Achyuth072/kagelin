@@ -48,6 +48,10 @@ function parseCuratedSections(rawOutput) {
   return orderSections(candidate);
 }
 
+function writeChangelogEntries(changelogFile, entries) {
+  fs.writeFileSync(changelogFile, JSON.stringify(entries, null, 2) + "\n");
+}
+
 function resolveChoice(answer) {
   const normalized = answer.trim().toLowerCase();
   if (normalized === "r" || normalized === "raw") return "raw";
@@ -114,6 +118,11 @@ async function runCurationLoop(initialSections) {
             ? editSections(sections)
             : curateWithAntigravity(sections);
       } catch (err) {
+        // Deliberate fallback, not a swallow: keep looping with the prior
+        // bullets so a transient `agy`/editor failure doesn't crash the
+        // whole release over a curation nicety. console.warn here reaches
+        // the person driving the terminal, which is the surface.
+        // eslint-disable-next-line no-restricted-syntax
         console.warn(
           `⚠ ${choice} failed (${err.message}) — bullets unchanged.`,
         );
@@ -150,12 +159,13 @@ if (require.main === module) {
     if (process.env.CURATED_SECTIONS) {
       try {
         entry.sections = parseCuratedSections(process.env.CURATED_SECTIONS);
-        fs.writeFileSync(
-          changelogFile,
-          JSON.stringify(entries, null, 2) + "\n",
-        );
+        writeChangelogEntries(changelogFile, entries);
         console.log(`✓ Applied curated changelog for v${version}`);
       } catch (err) {
+        // Deliberate fallback, not a swallow: this runs unattended from
+        // release-it's after:bump hook, so falling back to raw (uncurated)
+        // bullets beats aborting an entire release over a formatting nicety.
+        // eslint-disable-next-line no-restricted-syntax
         console.warn(
           `⚠ Could not apply curated sections for v${version} (${err.message}) — keeping raw bullets.`,
         );
@@ -168,7 +178,7 @@ if (require.main === module) {
     }
 
     entry.sections = await runCurationLoop(entry.sections);
-    fs.writeFileSync(changelogFile, JSON.stringify(entries, null, 2) + "\n");
+    writeChangelogEntries(changelogFile, entries);
     console.log(`✓ Updated changelog entry for v${version}`);
   })();
 }
