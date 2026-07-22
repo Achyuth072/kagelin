@@ -1,5 +1,32 @@
 [
   {
+    "version": "1.26.0",
+    "date": "2026-07-22",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Derive changelog entries and version bumps from commits on both release channels, supporting curation choices on stable releases and raw-commit previews in a review loop",
+        "Wire provenance capture and habit frequency tracking into the uhabits import flow for streak fidelity",
+        "Implement guest mode management in AuthProvider",
+        "Add /api/health uptime-monitor endpoint"
+      ],
+      "Improved": [
+        "Batch uhabits import habit creation with a prefetched sort_order",
+        "Rework guest mode seed data generation"
+      ],
+      "Fixed": [
+        "Current streak now reports the most-recent run within a pending window",
+        "Update UI to indicate beta status for Loop Habit Tracker and improve error message clarity",
+        "Paginate habit_entries fetch, stats, and account data export to load history past 1000 rows",
+        "Fix deployed uhabits import by copying sql.js wasm on build and excluding wasm assets from auth middleware",
+        "Bulk-write guest habit entries and report storage write errors to Sentry instead of swallowing them",
+        "Replace UI emoji with lucide icons and strip them from notification titles",
+        "Update classNames/props for react-day-picker v10 rename",
+        "Pin function search_path and revoke public execute per supabase advisors"
+      ]
+    }
+  },
+  {
     "version": "1.26.0-preview.0",
     "date": "2026-07-21",
     "channel": "preview",
@@ -723,16 +750,6 @@
     "sections": {
       "Added": [
         "Mobile UX polish and unified project visuals"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.7",
-    "date": "2026-05-07",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Resolve task DnD grouping and meta tag sync issues"
       ]
     }
   }
