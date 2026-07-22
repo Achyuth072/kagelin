@@ -25,16 +25,16 @@ _Currently in preview — expect rough edges._
 
 <table>
   <tr>
-    <td width="50%"><img src="https://raw.githubusercontent.com/Achyuth072/kagelin/main/public/screenshots/board-view-desktop.png" alt="Board view" /><br /><sub>Board view</sub></td>
-    <td width="50%"><img src="https://raw.githubusercontent.com/Achyuth072/kagelin/main/public/screenshots/habit-grid-desktop.png" alt="Habit grid" /><br /><sub>Habit grid</sub></td>
+    <td width="50%"><img src="public/screenshots/board-view-desktop.webp" alt="Board view" /><br /><sub>Board view</sub></td>
+    <td width="50%"><img src="public/screenshots/habit-grid-desktop.webp" alt="Habit grid" /><br /><sub>Habit grid</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="https://raw.githubusercontent.com/Achyuth072/kagelin/main/public/screenshots/timer-with-task.png" alt="Focus timer" /><br /><sub>Focus timer</sub></td>
-    <td width="50%"><img src="https://raw.githubusercontent.com/Achyuth072/kagelin/main/public/screenshots/calendar-monthly.png" alt="Calendar monthly view" /><br /><sub>Calendar</sub></td>
+    <td width="50%"><img src="public/screenshots/timer-with-task.webp" alt="Focus timer" /><br /><sub>Focus timer</sub></td>
+    <td width="50%"><img src="public/screenshots/calendar-monthly.webp" alt="Calendar monthly view" /><br /><sub>Calendar</sub></td>
   </tr>
 </table>
 
-<p align="center"><img src="https://raw.githubusercontent.com/Achyuth072/kagelin/main/public/screenshots/command-pallete-desktop.png" alt="Command palette" width="70%" /><br /><sub>Command palette (Ctrl/Cmd+K)</sub></p>
+<p align="center"><img src="public/screenshots/command-pallete-desktop.webp" alt="Command palette" width="70%" /><br /><sub>Command palette (Ctrl/Cmd+K)</sub></p>
 
 ## Why Kagelin
 
