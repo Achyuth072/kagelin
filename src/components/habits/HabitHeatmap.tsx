@@ -29,15 +29,14 @@ export function HabitHeatmap({
   const today = new Date().toISOString().split("T")[0];
   const dataMap = new Map(entries.map((e) => [e.date, e.value]));
 
-  // The calendar only fills gaps *between* its first and last date, so pin the
-  // edges ourselves. The 6-months-back floor keeps today at the right with empty
-  // cells to its left; longer habits keep their own earlier start and scroll.
+  // Calendar only fills gaps *between* first/last date — pin the edges so new
+  // habits get a full 12-month-wide grid instead of a stub a few days wide.
   const ensureDay = (date: string) => {
     if (!dataMap.has(date)) dataMap.set(date, 0);
   };
   if (startDate) ensureDay(startDate);
   ensureDay(today);
-  ensureDay(format(subMonths(new Date(), 6), "yyyy-MM-dd"));
+  ensureDay(format(subMonths(new Date(), 12), "yyyy-MM-dd"));
 
   const calendarData = Array.from(dataMap.entries())
     .map(([date, value]) => ({
@@ -47,13 +46,13 @@ export function HabitHeatmap({
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  // Generate monochromatic theme from base to habit color
   const theme = {
     dark: ["#262626", `${color}33`, `${color}66`, `${color}99`, color],
     light: ["#ebebeb", `${color}33`, `${color}66`, `${color}99`, color],
   };
 
   return (
+    // fit-content: natural blockSize, no stretching; callers scroll it into view.
     <div className={className} style={{ width: "fit-content" }}>
       <ActivityCalendar
         data={calendarData}
