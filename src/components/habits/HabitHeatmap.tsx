@@ -1,9 +1,14 @@
 "use client";
 
 import React from "react";
-import { ActivityCalendar } from "react-activity-calendar";
+import {
+  ActivityCalendar,
+  type Activity,
+  type BlockElement,
+} from "react-activity-calendar";
 import "react-activity-calendar/tooltips.css";
 import { useTheme } from "next-themes";
+import { subMonths, format } from "date-fns";
 
 interface HabitHeatmapProps {
   entries: Array<{ date: string; value: number }>;
@@ -14,18 +19,23 @@ interface HabitHeatmapProps {
   startDate?: string;
 }
 
-/**
- * HabitHeatmap Component
- *
- * Renders a GitHub-style activity heatmap for habit tracking.
- * Uses react-activity-calendar with a monochromatic theme based on habit color.
- *
- * @param entries - Array of habit entries (date + value)
- * @param color - Hex color for the habit (e.g., "#10b981")
- * @param className - Optional CSS class for container styling
- * @param blockSize - Size of each block in pixels
- * @param blockMargin - Margin between blocks in pixels
- */
+function renderBlock(block: BlockElement, activity: Activity) {
+  if (activity.level !== 0) return block;
+  return React.cloneElement(block, {
+    // Inset so the stroke stays inside the SVG viewBox at the edges.
+    x: (block.props.x as number) + 0.5,
+    y: (block.props.y as number) + 0.5,
+    width: (block.props.width as number) - 1,
+    height: (block.props.height as number) - 1,
+    style: {
+      ...block.props.style,
+      stroke: "hsl(var(--border) / 0.5)",
+      strokeWidth: 1,
+    },
+  });
+}
+
+/** GitHub-style habit activity heatmap, monochromatic on the habit color. */
 export function HabitHeatmap({
   entries,
   color,
@@ -36,20 +46,17 @@ export function HabitHeatmap({
 }: HabitHeatmapProps) {
   const { resolvedTheme } = useTheme();
 
-  // Transform habit entries to react-activity-calendar format
-  // We ensure the start_date and today are at least represented to fix the range
   const today = new Date().toISOString().split("T")[0];
   const dataMap = new Map(entries.map((e) => [e.date, e.value]));
 
-  // If startDate is provided, ensure it's in the map (even if 0)
-  if (startDate && !dataMap.has(startDate)) {
-    dataMap.set(startDate, 0);
-  }
-
-  // Ensure today is in the map to anchor the right side
-  if (!dataMap.has(today)) {
-    dataMap.set(today, 0);
-  }
+  // Calendar only fills gaps *between* first/last date — pin the edges so new
+  // habits get a full 12-month-wide grid instead of a stub a few days wide.
+  const ensureDay = (date: string) => {
+    if (!dataMap.has(date)) dataMap.set(date, 0);
+  };
+  if (startDate) ensureDay(startDate);
+  ensureDay(today);
+  ensureDay(format(subMonths(new Date(), 12), "yyyy-MM-dd"));
 
   const calendarData = Array.from(dataMap.entries())
     .map(([date, value]) => ({
@@ -59,13 +66,13 @@ export function HabitHeatmap({
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  // Generate monochromatic theme from base to habit color
   const theme = {
     dark: ["#262626", `${color}33`, `${color}66`, `${color}99`, color],
     light: ["#ebebeb", `${color}33`, `${color}66`, `${color}99`, color],
   };
 
   return (
+    // fit-content: natural blockSize, no stretching; callers scroll it into view.
     <div className={className} style={{ width: "fit-content" }}>
       <ActivityCalendar
         data={calendarData}
@@ -75,6 +82,7 @@ export function HabitHeatmap({
         blockMargin={blockMargin}
         blockRadius={2}
         fontSize={12}
+        renderBlock={renderBlock}
         showColorLegend={false}
         showMonthLabels={false}
         showTotalCount={false}

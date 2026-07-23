@@ -15,24 +15,21 @@ export function useHorizontalScroll() {
     let targetScrollLeft = el.scrollLeft;
     let animationId: number | null = null;
     const lerpFactor = 0.25;
-    const friction = 0.92; // Inertia decay rate
+    const friction = 0.92;
     let velocity = 0;
     let lastMouseX = 0;
     let lastTime = 0;
     let isMoving = false;
     let totalMoved = 0;
 
-    // Track sidebar transition state and user scrolling
     let isTransitioning = false;
     let distanceFromRightBeforeTransition: number | null = null;
     let transitionSyncFrame: number | null = null;
 
-    // Ignore very early mount resizes while the initial auto-scroll settles.
-    // Sidebar transitions bypass this path and are handled explicitly below.
+    // Ignore resize events until the initial auto-scroll settles.
     const mountTime = Date.now();
-    const MOUNT_GRACE_PERIOD = 300; // ms to ignore resize events after mount
+    const MOUNT_GRACE_PERIOD = 300;
 
-    // Store original scroll-snap style to restore later
     let originalScrollSnapType: string | null = null;
 
     const disableScrollSnap = () => {
@@ -49,24 +46,37 @@ export function useHorizontalScroll() {
       }
     };
 
+    const getMaxScrollLeft = () => Math.max(0, el.scrollWidth - el.clientWidth);
+
+    const finishMove = () => {
+      const maxScrollLeft = getMaxScrollLeft();
+      if (targetScrollLeft >= maxScrollLeft) {
+        el.scrollLeft = el.scrollWidth;
+      } else if (targetScrollLeft <= 0) {
+        el.scrollLeft = 0;
+      } else {
+        el.scrollLeft = targetScrollLeft;
+      }
+      animationId = null;
+      enableScrollSnap();
+      velocity = 0;
+      el.style.willChange = "auto";
+    };
+
     const update = () => {
       if (!el) return;
 
       if (isMoving) {
-        // Smoothly interpolate to target (used for Wheel)
         const diff = targetScrollLeft - el.scrollLeft;
-        if (Math.abs(diff) < 0.2) {
-          // Tighter threshold
-          el.scrollLeft = targetScrollLeft;
-          animationId = null;
-          enableScrollSnap();
-          velocity = 0;
-          el.style.willChange = "auto";
+        const before = targetScrollLeft - diff;
+        el.scrollLeft += diff * lerpFactor;
+        // Pixel rounding can stall the lerp short of target — detect no
+        // progress and snap instead of guessing a diff threshold.
+        if (el.scrollLeft === before) {
+          finishMove();
           return;
         }
-        el.scrollLeft += diff * lerpFactor;
       } else {
-        // Inertia (used for Drag release)
         if (Math.abs(velocity) < 0.1) {
           velocity = 0;
           animationId = null;
@@ -88,10 +98,9 @@ export function useHorizontalScroll() {
         return;
       }
 
-      const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth);
       const newScrollLeft = Math.max(
         0,
-        maxScroll - distanceFromRightBeforeTransition,
+        getMaxScrollLeft() - distanceFromRightBeforeTransition,
       );
 
       if (el.scrollLeft !== newScrollLeft) {
@@ -109,8 +118,7 @@ export function useHorizontalScroll() {
     };
 
     const onWheel = (e: WheelEvent) => {
-      // Horizontal swipe on trackpad or tilt wheel: let native handle it.
-      // This allows the system's native horizontal inertia to work perfectly.
+      // Trackpad horizontal swipe: let native scrolling handle it.
       if (Math.abs(e.deltaX) > 0) {
         if (animationId !== null) {
           cancelAnimationFrame(animationId);
@@ -136,7 +144,7 @@ export function useHorizontalScroll() {
 
       targetScrollLeft = Math.max(
         0,
-        Math.min(el.scrollWidth - el.clientWidth, targetScrollLeft + e.deltaY),
+        Math.min(getMaxScrollLeft(), targetScrollLeft + e.deltaY),
       );
 
       e.preventDefault();
@@ -147,10 +155,9 @@ export function useHorizontalScroll() {
     };
 
     const resizeObserver = new ResizeObserver(() => {
-      const maxScrollLeft = Math.max(0, el.scrollWidth - el.clientWidth);
+      const maxScrollLeft = getMaxScrollLeft();
 
-      // Keep the exact pre-transition distance from the right edge in sync with
-      // the sidebar width animation, instead of waiting for the next frame.
+      // Keep pace with the sidebar width animation instead of waiting a frame.
       if (isTransitioning && distanceFromRightBeforeTransition !== null) {
         const newScrollLeft = Math.max(
           0,
@@ -168,11 +175,9 @@ export function useHorizontalScroll() {
         return;
       }
 
-      // Outside sidebar transitions, only clamp within bounds.
       targetScrollLeft = Math.max(0, Math.min(maxScrollLeft, targetScrollLeft));
     });
 
-    // Mouse Drag Support
     let isDown = false;
     let startX: number;
     let scrollLeftStart: number;
@@ -203,7 +208,6 @@ export function useHorizontalScroll() {
       el.classList.remove("cursor-grabbing");
 
       if (Math.abs(velocity) > 2) {
-        // Trigger inertia
         isMoving = false;
         animationId = requestAnimationFrame(update);
       } else {
@@ -224,12 +228,10 @@ export function useHorizontalScroll() {
       el.scrollLeft = scrollLeftStart - walk;
       targetScrollLeft = el.scrollLeft;
 
-      // Calculate velocity
       const now = performance.now();
       const dt = now - lastTime;
       if (dt > 0) {
-        const dx = el.scrollLeft - prevScrollLeft;
-        velocity = dx; // Simple frame velocity
+        velocity = el.scrollLeft - prevScrollLeft;
         lastTime = now;
       }
 
@@ -258,8 +260,7 @@ export function useHorizontalScroll() {
     resizeObserver.observe(el);
 
     const onSidebarTransitionStart = () => {
-      const maxScroll = el.scrollWidth - el.clientWidth;
-      distanceFromRightBeforeTransition = maxScroll - el.scrollLeft;
+      distanceFromRightBeforeTransition = getMaxScrollLeft() - el.scrollLeft;
       isTransitioning = true;
 
       if (transitionSyncFrame === null) {
@@ -274,14 +275,12 @@ export function useHorizontalScroll() {
         transitionSyncFrame = null;
       }
       if (distanceFromRightBeforeTransition !== null) {
-        const maxScroll = el.scrollWidth - el.clientWidth;
         const newScrollLeft = Math.max(
           0,
-          maxScroll - distanceFromRightBeforeTransition,
+          getMaxScrollLeft() - distanceFromRightBeforeTransition,
         );
         el.scrollLeft = newScrollLeft;
         targetScrollLeft = newScrollLeft;
-        // distance from right handled below
         distanceFromRightBeforeTransition = null;
       }
     };
