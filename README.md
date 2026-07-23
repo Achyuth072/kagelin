@@ -10,8 +10,12 @@
 
 ### Work quietly. Own everything.
 
-[![License: AGPL-3.0](https://img.shields.io/github/license/Achyuth072/kagelin?style=flat)](LICENSE)
-[![Release](https://img.shields.io/github/package-json/v/Achyuth072/kagelin/dev?style=flat&label=release&color=blue)](../../releases)
+[![License: AGPL-3.0](https://img.shields.io/github/license/Achyuth072/kagelin?style=flat&labelColor=24292e)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/Achyuth072/kagelin/ci.yml?branch=main&style=flat&label=CI&logo=github&logoColor=white&labelColor=24292e)](../../actions/workflows/ci.yml)
+[![Deployed on Vercel](https://img.shields.io/github/deployments/Achyuth072/kagelin/production?style=flat&label=deployment&logo=vercel&logoColor=white&labelColor=24292e)](https://kagelin.app)
+
+[![Stable](https://img.shields.io/github/v/release/Achyuth072/kagelin?style=flat&label=Stable&labelColor=06599d&color=043b69)](../../releases)
+[![Preview](https://img.shields.io/github/package-json/v/Achyuth072/kagelin/dev?style=flat&label=Preview&labelColor=2c2c47&color=1c1c39)](../../releases)
 
 ## Use it
 
@@ -69,7 +73,7 @@ Most productivity apps want your email before you've written a single task, and 
 - **Multi-provider sync**: Google Calendar and Microsoft Outlook.
 - **ICS portability**: universal `.ics` (RFC 5545) import and export.
 
-> CalDAV (Nextcloud, iCloud, Fastmail) is on pause for now — the old connect flow was half-built and didn't handle credentials carefully enough, so it's pulled until it's rebuilt properly server-side.
+> CalDAV (Nextcloud, iCloud) is on pause for now — the old connect flow was half-built and didn't handle credentials carefully enough, so it's pulled until it's rebuilt properly server-side.
 
 ### Data Ownership
 
@@ -117,12 +121,12 @@ Most productivity apps want your email before you've written a single task, and 
 
 ## Setup
 
-**Prerequisites**: Node.js 20+, a Supabase project with the schema from `supabase/schema.sql`.
+**Prerequisites**: Node.js 20+, a Supabase project with the schema from `supabase/schema.sql` and relevant migrations from `supabase/migrations`.
 
 ```bash
 git clone https://github.com/Achyuth072/Kanso.git
 npm install
-cp .env.example .env.local   # add your Supabase keys
+cp .env.example .env.local   # add all relevant keys
 npm run dev
 ```
 
