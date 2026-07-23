@@ -34,7 +34,8 @@ jobs:
         run: |
           supabase db dump --linked -f roles.sql --role-only
           supabase db dump --linked -f schema.sql
-          supabase db dump --linked -f data.sql --use-copy --data-only
+          supabase db dump --linked -f data.sql --use-copy --data-only \
+            -x "storage.buckets_vectors" -x "storage.vector_indexes"
 
       - name: Encrypt dump
         run: |
