@@ -4,6 +4,7 @@ import React from "react";
 import { ActivityCalendar } from "react-activity-calendar";
 import "react-activity-calendar/tooltips.css";
 import { useTheme } from "next-themes";
+import { subMonths, format } from "date-fns";
 
 interface HabitHeatmapProps {
   entries: Array<{ date: string; value: number }>;
@@ -14,18 +15,7 @@ interface HabitHeatmapProps {
   startDate?: string;
 }
 
-/**
- * HabitHeatmap Component
- *
- * Renders a GitHub-style activity heatmap for habit tracking.
- * Uses react-activity-calendar with a monochromatic theme based on habit color.
- *
- * @param entries - Array of habit entries (date + value)
- * @param color - Hex color for the habit (e.g., "#10b981")
- * @param className - Optional CSS class for container styling
- * @param blockSize - Size of each block in pixels
- * @param blockMargin - Margin between blocks in pixels
- */
+/** GitHub-style habit activity heatmap, monochromatic on the habit color. */
 export function HabitHeatmap({
   entries,
   color,
@@ -36,20 +26,18 @@ export function HabitHeatmap({
 }: HabitHeatmapProps) {
   const { resolvedTheme } = useTheme();
 
-  // Transform habit entries to react-activity-calendar format
-  // We ensure the start_date and today are at least represented to fix the range
   const today = new Date().toISOString().split("T")[0];
   const dataMap = new Map(entries.map((e) => [e.date, e.value]));
 
-  // If startDate is provided, ensure it's in the map (even if 0)
-  if (startDate && !dataMap.has(startDate)) {
-    dataMap.set(startDate, 0);
-  }
-
-  // Ensure today is in the map to anchor the right side
-  if (!dataMap.has(today)) {
-    dataMap.set(today, 0);
-  }
+  // The calendar only fills gaps *between* its first and last date, so pin the
+  // edges ourselves. The 6-months-back floor keeps today at the right with empty
+  // cells to its left; longer habits keep their own earlier start and scroll.
+  const ensureDay = (date: string) => {
+    if (!dataMap.has(date)) dataMap.set(date, 0);
+  };
+  if (startDate) ensureDay(startDate);
+  ensureDay(today);
+  ensureDay(format(subMonths(new Date(), 6), "yyyy-MM-dd"));
 
   const calendarData = Array.from(dataMap.entries())
     .map(([date, value]) => ({
