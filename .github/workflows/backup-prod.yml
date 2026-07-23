@@ -1,0 +1,52 @@
+name: Backup prod database
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    environment: Production
+    permissions:
+      contents: read
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.PRODUCTION_DB_PASSWORD }}
+      PROJECT_ID: ${{ vars.PRODUCTION_PROJECT_ID }}
+      BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_BUCKET: ${{ vars.R2_BACKUP_BUCKET }}
+      AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+      AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
+
+      - run: supabase link --project-ref "$PROJECT_ID"
+
+      - name: Dump roles, schema, and data
+        run: |
+          supabase db dump --linked -f roles.sql --role-only
+          supabase db dump --linked -f schema.sql
+          supabase db dump --linked -f data.sql --use-copy --data-only
+
+      - name: Encrypt dump
+        run: |
+          tar -czf backup.tar.gz roles.sql schema.sql data.sql
+          gpg --batch --yes --symmetric --cipher-algo AES256 \
+            --passphrase "$BACKUP_ENCRYPTION_PASSPHRASE" \
+            -o backup.tar.gz.gpg backup.tar.gz
+          rm -f roles.sql schema.sql data.sql backup.tar.gz
+
+      - name: Upload encrypted dump to R2
+        run: |
+          KEY="prod/$(date -u +%Y/%m/%d-%H%M%S).tar.gz.gpg"
+          aws s3 cp backup.tar.gz.gpg "s3://$R2_BUCKET/$KEY" \
+            --endpoint-url "$R2_ENDPOINT"
+          echo "Uploaded s3://$R2_BUCKET/$KEY"
