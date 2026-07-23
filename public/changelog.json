@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.26.1",
+    "date": "2026-07-23",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Fix habit heatmap empty-cell contrast and scroll boundary clipping",
+        "Extend habit heatmap to a full 12-month grid for better visibility",
+        "Guard Notification access so iOS Safari/Chrome tabs don't crash on load"
+      ]
+    }
+  },
+  {
     "version": "1.26.0",
     "date": "2026-07-22",
     "channel": "stable",
@@ -740,16 +752,6 @@
     "sections": {
       "Added": [
         "Loop Habit Tracker import and hardened habit UI"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.8",
-    "date": "2026-05-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Mobile UX polish and unified project visuals"
       ]
     }
   }
