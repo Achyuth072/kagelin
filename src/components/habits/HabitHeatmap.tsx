@@ -1,7 +1,11 @@
 "use client";
 
 import React from "react";
-import { ActivityCalendar } from "react-activity-calendar";
+import {
+  ActivityCalendar,
+  type Activity,
+  type BlockElement,
+} from "react-activity-calendar";
 import "react-activity-calendar/tooltips.css";
 import { useTheme } from "next-themes";
 import { subMonths, format } from "date-fns";
@@ -13,6 +17,22 @@ interface HabitHeatmapProps {
   blockSize?: number;
   blockMargin?: number;
   startDate?: string;
+}
+
+function renderBlock(block: BlockElement, activity: Activity) {
+  if (activity.level !== 0) return block;
+  return React.cloneElement(block, {
+    // Inset so the stroke stays inside the SVG viewBox at the edges.
+    x: (block.props.x as number) + 0.5,
+    y: (block.props.y as number) + 0.5,
+    width: (block.props.width as number) - 1,
+    height: (block.props.height as number) - 1,
+    style: {
+      ...block.props.style,
+      stroke: "hsl(var(--border) / 0.5)",
+      strokeWidth: 1,
+    },
+  });
 }
 
 /** GitHub-style habit activity heatmap, monochromatic on the habit color. */
@@ -62,6 +82,7 @@ export function HabitHeatmap({
         blockMargin={blockMargin}
         blockRadius={2}
         fontSize={12}
+        renderBlock={renderBlock}
         showColorLegend={false}
         showMonthLabels={false}
         showTotalCount={false}
