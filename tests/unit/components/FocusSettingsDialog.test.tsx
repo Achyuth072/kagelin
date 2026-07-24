@@ -9,6 +9,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { FocusSettingsDialog } from "@/components/FocusSettingsDialog";
 
 const mockUpdateSettings = vi.fn();
+// Mutable so tests can simulate settings hydrating *after* the dialog mounts
+// (e.g. persisted store rehydration) — see the reset-button regression test.
+const mockSettings = {
+  focusDuration: 25,
+  shortBreakDuration: 5,
+  longBreakDuration: 15,
+  sessionsBeforeLongBreak: 4,
+  autoStartBreak: false,
+  autoStartFocus: false,
+  taskSwitchBehavior: "keepRunning",
+};
 vi.mock("@/components/TimerProvider", () => ({
   useTimer: () => ({
     state: {
@@ -19,15 +30,7 @@ vi.mock("@/components/TimerProvider", () => ({
       activeTaskId: null,
       startedAt: null,
     },
-    settings: {
-      focusDuration: 25,
-      shortBreakDuration: 5,
-      longBreakDuration: 15,
-      sessionsBeforeLongBreak: 4,
-      autoStartBreak: false,
-      autoStartFocus: false,
-      taskSwitchBehavior: "keepRunning",
-    },
+    settings: mockSettings,
     isLoaded: true,
     start: vi.fn(),
     pause: vi.fn(),
@@ -107,6 +110,15 @@ vi.mock("@/lib/hooks/useMediaQuery", () => ({
 describe("FocusSettingsDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.assign(mockSettings, {
+      focusDuration: 25,
+      shortBreakDuration: 5,
+      longBreakDuration: 15,
+      sessionsBeforeLongBreak: 4,
+      autoStartBreak: false,
+      autoStartFocus: false,
+      taskSwitchBehavior: "keepRunning",
+    });
   });
 
   it("renders settings fields when open", async () => {
@@ -197,6 +209,41 @@ describe("FocusSettingsDialog", () => {
     });
   });
 
+  it("resets to the current saved settings, not to a stale mount-time snapshot", async () => {
+    // Regression test: bare reset() reverts to the defaultValues object captured
+    // once at useForm() mount time. If settings hydrate *after* the dialog mounts
+    // (persisted store rehydration, cross-device sync), that snapshot goes stale
+    // and reset zeroes/mis-restores fields instead of reflecting the real saved
+    // settings. The fix passes the live settings explicitly: reset(settings).
+    mockSettings.focusDuration = 0;
+    const { rerender } = render(<FocusSettingsDialog />);
+    await act(async () => {
+      fireEvent.click(screen.getByText("Adjust Settings"));
+    });
+
+    // Settings hydrate post-mount to their real saved value.
+    mockSettings.focusDuration = 25;
+    rerender(<FocusSettingsDialog />);
+
+    // User edits the field, then hits reset — should restore 25, not the
+    // stale mount-time value of 0.
+    const input = screen.getByLabelText("Focus Duration");
+    await act(async () => {
+      fireEvent.change(input, { target: { value: "99" } });
+    });
+
+    const resetButton = screen.getByRole("button", {
+      name: /reset to saved settings/i,
+    });
+    await act(async () => {
+      fireEvent.click(resetButton);
+    });
+
+    await waitFor(() => {
+      expect(input).toHaveValue(25);
+    });
+  });
+
   it("validates form when dialog re-opens", async () => {
     render(<FocusSettingsDialog />);
 
@@ -213,7 +260,7 @@ describe("FocusSettingsDialog", () => {
 
     // Close dialog
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+      fireEvent.click(screen.getByRole("button", { name: /close/i }));
     });
 
     // Re-open dialog
