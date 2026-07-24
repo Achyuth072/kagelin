@@ -12,7 +12,7 @@ import {
   Zap,
   ListRestart,
   Save,
-  X,
+  RotateCcw,
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerFooter,
@@ -51,12 +50,37 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FocusSettingsSchema } from "@/lib/schemas/settings";
-import { TimerSettings } from "@/lib/types/timer";
+import { TimerSettings, TaskSwitchBehavior } from "@/lib/types/timer";
 
 const rowCls =
   "flex items-start gap-3 px-3 py-2.5 rounded-md mx-2 hover:bg-muted/40 transition-seijaku-fast";
 
-// Extracted settings form component
+const numberInputCls =
+  "w-10 bg-transparent border-0 outline-none text-sm text-right text-foreground [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+
+const tabTriggerCls = cn(
+  "rounded-md text-[12px] font-medium tracking-tight h-7 px-2",
+  "data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-seijaku-fast",
+  "border border-transparent data-[state=active]:border-brand/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40",
+);
+
+const resetBtnCls =
+  "h-9 w-9 p-0 [&_svg]:size-5! rounded-lg transition-seijaku-fast";
+const saveBtnCls =
+  "h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center";
+
+const TASK_SWITCH_TO_TAB: Record<TaskSwitchBehavior, string> = {
+  keepRunning: "keep",
+  pauseOnSwitch: "pause",
+  resetOnSwitch: "reset",
+};
+
+const TAB_TO_TASK_SWITCH: Record<string, TaskSwitchBehavior> = {
+  keep: "keepRunning",
+  pause: "pauseOnSwitch",
+  reset: "resetOnSwitch",
+};
+
 function SettingsForm() {
   const {
     register,
@@ -65,10 +89,8 @@ function SettingsForm() {
     formState: { errors },
   } = useFormContext<TimerSettings>();
 
-  // useWatch is React Compiler-compatible (unlike watch() for rendering).
-  // React Compiler memoizes components and skips re-renders when it cannot
-  // detect state changes — watch("field") uses an internal pub/sub that the
-  // compiler cannot track, causing toggles and sliders to appear stuck.
+  // useWatch (not watch()) so React Compiler can track re-renders — watch()'s
+  // pub/sub isn't compiler-visible and leaves sliders/switches stuck.
   const focusDuration = useWatch({ control, name: "focusDuration" });
   const shortBreak = useWatch({ control, name: "shortBreakDuration" });
   const longBreak = useWatch({ control, name: "longBreakDuration" });
@@ -79,7 +101,6 @@ function SettingsForm() {
 
   return (
     <div className="py-2">
-      {/* Focus Duration */}
       <div className={rowCls}>
         <IconCell>
           <Timer className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
@@ -96,7 +117,7 @@ function SettingsForm() {
                 type="number"
                 {...register("focusDuration", { valueAsNumber: true })}
                 className={cn(
-                  "w-10 bg-transparent border-0 outline-none text-sm text-right text-foreground",
+                  numberInputCls,
                   errors.focusDuration && "text-destructive",
                 )}
                 aria-invalid={!!errors.focusDuration}
@@ -128,7 +149,6 @@ function SettingsForm() {
         </div>
       </div>
 
-      {/* Short Break */}
       <div className={rowCls}>
         <IconCell>
           <Coffee
@@ -148,7 +168,7 @@ function SettingsForm() {
                 type="number"
                 {...register("shortBreakDuration", { valueAsNumber: true })}
                 className={cn(
-                  "w-10 bg-transparent border-0 outline-none text-sm text-right text-foreground",
+                  numberInputCls,
                   errors.shortBreakDuration && "text-destructive",
                 )}
                 aria-invalid={!!errors.shortBreakDuration}
@@ -180,7 +200,6 @@ function SettingsForm() {
         </div>
       </div>
 
-      {/* Long Break */}
       <div className={rowCls}>
         <IconCell>
           <Moon className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
@@ -196,7 +215,7 @@ function SettingsForm() {
                 type="number"
                 {...register("longBreakDuration", { valueAsNumber: true })}
                 className={cn(
-                  "w-10 bg-transparent border-0 outline-none text-sm text-right text-foreground",
+                  numberInputCls,
                   errors.longBreakDuration && "text-destructive",
                 )}
                 aria-invalid={!!errors.longBreakDuration}
@@ -228,7 +247,6 @@ function SettingsForm() {
         </div>
       </div>
 
-      {/* Sessions Before Long Break */}
       <div className={rowCls}>
         <IconCell>
           <Repeat
@@ -246,7 +264,7 @@ function SettingsForm() {
               type="number"
               {...register("sessionsBeforeLongBreak", { valueAsNumber: true })}
               className={cn(
-                "w-10 bg-transparent border-0 outline-none text-sm text-right text-foreground",
+                numberInputCls,
                 errors.sessionsBeforeLongBreak && "text-destructive",
               )}
               aria-invalid={!!errors.sessionsBeforeLongBreak}
@@ -280,7 +298,6 @@ function SettingsForm() {
 
       <div className="h-1" />
 
-      {/* Auto-start Breaks */}
       <div className={cn(rowCls, "items-center")}>
         <IconCell>
           <Play className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
@@ -302,7 +319,6 @@ function SettingsForm() {
         />
       </div>
 
-      {/* Auto-start Focus */}
       <div className={cn(rowCls, "items-center")}>
         <IconCell>
           <Zap className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
@@ -326,7 +342,6 @@ function SettingsForm() {
 
       <div className="h-1" />
 
-      {/* Task Switch Behavior */}
       <div className={rowCls}>
         <IconCell>
           <ListRestart
@@ -344,22 +359,10 @@ function SettingsForm() {
             </p>
           </div>
           <Tabs
-            value={
-              taskSwitchBehavior === "keepRunning"
-                ? "keep"
-                : taskSwitchBehavior === "pauseOnSwitch"
-                  ? "pause"
-                  : "reset"
-            }
+            value={TASK_SWITCH_TO_TAB[taskSwitchBehavior]}
             onValueChange={(v) => {
               if (v) {
-                const mapped =
-                  v === "keep"
-                    ? "keepRunning"
-                    : v === "pause"
-                      ? "pauseOnSwitch"
-                      : "resetOnSwitch";
-                setValue("taskSwitchBehavior", mapped, {
+                setValue("taskSwitchBehavior", TAB_TO_TASK_SWITCH[v], {
                   shouldValidate: true,
                 });
               }
@@ -367,34 +370,13 @@ function SettingsForm() {
             className="w-full"
           >
             <TabsList className="grid grid-cols-3 w-full bg-secondary/10 p-1 rounded-lg h-9 border border-border/40 shadow-none">
-              <TabsTrigger
-                value="keep"
-                className={cn(
-                  "rounded-md text-[12px] font-medium tracking-tight h-7 px-2",
-                  "data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-seijaku-fast",
-                  "border border-transparent data-[state=active]:border-brand/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40",
-                )}
-              >
+              <TabsTrigger value="keep" className={tabTriggerCls}>
                 Keep
               </TabsTrigger>
-              <TabsTrigger
-                value="pause"
-                className={cn(
-                  "rounded-md text-[12px] font-medium tracking-tight h-7 px-2",
-                  "data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-seijaku-fast",
-                  "border border-transparent data-[state=active]:border-brand/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40",
-                )}
-              >
+              <TabsTrigger value="pause" className={tabTriggerCls}>
                 Pause
               </TabsTrigger>
-              <TabsTrigger
-                value="reset"
-                className={cn(
-                  "rounded-md text-[12px] font-medium tracking-tight h-7 px-2",
-                  "data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-seijaku-fast",
-                  "border border-transparent data-[state=active]:border-brand/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40",
-                )}
-              >
+              <TabsTrigger value="reset" className={tabTriggerCls}>
                 Reset
               </TabsTrigger>
             </TabsList>
@@ -434,25 +416,19 @@ export function FocusSettingsDialog() {
     formState: { isValid },
   } = methods;
 
-  // Stable ref for updateSettings — prevents useEffect resubscribing on every
-  // timer tick (TimerProvider recreates the context object each second because
-  // timer.state changes, causing updateSettings reference to appear new even
-  // though the underlying Zustand action is stable).
+  // Ref keeps this stable across TimerProvider's per-tick context recreation,
+  // which would otherwise resubscribe the effect below every second.
   const updateSettingsRef = useRef(updateSettings);
   useEffect(() => {
     updateSettingsRef.current = updateSettings;
   }, [updateSettings]);
 
-  // D-08: Direct reactive persistence - save settings instantly
-  // This ensures changes are applied even if the dialog is open during a session
+  // Persist on every form change so edits apply even while the dialog is open.
   useEffect(() => {
     // eslint-disable-next-line
     const subscription = watch((value) => {
-      // Save on any form value change (setValue, native input, etc.)
-      // RHF watch(callback) does not fire on initial subscription — no mount guard needed.
-      // type === "change" was previously used as a guard but it is only set for native DOM
-      // change events; setValue() (used by sliders/switches) fires with type: undefined,
-      // causing slider/switch changes to never persist. safeParse provides the safety net.
+      // setValue() (sliders/switches) fires with type: undefined, so we can't
+      // gate on type === "change" — safeParse is the safety net instead.
       if (value) {
         const parsed = FocusSettingsSchema.safeParse(value);
         if (parsed.success) {
@@ -461,22 +437,21 @@ export function FocusSettingsDialog() {
       }
     });
     return () => subscription.unsubscribe();
-    // watch is a stable reference (RHF guarantee) — updateSettings via ref above
   }, [watch]);
 
-  // Handle back navigation on mobile to close drawer instead of navigating away
   useBackNavigation(open && !isDesktop, () => setOpen(false));
 
   const onFormSubmit = () => {
     trigger("thud");
-    // Settings already saved via watch() - just close
     setOpen(false);
   };
 
-  const handleCancel = () => {
+  const handleReset = () => {
     trigger("tick");
-    reset();
-    setOpen(false);
+    // Bare reset() reverts to the defaultValues snapshot captured once at
+    // mount, which goes stale (or is zeroed pre-hydration) — pass the live
+    // saved settings explicitly so this always restores the true saved state.
+    reset(settings);
   };
 
   const triggerButton = (
@@ -515,16 +490,16 @@ export function FocusSettingsDialog() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg transition-seijaku-fast"
-                  onClick={handleCancel}
-                  aria-label="Cancel"
+                  className={resetBtnCls}
+                  onClick={handleReset}
+                  aria-label="Reset to saved settings"
                 >
-                  <X strokeWidth={2.25} />
+                  <RotateCcw strokeWidth={2.25} />
                 </Button>
                 <Button
                   type="submit"
                   disabled={!isValid}
-                  className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
+                  className={saveBtnCls}
                   aria-label="Save changes"
                 >
                   <Save className="h-5 w-5 stroke-[2.25px]" />
@@ -553,21 +528,19 @@ export function FocusSettingsDialog() {
           </FormProvider>
         </div>
         <DrawerFooter className="flex-row items-center gap-3 pt-2 shrink-0 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          <DrawerClose asChild>
-            <Button
-              variant="outline"
-              className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg transition-seijaku-fast"
-              onClick={handleCancel}
-              aria-label="Cancel"
-            >
-              <X strokeWidth={2.25} />
-            </Button>
-          </DrawerClose>
+          <Button
+            variant="outline"
+            className={resetBtnCls}
+            onClick={handleReset}
+            aria-label="Reset to saved settings"
+          >
+            <RotateCcw strokeWidth={2.25} />
+          </Button>
           <div className="flex-1" />
           <Button
             onClick={handleSubmit(onFormSubmit)}
             disabled={!isValid}
-            className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
+            className={saveBtnCls}
             aria-label="Save changes"
           >
             <Save className="h-5 w-5 stroke-[2.25px]" />

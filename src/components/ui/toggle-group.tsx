@@ -6,6 +6,7 @@ import { type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 import { toggleVariants } from "@/components/ui/toggle";
+import { useHaptic } from "@/lib/hooks/useHaptic";
 
 const ToggleGroupContext = React.createContext<
   VariantProps<typeof toggleVariants>
@@ -36,8 +37,9 @@ const ToggleGroupItem = React.forwardRef<
   React.ElementRef<typeof ToggleGroupPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof ToggleGroupPrimitive.Item> &
     VariantProps<typeof toggleVariants>
->(({ className, children, variant, size, ...props }, ref) => {
+>(({ className, children, variant, size, onClick, ...props }, ref) => {
   const context = React.useContext(ToggleGroupContext);
+  const { trigger } = useHaptic();
 
   return (
     <ToggleGroupPrimitive.Item
@@ -49,6 +51,10 @@ const ToggleGroupItem = React.forwardRef<
         }),
         className,
       )}
+      onClick={(event) => {
+        trigger("tick");
+        onClick?.(event);
+      }}
       {...props}
     >
       {children}

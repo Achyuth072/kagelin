@@ -12,10 +12,8 @@ import { CancelSessionButton } from "@/components/CancelSessionButton";
 import { FullscreenToggle } from "@/components/FullscreenToggle";
 import type { TimerMode } from "@/lib/types/timer";
 import { cn } from "@/lib/utils";
+import { formatTime } from "@/lib/utils/time";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
-import type { Task } from "@/lib/types/task";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { usePiP } from "@/components/providers/PiPProvider";
@@ -30,54 +28,33 @@ const MODE_LABELS: Record<TimerMode, string> = {
   longBreak: "Long Break",
 };
 
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, "0")}:${secs
-    .toString()
-    .padStart(2, "0")}`;
-}
+const sideControlCls = cn(
+  buttonVariants({ variant: "ghost", size: "icon" }),
+  "h-14 w-14 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-seijaku cursor-pointer",
+);
 
 export default function FocusPage() {
   const router = useRouter();
   const { state, settings, start, pause, stop, skip } = useTimer();
-  const supabase = createClient();
   const { trigger, isPhone } = useHaptic();
   const { isPiPSupported, isPiPActive, openPiP, closePiP } = usePiP();
   const { isFullscreen } = useFullscreen();
   // Sourced from the server focus_logs so every device shows the same count.
   const { data: todaySessionsCount = 0 } = useTodayFocusSessions();
 
-  // Auto-start only on an explicit "play focus" intent (set by the task play
-  // button), consumed once on mount. Plain navigation to /focus must never
-  // start a timer — opening a device faithfully mirrors the shared state.
+  // Auto-starts only on an explicit "play focus" intent; plain navigation must never auto-start.
   useEffect(() => {
     if (useTimerStore.getState().consumeFocusStart()) {
       start();
     }
   }, [start]);
 
-  // Fetch active task if one is set
-  useQuery({
-    queryKey: ["task", state.activeTaskId],
-    queryFn: async () => {
-      if (!state.activeTaskId) return null;
-      const { data } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("id", state.activeTaskId)
-        .single();
-      return data as Task | null;
-    },
-    enabled: !!state.activeTaskId,
-  });
-
   const totalSeconds =
-    state.mode === "focus"
-      ? settings.focusDuration * 60
-      : state.mode === "shortBreak"
-        ? settings.shortBreakDuration * 60
-        : settings.longBreakDuration * 60;
+    {
+      focus: settings.focusDuration,
+      shortBreak: settings.shortBreakDuration,
+      longBreak: settings.longBreakDuration,
+    }[state.mode] * 60;
 
   const progress =
     ((totalSeconds - state.remainingSeconds) / totalSeconds) * 100;
@@ -110,7 +87,6 @@ export default function FocusPage() {
           : "absolute inset-0",
       )}
     >
-      {/* Close Button */}
       <motion.button
         onClick={() => router.back()}
         onTapStart={() => trigger("thud")}
@@ -123,7 +99,6 @@ export default function FocusPage() {
         <X className="h-6 w-6" strokeWidth={2.25} />
       </motion.button>
 
-      {/* PiP Button - Desktop only, bottom-left */}
       {isPiPSupported && !isPhone && (
         <motion.button
           onClick={handlePiP}
@@ -141,10 +116,8 @@ export default function FocusPage() {
         </motion.button>
       )}
 
-      {/* Fullscreen Toggle - top-right */}
       <FullscreenToggle />
 
-      {/* Main Timer UI - Hidden when in PiP */}
       <AnimatePresence mode="wait">
         {!isPiPActive ? (
           <motion.div
@@ -154,30 +127,24 @@ export default function FocusPage() {
             exit={{ opacity: 0, y: -10 }}
             className="flex flex-col items-center text-center"
           >
-            {/* Mode Badge */}
             <div className="type-ui font-medium uppercase tracking-widest text-muted-foreground/80">
               {MODE_LABELS[state.mode]}
             </div>
 
-            {/* Sync Indicator — below mode badge */}
             <div className="mt-2">
               <FocusSyncIndicator />
             </div>
 
-            {/* Task Chip — below sync indicator */}
             <FocusTaskPicker />
 
-            {/* Timer Display */}
             <div className="text-7xl sm:text-8xl md:text-[10rem] font-extralight font-mono tracking-tighter text-foreground tabular-nums mt-6 leading-none">
               {formatTime(state.remainingSeconds)}
             </div>
 
-            {/* Progress Bar */}
             <div className="w-full max-w-[240px] mt-12 mb-6">
               <Progress value={progress} className="h-0.5 opacity-40" />
             </div>
 
-            {/* Session Counter & Daily Total */}
             <div className="flex flex-col items-center gap-2 mb-10">
               <p className="type-ui text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 {state.mode === "focus"
@@ -197,14 +164,9 @@ export default function FocusPage() {
               </div>
             </div>
 
-            {/* Controls */}
             <div className="flex items-center gap-4">
-              {/* Stop */}
               <motion.button
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "icon" }),
-                  "h-14 w-14 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-seijaku cursor-pointer",
-                )}
+                className={sideControlCls}
                 onTapStart={() => trigger("thud")}
                 whileTap={isPhone ? { scale: 0.95 } : {}}
                 onClick={() => {
@@ -215,7 +177,6 @@ export default function FocusPage() {
                 <Square className="h-5 w-5" strokeWidth={2.25} />
               </motion.button>
 
-              {/* Play/Pause - Main action button */}
               <motion.button
                 className={cn(
                   buttonVariants({ variant: "default", size: "icon" }),
@@ -232,12 +193,8 @@ export default function FocusPage() {
                 )}
               </motion.button>
 
-              {/* Skip */}
               <motion.button
-                className={cn(
-                  buttonVariants({ variant: "ghost", size: "icon" }),
-                  "h-14 w-14 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-seijaku cursor-pointer",
-                )}
+                className={sideControlCls}
                 onTapStart={() => trigger("thud")}
                 whileTap={isPhone ? { scale: 0.95 } : {}}
                 onClick={skip}
@@ -246,10 +203,8 @@ export default function FocusPage() {
               </motion.button>
             </div>
 
-            {/* Cancel Session Button */}
             <CancelSessionButton />
 
-            {/* Settings Dialog */}
             <div className="mt-16">
               <FocusSettingsDialog />
             </div>
