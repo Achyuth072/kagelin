@@ -33,44 +33,26 @@ export function StatsExportMenu({ stats, period }: StatsExportMenuProps) {
 
   const noData = !stats || stats.dailyTrend.length === 0;
 
-  const handleExportCsv = () => {
+  const handleExport = (format: "csv" | "json") => {
     if (!stats) return;
     trigger("toggle");
-    setIsExporting("csv");
+    setIsExporting(format);
     try {
-      const csv = dailyRollupToCsv(stats.dailyTrend);
+      const content =
+        format === "csv"
+          ? dailyRollupToCsv(stats.dailyTrend)
+          : JSON.stringify(statsToExportJson(stats, { period }), null, 2);
+      const mime = format === "csv" ? "text/csv" : "application/json";
       triggerDownload(
-        analyticsFilename("stats", "csv", { period }),
-        csv,
-        "text/csv",
+        analyticsFilename("stats", format, { period }),
+        content,
+        mime,
       );
-      toast.success("Stats exported as CSV");
+      toast.success(`Stats exported as ${format.toUpperCase()}`);
       trigger("success");
     } catch (err) {
-      console.error("CSV export failed:", err);
-      toast.error("Failed to export CSV");
-      trigger("thud");
-    } finally {
-      setIsExporting(null);
-    }
-  };
-
-  const handleExportJson = () => {
-    if (!stats) return;
-    trigger("toggle");
-    setIsExporting("json");
-    try {
-      const payload = statsToExportJson(stats, { period });
-      triggerDownload(
-        analyticsFilename("stats", "json", { period }),
-        JSON.stringify(payload, null, 2),
-        "application/json",
-      );
-      toast.success("Stats exported as JSON");
-      trigger("success");
-    } catch (err) {
-      console.error("JSON export failed:", err);
-      toast.error("Failed to export JSON");
+      console.error(`${format.toUpperCase()} export failed:`, err);
+      toast.error(`Failed to export ${format.toUpperCase()}`);
       trigger("thud");
     } finally {
       setIsExporting(null);
@@ -97,16 +79,13 @@ export function StatsExportMenu({ stats, period }: StatsExportMenuProps) {
           <span className="sr-only">Export statistics</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="w-52 shadow-lg border-border/40"
-      >
+      <DropdownMenuContent align="end" className="w-52 border-border/40">
         <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Export analytics
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={handleExportCsv}
+          onClick={() => handleExport("csv")}
           disabled={isExporting === "csv"}
           className="cursor-pointer gap-2 py-2"
         >
@@ -116,7 +95,7 @@ export function StatsExportMenu({ stats, period }: StatsExportMenuProps) {
           </span>
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={handleExportJson}
+          onClick={() => handleExport("json")}
           disabled={isExporting === "json"}
           className="cursor-pointer gap-2 py-2"
         >
