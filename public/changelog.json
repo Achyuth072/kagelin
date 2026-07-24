@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.26.2",
+    "date": "2026-07-24",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Only show dialog close button focus ring on keyboard focus",
+        "Always render habits page header, even when the list is empty",
+        "Reset timer settings to live saved values",
+        "Add haptic feedback to toggle group items on mobile"
+      ]
+    }
+  },
+  {
     "version": "1.26.1",
     "date": "2026-07-23",
     "channel": "stable",
@@ -742,16 +755,6 @@
     "sections": {
       "Added": [
         "Unify smart filter system and optimise performance"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.9",
-    "date": "2026-05-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Loop Habit Tracker import and hardened habit UI"
       ]
     }
   }
