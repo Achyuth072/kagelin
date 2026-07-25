@@ -27,6 +27,9 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: version,
   },
+  allowedDevOrigins: process.env.LAN_DEV_ORIGIN
+    ? [process.env.LAN_DEV_ORIGIN]
+    : [],
   // Static export for Capacitor mobile builds
   output: isMobile ? "export" : undefined,
   images: {
