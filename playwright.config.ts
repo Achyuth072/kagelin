@@ -16,5 +16,13 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
+    {
+      // Real WebKit engine — catches scroll/snap bugs Chromium won't reproduce.
+      name: "mobile-webkit",
+      use: {
+        ...devices["iPhone 14"],
+        viewport: { width: 360, height: 780 },
+      },
+    },
   ],
 });
