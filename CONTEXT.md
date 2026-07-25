@@ -238,6 +238,35 @@ Two distinct things that both say "export":
 
 ---
 
+## Calendar views
+
+### Week
+
+Sunday–Saturday, always 7 days. One concept at every viewport size — what
+changes on narrow viewports is how much of it is on screen at once (see Day
+window below), never the span itself.
+
+### Day window
+
+The contiguous run of days visible at once within a Week: all 7 on desktop,
+3–6 on narrow viewports (derived from available width, clamped to that
+range). Scrolling moves the window; it does not change the Week.
+
+### Window scroll vs. Week paging
+
+Two distinct things a horizontal gesture can do, and only one at a time:
+
+- **Window scroll** — moves the Day window within the current Week.
+- **Week paging** — replaces the Week entirely (advances/retreats it).
+
+Paging only fires when the Day window was already parked at a Week boundary
+when the gesture began — never mid-week. Conflating the two (letting any
+horizontal drag both scroll the window and page the week) is the bug that got
+mobile Week view removed in `51df6af`; see that commit and issue #24 before
+changing the traversal mechanic.
+
+---
+
 ## Calendar connection
 
 ### Connect Calendar (vs. login identity)
