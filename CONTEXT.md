@@ -265,6 +265,15 @@ horizontal drag both scroll the window and page the week) is the bug that got
 mobile Week view removed in `51df6af`; see that commit and issue #24 before
 changing the traversal mechanic.
 
+### Bridge
+
+The mobile Week view's implementation detail for Week paging: a temporary
+14-day strip (the outgoing Week plus the paged-to Week) rendered only while a
+swipe-triggered page is smooth-scrolling across the boundary, so the scroller
+has real content to glide over instead of a hard cut. Collapses back to a
+normal 7-day Week once the scroll settles. Not a user-facing concept — see
+`MobileWeekGrid.tsx`.
+
 ---
 
 ## Calendar connection

@@ -124,15 +124,71 @@ test.describe("mobile week view", () => {
       );
       el.dispatchEvent(new TouchEvent("touchend", touchInit(rect.x + 10)));
     });
-    await page.waitForTimeout(300);
 
-    const datesAfter = await page
+    // Paging lands after a debounced scroll-settle, not instantly — poll for it.
+    await expect
+      .poll(() => scroller.evaluate((el) => el.scrollLeft), { timeout: 2000 })
+      .toBeLessThanOrEqual(2);
+
+    const columnsAfter = page.locator('[data-testid="day-column"]');
+    const datesAfter = await columnsAfter.evaluateAll((els) =>
+      els.map((el) => el.getAttribute("data-date")),
+    );
+
+    expect(datesAfter[0]).not.toBe(datesBefore[0]);
+    // The bridge's 14-day strip must collapse back to a normal 7-day week.
+    await expect(columnsAfter).toHaveCount(7);
+  });
+
+  test("a swipe from the start edge pages to prev week, landing at the end", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 780 });
+    await seedGuestAndOpenWeek(page);
+
+    const scroller = page.locator('[data-testid="mobile-week-grid"]');
+    const datesBefore = await page
       .locator('[data-testid="day-column"]')
       .evaluateAll((els) => els.map((el) => el.getAttribute("data-date")));
 
-    expect(datesAfter[0]).not.toBe(datesBefore[0]);
+    // Already parked at the start edge (scrollLeft: 0) by default.
+    await scroller.evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      const y = rect.y + 100;
+      const touchInit = (x: number) => ({
+        touches: [
+          new Touch({ identifier: 1, target: el, clientX: x, clientY: y }),
+        ],
+        changedTouches: [
+          new Touch({ identifier: 1, target: el, clientX: x, clientY: y }),
+        ],
+        bubbles: true,
+      });
+      el.dispatchEvent(new TouchEvent("touchstart", touchInit(rect.x + 10)));
+      el.dispatchEvent(
+        new TouchEvent("touchend", touchInit(rect.x + rect.width - 10)),
+      );
+    });
 
-    const scrollLeft = await scroller.evaluate((el) => el.scrollLeft);
-    expect(scrollLeft).toBeLessThanOrEqual(2);
+    // Paging backward lands at the end edge, not scrollLeft 0 — poll for the
+    // scroller's max, which exercises the prepend-jump path that the
+    // forward-paging test above never touches.
+    await expect
+      .poll(
+        () =>
+          scroller.evaluate(
+            (el) => el.scrollWidth - el.clientWidth - el.scrollLeft,
+          ),
+        { timeout: 2000 },
+      )
+      .toBeLessThanOrEqual(2);
+
+    const columnsAfter = page.locator('[data-testid="day-column"]');
+    const datesAfter = await columnsAfter.evaluateAll((els) =>
+      els.map((el) => el.getAttribute("data-date")),
+    );
+
+    expect(datesAfter[0]).not.toBe(datesBefore[0]);
+    await expect(columnsAfter).toHaveCount(7);
   });
 });

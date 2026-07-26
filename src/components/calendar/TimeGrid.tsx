@@ -42,7 +42,7 @@ export function TimeGrid({
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Centers the current-time indicator on mount and whenever "Today" is pressed.
+  // Duplicated in MobileWeekGrid.tsx — a shared hook trips the compiler's mutation check.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;

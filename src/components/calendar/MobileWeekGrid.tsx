@@ -1,9 +1,10 @@
 "use client";
 
-import { differenceInCalendarDays, startOfWeek } from "date-fns";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { addDays, differenceInCalendarDays, startOfWeek } from "date-fns";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useScrollSettle } from "@/lib/hooks/useScrollSettle";
 import { getDayRange, layoutDayRange } from "@/lib/calendar/engine";
 import { scrollTopForNow } from "@/lib/calendar/grid-constants";
 import {
@@ -16,6 +17,7 @@ import {
   INITIAL_WIDTH_GUESS_PX,
   SWIPE_THRESHOLD_PX,
   WEEK_LENGTH,
+  type PageDirection,
 } from "@/lib/calendar/week-window";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { TimeGutter } from "./TimeGutter";
@@ -26,6 +28,21 @@ interface MobileWeekGridProps {
   onDateNumberClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
 }
+
+const PAGE_EDGE: Record<PageDirection, "start" | "end"> = {
+  next: "start",
+  prev: "end",
+};
+
+const SCROLL_SETTLE_MS = 120;
+const BRIDGE_TIMEOUT_MS = 600;
+
+// See CONTEXT.md "Bridge".
+type Bridge = {
+  direction: PageDirection;
+  columns: ReturnType<typeof layoutDayRange>;
+  targetScrollLeft: number;
+};
 
 /**
  * 3-6 day window onto the 7-day week (see CONTEXT.md "Calendar views").
@@ -47,12 +64,12 @@ export function MobileWeekGrid({
   const scrollRef = useRef<HTMLDivElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
 
-  const [layout, setLayout] = useState(() => ({
-    gutterPx: GUTTER_PX,
-    ...computeWindowGeometry(INITIAL_WIDTH_GUESS_PX, GUTTER_PX),
-  }));
+  const [layout, setLayout] = useState(() =>
+    computeWindowGeometry(INITIAL_WIDTH_GUESS_PX, GUTTER_PX),
+  );
   const pendingEdge = useRef<"start" | "end" | null>(null);
   const touch = useRef<{ x: number; y: number; left: number } | null>(null);
+  const [bridge, setBridge] = useState<Bridge | null>(null);
 
   // Measured, not a %: a % would grow unbounded past a few columns.
   useEffect(() => {
@@ -60,10 +77,7 @@ export function MobileWeekGrid({
     if (!el) return;
     const observer = new ResizeObserver(([entry]) => {
       const gutterPx = gutterRef.current?.clientWidth ?? GUTTER_PX;
-      setLayout({
-        gutterPx,
-        ...computeWindowGeometry(entry.contentRect.width, gutterPx),
-      });
+      setLayout(computeWindowGeometry(entry.contentRect.width, gutterPx));
     });
     observer.observe(el);
     return () => observer.disconnect();
@@ -76,8 +90,8 @@ export function MobileWeekGrid({
     el.scrollTop = scrollTopForNow(el.clientHeight);
   }, [todayNonce]);
 
-  // Lands the window on the paged-to edge, or today's position otherwise.
-  useEffect(() => {
+  // Layout effect so the bridge's strip collapsing back to 7 days never flashes.
+  useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const edge = pendingEdge.current;
@@ -99,7 +113,55 @@ export function MobileWeekGrid({
     scrollRef,
   ]);
 
+  // Commits the paged-to week and hands off to the land effect above.
+  const finishBridge = (direction: PageDirection) => {
+    pendingEdge.current = PAGE_EDGE[direction];
+    setBridge(null);
+    if (direction === "next") next();
+    else prev();
+  };
+
+  // Paging backward prepends a week, so scrollLeft must jump by its width first.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !bridge) return;
+    if (bridge.direction === "prev")
+      el.scrollLeft += WEEK_LENGTH * layout.colWidth;
+    el.scrollTo({ left: bridge.targetScrollLeft, behavior: "smooth" });
+  }, [bridge, layout.colWidth]);
+
+  useScrollSettle(
+    scrollRef,
+    bridge !== null,
+    () => bridge && finishBridge(bridge.direction),
+    { settleMs: SCROLL_SETTLE_MS, timeoutMs: BRIDGE_TIMEOUT_MS },
+  );
+
+  const startBridge = (direction: PageDirection) => {
+    const isPrev = direction === "prev";
+    const newWeekStart = addDays(
+      weekStart,
+      isPrev ? -WEEK_LENGTH : WEEK_LENGTH,
+    );
+    const newColumns = layoutDayRange(
+      events,
+      getDayRange(newWeekStart, WEEK_LENGTH),
+    );
+    const targetIndex = isPrev
+      ? clampWindowStart(WEEK_LENGTH, layout.visibleDays)
+      : WEEK_LENGTH;
+    const [before, after] = isPrev
+      ? [newColumns, columns]
+      : [columns, newColumns];
+    setBridge({
+      direction,
+      columns: [...before, ...after],
+      targetScrollLeft: targetIndex * layout.colWidth,
+    });
+  };
+
   const onTouchStart = (e: React.TouchEvent) => {
+    if (bridge) return;
     const t = e.touches[0];
     const el = scrollRef.current;
     if (!t || !el) return;
@@ -115,7 +177,7 @@ export function MobileWeekGrid({
     const t = e.changedTouches[0];
     const el = scrollRef.current;
     touch.current = null;
-    if (!start || !t || !el) return;
+    if (bridge || !start || !t || !el) return;
 
     const max = el.scrollWidth - el.clientWidth;
     const startEdge = edgeAt(start.left, max, EDGE_TOLERANCE_PX);
@@ -128,13 +190,11 @@ export function MobileWeekGrid({
     });
 
     if (decision === "next") {
-      pendingEdge.current = "start";
       trigger("toggle");
-      next();
+      startBridge("next");
     } else if (decision === "prev") {
-      pendingEdge.current = "end";
       trigger("toggle");
-      prev();
+      startBridge("prev");
     }
   };
 
@@ -146,19 +206,20 @@ export function MobileWeekGrid({
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchCancel}
         data-testid="mobile-week-grid"
-        className="flex flex-1 min-h-0 overflow-auto bg-background custom-scrollbar touch-auto overscroll-contain snap-x snap-proximity"
-        style={{ scrollPaddingLeft: `${layout.gutterPx}px` }}
+        className="flex flex-1 min-h-0 overflow-auto bg-background custom-scrollbar touch-auto overscroll-contain"
       >
         <TimeGutter ref={gutterRef} />
         <div
           className="flex h-fit divide-x divide-border/40"
-          style={{ width: `${WEEK_LENGTH * layout.colWidth}px` }}
+          style={{
+            width: `${(bridge?.columns.length ?? WEEK_LENGTH) * layout.colWidth}px`,
+          }}
         >
-          {columns.map((column) => (
+          {(bridge?.columns ?? columns).map((column) => (
             <DayColumn
               key={column.date.toString()}
               column={column}
-              className="shrink-0 snap-start"
+              className="shrink-0"
               style={{ width: `${layout.colWidth}px` }}
               compactIndicator
               onDateNumberClick={onDateNumberClick}
