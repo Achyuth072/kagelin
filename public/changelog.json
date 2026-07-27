@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.27.0-preview.0",
+    "date": "2026-07-27",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add mobile week view with edge-gated day-window paging"
+      ],
+      "Improved": [
+        "Extract TimeGutter and DayColumn from TimeGrid, align header offset to 80px"
+      ],
+      "Fixed": [
+        "Drop y-transform from page transition to stop PiP button flash on /focus",
+        "Make /login scrollable so content isn't cut off on short mobile viewports"
+      ]
+    }
+  },
+  {
     "version": "1.26.2",
     "date": "2026-07-24",
     "channel": "stable",
@@ -745,16 +762,6 @@
       ],
       "Fixed": [
         "Replace missing @base-ui/react/use-render, install @radix-ui/react-scroll-area, fix pre-existing lint issues"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.10",
-    "date": "2026-05-11",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Unify smart filter system and optimise performance"
       ]
     }
   }
