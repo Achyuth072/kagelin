@@ -6,6 +6,7 @@ import { useCalendarStore } from "@/lib/calendar/store";
 import { CalendarToolbar } from "@/components/calendar/CalendarToolbar";
 import { CalendarReconnectBanner } from "@/components/calendar/CalendarReconnectBanner";
 import { TimeGrid } from "@/components/calendar/TimeGrid";
+import { MobileWeekGrid } from "@/components/calendar/MobileWeekGrid";
 import { YearView } from "@/components/calendar/YearView";
 import { MonthView } from "@/components/calendar/MonthView";
 import { ScheduleView } from "@/components/calendar/ScheduleView";
@@ -22,13 +23,12 @@ export default function CalendarPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const { data: fullTask } = useTask(selectedTaskId);
-  // Fetch real events from Supabase
   useCalendarEvents();
-  // Wire sync triggers: mount (throttled), window refocus, debounced post-edit push
+  // Wires sync triggers: mount (throttled), refocus, debounced post-edit push.
   useCalendarSync();
 
-  // OAuth errors surface here; the success path (?connected=) is owned by
-  // ConnectCalendarDialog, which reopens at the calendar picker.
+  // Success path (?connected=) is owned by ConnectCalendarDialog; only
+  // failures surface here.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get("oauth_error");
@@ -38,7 +38,6 @@ export default function CalendarPage() {
     }
   }, []);
 
-  // Detect mobile/desktop for view switching
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -46,9 +45,8 @@ export default function CalendarPage() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  // Adjust view if mobile/desktop changes
   useEffect(() => {
-    if (isMobile && (view === "4day" || view === "week")) {
+    if (isMobile && view === "4day") {
       setView("3day");
     } else if (!isMobile && view === "3day") {
       setView("4day");
@@ -125,7 +123,13 @@ export default function CalendarPage() {
         );
 
       case "week":
-        return (
+        return isMobile ? (
+          <MobileWeekGrid
+            events={events}
+            onDateNumberClick={handleDateNumberClick}
+            onEventClick={handleEventClick}
+          />
+        ) : (
           <TimeGrid
             startDate={startOfWeek(currentDate)}
             daysToShow={7}

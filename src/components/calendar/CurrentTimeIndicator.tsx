@@ -4,25 +4,19 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { useCurrentTime } from "@/lib/hooks/useCurrentTime";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
-
-const HOUR_HEIGHT = 120;
-const HEADER_HEIGHT = 64;
+import { HOUR_HEIGHT, HEADER_HEIGHT } from "@/lib/calendar/grid-constants";
 
 interface CurrentTimeIndicatorProps {
   className?: string;
-  // Narrow columns (mobile week view) need a smaller label to fit the cell.
+  // Smaller label for narrow (mobile week) columns.
   compact?: boolean;
 }
 
-/**
- * CurrentTimeIndicator displays a real-time horizontal line representing "now" on the calendar grid.
- * Styled according to Zen-Modernism: Kagelin Blue, high contrast, dampened transitions.
- */
 export function CurrentTimeIndicator({
   className,
   compact = false,
 }: CurrentTimeIndicatorProps) {
-  const now = useCurrentTime(60000); // Update every minute
+  const now = useCurrentTime(60000);
   const { formatTime } = useTimeFormat();
 
   const topPx = useMemo(() => {
@@ -40,10 +34,9 @@ export function CurrentTimeIndicator({
       )}
       style={{ top: `${topPx}px` }}
     >
-      {/* 1. The Horizontal Line, rendered first to be on BOTTOM */}
       <div className="absolute left-0 right-0 h-[2px] bg-brand/60 -translate-y-1/2" />
 
-      {/* 2. The Tick/Label on the left, rendered second to be on TOP */}
+      {/* Painted after the line, so it stacks on top. */}
       <div className="absolute left-0 flex items-center h-0 overflow-visible -translate-y-1/2">
         <div
           className={cn(
