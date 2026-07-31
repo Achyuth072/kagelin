@@ -61,7 +61,6 @@ export async function POST(request: Request) {
           {
             TTL: 60,
             urgency: "high",
-            topic: "test-notification",
           },
         );
         console.log(
