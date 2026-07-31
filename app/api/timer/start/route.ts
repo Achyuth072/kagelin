@@ -74,7 +74,9 @@ export async function POST(request: Request) {
           body,
           data: { url: "/focus", taskId },
         },
-        reference_id: taskId || null,
+        // null: this notification is owned by the timer, not the task —
+        // parking the task id here cancelled running timers' notifications.
+        reference_id: null,
       })
       .select("id")
       .single();
