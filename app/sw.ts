@@ -102,11 +102,11 @@ interface ExtendedNotificationOptions extends NotificationOptions {
 self.addEventListener("push", (event) => {
   console.log("[SW] Push event received", event);
 
+  // No default tag: a shared one replaces prior notifications instead of stacking.
   const options: ExtendedNotificationOptions = {
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
     vibrate: [200, 100, 200],
-    tag: "kanso-notification",
   };
 
   let title = "Kagelin";
@@ -153,6 +153,9 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
+  const target = (event.notification.data as { url?: string } | undefined)?.url;
+  const url = typeof target === "string" && target ? target : "/";
+
   event.waitUntil(
     (async () => {
       const allClients = await self.clients.matchAll({
@@ -160,16 +163,25 @@ self.addEventListener("notificationclick", (event) => {
         includeUncontrolled: true,
       });
 
-      // If a window is already open, focus it
       for (const client of allClients) {
-        if ("focus" in client) {
-          return client.focus();
+        if (!("focus" in client)) continue;
+
+        const alreadyThere = new URL(client.url).pathname === url;
+        if (!alreadyThere && "navigate" in client) {
+          // navigate() can reject (cross-origin, unloaded client).
+          const navigated = await client.navigate(url).then(
+            () => true,
+            () => false,
+          );
+          if (!navigated) {
+            return self.clients.openWindow?.(url);
+          }
         }
+        return client.focus();
       }
 
-      // Otherwise, open a new window
       if (self.clients.openWindow) {
-        return self.clients.openWindow("/");
+        return self.clients.openWindow(url);
       }
     })(),
   );
