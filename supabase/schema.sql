@@ -311,6 +311,70 @@ $$;
 REVOKE EXECUTE ON FUNCTION public.claim_due_notifications(INT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.claim_due_notifications(INT) TO service_role;
 
+-- B3. Scheduler
+-- Declared here rather than left to the dashboard, so the cron job is
+-- reviewable and restorable from backup rather than failing silently.
+--
+-- Credentials come from Vault, never from this file. Set them once per project:
+--     select vault.create_secret('https://<ref>.supabase.co', 'project_url');
+--     select vault.create_secret('<service-role-key>', 'service_role_key');
+
+CREATE OR REPLACE FUNCTION public.invoke_edge_function(p_function TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_url TEXT;
+  v_key TEXT;
+BEGIN
+  SELECT decrypted_secret INTO v_url
+  FROM vault.decrypted_secrets WHERE name = 'project_url';
+
+  SELECT decrypted_secret INTO v_key
+  FROM vault.decrypted_secrets WHERE name = 'service_role_key';
+
+  -- Raise rather than silently no-op: surfaces in cron.job_run_details.return_message.
+  IF v_url IS NULL OR v_key IS NULL THEN
+    RAISE EXCEPTION
+      'invoke_edge_function(%): vault secrets project_url and/or service_role_key are not set',
+      p_function;
+  END IF;
+
+  PERFORM net.http_post(
+    url := v_url || '/functions/v1/' || p_function,
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || v_key
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 60000
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.invoke_edge_function(TEXT) FROM PUBLIC;
+
+-- Unschedule first so a re-run of this file doesn't error on a duplicate
+-- jobname. Overlapping process-queue runs are safe: claim_due_notifications
+-- takes rows with FOR UPDATE SKIP LOCKED.
+SELECT cron.unschedule(jobname)
+FROM cron.job
+WHERE jobname IN ('process-notification-queue', 'system-daily-briefing');
+
+SELECT cron.schedule(
+  'process-notification-queue',
+  '* * * * *',
+  $$SELECT public.invoke_edge_function('process-queue')$$
+);
+
+SELECT cron.schedule(
+  'system-daily-briefing',
+  '0 * * * *',
+  $$SELECT public.invoke_edge_function('daily-briefing')$$
+);
+
 -- C. Task Notification Sync Trigger Function
 CREATE OR REPLACE FUNCTION handle_task_notification_sync()
 RETURNS TRIGGER
