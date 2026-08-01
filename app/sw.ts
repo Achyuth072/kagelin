@@ -7,10 +7,6 @@ import {
   type SerwistPlugin,
 } from "serwist";
 
-// This declares the value of `injectionPoint` to TypeScript.
-// `injectionPoint` is the string that will be replaced by the
-// actual precache manifest. By default, this string is set to
-// `"self.__SW_MANIFEST"`.
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
@@ -24,11 +20,9 @@ interface StrategyWithCacheName {
   plugins?: SerwistPlugin[];
 }
 
-// ⚡ Offline Resilience: Patch defaultCache to add a 3s timeout to navigation/pages.
-// Without this, the browser waits for the full TCP timeout (~3.3 min) before serving cache.
+// Without a timeout, navigation waits the full TCP timeout (~3.3 min) before falling back to cache.
 const patchedCache = defaultCache.map((entry) => {
   const handler = entry.handler;
-  // Check if handler is a strategy object with a cacheName (like NetworkFirst)
   if (handler && typeof handler !== "function" && "cacheName" in handler) {
     const strategy = handler as unknown as StrategyWithCacheName;
     if (
@@ -50,10 +44,8 @@ const patchedCache = defaultCache.map((entry) => {
   return entry;
 });
 
-// Replace the final catch-all NetworkOnly (matcher: /.*/i) with a 10s NetworkFirst
 const finalCache: RuntimeCaching[] = [
   ...patchedCache.filter((e) => {
-    // Keep everything except the catch-all NetworkOnly rule
     const isCatchAll =
       e.matcher instanceof RegExp &&
       e.matcher.source === ".*" &&
@@ -76,8 +68,7 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: false,
   runtimeCaching: finalCache,
-  // Serve the precached /~offline page when navigations fail.
-  // Content is served directly (no redirect) to avoid infinite loops.
+  // Serves /~offline directly (no redirect) on failed navigations, to avoid infinite loops.
   fallbacks: {
     entries: [
       {
@@ -92,11 +83,11 @@ const serwist = new Serwist({
 
 serwist.addEventListeners();
 
-// Push Notification Handlers
-// Fix for Vercel build: NotificationOptions in some envs is missing vibrate
+// Some envs' NotificationOptions type is missing vibrate/actions/renotify.
 interface ExtendedNotificationOptions extends NotificationOptions {
   vibrate?: number[];
   actions?: Array<{ action: string; title: string; icon?: string }>;
+  renotify?: boolean;
 }
 
 self.addEventListener("push", (event) => {
@@ -121,7 +112,11 @@ self.addEventListener("push", (event) => {
 
       if (data.icon) options.icon = data.icon;
       if (data.badge) options.badge = data.badge;
-      if (data.tag) options.tag = data.tag;
+      if (data.tag) {
+        options.tag = data.tag;
+        // Without renotify, a tagged notification replaces its predecessor silently.
+        options.renotify = true;
+      }
       if (data.data) options.data = data.data;
       if (data.actions) options.actions = data.actions;
     } catch (err) {
@@ -187,15 +182,13 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// Handle push subscription changes (Chrome Android auto-rotates subscriptions)
-// When the subscription changes, re-subscribe and sync the new endpoint to the server
+// Chrome Android auto-rotates push subscriptions.
 self.addEventListener("pushsubscriptionchange", (event) => {
   console.log("[SW] Push subscription change detected");
 
   event.waitUntil(
     (async () => {
       try {
-        // Check for existing subscription and unsubscribe from old endpoint
         const existingSubscription =
           await self.registration.pushManager.getSubscription();
         if (existingSubscription) {
@@ -203,8 +196,7 @@ self.addEventListener("pushsubscriptionchange", (event) => {
           await existingSubscription.unsubscribe();
         }
 
-        // Get VAPID key — NEXT_PUBLIC_ variables are replaced at build time
-        // by Next.js so process.env becomes a string literal in the compiled output
+        // NEXT_PUBLIC_ vars are replaced at build time, so process.env is a literal here.
         const vapidKey =
           typeof process !== "undefined" &&
           process.env?.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -217,13 +209,11 @@ self.addEventListener("pushsubscriptionchange", (event) => {
           return;
         }
 
-        // Subscribe with a fresh endpoint
         const newSubscription = await self.registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
         });
 
-        // Post new subscription to backend
         const response = await fetch("/api/push/subscribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -246,7 +236,6 @@ self.addEventListener("pushsubscriptionchange", (event) => {
   );
 });
 
-// Helper: Convert base64-encoded VAPID key to Uint8Array for pushManager.subscribe()
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
