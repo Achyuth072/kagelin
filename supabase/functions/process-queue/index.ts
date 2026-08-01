@@ -140,6 +140,7 @@ serve(async (req) => {
             continue;
           }
 
+          const sendOptions = buildSendOptions(item.type, item.reference_id);
           const payload = JSON.stringify({
             title: item.payload?.title || "Kagelin",
             body: item.payload?.body || "Notification",
@@ -147,7 +148,6 @@ serve(async (req) => {
             // Reuse the Topic: what collapses in transit collapses in the tray.
             tag: sendOptions.topic,
           });
-          const sendOptions = buildSendOptions(item.type, item.reference_id);
 
           const outcomes = await Promise.all(
             subscriptions.map(async (sub) => {

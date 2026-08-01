@@ -1,0 +1,4 @@
+{
+  "//": "supabase/functions is Deno, not Node — scope the Deno LSP there so the rest of the repo stays on tsserver. Needs denoland.vscode-deno.",
+  "deno.enablePaths": ["supabase/functions"]
+}
