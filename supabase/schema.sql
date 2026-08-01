@@ -118,15 +118,21 @@ CREATE TABLE IF NOT EXISTS public.notification_queue (
   scheduled_at TIMESTAMPTZ NOT NULL,
   type TEXT NOT NULL CHECK (type IN ('timer_end', 'due_date', 'do_date', 'evening', 'briefing')),
   payload JSONB NOT NULL DEFAULT '{}',
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'failed', 'cancelled')),
+  -- 'processing' = claimed by a sender run, not yet resolved.
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'sent', 'failed', 'cancelled')),
   reference_id UUID,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   sent_at TIMESTAMPTZ,
-  error_message TEXT
+  error_message TEXT,
+  retry_count INT NOT NULL DEFAULT 0,
+  claimed_at TIMESTAMPTZ,
+  -- Backoff time for a retry; scheduled_at stays immutable as "when this was
+  -- meant to fire".
+  next_attempt_at TIMESTAMPTZ
 );
 
 -- Index for queue processing
-CREATE INDEX IF NOT EXISTS notification_queue_processing_idx ON public.notification_queue (scheduled_at, status) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS notification_queue_claim_idx ON public.notification_queue (COALESCE(next_attempt_at, scheduled_at)) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS notification_queue_user_id_idx ON public.notification_queue (user_id);
 
 -- =============================================================================
@@ -259,6 +265,116 @@ REVOKE EXECUTE ON FUNCTION get_users_for_evening_plan()     FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION get_users_for_morning_briefing() TO service_role;
 GRANT EXECUTE ON FUNCTION get_users_for_evening_plan()     TO service_role;
 
+-- B2. Queue Claim Helper
+-- SKIP LOCKED lets concurrent process-queue runs take disjoint batches instead
+-- of racing for the same rows. Rows stuck in 'processing' (sender crashed
+-- mid-flight) become claimable again after 5 minutes.
+CREATE OR REPLACE FUNCTION public.claim_due_notifications(p_limit INT DEFAULT 50)
+RETURNS SETOF public.notification_queue
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  -- A row reclaimed this many times is abandoned rather than reclaimed
+  -- forever. 3 mirrors MAX_RETRIES in _shared/push-delivery.ts.
+  UPDATE public.notification_queue
+  SET status = 'failed',
+      error_message = 'abandoned after repeated incomplete delivery attempts'
+  WHERE status = 'processing'
+    AND claimed_at < now() - interval '5 minutes'
+    AND retry_count >= 3;
+
+  RETURN QUERY
+  UPDATE public.notification_queue q
+  SET status = 'processing',
+      claimed_at = now(),
+      -- SET expressions see the pre-UPDATE row, so this reads the old status.
+      retry_count = CASE
+        WHEN q.status = 'processing' THEN q.retry_count + 1
+        ELSE q.retry_count
+      END
+  WHERE q.id IN (
+    SELECT c.id
+    FROM public.notification_queue c
+    WHERE (c.status = 'pending'
+           AND COALESCE(c.next_attempt_at, c.scheduled_at) <= now())
+       OR (c.status = 'processing' AND c.claimed_at < now() - interval '5 minutes')
+    ORDER BY c.scheduled_at
+    FOR UPDATE SKIP LOCKED
+    LIMIT p_limit
+  )
+  RETURNING q.*;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.claim_due_notifications(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.claim_due_notifications(INT) TO service_role;
+
+-- B3. Scheduler
+-- Declared here rather than left to the dashboard, so the cron job is
+-- reviewable and restorable from backup rather than failing silently.
+--
+-- Credentials come from Vault, never from this file. Set them once per project:
+--     select vault.create_secret('https://<ref>.supabase.co', 'project_url');
+--     select vault.create_secret('<service-role-key>', 'service_role_key');
+
+CREATE OR REPLACE FUNCTION public.invoke_edge_function(p_function TEXT)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_url TEXT;
+  v_key TEXT;
+BEGIN
+  SELECT decrypted_secret INTO v_url
+  FROM vault.decrypted_secrets WHERE name = 'project_url';
+
+  SELECT decrypted_secret INTO v_key
+  FROM vault.decrypted_secrets WHERE name = 'service_role_key';
+
+  -- Raise rather than silently no-op: surfaces in cron.job_run_details.return_message.
+  IF v_url IS NULL OR v_key IS NULL THEN
+    RAISE EXCEPTION
+      'invoke_edge_function(%): vault secrets project_url and/or service_role_key are not set',
+      p_function;
+  END IF;
+
+  PERFORM net.http_post(
+    url := v_url || '/functions/v1/' || p_function,
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || v_key
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 60000
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.invoke_edge_function(TEXT) FROM PUBLIC;
+
+-- Unschedule first so a re-run of this file doesn't error on a duplicate
+-- jobname. Overlapping process-queue runs are safe: claim_due_notifications
+-- takes rows with FOR UPDATE SKIP LOCKED.
+SELECT cron.unschedule(jobname)
+FROM cron.job
+WHERE jobname IN ('process-notification-queue', 'system-daily-briefing');
+
+SELECT cron.schedule(
+  'process-notification-queue',
+  '* * * * *',
+  $$SELECT public.invoke_edge_function('process-queue')$$
+);
+
+SELECT cron.schedule(
+  'system-daily-briefing',
+  '0 * * * *',
+  $$SELECT public.invoke_edge_function('daily-briefing')$$
+);
+
 -- C. Task Notification Sync Trigger Function
 CREATE OR REPLACE FUNCTION handle_task_notification_sync()
 RETURNS TRIGGER
@@ -270,12 +386,15 @@ DECLARE
   payload_body TEXT;
   user_settings JSONB;
 BEGIN
-  -- 1. CLEANUP: If task is updated or deleted, cancel pending notifications for this task
+  -- 1. CLEANUP: cancel only the notifications this trigger itself creates.
+  -- timer_end rows share reference_id with the task but are owned by the focus
+  -- timer — cancelling those killed running timers' notifications.
   IF TG_OP IN ('UPDATE', 'DELETE') THEN
     UPDATE public.notification_queue
     SET status = 'cancelled'
     WHERE reference_id = OLD.id
-      AND status = 'pending';
+      AND status = 'pending'
+      AND type IN ('due_date', 'do_date');
   END IF;
 
   -- 2. CREATE NEW NOTIFICATIONS: If task is created or updated (and not completed)

@@ -13,7 +13,7 @@ describe("CurrentTimeIndicator", () => {
 
   // Given: Time is 10:30 AM (local)
   // When:  Component is rendered
-  // Then:  The line is at (10 * 120) + (0.5 * 120) + 64 = 1200 + 60 + 64 = 1324px
+  // Then:  The line is at (10 * 120) + (0.5 * 120) + 80 = 1200 + 60 + 80 = 1340px
   it("renders at the correct vertical position for a given time", () => {
     const testDate = new Date(2026, 0, 29, 10, 30, 0);
     vi.setSystemTime(testDate);
@@ -23,12 +23,12 @@ describe("CurrentTimeIndicator", () => {
     const container = screen.getByTestId("current-time-indicator");
     const style = window.getComputedStyle(container);
 
-    expect(style.top).toBe("1324px");
+    expect(style.top).toBe("1340px");
   });
 
   // Given: Time is 00:00 (Midnight) (local)
   // When:  Component is rendered
-  // Then:  Position = (0 * 120) + (0 * 120) + 64 = 64px
+  // Then:  Position = (0 * 120) + (0 * 120) + 80 = 80px
   it("renders at the correct vertical position for midnight", () => {
     const testDate = new Date(2026, 0, 29, 0, 0, 0);
     vi.setSystemTime(testDate);
@@ -38,7 +38,7 @@ describe("CurrentTimeIndicator", () => {
     const container = screen.getByTestId("current-time-indicator");
     const style = window.getComputedStyle(container);
 
-    expect(style.top).toBe("64px");
+    expect(style.top).toBe("80px");
   });
 
   it("displays the current time text", () => {

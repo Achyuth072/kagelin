@@ -8,8 +8,7 @@ describe("Regression Fixes", () => {
   const mockDate = new Date("2024-01-01T12:00:00");
   const mockEvents: CalendarEvent[] = [];
 
-  it("TimeGrid: Header height should be compact (h-16) to avoid huge gap", () => {
-    // Note: We test strictly for what we want to enact (h-16)
+  it("TimeGrid: Header height should be 80px, matching the grid-line/event offset", () => {
     render(
       <TimeGrid
         startDate={mockDate}
@@ -25,8 +24,7 @@ describe("Regression Fixes", () => {
     );
 
     expect(dayHeader).toBeTruthy();
-    expect(dayHeader?.className).toContain("h-20");
-    expect(dayHeader?.className).not.toContain("h-24");
+    expect((dayHeader as HTMLElement)?.style.height).toBe("80px");
   });
 
   it("TimeGrid: should render CurrentTimeIndicator when today is visible", () => {

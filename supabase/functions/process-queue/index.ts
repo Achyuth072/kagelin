@@ -1,12 +1,40 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import webpush from "npm:web-push";
+import {
+  buildSendOptions,
+  isExpired,
+  isGoneStatus,
+  resolveFailure,
+  type FailureResolution,
+  type NotificationType,
+} from "../_shared/push-delivery.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+interface QueueRow {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  reference_id: string | null;
+  retry_count: number;
+  scheduled_at: string;
+  payload: {
+    title?: string;
+    body?: string;
+    data?: Record<string, unknown>;
+  } | null;
+}
+
+interface Subscription {
+  id: string;
+  user_id: string;
+  subscription: unknown;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -29,106 +57,155 @@ serve(async (req) => {
 
     webpush.setVapidDetails(vapidSubject, publicVapidKey, privateVapidKey);
 
-    const results = { sent: 0, failed: 0, skipped: 0, polls: 0 };
+    const results = {
+      sent: 0,
+      failed: 0,
+      retried: 0,
+      skipped: 0,
+      expired: 0,
+      polls: 0,
+    };
     const startTime = Date.now();
     const MAX_RUNTIME = 50000; // Run for up to 50 seconds
     const POLL_INTERVAL = 5000; // Poll every 5 seconds
 
+    const queue = supabaseAdmin.from("notification_queue");
+
+    const markFailed = async (id: string, message: string) => {
+      await queue
+        .update({ status: "failed", error_message: message })
+        .eq("id", id);
+    };
+
+    const settle = async (
+      id: string,
+      resolution: FailureResolution,
+      failMessage?: string,
+    ) => {
+      if (resolution.action === "retry") {
+        await queue
+          .update({
+            status: "pending",
+            retry_count: resolution.retryCount,
+            next_attempt_at: resolution.nextAttemptAt,
+            claimed_at: null,
+          })
+          .eq("id", id);
+        results.retried++;
+        return;
+      }
+      await markFailed(id, failMessage ?? resolution.errorMessage);
+      results.failed++;
+    };
+
     while (Date.now() - startTime < MAX_RUNTIME) {
       results.polls++;
 
-      // 1. Fetch pending notifications
-      const { data: queue, error: queueError } = await supabaseAdmin
-        .from("notification_queue")
-        .select("*")
-        .eq("status", "pending")
-        .lte("scheduled_at", new Date().toISOString())
-        .limit(50);
+      // Atomic claim so concurrent runs take disjoint batches.
+      const { data: claimed, error: queueError } = await supabaseAdmin.rpc(
+        "claim_due_notifications",
+        { p_limit: 50 },
+      );
 
       if (queueError) throw queueError;
+      const batch = (claimed ?? []) as QueueRow[];
 
-      if (queue && queue.length > 0) {
-        // 2. Process each notification
-        for (const item of queue) {
-          try {
-            // Get all subscriptions for the user (multi-device/domain support)
-            const { data: subData, error: subError } = await supabaseAdmin
-              .from("push_subscriptions")
-              .select("id, subscription")
-              .eq("user_id", item.user_id);
+      // One lookup for the whole batch instead of one per row.
+      const subsByUser = new Map<string, Subscription[]>();
+      if (batch.length > 0) {
+        const { data: subs } = await supabaseAdmin
+          .from("push_subscriptions")
+          .select("id, user_id, subscription")
+          .in("user_id", [...new Set(batch.map((row) => row.user_id))]);
 
-            if (subError || !subData || subData.length === 0) {
-              await supabaseAdmin
-                .from("notification_queue")
-                .update({
-                  status: "failed",
-                  error_message: "User subscription not found",
-                })
-                .eq("id", item.id);
-              results.skipped++;
-              continue;
-            }
+        for (const sub of (subs ?? []) as Subscription[]) {
+          const existing = subsByUser.get(sub.user_id);
+          if (existing) existing.push(sub);
+          else subsByUser.set(sub.user_id, [sub]);
+        }
+      }
 
-            const payload = JSON.stringify({
-              title: item.payload?.title || "Kagelin",
-              body: item.payload?.body || "Notification",
-              data: item.payload?.data || {},
-            });
+      for (const item of batch) {
+        try {
+          if (isExpired(item.type, item.scheduled_at)) {
+            await markFailed(item.id, "expired before delivery");
+            results.expired++;
+            continue;
+          }
 
-            let sent = 0;
-            let failed = 0;
+          const subscriptions = subsByUser.get(item.user_id) ?? [];
+          if (subscriptions.length === 0) {
+            await markFailed(item.id, "User subscription not found");
+            results.skipped++;
+            continue;
+          }
 
-            for (const sub of subData) {
+          const payload = JSON.stringify({
+            title: item.payload?.title || "Kagelin",
+            body: item.payload?.body || "Notification",
+            data: item.payload?.data || {},
+            tag: `${item.type}-${item.id}`, // distinct per row so notifications stack
+          });
+          const sendOptions = buildSendOptions(item.type, item.reference_id);
+
+          const outcomes = await Promise.all(
+            subscriptions.map(async (sub) => {
               try {
-                await webpush.sendNotification(sub.subscription, payload);
-                sent++;
+                await webpush.sendNotification(
+                  sub.subscription,
+                  payload,
+                  sendOptions,
+                );
+                return { ok: true as const };
               } catch (error) {
-                failed++;
-                const statusCode = error.statusCode;
-                if (statusCode === 410 || statusCode === 404) {
-                  await supabaseAdmin
-                    .from("push_subscriptions")
-                    .delete()
-                    .eq("id", sub.id);
-                }
                 console.error(
                   `Error sending notification ${item.id} to subscription ${sub.id}:`,
                   error,
                 );
+                return {
+                  ok: false as const,
+                  id: sub.id,
+                  statusCode: error?.statusCode as number | undefined,
+                };
               }
-            }
+            }),
+          );
 
-            if (sent === 0) {
-              await supabaseAdmin
-                .from("notification_queue")
-                .update({
-                  status: "failed",
-                  error_message:
-                    failed > 0
-                      ? "Failed to deliver to all subscriptions"
-                      : "User subscription not found",
-                })
-                .eq("id", item.id);
+          const failures = outcomes.filter((o) => !o.ok);
+          const goneIds = failures
+            .filter((f) => isGoneStatus(f.statusCode))
+            .map((f) => f.id);
 
-              results.failed++;
-              continue;
-            }
-
+          if (goneIds.length > 0) {
             await supabaseAdmin
-              .from("notification_queue")
+              .from("push_subscriptions")
+              .delete()
+              .in("id", goneIds);
+          }
+
+          if (outcomes.length > failures.length) {
+            await queue
               .update({ status: "sent", sent_at: new Date().toISOString() })
               .eq("id", item.id);
-
             results.sent++;
-          } catch (error) {
-            console.error(`Error sending notification ${item.id}:`, error);
-
-            await supabaseAdmin
-              .from("notification_queue")
-              .update({ status: "failed", error_message: error.message })
-              .eq("id", item.id);
-            results.failed++;
+            continue;
           }
+
+          await settle(
+            item.id,
+            resolveFailure(
+              item.retry_count,
+              failures.map((f) => f.statusCode),
+            ),
+          );
+        } catch (error) {
+          console.error(`Error sending notification ${item.id}:`, error);
+
+          await settle(
+            item.id,
+            resolveFailure(item.retry_count, [undefined]),
+            error.message,
+          );
         }
       }
 

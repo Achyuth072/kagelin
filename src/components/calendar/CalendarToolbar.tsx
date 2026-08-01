@@ -73,7 +73,7 @@ export function CalendarToolbar({
     }
   };
 
-  // We render all options and use CSS to hide desktop/mobile specific ones
+  // All options render; CSS hides the device-specific ones.
   const availableViews: {
     value: CalendarView;
     label: string;
@@ -81,7 +81,7 @@ export function CalendarToolbar({
   }[] = [
     { value: "year", label: "Year", className: "hidden md:flex" },
     { value: "month", label: "Month" },
-    { value: "week", label: "Week", className: "hidden md:flex" },
+    { value: "week", label: "Week" },
     { value: "4day", label: "4-Day", className: "hidden md:flex" },
     { value: "3day", label: "3-Day", className: "flex md:hidden" },
     { value: "day", label: "Day" },
@@ -129,7 +129,7 @@ export function CalendarToolbar({
         className,
       )}
     >
-      {/* Left Cluster: Navigation on desktop / Nav Cluster on mobile */}
+      {/* Left cluster */}
       <div
         className={cn("flex-initial lg:flex-1 flex items-center gap-2 min-w-0")}
       >
@@ -176,7 +176,7 @@ export function CalendarToolbar({
           </div>
         </div>
 
-        {/* Mobile Navigation - Only show Today button as swipe is enabled */}
+        {/* Mobile: swipe replaces prev/next, so only Today shows */}
         <div className="flex md:hidden items-center">
           <Button
             variant="ghost"
@@ -193,7 +193,7 @@ export function CalendarToolbar({
         </div>
       </div>
 
-      {/* Middle: Date Label - Centered between clusters on mobile, absolute on desktop */}
+      {/* Date label */}
       <div
         className={cn(
           "lg:absolute lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2",
@@ -210,7 +210,7 @@ export function CalendarToolbar({
         </div>
       </div>
 
-      {/* Right Cluster: View Select + Menu */}
+      {/* Right cluster */}
       <div className="flex-initial lg:flex-1 flex items-center gap-1 md:gap-1.5 min-w-0 justify-end">
         <Select
           value={view}

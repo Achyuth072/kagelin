@@ -232,7 +232,6 @@ describe("Push Notification API Routes", () => {
         {
           TTL: 60,
           urgency: "high",
-          topic: "test-notification",
         },
       );
     });

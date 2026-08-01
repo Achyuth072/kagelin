@@ -1,6 +1,6 @@
 {
   "name": "kagelin",
-  "version": "1.26.2",
+  "version": "1.27.0-preview.1",
   "license": "AGPL-3.0-only",
   "private": false,
   "scripts": {
