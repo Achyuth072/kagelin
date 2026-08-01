@@ -199,7 +199,8 @@ export function useFocusTimer() {
                 prevState.mode === "focus"
                   ? "Your focus session is complete. Take a break!"
                   : "Your break is over. Time to focus!",
-              tag: "timer-notification",
+              // Matches the queued push's tag so they replace, not stack.
+              tag: "timer_end",
               renotify: true,
             } as NotificationOptions,
           );
