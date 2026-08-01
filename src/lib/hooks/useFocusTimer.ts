@@ -64,6 +64,9 @@ export function useFocusTimer() {
   }, [upsertTimerState]);
 
   const notificationIdRef = useRef<string | null>(null);
+  // notificationIdRef is only set once the request resolves, leaving the round
+  // trip open for a tick to queue a duplicate. This closes synchronously.
+  const schedulingRef = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync isLoaded
@@ -196,7 +199,8 @@ export function useFocusTimer() {
                 prevState.mode === "focus"
                   ? "Your focus session is complete. Take a break!"
                   : "Your break is over. Time to focus!",
-              tag: "timer-notification",
+              // Matches the queued push's tag so they replace, not stack.
+              tag: "timer_end",
               renotify: true,
             } as NotificationOptions,
           );
@@ -263,7 +267,13 @@ export function useFocusTimer() {
 
   // Server-side notification scheduling
   useEffect(() => {
-    if (state.isRunning && !isGuestMode && !notificationIdRef.current) {
+    if (
+      state.isRunning &&
+      !isGuestMode &&
+      !notificationIdRef.current &&
+      !schedulingRef.current
+    ) {
+      schedulingRef.current = true;
       const schedule = async () => {
         try {
           const { notificationId } = await scheduleTimerNotification({
@@ -274,6 +284,8 @@ export function useFocusTimer() {
           notificationIdRef.current = notificationId;
         } catch (err) {
           console.warn("Failed to auto-schedule timer notification:", err);
+        } finally {
+          schedulingRef.current = false;
         }
       };
       schedule();
@@ -293,7 +305,12 @@ export function useFocusTimer() {
 
       const targetTaskId = taskId ?? state.activeTaskId;
 
-      if (!isGuestMode) {
+      if (
+        !isGuestMode &&
+        !notificationIdRef.current &&
+        !schedulingRef.current
+      ) {
+        schedulingRef.current = true;
         try {
           const { notificationId } = await scheduleTimerNotification({
             duration: state.remainingSeconds,
@@ -303,6 +320,8 @@ export function useFocusTimer() {
           notificationIdRef.current = notificationId;
         } catch (err) {
           console.warn("Failed to schedule timer notification:", err);
+        } finally {
+          schedulingRef.current = false;
         }
       }
 

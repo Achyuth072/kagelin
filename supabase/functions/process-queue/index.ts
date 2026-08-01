@@ -144,7 +144,8 @@ serve(async (req) => {
             title: item.payload?.title || "Kagelin",
             body: item.payload?.body || "Notification",
             data: item.payload?.data || {},
-            tag: `${item.type}-${item.id}`, // distinct per row so notifications stack
+            // Reuse the Topic: what collapses in transit collapses in the tray.
+            tag: sendOptions.topic,
           });
           const sendOptions = buildSendOptions(item.type, item.reference_id);
 

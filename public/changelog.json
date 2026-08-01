@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.27.0-preview.2",
+    "date": "2026-08-01",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Align local and push notification tags so they replace instead of stacking",
+        "Stop duplicate timer notifications from a schedule race"
+      ]
+    }
+  },
+  {
     "version": "1.27.0-preview.1",
     "date": "2026-08-01",
     "channel": "preview",
@@ -748,17 +759,6 @@
     "sections": {
       "Added": [
         "Restore guest account settings and enhance import functionality"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.12",
-    "date": "2026-05-11",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Persist slider and switch changes via watch() subscription",
-        "Resolve focus settings toggles broken by React Compiler"
       ]
     }
   }
