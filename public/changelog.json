@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.27.0-preview.1",
+    "date": "2026-08-01",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Make scheduled push delivery reliable (timer/task isolation, claim, retry)"
+      ]
+    }
+  },
+  {
     "version": "1.27.0-preview.0",
     "date": "2026-07-27",
     "channel": "preview",
@@ -749,19 +759,6 @@
       "Fixed": [
         "Persist slider and switch changes via watch() subscription",
         "Resolve focus settings toggles broken by React Compiler"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.11",
-    "date": "2026-05-11",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Changelog popup with prefetch cache, accessibility, and version scoping"
-      ],
-      "Fixed": [
-        "Replace missing @base-ui/react/use-render, install @radix-ui/react-scroll-area, fix pre-existing lint issues"
       ]
     }
   }
