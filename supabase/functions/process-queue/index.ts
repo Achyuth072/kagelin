@@ -5,10 +5,12 @@ import {
   buildSendOptions,
   isExpired,
   isGoneStatus,
+  pushStatusCode,
   resolveFailure,
   type FailureResolution,
   type NotificationType,
 } from "../_shared/push-delivery.ts";
+import { toErrorMessage } from "../_shared/errors.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,7 +38,7 @@ interface Subscription {
   subscription: unknown;
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -166,7 +168,7 @@ serve(async (req) => {
                 return {
                   ok: false as const,
                   id: sub.id,
-                  statusCode: error?.statusCode as number | undefined,
+                  statusCode: pushStatusCode(error),
                 };
               }
             }),
@@ -205,7 +207,7 @@ serve(async (req) => {
           await settle(
             item.id,
             resolveFailure(item.retry_count, [undefined]),
-            error.message,
+            toErrorMessage(error),
           );
         }
       }
@@ -225,7 +227,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Critical error in process-queue:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: toErrorMessage(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

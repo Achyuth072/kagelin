@@ -6,6 +6,7 @@ import {
   isGoneStatus,
   isRetryableStatus,
   MAX_RETRIES,
+  pushStatusCode,
   resolveFailure,
   retryDelaySeconds,
 } from "../../supabase/functions/_shared/push-delivery";
@@ -150,5 +151,23 @@ describe("resolveFailure", () => {
   it("retries when any endpoint failed transiently", () => {
     // Multi-device user: one dead subscription, one transient failure.
     expect(resolveFailure(0, [410, 503], now).action).toBe("retry");
+  });
+});
+
+describe("pushStatusCode", () => {
+  it("reads the status web-push attaches to a rejected send", () => {
+    expect(
+      pushStatusCode(Object.assign(new Error("Gone"), { statusCode: 410 })),
+    ).toBe(410);
+  });
+
+  it("reports no status for a throw that never reached the push service", () => {
+    expect(pushStatusCode(new Error("getaddrinfo ENOTFOUND"))).toBeUndefined();
+    expect(pushStatusCode("boom")).toBeUndefined();
+    expect(pushStatusCode(null)).toBeUndefined();
+  });
+
+  it("ignores a non-numeric status instead of trusting it as a code", () => {
+    expect(pushStatusCode({ statusCode: "410" })).toBeUndefined();
   });
 });
