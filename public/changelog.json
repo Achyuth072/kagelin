@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.27.0",
+    "date": "2026-08-01",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Add mobile week view with edge-gated day-window paging"
+      ],
+      "Fixed": [
+        "Make scheduled push delivery reliable (timer/task isolation, claim, retry)",
+        "Align local and push notification tags so they replace instead of stacking",
+        "Stop duplicate timer notifications from a schedule race",
+        "Route notification clicks to their target URL instead of always /",
+        "Drop y-transform from page transition to stop PiP button flash on /focus",
+        "Make /login scrollable so content isn't cut off on short mobile viewports"
+      ]
+    }
+  },
+  {
     "version": "1.27.0-preview.2",
     "date": "2026-08-01",
     "channel": "preview",
@@ -749,16 +767,6 @@
       ],
       "Fixed": [
         "Align What's New indicator with Ink & Matte design"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.13",
-    "date": "2026-05-12",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Restore guest account settings and enhance import functionality"
       ]
     }
   }
