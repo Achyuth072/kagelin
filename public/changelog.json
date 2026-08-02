@@ -1,6 +1,6 @@
 [
   {
-    "version": "1.27.0-preview.3",
+    "version": "1.27.1-preview.1",
     "date": "2026-08-02",
     "channel": "preview",
     "sections": {
@@ -16,6 +16,24 @@
         "Clear timer notification ref before cancel resolves to avoid latching scheduling off",
         "Narrow unknown errors in edge functions with shared toErrorMessage and pushStatusCode helpers",
         "Reorder sendOptions in process-queue to stop a TDZ crash killing every push"
+      ]
+    }
+  },
+  {
+    "version": "1.27.0",
+    "date": "2026-08-01",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Add mobile week view with edge-gated day-window paging"
+      ],
+      "Fixed": [
+        "Make scheduled push delivery reliable (timer/task isolation, claim, retry)",
+        "Align local and push notification tags so they replace instead of stacking",
+        "Stop duplicate timer notifications from a schedule race",
+        "Route notification clicks to their target URL instead of always /",
+        "Drop y-transform from page transition to stop PiP button flash on /focus",
+        "Make /login scrollable so content isn't cut off on short mobile viewports"
       ]
     }
   },
