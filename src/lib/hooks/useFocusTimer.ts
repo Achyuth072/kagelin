@@ -37,7 +37,6 @@ export function useFocusTimer() {
   const { play } = useFocusSounds();
   const { trigger } = useHaptic();
 
-  // Get state and actions from store
   const {
     state,
     settings,
@@ -229,7 +228,6 @@ export function useFocusTimer() {
       intervalRef.current = setInterval(() => {
         const currentSeconds = useTimerStore.getState().state.remainingSeconds;
 
-        // Warning sounds at 1 minute remaining
         if (currentSeconds === 61) {
           const currentMode = useTimerStore.getState().state.mode;
           if (currentMode === "focus") {
@@ -341,6 +339,14 @@ export function useFocusTimer() {
     syncToServer();
   }, [handleCancelNotification, storeCancel, syncToServer]);
 
+  // The push for the original deadline would fire mid-way through a later session.
+  // Cancel first: storeSkip dispatches timer-complete synchronously, and that
+  // handler clears the ref this reads. Completion persists, so no sync here.
+  const skip = useCallback(() => {
+    handleCancelNotification();
+    storeSkip();
+  }, [handleCancelNotification, storeSkip]);
+
   // Settings are per-account: propagate so other devices agree on them.
   const updateSettings = useCallback(
     (newSettings: Parameters<typeof storeUpdateSettings>[0]) => {
@@ -350,7 +356,7 @@ export function useFocusTimer() {
     [storeUpdateSettings, syncToServer],
   );
 
-  // Initial sync on mount if timer is running (handles PWA reopen with active timer)
+  // Handles reopening the PWA with a timer already running.
   const hasSyncedRef = useRef(false);
   useEffect(() => {
     if (hasSyncedRef.current) return;
@@ -368,7 +374,7 @@ export function useFocusTimer() {
     pause,
     stop,
     cancel,
-    skip: storeSkip,
+    skip,
     updateSettings,
   };
 }
