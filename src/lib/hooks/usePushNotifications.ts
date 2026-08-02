@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useUiStore } from "@/lib/store/uiStore";
 import { removePushSubscription, syncPushSubscription } from "@/lib/push-api";
+import { displayNotification } from "@/lib/notifications";
 import { useAuth } from "@/components/AuthProvider";
 
 type NotificationPermission = "default" | "granted" | "denied";
@@ -42,7 +43,6 @@ export function usePushNotifications() {
   );
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Track last-known subscription endpoint for detecting auto-rotation (Chrome Android)
   const subscriptionEndpointRef = useRef<string | null>(null);
 
   const getServiceWorkerRegistration = useCallback(async () => {
@@ -135,7 +135,6 @@ export function usePushNotifications() {
         setSubscription(sub);
         await sendSubscriptionToBackend(sub);
 
-        // Finally enable notifications in store only after everything is synced
         setNotificationsEnabled(true);
 
         return sub;
@@ -223,12 +222,7 @@ export function usePushNotifications() {
 
       try {
         const registration = await getServiceWorkerRegistration();
-        await registration.showNotification(title, {
-          icon: "/icons/icon-192.png",
-          badge: "/icons/icon-192.png",
-          vibrate: [200, 100, 200],
-          ...options,
-        } as NotificationOptions);
+        await displayNotification(registration, title, options);
       } catch (error) {
         console.error("Error showing notification:", error);
       }

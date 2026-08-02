@@ -18,8 +18,7 @@ const TTL_SECONDS: Record<NotificationType, number> = {
   briefing: 3600,
 };
 
-// RFC 8030 topic: a later message replaces a still-queued one with the same
-// topic, so an offline device wakes to one current reminder, not a pile.
+// RFC 8030 topic: a later message collapses a still-queued one with the same topic.
 export function buildTopic(
   type: NotificationType,
   referenceId?: string | null,
@@ -67,6 +66,12 @@ export function isExpired(
 ): boolean {
   const scheduled = new Date(scheduledAt).getTime();
   return now.getTime() - scheduled > TTL_SECONDS[type] * 1000;
+}
+
+// web-push only sets `statusCode` from an HTTP response; a DNS/socket failure has none.
+export function pushStatusCode(error: unknown): number | undefined {
+  const statusCode = (error as { statusCode?: unknown } | null)?.statusCode;
+  return typeof statusCode === "number" ? statusCode : undefined;
 }
 
 export type FailureResolution =

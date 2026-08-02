@@ -6,11 +6,11 @@ import {
   type RuntimeCaching,
   type SerwistPlugin,
 } from "serwist";
+import {
+  displayNotification,
+  type NotificationDisplayOptions,
+} from "@/lib/notifications";
 
-// This declares the value of `injectionPoint` to TypeScript.
-// `injectionPoint` is the string that will be replaced by the
-// actual precache manifest. By default, this string is set to
-// `"self.__SW_MANIFEST"`.
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: (PrecacheEntry | string)[] | undefined;
@@ -24,11 +24,9 @@ interface StrategyWithCacheName {
   plugins?: SerwistPlugin[];
 }
 
-// ⚡ Offline Resilience: Patch defaultCache to add a 3s timeout to navigation/pages.
-// Without this, the browser waits for the full TCP timeout (~3.3 min) before serving cache.
+// Without a timeout, navigation waits the full TCP timeout (~3.3 min) before falling back to cache.
 const patchedCache = defaultCache.map((entry) => {
   const handler = entry.handler;
-  // Check if handler is a strategy object with a cacheName (like NetworkFirst)
   if (handler && typeof handler !== "function" && "cacheName" in handler) {
     const strategy = handler as unknown as StrategyWithCacheName;
     if (
@@ -50,10 +48,8 @@ const patchedCache = defaultCache.map((entry) => {
   return entry;
 });
 
-// Replace the final catch-all NetworkOnly (matcher: /.*/i) with a 10s NetworkFirst
 const finalCache: RuntimeCaching[] = [
   ...patchedCache.filter((e) => {
-    // Keep everything except the catch-all NetworkOnly rule
     const isCatchAll =
       e.matcher instanceof RegExp &&
       e.matcher.source === ".*" &&
@@ -76,8 +72,7 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: false,
   runtimeCaching: finalCache,
-  // Serve the precached /~offline page when navigations fail.
-  // Content is served directly (no redirect) to avoid infinite loops.
+  // Serves /~offline directly (no redirect) on failed navigations, to avoid infinite loops.
   fallbacks: {
     entries: [
       {
@@ -92,62 +87,75 @@ const serwist = new Serwist({
 
 serwist.addEventListeners();
 
-// Push Notification Handlers
-// Fix for Vercel build: NotificationOptions in some envs is missing vibrate
-interface ExtendedNotificationOptions extends NotificationOptions {
-  vibrate?: number[];
-  actions?: Array<{ action: string; title: string; icon?: string }>;
+interface PushPayload {
+  title?: string;
+  body?: string;
+  icon?: string;
+  badge?: string;
+  tag?: string;
+  data?: unknown;
+  actions?: NotificationDisplayOptions["actions"];
+}
+
+const FALLBACK_TITLE = "Kagelin";
+const FALLBACK_BODY = "You have a new notification";
+
+function readPushText(data: PushMessageData): string | undefined {
+  try {
+    return data.text() || undefined;
+  } catch (err) {
+    console.warn("[SW] Push payload is not text either", err);
+    return undefined;
+  }
+}
+
+// json() and text() each throw on a payload that doesn't decode. Neither may
+// escape: a push that displays nothing reads as a silent push, and iOS revokes
+// the subscription for those.
+function readPushPayload(data: PushMessageData | null): PushPayload {
+  if (!data) return {};
+  try {
+    return (data.json() ?? {}) as PushPayload;
+  } catch (err) {
+    console.warn("[SW] Push payload is not JSON, falling back to text", err);
+    return { body: readPushText(data) };
+  }
+}
+
+async function showPushNotification(payload: PushPayload): Promise<void> {
+  // No default tag: a shared one would collapse unrelated notifications.
+  const options: NotificationDisplayOptions = {
+    body: payload.body || FALLBACK_BODY,
+  };
+
+  if (payload.icon) options.icon = payload.icon;
+  if (payload.badge) options.badge = payload.badge;
+  if (payload.tag) {
+    options.tag = payload.tag;
+    // Without renotify, a tagged notification replaces its predecessor silently.
+    options.renotify = true;
+  }
+  if (payload.data) options.data = payload.data;
+  if (payload.actions) options.actions = payload.actions;
+
+  try {
+    await displayNotification(
+      self.registration,
+      payload.title || FALLBACK_TITLE,
+      options,
+    );
+  } catch (err) {
+    // Something in the payload was rejected. Show the barest possible
+    // notification rather than none — see readPushPayload on silent pushes.
+    console.error("[SW] Failed to show notification; showing fallback", err);
+    await displayNotification(self.registration, FALLBACK_TITLE, {
+      body: FALLBACK_BODY,
+    });
+  }
 }
 
 self.addEventListener("push", (event) => {
-  console.log("[SW] Push event received", event);
-
-  // No default tag: a shared one replaces prior notifications instead of stacking.
-  const options: ExtendedNotificationOptions = {
-    icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
-    vibrate: [200, 100, 200],
-  };
-
-  let title = "Kagelin";
-  let body = "You have a new notification";
-
-  if (event.data) {
-    try {
-      const data = event.data.json();
-      console.log("[SW] Push data parsed:", data);
-      title = data.title || title;
-      body = data.body || body;
-
-      if (data.icon) options.icon = data.icon;
-      if (data.badge) options.badge = data.badge;
-      if (data.tag) options.tag = data.tag;
-      if (data.data) options.data = data.data;
-      if (data.actions) options.actions = data.actions;
-    } catch (err) {
-      console.warn(
-        "[SW] Push data failed to parse as JSON, falling back to text",
-        err,
-      );
-      body = event.data.text();
-    }
-  } else {
-    console.log("[SW] Push event has no data");
-  }
-
-  event.waitUntil(
-    self.registration
-      .showNotification(title, {
-        body,
-        ...options,
-      })
-      .then(() => {
-        console.log("[SW] Notification shown successfully:", title);
-      })
-      .catch((err) => {
-        console.error("[SW] Failed to show notification:", err);
-      }),
-  );
+  event.waitUntil(showPushNotification(readPushPayload(event.data ?? null)));
 });
 
 self.addEventListener("notificationclick", (event) => {
@@ -187,15 +195,13 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-// Handle push subscription changes (Chrome Android auto-rotates subscriptions)
-// When the subscription changes, re-subscribe and sync the new endpoint to the server
+// Chrome Android auto-rotates push subscriptions.
 self.addEventListener("pushsubscriptionchange", (event) => {
   console.log("[SW] Push subscription change detected");
 
   event.waitUntil(
     (async () => {
       try {
-        // Check for existing subscription and unsubscribe from old endpoint
         const existingSubscription =
           await self.registration.pushManager.getSubscription();
         if (existingSubscription) {
@@ -203,8 +209,7 @@ self.addEventListener("pushsubscriptionchange", (event) => {
           await existingSubscription.unsubscribe();
         }
 
-        // Get VAPID key — NEXT_PUBLIC_ variables are replaced at build time
-        // by Next.js so process.env becomes a string literal in the compiled output
+        // NEXT_PUBLIC_ vars are replaced at build time, so process.env is a literal here.
         const vapidKey =
           typeof process !== "undefined" &&
           process.env?.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -217,13 +222,11 @@ self.addEventListener("pushsubscriptionchange", (event) => {
           return;
         }
 
-        // Subscribe with a fresh endpoint
         const newSubscription = await self.registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
         });
 
-        // Post new subscription to backend
         const response = await fetch("/api/push/subscribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -246,7 +249,6 @@ self.addEventListener("pushsubscriptionchange", (event) => {
   );
 });
 
-// Helper: Convert base64-encoded VAPID key to Uint8Array for pushManager.subscribe()
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");

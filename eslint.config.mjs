@@ -26,10 +26,19 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-require-imports": "off",
     },
   },
-  // Custom rule overrides
+  // Deno entrypoints are unreachable by tsc, so lint is their only gate.
+  // (_shared modules are checked — tests/unit pulls them into the program.)
+  {
+    files: ["supabase/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-use-before-define": [
+        "error",
+        { functions: false, classes: false, variables: true },
+      ],
+    },
+  },
   {
     rules: {
-      // Allow underscore-prefixed unused variables (common pattern for intentionally unused params)
       "@typescript-eslint/no-unused-vars": [
         "error",
         {

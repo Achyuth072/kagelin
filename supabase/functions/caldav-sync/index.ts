@@ -1,10 +1,6 @@
-// Follow this setup guide to bootstrap the edge function:
-// https://supabase.com/docs/guides/functions/connect-to-postgres
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-// Note: tsdav is a Node.js library, we might need a Deno-compatible version or use esm.sh
-// For this scaffold, we assume the orchestrator runs on the client or a background job
-// But the Edge Function provides the CORS bypass proxy for CalDAV servers if needed.
+import { toErrorMessage } from "../_shared/errors.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,8 +8,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
-  // Handle CORS preflight
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -29,7 +24,6 @@ serve(async (req) => {
       },
     );
 
-    // Get user from token
     const {
       data: { user },
       error: authError,
@@ -43,10 +37,7 @@ serve(async (req) => {
     if (action === "sync") {
       console.log(`Starting sync for calendar ${calendarId}...`);
 
-      // In a real implementation, we would either:
-      // 1. Run the Sync Orchestrator here (using tsdav via esm.sh)
-      // 2. Queue a background job
-
+      // Stub — no orchestrator wired up yet.
       return new Response(
         JSON.stringify({
           status: "sync_queued",
@@ -64,8 +55,7 @@ serve(async (req) => {
       status: 400,
     });
   } catch (error: unknown) {
-    const err = error as Error;
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: toErrorMessage(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     });

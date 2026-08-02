@@ -29,10 +29,6 @@ type TimerCompleteEvent = CustomEvent<{
   };
 }>;
 
-/**
- * Pomodoro Focus Timer Hook - Refactored to use Zustand
- * This hook now acts as the "Engine" and "Side Effect Manager" for the timer.
- */
 export function useFocusTimer() {
   const queryClient = useQueryClient();
   const pathname = usePathname();
@@ -41,7 +37,6 @@ export function useFocusTimer() {
   const { play } = useFocusSounds();
   const { trigger } = useHaptic();
 
-  // Get state and actions from store
   const {
     state,
     settings,
@@ -69,7 +64,6 @@ export function useFocusTimer() {
   const schedulingRef = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync isLoaded
   useEffect(() => {
     if (typeof window !== "undefined") {
       setLoaded(true);
@@ -86,39 +80,37 @@ export function useFocusTimer() {
   });
 
   const handleCancelNotification = useCallback(async () => {
-    if (notificationIdRef.current) {
-      try {
-        await cancelTimerNotification(notificationIdRef.current);
-        notificationIdRef.current = null;
-      } catch (err) {
-        console.warn("Failed to cancel timer notification:", err);
-      }
+    const pendingId = notificationIdRef.current;
+    if (!pendingId) return;
+
+    // Clear before the await, not after success: a stale id keeps the
+    // `!notificationIdRef.current` scheduling guard latched off, and a duplicate
+    // alert (collapsed by the shared "timer_end" tag) beats a missing one.
+    notificationIdRef.current = null;
+    try {
+      await cancelTimerNotification(pendingId);
+    } catch (err) {
+      console.warn("Failed to cancel timer notification:", err);
     }
   }, []);
 
-  // Handle timer completion side effects
   useEffect(() => {
     const handleComplete = async (event: Event) => {
       const customEvent = event as TimerCompleteEvent;
       const { prevState, nextState, options } = customEvent.detail;
 
-      // Reset notification ref
       notificationIdRef.current = null;
 
-      // Atomically claim this completion. The local state already advanced
-      // optimistically; the claim writes it to the DB only if no other device
-      // beat us to it. The loser skips side-effects and mirrors via realtime —
-      // so the session is never double-logged even if two devices finish at
-      // once. (prevState.endsAt is the deadline that just passed.)
+      // Claim writes to the DB only if no other device beat us to it; the loser
+      // skips side-effects and mirrors via realtime, so the session is never
+      // double-logged. prevState.endsAt is the deadline that just passed.
       if (prevState.endsAt != null) {
         try {
           const won = await claimTimerCompletion(prevState.endsAt);
           if (!won) return;
         } catch (err) {
-          // Transient network/auth error — we can't confirm the claim. Fail open
-          // and still log + notify locally rather than silently dropping the
-          // completed session; a rare double-log on simultaneous multi-device
-          // completion is preferable to losing the user's work.
+          // Can't confirm the claim — fail open and log/notify locally. A rare
+          // double-log beats silently dropping the completed session.
           console.warn(
             "Timer completion claim failed; proceeding locally:",
             err,
@@ -136,7 +128,6 @@ export function useFocusTimer() {
         }
       }
 
-      // Log focus if needed
       if (!options?.skipLog && prevState.mode === "focus") {
         if (prevState.activeTaskId) {
           logFocusSessionMutation({
@@ -151,7 +142,6 @@ export function useFocusTimer() {
         });
       }
 
-      // Side feedback
       if (prevState.mode === "focus") {
         play("sessionComplete");
       } else {
@@ -159,7 +149,6 @@ export function useFocusTimer() {
       }
       trigger("thud");
 
-      // Show toast / notification
       const title =
         prevState.mode === "focus"
           ? "Focus session completed"
@@ -172,7 +161,6 @@ export function useFocusTimer() {
             }`
           : "The timer is ready for your next session.";
 
-      // Show toast if away from focus page or PIP
       if (!options?.skipToast && !document.hidden) {
         const isPipActive = useUiStore.getState().isPipActive;
         const isOnFocusPage = pathname === "/focus";
@@ -186,7 +174,6 @@ export function useFocusTimer() {
         }
       }
 
-      // Smart push notification logic
       if (!options?.skipNotification) {
         const isPipActive = useUiStore.getState().isPipActive;
         const isOnFocusPage = pathname === "/focus";
@@ -221,7 +208,6 @@ export function useFocusTimer() {
     claimTimerCompletion,
   ]);
 
-  // Handle visibility change for state reconciliation
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -237,13 +223,11 @@ export function useFocusTimer() {
     };
   }, [reconcile]);
 
-  // Timer tick interval
   useEffect(() => {
     if (state.isRunning) {
       intervalRef.current = setInterval(() => {
         const currentSeconds = useTimerStore.getState().state.remainingSeconds;
 
-        // Warning sounds at 1 minute remaining
         if (currentSeconds === 61) {
           const currentMode = useTimerStore.getState().state.mode;
           if (currentMode === "focus") {
@@ -265,7 +249,6 @@ export function useFocusTimer() {
     };
   }, [state.isRunning, tick, play]);
 
-  // Server-side notification scheduling
   useEffect(() => {
     if (
       state.isRunning &&
@@ -298,7 +281,6 @@ export function useFocusTimer() {
     state.remainingSeconds,
   ]);
 
-  // Wrapped actions to handle side effects
   const start = useCallback(
     async (taskId?: string) => {
       play("focusStart");
@@ -357,8 +339,15 @@ export function useFocusTimer() {
     syncToServer();
   }, [handleCancelNotification, storeCancel, syncToServer]);
 
-  // Settings are per-account: propagate changes so other devices agree on
-  // durations, progress, and session labels.
+  // The push for the original deadline would fire mid-way through a later session.
+  // Cancel first: storeSkip dispatches timer-complete synchronously, and that
+  // handler clears the ref this reads. Completion persists, so no sync here.
+  const skip = useCallback(() => {
+    handleCancelNotification();
+    storeSkip();
+  }, [handleCancelNotification, storeSkip]);
+
+  // Settings are per-account: propagate so other devices agree on them.
   const updateSettings = useCallback(
     (newSettings: Parameters<typeof storeUpdateSettings>[0]) => {
       storeUpdateSettings(newSettings);
@@ -367,7 +356,7 @@ export function useFocusTimer() {
     [storeUpdateSettings, syncToServer],
   );
 
-  // Initial sync on mount if timer is running (handles PWA reopen with active timer)
+  // Handles reopening the PWA with a timer already running.
   const hasSyncedRef = useRef(false);
   useEffect(() => {
     if (hasSyncedRef.current) return;
@@ -385,7 +374,7 @@ export function useFocusTimer() {
     pause,
     stop,
     cancel,
-    skip: storeSkip,
+    skip,
     updateSettings,
   };
 }

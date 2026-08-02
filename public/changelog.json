@@ -1,5 +1,25 @@
 [
   {
+    "version": "1.27.1-preview.1",
+    "date": "2026-08-02",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add displayNotification as the shared iOS-safe notification choke point"
+      ],
+      "Fixed": [
+        "Cancel scheduled push notification when the focus timer is skipped",
+        "Stop local test notification from bypassing dedup and defaults",
+        "Route client-side showNotification through displayNotification",
+        "Guarantee every SW push displays and dedupes via displayNotification",
+        "Re-alert on tag-collapsed push notifications instead of replacing them silently",
+        "Clear timer notification ref before cancel resolves to avoid latching scheduling off",
+        "Narrow unknown errors in edge functions with shared toErrorMessage and pushStatusCode helpers",
+        "Reorder sendOptions in process-queue to stop a TDZ crash killing every push"
+      ]
+    }
+  },
+  {
     "version": "1.27.0",
     "date": "2026-08-01",
     "channel": "stable",

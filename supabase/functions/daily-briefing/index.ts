@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { toErrorMessage } from "../_shared/errors.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +8,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -18,12 +19,10 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    // 1. Identify users for MORNING BRIEFING (8 AM)
+    // Morning briefing runs at 8 AM, evening plan at 6 PM (scheduler-side).
     const { data: morningUsers, error: morningError } = await supabaseAdmin.rpc(
       "get_users_for_morning_briefing",
     );
-
-    // 2. Identify users for EVENING PLAN (6 PM)
     const { data: eveningUsers, error: eveningError } = await supabaseAdmin.rpc(
       "get_users_for_evening_plan",
     );
@@ -34,10 +33,8 @@ serve(async (req) => {
 
     const results = { morning_scheduled: 0, evening_scheduled: 0 };
 
-    // 3. Process Morning Briefings
     if (morningUsers && morningUsers.length > 0) {
       for (const user of morningUsers) {
-        // Check if user has morning briefing enabled
         const { data: profile } = await supabaseAdmin
           .from("profiles")
           .select("settings")
@@ -78,10 +75,8 @@ serve(async (req) => {
       }
     }
 
-    // 4. Process Evening Plans
     if (eveningUsers && eveningUsers.length > 0) {
       for (const user of eveningUsers) {
-        // Check if user has evening plan enabled
         const { data: profile } = await supabaseAdmin
           .from("profiles")
           .select("settings")
@@ -125,7 +120,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error("Critical error in daily-briefing:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: toErrorMessage(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });

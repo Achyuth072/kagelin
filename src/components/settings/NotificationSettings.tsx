@@ -53,6 +53,7 @@ export function NotificationSettings() {
     requestPermission,
     subscribeToPush,
     unsubscribe,
+    showNotification,
   } = usePushNotifications();
   const { isGuestMode } = useAuth();
   const { profile, updateProfile, updateSettings } = useProfile();
@@ -190,18 +191,11 @@ export function NotificationSettings() {
       return;
     }
 
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.showNotification("Local Test Notification", {
-          body: "This notification was triggered locally from the browser.",
-          icon: "/icons/icon-192.png",
-          tag: "kanso-local-test",
-        });
-        toast.success("Local notification triggered");
-      });
-    } else {
-      toast.error("Service worker not supported");
-    }
+    showNotification("Local Test Notification", {
+      body: "This notification was triggered locally from the browser.",
+      tag: "kanso-local-test",
+    });
+    toast.success("Local notification triggered");
   };
 
   if (!isSupported) {
