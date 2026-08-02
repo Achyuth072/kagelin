@@ -12,11 +12,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { duration, taskId, mode } = await request.json();
+    const { endsAt, taskId, mode } = await request.json();
 
-    if (!duration || typeof duration !== "number" || duration <= 0) {
+    if (
+      !endsAt ||
+      typeof endsAt !== "number" ||
+      !Number.isFinite(endsAt) ||
+      endsAt <= 0
+    ) {
       return NextResponse.json(
-        { error: "Valid positive duration is required" },
+        { error: "Valid endsAt timestamp is required" },
         { status: 400 },
       );
     }
@@ -59,8 +64,10 @@ export async function POST(request: Request) {
         ? "Your focus session is complete. Take a break!"
         : "Your break is over. Time to focus!";
 
-    // 3. Calculate scheduled time
-    const scheduledAt = new Date(Date.now() + duration * 1000).toISOString();
+    // 3. Use the client's deadline verbatim — it's already the source of truth
+    // the timer model runs on (ADR 0002), so recomputing from a duration here
+    // would just reintroduce the drift this route exists to avoid.
+    const scheduledAt = new Date(endsAt).toISOString();
 
     // 4. Insert into notification queue
     const { data, error } = await supabase

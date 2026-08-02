@@ -3,6 +3,7 @@ import { useFocusTimer } from "@/lib/hooks/useFocusTimer";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { setServerOffset } from "@/lib/store/serverClock";
+import { scheduleTimerNotification } from "@/lib/timer-api";
 import type { TimerState } from "@/lib/types/timer";
 
 // Mock dependencies
@@ -237,5 +238,27 @@ describe("useFocusTimer - Reconciliation", () => {
       expect.stringContaining("session completed"),
       expect.anything(),
     );
+  });
+
+  it("schedules the timer-end notification against the freshly computed endsAt deadline", async () => {
+    const baseTime = new Date("2024-01-01T12:00:00Z").getTime();
+    vi.setSystemTime(baseTime);
+
+    const { result } = renderHook(() => useFocusTimer());
+
+    await act(async () => {
+      await result.current.start();
+    });
+
+    // storeStart anchors endsAt to serverNow() + remainingSeconds; with the
+    // server offset at 0 that's exactly baseTime + the idle 1500s duration.
+    const expectedEndsAt = baseTime + 1500 * 1000;
+
+    expect(scheduleTimerNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ endsAt: expectedEndsAt }),
+    );
+    const [call] = (scheduleTimerNotification as ReturnType<typeof vi.fn>).mock
+      .calls;
+    expect(call[0]).not.toHaveProperty("duration");
   });
 });

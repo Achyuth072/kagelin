@@ -50,10 +50,12 @@ describe("Timer API Routes (/api/timer)", () => {
         })
         .mockResolvedValueOnce({ data: { id: "notif-99" }, error: null });
 
+      const endsAt = Date.UTC(2024, 0, 1, 12, 0, 0);
+
       const request = new Request("http://localhost/api/timer/start", {
         method: "POST",
         body: JSON.stringify({
-          duration: 1500,
+          endsAt,
           mode: "focus",
         }),
       });
@@ -64,6 +66,40 @@ describe("Timer API Routes (/api/timer)", () => {
       expect(response.status).toBe(200);
       expect(body.success).toBe(true);
       expect(body.notificationId).toBe("notif-99");
+    });
+
+    it("TC-TI-01b: should use the submitted endsAt verbatim as scheduled_at, not a recomputed value", async () => {
+      mockSupabase.auth.getUser.mockResolvedValue({
+        data: { user: { id: "user-123" } },
+      });
+
+      mockQuery.single
+        .mockResolvedValueOnce({
+          data: { settings: { notifications: { timer_alerts: true } } },
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: { id: "notif-99" }, error: null });
+
+      // Deliberately far from "now" — if the route recomputed from a duration
+      // against its own clock, this exact value would not come back out.
+      const endsAt = Date.UTC(2030, 5, 15, 8, 30, 0);
+      const expectedScheduledAt = new Date(endsAt).toISOString();
+
+      const request = new Request("http://localhost/api/timer/start", {
+        method: "POST",
+        body: JSON.stringify({
+          endsAt,
+          mode: "focus",
+        }),
+      });
+
+      const response = await timerStartPOST(request);
+      const body = await response.json();
+
+      expect(body.scheduledAt).toBe(expectedScheduledAt);
+      expect(mockQuery.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ scheduled_at: expectedScheduledAt }),
+      );
     });
 
     it("TC-TI-02: should skip scheduling when disabled in settings", async () => {
@@ -80,7 +116,7 @@ describe("Timer API Routes (/api/timer)", () => {
       const request = new Request("http://localhost/api/timer/start", {
         method: "POST",
         body: JSON.stringify({
-          duration: 1500,
+          endsAt: Date.UTC(2024, 0, 1, 12, 0, 0),
           mode: "focus",
         }),
       });
@@ -93,7 +129,7 @@ describe("Timer API Routes (/api/timer)", () => {
       expect(body.message).toContain("notifications are disabled");
     });
 
-    it("TC-TI-04: should return 400 for invalid duration", async () => {
+    it("TC-TI-04: should return 400 for invalid endsAt", async () => {
       mockSupabase.auth.getUser.mockResolvedValue({
         data: { user: { id: "user-123" } },
       });
@@ -101,7 +137,7 @@ describe("Timer API Routes (/api/timer)", () => {
       const request = new Request("http://localhost/api/timer/start", {
         method: "POST",
         body: JSON.stringify({
-          duration: -10,
+          endsAt: -10,
           mode: "focus",
         }),
       });
@@ -117,7 +153,7 @@ describe("Timer API Routes (/api/timer)", () => {
 
       const request = new Request("http://localhost/api/timer/start", {
         method: "POST",
-        body: JSON.stringify({ duration: 1500 }),
+        body: JSON.stringify({ endsAt: Date.UTC(2024, 0, 1, 12, 0, 0) }),
       });
 
       const response = await timerStartPOST(request);

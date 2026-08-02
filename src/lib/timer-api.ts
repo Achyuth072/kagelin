@@ -3,7 +3,7 @@
  */
 
 export interface ScheduleTimerParams {
-  duration: number; // in seconds
+  endsAt: number; // absolute deadline, epoch ms
   taskId?: string | null;
   mode: "focus" | "shortBreak" | "longBreak";
 }

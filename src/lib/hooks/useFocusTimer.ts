@@ -250,17 +250,19 @@ export function useFocusTimer() {
   }, [state.isRunning, tick, play]);
 
   useEffect(() => {
+    const endsAt = state.endsAt;
     if (
       state.isRunning &&
       !isGuestMode &&
       !notificationIdRef.current &&
-      !schedulingRef.current
+      !schedulingRef.current &&
+      endsAt != null
     ) {
       schedulingRef.current = true;
       const schedule = async () => {
         try {
           const { notificationId } = await scheduleTimerNotification({
-            duration: state.remainingSeconds,
+            endsAt,
             taskId: state.activeTaskId,
             mode: state.mode,
           });
@@ -278,7 +280,7 @@ export function useFocusTimer() {
     state.mode,
     isGuestMode,
     state.activeTaskId,
-    state.remainingSeconds,
+    state.endsAt,
   ]);
 
   const start = useCallback(
@@ -287,15 +289,22 @@ export function useFocusTimer() {
 
       const targetTaskId = taskId ?? state.activeTaskId;
 
+      // Start locally first so the deadline sent to the API is the exact
+      // endsAt the timer itself will count down against, not a value derived
+      // separately that could drift from it by a tick.
+      storeStart(taskId);
+      const endsAt = useTimerStore.getState().state.endsAt;
+
       if (
         !isGuestMode &&
         !notificationIdRef.current &&
-        !schedulingRef.current
+        !schedulingRef.current &&
+        endsAt != null
       ) {
         schedulingRef.current = true;
         try {
           const { notificationId } = await scheduleTimerNotification({
-            duration: state.remainingSeconds,
+            endsAt,
             taskId: targetTaskId,
             mode: state.mode,
           });
@@ -307,13 +316,11 @@ export function useFocusTimer() {
         }
       }
 
-      storeStart(taskId);
       syncToServer();
     },
     [
       play,
       isGuestMode,
-      state.remainingSeconds,
       state.activeTaskId,
       state.mode,
       storeStart,
