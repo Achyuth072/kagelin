@@ -6,6 +6,10 @@ import {
   type RuntimeCaching,
   type SerwistPlugin,
 } from "serwist";
+import {
+  displayNotification,
+  type NotificationDisplayOptions,
+} from "@/lib/notifications";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -83,66 +87,75 @@ const serwist = new Serwist({
 
 serwist.addEventListeners();
 
-// Some envs' NotificationOptions type is missing vibrate/actions/renotify.
-interface ExtendedNotificationOptions extends NotificationOptions {
-  vibrate?: number[];
-  actions?: Array<{ action: string; title: string; icon?: string }>;
-  renotify?: boolean;
+interface PushPayload {
+  title?: string;
+  body?: string;
+  icon?: string;
+  badge?: string;
+  tag?: string;
+  data?: unknown;
+  actions?: NotificationDisplayOptions["actions"];
+}
+
+const FALLBACK_TITLE = "Kagelin";
+const FALLBACK_BODY = "You have a new notification";
+
+function readPushText(data: PushMessageData): string | undefined {
+  try {
+    return data.text() || undefined;
+  } catch (err) {
+    console.warn("[SW] Push payload is not text either", err);
+    return undefined;
+  }
+}
+
+// json() and text() each throw on a payload that doesn't decode. Neither may
+// escape: a push that displays nothing reads as a silent push, and iOS revokes
+// the subscription for those.
+function readPushPayload(data: PushMessageData | null): PushPayload {
+  if (!data) return {};
+  try {
+    return (data.json() ?? {}) as PushPayload;
+  } catch (err) {
+    console.warn("[SW] Push payload is not JSON, falling back to text", err);
+    return { body: readPushText(data) };
+  }
+}
+
+async function showPushNotification(payload: PushPayload): Promise<void> {
+  // No default tag: a shared one would collapse unrelated notifications.
+  const options: NotificationDisplayOptions = {
+    body: payload.body || FALLBACK_BODY,
+  };
+
+  if (payload.icon) options.icon = payload.icon;
+  if (payload.badge) options.badge = payload.badge;
+  if (payload.tag) {
+    options.tag = payload.tag;
+    // Without renotify, a tagged notification replaces its predecessor silently.
+    options.renotify = true;
+  }
+  if (payload.data) options.data = payload.data;
+  if (payload.actions) options.actions = payload.actions;
+
+  try {
+    await displayNotification(
+      self.registration,
+      payload.title || FALLBACK_TITLE,
+      options,
+    );
+  } catch (err) {
+    // Something in the payload was rejected. Show the barest possible
+    // notification rather than none — see readPushPayload on silent pushes.
+    console.error("[SW] Failed to show notification; showing fallback", err);
+    await displayNotification(self.registration, FALLBACK_TITLE, {
+      body: FALLBACK_BODY,
+    });
+  }
 }
 
 self.addEventListener("push", (event) => {
-  console.log("[SW] Push event received", event);
-
-  // No default tag: a shared one replaces prior notifications instead of stacking.
-  const options: ExtendedNotificationOptions = {
-    icon: "/icons/icon-192.png",
-    badge: "/icons/icon-192.png",
-    vibrate: [200, 100, 200],
-  };
-
-  let title = "Kagelin";
-  let body = "You have a new notification";
-
-  if (event.data) {
-    try {
-      const data = event.data.json();
-      console.log("[SW] Push data parsed:", data);
-      title = data.title || title;
-      body = data.body || body;
-
-      if (data.icon) options.icon = data.icon;
-      if (data.badge) options.badge = data.badge;
-      if (data.tag) {
-        options.tag = data.tag;
-        // Without renotify, a tagged notification replaces its predecessor silently.
-        options.renotify = true;
-      }
-      if (data.data) options.data = data.data;
-      if (data.actions) options.actions = data.actions;
-    } catch (err) {
-      console.warn(
-        "[SW] Push data failed to parse as JSON, falling back to text",
-        err,
-      );
-      body = event.data.text();
-    }
-  } else {
-    console.log("[SW] Push event has no data");
-  }
-
-  event.waitUntil(
-    self.registration
-      .showNotification(title, {
-        body,
-        ...options,
-      })
-      .then(() => {
-        console.log("[SW] Notification shown successfully:", title);
-      })
-      .catch((err) => {
-        console.error("[SW] Failed to show notification:", err);
-      }),
-  );
+  event.waitUntil(showPushNotification(readPushPayload(event.data ?? null)));
 });
 
 self.addEventListener("notificationclick", (event) => {
