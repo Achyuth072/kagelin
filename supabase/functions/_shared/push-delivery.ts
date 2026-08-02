@@ -11,7 +11,7 @@ export interface SendOptions {
 
 // A focus-timer alert is stale within minutes; a briefing can run late.
 const TTL_SECONDS: Record<NotificationType, number> = {
-  timer_end: 300,
+  timer_end: 60,
   due_date: 3600,
   do_date: 3600,
   evening: 3600,

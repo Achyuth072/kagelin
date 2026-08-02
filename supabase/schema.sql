@@ -268,7 +268,8 @@ GRANT EXECUTE ON FUNCTION get_users_for_evening_plan()     TO service_role;
 -- B2. Queue Claim Helper
 -- SKIP LOCKED lets concurrent process-queue runs take disjoint batches instead
 -- of racing for the same rows. Rows stuck in 'processing' (sender crashed
--- mid-flight) become claimable again after 5 minutes.
+-- mid-flight) become claimable again after 30 seconds — kept under timer_end's
+-- 60s TTL so a reclaimed row still has retry budget left.
 CREATE OR REPLACE FUNCTION public.claim_due_notifications(p_limit INT DEFAULT 50)
 RETURNS SETOF public.notification_queue
 LANGUAGE plpgsql
@@ -282,7 +283,7 @@ BEGIN
   SET status = 'failed',
       error_message = 'abandoned after repeated incomplete delivery attempts'
   WHERE status = 'processing'
-    AND claimed_at < now() - interval '5 minutes'
+    AND claimed_at < now() - interval '30 seconds'
     AND retry_count >= 3;
 
   RETURN QUERY
@@ -299,7 +300,7 @@ BEGIN
     FROM public.notification_queue c
     WHERE (c.status = 'pending'
            AND COALESCE(c.next_attempt_at, c.scheduled_at) <= now())
-       OR (c.status = 'processing' AND c.claimed_at < now() - interval '5 minutes')
+       OR (c.status = 'processing' AND c.claimed_at < now() - interval '30 seconds')
     ORDER BY c.scheduled_at
     FOR UPDATE SKIP LOCKED
     LIMIT p_limit

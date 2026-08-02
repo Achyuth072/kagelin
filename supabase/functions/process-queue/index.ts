@@ -69,7 +69,7 @@ serve(async (req: Request) => {
     };
     const startTime = Date.now();
     const MAX_RUNTIME = 50000; // Run for up to 50 seconds
-    const POLL_INTERVAL = 5000; // Poll every 5 seconds
+    const POLL_INTERVAL = 1500; // Poll every 1.5 seconds
 
     const queue = supabaseAdmin.from("notification_queue");
 
