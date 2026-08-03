@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.28.0",
+    "date": "2026-08-03",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Android users now get a one-time tip after enabling notifications, showing how to disable battery optimization for Chrome so timer alerts aren't silently blocked while your phone is idle"
+      ],
+      "Fixed": [
+        "Fixed focus-timer notifications sometimes arriving late or twice"
+      ]
+    }
+  },
+  {
     "version": "1.28.0-preview.0",
     "date": "2026-08-03",
     "channel": "preview",
@@ -778,16 +791,6 @@
       "Fixed": [
         "Override w-fit width on mobile Sonner toasts to ensure proper centring",
         "Unskip CreateEventDialog from React Compiler"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.18",
-    "date": "2026-05-16",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Align ghost task list layout, apply completed state opacity, and adjust mobile filter chip spacing"
       ]
     }
   }
