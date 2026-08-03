@@ -24,3 +24,27 @@ lets a device joining mid-session show live countdown immediately.
 - **Realtime sync.** `source_device_id` prevents echo (device skips its own
   writes). Concurrent conflicts resolve by trigger-set `updated_at` (last-write-wins).
   Subscription scoped by RLS on `user_id` (mirrors the working tasks-changes pattern).
+
+## Amendment: server-derived notification scheduling
+
+Notification _scheduling_ moved server-side (`handle_timer_notification_sync`,
+a trigger on `user_timer_state`), replacing the client-driven `/api/timer/start`
+path. On every write, the trigger cancels the user's pending `timer_end` rows
+and re-projects the chain of upcoming deadlines from the row's own `ends_at`,
+`mode`, and `completed_sessions`, replaying the same mode-transition state
+machine `timerStore`'s `completeTimer()` runs client-side. This was driven by
+four defects traced to scheduling being a client-authored, per-device artifact
+with no relationship to the timer's actual deadline: cross-device duplicate
+rows, duration-based scheduling drift, a chain that stalled when no device was
+foregrounded, and cancellation that only reached the row a given device itself
+created. See `.planning/65-PUSH-DELIVERY-DIAGNOSIS.md` and
+`.planning/67-PUSH-DELIVERY-QUEUE-CHAIN-SPEC.md`.
+
+**This does not change completion semantics.** The consequences above —
+foreground-device completion, the race-free `WHERE is_running AND ends_at =
+<deadline>` claim — are exactly as documented and untouched. The split is
+deliberate: _scheduling_ (when a `timer_end` push is queued) is now derived
+server-side from state; _completion_ (which device logs and advances a
+finished session) is still decided locally, by whichever device is
+foregrounded when the deadline arrives. Read this ADR's "Consequences" section
+above as still authoritative for completion; only scheduling moved.
