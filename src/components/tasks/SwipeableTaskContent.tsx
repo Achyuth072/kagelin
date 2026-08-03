@@ -7,7 +7,6 @@ interface SwipeableTaskContentProps {
   children: React.ReactNode;
   isDesktop: boolean;
   _isDragging: boolean;
-  _viewMode: "list" | "grid" | "board";
   _isHandleActive: boolean;
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
@@ -25,7 +24,6 @@ const SCHEDULE_SWIPE_THRESHOLD = 150;
 export function SwipeableTaskContent({
   children,
   _isDragging,
-  _viewMode,
   _isHandleActive,
   onSwipeLeft,
   onSwipeRight,

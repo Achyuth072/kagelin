@@ -1,5 +1,6 @@
 export type SortOption = "date" | "priority" | "alphabetical" | "custom";
 export type GroupOption = "none" | "priority" | "date" | "project";
+export type TaskViewMode = "list" | "board";
 
 export const SORT_LABELS: Record<SortOption, string> = {
   date: "Due Date",

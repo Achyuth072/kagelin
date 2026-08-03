@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, react/display-name */
+/* eslint-disable @typescript-eslint/no-explicit-any, react/display-name */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import React, { useEffect } from "react";
 
 // ===== Hoisted mocks =====
@@ -214,51 +214,5 @@ describe("Focus auto-start on mount (Tests 7 & 8)", () => {
     render(<FocusPageAutoStartHarness />);
 
     expect(mockStart).not.toHaveBeenCalled();
-  });
-});
-
-// ===== GridTaskCard setActiveTaskId test (Test 6) =====
-
-describe("GridTaskCard uses setActiveTaskId (Test 6)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("GridTaskCard receives setActiveTaskId prop and passes it in handlePlayFocus", async () => {
-    const { GridTaskCard } = await import("@/components/tasks/GridTaskCard");
-    const mockTask = {
-      id: "task-999",
-      content: "Test Task",
-      project_id: "inbox",
-      priority: 2,
-      is_completed: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      user_id: "user1",
-    };
-
-    render(
-      <GridTaskCard
-        task={mockTask as any}
-        isDesktop={true}
-        setActiveTaskId={mockSetActiveTaskId}
-      />,
-    );
-
-    // In desktop mode the Play button is rendered via KanbanBoardCardButton.
-    // Find buttons and look for the one that triggers handlePlayFocus
-    const buttons = screen.getAllByRole("button");
-    // Desktop view has several buttons including the play button
-
-    // Click any button — the relevant one for our test should be found
-    // Fire click on the play button (it's typically the first small icon button)
-    // We know the component has at least one button (the checkbox's parent div
-    // also acts as a button). Try clicking and verify setActiveTaskId gets called
-    // with the right task id if the button maps to handlePlayFocus.
-
-    // Since the components use motion.div wrappers that might not render
-    // as standard buttons, we check that setActiveTaskId is wired in the props
-    // by verifying the component mounts without error when given setActiveTaskId.
-    expect(screen.getByText("Test Task")).toBeInTheDocument();
   });
 });

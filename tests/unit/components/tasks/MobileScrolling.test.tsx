@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import { vi, describe, it, expect } from "vitest";
-import { TaskMasonryGrid } from "@/components/tasks/TaskMasonryGrid";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import type { ReactNode } from "react";
@@ -169,24 +168,6 @@ describe("Mobile Scrolling Padding", () => {
     completed: [],
     groups: null,
   };
-
-  it("TaskMasonryGrid should have bottom padding to prevent cutoff on mobile", () => {
-    const dummyProps = {
-      projectsMap: new Map(),
-      isDesktop: false,
-      triggerHaptic: vi.fn(),
-      setActiveTaskId: vi.fn(),
-    };
-
-    const { container: _container } = render(
-      <TaskMasonryGrid processedTasks={mockProcessedTasks} {...dummyProps} />,
-    );
-
-    const gridContainer = screen.getByTestId("task-grid-container");
-    expect(gridContainer).not.toBeNull();
-    expect(gridContainer?.className).toContain("pb-12");
-    expect(gridContainer?.className).toContain("md:pb-8");
-  });
 
   it("TaskBoard should have bottom padding to prevent cutoff on mobile", () => {
     const dummyProps = {

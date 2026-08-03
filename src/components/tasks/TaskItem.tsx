@@ -11,6 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
+import type { TaskViewMode } from "@/lib/types/sorting";
 import dynamic from "next/dynamic";
 
 // Lazy load SubtaskList to reduce initial render weight (PERF-02)
@@ -22,7 +23,6 @@ const SubtaskList = dynamic(() => import("./SubtaskList"), {
 import { useRouter } from "next/navigation";
 import { BoardTaskCard } from "./BoardTaskCard";
 import { ListTaskCard } from "./ListTaskCard";
-import { GridTaskCard } from "./GridTaskCard";
 import { SwipeableTaskContent } from "./SwipeableTaskContent";
 
 interface TaskItemProps {
@@ -32,7 +32,7 @@ interface TaskItemProps {
   dragAttributes?: DraggableAttributes;
   isDragging?: boolean;
   isKeyboardSelected?: boolean;
-  viewMode?: "list" | "grid" | "board";
+  viewMode?: TaskViewMode;
   dragActivatorRef?: (element: HTMLElement | null) => void;
   isDndActive?: boolean;
   // Shared state and utilities passed from parent for performance
@@ -80,7 +80,6 @@ function TaskItemBase({
   const handleComplete = (checked: boolean) => {
     triggerHaptic?.(checked ? "success" : "toggle");
     setIsChecking(true);
-    // Trigger animation only when user actively checks the box
     if (checked) {
       setShouldAnimate(true);
       setTimeout(() => setShouldAnimate(false), 1000);
@@ -137,16 +136,6 @@ function TaskItemBase({
           onClick={() => onSelect?.(task)}
           shouldAnimate={shouldAnimate}
         />
-      ) : viewMode === "grid" ? (
-        <GridTaskCard
-          task={task}
-          project={project}
-          onSelect={onSelect}
-          isDesktop={isDesktop}
-          triggerHaptic={triggerHaptic}
-          setActiveTaskId={setActiveTaskId}
-          shouldAnimate={shouldAnimate}
-        />
       ) : isDesktop ? (
         /* Fast path for Desktop List View: No Framer Motion wrappers (fixes sidebar layout thrashing) */
         <div
@@ -180,7 +169,6 @@ function TaskItemBase({
         <SwipeableTaskContent
           isDesktop={isDesktop}
           _isDragging={isDragging}
-          _viewMode={viewMode}
           _isHandleActive={isHandleActive}
           isCompleted={task.is_completed}
           onSwipeLeft={() => {
@@ -225,9 +213,7 @@ function TaskItemBase({
         </SwipeableTaskContent>
       )}
 
-      {/* Expanded Subtasks — skipped while dragging: the user can't expand a
-          row mid-drag anyway, so there's no reason to pay for the motion
-          layer's per-frame cost on every row during a drag. */}
+      {/* Skipped while dragging — avoids the motion layer's per-frame cost on every row. */}
       <AnimatePresence initial={false}>
         {isExpanded && !isDndActive && (
           <motion.div

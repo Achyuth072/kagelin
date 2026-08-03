@@ -110,7 +110,7 @@ export function GlobalHotkeys({
   // Focus Mode (f)
   useHotkeys("f", () => router.push("/focus"), options);
 
-  // View Switching Shortcuts (Shift + 1/2/3)
+  // View Switching Shortcuts (Shift + 1/2)
   useHotkeys(
     "shift+1",
     () => {
@@ -127,15 +127,6 @@ export function GlobalHotkeys({
         setViewMode("board");
         if (pathname !== "/") router.push("/");
       }
-    },
-    options,
-  );
-
-  useHotkeys(
-    "shift+3",
-    () => {
-      setViewMode("grid");
-      if (pathname !== "/") router.push("/");
     },
     options,
   );

@@ -57,9 +57,6 @@ vi.mock("@/components/tasks/TaskListView", () => ({
   ),
 }));
 
-vi.mock("@/components/tasks/TaskMasonryGrid", () => ({
-  TaskMasonryGrid: () => <div data-testid="task-grid-view" />,
-}));
 vi.mock("@/components/tasks/TaskBoard", () => ({
   TaskBoard: () => <div data-testid="task-board-view" />,
 }));

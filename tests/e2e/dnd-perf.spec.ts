@@ -21,7 +21,7 @@ const GUEST_DATA_KEY = "kanso_guest_data_v11";
 const UI_KEY = "kanso-ui-state";
 
 type ViewCfg = {
-  viewMode: "board" | "list" | "grid";
+  viewMode: "board" | "list";
   groupBy: "none" | "project" | "date" | "priority";
   sortBy: string;
 };
@@ -104,7 +104,7 @@ async function bootstrap(
       localStorage.setItem(dataKey as string, JSON.stringify(data));
       localStorage.setItem(
         uiKey as string,
-        JSON.stringify({ state: uiCfg, version: 0 }),
+        JSON.stringify({ state: uiCfg, version: 1 }),
       );
 
       // Frame-gap sampler + longtask observer, installed before app scripts.

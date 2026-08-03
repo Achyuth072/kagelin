@@ -49,8 +49,7 @@ const getShortcuts = (platformKey: string): ShortcutGroup[] => [
     title: "View",
     shortcuts: [
       { keys: ["Shift", "1"], description: "List View" },
-      { keys: ["Shift", "2"], description: "Grid View" },
-      { keys: ["Shift", "3"], description: "Board View" },
+      { keys: ["Shift", "2"], description: "Board View" },
     ],
   },
   {
