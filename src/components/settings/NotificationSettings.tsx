@@ -18,11 +18,7 @@ import { useProfile } from "@/lib/hooks/useProfile";
 import { useAuth } from "@/components/AuthProvider";
 import { toast } from "sonner";
 import { sendPushNotification } from "@/lib/push-api";
-import { isAndroidChrome } from "@/lib/utils/platform";
-import {
-  dismissAndroidBatteryHint,
-  isAndroidBatteryHintDismissed,
-} from "@/lib/utils/androidBatteryHint";
+import { useAndroidBatteryHint } from "@/lib/hooks/useAndroidBatteryHint";
 import { AndroidBatteryHint } from "@/components/settings/AndroidBatteryHint";
 import {
   Select,
@@ -68,11 +64,13 @@ export function NotificationSettings() {
   const [timezones] = useState<string[]>(getInitialTimezones);
   const [timezoneSearch, setTimezoneSearch] = useState("");
 
-  const [isAndroidChromeBrowser] = useState(isAndroidChrome);
-  const [batteryHintOpen, setBatteryHintOpen] = useState(false);
-  const [batteryHintDismissed, setBatteryHintDismissed] = useState(
-    isAndroidBatteryHintDismissed,
-  );
+  const {
+    isAndroidChromeBrowser,
+    isOpen: batteryHintOpen,
+    promptIfDue: promptBatteryHintIfDue,
+    dismiss: handleDismissBatteryHint,
+    reopen: handleReopenBatteryHint,
+  } = useAndroidBatteryHint();
 
   // Memoize timezone data with offsets once
   const timezoneOptions = useMemo(() => {
@@ -142,9 +140,7 @@ export function NotificationSettings() {
       const result = await requestPermission({ forceRefresh: true });
       if (result.permission === "granted" && result.subscription) {
         toast.success("Notifications enabled");
-        if (isAndroidChromeBrowser && !batteryHintDismissed) {
-          setBatteryHintOpen(true);
-        }
+        promptBatteryHintIfDue();
       } else if (result.permission === "denied") {
         toast.error("Permission denied. Enable in browser settings.");
       } else {
@@ -199,16 +195,6 @@ export function NotificationSettings() {
     }
   };
 
-  const handleDismissBatteryHint = () => {
-    dismissAndroidBatteryHint();
-    setBatteryHintDismissed(true);
-    setBatteryHintOpen(false);
-  };
-
-  const handleReopenBatteryHint = () => {
-    setBatteryHintOpen(true);
-  };
-
   const handleLocalTestNotification = () => {
     trigger("toggle");
     if (permission !== "granted") {
@@ -240,6 +226,11 @@ export function NotificationSettings() {
   }
 
   const settings = profile?.settings?.notifications;
+  const showBatteryHintArea =
+    isAndroidChromeBrowser &&
+    !isGuestMode &&
+    permission === "granted" &&
+    notificationsEnabled;
 
   return (
     <div className="space-y-6">
@@ -305,10 +296,7 @@ export function NotificationSettings() {
               </Button>
             </div>
           )}
-        {isAndroidChromeBrowser &&
-          !isGuestMode &&
-          permission === "granted" &&
-          notificationsEnabled &&
+        {showBatteryHintArea &&
           (batteryHintOpen ? (
             <AndroidBatteryHint onDismiss={handleDismissBatteryHint} />
           ) : (
