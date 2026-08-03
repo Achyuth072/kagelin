@@ -17,7 +17,6 @@ const withSerwist = withSerwistInit({
     process.env.NODE_ENV === "development" && process.env.ENABLE_PWA !== "true",
 });
 
-// Dual Build Strategy: Mobile (Capacitor) vs Web
 const isMobile = process.env.NEXT_PUBLIC_IS_CAPACITOR === "true";
 
 // Turbopack detection - skip Serwist wrapper for faster dev builds
@@ -30,7 +29,6 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: process.env.LAN_DEV_ORIGIN
     ? [process.env.LAN_DEV_ORIGIN]
     : [],
-  // Static export for Capacitor mobile builds
   output: isMobile ? "export" : undefined,
   images: {
     // Disable image optimization for mobile (no server available)
@@ -39,8 +37,17 @@ const nextConfig: NextConfig = {
   // Empty turbopack config to silence webpack warning
   turbopack: {},
   reactCompiler: true,
+  poweredByHeader: false,
   async headers() {
     return [
+      {
+        source: "/:path*",
+        headers: [
+          // Clickjacking/MIME-sniffing hardening flagged by the ZAP baseline scan.
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+        ],
+      },
       {
         source: "/changelog.json",
         headers: [
