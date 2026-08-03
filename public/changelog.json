@@ -1,5 +1,27 @@
 [
   {
+    "version": "1.28.0-preview.0",
+    "date": "2026-08-03",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add Android battery-optimization onboarding hint after push enable",
+        "Cut client over to server-derived timer_end scheduling, drop /api/timer/start",
+        "Server-derive timer_end notification chain via trigger, amend ADR 0002",
+        "Report notification_queue delivery health via /api/health"
+      ],
+      "Improved": [
+        "Extract Android battery hint state into useAndroidBatteryHint hook",
+        "Simplify timer notification trigger and skip callback from /simplify review",
+        "Simplify health check and timer route from /simplify review"
+      ],
+      "Fixed": [
+        "Schedule timer_end notifications off the client's endsAt deadline, not a recomputed duration",
+        "Tighten timer_end TTL to 60s and close poll-interval lateness"
+      ]
+    }
+  },
+  {
     "version": "1.27.1",
     "date": "2026-08-02",
     "channel": "stable",
@@ -766,16 +788,6 @@
     "sections": {
       "Fixed": [
         "Align ghost task list layout, apply completed state opacity, and adjust mobile filter chip spacing"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.17",
-    "date": "2026-05-15",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Stabilise test suite and resolve CSS lint regressions"
       ]
     }
   }
