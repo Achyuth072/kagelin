@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.28.1-preview.0",
+    "date": "2026-08-03",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Remove redundant grid view from Tasks page, keep List and Board"
+      ],
+      "Fixed": [
+        "Add clickjacking/MIME-sniffing headers, hide X-Powered-By"
+      ]
+    }
+  },
+  {
     "version": "1.28.0",
     "date": "2026-08-03",
     "channel": "stable",
@@ -777,20 +790,6 @@
       ],
       "Fixed": [
         "Resolve mobile z-index issues for toast notifications and move 'What's New' indicator to mobile header"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.19",
-    "date": "2026-05-17",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Unify notification styling by removing coloured backgrounds and standardising icon colours"
-      ],
-      "Fixed": [
-        "Override w-fit width on mobile Sonner toasts to ensure proper centring",
-        "Unskip CreateEventDialog from React Compiler"
       ]
     }
   }
