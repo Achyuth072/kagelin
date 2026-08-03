@@ -14,12 +14,7 @@ export async function POST(request: Request) {
 
     const { endsAt, taskId, mode } = await request.json();
 
-    if (
-      !endsAt ||
-      typeof endsAt !== "number" ||
-      !Number.isFinite(endsAt) ||
-      endsAt <= 0
-    ) {
+    if (typeof endsAt !== "number" || !Number.isFinite(endsAt) || endsAt <= 0) {
       return NextResponse.json(
         { error: "Valid endsAt timestamp is required" },
         { status: 400 },

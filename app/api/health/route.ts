@@ -12,15 +12,12 @@ const DB_UNREACHABLE_RESPONSE = {
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
-// `sent_at` is when delivery actually happened; `scheduled_at` is immutable
-// ("when this was meant to fire", see schema.sql) so it's the only anchor
-// shared by failed/pending rows, which have no completion timestamp.
 async function countByStatus(
   admin: AdminClient,
   status: "sent" | "failed",
-  anchorColumn: "sent_at" | "scheduled_at",
   windowStart: string,
 ): Promise<number> {
+  const anchorColumn = status === "sent" ? "sent_at" : "scheduled_at";
   const { count, error } = await admin
     .from("notification_queue")
     .select("id", { count: "exact", head: true })
@@ -51,8 +48,7 @@ async function countOverduePending(
 }
 
 async function getNotificationHealth() {
-  // RLS scopes notification_queue to user_id = auth.uid(); an unauthenticated
-  // health check needs the admin client to see counts across all users.
+  // Admin client — RLS would otherwise scope this to a single user.
   const admin = createAdminClient();
   const now = new Date();
   const windowStart = new Date(
@@ -61,32 +57,31 @@ async function getNotificationHealth() {
   const nowIso = now.toISOString();
 
   const [sent, failed, pending] = await Promise.all([
-    countByStatus(admin, "sent", "sent_at", windowStart),
-    countByStatus(admin, "failed", "scheduled_at", windowStart),
+    countByStatus(admin, "sent", windowStart),
+    countByStatus(admin, "failed", windowStart),
     countOverduePending(admin, windowStart, nowIso),
   ]);
 
   return { sent, failed, pending };
 }
 
-// Public route (middleware.ts isPublicRoute) so an unauthenticated monitor
-// gets a real 200/503 instead of a redirect to /login.
+// Public route (see middleware.ts) so monitors get 200/503, not a login redirect.
 export async function GET() {
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("profiles")
-    .select("id", { head: true });
 
-  if (error) {
+  const [dbCheck, notificationsResult] = await Promise.allSettled([
+    supabase.from("profiles").select("id", { head: true }),
+    getNotificationHealth(),
+  ]);
+
+  if (dbCheck.status === "rejected" || dbCheck.value.error) {
     return NextResponse.json(DB_UNREACHABLE_RESPONSE, { status: 503 });
   }
 
-  let notifications;
-  try {
-    notifications = await getNotificationHealth();
-  } catch {
+  if (notificationsResult.status === "rejected") {
     return NextResponse.json(DB_UNREACHABLE_RESPONSE, { status: 503 });
   }
+  const notifications = notificationsResult.value;
 
   const status =
     notifications.sent === 0 &&
