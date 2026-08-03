@@ -9,10 +9,6 @@ import { useAuth } from "@/components/AuthProvider";
 import { useFocusSounds } from "@/lib/hooks/useFocusSounds";
 import { usePathname } from "next/navigation";
 import { usePushNotifications } from "@/lib/hooks/usePushNotifications";
-import {
-  scheduleTimerNotification,
-  cancelTimerNotification,
-} from "@/lib/timer-api";
 import { toast } from "sonner";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimerStore } from "@/lib/store/timerStore";
@@ -58,10 +54,6 @@ export function useFocusTimer() {
     await upsertTimerState();
   }, [upsertTimerState]);
 
-  const notificationIdRef = useRef<string | null>(null);
-  // notificationIdRef is only set once the request resolves, leaving the round
-  // trip open for a tick to queue a duplicate. This closes synchronously.
-  const schedulingRef = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -79,27 +71,10 @@ export function useFocusTimer() {
     },
   });
 
-  const handleCancelNotification = useCallback(async () => {
-    const pendingId = notificationIdRef.current;
-    if (!pendingId) return;
-
-    // Clear before the await, not after success: a stale id keeps the
-    // `!notificationIdRef.current` scheduling guard latched off, and a duplicate
-    // alert (collapsed by the shared "timer_end" tag) beats a missing one.
-    notificationIdRef.current = null;
-    try {
-      await cancelTimerNotification(pendingId);
-    } catch (err) {
-      console.warn("Failed to cancel timer notification:", err);
-    }
-  }, []);
-
   useEffect(() => {
     const handleComplete = async (event: Event) => {
       const customEvent = event as TimerCompleteEvent;
       const { prevState, nextState, options } = customEvent.detail;
-
-      notificationIdRef.current = null;
 
       // Claim writes to the DB only if no other device beat us to it; the loser
       // skips side-effects and mirrors via realtime, so the session is never
@@ -249,110 +224,35 @@ export function useFocusTimer() {
     };
   }, [state.isRunning, tick, play]);
 
-  useEffect(() => {
-    const endsAt = state.endsAt;
-    if (
-      state.isRunning &&
-      !isGuestMode &&
-      !notificationIdRef.current &&
-      !schedulingRef.current &&
-      endsAt != null
-    ) {
-      schedulingRef.current = true;
-      const schedule = async () => {
-        try {
-          const { notificationId } = await scheduleTimerNotification({
-            endsAt,
-            taskId: state.activeTaskId,
-            mode: state.mode,
-          });
-          notificationIdRef.current = notificationId;
-        } catch (err) {
-          console.warn("Failed to auto-schedule timer notification:", err);
-        } finally {
-          schedulingRef.current = false;
-        }
-      };
-      schedule();
-    }
-  }, [
-    state.isRunning,
-    state.mode,
-    isGuestMode,
-    state.activeTaskId,
-    state.endsAt,
-  ]);
-
   const start = useCallback(
     async (taskId?: string) => {
       play("focusStart");
-
-      const targetTaskId = taskId ?? state.activeTaskId;
-
-      // Start locally first so the deadline sent to the API is the exact
-      // endsAt the timer itself will count down against, not a value derived
-      // separately that could drift from it by a tick.
       storeStart(taskId);
-      const endsAt = useTimerStore.getState().state.endsAt;
-
-      if (
-        !isGuestMode &&
-        !notificationIdRef.current &&
-        !schedulingRef.current &&
-        endsAt != null
-      ) {
-        schedulingRef.current = true;
-        try {
-          const { notificationId } = await scheduleTimerNotification({
-            endsAt,
-            taskId: targetTaskId,
-            mode: state.mode,
-          });
-          notificationIdRef.current = notificationId;
-        } catch (err) {
-          console.warn("Failed to schedule timer notification:", err);
-        } finally {
-          schedulingRef.current = false;
-        }
-      }
-
       syncToServer();
     },
-    [
-      play,
-      isGuestMode,
-      state.activeTaskId,
-      state.mode,
-      storeStart,
-      syncToServer,
-    ],
+    [play, storeStart, syncToServer],
   );
 
   const pause = useCallback(() => {
-    handleCancelNotification();
     storePause();
     syncToServer();
-  }, [handleCancelNotification, storePause, syncToServer]);
+  }, [storePause, syncToServer]);
 
   const stop = useCallback(() => {
-    handleCancelNotification();
     storeStop();
     syncToServer();
-  }, [handleCancelNotification, storeStop, syncToServer]);
+  }, [storeStop, syncToServer]);
 
   const cancel = useCallback(() => {
-    handleCancelNotification();
     storeCancel();
     syncToServer();
-  }, [handleCancelNotification, storeCancel, syncToServer]);
+  }, [storeCancel, syncToServer]);
 
-  // The push for the original deadline would fire mid-way through a later session.
-  // Cancel first: storeSkip dispatches timer-complete synchronously, and that
-  // handler clears the ref this reads. Completion persists, so no sync here.
+  // storeSkip dispatches timer-complete synchronously; the handler persists the
+  // new state (claim or sync), which re-fires the server-side chain projection.
   const skip = useCallback(() => {
-    handleCancelNotification();
     storeSkip();
-  }, [handleCancelNotification, storeSkip]);
+  }, [storeSkip]);
 
   // Settings are per-account: propagate so other devices agree on them.
   const updateSettings = useCallback(

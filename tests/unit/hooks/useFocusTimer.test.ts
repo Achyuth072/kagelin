@@ -3,7 +3,6 @@ import { useFocusTimer } from "@/lib/hooks/useFocusTimer";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { setServerOffset } from "@/lib/store/serverClock";
-import { scheduleTimerNotification } from "@/lib/timer-api";
 import type { TimerState } from "@/lib/types/timer";
 
 // Mock dependencies
@@ -56,13 +55,6 @@ vi.mock("@/lib/hooks/usePushNotifications", () => ({
   usePushNotifications: vi.fn(() => ({ showNotification: vi.fn() })),
 }));
 
-vi.mock("@/lib/timer-api", () => ({
-  scheduleTimerNotification: vi.fn(() =>
-    Promise.resolve({ success: true, notificationId: "test-id" }),
-  ),
-  cancelTimerNotification: vi.fn(() => Promise.resolve({ success: true })),
-}));
-
 // Use vi.hoisted() so toastMock is available in vi.mock factory
 const { toastMock } = vi.hoisted(() => ({
   toastMock: vi.fn(),
@@ -77,10 +69,17 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
 }));
 
 // Stub the sync layer: completion side-effects are gated on winning the atomic
-// claim, which resolves true here (single-device → always wins).
+// claim, which resolves true here (single-device → always wins). Hoisted so
+// upsertTimerStateMock is assertable from tests — it's the only path left
+// that persists endsAt, which is what the server-side chain trigger now
+// schedules notifications from.
+const { upsertTimerStateMock } = vi.hoisted(() => ({
+  upsertTimerStateMock: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/lib/hooks/useTimerSync", () => ({
   useTimerSync: () => ({
-    upsertTimerState: vi.fn().mockResolvedValue(undefined),
+    upsertTimerState: upsertTimerStateMock,
     claimTimerCompletion: vi.fn().mockResolvedValue(true),
   }),
 }));
@@ -240,7 +239,7 @@ describe("useFocusTimer - Reconciliation", () => {
     );
   });
 
-  it("schedules the timer-end notification against the freshly computed endsAt deadline", async () => {
+  it("syncs the freshly computed endsAt deadline to the server on start, with no client-side notification scheduling", async () => {
     const baseTime = new Date("2024-01-01T12:00:00Z").getTime();
     vi.setSystemTime(baseTime);
 
@@ -252,13 +251,10 @@ describe("useFocusTimer - Reconciliation", () => {
 
     // storeStart anchors endsAt to serverNow() + remainingSeconds; with the
     // server offset at 0 that's exactly baseTime + the idle 1500s duration.
-    const expectedEndsAt = baseTime + 1500 * 1000;
-
-    expect(scheduleTimerNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ endsAt: expectedEndsAt }),
-    );
-    const [call] = (scheduleTimerNotification as ReturnType<typeof vi.fn>).mock
-      .calls;
-    expect(call[0]).not.toHaveProperty("duration");
+    // The synced user_timer_state row is now the only input the server-side
+    // chain trigger schedules timer_end notifications from — there is no
+    // client-side scheduling call left to make.
+    expect(useTimerStore.getState().state.endsAt).toBe(baseTime + 1500 * 1000);
+    expect(upsertTimerStateMock).toHaveBeenCalledTimes(1);
   });
 });
