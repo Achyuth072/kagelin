@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.27.1",
+    "date": "2026-08-02",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Fixed push notifications sometimes failing to deliver at all",
+        "Fixed duplicate and missing focus-timer notifications",
+        "Fixed notifications on iOS stacking instead of replacing each other",
+        "Fixed a stray notification firing after skipping a session"
+      ]
+    }
+  },
+  {
     "version": "1.27.1-preview.1",
     "date": "2026-08-02",
     "channel": "preview",
@@ -763,30 +776,6 @@
     "sections": {
       "Fixed": [
         "Stabilise test suite and resolve CSS lint regressions"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.16",
-    "date": "2026-05-13",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Invalidate cache when new version detected by poller, fix stale preview.13 showing after deploy"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.14",
-    "date": "2026-05-13",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add 24hr mode to SegmentedTimePicker and haptic feedback to quick-select buttons",
-        "Wire useTimeFormat into all display components with system locale detection"
-      ],
-      "Fixed": [
-        "Align What's New indicator with Ink & Matte design"
       ]
     }
   }
