@@ -18,6 +18,12 @@ import { useProfile } from "@/lib/hooks/useProfile";
 import { useAuth } from "@/components/AuthProvider";
 import { toast } from "sonner";
 import { sendPushNotification } from "@/lib/push-api";
+import { isAndroidChrome } from "@/lib/utils/platform";
+import {
+  dismissAndroidBatteryHint,
+  isAndroidBatteryHintDismissed,
+} from "@/lib/utils/androidBatteryHint";
+import { AndroidBatteryHint } from "@/components/settings/AndroidBatteryHint";
 import {
   Select,
   SelectContent,
@@ -61,6 +67,12 @@ export function NotificationSettings() {
 
   const [timezones] = useState<string[]>(getInitialTimezones);
   const [timezoneSearch, setTimezoneSearch] = useState("");
+
+  const [isAndroidChromeBrowser] = useState(isAndroidChrome);
+  const [batteryHintOpen, setBatteryHintOpen] = useState(false);
+  const [batteryHintDismissed, setBatteryHintDismissed] = useState(
+    isAndroidBatteryHintDismissed,
+  );
 
   // Memoize timezone data with offsets once
   const timezoneOptions = useMemo(() => {
@@ -130,6 +142,9 @@ export function NotificationSettings() {
       const result = await requestPermission({ forceRefresh: true });
       if (result.permission === "granted" && result.subscription) {
         toast.success("Notifications enabled");
+        if (isAndroidChromeBrowser && !batteryHintDismissed) {
+          setBatteryHintOpen(true);
+        }
       } else if (result.permission === "denied") {
         toast.error("Permission denied. Enable in browser settings.");
       } else {
@@ -182,6 +197,16 @@ export function NotificationSettings() {
     } catch {
       toast.error("Failed to send test notification");
     }
+  };
+
+  const handleDismissBatteryHint = () => {
+    dismissAndroidBatteryHint();
+    setBatteryHintDismissed(true);
+    setBatteryHintOpen(false);
+  };
+
+  const handleReopenBatteryHint = () => {
+    setBatteryHintOpen(true);
   };
 
   const handleLocalTestNotification = () => {
@@ -280,6 +305,22 @@ export function NotificationSettings() {
               </Button>
             </div>
           )}
+        {isAndroidChromeBrowser &&
+          !isGuestMode &&
+          permission === "granted" &&
+          notificationsEnabled &&
+          (batteryHintOpen ? (
+            <AndroidBatteryHint onDismiss={handleDismissBatteryHint} />
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-[10px] text-muted-foreground hover:text-foreground h-7"
+              onClick={handleReopenBatteryHint}
+            >
+              Notifications arriving late on Android?
+            </Button>
+          ))}
       </div>
 
       {/* 2. Timezone Selection */}
