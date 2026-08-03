@@ -41,7 +41,6 @@ DECLARE
   cur_mode TEXT := NEW.mode;
   cur_ends_at TIMESTAMPTZ := NEW.ends_at;
   cur_completed_sessions INT := NEW.completed_sessions;
-  cur_running BOOLEAN := TRUE;
   next_mode TEXT;
   next_running BOOLEAN;
   next_completed_sessions INT;
@@ -51,6 +50,21 @@ DECLARE
   depth INT := 0;
   MAX_CHAIN_DEPTH CONSTANT INT := 5;
 BEGIN
+  -- Skip entirely when nothing chain-relevant changed (e.g. a reconcile write
+  -- that re-persists remaining_seconds/source_device_id on an already-running,
+  -- already-projected timer) — otherwise every such write would cancel and
+  -- rebuild an identical chain for no reason.
+  IF TG_OP = 'UPDATE'
+    AND NEW.is_running IS NOT DISTINCT FROM OLD.is_running
+    AND NEW.ends_at IS NOT DISTINCT FROM OLD.ends_at
+    AND NEW.mode IS NOT DISTINCT FROM OLD.mode
+    AND NEW.completed_sessions IS NOT DISTINCT FROM OLD.completed_sessions
+    AND NEW.active_task_id IS NOT DISTINCT FROM OLD.active_task_id
+    AND NEW.settings IS NOT DISTINCT FROM OLD.settings
+  THEN
+    RETURN NEW;
+  END IF;
+
   -- Phase 1 (cleanup): unconditionally cancel every still-pending timer_end
   -- row for this user. Safe because Phase 2 immediately rebuilds whatever
   -- chain is still needed, and there is exactly one user_timer_state row per
@@ -84,7 +98,7 @@ BEGIN
       -- subsequent interval is appended only while the relevant auto-start
       -- flag is true — the chain terminates the first time it isn't, capped
       -- at MAX_CHAIN_DEPTH regardless of settings as a safety net.
-      WHILE cur_running AND depth < MAX_CHAIN_DEPTH LOOP
+      WHILE depth < MAX_CHAIN_DEPTH LOOP
         depth := depth + 1;
 
         payload_title := CASE WHEN cur_mode = 'focus' THEN 'Focus Complete' ELSE 'Break Complete' END;
@@ -137,7 +151,6 @@ BEGIN
         cur_ends_at := cur_ends_at + (next_duration_minutes * interval '1 minute');
         cur_mode := next_mode;
         cur_completed_sessions := next_completed_sessions;
-        cur_running := next_running;
       END LOOP;
     END IF;
   END IF;

@@ -248,12 +248,6 @@ export function useFocusTimer() {
     syncToServer();
   }, [storeCancel, syncToServer]);
 
-  // storeSkip dispatches timer-complete synchronously; the handler persists the
-  // new state (claim or sync), which re-fires the server-side chain projection.
-  const skip = useCallback(() => {
-    storeSkip();
-  }, [storeSkip]);
-
   // Settings are per-account: propagate so other devices agree on them.
   const updateSettings = useCallback(
     (newSettings: Parameters<typeof storeUpdateSettings>[0]) => {
@@ -281,7 +275,10 @@ export function useFocusTimer() {
     pause,
     stop,
     cancel,
-    skip,
+    // storeSkip dispatches timer-complete synchronously; the handler persists
+    // the new state (claim or sync), which re-fires the server-side chain
+    // projection — no wrapper needed beyond the stable store action itself.
+    skip: storeSkip,
     updateSettings,
   };
 }
