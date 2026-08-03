@@ -18,6 +18,8 @@ import { useProfile } from "@/lib/hooks/useProfile";
 import { useAuth } from "@/components/AuthProvider";
 import { toast } from "sonner";
 import { sendPushNotification } from "@/lib/push-api";
+import { useAndroidBatteryHint } from "@/lib/hooks/useAndroidBatteryHint";
+import { AndroidBatteryHint } from "@/components/settings/AndroidBatteryHint";
 import {
   Select,
   SelectContent,
@@ -61,6 +63,14 @@ export function NotificationSettings() {
 
   const [timezones] = useState<string[]>(getInitialTimezones);
   const [timezoneSearch, setTimezoneSearch] = useState("");
+
+  const {
+    isAndroidChromeBrowser,
+    isOpen: batteryHintOpen,
+    promptIfDue: promptBatteryHintIfDue,
+    dismiss: handleDismissBatteryHint,
+    reopen: handleReopenBatteryHint,
+  } = useAndroidBatteryHint();
 
   // Memoize timezone data with offsets once
   const timezoneOptions = useMemo(() => {
@@ -130,6 +140,7 @@ export function NotificationSettings() {
       const result = await requestPermission({ forceRefresh: true });
       if (result.permission === "granted" && result.subscription) {
         toast.success("Notifications enabled");
+        promptBatteryHintIfDue();
       } else if (result.permission === "denied") {
         toast.error("Permission denied. Enable in browser settings.");
       } else {
@@ -215,6 +226,11 @@ export function NotificationSettings() {
   }
 
   const settings = profile?.settings?.notifications;
+  const showBatteryHintArea =
+    isAndroidChromeBrowser &&
+    !isGuestMode &&
+    permission === "granted" &&
+    notificationsEnabled;
 
   return (
     <div className="space-y-6">
@@ -280,6 +296,19 @@ export function NotificationSettings() {
               </Button>
             </div>
           )}
+        {showBatteryHintArea &&
+          (batteryHintOpen ? (
+            <AndroidBatteryHint onDismiss={handleDismissBatteryHint} />
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-[10px] text-muted-foreground hover:text-foreground h-7"
+              onClick={handleReopenBatteryHint}
+            >
+              Notifications arriving late on Android?
+            </Button>
+          ))}
       </div>
 
       {/* 2. Timezone Selection */}

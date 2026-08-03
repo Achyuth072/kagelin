@@ -25,7 +25,7 @@ describe("buildSendOptions", () => {
   });
 
   it("gives a focus-timer alert a short TTL and a briefing a long one", () => {
-    expect(buildSendOptions("timer_end").TTL).toBe(300);
+    expect(buildSendOptions("timer_end").TTL).toBe(60);
     expect(buildSendOptions("briefing").TTL).toBe(3600);
   });
 });
@@ -65,13 +65,19 @@ describe("isExpired", () => {
   const now = new Date("2026-07-27T12:00:00.000Z");
   const minutesAgo = (n: number) =>
     new Date(now.getTime() - n * 60_000).toISOString();
+  const secondsAgo = (n: number) =>
+    new Date(now.getTime() - n * 1_000).toISOString();
 
   it("treats a long-overdue focus-timer row as undeliverable", () => {
     expect(isExpired("timer_end", minutesAgo(60), now)).toBe(true);
   });
 
   it("still delivers a row that is only slightly late", () => {
-    expect(isExpired("timer_end", minutesAgo(2), now)).toBe(false);
+    expect(isExpired("timer_end", secondsAgo(30), now)).toBe(false);
+  });
+
+  it("treats a timer_end row past its 60s TTL as expired", () => {
+    expect(isExpired("timer_end", secondsAgo(61), now)).toBe(true);
   });
 
   it("gives a briefing a longer grace than a focus timer", () => {

@@ -111,6 +111,72 @@ describe("useTimerStore", () => {
     expect(state.completedSessions).toBe(1);
   });
 
+  it("should transition to longBreak once completedSessions reaches sessionsBeforeLongBreak", () => {
+    // Given: one session away from the (lowered) long-break threshold
+    useTimerStore.setState((s) => ({
+      settings: { ...s.settings, sessionsBeforeLongBreak: 2 },
+      state: {
+        ...s.state,
+        mode: "focus",
+        isRunning: true,
+        completedSessions: 1,
+        endsAt: Date.now() - 1000,
+      },
+    }));
+
+    // When: the focus session completes
+    useTimerStore.getState().completeTimer({ skipLog: true });
+
+    // Then: it crosses the threshold into longBreak rather than shortBreak
+    const { state } = useTimerStore.getState();
+    expect(state.mode).toBe("longBreak");
+    expect(state.completedSessions).toBe(2);
+  });
+
+  it("should reset completedSessions to 0 only when completing FROM longBreak", () => {
+    // Given: a completed longBreak, about to hand back to focus
+    useTimerStore.setState((s) => ({
+      settings: { ...s.settings, sessionsBeforeLongBreak: 2 },
+      state: {
+        ...s.state,
+        mode: "longBreak",
+        isRunning: true,
+        completedSessions: 2,
+        endsAt: Date.now() - 1000,
+      },
+    }));
+
+    // When: the long break completes
+    useTimerStore.getState().completeTimer({ skipLog: true });
+
+    // Then: back to focus with the session counter reset
+    const { state } = useTimerStore.getState();
+    expect(state.mode).toBe("focus");
+    expect(state.completedSessions).toBe(0);
+  });
+
+  it("should preserve completedSessions when completing FROM shortBreak (no reset)", () => {
+    // Given: a completed shortBreak (not a longBreak) mid-cycle
+    useTimerStore.setState((s) => ({
+      settings: { ...s.settings, sessionsBeforeLongBreak: 4 },
+      state: {
+        ...s.state,
+        mode: "shortBreak",
+        isRunning: true,
+        completedSessions: 1,
+        endsAt: Date.now() - 1000,
+      },
+    }));
+
+    // When: the short break completes
+    useTimerStore.getState().completeTimer({ skipLog: true });
+
+    // Then: back to focus, session counter unchanged (only longBreak resets it)
+    const { state } = useTimerStore.getState();
+    expect(state.mode).toBe("focus");
+    expect(state.completedSessions).toBe(1);
+  });
+
   it("should stop and reset the timer", () => {
     // Given: A running timer with some progress
     useTimerStore.getState().start();

@@ -46,12 +46,6 @@ vi.mock("@/lib/hooks/useFocusSounds", () => ({
 vi.mock("@/lib/hooks/usePushNotifications", () => ({
   usePushNotifications: vi.fn(() => ({ showNotification: vi.fn() })),
 }));
-vi.mock("@/lib/timer-api", () => ({
-  scheduleTimerNotification: vi.fn(() =>
-    Promise.resolve({ success: true, notificationId: "id" }),
-  ),
-  cancelTimerNotification: vi.fn(() => Promise.resolve({ success: true })),
-}));
 vi.mock("sonner", () => ({ toast: vi.fn() }));
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: vi.fn(() => ({ trigger: vi.fn(), isPhone: false })),
