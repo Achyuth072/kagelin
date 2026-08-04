@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.28.1-preview.1",
+    "date": "2026-08-04",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Bring back Board view on mobile"
+      ],
+      "Improved": [
+        "Simplify board container class and drop stale test mock"
+      ]
+    }
+  },
+  {
     "version": "1.28.1-preview.0",
     "date": "2026-08-03",
     "channel": "preview",
@@ -777,19 +790,6 @@
         "Notification z-index lowered below the changelog, with larger touch targets on filter chips",
         "Added missing isChangelogOpen fields to UiState test mocks",
         "Consolidated the completed grayscale class onto TaskItem root"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.20",
-    "date": "2026-05-19",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Wrap sort/group in useTransition and fix filter component layout"
-      ],
-      "Fixed": [
-        "Resolve mobile z-index issues for toast notifications and move 'What's New' indicator to mobile header"
       ]
     }
   }
