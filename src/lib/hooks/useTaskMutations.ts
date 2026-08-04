@@ -10,6 +10,7 @@ import { useAuth } from "@/components/AuthProvider";
 import type { Task, CreateTaskInput } from "@/lib/types/task";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { handleMutationError } from "@/lib/utils/mutation-error";
+import { notify } from "@/lib/notify";
 
 import { taskMutations } from "@/lib/mutations/task";
 import { mockStore } from "@/lib/mock/mock-store";
@@ -193,9 +194,6 @@ export function useDeleteTask() {
     mutationKey: ["deleteTask"],
     mutationFn: taskMutations.delete,
     onMutate: async (id) => {
-      // Dynamic import to avoid SSR issues.
-      const { notify } = await import("@/lib/notify");
-
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
 
       const allTaskQueries = queryClient.getQueriesData<Task[]>({
@@ -224,6 +222,8 @@ export function useDeleteTask() {
 
         trigger("success");
 
+        // Task content is unbounded user text, so it's dropped rather than
+        // folded into the title like other toasts (see ADR 0008).
         notify("Task deleted", {
           duration: 5000,
           action: {

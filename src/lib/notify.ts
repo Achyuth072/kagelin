@@ -25,7 +25,7 @@ function success(message: string, opts?: NotifyIdOption) {
 
 function error(
   message: string,
-  opts?: NotifyIdOption & { description?: string },
+  opts?: NotifyIdOption & { description?: string; action?: never },
 ) {
   return toast.error(message, opts);
 }
