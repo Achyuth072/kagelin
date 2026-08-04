@@ -12,6 +12,7 @@ import {
   HardDrive,
   Cloud,
   Trash2,
+  BellRing,
 } from "lucide-react";
 import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
@@ -25,8 +26,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useUiStore } from "@/lib/store/uiStore";
 import {
   createBackupZip,
   parseBackupZip,
@@ -223,6 +233,84 @@ function CloudSyncCard({
         </CardContent>
       </Card>
     </TabsContent>
+  );
+}
+
+const BACKUP_REMINDER_FREQUENCY_OPTIONS = [
+  { value: "7", label: "Weekly" },
+  { value: "14", label: "Biweekly" },
+  { value: "30", label: "Monthly" },
+];
+
+function BackupRemindersCard() {
+  const { trigger } = useHaptic();
+  const backupReminderEnabled = useUiStore((s) => s.backupReminderEnabled);
+  const setBackupReminderEnabled = useUiStore(
+    (s) => s.setBackupReminderEnabled,
+  );
+  const backupReminderFrequencyDays = useUiStore(
+    (s) => s.backupReminderFrequencyDays,
+  );
+  const setBackupReminderFrequencyDays = useUiStore(
+    (s) => s.setBackupReminderFrequencyDays,
+  );
+
+  return (
+    <Card className="border-border/50 shadow-none bg-background/50">
+      <CardHeader className="pb-3 px-4 pt-5">
+        <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
+          <BellRing className="h-4 w-4 text-brand" strokeWidth={2.25} />
+          Backup Reminders
+        </CardTitle>
+        <CardDescription className="text-xs text-muted-foreground/80 lowercase">
+          Get nudged to export a backup, since your data is stored on this
+          device only.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 px-4 pb-5 pt-0">
+        <div className="flex items-center justify-between p-3 rounded-md border border-border/30 bg-muted/20">
+          <div className="flex items-center gap-3">
+            <BellRing className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Remind me to back up</p>
+              <p className="text-[10px] text-muted-foreground">
+                Periodic nudge to export your local data
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={backupReminderEnabled}
+            onCheckedChange={(checked) => {
+              trigger("toggle");
+              setBackupReminderEnabled(checked);
+            }}
+            aria-label="Remind me to back up"
+          />
+        </div>
+        <Select
+          value={String(backupReminderFrequencyDays)}
+          onValueChange={(val) => {
+            trigger("toggle");
+            setBackupReminderFrequencyDays(Number(val));
+          }}
+          disabled={!backupReminderEnabled}
+        >
+          <SelectTrigger
+            className="w-full h-10 bg-background/30 border-border/40"
+            aria-label="Reminder frequency"
+          >
+            <SelectValue placeholder="Frequency" />
+          </SelectTrigger>
+          <SelectContent>
+            {BACKUP_REMINDER_FREQUENCY_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -587,6 +675,11 @@ export function BackupSyncSettings() {
               </Button>
             </div>
           </Card>
+          {isGuestMode && (
+            <div className="mt-4">
+              <BackupRemindersCard />
+            </div>
+          )}
         </TabsContent>
 
         {showCloudSync && (

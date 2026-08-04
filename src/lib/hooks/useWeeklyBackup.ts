@@ -4,15 +4,19 @@ import { useEffect, useCallback, useRef, useMemo } from "react";
 import { notify } from "@/lib/notify";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
+import { useUiStore } from "@/lib/store/uiStore";
 import type { BackupData } from "@/lib/backup/types";
 
 const STORAGE_KEY = "kanso_last_backup_date";
 const SESSION_KEY = "kanso_backup_prompted";
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** Prompts guest users to back up weekly via a dismissible toast, not a modal. */
 export function useWeeklyBackup() {
   const { isGuestMode } = useAuth();
+  const backupReminderEnabled = useUiStore((s) => s.backupReminderEnabled);
+  const backupReminderFrequencyDays = useUiStore(
+    (s) => s.backupReminderFrequencyDays,
+  );
   const hasPrompted = useRef(false);
 
   const lastBackupDate = useMemo(() => {
@@ -59,12 +63,14 @@ export function useWeeklyBackup() {
 
   useEffect(() => {
     if (!isGuestMode) return;
+    if (!backupReminderEnabled) return;
     if (hasPrompted.current) return;
     if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_KEY))
       return;
 
+    const frequencyMs = backupReminderFrequencyDays * 24 * 60 * 60 * 1000;
     const isStale =
-      !lastBackupDate || Date.now() - lastBackupDate.getTime() > SEVEN_DAYS_MS;
+      !lastBackupDate || Date.now() - lastBackupDate.getTime() > frequencyMs;
 
     if (isStale) {
       // Delay so this doesn't interrupt initial page load.
@@ -92,7 +98,13 @@ export function useWeeklyBackup() {
 
       return () => clearTimeout(timeoutId);
     }
-  }, [isGuestMode, lastBackupDate, triggerBackup]);
+  }, [
+    isGuestMode,
+    backupReminderEnabled,
+    backupReminderFrequencyDays,
+    lastBackupDate,
+    triggerBackup,
+  ]);
 
   return {
     lastBackupDate,

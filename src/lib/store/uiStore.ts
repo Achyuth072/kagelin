@@ -45,6 +45,10 @@ interface UiState {
   setHapticsEnabled: (enabled: boolean) => void;
   notificationsEnabled: boolean;
   setNotificationsEnabled: (enabled: boolean) => void;
+  backupReminderEnabled: boolean;
+  setBackupReminderEnabled: (enabled: boolean) => void;
+  backupReminderFrequencyDays: number;
+  setBackupReminderFrequencyDays: (days: number) => void;
 
   // Global Goals (aggregate targets, not per-item — see CONTEXT.md "Goals")
   goals: GoalsState;
@@ -130,6 +134,12 @@ export const useUiStore = create<UiState>()(
       notificationsEnabled: false,
       setNotificationsEnabled: (enabled) =>
         set({ notificationsEnabled: enabled }),
+      backupReminderEnabled: true,
+      setBackupReminderEnabled: (enabled) =>
+        set({ backupReminderEnabled: enabled }),
+      backupReminderFrequencyDays: 7,
+      setBackupReminderFrequencyDays: (days) =>
+        set({ backupReminderFrequencyDays: days }),
 
       // Global Goals defaults
       goals: {
