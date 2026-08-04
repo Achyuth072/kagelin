@@ -40,7 +40,6 @@ import { SortableBoardTaskCard } from "./SortableBoardTaskCard";
 import { TaskGhost } from "./TaskGhost";
 import { useUpdateTask, useReorderTasks } from "@/lib/hooks/useTaskMutations";
 import { useUiStore } from "@/lib/store/uiStore";
-import { cn } from "@/lib/utils";
 import {
   getTaskUpdatesForGroup,
   computeReorderPairs,
@@ -417,10 +416,7 @@ export function TaskBoard({
       {/* Snap off mid-drag: it re-adjusts scroll offset after programmatic
           scrolls, fighting dnd-kit's auto-scroll. See ADR 0007. */}
       <div
-        className={cn(
-          "flex items-start h-full overflow-x-auto pb-12 md:pb-6 px-4 md:px-6 gap-6 scrollbar-hide",
-          !activeId && "snap-x snap-mandatory",
-        )}
+        className={`flex items-start h-full overflow-x-auto pb-12 md:pb-6 px-4 md:px-6 gap-6 scrollbar-hide${activeId ? "" : " snap-x snap-mandatory"}`}
         data-testid="task-board-container"
       >
         {displayColumns.map((group) => (
