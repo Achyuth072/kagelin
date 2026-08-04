@@ -99,11 +99,11 @@ function TaskListBase({
   const { data: projectsData } = useProjects();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  // Captured once at drag start for the DragOverlay ghost — deriving it every
-  // render would re-run flatMap+find over every task on each drag-over tick.
+  // Snapshotted at drag start for the ghost — deriving it per render would
+  // flatMap+find over every task on each drag-over.
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  // Keeps displaying local DnD state after activeId clears, until the
-  // reorder mutation's onSettled fires and the optimistic cache update is live.
+  // Holds local drag state after activeId clears, until the optimistic
+  // cache update lands.
   const [lockLocal, setLockLocal] = useState(false);
   const [keyboardSelectedId, setKeyboardSelectedId] = useState<string | null>(
     null,
@@ -129,7 +129,6 @@ function TaskListBase({
   const { trigger: triggerHaptic } = useHaptic();
   const setActiveTaskId = useTimerStore((state) => state.setActiveTaskId);
 
-  // --- Optimization: Stabilize Sensors ---
   const mouseSensor = useSensor(MouseSensor, {
     // If we're on mobile (!isDesktop), we enforce a delay even for mouse pointers
     // to match TouchSensor behavior and prevent DevTools swipes from clashing.
@@ -146,7 +145,6 @@ function TaskListBase({
 
   const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
 
-  // Pre-calculate project map for O(1) lookups in subcomponents
   const projectsMap = useMemo(() => {
     const map = new Map<string, Project>();
     if (projectsData) {
@@ -189,19 +187,17 @@ function TaskListBase({
   // order (derived sort) or day_order (custom sort) into the custom order.
   const preDragFlatTasksRef = useRef<Task[]>([]);
 
-  // Freezes the pre-switch order into day_order when switching to "custom"
-  // sort (day_order is otherwise stale, causing a visible jump-then-revert).
-  // Must read prevDisplayedFlatRef, not the already-resorted processedTasks,
-  // via useLayoutEffect so the first custom-sorted paint is already correct.
-  // Skipped for drag-driven switches — the drag path bakes its own order.
+  // Freezes the pre-switch order into day_order when switching to custom sort,
+  // which is otherwise stale and visibly jumps. Reads prevDisplayedFlatRef
+  // rather than the already-resorted processedTasks, in useLayoutEffect so the
+  // first paint is correct. Drag-driven switches bake their own order.
   const prevSortByRef = useRef(sortBy);
   const prevDisplayedFlatRef = useRef<Task[]>([]);
   useLayoutEffect(() => {
     const prevSortBy = prevSortByRef.current;
     prevSortByRef.current = sortBy;
 
-    // Read the snapshot captured under the OLD sort, then refresh the ref to
-    // the current sort's order for the next transition.
+    // Read the snapshot from the old sort, then refresh it for next time.
     const prevDisplayed = prevDisplayedFlatRef.current;
     prevDisplayedFlatRef.current = processedTasks.groups
       ? processedTasks.groups.flatMap((g) => g.tasks)
@@ -235,9 +231,8 @@ function TaskListBase({
     setCustomSortEnteredViaDrag,
   ]);
 
-  // Opens the edit sheet for a task selected from the global command menu.
-  // Clears the id only once found — on first load from another page the
-  // list may still be loading, and clearing early would drop the request.
+  // Opens the edit sheet for a task picked in the command menu. Clears the id
+  // only once found — the list may still be loading on first navigation.
   useEffect(() => {
     if (!selectedTaskId) return;
     const task = tasks.find((t) => t.id === selectedTaskId);
@@ -260,7 +255,7 @@ function TaskListBase({
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      // Only synced on drag start — avoids expensive state syncing on every re-sort/re-group.
+      // Synced on drag start only — otherwise every re-sort/re-group pays.
       setLocalActive(processedTasks.active);
       setLocalEvening(processedTasks.evening);
       setLocalGroups(processedTasks.groups);
@@ -274,9 +269,8 @@ function TaskListBase({
             .find((t) => t.id === id) ||
           null,
       );
-      // From processedTasks, not raw `tasks` — they can diverge (filtering,
-      // tie-broken day_order) and corrupt the reorder math. Custom sort also
-      // re-sorts to undo group-flattening's cross-group interleaving (mirrors TaskBoard.tsx).
+      // From processedTasks, not raw `tasks` — filtering and tie-broken
+      // day_order make them diverge and corrupt the reorder math.
       const visibleTasks = processedTasks.groups
         ? processedTasks.groups.flatMap((g) => g.tasks)
         : [...processedTasks.active, ...processedTasks.evening];
@@ -301,7 +295,6 @@ function TaskListBase({
       if (!activeContainer || !overContainer) return;
 
       if (localGroups && localGroups.length > 0) {
-        // --- Moving with Groups Active ---
         const activeGroupIndex = localGroups.findIndex(
           (g: TaskGroup) =>
             g.title === activeContainer ||
@@ -316,12 +309,10 @@ function TaskListBase({
         if (activeGroupIndex === -1 || overGroupIndex === -1) return;
 
         if (activeGroupIndex === overGroupIndex) {
-          // Reorder within same group
           const group = localGroups[activeGroupIndex];
           const oldIndex = group.tasks.findIndex((t) => t.id === active.id);
 
-          // dnd-kit's sortable index reflects DOM state; findIndex on React
-          // state can be off-by-one during rapid drag-over events.
+          // findIndex on React state can be off-by-one during rapid drag-over.
           let newIndex = over.data.current?.sortable?.index;
           if (newIndex === undefined) {
             newIndex = group.tasks.findIndex((t) => t.id === over.id);
@@ -334,7 +325,6 @@ function TaskListBase({
             setLocalGroups(newGroups);
           }
         } else {
-          // Move between groups
           // Derived buckets like "Overdue" have no settable property — the
           // drop could never stick, so don't let the drag enter the group.
           if (isDropBlockedGroup(localGroups[overGroupIndex].title, groupBy)) {
@@ -362,7 +352,6 @@ function TaskListBase({
               );
               newIndex = overIndex >= 0 ? overIndex : targetGroup.tasks.length;
             } else {
-              // Ensure index is valid, clamped to array bounds
               if (newIndex < 0) newIndex = targetGroup.tasks.length;
             }
 
@@ -374,9 +363,7 @@ function TaskListBase({
           });
         }
       } else {
-        // --- Standard Active/Evening Moving ---
         if (activeContainer === overContainer) {
-          // Moving within the same list
           const isEvening = activeContainer === "evening-section";
           const list = isEvening ? localEvening : localActive;
           const setList = isEvening ? setLocalEvening : setLocalActive;
@@ -392,7 +379,6 @@ function TaskListBase({
             setList(arrayMove(list, oldIndex, newIndex));
           }
         } else {
-          // Moving between lists (Active <-> Evening)
           const activeIsEvening = activeContainer === "evening-section";
           const overIsEvening = overContainer === "evening-section";
 
@@ -453,8 +439,7 @@ function TaskListBase({
         const finalGroup = localGroups.find((g: TaskGroup) =>
           g.tasks.some((t: Task) => t.id === activeId),
         );
-        // Early-return BEFORE any state setters so we never leave the
-        // component in a half-committed state (activeId=null, lockLocal=false).
+        // Return before any setter, or we land half-committed.
         if (!finalGroup) {
           setActiveId(null);
           setActiveTask(null);
@@ -474,17 +459,14 @@ function TaskListBase({
         );
         const isSameSection = originalGroup?.title === finalGroup.title;
 
-        // CRITICAL: setLockLocal(true) must be queued before setActiveId(null)
-        // — batching alone is fragile here (dnd-kit's dispatch + Compiler effect
-        // reordering), and reversing this order can let displayTasks fall
-        // through to a stale processedTasks.active. See dnd-residual-race-condition.md.
+        // Must precede setActiveId(null) — reversing it lets displayTasks fall
+        // through to stale server data. See dnd-residual-race-condition.md.
         setLockLocal(true);
         if (sortBy !== "custom") {
           setCustomSortEnteredViaDrag(true);
           setSortBy("custom");
         }
 
-        // 1. Commit property updates (cross-group only)
         const updates = getTaskUpdates(finalGroup.title);
         const originalTask = tasks.find((t: Task) => t.id === activeId);
 
@@ -496,8 +478,8 @@ function TaskListBase({
               (originalTask as unknown as Record<string, unknown>)[key],
           );
 
-        // lockLocal releases only once ALL pending mutations settle — prevents
-        // a cross-group snap-back if reorderMutation's refetch beats updateMutation's.
+        // Releases only once all mutations settle — otherwise reorder's refetch
+        // can beat update's and snap the task back.
         let pendingCount = 0;
         const tryReleaseLock = () => {
           pendingCount--;
@@ -515,9 +497,8 @@ function TaskListBase({
           );
         }
 
-        // 2. Commit the reorder: a single-task move if already in custom sort;
-        // otherwise every other group's day_order is stale, so freeze the
-        // entire post-drop order instead (localGroups already reflects the move).
+        // Single-task move in custom sort; otherwise every other group's
+        // day_order is stale, so freeze the whole post-drop order.
         let pairs: { id: string; day_order: number }[];
         if (sortBy === "custom") {
           const orderedIds = finalGroup.tasks.map((t: Task) => t.id);
@@ -562,7 +543,6 @@ function TaskListBase({
           setSortBy("custom");
         }
 
-        // Check if it's now in evening vs active
         const isInEveningNow = localEvening.some(
           (t: Task) => t.id === active.id,
         );
@@ -592,8 +572,8 @@ function TaskListBase({
           );
         }
 
-        // Commit the reorder: single-task move if already custom-sorted;
-        // otherwise freeze the full post-drop order so untouched sections (e.g. evening) don't jump.
+        // Single-task move in custom sort; otherwise freeze the full order so
+        // untouched sections don't jump.
         triggerHaptic("thud");
         let pairs: { id: string; day_order: number }[];
         if (sortBy === "custom") {
@@ -786,7 +766,7 @@ function TaskListBase({
           className="flex-1 h-full overflow-y-auto scrollbar-hide relative overscroll-contain"
           style={{ contain: "strict" }}
         >
-          {viewMode === "board" && isDesktop ? (
+          {viewMode === "board" ? (
             <TaskBoard
               processedTasks={processedTasks}
               projectsMap={projectsMap}
@@ -794,6 +774,9 @@ function TaskListBase({
               isDesktop={isDesktop}
               triggerHaptic={triggerHaptic}
               setActiveTaskId={setActiveTaskId}
+              // Omitting this drops getTaskUpdatesForGroup to its heuristic
+              // cascade, where a project named "Today" reads as a date.
+              groupBy={groupBy}
             />
           ) : (
             <TaskListView

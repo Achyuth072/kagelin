@@ -40,6 +40,7 @@ import { SortableBoardTaskCard } from "./SortableBoardTaskCard";
 import { TaskGhost } from "./TaskGhost";
 import { useUpdateTask, useReorderTasks } from "@/lib/hooks/useTaskMutations";
 import { useUiStore } from "@/lib/store/uiStore";
+import { cn } from "@/lib/utils";
 import {
   getTaskUpdatesForGroup,
   computeReorderPairs,
@@ -47,11 +48,8 @@ import {
   isDropBlockedGroup,
 } from "@/lib/utils/task-dnd";
 
-// dnd-kit's built-in Accessibility component calls announce() on every
-// onDragOver by default, thrashing the aria-live region at drag-over
-// frequency (60-120Hz). Suppress the per-tick announcement (returning
-// undefined is a no-op per @dnd-kit/accessibility's useAnnouncement) while
-// keeping start/end/cancel. Module-level so the object identity is stable.
+// dnd-kit announces every onDragOver by default, thrashing aria-live at
+// 60-120Hz. Returning undefined is a no-op; start/end/cancel still fire.
 const dndAnnouncements = {
   ...defaultAnnouncements,
   onDragOver: () => undefined,
@@ -87,60 +85,46 @@ export function TaskBoard({
   );
 
   const [activeId, setActiveId] = useState<string | null>(null);
-  // Snapshot of the dragged task, captured once at drag start and fed to the
-  // DragOverlay ghost. Deriving it from localColumns instead would recompute
-  // (flatMap + find over every task) on each drag-over state update.
+  // Snapshotted at drag start for the ghost — deriving it per render would
+  // flatMap+find over every task on each drag-over.
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  // Mirrors the list-view lockLocal pattern: while lockLocal=true (or activeId
-  // is set), displayColumns reads from localColumns (local drag state) rather
-  // than boardColumns (server-derived). The inline ternary is evaluated
-  // synchronously in the render body — no useEffect race window.
+  // While set, displayColumns reads local drag state instead of server data.
   const [lockLocal, setLockLocal] = useState(false);
-  // When a cross-column drop fires both updateMutation and reorderMutation,
-  // reorderMutation often settles first → invalidateQueries → a background
-  // refetch returns stale server data (before updateMutation commits) →
-  // boardColumns briefly has the task in the old column. If we released
-  // lockLocal immediately when pendingCount hits 0, displayColumns would
-  // switch to this stale boardColumns → snap-back. Instead, we defer the
-  // release until boardColumns actually reflects the expected destination.
+  // On a cross-column drop reorderMutation usually settles before
+  // updateMutation, so a refetch can briefly show the task in its old column.
+  // Releasing the lock on that would snap it back — wait for the destination.
   const [pendingLockRelease, setPendingLockRelease] = useState<{
     taskId: string;
     columnTitle: string;
   } | null>(null);
 
-  // Captures the flat task list at drag-start time. Used by computeReorderPairs
-  // to find the server-authoritative day_order values of the slots being reordered,
-  // without requiring access to the query client inside a component.
+  // Drag-start snapshot: computeReorderPairs needs the server-authoritative
+  // day_order of the slots being reordered.
   const preDragFlatTasksRef = useRef<Task[]>([]);
 
+  // Empty columns are kept: an empty "This Evening" is the drop target that
+  // defers a task to tonight.
   const boardColumns = useMemo<TaskGroup[]>(() => {
     if (groups && groups.length > 0) return groups;
     return [
       { title: "Tasks", tasks: active },
       { title: "This Evening", tasks: evening },
-    ].filter((c) => c.tasks.length > 0);
+    ];
   }, [groups, active, evening]);
 
   const [localColumns, setLocalColumns] = useState<TaskGroup[]>(boardColumns);
 
-  // Inline gate: while dragging (activeId set) or locked (lockLocal), show the
-  // local drag state; otherwise show the server-authoritative boardColumns.
-  // Evaluated synchronously in the render body — no extra render cycle,
-  // no race window between a prop update and a useEffect firing.
-  // This mirrors TaskList.tsx's (activeId || lockLocal) ? localActive : processedTasks.active.
+  // Evaluated in the render body, not an effect — no race window.
   const displayColumns = activeId || lockLocal ? localColumns : boardColumns;
 
-  // Keep localColumns in sync between drags so handleDragStart has a fresh base.
   useEffect(() => {
     if (!activeId && !lockLocal) {
       setLocalColumns(boardColumns);
     }
   }, [boardColumns, activeId, lockLocal]);
 
-  // Deferred lock release: only switch displayColumns → boardColumns once
-  // boardColumns actually contains the dragged task in the expected destination
-  // column. This prevents the snap-back caused by a stale invalidateQueries
-  // refetch completing before the property updateMutation commits to the server.
+  // Release only once the server data actually shows the task in its
+  // destination column (see pendingLockRelease above).
   useEffect(() => {
     if (!pendingLockRelease) return;
     const taskInColumn = boardColumns
@@ -171,19 +155,14 @@ export function TaskBoard({
   );
 
   const handleDragStart = (event: DragStartEvent) => {
-    // Sync local state only when drag starts
     setLocalColumns(boardColumns);
     const id = event.active.id as string;
     setActiveId(id);
     setActiveTask(
       boardColumns.flatMap((c) => c.tasks).find((t) => t.id === id) || null,
     );
-    // Capture the flat task list before any local drag mutations; handleDragEnd
-    // feeds it to computeReorderPairs. In custom sort the display already
-    // follows day_order, so sort by it (columns interleave in the flatMap).
-    // Under a derived sort (date/priority/alphabetical) the drop converts the
-    // on-screen order into the custom order, so capture display order as-is
-    // and let computeMoveOrders bake it in.
+    // Custom sort already follows day_order, so sort by it (the flatMap
+    // interleaves columns). A derived sort bakes in the on-screen order.
     const visibleTasks = boardColumns.flatMap((col) => col.tasks);
     preDragFlatTasksRef.current =
       sortBy === "custom"
@@ -227,8 +206,7 @@ export function TaskBoard({
         const activeIndex = activeTasks.findIndex((t) => t.id === activeId);
         if (activeIndex === -1) return prev;
 
-        // dnd-kit's sortable index reflects DOM state; findIndex on React
-        // state can be off-by-one during rapid drag-over events.
+        // findIndex on React state can be off-by-one during rapid drag-over.
         let overIndex = over.data?.current?.sortable?.index;
         if (overIndex === undefined) {
           overIndex = overTasks.findIndex((t) => t.id === overId);
@@ -236,7 +214,6 @@ export function TaskBoard({
 
         const [movedTask] = activeTasks.splice(activeIndex, 1);
 
-        // Apply property updates when moving between columns
         const updates = getTaskUpdates(overColumn.title);
         const updatedTask = { ...movedTask, ...updates };
 
@@ -258,11 +235,8 @@ export function TaskBoard({
         return newCols;
       });
     } else {
-      // Reordering within the same column.
-      // newIndex comes from dnd-kit's event (DOM-based, not React state).
-      // All other computation happens inside the functional updater so the
-      // closure never captures stale localColumns — every reference reads
-      // directly from prev, which is the latest committed state.
+      // Everything else runs inside the updater so the closure can't capture
+      // a stale localColumns.
       const dndNewIndex = over.data?.current?.sortable?.index;
 
       setLocalColumns((prev) => {
@@ -273,15 +247,13 @@ export function TaskBoard({
         const oldIndex = prevTasks.findIndex((t) => t.id === activeId);
         if (oldIndex === -1) return prev;
 
-        // Use dnd-kit's provided index for reliable positioning
         let newIndex = dndNewIndex;
         if (newIndex === undefined) {
-          // Fallback to findIndex from prev state
           newIndex = prevTasks.findIndex((t) => t.id === overId);
         }
         if (newIndex === undefined || newIndex === -1) return prev;
-        // Bail out when nothing moves — avoids a fresh column object (and the
-        // KanbanColumn + SortableContext re-render it causes) per drag-over.
+        // Bail when nothing moves — a fresh column object re-renders
+        // KanbanColumn + SortableContext on every drag-over.
         if (newIndex === oldIndex) return prev;
 
         const newCols = [...prev];
@@ -303,8 +275,7 @@ export function TaskBoard({
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    // Dropped outside any droppable — just clear activeId.
-    // displayColumns falls through to boardColumns when activeId=null && lockLocal=false.
+    // Dropped outside any droppable — displayColumns falls back on its own.
     if (!over) {
       setActiveId(null);
       setActiveTask(null);
@@ -315,9 +286,8 @@ export function TaskBoard({
     const finalColumn = localColumns.find((col) =>
       col.tasks.some((t) => t.id === activeId),
     );
-    // Early-return BEFORE clearing activeId so we never enter a render with
-    // activeId=null && lockLocal=false (which would let displayColumns fall
-    // through to boardColumns before the drop position is committed).
+    // Return before clearing activeId, or displayColumns falls back to
+    // server data before the drop is committed.
     if (!finalColumn) {
       setActiveId(null);
       setActiveTask(null);
@@ -335,27 +305,21 @@ export function TaskBoard({
     );
     const isSameSection = originalColumn?.title === finalColumn.title;
 
-    // CRITICAL ORDERING: setLockLocal(true) MUST be queued BEFORE setActiveId(null).
-    // React 18 batches both into one render, but ordering defends against any
-    // partial-flush scenario (dnd-kit useReducer + React Compiler). While
-    // lockLocal=true, displayColumns reads localColumns (new order) — not
-    // boardColumns — so no stale server state can overwrite the drop position.
+    // Must be queued before setActiveId(null): batching makes them one render,
+    // but the order defends against a partial flush leaving both unset.
     setLockLocal(true);
     if (sortBy !== "custom") {
-      // TaskList's freeze-on-menu-switch effect watches this flag to tell a
-      // drag-driven switch to Custom apart from a menu-driven one — this
-      // drag's own reorder mutation below already computes the precise order.
+      // Tells TaskList's freeze effect this switch came from a drag, which
+      // computes its own order below.
       setCustomSortEnteredViaDrag(true);
       setSortBy("custom");
     }
 
-    // 1. Commit property updates (if any)
     const updates = getTaskUpdates(finalColumn.title);
     const originalTask =
       processedTasks.active.find((t) => t.id === activeId) ||
       processedTasks.evening.find((t) => t.id === activeId);
 
-    // Check if properties actually changed
     const hasChanged =
       originalTask &&
       Object.keys(updates).some(
@@ -364,11 +328,8 @@ export function TaskBoard({
           (originalTask as unknown as Record<string, unknown>)[key],
       );
 
-    // Each mutation that fires increments pendingCount. For cross-column drops
-    // (hasChanged=true), the lock is released via deferred release — we wait
-    // until boardColumns actually reflects the destination column before calling
-    // setLockLocal(false). For same-column reorders (hasChanged=false/undefined),
-    // the lock releases immediately when pendingCount hits 0.
+    // Cross-column drops defer the release until the server agrees;
+    // same-column reorders release as soon as the mutations settle.
     let pendingCount = 0;
     const tryReleaseLock = () => {
       pendingCount--;
@@ -394,15 +355,9 @@ export function TaskBoard({
       );
     }
 
-    // 2. Commit the reorder.
-    // When ALREADY in custom sort, day_order is authoritative, so model the
-    // drop as a single-task move (only the dragged span changes; other columns
-    // keep their day_order). But when this drop CONVERTS a derived sort to
-    // custom, every other column's day_order is stale (derived/creation order,
-    // not what's shown) — a single-move would leave them to re-sort and jump on
-    // the switch. So freeze the ENTIRE post-drop visible order (localColumns
-    // already reflects the move) so untouched columns stay exactly as shown.
-    // Empty pairs mean nothing to persist — skip the mutation entirely.
+    // In custom sort day_order is authoritative, so persist just the moved
+    // span. Converting from a derived sort leaves every other column's
+    // day_order stale, so freeze the whole visible order instead.
     let pairs: { id: string; day_order: number }[];
     if (sortBy === "custom") {
       const orderedIds = finalColumn.tasks.map((t) => t.id);
@@ -435,19 +390,16 @@ export function TaskBoard({
   return (
     <DndContext
       sensors={sensors}
-      // dnd-kit docs: for Kanban-style stacked droppables (a column + its
-      // items), rectIntersection/closestCenter can resolve to the whole
-      // column instead of an item within it — which dropped tasks at the
-      // bottom of sparse columns. closestCorners is the documented choice.
+      // For stacked droppables (a column + its items) rectIntersection can
+      // resolve to the column itself, dropping tasks at the bottom.
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
       accessibility={{ announcements: dndAnnouncements }}
-      // WhileDragging (the dnd-kit default) measures the same as Always
-      // during a drag; Always additionally re-measures on every droppable
-      // registry mutation while idle, which is pure overhead here.
+      // Always re-measures on every idle droppable mutation too — pure
+      // overhead, since both behave identically during a drag.
       measuring={{
         droppable: {
           strategy: MeasuringStrategy.WhileDragging,
@@ -462,8 +414,13 @@ export function TaskBoard({
         acceleration: 10,
       }}
     >
+      {/* Snap off mid-drag: it re-adjusts scroll offset after programmatic
+          scrolls, fighting dnd-kit's auto-scroll. See ADR 0007. */}
       <div
-        className="flex items-start h-full overflow-x-auto pb-12 md:pb-6 px-4 md:px-6 gap-6 snap-x snap-mandatory scrollbar-hide"
+        className={cn(
+          "flex items-start h-full overflow-x-auto pb-12 md:pb-6 px-4 md:px-6 gap-6 scrollbar-hide",
+          !activeId && "snap-x snap-mandatory",
+        )}
         data-testid="task-board-container"
       >
         {displayColumns.map((group) => (
@@ -483,18 +440,9 @@ export function TaskBoard({
       {typeof document !== "undefined" &&
         createPortal(
           <DragOverlay
-            // dropAnimation duration is 0 here (matching TaskList) to
-            // eliminate the residual "overlay animates to original
-            // position then snaps to new" glitch. The drop animation
-            // measures the active node's DOM rect AFTER React renders
-            // the post-drop state, but BEFORE the optimistic cache
-            // update from React Query's async onMutate has propagated.
-            // When duration is 0, dnd-kit short-circuits the animation
-            // entirely (see createDefaultDropAnimation: `if (!duration)
-            // return`), so the overlay simply disappears at the same
-            // instant the source item snaps into place — which is
-            // already in the correct (new) position because displayColumns
-            // is gated by lockLocal until onSettled fires.
+            // duration 0 short-circuits the animation entirely. Otherwise
+            // it measures the active rect before the optimistic cache update
+            // lands, animating to the old position and then snapping.
             dropAnimation={{
               duration: 0,
               sideEffects: defaultDropAnimationSideEffects({
@@ -540,10 +488,12 @@ const KanbanColumn = memo(function KanbanColumn({
 }) {
   const { setNodeRef } = useDroppable({ id: group.title });
 
+  // Without shrink-0 the flex columns compress to fit, so the board never
+  // overflows and neither snap nor drag auto-scroll has anything to scroll.
   return (
     <section
       ref={setNodeRef}
-      className="w-[85vw] md:w-[320px] snap-center bg-sidebar border border-border rounded-2xl flex flex-col p-0.5 max-h-[calc(100dvh-200px)] md:max-h-full"
+      className="w-[85vw] md:w-[320px] shrink-0 snap-center bg-sidebar border border-border rounded-2xl flex flex-col p-0.5 max-h-[calc(100dvh-200px)] md:max-h-full"
     >
       <div className="px-3 py-2.5 flex items-center justify-between">
         <h3 className="type-h3 lowercase tracking-tight text-foreground/70">

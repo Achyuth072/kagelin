@@ -14,7 +14,7 @@ import type { Task } from "@/lib/types/task";
 import type { TaskViewMode } from "@/lib/types/sorting";
 import dynamic from "next/dynamic";
 
-// Lazy load SubtaskList to reduce initial render weight (PERF-02)
+// Lazy-loaded to cut initial render weight (PERF-02).
 const SubtaskList = dynamic(() => import("./SubtaskList"), {
   loading: () => <div className="h-16 animate-pulse bg-muted/30 rounded-lg" />,
   ssr: false,
@@ -35,7 +35,6 @@ interface TaskItemProps {
   viewMode?: TaskViewMode;
   dragActivatorRef?: (element: HTMLElement | null) => void;
   isDndActive?: boolean;
-  // Shared state and utilities passed from parent for performance
   project?: { color: string; name: string };
   isDesktop?: boolean;
   triggerHaptic?: (signature?: "tick" | "toggle" | "thud" | "success") => void;
@@ -130,14 +129,14 @@ function TaskItemBase({
         <BoardTaskCard
           task={task}
           project={project}
-          _isDesktop={isDesktop}
           handleComplete={handleComplete}
           handlePlayFocus={handlePlayFocus}
           onClick={() => onSelect?.(task)}
           shouldAnimate={shouldAnimate}
         />
       ) : isDesktop ? (
-        /* Fast path for Desktop List View: No Framer Motion wrappers (fixes sidebar layout thrashing) */
+        /* Desktop fast path: no Framer Motion wrapper, which thrashed
+           sidebar layout. */
         <div
           className={cn(contentClassName, "overflow-hidden rounded-md")}
           style={{ isolation: "isolate" }}
@@ -165,7 +164,7 @@ function TaskItemBase({
           />
         </div>
       ) : (
-        /* Mobile List View Path: Uses SwipeableTaskContent with suspension to save perf during DnD */
+        /* Mobile: swipeable, suspended during DnD to save the per-frame cost. */
         <SwipeableTaskContent
           isDesktop={isDesktop}
           _isDragging={isDragging}
@@ -213,7 +212,7 @@ function TaskItemBase({
         </SwipeableTaskContent>
       )}
 
-      {/* Skipped while dragging — avoids the motion layer's per-frame cost on every row. */}
+      {/* Skipped while dragging — the motion layer costs per frame, per row. */}
       <AnimatePresence initial={false}>
         {isExpanded && !isDndActive && (
           <motion.div

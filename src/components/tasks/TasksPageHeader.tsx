@@ -29,7 +29,6 @@ import {
   SORT_LABELS,
 } from "@/lib/types/sorting";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 import { SyncIndicator } from "@/components/ui/SyncIndicator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -55,7 +54,6 @@ function TasksPageHeaderBase({
 }: TasksPageHeaderProps) {
   const { openSheet } = useCompletedTasks();
   const { trigger } = useHaptic();
-  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   // O(1) zustand writes — useTransition would only add scheduler latency here.
   const handleSortChange = (sort: SortOption) => {
@@ -92,16 +90,14 @@ function TasksPageHeaderBase({
             <List className="h-4 w-4" strokeWidth={2.25} />
             <span className="hidden lg:inline">List</span>
           </TabsTrigger>
-          {isDesktop && (
-            <TabsTrigger
-              value="board"
-              className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-8 border border-transparent data-[state=active]:border-brand/20"
-              title="Board View (Shift+2)"
-            >
-              <KanbanSquare className="h-4 w-4" strokeWidth={2.25} />
-              <span className="hidden lg:inline">Board</span>
-            </TabsTrigger>
-          )}
+          <TabsTrigger
+            value="board"
+            className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-8 border border-transparent data-[state=active]:border-brand/20"
+            title="Board View (Shift+2)"
+          >
+            <KanbanSquare className="h-4 w-4" strokeWidth={2.25} />
+            <span className="hidden lg:inline">Board</span>
+          </TabsTrigger>
         </TabsList>
       </Tabs>
 

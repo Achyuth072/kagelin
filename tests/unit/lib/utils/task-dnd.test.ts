@@ -55,4 +55,37 @@ describe("getTaskUpdatesForGroup", () => {
     const updates = getTaskUpdatesForGroup("Active", projectsMap);
     expect(updates.is_evening).toBe(false);
   });
+
+  describe("with an explicit groupBy", () => {
+    beforeEach(() => {
+      projectsMap.set("p2", { id: "p2", name: "Today" } as unknown as Project);
+    });
+
+    it("maps a project named 'Today' to its project, not a date", () => {
+      const updates = getTaskUpdatesForGroup("Today", projectsMap, "project");
+      expect(updates.project_id).toBe("p2");
+      expect(updates.do_date).toBeUndefined();
+      expect(updates.due_date).toBeUndefined();
+    });
+
+    it("maps a project named 'This Evening' to its project, not is_evening", () => {
+      projectsMap.set("p3", {
+        id: "p3",
+        name: "This Evening",
+      } as unknown as Project);
+      const updates = getTaskUpdatesForGroup(
+        "This Evening",
+        projectsMap,
+        "project",
+      );
+      expect(updates.project_id).toBe("p3");
+      expect(updates.is_evening).toBeUndefined();
+    });
+
+    it("falls back to the heuristic cascade when groupBy is omitted", () => {
+      const updates = getTaskUpdatesForGroup("Today", projectsMap);
+      expect(updates.do_date).toBe(todayStr);
+      expect(updates.project_id).toBeUndefined();
+    });
+  });
 });

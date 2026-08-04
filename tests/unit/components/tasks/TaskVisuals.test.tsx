@@ -33,7 +33,6 @@ describe("BoardTaskCard Visuals", () => {
       <BoardTaskCard
         task={mockTask}
         project={mockProject}
-        _isDesktop={true}
         handleComplete={() => {}}
         handlePlayFocus={() => {}}
       />,
@@ -48,7 +47,6 @@ describe("BoardTaskCard Visuals", () => {
       <BoardTaskCard
         task={mockTask}
         project={mockProject}
-        _isDesktop={true}
         handleComplete={() => {}}
         handlePlayFocus={() => {}}
       />,
@@ -69,7 +67,6 @@ describe("BoardTaskCard Visuals", () => {
       <BoardTaskCard
         task={mockTask}
         project={mockProject}
-        _isDesktop={true}
         handleComplete={() => {}}
         handlePlayFocus={() => {}}
       />,
