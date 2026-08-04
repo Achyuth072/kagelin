@@ -72,7 +72,6 @@ export function NotificationSettings() {
     reopen: handleReopenBatteryHint,
   } = useAndroidBatteryHint();
 
-  // Memoize timezone data with offsets once
   const timezoneOptions = useMemo(() => {
     const now = new Date();
     return timezones.map((tz) => {
@@ -101,7 +100,7 @@ export function NotificationSettings() {
     });
   }, [timezones]);
 
-  // Filter and limit results, ensuring current selection is ALWAYS present
+  // Keeps the current selection visible even if search/pagination would cut it.
   const filteredTimezones = useMemo(() => {
     const search = timezoneSearch.toLowerCase().trim();
     const currentTz = profile?.timezone || "UTC";
@@ -110,16 +109,12 @@ export function NotificationSettings() {
       ? timezoneOptions.filter((opt) => opt.searchable.includes(search))
       : timezoneOptions;
 
-    // Separate top 100
     const topResults = results.slice(0, 100);
-
-    // If current selection is NOT in top results but IS in the overall matching results, add it
     const isSelectedInTop = topResults.some((opt) => opt.id === currentTz);
 
     if (!isSelectedInTop) {
       const selectedOpt = results.find((opt) => opt.id === currentTz);
       if (selectedOpt) {
-        // Add current selection to the top of the list if searching, or keep batch small
         return [selectedOpt, ...topResults];
       }
     }
@@ -330,7 +325,7 @@ export function NotificationSettings() {
               onValueChange={(val) => {
                 trigger("toggle");
                 updateProfile.mutate({ timezone: val });
-                setTimezoneSearch(""); // Clear search on selection
+                setTimezoneSearch("");
               }}
             >
               <SelectTrigger className="w-full" aria-label="Select Timezone">
@@ -389,7 +384,6 @@ export function NotificationSettings() {
           </div>
 
           <div className="space-y-2">
-            {/* Morning Briefing */}
             <ScheduleToggle
               icon={Coffee}
               title="Morning Briefing"
@@ -398,7 +392,6 @@ export function NotificationSettings() {
               onChange={(c) => updateNotifySetting("morning_briefing", c)}
             />
 
-            {/* Evening Plan */}
             <ScheduleToggle
               icon={Moon}
               title="Evening Plan"
@@ -407,7 +400,6 @@ export function NotificationSettings() {
               onChange={(c) => updateNotifySetting("evening_plan", c)}
             />
 
-            {/* Smart Alerts */}
             <ScheduleToggle
               icon={Calendar}
               title="Due Date Alerts"

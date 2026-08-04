@@ -62,14 +62,12 @@ export function useUhabitsImport() {
         typeof window !== "undefined" &&
         localStorage.getItem("kanso_guest_mode") === "true";
 
-      // Best-effort capture for round-trip export; runs in the background and
-      // never blocks or fails the import (ADR 0006).
+      // Best-effort, backgrounded capture for round-trip export (ADR 0006).
       void persistImportSource(
         { source_app: "uhabits", file_name: file.name, raw: source },
         { isGuest },
       ).catch((err) => Sentry.captureException(err));
 
-      // Detect duplicate habits by name to avoid re-importing
       let habitsToImport = habits;
       let skippedCount = 0;
       let nextSortOrder = 0;
@@ -110,12 +108,11 @@ export function useUhabitsImport() {
         id: loadingToastId,
       });
 
-      // Build set of skipped temp IDs so their entries are also dropped
       const skippedTempIds = new Set(
         habits.filter((h) => !habitsToImport.includes(h)).map((h) => h.id),
       );
 
-      // Track tempId (from parseUhabitsFile) → actualId (from DB / mock store)
+      // tempId (from parseUhabitsFile) -> actualId (DB / mock store)
       const habitIdMap = new Map<string, string>();
 
       // Raw create avoids invalidating the habits query once per habit.
@@ -127,7 +124,6 @@ export function useUhabitsImport() {
         habitIdMap.set(habit.id, created.id);
       }
 
-      // Insert habit entries with remapped IDs
       if (entries.length > 0) {
         notify.loading(
           `Importing ${habits.length} habits and ${entries.length} history entries...`,
@@ -160,7 +156,6 @@ export function useUhabitsImport() {
         }
       }
 
-      // Refresh habits query
       await queryClient.invalidateQueries({ queryKey: ["habits"] });
 
       const skippedMsg =
@@ -172,8 +167,7 @@ export function useUhabitsImport() {
       trigger("success");
       return true;
     } catch (err) {
-      // Parsing already succeeded here, so this is a save failure on our
-      // side — never blame the user's file for it.
+      // Parsing already succeeded, so this is a save failure, not a bad file.
       return reportImportFailure(err, SAVE_ERROR_MESSAGE);
     } finally {
       setIsImporting(false);

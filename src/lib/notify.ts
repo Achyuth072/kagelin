@@ -1,11 +1,6 @@
 import { toast } from "sonner";
 import type { ReactNode } from "react";
 
-/**
- * The only module (besides toaster.tsx) allowed to import from "sonner" —
- * see docs/adr/0008-toasts-behind-owned-notify-interface.md.
- */
-
 interface NotifyAction {
   label: string;
   onClick: () => void | Promise<void>;

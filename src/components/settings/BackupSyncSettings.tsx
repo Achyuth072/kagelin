@@ -73,7 +73,6 @@ function CloudSyncCard({
 }: CloudSyncCardProps) {
   return (
     <TabsContent value="cloud" className="mt-0 outline-none">
-      {/* WebDAV Sync Section */}
       <Card className="border-border/50 shadow-none bg-background/50">
         <CardHeader className="pb-3 px-4 pt-5">
           <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
@@ -234,14 +233,12 @@ export function BackupSyncSettings() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Export/Import state
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [showExternalImport, setShowExternalImport] = useState(false);
 
-  // WebDAV state — kept in memory only, cleared on reload. Not persisted to
-  // localStorage, which used to store server URL + username + password in
-  // plaintext (same pattern the CalDAV flow used to have).
+  // In-memory only — never persisted, unlike the old CalDAV flow's plaintext
+  // localStorage credentials.
   const [webdavCredentials, setWebdavCredentials] = useState<WebDAVCredentials>(
     { serverUrl: "", username: "", password: "" },
   );
@@ -251,8 +248,7 @@ export function BackupSyncSettings() {
   >("idle");
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // WebDAV sync is a registered-user feature; guests keep credential-free
-  // ZIP export/import only.
+  // Registered-user feature; guests get credential-free ZIP export/import only.
   const showCloudSync = !isGuestMode;
 
   const invalidateGuestDataQueries = async () => {
@@ -271,8 +267,6 @@ export function BackupSyncSettings() {
       queryClient.invalidateQueries({ queryKey: ["heatmap-data"] }),
     ]);
   };
-
-  // --- Export/Import Functions ---
 
   const handleExport = async () => {
     trigger("toggle");
@@ -302,7 +296,6 @@ export function BackupSyncSettings() {
       const blob = await createBackupZip(backupData);
       downloadBackup(blob);
 
-      // Update last backup date for weekly prompt
       localStorage.setItem("kanso_last_backup_date", new Date().toISOString());
 
       notify.success("Backup downloaded successfully");
@@ -340,15 +333,12 @@ export function BackupSyncSettings() {
     try {
       const backupData = await parseBackupZip(file);
 
-      // Replace the guest snapshot in one write so large restores do not
-      // repeatedly stringify an ever-growing payload.
+      // Single write so large restores don't repeatedly stringify a growing payload.
       mockStore.restoreBackup(backupData);
       useLocationHistoryStore.setState({
         locations: backupData.location_history ?? [],
       });
 
-      // Mark guest-data queries stale so all visible screens refresh from the
-      // updated local snapshot without a full page reload.
       await invalidateGuestDataQueries();
 
       notify.success(
@@ -369,8 +359,6 @@ export function BackupSyncSettings() {
       }
     }
   };
-
-  // --- WebDAV Functions ---
 
   const resetCredentials = () => {
     trigger("toggle");
@@ -479,7 +467,6 @@ export function BackupSyncSettings() {
       const result = await downloadWebDavBackup(webdavCredentials);
 
       if (result.success && result.data) {
-        // Apply the downloaded snapshot atomically.
         mockStore.restoreBackup(result.data);
         useLocationHistoryStore.setState({
           locations: result.data.location_history ?? [],
@@ -503,7 +490,6 @@ export function BackupSyncSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -541,7 +527,6 @@ export function BackupSyncSettings() {
         </TabsList>
 
         <TabsContent value="local" className="mt-0 outline-none">
-          {/* Local Backup Section */}
           <Card className="border-border/50 shadow-none bg-background/50">
             <CardHeader className="pb-3 px-4 pt-5">
               <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">

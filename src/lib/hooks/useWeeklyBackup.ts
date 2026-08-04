@@ -3,7 +3,6 @@
 import { useEffect, useCallback, useRef, useMemo } from "react";
 import { notify } from "@/lib/notify";
 import { useAuth } from "@/components/AuthProvider";
-// Performance: Moved backup utilities to dynamic imports to prevent bundle bloat in AppShell (PERF-02)
 import { mockStore } from "@/lib/mock/mock-store";
 import type { BackupData } from "@/lib/backup/types";
 
@@ -11,20 +10,16 @@ const STORAGE_KEY = "kanso_last_backup_date";
 const SESSION_KEY = "kanso_backup_prompted";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
-/**
- * Hook that prompts guest users to back up their data weekly.
- * Per RESEARCH.md: Use subtle, dismissible toast (not modal) to avoid "Kagelin" violation.
- */
+/** Prompts guest users to back up weekly via a dismissible toast, not a modal. */
 export function useWeeklyBackup() {
   const { isGuestMode } = useAuth();
   const hasPrompted = useRef(false);
 
-  // Memoize lastBackupDate to prevent creating new Date object on every render
   const lastBackupDate = useMemo(() => {
     if (typeof window === "undefined") return null;
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? new Date(stored) : null;
-  }, []); // Empty deps - only compute once on mount
+  }, []);
 
   const updateLastBackupDate = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -34,7 +29,6 @@ export function useWeeklyBackup() {
 
   const triggerBackup = useCallback(async () => {
     try {
-      // Gather all guest data from mockStore
       const backupData: BackupData = {
         metadata: {
           version: 1,
@@ -54,7 +48,6 @@ export function useWeeklyBackup() {
       const blob = await createBackupZip(backupData);
       downloadBackup(blob);
 
-      // Update last backup date
       updateLastBackupDate();
 
       notify.success("Backup downloaded successfully");
@@ -65,10 +58,7 @@ export function useWeeklyBackup() {
   }, [updateLastBackupDate]);
 
   useEffect(() => {
-    // Only for guest mode
     if (!isGuestMode) return;
-
-    // Only run once per session
     if (hasPrompted.current) return;
     if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_KEY))
       return;
@@ -77,10 +67,10 @@ export function useWeeklyBackup() {
       !lastBackupDate || Date.now() - lastBackupDate.getTime() > SEVEN_DAYS_MS;
 
     if (isStale) {
-      // Delay slightly to not interrupt initial page load
+      // Delay so this doesn't interrupt initial page load.
       const timeoutId = setTimeout(() => {
-        // Only set flags AFTER we actually show the toast
-        // This prevents React Strict Mode from skipping the toast
+        // Set flags only after the toast actually shows, so Strict Mode's
+        // double-invoke doesn't skip it.
         hasPrompted.current = true;
         if (typeof window !== "undefined") {
           sessionStorage.setItem(SESSION_KEY, "true");

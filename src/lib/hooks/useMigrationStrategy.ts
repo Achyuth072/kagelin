@@ -113,7 +113,6 @@ export function useMigrationStrategy() {
 
       // 2. Migrate Habits
       if (guestData.habits && guestData.habits.length > 0) {
-        // Check for existing habits
         const { data: existingHabits } = await supabase
           .from("habits")
           .select("id, name")
@@ -168,7 +167,6 @@ export function useMigrationStrategy() {
           updated_at: t.updated_at,
         }));
 
-        // Batch insert
         const { data: newTasks, error } = await supabase
           .from("tasks")
           .insert(tasksToInsert)
@@ -246,7 +244,6 @@ export function useMigrationStrategy() {
         if (error) throw error;
       }
 
-      // SUCCESS: Clear Guest Data
       localStorage.removeItem("kanso_guest_mode");
       localStorage.removeItem("kanso_guest_data_v7");
       document.cookie = "kanso_guest_mode=; path=/; max-age=0";
@@ -255,7 +252,6 @@ export function useMigrationStrategy() {
         "Synchronization complete! Your data is safe in the cloud.",
       );
 
-      // Reload to refresh all application state with real data
       window.location.reload();
     } catch (err: unknown) {
       console.error("Migration fatal error:", err);

@@ -1,14 +1,8 @@
 "use client";
 
-/**
- * Connect Calendar Dialog
- * Supports: Google OAuth, Outlook OAuth
- *
- * C-2: the CalDAV connect flow was removed pre-beta — it was a facade
- * (nothing persisted server-side) and it wrote credentials to localStorage
- * in plaintext. See git history to revive it; the legacy-credential purge
- * lives in `src/lib/storage-cleanup.ts`.
- */
+// The CalDAV connect flow was removed pre-beta, it was a facade
+// (nothing persisted server-side) and it wrote credentials to localStorage
+// in plaintext. The legacy-credential purge lives in `src/lib/storage-cleanup.ts`.
 
 import React, { useState, useCallback } from "react";
 import {
@@ -75,7 +69,6 @@ export function ConnectCalendarDialog({
   const [selectedProvider, setSelectedProvider] =
     useState<CalendarProvider | null>(null);
 
-  // Calendar picker (OAuth providers)
   const [pickerCalendars, setPickerCalendars] = useState<DiscoveredCalendar[]>(
     [],
   );
@@ -159,8 +152,6 @@ export function ConnectCalendarDialog({
     }
   };
 
-  // Resume after OAuth redirect: /calendar?connected=:provider → open the dialog
-  // straight at the calendar picker so there's no "did it connect?" gap.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -169,7 +160,6 @@ export function ConnectCalendarDialog({
       return;
 
     notify.success(`${capitalize(connected)} Calendar connected`);
-    // Refresh the connected-providers list so the "Connected" section is ready
     queryClient.invalidateQueries({
       queryKey: ["calendar-connected-providers"],
     });
@@ -187,7 +177,6 @@ export function ConnectCalendarDialog({
   };
 
   const handleProviderSelect = (provider: CalendarProvider) => {
-    // Google / Outlook — redirect to server-side OAuth initiation
     window.location.href = `/api/calendar/connect/${provider}`;
   };
 
