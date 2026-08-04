@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 
 // Mock dependencies
-vi.mock("sonner", () => ({
-  toast: vi.fn(),
+vi.mock("@/lib/notify", () => ({
+  notify: vi.fn(),
 }));
 
 vi.mock("@/lib/backup/export-import", () => ({
@@ -47,7 +47,7 @@ describe("useWeeklyBackup", () => {
 
     // Dynamic import to ensure mocks are applied
     const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
-    const { toast } = await import("sonner");
+    const { notify } = await import("@/lib/notify");
 
     renderHook(() => useWeeklyBackup());
 
@@ -56,7 +56,7 @@ describe("useWeeklyBackup", () => {
       vi.advanceTimersByTime(4000);
     });
 
-    expect(toast).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
   });
 
   it("shows toast if backup is older than 7 days", async () => {
@@ -64,7 +64,7 @@ describe("useWeeklyBackup", () => {
     localStorage.setItem(STORAGE_KEY, oldDate.toISOString());
 
     const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
-    const { toast } = await import("sonner");
+    const { notify } = await import("@/lib/notify");
 
     renderHook(() => useWeeklyBackup());
 
@@ -73,10 +73,9 @@ describe("useWeeklyBackup", () => {
       vi.advanceTimersByTime(4000);
     });
 
-    expect(toast).toHaveBeenCalledWith(
-      "It's been a while since your last backup",
+    expect(notify).toHaveBeenCalledWith(
+      "It's been a while since your last backup — back up now to prevent loss",
       expect.objectContaining({
-        description: "Back up your data to prevent loss",
         action: expect.objectContaining({
           label: "Back Up Now",
         }),
@@ -90,7 +89,7 @@ describe("useWeeklyBackup", () => {
     sessionStorage.setItem(SESSION_KEY, "true");
 
     const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
-    const { toast } = await import("sonner");
+    const { notify } = await import("@/lib/notify");
 
     renderHook(() => useWeeklyBackup());
 
@@ -98,7 +97,7 @@ describe("useWeeklyBackup", () => {
       vi.advanceTimersByTime(4000);
     });
 
-    expect(toast).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
   });
 });
 

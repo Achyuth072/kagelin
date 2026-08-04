@@ -6,10 +6,10 @@ import { DEFAULT_TIMER_SETTINGS } from "@/lib/types/timer";
 
 // ===== Hoisted mocks =====
 
-const { mockLogSession, mockUpsertTimerState, toastMock } = vi.hoisted(() => ({
+const { mockLogSession, mockUpsertTimerState, notifyMock } = vi.hoisted(() => ({
   mockLogSession: vi.fn(),
   mockUpsertTimerState: vi.fn(),
-  toastMock: vi.fn(),
+  notifyMock: vi.fn(),
 }));
 
 vi.mock("@/lib/mutations/focus", () => ({
@@ -71,8 +71,8 @@ vi.mock("@/lib/hooks/usePushNotifications", () => ({
   usePushNotifications: vi.fn(() => ({ showNotification: vi.fn() })),
 }));
 
-vi.mock("sonner", () => ({
-  toast: toastMock,
+vi.mock("@/lib/notify", () => ({
+  notify: notifyMock,
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({

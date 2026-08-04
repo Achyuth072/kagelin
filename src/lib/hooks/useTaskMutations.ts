@@ -201,8 +201,8 @@ export function useDeleteTask() {
     mutationKey: ["deleteTask"],
     mutationFn: taskMutations.delete,
     onMutate: async (id) => {
-      // Import toast dynamically to avoid SSR issues
-      const { toast } = await import("sonner");
+      // Import notify dynamically to avoid SSR issues
+      const { notify } = await import("@/lib/notify");
 
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
 
@@ -237,8 +237,7 @@ export function useDeleteTask() {
         // Success Haptic (Double Tick)
         trigger("success");
 
-        toast("Task deleted", {
-          description: deletedTask.content,
+        notify("Task deleted", {
           duration: 5000,
           action: {
             label: "Undo",
@@ -248,7 +247,7 @@ export function useDeleteTask() {
                 mockStore.addTask(taskToRestore);
                 queryClient.invalidateQueries({ queryKey: ["tasks"] });
                 trigger("success");
-                toast("Task restored");
+                notify("Task restored");
                 return;
               }
 
@@ -278,12 +277,12 @@ export function useDeleteTask() {
                 // Error Haptic (Strong Pulse)
                 trigger("thud");
 
-                toast.error("Failed to restore task");
+                notify.error("Failed to restore task");
               } else {
                 // Success Haptic (Double Tick)
                 trigger("success");
 
-                toast("Task restored");
+                notify("Task restored");
               }
               // Always invalidate to sync with database
               queryClient.invalidateQueries({ queryKey: ["tasks"] });

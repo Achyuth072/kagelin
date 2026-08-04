@@ -55,13 +55,13 @@ vi.mock("@/lib/hooks/usePushNotifications", () => ({
   usePushNotifications: vi.fn(() => ({ showNotification: vi.fn() })),
 }));
 
-// Use vi.hoisted() so toastMock is available in vi.mock factory
-const { toastMock } = vi.hoisted(() => ({
-  toastMock: vi.fn(),
+// Use vi.hoisted() so notifyMock is available in vi.mock factory
+const { notifyMock } = vi.hoisted(() => ({
+  notifyMock: vi.fn(),
 }));
 
-vi.mock("sonner", () => ({
-  toast: toastMock,
+vi.mock("@/lib/notify", () => ({
+  notify: notifyMock,
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -142,7 +142,7 @@ describe("useFocusTimer - Reconciliation", () => {
 
     // Then: 25 mins = 1500s. 30s elapsed should leave 1470s. No toast.
     expect(result.current.state.remainingSeconds).toBe(1470);
-    expect(toastMock).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
   });
 
   it("should trigger completion and show toast exactly once when session ended while away", async () => {
@@ -168,8 +168,8 @@ describe("useFocusTimer - Reconciliation", () => {
     await act(async () => {});
 
     // Then: Reconciliation should run on mount, showing exactly 1 toast
-    expect(toastMock).toHaveBeenCalledTimes(1);
-    expect(toastMock).toHaveBeenCalledWith(
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock).toHaveBeenCalledWith(
       expect.stringContaining("session completed"),
       expect.anything(),
     );
@@ -197,7 +197,7 @@ describe("useFocusTimer - Reconciliation", () => {
     vi.setSystemTime(baseTime);
     renderHook(() => useFocusTimer());
 
-    const callCountAfterMount = toastMock.mock.calls.length;
+    const callCountAfterMount = notifyMock.mock.calls.length;
 
     // When: Simulate a second visibilitychange event
     act(() => {
@@ -205,7 +205,7 @@ describe("useFocusTimer - Reconciliation", () => {
     });
 
     // Then: Toast count should remain the same (no duplicate)
-    expect(toastMock).toHaveBeenCalledTimes(callCountAfterMount);
+    expect(notifyMock).toHaveBeenCalledTimes(callCountAfterMount);
   });
 
   it("should show toast on mount when session expired while app was closed", async () => {
@@ -232,8 +232,8 @@ describe("useFocusTimer - Reconciliation", () => {
     await act(async () => {});
 
     // Then: Toast should appear exactly once
-    expect(toastMock).toHaveBeenCalled();
-    expect(toastMock).toHaveBeenCalledWith(
+    expect(notifyMock).toHaveBeenCalled();
+    expect(notifyMock).toHaveBeenCalledWith(
       expect.stringContaining("session completed"),
       expect.anything(),
     );

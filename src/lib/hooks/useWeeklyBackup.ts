@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useRef, useMemo } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { useAuth } from "@/components/AuthProvider";
 // Performance: Moved backup utilities to dynamic imports to prevent bundle bloat in AppShell (PERF-02)
 import { mockStore } from "@/lib/mock/mock-store";
@@ -57,10 +57,10 @@ export function useWeeklyBackup() {
       // Update last backup date
       updateLastBackupDate();
 
-      toast.success("Backup downloaded successfully");
+      notify.success("Backup downloaded successfully");
     } catch (error) {
       console.error("Backup failed:", error);
-      toast.error("Failed to create backup");
+      notify.error("Failed to create backup");
     }
   }, [updateLastBackupDate]);
 
@@ -86,16 +86,18 @@ export function useWeeklyBackup() {
           sessionStorage.setItem(SESSION_KEY, "true");
         }
 
-        toast("It's been a while since your last backup", {
-          description: "Back up your data to prevent loss",
-          duration: 10000,
-          action: {
-            label: "Back Up Now",
-            onClick: () => {
-              triggerBackup();
+        notify(
+          "It's been a while since your last backup — back up now to prevent loss",
+          {
+            duration: 10000,
+            action: {
+              label: "Back Up Now",
+              onClick: () => {
+                triggerBackup();
+              },
             },
           },
-        });
+        );
       }, 3000);
 
       return () => clearTimeout(timeoutId);
