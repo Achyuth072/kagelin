@@ -63,6 +63,8 @@
   --ease-spring-s: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-spring-m: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring-bouncy: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* JS spring animations (e.g. Framer Motion) should match: mass:1, stiffness:280, damping:60 */
 }
 
 @keyframes accordion-down {
