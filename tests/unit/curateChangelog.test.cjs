@@ -1,17 +1,7 @@
 const {
-  buildCurationPrompt,
   parseCuratedSections,
   resolveChoice,
 } = require("../../scripts/curate-changelog.cjs");
-
-describe("buildCurationPrompt", () => {
-  it("embeds the raw sections as JSON in the prompt", () => {
-    const sections = { Added: ["Add x"], Fixed: ["Fix y"] };
-    const prompt = buildCurationPrompt(sections);
-    expect(prompt).toContain(JSON.stringify(sections, null, 2));
-    expect(prompt).toContain("ONLY valid JSON");
-  });
-});
 
 describe("parseCuratedSections", () => {
   it("parses and reorders valid curated JSON into Added/Improved/Fixed order", () => {
@@ -65,10 +55,8 @@ describe("resolveChoice", () => {
     expect(resolveChoice("Edit")).toBe("edit");
   });
 
-  it("defaults to antigravity for a/antigravity/empty/unrecognized input", () => {
-    expect(resolveChoice("a")).toBe("antigravity");
-    expect(resolveChoice("antigravity")).toBe("antigravity");
-    expect(resolveChoice("")).toBe("antigravity");
-    expect(resolveChoice("whatever")).toBe("antigravity");
+  it("defaults to raw for empty/unrecognized input", () => {
+    expect(resolveChoice("")).toBe("raw");
+    expect(resolveChoice("whatever")).toBe("raw");
   });
 });

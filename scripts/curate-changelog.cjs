@@ -1,27 +1,11 @@
 #!/usr/bin/env node
-// runCurationLoop needs a TTY, so release.cjs runs it and passes the
-// result here via CURATED_SECTIONS — release-it's after:bump hook has none.
+// TTY-only: release.cjs runs this and forwards results via CURATED_SECTIONS.
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const readline = require("readline");
 const { execFileSync } = require("child_process");
 const { SECTION_ORDER, orderSections } = require("./lib/commit-types.cjs");
-
-function buildCurationPrompt(sections) {
-  return [
-    "You are editing a product changelog. The bullets below were generated",
-    "one per commit, so several bullets often describe steps of the same",
-    "user-facing change. Consolidate bullets that describe the same change",
-    "into a single concise, user-facing line. Keep genuinely distinct",
-    "changes as separate bullets. Do not invent content, do not move a",
-    "bullet to a different section, do not drop a distinct change.",
-    "",
-    "Reply with ONLY valid JSON (no markdown fences, no commentary) in",
-    "this exact shape, omitting any section that ends up empty:",
-    JSON.stringify(sections, null, 2),
-  ].join("\n");
-}
 
 function isValidCuratedSections(candidate) {
   if (
@@ -54,26 +38,8 @@ function writeChangelogEntries(changelogFile, entries) {
 
 function resolveChoice(answer) {
   const normalized = answer.trim().toLowerCase();
-  if (normalized === "r" || normalized === "raw") return "raw";
   if (normalized === "e" || normalized === "edit") return "edit";
-  return "antigravity";
-}
-
-function curateWithAntigravity(sections) {
-  const raw = execFileSync(
-    "agy",
-    [
-      "-p",
-      buildCurationPrompt(sections),
-      "--model",
-      "gemini-3.6-flash",
-      "--effort",
-      "medium",
-      "--dangerously-skip-permissions",
-    ],
-    { encoding: "utf-8", timeout: 90_000, stdio: ["ignore", "pipe", "pipe"] },
-  );
-  return parseCuratedSections(raw);
+  return "raw";
 }
 
 function editSections(sections) {
@@ -94,7 +60,7 @@ async function runCurationLoop(initialSections) {
     input: process.stdin,
     output: process.stdout,
   });
-  // Async iterator, not rl.question(), so buffered input can't be dropped
+  // Async iterator, not rl.question(), so buffered input isn't dropped
   // between prompts.
   const lines = rl[Symbol.asyncIterator]();
 
@@ -102,9 +68,7 @@ async function runCurationLoop(initialSections) {
     for (;;) {
       console.log("\nChangelog bullets:");
       console.log(JSON.stringify(sections, null, 2));
-      process.stdout.write(
-        "[a] antigravity curate  [r] accept as-is  [e] edit (default a): ",
-      );
+      process.stdout.write("[r] accept as-is  [e] edit (default r): ");
 
       const { value: answer, done } = await lines.next();
       if (done) return sections;
@@ -113,19 +77,12 @@ async function runCurationLoop(initialSections) {
       if (choice === "raw") return sections;
 
       try {
-        sections =
-          choice === "edit"
-            ? editSections(sections)
-            : curateWithAntigravity(sections);
+        sections = editSections(sections);
       } catch (err) {
-        // Deliberate fallback, not a swallow: keep looping with the prior
-        // bullets so a transient `agy`/editor failure doesn't crash the
-        // whole release over a curation nicety. console.warn here reaches
-        // the person driving the terminal, which is the surface.
+        // Deliberate fallback: a transient editor failure shouldn't crash
+        // the release over a curation nicety.
         // eslint-disable-next-line no-restricted-syntax
-        console.warn(
-          `⚠ ${choice} failed (${err.message}) — bullets unchanged.`,
-        );
+        console.warn(`⚠ edit failed (${err.message}) — bullets unchanged.`);
       }
     }
   } finally {
@@ -134,7 +91,6 @@ async function runCurationLoop(initialSections) {
 }
 
 module.exports = {
-  buildCurationPrompt,
   parseCuratedSections,
   resolveChoice,
   runCurationLoop,
@@ -162,9 +118,8 @@ if (require.main === module) {
         writeChangelogEntries(changelogFile, entries);
         console.log(`✓ Applied curated changelog for v${version}`);
       } catch (err) {
-        // Deliberate fallback, not a swallow: this runs unattended from
-        // release-it's after:bump hook, so falling back to raw (uncurated)
-        // bullets beats aborting an entire release over a formatting nicety.
+        // Deliberate fallback: runs unattended from release-it's after:bump
+        // hook, so raw bullets beat aborting the release.
         // eslint-disable-next-line no-restricted-syntax
         console.warn(
           `⚠ Could not apply curated sections for v${version} (${err.message}) — keeping raw bullets.`,
