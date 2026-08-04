@@ -30,7 +30,7 @@ import { Vibrate } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useQueryClient } from "@tanstack/react-query";
 import { mockStore } from "@/lib/mock/mock-store";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
 import { BackupSyncSettings } from "@/components/settings/BackupSyncSettings";
@@ -101,7 +101,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
     queryClient.removeQueries({ queryKey: ["stats-dashboard"] });
     queryClient.removeQueries({ queryKey: ["calendar-events"] });
     queryClient.removeQueries({ queryKey: ["calendar-tasks"] });
-    toast.success("Demo data reset successfully");
+    notify.success("Demo data reset successfully");
   };
 
   const handleClearData = async () => {
@@ -117,7 +117,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
     queryClient.removeQueries({ queryKey: ["stats-dashboard"] });
     queryClient.removeQueries({ queryKey: ["calendar-events"] });
     queryClient.removeQueries({ queryKey: ["calendar-tasks"] });
-    toast.success("All data cleared");
+    notify.success("All data cleared");
   };
 
   const themeOptions = [
@@ -255,78 +255,88 @@ export function SettingsClient({ version }: SettingsClientProps) {
             )}
 
             {activeTab === "preferences" && (
-              <section className="space-y-4">
-                <div>
-                  <h2 className="type-micro font-medium uppercase">
-                    Preferences
-                  </h2>
-                </div>
+              <>
+                <section className="space-y-4">
+                  <div>
+                    <h2 className="type-micro font-medium uppercase">
+                      Preferences
+                    </h2>
+                  </div>
 
-                <div className="space-y-3">
-                  {!isDesktop && (
-                    <div className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-background">
+                  <div className="space-y-3">
+                    {!isDesktop && (
+                      <div className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-background">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-full bg-secondary/30">
+                            <Vibrate className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              Haptic Feedback
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Vibrate on interactions
+                            </p>
+                          </div>
+                        </div>
+                        <Switch
+                          checked={hapticsEnabled}
+                          onCheckedChange={setHapticsEnabled}
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-background">
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-full bg-secondary/30">
-                          <Vibrate className="h-4 w-4 text-muted-foreground" />
+                          <Clock className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium">Haptic Feedback</p>
+                          <p className="text-sm font-medium">Time Format</p>
                           <p className="text-xs text-muted-foreground">
-                            Vibrate on interactions
+                            Choose how times are displayed
                           </p>
                         </div>
                       </div>
-                      <Switch
-                        checked={hapticsEnabled}
-                        onCheckedChange={setHapticsEnabled}
-                      />
+                      <Tabs
+                        value={timeFormat}
+                        onValueChange={(v) => {
+                          trigger("toggle");
+                          setTimeFormat(v as "12h" | "24h" | "system");
+                        }}
+                        className="w-full"
+                      >
+                        <TabsList className="grid grid-cols-3 bg-secondary/10 p-1 rounded-lg h-10 border border-border/40 shadow-none">
+                          <TabsTrigger
+                            value="12h"
+                            className="rounded-md text-[13px] font-medium data-[state=active]:bg-brand data-[state=active]:text-brand-foreground transition-seijaku-fast"
+                          >
+                            12-hour
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="24h"
+                            className="rounded-md text-[13px] font-medium data-[state=active]:bg-brand data-[state=active]:text-brand-foreground transition-seijaku-fast"
+                          >
+                            24-hour
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="system"
+                            className="rounded-md text-[13px] font-medium data-[state=active]:bg-brand data-[state=active]:text-brand-foreground transition-seijaku-fast"
+                          >
+                            System
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
                     </div>
-                  )}
 
-                  <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-background">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-full bg-secondary/30">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Time Format</p>
-                        <p className="text-xs text-muted-foreground">
-                          Choose how times are displayed
-                        </p>
-                      </div>
-                    </div>
-                    <Tabs
-                      value={timeFormat}
-                      onValueChange={(v) => {
-                        trigger("toggle");
-                        setTimeFormat(v as "12h" | "24h" | "system");
-                      }}
-                      className="w-full"
-                    >
-                      <TabsList className="grid grid-cols-3 bg-secondary/10 p-1 rounded-lg h-10 border border-border/40 shadow-none">
-                        <TabsTrigger
-                          value="12h"
-                          className="rounded-md text-[13px] font-medium data-[state=active]:bg-brand data-[state=active]:text-brand-foreground transition-seijaku-fast"
-                        >
-                          12-hour
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="24h"
-                          className="rounded-md text-[13px] font-medium data-[state=active]:bg-brand data-[state=active]:text-brand-foreground transition-seijaku-fast"
-                        >
-                          24-hour
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="system"
-                          className="rounded-md text-[13px] font-medium data-[state=active]:bg-brand data-[state=active]:text-brand-foreground transition-seijaku-fast"
-                        >
-                          System
-                        </TabsTrigger>
-                      </TabsList>
-                    </Tabs>
+                    <NotificationSettings />
                   </div>
+                </section>
 
-                  <NotificationSettings />
+                <section className="space-y-4">
+                  <div>
+                    <h2 className="type-micro font-medium uppercase">Goals</h2>
+                  </div>
 
                   <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-background">
                     <div className="flex items-center gap-3 pb-1">
@@ -363,8 +373,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
                       onCommit={(v) => setGoals({ weeklyTasksCompleted: v })}
                     />
                   </div>
-                </div>
-              </section>
+                </section>
+              </>
             )}
 
             {isGuestMode && activeTab === "account" && (

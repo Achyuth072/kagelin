@@ -26,7 +26,7 @@ import { useCreateCalendarEvent } from "@/lib/hooks/useCalendarEventMutations";
 import { parseICSFile } from "@/lib/utils/ics-parser";
 import { downloadICS } from "@/lib/utils/ics-generator";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 interface ImportExportMenuProps {
   events: CalendarEventUI[];
@@ -44,25 +44,25 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
   const handleSync = async () => {
     trigger("toggle");
     setIsSyncing(true);
-    const toastId = toast.loading("Syncing calendar…");
+    const toastId = notify.loading("Syncing calendar…");
     try {
       const summary = await runCalendarSync();
       if (summary.configured === 0) {
-        toast.info("No calendars configured yet. Connect a calendar first.", {
+        notify.info("No calendars configured yet. Connect a calendar first.", {
           id: toastId,
         });
       } else if (summary.errors.length) {
-        toast.error(`Sync completed with errors: ${summary.errors[0]}`, {
+        notify.error(`Sync completed with errors: ${summary.errors[0]}`, {
           id: toastId,
         });
       } else {
-        toast.success(formatSyncSummary(summary), { id: toastId });
+        notify.success(formatSyncSummary(summary), { id: toastId });
         trigger("success");
       }
       // Refetch so pulled/pushed changes appear without a manual reload
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     } catch {
-      toast.error("Sync failed", { id: toastId });
+      notify.error("Sync failed", { id: toastId });
     } finally {
       setIsSyncing(false);
     }
@@ -72,11 +72,11 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
     trigger("thud");
     try {
       downloadICS(events);
-      toast.success("Calendar exported to .ics");
+      notify.success("Calendar exported to .ics");
       trigger("success");
     } catch (err) {
       console.error("Export failed:", err);
-      toast.error("Failed to export calendar");
+      notify.error("Failed to export calendar");
       trigger("thud");
     }
   };
@@ -93,19 +93,19 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
     setIsImporting(true);
     trigger("toggle");
 
-    const loadingToastId = toast.loading(`Importing ${file.name}...`);
+    const loadingToastId = notify.loading(`Importing ${file.name}...`);
 
     try {
       const { events: parsedEvents, errors } = await parseICSFile(file);
 
       if (parsedEvents.length === 0 && errors.length > 0) {
-        toast.error("Failed to parse ICS file", { id: loadingToastId });
+        notify.error("Failed to parse ICS file", { id: loadingToastId });
         trigger("thud");
         return;
       }
 
       if (parsedEvents.length === 0) {
-        toast.error("No valid events found in file", { id: loadingToastId });
+        notify.error("No valid events found in file", { id: loadingToastId });
         trigger("thud");
         return;
       }
@@ -121,17 +121,17 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
         }
       }
 
-      toast.success(`Successfully imported ${importedCount} events`, {
+      notify.success(`Successfully imported ${importedCount} events`, {
         id: loadingToastId,
       });
       trigger("success");
 
       if (errors.length > 0) {
-        toast.warning(`${errors.length} events had parsing warnings.`);
+        notify.warning(`${errors.length} events had parsing warnings.`);
       }
     } catch (err) {
       console.error("Failed to import ICS:", err);
-      toast.error("Critical error during import", { id: loadingToastId });
+      notify.error("Critical error during import", { id: loadingToastId });
       trigger("thud");
     } finally {
       setIsImporting(false);

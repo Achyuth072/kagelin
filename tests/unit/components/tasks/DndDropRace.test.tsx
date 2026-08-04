@@ -131,10 +131,6 @@ vi.mock("@/components/tasks/TaskListView", () => ({
   },
 }));
 
-vi.mock("@/components/tasks/TaskMasonryGrid", () => ({
-  TaskMasonryGrid: () => <div data-testid="task-grid-view" />,
-}));
-
 vi.mock("@/components/tasks/TaskBoard", () => ({
   TaskBoard: () => <div data-testid="task-board-view" />,
 }));
@@ -257,6 +253,10 @@ describe("TaskList drop race condition (residual snap-back)", () => {
         setHapticsEnabled: vi.fn(),
         notificationsEnabled: false,
         setNotificationsEnabled: vi.fn(),
+        backupReminderEnabled: true,
+        setBackupReminderEnabled: vi.fn(),
+        backupReminderFrequencyDays: 7,
+        setBackupReminderFrequencyDays: vi.fn(),
         isShortcutsHelpOpen: false,
         setShortcutsHelpOpen: vi.fn(),
         isPipActive: false,

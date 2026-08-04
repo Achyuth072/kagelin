@@ -54,26 +54,18 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTaskViewData } from "@/lib/hooks/useTaskViewData";
 import { TaskListView } from "./TaskListView";
-import { TaskMasonryGrid } from "./TaskMasonryGrid";
 import { TaskBoard } from "./TaskBoard";
 import { TaskGhost } from "./TaskGhost";
 import { useTimerStore } from "@/lib/store/timerStore";
 
-// dnd-kit's built-in Accessibility component calls announce() on every
-// onDragOver by default, thrashing the aria-live region and React's
-// transition queue at drag-over frequency (60-120Hz). Suppressing the
-// per-tick announcement (returning undefined = no-op, see
-// @dnd-kit/accessibility's useAnnouncement) while keeping start/end/cancel
-// matches how Trello-style UIs announce (pick-up and drop only). Defined
-// outside the component so the object identity is stable across renders.
+// dnd-kit announces on every onDragOver by default, thrashing aria-live at
+// drag-over frequency — no-op it and keep only start/end/cancel announcements.
 const dndAnnouncements = {
   ...defaultAnnouncements,
   onDragOver: () => undefined,
 };
 
-// Pure w.r.t. its argument (no component state), so hoisted to module scope
-// for a permanently stable reference — dnd-kit calls this on every
-// auto-scroll tick while a drag is active.
+// Pure and hoisted to module scope — dnd-kit calls this every auto-scroll tick during a drag.
 function canScrollTaskListContainer(element: Element): boolean {
   if (!(element instanceof HTMLElement)) {
     return false;
@@ -107,12 +99,11 @@ function TaskListBase({
   const { data: projectsData } = useProjects();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  // Snapshot of the dragged task, captured once at drag start and fed to the
-  // DragOverlay ghost. Deriving it from local state on every render would
-  // re-run flatMap + find over every task on each drag-over update.
+  // Snapshotted at drag start for the ghost — deriving it per render would
+  // flatMap+find over every task on each drag-over.
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  // Keeps displaying local DnD state after activeId clears, until the
-  // reorder mutation's onSettled fires and the optimistic cache update is live.
+  // Holds local drag state after activeId clears, until the optimistic
+  // cache update lands.
   const [lockLocal, setLockLocal] = useState(false);
   const [keyboardSelectedId, setKeyboardSelectedId] = useState<string | null>(
     null,
@@ -138,7 +129,6 @@ function TaskListBase({
   const { trigger: triggerHaptic } = useHaptic();
   const setActiveTaskId = useTimerStore((state) => state.setActiveTaskId);
 
-  // --- Optimization: Stabilize Sensors ---
   const mouseSensor = useSensor(MouseSensor, {
     // If we're on mobile (!isDesktop), we enforce a delay even for mouse pointers
     // to match TouchSensor behavior and prevent DevTools swipes from clashing.
@@ -155,7 +145,6 @@ function TaskListBase({
 
   const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
 
-  // Pre-calculate project map for O(1) lookups in subcomponents
   const projectsMap = useMemo(() => {
     const map = new Map<string, Project>();
     if (projectsData) {
@@ -194,43 +183,21 @@ function TaskListBase({
     [projectsMap, groupBy],
   );
 
-  // Flat task list captured at drag start, fed to computeReorderPairs in
-  // handleDragEnd. Custom sort: authoritative day_order order. Derived sorts:
-  // display order, which the drop bakes into the custom order (the drop
-  // switches sortBy to "custom", so what's on screen must be persisted).
+  // Fed to computeReorderPairs in handleDragEnd — a drop bakes the display
+  // order (derived sort) or day_order (custom sort) into the custom order.
   const preDragFlatTasksRef = useRef<Task[]>([]);
 
-  // Switching sortBy to "custom" from the sort menu only changes which field
-  // useTaskViewData reads for display; day_order still holds whatever the last
-  // drag (or creation order) left it at, unrelated to the derived sort the user
-  // was just looking at. Without this, the list visibly jumps to day_order
-  // order on switch. Freeze the order that was on screen UNDER THE PREVIOUS
-  // (derived) sort into day_order so the view stays put.
-  //
-  // Critically, we read `prevDisplayedFlatRef` — the flat display order captured
-  // on the render BEFORE the switch — NOT the current `processedTasks`, which
-  // the memo has ALREADY re-sorted by day_order on this very render (reading it
-  // would just re-freeze the jumped order, a no-op — the original bug).
-  //
-  // This is a LAYOUT effect that writes the frozen day_order into the query
-  // cache SYNCHRONOUSLY (before paint). A plain passive effect corrects the
-  // order only after the browser has already painted the jumped custom render,
-  // producing a visible rearrange-then-revert flash; running before paint makes
-  // the very first custom-sorted paint already reflect the pre-switch order.
-  // reorderMutation then persists the same values (guest path writes the mock
-  // store; onSettled reconciles with the server).
-  //
-  // Skipped when the switch came from a drag (TaskList's or TaskBoard's handler
-  // sets customSortEnteredViaDrag) since the drag path already bakes its own,
-  // more precise single-move order via computeReorderPairs.
+  // Freezes the pre-switch order into day_order when switching to custom sort,
+  // which is otherwise stale and visibly jumps. Reads prevDisplayedFlatRef
+  // rather than the already-resorted processedTasks, in useLayoutEffect so the
+  // first paint is correct. Drag-driven switches bake their own order.
   const prevSortByRef = useRef(sortBy);
   const prevDisplayedFlatRef = useRef<Task[]>([]);
   useLayoutEffect(() => {
     const prevSortBy = prevSortByRef.current;
     prevSortByRef.current = sortBy;
 
-    // Read the snapshot captured under the OLD sort, then refresh the ref to
-    // the current sort's order for the next transition.
+    // Read the snapshot from the old sort, then refresh it for next time.
     const prevDisplayed = prevDisplayedFlatRef.current;
     prevDisplayedFlatRef.current = processedTasks.groups
       ? processedTasks.groups.flatMap((g) => g.tasks)
@@ -264,11 +231,8 @@ function TaskListBase({
     setCustomSortEnteredViaDrag,
   ]);
 
-  // Open-bridge for global search: when a task is selected from the command
-  // menu, open its edit sheet here (the sheet lives on the tasks page). Clear
-  // the id only once the task is found and opened — when navigating in from
-  // another page the list is still loading on first run, so clearing early
-  // would drop the request before the data arrives.
+  // Opens the edit sheet for a task picked in the command menu. Clears the id
+  // only once found — the list may still be loading on first navigation.
   useEffect(() => {
     if (!selectedTaskId) return;
     const task = tasks.find((t) => t.id === selectedTaskId);
@@ -291,8 +255,7 @@ function TaskListBase({
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      // Initialize local DnD state only when drag starts
-      // This prevents expensive state syncing during every re-sort/re-group.
+      // Synced on drag start only — otherwise every re-sort/re-group pays.
       setLocalActive(processedTasks.active);
       setLocalEvening(processedTasks.evening);
       setLocalGroups(processedTasks.groups);
@@ -306,12 +269,8 @@ function TaskListBase({
             .find((t) => t.id === id) ||
           null,
       );
-      // Captured from processedTasks (what's actually rendered), not the raw
-      // `tasks` prop — the two can diverge (filtering, tied day_order values
-      // resolved differently), which corrupted the reorder math computed from
-      // this snapshot. In custom sort, group flattening can interleave
-      // cross-group day_order values, so re-sort to restore a single global
-      // order (mirrors TaskBoard.tsx's handleDragStart).
+      // From processedTasks, not raw `tasks` — filtering and tie-broken
+      // day_order make them diverge and corrupt the reorder math.
       const visibleTasks = processedTasks.groups
         ? processedTasks.groups.flatMap((g) => g.tasks)
         : [...processedTasks.active, ...processedTasks.evening];
@@ -336,7 +295,6 @@ function TaskListBase({
       if (!activeContainer || !overContainer) return;
 
       if (localGroups && localGroups.length > 0) {
-        // --- Moving with Groups Active ---
         const activeGroupIndex = localGroups.findIndex(
           (g: TaskGroup) =>
             g.title === activeContainer ||
@@ -351,12 +309,10 @@ function TaskListBase({
         if (activeGroupIndex === -1 || overGroupIndex === -1) return;
 
         if (activeGroupIndex === overGroupIndex) {
-          // Reorder within same group
           const group = localGroups[activeGroupIndex];
           const oldIndex = group.tasks.findIndex((t) => t.id === active.id);
 
-          // dnd-kit's sortable index reflects DOM state; findIndex on React
-          // state can be off-by-one during rapid drag-over events.
+          // findIndex on React state can be off-by-one during rapid drag-over.
           let newIndex = over.data.current?.sortable?.index;
           if (newIndex === undefined) {
             newIndex = group.tasks.findIndex((t) => t.id === over.id);
@@ -369,7 +325,6 @@ function TaskListBase({
             setLocalGroups(newGroups);
           }
         } else {
-          // Move between groups
           // Derived buckets like "Overdue" have no settable property — the
           // drop could never stick, so don't let the drag enter the group.
           if (isDropBlockedGroup(localGroups[overGroupIndex].title, groupBy)) {
@@ -397,7 +352,6 @@ function TaskListBase({
               );
               newIndex = overIndex >= 0 ? overIndex : targetGroup.tasks.length;
             } else {
-              // Ensure index is valid, clamped to array bounds
               if (newIndex < 0) newIndex = targetGroup.tasks.length;
             }
 
@@ -409,9 +363,7 @@ function TaskListBase({
           });
         }
       } else {
-        // --- Standard Active/Evening Moving ---
         if (activeContainer === overContainer) {
-          // Moving within the same list
           const isEvening = activeContainer === "evening-section";
           const list = isEvening ? localEvening : localActive;
           const setList = isEvening ? setLocalEvening : setLocalActive;
@@ -427,7 +379,6 @@ function TaskListBase({
             setList(arrayMove(list, oldIndex, newIndex));
           }
         } else {
-          // Moving between lists (Active <-> Evening)
           const activeIsEvening = activeContainer === "evening-section";
           const overIsEvening = overContainer === "evening-section";
 
@@ -471,11 +422,8 @@ function TaskListBase({
     (event: DragEndEvent) => {
       const { active, over } = event;
 
-      // Dropped outside any droppable — reset and exit.
-      // setLockLocal(false) is set BEFORE setActiveId(null) so there is no
-      // intermediate render where activeId=null AND lockLocal=true with stale
-      // localActive (which would happen if order were reversed and a render
-      // slipped in between).
+      // Dropped outside any droppable — reset and exit. lockLocal(false) must
+      // precede setActiveId(null) to avoid a render with stale localActive.
       if (!over) {
         setLockLocal(false);
         setLocalActive(processedTasks.active);
@@ -491,8 +439,7 @@ function TaskListBase({
         const finalGroup = localGroups.find((g: TaskGroup) =>
           g.tasks.some((t: Task) => t.id === activeId),
         );
-        // Early-return BEFORE any state setters so we never leave the
-        // component in a half-committed state (activeId=null, lockLocal=false).
+        // Return before any setter, or we land half-committed.
         if (!finalGroup) {
           setActiveId(null);
           setActiveTask(null);
@@ -512,24 +459,14 @@ function TaskListBase({
         );
         const isSameSection = originalGroup?.title === finalGroup.title;
 
-        // CRITICAL ORDERING:
-        // setLockLocal(true) MUST be queued BEFORE setActiveId(null). React 18
-        // batches all state updates in this handler into a single render,
-        // BUT relying on that batching alone has been fragile in practice
-        // (likely due to dnd-kit's own useReducer dispatch in the same batch
-        // and React Compiler reordering effects). Queuing lockLocal first
-        // guarantees that even under any pathological partial-flush
-        // scenario, displayTasks never falls through to processedTasks.active
-        // (which lags behind localActive until React Query's async onMutate
-        // applies the optimistic cache update). See debug session
-        // dnd-residual-race-condition.md for the full analysis.
+        // Must precede setActiveId(null) — reversing it lets displayTasks fall
+        // through to stale server data. See dnd-residual-race-condition.md.
         setLockLocal(true);
         if (sortBy !== "custom") {
           setCustomSortEnteredViaDrag(true);
           setSortBy("custom");
         }
 
-        // 1. Commit property updates (cross-group only)
         const updates = getTaskUpdates(finalGroup.title);
         const originalTask = tasks.find((t: Task) => t.id === activeId);
 
@@ -541,11 +478,8 @@ function TaskListBase({
               (originalTask as unknown as Record<string, unknown>)[key],
           );
 
-        // Each mutation that fires increments pendingCount. lockLocal releases
-        // only when ALL pending mutations settle — prevents cross-group snap-back
-        // where reorderMutation settles before updateMutation: the reorder's
-        // invalidateQueries refetch would return the task with its old property
-        // (e.g. is_evening=false), causing it to briefly re-appear in the old group.
+        // Releases only once all mutations settle — otherwise reorder's refetch
+        // can beat update's and snap the task back.
         let pendingCount = 0;
         const tryReleaseLock = () => {
           pendingCount--;
@@ -563,15 +497,8 @@ function TaskListBase({
           );
         }
 
-        // 2. Commit the reorder. In custom sort day_order is authoritative, so
-        // model the drop as a single-task move (only the dragged span changes).
-        // But when this drop CONVERTS a derived/grouped view to custom, every
-        // other group's day_order is stale (derived order, not what's shown), so
-        // a single-move would leave them to re-sort and jump on the switch. Then
-        // freeze the ENTIRE post-drop visible order (localGroups already
-        // reflects the move) so untouched groups stay exactly as shown.
-        // Empty pairs mean no order change — skip.
-        // lockLocal released via tryReleaseLock once all mutations settle.
+        // Single-task move in custom sort; otherwise every other group's
+        // day_order is stale, so freeze the whole post-drop order.
         let pairs: { id: string; day_order: number }[];
         if (sortBy === "custom") {
           const orderedIds = finalGroup.tasks.map((t: Task) => t.id);
@@ -616,7 +543,6 @@ function TaskListBase({
           setSortBy("custom");
         }
 
-        // Check if it's now in evening vs active
         const isInEveningNow = localEvening.some(
           (t: Task) => t.id === active.id,
         );
@@ -646,10 +572,8 @@ function TaskListBase({
           );
         }
 
-        // Commit the reorder. Single-task move when already in custom sort;
-        // full freeze of the post-drop order when this drop converts a derived
-        // sort to custom (so the untouched section — e.g. evening — doesn't
-        // re-sort by its stale day_order and jump). Empty pairs — skip.
+        // Single-task move in custom sort; otherwise freeze the full order so
+        // untouched sections don't jump.
         triggerHaptic("thud");
         let pairs: { id: string; day_order: number }[];
         if (sortBy === "custom") {
@@ -814,18 +738,14 @@ function TaskListBase({
     <>
       <DndContext
         sensors={sensors}
-        // dnd-kit docs: for Kanban-style stacked droppables (a column + its
-        // items), rectIntersection can resolve to the whole column instead of
-        // an item within it — which dropped tasks at the bottom of sparse
-        // columns like Overdue. closestCorners is the documented choice.
+        // rectIntersection can resolve to the whole column instead of an item
+        // within it for stacked droppables — closestCorners avoids that.
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         accessibility={{ announcements: dndAnnouncements }}
-        // WhileDragging measures the same as Always during a drag; Always
-        // additionally re-measures on every droppable registry mutation while
-        // idle, which is pure overhead here and hurts cross-column drags.
+        // WhileDragging avoids Always's idle re-measure overhead, which hurts cross-column drags.
         measuring={{
           droppable: {
             strategy: MeasuringStrategy.WhileDragging,
@@ -846,16 +766,7 @@ function TaskListBase({
           className="flex-1 h-full overflow-y-auto scrollbar-hide relative overscroll-contain"
           style={{ contain: "strict" }}
         >
-          {viewMode === "grid" ? (
-            <TaskMasonryGrid
-              processedTasks={processedTasks}
-              projectsMap={projectsMap}
-              onSelect={handleTaskClick}
-              isDesktop={isDesktop}
-              triggerHaptic={triggerHaptic}
-              setActiveTaskId={setActiveTaskId}
-            />
-          ) : viewMode === "board" && isDesktop ? (
+          {viewMode === "board" ? (
             <TaskBoard
               processedTasks={processedTasks}
               projectsMap={projectsMap}
@@ -863,6 +774,9 @@ function TaskListBase({
               isDesktop={isDesktop}
               triggerHaptic={triggerHaptic}
               setActiveTaskId={setActiveTaskId}
+              // Omitting this drops getTaskUpdatesForGroup to its heuristic
+              // cascade, where a project named "Today" reads as a date.
+              groupBy={groupBy}
             />
           ) : (
             <TaskListView

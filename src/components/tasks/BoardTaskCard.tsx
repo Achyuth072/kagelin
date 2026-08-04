@@ -15,7 +15,6 @@ import { KanbanBoardCardButton } from "@/components/kanban";
 interface BoardTaskCardProps {
   task: Task;
   project: { color: string; name: string } | undefined;
-  _isDesktop: boolean;
   handleComplete: (checked: boolean) => void;
   handlePlayFocus: (e: React.MouseEvent) => void;
   onClick?: () => void;
@@ -27,7 +26,6 @@ interface BoardTaskCardProps {
 export function BoardTaskCard({
   task,
   project,
-  _isDesktop,
   handleComplete,
   handlePlayFocus,
   onClick,
@@ -40,7 +38,6 @@ export function BoardTaskCard({
       )}
       onClick={onClick}
     >
-      {/* Vertical Project Accent Bar */}
       {project && (
         <div
           className="absolute left-0 top-0 bottom-0 w-1"
@@ -49,7 +46,6 @@ export function BoardTaskCard({
       )}
 
       <div className="flex flex-col gap-2 w-full text-left p-3 pl-4">
-        {/* Header: Checkbox, Content */}
         <div className="flex items-start gap-2">
           <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
             <Checkbox
@@ -71,15 +67,10 @@ export function BoardTaskCard({
             </span>
           </p>
 
+          {/* CSS, not isDesktop — that defaults to true until AppShell's
+              effect runs, so on mobile the button flashed in. */}
           {!task.is_completed && (
-            <div
-              className={cn(
-                "flex items-center h-7 ml-auto gap-1 transition-opacity",
-                _isDesktop
-                  ? "opacity-0 group-hover/card:opacity-100"
-                  : "opacity-100",
-              )}
-            >
+            <div className="flex items-center h-7 ml-auto gap-1 transition-opacity opacity-100 md:opacity-0 md:group-hover/card:opacity-100">
               <KanbanBoardCardButton
                 onClick={handlePlayFocus}
                 className="h-7 w-7 text-muted-foreground/40 hover:text-brand-foreground hover:bg-brand hover:shadow-brand/10 border-none transition-seijaku"
@@ -91,7 +82,6 @@ export function BoardTaskCard({
           )}
         </div>
 
-        {/* Metadata Row: Always visible with icons */}
         <div className="flex items-center gap-2.5 flex-wrap ml-6">
           {task.due_date && (
             <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">

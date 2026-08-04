@@ -310,7 +310,7 @@ export function TaskView(props: TaskViewProps) {
         >
           <SelectTrigger
             onPointerDown={() => trigger("toggle")}
-            className="h-9 w-auto min-w-[130px] max-w-[200px] type-ui border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none focus:ring-0 transition-all rounded-lg text-foreground [&_svg]:opacity-100 [&_svg]:text-foreground px-3 shrink-0"
+            className="h-9 w-auto min-w-[130px] max-w-[200px] type-ui border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none transition-all rounded-lg text-foreground [&_svg]:opacity-100 [&_svg]:text-foreground px-3 shrink-0"
           >
             <SelectValue placeholder="Inbox" />
           </SelectTrigger>

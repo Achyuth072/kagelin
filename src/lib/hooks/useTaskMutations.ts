@@ -10,6 +10,7 @@ import { useAuth } from "@/components/AuthProvider";
 import type { Task, CreateTaskInput } from "@/lib/types/task";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { handleMutationError } from "@/lib/utils/mutation-error";
+import { notify } from "@/lib/notify";
 
 import { taskMutations } from "@/lib/mutations/task";
 import { mockStore } from "@/lib/mock/mock-store";
@@ -20,8 +21,7 @@ function invalidateTaskCaches(queryClient: QueryClient): void {
     queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
     queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] }),
     queryClient.invalidateQueries({ queryKey: ["focus-tasks"] }),
-    // Keep Task Insights (streaks, on-time %, History) fresh after a
-    // completion toggle — the panel reads occurrences via ["task-series", …].
+    // Task Insights panel reads occurrences via ["task-series", …].
     queryClient.invalidateQueries({ queryKey: ["task-series"] }),
   ]);
 }
@@ -35,13 +35,6 @@ export function useCreateTask() {
     mutationFn: taskMutations.create,
     onMutate: async (newTask) => {
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
-
-      // If guest mode, we don't need optimistic updates because mockStore is synchronous
-      // and fast, BUT keeping optimistic UI makes it feel same as prod.
-      // However, mockStore persists immediately so careful not to dupe.
-      // Actually, since mockStore is local, the mutationFn resolves instantly.
-      // We can keep optimistic update logic or skip it for guest.
-      // Skipping simplifies things, but let's keep it consistent.
 
       const previousTasks = queryClient.getQueryData<Task[]>([
         "tasks",
@@ -193,26 +186,21 @@ export function useUpdateTask() {
 
 export function useDeleteTask() {
   const queryClient = useQueryClient();
-  const { trigger } = useHaptic(); // Use haptic hook
+  const { trigger } = useHaptic();
   const { isGuestMode } = useAuth();
-  const supabase = createClient(); // Still needed for UNDO logic below
+  const supabase = createClient();
 
   return useMutation({
     mutationKey: ["deleteTask"],
     mutationFn: taskMutations.delete,
     onMutate: async (id) => {
-      // Import toast dynamically to avoid SSR issues
-      const { toast } = await import("sonner");
-
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
 
-      // Get all task query caches and find the deleted task
       const allTaskQueries = queryClient.getQueriesData<Task[]>({
         queryKey: ["tasks"],
       });
       let deletedTask: Task | undefined;
 
-      // Search through all task caches to find the task being deleted
       for (const [, data] of allTaskQueries) {
         if (data) {
           const found = data.find((task) => task.id === id);
@@ -223,36 +211,33 @@ export function useDeleteTask() {
         }
       }
 
-      // Optimistically remove from ALL task caches
       for (const [queryKey] of allTaskQueries) {
         queryClient.setQueryData<Task[]>(queryKey, (old) =>
           old?.filter((task) => task.id !== id),
         );
       }
 
-      // Show undo toast
       if (deletedTask) {
         const taskToRestore = { ...deletedTask };
 
-        // Success Haptic (Double Tick)
         trigger("success");
 
-        toast("Task deleted", {
-          description: deletedTask.content,
+        // Task content is unbounded user text, so it's dropped rather than
+        // folded into the title like other toasts (see ADR 0008).
+        notify("Task deleted", {
           duration: 5000,
           action: {
             label: "Undo",
             onClick: async () => {
               if (isGuestMode) {
-                // Restore to mock store
                 mockStore.addTask(taskToRestore);
                 queryClient.invalidateQueries({ queryKey: ["tasks"] });
                 trigger("success");
-                toast("Task restored");
+                notify("Task restored");
                 return;
               }
 
-              // Re-insert into database using insert (task was hard-deleted)
+              // Task was hard-deleted, so undo re-inserts rather than updates.
               const { error } = await supabase.from("tasks").insert({
                 id: taskToRestore.id,
                 user_id: taskToRestore.user_id,
@@ -274,18 +259,12 @@ export function useDeleteTask() {
 
               if (error) {
                 console.error("Failed to restore task:", error);
-
-                // Error Haptic (Strong Pulse)
                 trigger("thud");
-
-                toast.error("Failed to restore task");
+                notify.error("Failed to restore task");
               } else {
-                // Success Haptic (Double Tick)
                 trigger("success");
-
-                toast("Task restored");
+                notify("Task restored");
               }
-              // Always invalidate to sync with database
               queryClient.invalidateQueries({ queryKey: ["tasks"] });
             },
           },
@@ -295,7 +274,6 @@ export function useDeleteTask() {
       return { deletedTask };
     },
     onError: (err, _id, _context) => {
-      // Invalidate to refetch from database on error
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       handleMutationError(err);
     },
@@ -324,12 +302,10 @@ export function useReorderTasks() {
         queryClient.setQueryData<Task[]>(queryKey, (old) => {
           if (!old) return old;
 
-          // The pairs now come from computeMoveOrders (see reorder.ts / task-dnd.ts):
-          // they describe a single task move within the shared flat list, and each
-          // pair already carries the task's final day_order value. We just apply
-          // those day_order updates in place. Consumers that care about order sort
-          // by day_order (e.g. useTaskViewData), so the visual order is correct
-          // without reshuffling the cache array here.
+          // Pairs come from computeMoveOrders (reorder.ts / task-dnd.ts) with each
+          // task's final day_order already computed — just apply in place.
+          // Consumers sort by day_order themselves (e.g. useTaskViewData), so the
+          // cache array doesn't need reshuffling.
           return old.map((task) => {
             const newOrder = pairById.get(task.id);
             return newOrder === undefined || task.day_order === newOrder
@@ -364,13 +340,10 @@ export function useClearCompletedTasks() {
     mutationKey: ["clearCompletedTasks"],
     mutationFn: taskMutations.clearCompleted,
     onMutate: async () => {
-      // Cancel outgoing queries
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
 
-      // Snapshot previous data for rollback
       const previousTasks = queryClient.getQueriesData({ queryKey: ["tasks"] });
 
-      // Optimistically remove all completed tasks from cache
       queryClient.setQueriesData(
         { queryKey: ["tasks"] },
         (oldData: Task[] | undefined) => {
@@ -385,7 +358,6 @@ export function useClearCompletedTasks() {
       return { previousTasks };
     },
     onError: (err, _vars, context) => {
-      // Rollback on error
       if (context?.previousTasks) {
         context.previousTasks.forEach(([queryKey, data]) => {
           queryClient.setQueryData(queryKey, data);
@@ -394,7 +366,6 @@ export function useClearCompletedTasks() {
       handleMutationError(err);
     },
     onSettled: () => {
-      // Invalidate all task queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { BarChart3, Download, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { InsightSection } from "@/components/ui/InsightSection";
@@ -66,11 +66,11 @@ export function HabitInsightsPanel({
         csv,
         "text/csv",
       );
-      toast.success("Habit history exported as CSV");
+      notify.success("Habit history exported as CSV");
       trigger("success");
     } catch (err) {
       console.error("Habit history export failed:", err);
-      toast.error("Failed to export habit history");
+      notify.error("Failed to export habit history");
       trigger("thud");
     } finally {
       setIsExporting(false);

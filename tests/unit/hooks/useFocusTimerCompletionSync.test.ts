@@ -46,7 +46,7 @@ vi.mock("@/lib/hooks/useFocusSounds", () => ({
 vi.mock("@/lib/hooks/usePushNotifications", () => ({
   usePushNotifications: vi.fn(() => ({ showNotification: vi.fn() })),
 }));
-vi.mock("sonner", () => ({ toast: vi.fn() }));
+vi.mock("@/lib/notify", () => ({ notify: vi.fn() }));
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: vi.fn(() => ({ trigger: vi.fn(), isPhone: false })),
 }));

@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   ListFilter,
   Plus,
-  LayoutGrid,
   KanbanSquare,
   List,
   ArrowUpDown,
@@ -25,11 +24,11 @@ import {
 import {
   GroupOption,
   SortOption,
+  TaskViewMode,
   GROUP_LABELS,
   SORT_LABELS,
 } from "@/lib/types/sorting";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 import { SyncIndicator } from "@/components/ui/SyncIndicator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,10 +36,10 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 interface TasksPageHeaderProps {
   currentSort: SortOption;
   currentGroup: GroupOption;
-  viewMode: "list" | "grid" | "board";
+  viewMode: TaskViewMode;
   onSortChange: (sort: SortOption) => void;
   onGroupChange: (group: GroupOption) => void;
-  onViewModeChange: (mode: "list" | "grid" | "board") => void;
+  onViewModeChange: (mode: TaskViewMode) => void;
   onNewTask?: () => void;
 }
 
@@ -55,12 +54,8 @@ function TasksPageHeaderBase({
 }: TasksPageHeaderProps) {
   const { openSheet } = useCompletedTasks();
   const { trigger } = useHaptic();
-  const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  // Sort and group store writes are O(1) zustand set() calls — no transition needed.
-  // The derived-state recalculation in useTaskViewData uses useMemo for memoization,
-  // so wrapping these in useTransition only adds unnecessary scheduler latency
-  // without any benefit.
+  // O(1) zustand writes — useTransition would only add scheduler latency here.
   const handleSortChange = (sort: SortOption) => {
     onSortChange(sort);
   };
@@ -82,7 +77,7 @@ function TasksPageHeaderBase({
         value={viewMode}
         onValueChange={(v) => {
           trigger("toggle");
-          onViewModeChange(v as "list" | "grid" | "board");
+          onViewModeChange(v as TaskViewMode);
         }}
         className="h-10"
       >
@@ -95,23 +90,13 @@ function TasksPageHeaderBase({
             <List className="h-4 w-4" strokeWidth={2.25} />
             <span className="hidden lg:inline">List</span>
           </TabsTrigger>
-          {isDesktop && (
-            <TabsTrigger
-              value="board"
-              className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-8 border border-transparent data-[state=active]:border-brand/20"
-              title="Board View (Shift+2)"
-            >
-              <KanbanSquare className="h-4 w-4" strokeWidth={2.25} />
-              <span className="hidden lg:inline">Board</span>
-            </TabsTrigger>
-          )}
           <TabsTrigger
-            value="grid"
+            value="board"
             className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-8 border border-transparent data-[state=active]:border-brand/20"
-            title="Grid View (Shift+3)"
+            title="Board View (Shift+2)"
           >
-            <LayoutGrid className="h-4 w-4" strokeWidth={2.25} />
-            <span className="hidden lg:inline">Grid</span>
+            <KanbanSquare className="h-4 w-4" strokeWidth={2.25} />
+            <span className="hidden lg:inline">Board</span>
           </TabsTrigger>
         </TabsList>
       </Tabs>

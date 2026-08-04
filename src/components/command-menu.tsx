@@ -59,7 +59,7 @@ import { useCalendarEventsList } from "@/lib/hooks/useCalendarEventsList";
 import { getHabitIcon } from "@/components/habits/shared/HabitIconPicker";
 import type { Habit } from "@/lib/types/habit";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { getPlatformKey } from "@/lib/utils/platform";
 
 interface CommandMenuProps {
@@ -276,7 +276,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 onSelect={() =>
                   runCommand(() => {
                     queryClient.invalidateQueries();
-                    toast.success("Syncing...");
+                    notify.success("Syncing...");
                   })
                 }
               >

@@ -1,6 +1,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
+import type { TaskViewMode } from "@/lib/types/sorting";
 import { formatDueDate } from "./task-utils";
 import { DragHandle } from "./DragHandle";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,14 +12,10 @@ interface TaskGhostProps {
   task: Task;
   isDesktop: boolean;
   project?: { color: string; name: string };
-  viewMode?: "list" | "board" | "grid";
+  viewMode?: TaskViewMode;
 }
 
-/**
- * TaskGhost is a simplified, read-only representation of a task row
- * used exclusively for the DnD DragOverlay. It is optimized for
- * high-frequency rendering and visual clarity during drag operations.
- */
+// Read-only task row rendered exclusively in the DnD DragOverlay.
 export const TaskGhost = React.memo(
   function TaskGhost({
     task,
@@ -33,10 +30,7 @@ export const TaskGhost = React.memo(
           "bg-background/98 border border-border/80 backdrop-blur-xl relative overflow-hidden",
           viewMode === "list"
             ? "px-4 py-3 w-full rounded-xl border-2 border-primary/20 shadow-sm"
-            : cn(
-                "p-3 pl-4 rounded-xl border-2 border-primary/20 shadow-sm cursor-grabbing",
-                viewMode === "board" ? "w-[280px]" : "w-[312px]",
-              ),
+            : "p-3 pl-4 rounded-xl border-2 border-primary/20 shadow-sm cursor-grabbing w-70",
         )}
       >
         {/* Shodo Accent Stripe */}
@@ -49,24 +43,17 @@ export const TaskGhost = React.memo(
             style={{ backgroundColor: project.color }}
           />
         )}
-        {isDesktop && viewMode !== "board" && (
+        {isDesktop && viewMode === "list" && (
           <DragHandle
             variant="desktop"
-            className={cn(
-              "text-foreground/40 shrink-0",
-              viewMode === "list" ? "ml-1" : "",
-            )}
+            className="text-foreground/40 shrink-0 ml-1"
           />
         )}
 
         <div
           className={cn(
-            "flex w-full text-left",
-            viewMode === "board"
-              ? "flex-col gap-2"
-              : viewMode === "list"
-                ? "flex-col gap-0.5"
-                : "items-center gap-1 md:gap-2",
+            "flex flex-col w-full text-left",
+            viewMode === "board" ? "gap-2" : "gap-0.5",
           )}
         >
           {/* Header Row */}
@@ -108,14 +95,7 @@ export const TaskGhost = React.memo(
             task.priority < 4 ||
             project ||
             task.is_evening) && (
-            <div
-              className={cn(
-                "flex items-center gap-2.5 flex-wrap",
-                viewMode === "board" || viewMode === "list"
-                  ? "ml-6 mt-0.5"
-                  : "mt-1 ml-[2px]",
-              )}
-            >
+            <div className="flex items-center gap-2.5 flex-wrap ml-6 mt-0.5">
               {task.due_date && (
                 <span className="text-[11px] text-muted-foreground/80 flex items-center gap-1 font-medium uppercase tracking-wider">
                   <Calendar className="h-3 w-3" strokeWidth={2.25} />

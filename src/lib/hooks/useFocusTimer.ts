@@ -9,7 +9,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useFocusSounds } from "@/lib/hooks/useFocusSounds";
 import { usePathname } from "next/navigation";
 import { usePushNotifications } from "@/lib/hooks/usePushNotifications";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimerSync } from "@/lib/hooks/useTimerSync";
@@ -141,8 +141,7 @@ export function useFocusTimer() {
         const isOnFocusPage = pathname === "/focus";
 
         if (!isOnFocusPage && !isPipActive) {
-          toast(title, {
-            description,
+          notify(`${title} — ${description}`, {
             duration: 4000,
             icon: null,
           });

@@ -195,6 +195,69 @@ describe("IntegratedTaskKanbanBoard", () => {
     expect(screen.getByText("Ma (Void)")).toBeInTheDocument();
   });
 
+  it("renders both fallback columns when ungrouped and there are no evening tasks", () => {
+    const noEvening: ProcessedTasks = {
+      ...mockProcessedTasks,
+      evening: [],
+      groups: [],
+    };
+
+    render(
+      <TooltipProvider>
+        <TaskBoard
+          processedTasks={noEvening}
+          projectsMap={new Map()}
+          isDesktop={true}
+          triggerHaptic={vi.fn()}
+          setActiveTaskId={vi.fn()}
+          groupBy="none"
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Tasks")).toBeInTheDocument();
+    expect(screen.getByText("This Evening")).toBeInTheDocument();
+    // The empty Evening column is the "defer to tonight" drop target.
+    expect(screen.getByText("Ma (Void)")).toBeInTheDocument();
+  });
+
+  it("keeps columns at full width so the board can overflow and scroll", () => {
+    const { container } = render(
+      <TooltipProvider>
+        <TaskBoard
+          processedTasks={mockProcessedTasks}
+          projectsMap={new Map()}
+          isDesktop={true}
+          triggerHaptic={vi.fn()}
+          setActiveTaskId={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    // Without shrink-0 the flex columns compress to fit and scrollWidth never
+    // exceeds clientWidth, so the snap carousel and drag auto-scroll are dead.
+    const column = container.querySelector("section");
+    expect(column?.className).toContain("shrink-0");
+  });
+
+  it("snaps while idle so the carousel settles on a column", () => {
+    render(
+      <TooltipProvider>
+        <TaskBoard
+          processedTasks={mockProcessedTasks}
+          projectsMap={new Map()}
+          isDesktop={true}
+          triggerHaptic={vi.fn()}
+          setActiveTaskId={vi.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByTestId("task-board-container").className).toContain(
+      "snap-mandatory",
+    );
+  });
+
   it("respects Zen-Modernism: no headers in grid mode (verify board mode specific features)", () => {
     render(
       <TooltipProvider>

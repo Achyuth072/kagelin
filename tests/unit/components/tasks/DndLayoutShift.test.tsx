@@ -79,10 +79,6 @@ vi.mock("@/components/tasks/TaskListView", () => ({
   TaskListView: () => <div data-testid="task-list-view" />,
 }));
 
-vi.mock("@/components/tasks/TaskMasonryGrid", () => ({
-  TaskMasonryGrid: () => <div data-testid="task-grid-view" />,
-}));
-
 vi.mock("@/components/tasks/TaskBoard", () => ({
   TaskBoard: () => <div data-testid="task-board-view" />,
 }));
@@ -181,6 +177,10 @@ describe("TaskList DnD layout shift protection", () => {
         setHapticsEnabled: vi.fn(),
         notificationsEnabled: false,
         setNotificationsEnabled: vi.fn(),
+        backupReminderEnabled: true,
+        setBackupReminderEnabled: vi.fn(),
+        backupReminderFrequencyDays: 7,
+        setBackupReminderFrequencyDays: vi.fn(),
         isShortcutsHelpOpen: false,
         setShortcutsHelpOpen: vi.fn(),
         isPipActive: false,

@@ -26,7 +26,7 @@ import { ImportExportMenu } from "./ImportExportMenu";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
 import { runCalendarSync, formatSyncSummary } from "@/lib/sync/run-sync";
 import { markAutoSync } from "@/lib/sync/sync-scheduler";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 interface CalendarToolbarProps {
   onCreateEvent: () => void;
@@ -49,25 +49,25 @@ export function CalendarToolbar({
     trigger("toggle");
     setIsSyncing(true);
     markAutoSync();
-    const toastId = toast.loading("Syncing calendar…");
+    const toastId = notify.loading("Syncing calendar…");
     try {
       const summary = await runCalendarSync();
       if (summary.configured === 0) {
-        toast.info("No calendars configured yet. Connect a calendar first.", {
+        notify.info("No calendars configured yet. Connect a calendar first.", {
           id: toastId,
         });
       } else if (summary.errors.length) {
-        toast.error(`Sync completed with errors: ${summary.errors[0]}`, {
+        notify.error(`Sync completed with errors: ${summary.errors[0]}`, {
           id: toastId,
         });
       } else {
-        toast.success(formatSyncSummary(summary), { id: toastId });
+        notify.success(formatSyncSummary(summary), { id: toastId });
         trigger("success");
       }
       // Refetch so pulled/pushed changes appear without a manual reload
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     } catch {
-      toast.error("Sync failed", { id: toastId });
+      notify.error("Sync failed", { id: toastId });
     } finally {
       setIsSyncing(false);
     }

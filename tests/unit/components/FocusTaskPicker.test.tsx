@@ -11,11 +11,11 @@ interface MockQueryOptions {
 
 // ===== Hoisted mocks =====
 
-const { mockPause, mockCancel, mockToast, mockUseQuery, mockCreateClient } =
+const { mockPause, mockCancel, mockNotify, mockUseQuery, mockCreateClient } =
   vi.hoisted(() => ({
     mockPause: vi.fn(),
     mockCancel: vi.fn(),
-    mockToast: vi.fn(),
+    mockNotify: vi.fn(),
     mockUseQuery: vi.fn(),
     mockCreateClient: vi.fn(),
   }));
@@ -119,8 +119,8 @@ vi.mock("@/lib/mock/mock-store", () => ({
   },
 }));
 
-vi.mock("sonner", () => ({
-  toast: mockToast,
+vi.mock("@/lib/notify", () => ({
+  notify: mockNotify,
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -392,7 +392,7 @@ describe("FocusTaskPicker", () => {
     // Timer should NOT be paused or cancelled — kept running
     expect(mockPause).not.toHaveBeenCalled();
     expect(mockCancel).not.toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalledWith("Now focusing on New task");
+    expect(mockNotify).toHaveBeenCalledWith("Now focusing on New task");
   });
 
   // Test 5: pauseOnSwitch — timer pauses, toast shown
@@ -427,7 +427,7 @@ describe("FocusTaskPicker", () => {
 
     expect(mockPause).toHaveBeenCalledTimes(1);
     expect(mockCancel).not.toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalledWith("Now focusing on New task");
+    expect(mockNotify).toHaveBeenCalledWith("Now focusing on New task");
   });
 
   // Test 6: resetOnSwitch — cancels timer, toast shown
@@ -462,7 +462,7 @@ describe("FocusTaskPicker", () => {
 
     expect(mockCancel).toHaveBeenCalledTimes(1);
     expect(mockPause).not.toHaveBeenCalled();
-    expect(mockToast).toHaveBeenCalledWith("Now focusing on New task");
+    expect(mockNotify).toHaveBeenCalledWith("Now focusing on New task");
   });
 
   // Test 7: Completed tasks shown dimmed and not tappable

@@ -1,14 +1,8 @@
 "use client";
 
-/**
- * Connect Calendar Dialog
- * Supports: Google OAuth, Outlook OAuth
- *
- * C-2: the CalDAV connect flow was removed pre-beta — it was a facade
- * (nothing persisted server-side) and it wrote credentials to localStorage
- * in plaintext. See git history to revive it; the legacy-credential purge
- * lives in `src/lib/storage-cleanup.ts`.
- */
+// The CalDAV connect flow was removed pre-beta, it was a facade
+// (nothing persisted server-side) and it wrote credentials to localStorage
+// in plaintext. The legacy-credential purge lives in `src/lib/storage-cleanup.ts`.
 
 import React, { useState, useCallback } from "react";
 import {
@@ -42,7 +36,7 @@ import {
   useDisconnectCalendarProvider,
 } from "@/lib/hooks/useConnectedCalendarProviders";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 interface ConnectCalendarDialogProps {
   onSuccess?: () => void;
@@ -75,7 +69,6 @@ export function ConnectCalendarDialog({
   const [selectedProvider, setSelectedProvider] =
     useState<CalendarProvider | null>(null);
 
-  // Calendar picker (OAuth providers)
   const [pickerCalendars, setPickerCalendars] = useState<DiscoveredCalendar[]>(
     [],
   );
@@ -149,18 +142,16 @@ export function ConnectCalendarDialog({
         throw new Error(error || "Failed to save");
       }
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
-      toast.success("Calendars saved — run Sync to pull events");
+      notify.success("Calendars saved — run Sync to pull events");
       setOpen(false);
       onSuccess?.();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save calendars");
+      notify.error(e instanceof Error ? e.message : "Failed to save calendars");
     } finally {
       setPickerSaving(false);
     }
   };
 
-  // Resume after OAuth redirect: /calendar?connected=:provider → open the dialog
-  // straight at the calendar picker so there's no "did it connect?" gap.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -168,8 +159,7 @@ export function ConnectCalendarDialog({
     if (!connected || CALDAV_PROVIDERS.includes(connected as CalendarProvider))
       return;
 
-    toast.success(`${capitalize(connected)} Calendar connected`);
-    // Refresh the connected-providers list so the "Connected" section is ready
+    notify.success(`${capitalize(connected)} Calendar connected`);
     queryClient.invalidateQueries({
       queryKey: ["calendar-connected-providers"],
     });
@@ -187,7 +177,6 @@ export function ConnectCalendarDialog({
   };
 
   const handleProviderSelect = (provider: CalendarProvider) => {
-    // Google / Outlook — redirect to server-side OAuth initiation
     window.location.href = `/api/calendar/connect/${provider}`;
   };
 
@@ -265,7 +254,7 @@ export function ConnectCalendarDialog({
                     aria-label={`Disconnect ${p}`}
                     onClick={async () => {
                       await disconnect(p);
-                      toast.success(`${capitalize(p)} disconnected`);
+                      notify.success(`${capitalize(p)} disconnected`);
                     }}
                   >
                     <Trash2 className="w-3.5 h-3.5" strokeWidth={2.25} />

@@ -51,9 +51,9 @@ vi.mock("@/lib/backup/export-import", () => ({
   downloadBackup: vi.fn(),
 }));
 
-// Mock Sonner
-vi.mock("sonner", () => ({
-  toast: {
+// Mock notify
+vi.mock("@/lib/notify", () => ({
+  notify: {
     success: vi.fn(),
     error: vi.fn(),
     promise: vi.fn((p) => p),

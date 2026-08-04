@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { parseICSFile } from "@/lib/utils/ics-parser";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useCreateCalendarEvent } from "@/lib/hooks/useCalendarEventMutations";
 
@@ -16,19 +16,19 @@ export function useIcsImport() {
 
     setIsImporting(true);
     trigger("toggle");
-    const loadingToastId = toast.loading(`Importing ${file.name}...`);
+    const loadingToastId = notify.loading(`Importing ${file.name}...`);
 
     try {
       const { events: parsedEvents, errors } = await parseICSFile(file);
 
       if (parsedEvents.length === 0 && errors.length > 0) {
-        toast.error("Failed to parse ICS file", { id: loadingToastId });
+        notify.error("Failed to parse ICS file", { id: loadingToastId });
         trigger("thud");
         return false;
       }
 
       if (parsedEvents.length === 0) {
-        toast.error("No valid events found in file", { id: loadingToastId });
+        notify.error("No valid events found in file", { id: loadingToastId });
         trigger("thud");
         return false;
       }
@@ -44,19 +44,19 @@ export function useIcsImport() {
         }
       }
 
-      toast.success(`Successfully imported ${importedCount} events`, {
+      notify.success(`Successfully imported ${importedCount} events`, {
         id: loadingToastId,
       });
       trigger("success");
 
       if (errors.length > 0) {
-        toast.warning(`${errors.length} events had parsing warnings.`);
+        notify.warning(`${errors.length} events had parsing warnings.`);
       }
 
       return true;
     } catch (err) {
       console.error("Failed to import ICS:", err);
-      toast.error("Critical error during import", { id: loadingToastId });
+      notify.error("Critical error during import", { id: loadingToastId });
       trigger("thud");
       return false;
     } finally {

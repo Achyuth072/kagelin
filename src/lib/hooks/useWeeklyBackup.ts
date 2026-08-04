@@ -1,30 +1,29 @@
 "use client";
 
 import { useEffect, useCallback, useRef, useMemo } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { useAuth } from "@/components/AuthProvider";
-// Performance: Moved backup utilities to dynamic imports to prevent bundle bloat in AppShell (PERF-02)
 import { mockStore } from "@/lib/mock/mock-store";
+import { useUiStore } from "@/lib/store/uiStore";
 import type { BackupData } from "@/lib/backup/types";
 
 const STORAGE_KEY = "kanso_last_backup_date";
 const SESSION_KEY = "kanso_backup_prompted";
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
-/**
- * Hook that prompts guest users to back up their data weekly.
- * Per RESEARCH.md: Use subtle, dismissible toast (not modal) to avoid "Kagelin" violation.
- */
+/** Prompts guest users to back up weekly via a dismissible toast, not a modal. */
 export function useWeeklyBackup() {
   const { isGuestMode } = useAuth();
+  const backupReminderEnabled = useUiStore((s) => s.backupReminderEnabled);
+  const backupReminderFrequencyDays = useUiStore(
+    (s) => s.backupReminderFrequencyDays,
+  );
   const hasPrompted = useRef(false);
 
-  // Memoize lastBackupDate to prevent creating new Date object on every render
   const lastBackupDate = useMemo(() => {
     if (typeof window === "undefined") return null;
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? new Date(stored) : null;
-  }, []); // Empty deps - only compute once on mount
+  }, []);
 
   const updateLastBackupDate = useCallback(() => {
     if (typeof window !== "undefined") {
@@ -34,7 +33,6 @@ export function useWeeklyBackup() {
 
   const triggerBackup = useCallback(async () => {
     try {
-      // Gather all guest data from mockStore
       const backupData: BackupData = {
         metadata: {
           version: 1,
@@ -54,53 +52,59 @@ export function useWeeklyBackup() {
       const blob = await createBackupZip(backupData);
       downloadBackup(blob);
 
-      // Update last backup date
       updateLastBackupDate();
 
-      toast.success("Backup downloaded successfully");
+      notify.success("Backup downloaded successfully");
     } catch (error) {
       console.error("Backup failed:", error);
-      toast.error("Failed to create backup");
+      notify.error("Failed to create backup");
     }
   }, [updateLastBackupDate]);
 
   useEffect(() => {
-    // Only for guest mode
     if (!isGuestMode) return;
-
-    // Only run once per session
+    if (!backupReminderEnabled) return;
     if (hasPrompted.current) return;
     if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_KEY))
       return;
 
+    const frequencyMs = backupReminderFrequencyDays * 24 * 60 * 60 * 1000;
     const isStale =
-      !lastBackupDate || Date.now() - lastBackupDate.getTime() > SEVEN_DAYS_MS;
+      !lastBackupDate || Date.now() - lastBackupDate.getTime() > frequencyMs;
 
     if (isStale) {
-      // Delay slightly to not interrupt initial page load
+      // Delay so this doesn't interrupt initial page load.
       const timeoutId = setTimeout(() => {
-        // Only set flags AFTER we actually show the toast
-        // This prevents React Strict Mode from skipping the toast
+        // Set flags only after the toast actually shows, so Strict Mode's
+        // double-invoke doesn't skip it.
         hasPrompted.current = true;
         if (typeof window !== "undefined") {
           sessionStorage.setItem(SESSION_KEY, "true");
         }
 
-        toast("It's been a while since your last backup", {
-          description: "Back up your data to prevent loss",
-          duration: 10000,
-          action: {
-            label: "Back Up Now",
-            onClick: () => {
-              triggerBackup();
+        notify(
+          "It's been a while since your last backup — back up now to prevent loss",
+          {
+            duration: 10000,
+            action: {
+              label: "Back Up Now",
+              onClick: () => {
+                triggerBackup();
+              },
             },
           },
-        });
+        );
       }, 3000);
 
       return () => clearTimeout(timeoutId);
     }
-  }, [isGuestMode, lastBackupDate, triggerBackup]);
+  }, [
+    isGuestMode,
+    backupReminderEnabled,
+    backupReminderFrequencyDays,
+    lastBackupDate,
+    triggerBackup,
+  ]);
 
   return {
     lastBackupDate,

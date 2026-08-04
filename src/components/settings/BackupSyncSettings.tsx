@@ -12,8 +12,9 @@ import {
   HardDrive,
   Cloud,
   Trash2,
+  BellRing,
 } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,8 +26,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ToggleRow } from "@/components/settings/ToggleRow";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useUiStore } from "@/lib/store/uiStore";
 import {
   createBackupZip,
   parseBackupZip,
@@ -73,7 +83,6 @@ function CloudSyncCard({
 }: CloudSyncCardProps) {
   return (
     <TabsContent value="cloud" className="mt-0 outline-none">
-      {/* WebDAV Sync Section */}
       <Card className="border-border/50 shadow-none bg-background/50">
         <CardHeader className="pb-3 px-4 pt-5">
           <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
@@ -227,6 +236,75 @@ function CloudSyncCard({
   );
 }
 
+const BACKUP_REMINDER_FREQUENCY_OPTIONS = [
+  { value: "7", label: "Weekly" },
+  { value: "14", label: "Biweekly" },
+  { value: "30", label: "Monthly" },
+];
+
+function BackupRemindersCard() {
+  const { trigger } = useHaptic();
+  const backupReminderEnabled = useUiStore((s) => s.backupReminderEnabled);
+  const setBackupReminderEnabled = useUiStore(
+    (s) => s.setBackupReminderEnabled,
+  );
+  const backupReminderFrequencyDays = useUiStore(
+    (s) => s.backupReminderFrequencyDays,
+  );
+  const setBackupReminderFrequencyDays = useUiStore(
+    (s) => s.setBackupReminderFrequencyDays,
+  );
+
+  return (
+    <Card className="border-border/50 shadow-none bg-background/50">
+      <CardHeader className="pb-3 px-4 pt-5">
+        <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
+          <BellRing className="h-4 w-4 text-brand" strokeWidth={2.25} />
+          Backup Reminders
+        </CardTitle>
+        <CardDescription className="text-xs text-muted-foreground/80 lowercase">
+          Get nudged to export a backup, since your data is stored on this
+          device only.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3 px-4 pb-5 pt-0">
+        <ToggleRow
+          icon={BellRing}
+          title="Remind me to back up"
+          description="Periodic nudge to export your local data"
+          checked={backupReminderEnabled}
+          onChange={(checked) => {
+            trigger("toggle");
+            setBackupReminderEnabled(checked);
+          }}
+        />
+        <Select
+          value={String(backupReminderFrequencyDays)}
+          onValueChange={(val) => {
+            trigger("toggle");
+            setBackupReminderFrequencyDays(Number(val));
+          }}
+          disabled={!backupReminderEnabled}
+        >
+          <SelectTrigger
+            className="w-full h-10 bg-background/30 border-border/40"
+            aria-label="Reminder frequency"
+          >
+            <SelectValue placeholder="Frequency" />
+          </SelectTrigger>
+          <SelectContent>
+            {BACKUP_REMINDER_FREQUENCY_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function BackupSyncSettings() {
   const { trigger } = useHaptic();
   const { isGuestMode } = useAuth();
@@ -234,14 +312,12 @@ export function BackupSyncSettings() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Export/Import state
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [showExternalImport, setShowExternalImport] = useState(false);
 
-  // WebDAV state — kept in memory only, cleared on reload. Not persisted to
-  // localStorage, which used to store server URL + username + password in
-  // plaintext (same pattern the CalDAV flow used to have).
+  // In-memory only — never persisted, unlike the old CalDAV flow's plaintext
+  // localStorage credentials.
   const [webdavCredentials, setWebdavCredentials] = useState<WebDAVCredentials>(
     { serverUrl: "", username: "", password: "" },
   );
@@ -251,8 +327,7 @@ export function BackupSyncSettings() {
   >("idle");
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // WebDAV sync is a registered-user feature; guests keep credential-free
-  // ZIP export/import only.
+  // Registered-user feature; guests get credential-free ZIP export/import only.
   const showCloudSync = !isGuestMode;
 
   const invalidateGuestDataQueries = async () => {
@@ -271,8 +346,6 @@ export function BackupSyncSettings() {
       queryClient.invalidateQueries({ queryKey: ["heatmap-data"] }),
     ]);
   };
-
-  // --- Export/Import Functions ---
 
   const handleExport = async () => {
     trigger("toggle");
@@ -302,14 +375,13 @@ export function BackupSyncSettings() {
       const blob = await createBackupZip(backupData);
       downloadBackup(blob);
 
-      // Update last backup date for weekly prompt
       localStorage.setItem("kanso_last_backup_date", new Date().toISOString());
 
-      toast.success("Backup downloaded successfully");
+      notify.success("Backup downloaded successfully");
       trigger("success");
     } catch (err) {
       console.error("Export failed:", err);
-      toast.error("Failed to create backup");
+      notify.error("Failed to create backup");
       trigger("thud");
     } finally {
       setIsExporting(false);
@@ -335,23 +407,20 @@ export function BackupSyncSettings() {
 
     setIsImporting(true);
     trigger("toggle");
-    const loadingToastId = toast.loading(`Importing ${file.name}...`);
+    const loadingToastId = notify.loading(`Importing ${file.name}...`);
 
     try {
       const backupData = await parseBackupZip(file);
 
-      // Replace the guest snapshot in one write so large restores do not
-      // repeatedly stringify an ever-growing payload.
+      // Single write so large restores don't repeatedly stringify a growing payload.
       mockStore.restoreBackup(backupData);
       useLocationHistoryStore.setState({
         locations: backupData.location_history ?? [],
       });
 
-      // Mark guest-data queries stale so all visible screens refresh from the
-      // updated local snapshot without a full page reload.
       await invalidateGuestDataQueries();
 
-      toast.success(
+      notify.success(
         `Restored ${backupData.tasks.length} tasks, ${backupData.projects.length} projects`,
         {
           id: loadingToastId,
@@ -360,7 +429,7 @@ export function BackupSyncSettings() {
       trigger("success");
     } catch (err) {
       console.error("Import failed:", err);
-      toast.error("Failed to import backup", { id: loadingToastId });
+      notify.error("Failed to import backup", { id: loadingToastId });
       trigger("thud");
     } finally {
       setIsImporting(false);
@@ -370,13 +439,11 @@ export function BackupSyncSettings() {
     }
   };
 
-  // --- WebDAV Functions ---
-
   const resetCredentials = () => {
     trigger("toggle");
     setWebdavCredentials({ serverUrl: "", username: "", password: "" });
     setConnectionStatus("idle");
-    toast.success("Credentials cleared");
+    notify.success("Credentials cleared");
   };
 
   const handleTestConnection = async () => {
@@ -386,7 +453,7 @@ export function BackupSyncSettings() {
       !webdavCredentials.username ||
       !webdavCredentials.password
     ) {
-      toast.error("Please fill in all WebDAV fields");
+      notify.error("Please fill in all WebDAV fields");
       return;
     }
 
@@ -399,16 +466,16 @@ export function BackupSyncSettings() {
 
       if (result.success) {
         setConnectionStatus("success");
-        toast.success("Connected successfully");
+        notify.success("Connected successfully");
         trigger("success");
       } else {
         setConnectionStatus("error");
-        toast.error(result.error || "Connection failed");
+        notify.error(result.error || "Connection failed");
         trigger("thud");
       }
     } catch {
       setConnectionStatus("error");
-      toast.error("Connection test failed");
+      notify.error("Connection test failed");
       trigger("thud");
     } finally {
       setIsTestingConnection(false);
@@ -418,7 +485,7 @@ export function BackupSyncSettings() {
   const handleSyncUpload = async () => {
     if (isGuestMode) return;
     if (!webdavCredentials.serverUrl) {
-      toast.error("Configure WebDAV settings first");
+      notify.error("Configure WebDAV settings first");
       return;
     }
 
@@ -451,14 +518,14 @@ export function BackupSyncSettings() {
           "kanso_last_backup_date",
           new Date().toISOString(),
         );
-        toast.success("Data synced to server");
+        notify.success("Data synced to server");
         trigger("success");
       } else {
-        toast.error(result.error || "Sync failed");
+        notify.error(result.error || "Sync failed");
         trigger("thud");
       }
     } catch {
-      toast.error("Sync failed");
+      notify.error("Sync failed");
       trigger("thud");
     } finally {
       setIsSyncing(false);
@@ -468,7 +535,7 @@ export function BackupSyncSettings() {
   const handleSyncDownload = async () => {
     if (isGuestMode) return;
     if (!webdavCredentials.serverUrl) {
-      toast.error("Configure WebDAV settings first");
+      notify.error("Configure WebDAV settings first");
       return;
     }
 
@@ -479,7 +546,6 @@ export function BackupSyncSettings() {
       const result = await downloadWebDavBackup(webdavCredentials);
 
       if (result.success && result.data) {
-        // Apply the downloaded snapshot atomically.
         mockStore.restoreBackup(result.data);
         useLocationHistoryStore.setState({
           locations: result.data.location_history ?? [],
@@ -487,14 +553,14 @@ export function BackupSyncSettings() {
 
         await invalidateGuestDataQueries();
 
-        toast.success("Data restored from server");
+        notify.success("Data restored from server");
         trigger("success");
       } else {
-        toast.error(result.error || "Download failed");
+        notify.error(result.error || "Download failed");
         trigger("thud");
       }
     } catch {
-      toast.error("Download failed");
+      notify.error("Download failed");
       trigger("thud");
     } finally {
       setIsSyncing(false);
@@ -503,7 +569,6 @@ export function BackupSyncSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -541,7 +606,6 @@ export function BackupSyncSettings() {
         </TabsList>
 
         <TabsContent value="local" className="mt-0 outline-none">
-          {/* Local Backup Section */}
           <Card className="border-border/50 shadow-none bg-background/50">
             <CardHeader className="pb-3 px-4 pt-5">
               <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
@@ -602,6 +666,11 @@ export function BackupSyncSettings() {
               </Button>
             </div>
           </Card>
+          {isGuestMode && (
+            <div className="mt-4">
+              <BackupRemindersCard />
+            </div>
+          )}
         </TabsContent>
 
         {showCloudSync && (

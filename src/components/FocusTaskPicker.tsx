@@ -22,7 +22,7 @@ import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimerActions } from "@/components/TimerProvider";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
 import { isBefore, isToday, parseISO, startOfDay } from "date-fns";
@@ -31,17 +31,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 import { useProjects } from "@/lib/hooks/useProjects";
-
-/**
- * Focus Task Picker
- *
- * Tappable chip showing the active focus task (or "Add task" placeholder).
- * Opens a task picker — Drawer on mobile, Dialog on desktop — showing
- * today's tasks and overdue tasks. Task selection respects the
- * taskSwitchBehavior setting (keepRunning / pauseOnSwitch / resetOnSwitch).
- *
- * Per UI-SPEC TASK-CHIP-01 and TASK-PICKER-01/02.
- */
 
 function getEndOfToday(): Date {
   const d = new Date();
@@ -57,7 +46,6 @@ export function FocusTaskPicker() {
   const supabase = createClient();
   const { data: projectsData } = useProjects();
 
-  // Timer store selectors
   const activeTaskId = useTimerStore((s) => s.state.activeTaskId);
   const taskSwitchBehavior = useTimerStore(
     (s) => s.settings.taskSwitchBehavior,
@@ -65,7 +53,6 @@ export function FocusTaskPicker() {
   const { pause, cancel } = useTimerActions();
   const setActiveTaskId = useTimerStore((s) => s.setActiveTaskId);
 
-  // Resolve active task: guest uses local mockStore lookup, authed uses Supabase
   const { data: resolvedActiveTask, isLoading: resolvedActiveTaskLoading } =
     useActiveTask(activeTaskId);
 
@@ -75,7 +62,6 @@ export function FocusTaskPicker() {
     return map;
   }, [projectsData]);
 
-  // Fetch today's + overdue non-completed tasks for the picker (only when open)
   const todayDateStr = useMemo(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -137,18 +123,15 @@ export function FocusTaskPicker() {
     return { overdue, today };
   }, [pickerTasks]);
 
-  // Chip tap handler — opens the picker
   const handleChipTap = useCallback(() => {
     trigger("toggle");
     setOpen(true);
   }, [trigger]);
 
-  // Task selection handler
   const handleSelectTask = useCallback(
     (task: Task) => {
       trigger("toggle");
 
-      // Apply taskSwitchBehavior
       switch (taskSwitchBehavior) {
         case "pauseOnSwitch":
           pause();
@@ -158,26 +141,22 @@ export function FocusTaskPicker() {
           break;
         case "keepRunning":
         default:
-          // Keep timer running — just update activeTaskId
           break;
       }
 
       setActiveTaskId(task.id);
       setOpen(false);
-      toast("Now focusing on " + task.content);
+      notify("Now focusing on " + task.content);
     },
     [taskSwitchBehavior, pause, cancel, setActiveTaskId, trigger],
   );
 
-  // Back navigation for mobile drawer
   useBackNavigation(open && !isDesktop, () => setOpen(false));
 
-  // Chip ARIA label
   const chipLabel = resolvedActiveTask
     ? `Change focus task: ${resolvedActiveTask?.content || ""}`
     : "Select focus task";
 
-  // Task list rendering
   const renderTaskList = () => {
     if (pickerLoading) {
       return (
@@ -280,7 +259,6 @@ export function FocusTaskPicker() {
 
   return (
     <>
-      {/* Task Chip */}
       <div className="flex justify-center mt-4 mb-0">
         <motion.button
           onClick={handleChipTap}
@@ -314,7 +292,6 @@ export function FocusTaskPicker() {
         </motion.button>
       </div>
 
-      {/* Desktop: Dialog */}
       {isDesktop ? (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-sm flex flex-col max-h-[60vh]">
@@ -327,7 +304,6 @@ export function FocusTaskPicker() {
           </DialogContent>
         </Dialog>
       ) : (
-        /* Mobile: Drawer */
         <Drawer open={open} onOpenChange={setOpen} repositionInputs={false}>
           <DrawerContent className="max-h-[55dvh]">
             <DrawerHeader>

@@ -2,8 +2,10 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { GroupOption, SortOption } from "@/lib/types/sorting";
+import { GroupOption, SortOption, TaskViewMode } from "@/lib/types/sorting";
 import { StatsPeriod } from "@/lib/types/stats";
+
+const RETIRED_VIEW_MODES = new Set(["split", "grid"]);
 
 export interface GoalsState {
   dailyFocusHours: number | null;
@@ -20,16 +22,12 @@ interface UiState {
   // Task List State
   sortBy: SortOption;
   groupBy: GroupOption;
-  viewMode: "list" | "grid" | "board";
+  viewMode: TaskViewMode;
   setSortBy: (sort: SortOption) => void;
   setGroupBy: (group: GroupOption) => void;
-  setViewMode: (mode: "list" | "grid" | "board") => void;
-  // Set by TaskList/TaskBoard's drag handlers right before setSortBy("custom"),
-  // so the effect that freezes the visible order into day_order (for a
-  // menu-driven switch to Custom) can tell a drag-driven switch apart and skip
-  // — the drag path already bakes its own, more precise single-move order.
-  // Shared via the store (not a local ref) because TaskList and TaskBoard are
-  // separate components with independent drag handlers.
+  setViewMode: (mode: TaskViewMode) => void;
+  // Set by TaskList/TaskBoard's drag handlers so the day_order-freeze effect
+  // can skip drag-driven sortBy switches — the drag path bakes its own order.
   customSortEnteredViaDrag: boolean;
   setCustomSortEnteredViaDrag: (value: boolean) => void;
 
@@ -47,6 +45,10 @@ interface UiState {
   setHapticsEnabled: (enabled: boolean) => void;
   notificationsEnabled: boolean;
   setNotificationsEnabled: (enabled: boolean) => void;
+  backupReminderEnabled: boolean;
+  setBackupReminderEnabled: (enabled: boolean) => void;
+  backupReminderFrequencyDays: number;
+  setBackupReminderFrequencyDays: (days: number) => void;
 
   // Global Goals (aggregate targets, not per-item — see CONTEXT.md "Goals")
   goals: GoalsState;
@@ -108,7 +110,7 @@ export const useUiStore = create<UiState>()(
       // Task List defaults
       sortBy: "date",
       groupBy: "none",
-      viewMode: "grid",
+      viewMode: "list",
       setSortBy: (sort) => set({ sortBy: sort }),
       setGroupBy: (group) => set({ groupBy: group }),
       setViewMode: (mode) => set({ viewMode: mode }),
@@ -132,6 +134,12 @@ export const useUiStore = create<UiState>()(
       notificationsEnabled: false,
       setNotificationsEnabled: (enabled) =>
         set({ notificationsEnabled: enabled }),
+      backupReminderEnabled: true,
+      setBackupReminderEnabled: (enabled) =>
+        set({ backupReminderEnabled: enabled }),
+      backupReminderFrequencyDays: 7,
+      setBackupReminderFrequencyDays: (days) =>
+        set({ backupReminderFrequencyDays: days }),
 
       // Global Goals defaults
       goals: {
@@ -195,6 +203,8 @@ export const useUiStore = create<UiState>()(
     }),
     {
       name: "kanso-ui-state",
+      // zustand only calls migrate() when this differs from the stored version.
+      version: 1,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
         if (state?.lastSeenVersion && !state.lastDismissedVersion) {
@@ -222,8 +232,8 @@ export const useUiStore = create<UiState>()(
       },
       migrate: (persistedState: unknown, _version: number) => {
         const state = persistedState as Record<string, unknown> | undefined;
-        // Migrate legacy "split" viewMode to "list"
-        if (state?.viewMode === "split") {
+        // "split" and "grid" were both retired in favour of "list".
+        if (RETIRED_VIEW_MODES.has(state?.viewMode as string)) {
           return { ...state, viewMode: "list" };
         }
         return state;

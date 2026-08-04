@@ -9,7 +9,6 @@ import { useHabitActions } from "@/components/habits/HabitActionsProvider";
 import { useProjectActions } from "@/components/ProjectActionsProvider";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useCalendarStore } from "@/lib/calendar/store";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 interface GlobalHotkeysProps {
   setCommandOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
@@ -39,7 +38,6 @@ export function GlobalHotkeys({
     (state) => state.isArchivedProjectsOpen,
   );
   const isChangelogOpen = useUiStore((state) => state.isChangelogOpen);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const isOtherModalOpen =
     isAddTaskOpen ||
@@ -110,7 +108,7 @@ export function GlobalHotkeys({
   // Focus Mode (f)
   useHotkeys("f", () => router.push("/focus"), options);
 
-  // View Switching Shortcuts (Shift + 1/2/3)
+  // View Switching Shortcuts (Shift + 1/2)
   useHotkeys(
     "shift+1",
     () => {
@@ -123,18 +121,7 @@ export function GlobalHotkeys({
   useHotkeys(
     "shift+2",
     () => {
-      if (isDesktop) {
-        setViewMode("board");
-        if (pathname !== "/") router.push("/");
-      }
-    },
-    options,
-  );
-
-  useHotkeys(
-    "shift+3",
-    () => {
-      setViewMode("grid");
+      setViewMode("board");
       if (pathname !== "/") router.push("/");
     },
     options,

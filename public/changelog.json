@@ -1,5 +1,61 @@
 [
   {
+    "version": "1.28.1-preview.3",
+    "date": "2026-08-04",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Let guests control Backup reminder cadence/on-off",
+        "Add notify.ts interface wrapping sonner"
+      ],
+      "Improved": [
+        "Drop pointless dynamic import, close error() action hole",
+        "Rename Toaster and migrate all call sites off sonner"
+      ],
+      "Fixed": [
+        "Match select dropdown width to trigger, extract ToggleRow",
+        "Fold description into title on the 3 oversized-Toast sites, enforce via lint",
+        "Separate goals section header and apply ink & matte styling to android battery hint"
+      ]
+    }
+  },
+  {
+    "version": "1.28.1-preview.2",
+    "date": "2026-08-04",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Use focus-visible and softer ring color on Select/Sheet/Dialog triggers"
+      ]
+    }
+  },
+  {
+    "version": "1.28.1-preview.1",
+    "date": "2026-08-04",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Bring back Board view on mobile"
+      ],
+      "Improved": [
+        "Simplify board container class and drop stale test mock"
+      ]
+    }
+  },
+  {
+    "version": "1.28.1-preview.0",
+    "date": "2026-08-03",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Remove redundant grid view from Tasks page, keep List and Board"
+      ],
+      "Fixed": [
+        "Add clickjacking/MIME-sniffing headers, hide X-Powered-By"
+      ]
+    }
+  },
+  {
     "version": "1.28.0",
     "date": "2026-08-03",
     "channel": "stable",
@@ -740,57 +796,6 @@
         "Faster, more reliable update detection",
         "More responsive masonry layout on varied screen widths",
         "Tidier header layout"
-      ]
-    }
-  },
-  {
-    "version": "1.20.0",
-    "date": "2026-05-20",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Android keyboard not appearing on time picker"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.21",
-    "date": "2026-05-20",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Established a clean z-index stack (70/60/50/40 hierarchy)",
-        "Notifications now sit below dialogs and above header/FAB",
-        "Notification z-index lowered below the changelog, with larger touch targets on filter chips",
-        "Added missing isChangelogOpen fields to UiState test mocks",
-        "Consolidated the completed grayscale class onto TaskItem root"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.20",
-    "date": "2026-05-19",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Wrap sort/group in useTransition and fix filter component layout"
-      ],
-      "Fixed": [
-        "Resolve mobile z-index issues for toast notifications and move 'What's New' indicator to mobile header"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.19",
-    "date": "2026-05-17",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Unify notification styling by removing coloured backgrounds and standardising icon colours"
-      ],
-      "Fixed": [
-        "Override w-fit width on mobile Sonner toasts to ensure proper centring",
-        "Unskip CreateEventDialog from React Compiler"
       ]
     }
   }

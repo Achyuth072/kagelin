@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { handleMutationError } from "@/lib/utils/mutation-error";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
-vi.mock("sonner", () => ({
-  toast: {
+vi.mock("@/lib/notify", () => ({
+  notify: {
     error: vi.fn(),
   },
 }));
@@ -21,7 +21,7 @@ describe("handleMutationError", () => {
     handleMutationError(error);
 
     // Then: Network error toast is shown
-    expect(toast.error).toHaveBeenCalledWith(
+    expect(notify.error).toHaveBeenCalledWith(
       "Network Error. Changes could not be saved.",
     );
   });
@@ -34,7 +34,7 @@ describe("handleMutationError", () => {
     handleMutationError(error);
 
     // Then: Auth error toast is shown
-    expect(toast.error).toHaveBeenCalledWith(
+    expect(notify.error).toHaveBeenCalledWith(
       "Authentication error. Please log in again.",
     );
   });
@@ -47,7 +47,7 @@ describe("handleMutationError", () => {
     handleMutationError(error);
 
     // Then: Exact error message is shown
-    expect(toast.error).toHaveBeenCalledWith("Database constraints failed");
+    expect(notify.error).toHaveBeenCalledWith("Database constraints failed");
   });
 
   it("ME-B-01: should show fallback message for unknown error types", () => {
@@ -58,6 +58,6 @@ describe("handleMutationError", () => {
     handleMutationError(error);
 
     // Then: Fallback toast is shown
-    expect(toast.error).toHaveBeenCalledWith("An unexpected error occurred.");
+    expect(notify.error).toHaveBeenCalledWith("An unexpected error occurred.");
   });
 });

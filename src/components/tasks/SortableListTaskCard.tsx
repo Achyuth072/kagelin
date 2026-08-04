@@ -3,6 +3,7 @@
 import React, { memo } from "react";
 import { TaskItem } from "./TaskItem";
 import type { Task } from "@/lib/types/task";
+import type { TaskViewMode } from "@/lib/types/sorting";
 import { cn } from "@/lib/utils";
 import { useSortableRow, dropLineClasses } from "@/lib/hooks/useSortableRow";
 
@@ -10,7 +11,7 @@ interface SortableListTaskCardProps {
   task: Task;
   onSelect?: (task: Task) => void;
   isKeyboardSelected?: boolean;
-  viewMode?: "list" | "grid" | "board";
+  viewMode?: TaskViewMode;
   isDndActive?: boolean;
   // Shared props
   project?: { color: string; name: string };
@@ -19,11 +20,7 @@ interface SortableListTaskCardProps {
   setActiveTaskId?: (taskId: string) => void;
 }
 
-/**
- * TaskItemContent is memoized to prevent re-renders during drag operations.
- * useSortable in the parent triggers re-renders on every frame (60fps),
- * but this child will only re-render if its props actually change.
- */
+// Memoized — useSortable re-renders the parent every frame during drag.
 const TaskItemContent = memo(
   ({
     task,
@@ -64,7 +61,6 @@ const TaskItemContent = memo(
     );
   },
   (prev, next) => {
-    // Custom equality check to be extra safe during DnD re-renders
     return (
       prev.task.id === next.task.id &&
       prev.task.content === next.task.content &&

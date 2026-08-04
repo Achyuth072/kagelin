@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 
 // Mock dependencies
-vi.mock("sonner", () => ({
-  toast: vi.fn(),
+vi.mock("@/lib/notify", () => ({
+  notify: vi.fn(),
 }));
 
 vi.mock("@/lib/backup/export-import", () => ({
@@ -31,11 +31,17 @@ const STORAGE_KEY = "kanso_last_backup_date";
 const SESSION_KEY = "kanso_backup_prompted";
 
 describe("useWeeklyBackup", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
     sessionStorage.clear();
     vi.useFakeTimers();
     vi.clearAllMocks();
+
+    const { useUiStore } = await import("@/lib/store/uiStore");
+    useUiStore.setState({
+      backupReminderEnabled: true,
+      backupReminderFrequencyDays: 7,
+    });
   });
 
   afterEach(() => {
@@ -47,7 +53,7 @@ describe("useWeeklyBackup", () => {
 
     // Dynamic import to ensure mocks are applied
     const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
-    const { toast } = await import("sonner");
+    const { notify } = await import("@/lib/notify");
 
     renderHook(() => useWeeklyBackup());
 
@@ -56,7 +62,7 @@ describe("useWeeklyBackup", () => {
       vi.advanceTimersByTime(4000);
     });
 
-    expect(toast).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
   });
 
   it("shows toast if backup is older than 7 days", async () => {
@@ -64,7 +70,7 @@ describe("useWeeklyBackup", () => {
     localStorage.setItem(STORAGE_KEY, oldDate.toISOString());
 
     const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
-    const { toast } = await import("sonner");
+    const { notify } = await import("@/lib/notify");
 
     renderHook(() => useWeeklyBackup());
 
@@ -73,10 +79,9 @@ describe("useWeeklyBackup", () => {
       vi.advanceTimersByTime(4000);
     });
 
-    expect(toast).toHaveBeenCalledWith(
-      "It's been a while since your last backup",
+    expect(notify).toHaveBeenCalledWith(
+      "It's been a while since your last backup — back up now to prevent loss",
       expect.objectContaining({
-        description: "Back up your data to prevent loss",
         action: expect.objectContaining({
           label: "Back Up Now",
         }),
@@ -90,7 +95,7 @@ describe("useWeeklyBackup", () => {
     sessionStorage.setItem(SESSION_KEY, "true");
 
     const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
-    const { toast } = await import("sonner");
+    const { notify } = await import("@/lib/notify");
 
     renderHook(() => useWeeklyBackup());
 
@@ -98,7 +103,48 @@ describe("useWeeklyBackup", () => {
       vi.advanceTimersByTime(4000);
     });
 
-    expect(toast).not.toHaveBeenCalled();
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it("does not show toast when the backup reminder is disabled, even if stale", async () => {
+    const oldDate = new Date(Date.now() - SEVEN_DAYS_MS - 1000);
+    localStorage.setItem(STORAGE_KEY, oldDate.toISOString());
+
+    const { useUiStore } = await import("@/lib/store/uiStore");
+    useUiStore.setState({ backupReminderEnabled: false });
+
+    const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
+    const { notify } = await import("@/lib/notify");
+
+    renderHook(() => useWeeklyBackup());
+
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it("uses backupReminderFrequencyDays instead of the hardcoded 7-day window", async () => {
+    const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+    const oldDate = new Date(Date.now() - TEN_DAYS_MS);
+    localStorage.setItem(STORAGE_KEY, oldDate.toISOString());
+
+    const { useUiStore } = await import("@/lib/store/uiStore");
+    useUiStore.setState({ backupReminderFrequencyDays: 14 });
+
+    const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
+    const { notify } = await import("@/lib/notify");
+
+    renderHook(() => useWeeklyBackup());
+
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+
+    // 10 days elapsed is stale against the old hardcoded 7-day window but
+    // not against the configured 14-day cadence.
+    expect(notify).not.toHaveBeenCalled();
   });
 });
 

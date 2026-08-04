@@ -16,10 +16,11 @@ import { usePushNotifications } from "@/lib/hooks/usePushNotifications";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useAuth } from "@/components/AuthProvider";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { sendPushNotification } from "@/lib/push-api";
 import { useAndroidBatteryHint } from "@/lib/hooks/useAndroidBatteryHint";
 import { AndroidBatteryHint } from "@/components/settings/AndroidBatteryHint";
+import { ToggleRow } from "@/components/settings/ToggleRow";
 import {
   Select,
   SelectContent,
@@ -72,7 +73,6 @@ export function NotificationSettings() {
     reopen: handleReopenBatteryHint,
   } = useAndroidBatteryHint();
 
-  // Memoize timezone data with offsets once
   const timezoneOptions = useMemo(() => {
     const now = new Date();
     return timezones.map((tz) => {
@@ -101,7 +101,7 @@ export function NotificationSettings() {
     });
   }, [timezones]);
 
-  // Filter and limit results, ensuring current selection is ALWAYS present
+  // Keeps the current selection visible even if search/pagination would cut it.
   const filteredTimezones = useMemo(() => {
     const search = timezoneSearch.toLowerCase().trim();
     const currentTz = profile?.timezone || "UTC";
@@ -110,16 +110,12 @@ export function NotificationSettings() {
       ? timezoneOptions.filter((opt) => opt.searchable.includes(search))
       : timezoneOptions;
 
-    // Separate top 100
     const topResults = results.slice(0, 100);
-
-    // If current selection is NOT in top results but IS in the overall matching results, add it
     const isSelectedInTop = topResults.some((opt) => opt.id === currentTz);
 
     if (!isSelectedInTop) {
       const selectedOpt = results.find((opt) => opt.id === currentTz);
       if (selectedOpt) {
-        // Add current selection to the top of the list if searching, or keep batch small
         return [selectedOpt, ...topResults];
       }
     }
@@ -132,23 +128,23 @@ export function NotificationSettings() {
     trigger("toggle");
 
     if (!isSupported) {
-      toast.error("Push notifications are not supported in this browser");
+      notify.error("Push notifications are not supported in this browser");
       return;
     }
 
     if (checked) {
       const result = await requestPermission({ forceRefresh: true });
       if (result.permission === "granted" && result.subscription) {
-        toast.success("Notifications enabled");
+        notify.success("Notifications enabled");
         promptBatteryHintIfDue();
       } else if (result.permission === "denied") {
-        toast.error("Permission denied. Enable in browser settings.");
+        notify.error("Permission denied. Enable in browser settings.");
       } else {
-        toast.error("Failed to activate notifications on this device.");
+        notify.error("Failed to activate notifications on this device.");
       }
     } else {
       await unsubscribe();
-      toast.success("Notifications disabled");
+      notify.success("Notifications disabled");
     }
   };
 
@@ -162,14 +158,14 @@ export function NotificationSettings() {
         },
       } as Parameters<typeof updateSettings.mutateAsync>[0]);
     } catch {
-      toast.error("Failed to update settings");
+      notify.error("Failed to update settings");
     }
   };
 
   const handleTestNotification = async () => {
     trigger("toggle");
     if (permission !== "granted") {
-      toast.error("Please enable notifications first");
+      notify.error("Please enable notifications first");
       return;
     }
 
@@ -179,7 +175,7 @@ export function NotificationSettings() {
       });
 
       if (!activeSubscription) {
-        toast.error("Failed to refresh notifications on this device");
+        notify.error("Failed to refresh notifications on this device");
         return;
       }
 
@@ -189,16 +185,16 @@ export function NotificationSettings() {
         body: "This is a server-sent test notification from Kagelin",
         data: { type: "test" },
       });
-      toast.success("Test notification sent to this device");
+      notify.success("Test notification sent to this device");
     } catch {
-      toast.error("Failed to send test notification");
+      notify.error("Failed to send test notification");
     }
   };
 
   const handleLocalTestNotification = () => {
     trigger("toggle");
     if (permission !== "granted") {
-      toast.error("Please enable notifications first");
+      notify.error("Please enable notifications first");
       return;
     }
 
@@ -206,7 +202,7 @@ export function NotificationSettings() {
       body: "This notification was triggered locally from the browser.",
       tag: "kanso-local-test",
     });
-    toast.success("Local notification triggered");
+    notify.success("Local notification triggered");
   };
 
   if (!isSupported) {
@@ -330,7 +326,7 @@ export function NotificationSettings() {
               onValueChange={(val) => {
                 trigger("toggle");
                 updateProfile.mutate({ timezone: val });
-                setTimezoneSearch(""); // Clear search on selection
+                setTimezoneSearch("");
               }}
             >
               <SelectTrigger className="w-full" aria-label="Select Timezone">
@@ -389,8 +385,7 @@ export function NotificationSettings() {
           </div>
 
           <div className="space-y-2">
-            {/* Morning Briefing */}
-            <ScheduleToggle
+            <ToggleRow
               icon={Coffee}
               title="Morning Briefing"
               description="Daily summary at 8:00 AM"
@@ -398,8 +393,7 @@ export function NotificationSettings() {
               onChange={(c) => updateNotifySetting("morning_briefing", c)}
             />
 
-            {/* Evening Plan */}
-            <ScheduleToggle
+            <ToggleRow
               icon={Moon}
               title="Evening Plan"
               description="Review tonight's tasks at 6:00 PM"
@@ -407,8 +401,7 @@ export function NotificationSettings() {
               onChange={(c) => updateNotifySetting("evening_plan", c)}
             />
 
-            {/* Smart Alerts */}
-            <ScheduleToggle
+            <ToggleRow
               icon={Calendar}
               title="Due Date Alerts"
               description="When a task reaches its deadline"
@@ -416,7 +409,7 @@ export function NotificationSettings() {
               onChange={(c) => updateNotifySetting("due_date_alerts", c)}
             />
 
-            <ScheduleToggle
+            <ToggleRow
               icon={Timer}
               title="Timer Completion"
               description="When your focus or break ends"
@@ -426,33 +419,6 @@ export function NotificationSettings() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function ScheduleToggle({
-  icon: Icon,
-  title,
-  description,
-  checked,
-  onChange,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  checked: boolean;
-  onChange: (c: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between p-3 rounded-md border border-border/30 bg-muted/20">
-      <div className="flex items-center gap-3">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <div>
-          <p className="text-sm font-medium">{title}</p>
-          <p className="text-[10px] text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange} aria-label={title} />
     </div>
   );
 }

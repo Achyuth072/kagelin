@@ -13,7 +13,7 @@ import {
   SAVE_ERROR_MESSAGE,
 } from "@/lib/import/uhabitsErrors";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { habitMutations } from "@/lib/mutations/habit";
 import { useQueryClient } from "@tanstack/react-query";
@@ -32,11 +32,11 @@ export function useUhabitsImport() {
 
     setIsImporting(true);
     trigger("toggle");
-    const loadingToastId = toast.loading(`Parsing ${file.name}...`);
+    const loadingToastId = notify.loading(`Parsing ${file.name}...`);
 
     const reportImportFailure = (err: unknown, message: string) => {
       Sentry.captureException(err);
-      toast.error(message, { id: loadingToastId });
+      notify.error(message, { id: loadingToastId });
       trigger("thud");
       return false;
     };
@@ -52,7 +52,7 @@ export function useUhabitsImport() {
       }
 
       if (habits.length === 0) {
-        toast.error("No compatible habits found in the database", {
+        notify.error("No compatible habits found in the database", {
           id: loadingToastId,
         });
         return;
@@ -62,14 +62,12 @@ export function useUhabitsImport() {
         typeof window !== "undefined" &&
         localStorage.getItem("kanso_guest_mode") === "true";
 
-      // Best-effort capture for round-trip export; runs in the background and
-      // never blocks or fails the import (ADR 0006).
+      // Best-effort, backgrounded capture for round-trip export (ADR 0006).
       void persistImportSource(
         { source_app: "uhabits", file_name: file.name, raw: source },
         { isGuest },
       ).catch((err) => Sentry.captureException(err));
 
-      // Detect duplicate habits by name to avoid re-importing
       let habitsToImport = habits;
       let skippedCount = 0;
       let nextSortOrder = 0;
@@ -99,23 +97,22 @@ export function useUhabitsImport() {
       }
 
       if (habitsToImport.length === 0) {
-        toast.info(
+        notify.info(
           `All ${habits.length} habits already exist — nothing imported`,
           { id: loadingToastId },
         );
         return true;
       }
 
-      toast.loading(`Importing ${habitsToImport.length} habits...`, {
+      notify.loading(`Importing ${habitsToImport.length} habits...`, {
         id: loadingToastId,
       });
 
-      // Build set of skipped temp IDs so their entries are also dropped
       const skippedTempIds = new Set(
         habits.filter((h) => !habitsToImport.includes(h)).map((h) => h.id),
       );
 
-      // Track tempId (from parseUhabitsFile) → actualId (from DB / mock store)
+      // tempId (from parseUhabitsFile) -> actualId (DB / mock store)
       const habitIdMap = new Map<string, string>();
 
       // Raw create avoids invalidating the habits query once per habit.
@@ -127,9 +124,8 @@ export function useUhabitsImport() {
         habitIdMap.set(habit.id, created.id);
       }
 
-      // Insert habit entries with remapped IDs
       if (entries.length > 0) {
-        toast.loading(
+        notify.loading(
           `Importing ${habits.length} habits and ${entries.length} history entries...`,
           { id: loadingToastId },
         );
@@ -160,20 +156,18 @@ export function useUhabitsImport() {
         }
       }
 
-      // Refresh habits query
       await queryClient.invalidateQueries({ queryKey: ["habits"] });
 
       const skippedMsg =
         skippedCount > 0 ? ` (${skippedCount} already existed, skipped)` : "";
-      toast.success(
+      notify.success(
         `Imported ${habitsToImport.length} habits with ${entries.length} history entries${skippedMsg}`,
         { id: loadingToastId },
       );
       trigger("success");
       return true;
     } catch (err) {
-      // Parsing already succeeded here, so this is a save failure on our
-      // side — never blame the user's file for it.
+      // Parsing already succeeded, so this is a save failure, not a bad file.
       return reportImportFailure(err, SAVE_ERROR_MESSAGE);
     } finally {
       setIsImporting(false);

@@ -33,7 +33,6 @@ const priorities: {
   },
 ];
 
-// Priority-specific icon colors for the trigger button
 const priorityIconColor: Record<number, string> = {
   1: "text-brand fill-brand/20",
   2: "text-secondary-foreground/80",
@@ -69,11 +68,9 @@ export function TaskPrioritySelect({
       <SelectTrigger
         onPointerDown={() => trigger("toggle")}
         className={cn(
-          // Base — exactly matches the Evening / Subtasks / DatePicker tags
-          "h-9 transition-all shrink-0 [&>svg]:hidden shadow-none border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-lg outline-none focus:ring-0 focus:outline-none",
-          // Unselected (P4 / Low): icon-only pill
+          // Matches the Evening / Subtasks / DatePicker tags
+          "h-9 transition-all shrink-0 [&>svg]:hidden shadow-none border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-lg",
           !isSelected && "w-9 px-0 text-muted-foreground hover:text-foreground",
-          // Selected (P1-P3): labelled pill with brand outline active state
           isSelected &&
             "w-auto px-2.5 min-w-[68px] text-[13px] text-brand bg-brand/10 border-transparent hover:bg-brand/20 hover:text-brand",
         )}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Download, FileDown, FileJson, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -48,11 +48,11 @@ export function StatsExportMenu({ stats, period }: StatsExportMenuProps) {
         content,
         mime,
       );
-      toast.success(`Stats exported as ${format.toUpperCase()}`);
+      notify.success(`Stats exported as ${format.toUpperCase()}`);
       trigger("success");
     } catch (err) {
       console.error(`${format.toUpperCase()} export failed:`, err);
-      toast.error(`Failed to export ${format.toUpperCase()}`);
+      notify.error(`Failed to export ${format.toUpperCase()}`);
       trigger("thud");
     } finally {
       setIsExporting(null);

@@ -47,6 +47,18 @@ const eslintConfig = defineConfig([
         },
       ],
       "react-compiler/react-compiler": "error",
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "sonner",
+              message:
+                "Import notify from '@/lib/notify' instead — see docs/adr/0008-toasts-behind-owned-notify-interface.md.",
+            },
+          ],
+        },
+      ],
       "no-restricted-syntax": [
         "warn",
         {
@@ -59,6 +71,14 @@ const eslintConfig = defineConfig([
     },
     plugins: {
       "react-compiler": reactCompiler,
+    },
+  },
+  // notify.ts and toaster.tsx are the only files allowed to import sonner
+  // directly — everywhere else routes through notify.
+  {
+    files: ["src/lib/notify.ts", "src/components/ui/toaster.tsx"],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 ]);

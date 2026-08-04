@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-// Only the first preview after a stable cut needs a pre-prefixed increment;
-// release-it continues an existing prerelease series on its own.
 const { execFileSync } = require("child_process");
 const path = require("path");
 const { getLastTag, getCommitSubjectsSince } = require("./lib/git-commits.cjs");
@@ -26,7 +24,10 @@ async function main() {
   const args = process.argv.slice(2);
   const channelArg = args.find((a) => /^--channel=(preview|stable)$/.test(a));
   const channel = channelArg ? channelArg.split("=")[1] : null;
-  const override = args.find((a) => a !== channelArg && !a.startsWith("--"));
+  const skipValidate = args.includes("--skip-validate");
+  const consumed = new Set([channelArg, "--skip-validate"].filter(Boolean));
+  const override = args.find((a) => !consumed.has(a) && !a.startsWith("--"));
+  const passthrough = args.filter((a) => a !== override && !consumed.has(a));
 
   if (!channel) {
     console.error("Usage: release.cjs --channel=preview|stable [version]");
@@ -71,6 +72,15 @@ async function main() {
       CURATED_SECTIONS: JSON.stringify(curatedSections),
     };
   }
+
+  if (skipValidate) {
+    console.warn(
+      "⚠ --skip-validate: bypassing typecheck/lint/test/build before this release.",
+    );
+    releaseItArgs.push("--hooks.before:init=");
+  }
+
+  releaseItArgs.push(...passthrough);
 
   console.log(`→ release-it ${releaseItArgs.join(" ")}`);
   execFileSync("npx", ["release-it", ...releaseItArgs], {
