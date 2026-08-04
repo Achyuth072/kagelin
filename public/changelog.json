@@ -1,5 +1,25 @@
 [
   {
+    "version": "1.29.0",
+    "date": "2026-08-04",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Guests can now choose how often they get backup reminders, or turn them off entirely",
+        "Board view is back on mobile"
+      ],
+      "Improved": [
+        "Dropdown menus now match the width of the button that opens them",
+        "Softened the focus ring on dropdowns, sheets, and dialogs so it no longer flashes on tap on mobile",
+        "Added security headers to block clickjacking and MIME-sniffing attacks"
+      ],
+      "Fixed": [
+        "Fixed notification toasts overflowing their card on longer messages",
+        "Cleaned up spacing on the Goals section header and the Android battery-optimization hint"
+      ]
+    }
+  },
+  {
     "version": "1.28.1-preview.3",
     "date": "2026-08-04",
     "channel": "preview",
@@ -784,18 +804,6 @@
         "Overlays stacking incorrectly (portalled overlays now sit at the correct z-index)",
         "Time-picker keyboard not appearing on Android",
         "Guest mode push toggle and backend sync now correctly blocked"
-      ]
-    }
-  },
-  {
-    "version": "1.20.1",
-    "date": "2026-05-20",
-    "channel": "stable",
-    "sections": {
-      "Improved": [
-        "Faster, more reliable update detection",
-        "More responsive masonry layout on varied screen widths",
-        "Tidier header layout"
       ]
     }
   }
