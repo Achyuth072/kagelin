@@ -5,9 +5,9 @@ import { CancelSessionButton } from "@/components/CancelSessionButton";
 
 // ===== Hoisted mocks =====
 
-const { mockCancel, mockToast } = vi.hoisted(() => ({
+const { mockCancel, mockNotify } = vi.hoisted(() => ({
   mockCancel: vi.fn(),
-  mockToast: vi.fn(),
+  mockNotify: vi.fn(),
   mockTrigger: vi.fn(),
 }));
 
@@ -67,8 +67,8 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   }),
 }));
 
-vi.mock("sonner", () => ({
-  toast: mockToast,
+vi.mock("@/lib/notify", () => ({
+  notify: mockNotify,
 }));
 
 describe("CancelSessionButton", () => {
@@ -120,7 +120,7 @@ describe("CancelSessionButton", () => {
     fireEvent.click(button);
 
     expect(mockCancel).toHaveBeenCalledTimes(1);
-    expect(mockToast).toHaveBeenCalledWith("Session cancelled", {
+    expect(mockNotify).toHaveBeenCalledWith("Session cancelled", {
       duration: 1500,
     });
   });

@@ -13,7 +13,7 @@ import {
   Cloud,
   Trash2,
 } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -305,11 +305,11 @@ export function BackupSyncSettings() {
       // Update last backup date for weekly prompt
       localStorage.setItem("kanso_last_backup_date", new Date().toISOString());
 
-      toast.success("Backup downloaded successfully");
+      notify.success("Backup downloaded successfully");
       trigger("success");
     } catch (err) {
       console.error("Export failed:", err);
-      toast.error("Failed to create backup");
+      notify.error("Failed to create backup");
       trigger("thud");
     } finally {
       setIsExporting(false);
@@ -335,7 +335,7 @@ export function BackupSyncSettings() {
 
     setIsImporting(true);
     trigger("toggle");
-    const loadingToastId = toast.loading(`Importing ${file.name}...`);
+    const loadingToastId = notify.loading(`Importing ${file.name}...`);
 
     try {
       const backupData = await parseBackupZip(file);
@@ -351,7 +351,7 @@ export function BackupSyncSettings() {
       // updated local snapshot without a full page reload.
       await invalidateGuestDataQueries();
 
-      toast.success(
+      notify.success(
         `Restored ${backupData.tasks.length} tasks, ${backupData.projects.length} projects`,
         {
           id: loadingToastId,
@@ -360,7 +360,7 @@ export function BackupSyncSettings() {
       trigger("success");
     } catch (err) {
       console.error("Import failed:", err);
-      toast.error("Failed to import backup", { id: loadingToastId });
+      notify.error("Failed to import backup", { id: loadingToastId });
       trigger("thud");
     } finally {
       setIsImporting(false);
@@ -376,7 +376,7 @@ export function BackupSyncSettings() {
     trigger("toggle");
     setWebdavCredentials({ serverUrl: "", username: "", password: "" });
     setConnectionStatus("idle");
-    toast.success("Credentials cleared");
+    notify.success("Credentials cleared");
   };
 
   const handleTestConnection = async () => {
@@ -386,7 +386,7 @@ export function BackupSyncSettings() {
       !webdavCredentials.username ||
       !webdavCredentials.password
     ) {
-      toast.error("Please fill in all WebDAV fields");
+      notify.error("Please fill in all WebDAV fields");
       return;
     }
 
@@ -399,16 +399,16 @@ export function BackupSyncSettings() {
 
       if (result.success) {
         setConnectionStatus("success");
-        toast.success("Connected successfully");
+        notify.success("Connected successfully");
         trigger("success");
       } else {
         setConnectionStatus("error");
-        toast.error(result.error || "Connection failed");
+        notify.error(result.error || "Connection failed");
         trigger("thud");
       }
     } catch {
       setConnectionStatus("error");
-      toast.error("Connection test failed");
+      notify.error("Connection test failed");
       trigger("thud");
     } finally {
       setIsTestingConnection(false);
@@ -418,7 +418,7 @@ export function BackupSyncSettings() {
   const handleSyncUpload = async () => {
     if (isGuestMode) return;
     if (!webdavCredentials.serverUrl) {
-      toast.error("Configure WebDAV settings first");
+      notify.error("Configure WebDAV settings first");
       return;
     }
 
@@ -451,14 +451,14 @@ export function BackupSyncSettings() {
           "kanso_last_backup_date",
           new Date().toISOString(),
         );
-        toast.success("Data synced to server");
+        notify.success("Data synced to server");
         trigger("success");
       } else {
-        toast.error(result.error || "Sync failed");
+        notify.error(result.error || "Sync failed");
         trigger("thud");
       }
     } catch {
-      toast.error("Sync failed");
+      notify.error("Sync failed");
       trigger("thud");
     } finally {
       setIsSyncing(false);
@@ -468,7 +468,7 @@ export function BackupSyncSettings() {
   const handleSyncDownload = async () => {
     if (isGuestMode) return;
     if (!webdavCredentials.serverUrl) {
-      toast.error("Configure WebDAV settings first");
+      notify.error("Configure WebDAV settings first");
       return;
     }
 
@@ -487,14 +487,14 @@ export function BackupSyncSettings() {
 
         await invalidateGuestDataQueries();
 
-        toast.success("Data restored from server");
+        notify.success("Data restored from server");
         trigger("success");
       } else {
-        toast.error(result.error || "Download failed");
+        notify.error(result.error || "Download failed");
         trigger("thud");
       }
     } catch {
-      toast.error("Download failed");
+      notify.error("Download failed");
       trigger("thud");
     } finally {
       setIsSyncing(false);

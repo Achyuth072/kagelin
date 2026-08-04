@@ -22,7 +22,7 @@ import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimerActions } from "@/components/TimerProvider";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
 import { isBefore, isToday, parseISO, startOfDay } from "date-fns";
@@ -164,7 +164,7 @@ export function FocusTaskPicker() {
 
       setActiveTaskId(task.id);
       setOpen(false);
-      toast("Now focusing on " + task.content);
+      notify("Now focusing on " + task.content);
     },
     [taskSwitchBehavior, pause, cancel, setActiveTaskId, trigger],
   );

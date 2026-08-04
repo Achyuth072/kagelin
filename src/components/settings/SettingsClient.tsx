@@ -30,7 +30,7 @@ import { Vibrate } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useQueryClient } from "@tanstack/react-query";
 import { mockStore } from "@/lib/mock/mock-store";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
 import { BackupSyncSettings } from "@/components/settings/BackupSyncSettings";
@@ -101,7 +101,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
     queryClient.removeQueries({ queryKey: ["stats-dashboard"] });
     queryClient.removeQueries({ queryKey: ["calendar-events"] });
     queryClient.removeQueries({ queryKey: ["calendar-tasks"] });
-    toast.success("Demo data reset successfully");
+    notify.success("Demo data reset successfully");
   };
 
   const handleClearData = async () => {
@@ -117,7 +117,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
     queryClient.removeQueries({ queryKey: ["stats-dashboard"] });
     queryClient.removeQueries({ queryKey: ["calendar-events"] });
     queryClient.removeQueries({ queryKey: ["calendar-tasks"] });
-    toast.success("All data cleared");
+    notify.success("All data cleared");
   };
 
   const themeOptions = [

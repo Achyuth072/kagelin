@@ -13,7 +13,7 @@ import {
   SAVE_ERROR_MESSAGE,
 } from "@/lib/import/uhabitsErrors";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { habitMutations } from "@/lib/mutations/habit";
 import { useQueryClient } from "@tanstack/react-query";
@@ -32,11 +32,11 @@ export function useUhabitsImport() {
 
     setIsImporting(true);
     trigger("toggle");
-    const loadingToastId = toast.loading(`Parsing ${file.name}...`);
+    const loadingToastId = notify.loading(`Parsing ${file.name}...`);
 
     const reportImportFailure = (err: unknown, message: string) => {
       Sentry.captureException(err);
-      toast.error(message, { id: loadingToastId });
+      notify.error(message, { id: loadingToastId });
       trigger("thud");
       return false;
     };
@@ -52,7 +52,7 @@ export function useUhabitsImport() {
       }
 
       if (habits.length === 0) {
-        toast.error("No compatible habits found in the database", {
+        notify.error("No compatible habits found in the database", {
           id: loadingToastId,
         });
         return;
@@ -99,14 +99,14 @@ export function useUhabitsImport() {
       }
 
       if (habitsToImport.length === 0) {
-        toast.info(
+        notify.info(
           `All ${habits.length} habits already exist — nothing imported`,
           { id: loadingToastId },
         );
         return true;
       }
 
-      toast.loading(`Importing ${habitsToImport.length} habits...`, {
+      notify.loading(`Importing ${habitsToImport.length} habits...`, {
         id: loadingToastId,
       });
 
@@ -129,7 +129,7 @@ export function useUhabitsImport() {
 
       // Insert habit entries with remapped IDs
       if (entries.length > 0) {
-        toast.loading(
+        notify.loading(
           `Importing ${habits.length} habits and ${entries.length} history entries...`,
           { id: loadingToastId },
         );
@@ -165,7 +165,7 @@ export function useUhabitsImport() {
 
       const skippedMsg =
         skippedCount > 0 ? ` (${skippedCount} already existed, skipped)` : "";
-      toast.success(
+      notify.success(
         `Imported ${habitsToImport.length} habits with ${entries.length} history entries${skippedMsg}`,
         { id: loadingToastId },
       );

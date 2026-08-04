@@ -10,7 +10,7 @@ import type { UpsertTimerStateInput } from "@/lib/mutations/focus";
 import { getDeviceId } from "@/lib/store/deviceId";
 import { computeOffset, setServerOffset } from "@/lib/store/serverClock";
 import type { TimerMode, TimerState, TimerSettings } from "@/lib/types/timer";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 const VALID_MODES: TimerMode[] = ["focus", "shortBreak", "longBreak"];
 
@@ -268,13 +268,13 @@ export function useTimerSync() {
             settings: remoteRowToSettings(remote, currentSettings),
           });
 
-          // Subtle toast on remote pause / stop commands
+          // Subtle notify on remote pause / stop commands
           if (wasRunning && remote.is_running === false) {
             const message =
               (remote.remaining_seconds as number) === 0
                 ? "Timer stopped from another device"
                 : "Timer paused from another device";
-            toast(message, { duration: 3000 });
+            notify(message, { duration: 3000 });
           }
 
           useUiStore.getState().setIsSynced(true);

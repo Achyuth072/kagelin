@@ -47,7 +47,7 @@ import { useCalendarStore } from "@/lib/calendar/store";
 import { useWeeklyBackup } from "@/lib/hooks/useWeeklyBackup";
 import { GlobalFabs } from "@/components/layout/GlobalFabs";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
-import { Toaster } from "@/components/ui/notification";
+import { Toaster } from "@/components/ui/toaster";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 

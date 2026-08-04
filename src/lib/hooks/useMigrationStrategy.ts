@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import type { Task, Project } from "@/lib/types/task";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 
@@ -251,7 +251,7 @@ export function useMigrationStrategy() {
       localStorage.removeItem("kanso_guest_data_v7");
       document.cookie = "kanso_guest_mode=; path=/; max-age=0";
 
-      toast.success(
+      notify.success(
         "Synchronization complete! Your data is safe in the cloud.",
       );
 
@@ -259,7 +259,7 @@ export function useMigrationStrategy() {
       window.location.reload();
     } catch (err: unknown) {
       console.error("Migration fatal error:", err);
-      toast.error(
+      notify.error(
         "Sync interrupted. We'll try again automatically on next reload.",
       );
     } finally {

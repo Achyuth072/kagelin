@@ -1,4 +1,4 @@
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 /**
  * Handles mutation errors by displaying appropriate toasts.
@@ -7,7 +7,7 @@ import { toast } from "sonner";
 export function handleMutationError(err: unknown) {
   // standard fetch network error
   if (err instanceof TypeError && err.message === "Failed to fetch") {
-    toast.error("Network Error. Changes could not be saved.");
+    notify.error("Network Error. Changes could not be saved.");
     return;
   }
 
@@ -20,15 +20,15 @@ export function handleMutationError(err: unknown) {
       msg.includes("not authenticated") ||
       msg.includes("unauthorized")
     ) {
-      toast.error("Authentication error. Please log in again.");
+      notify.error("Authentication error. Please log in again.");
       return;
     }
 
     // Generic error
-    toast.error(err.message || "An error occurred.");
+    notify.error(err.message || "An error occurred.");
     return;
   }
 
   // Fallback
-  toast.error("An unexpected error occurred.");
+  notify.error("An unexpected error occurred.");
 }

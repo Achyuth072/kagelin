@@ -15,7 +15,7 @@ import { useCalendarSync } from "@/lib/hooks/useCalendarSync";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
 import { useTask } from "@/lib/hooks/useTasks";
 import TaskSheet from "@/components/tasks/TaskSheet";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 export default function CalendarPage() {
   const { currentDate, view, events, setView, setDate, openCreateEvent } =
@@ -33,7 +33,7 @@ export default function CalendarPage() {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get("oauth_error");
     if (oauthError) {
-      toast.error(`Calendar connection failed: ${oauthError}`);
+      notify.error(`Calendar connection failed: ${oauthError}`);
       window.history.replaceState({}, "", "/calendar");
     }
   }, []);

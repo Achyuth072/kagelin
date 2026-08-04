@@ -42,7 +42,7 @@ import {
   useDisconnectCalendarProvider,
 } from "@/lib/hooks/useConnectedCalendarProviders";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 
 interface ConnectCalendarDialogProps {
   onSuccess?: () => void;
@@ -149,11 +149,11 @@ export function ConnectCalendarDialog({
         throw new Error(error || "Failed to save");
       }
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
-      toast.success("Calendars saved — run Sync to pull events");
+      notify.success("Calendars saved — run Sync to pull events");
       setOpen(false);
       onSuccess?.();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to save calendars");
+      notify.error(e instanceof Error ? e.message : "Failed to save calendars");
     } finally {
       setPickerSaving(false);
     }
@@ -168,7 +168,7 @@ export function ConnectCalendarDialog({
     if (!connected || CALDAV_PROVIDERS.includes(connected as CalendarProvider))
       return;
 
-    toast.success(`${capitalize(connected)} Calendar connected`);
+    notify.success(`${capitalize(connected)} Calendar connected`);
     // Refresh the connected-providers list so the "Connected" section is ready
     queryClient.invalidateQueries({
       queryKey: ["calendar-connected-providers"],
@@ -265,7 +265,7 @@ export function ConnectCalendarDialog({
                     aria-label={`Disconnect ${p}`}
                     onClick={async () => {
                       await disconnect(p);
-                      toast.success(`${capitalize(p)} disconnected`);
+                      notify.success(`${capitalize(p)} disconnected`);
                     }}
                   >
                     <Trash2 className="w-3.5 h-3.5" strokeWidth={2.25} />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimerActions } from "@/components/TimerProvider";
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -32,7 +32,7 @@ export function CancelSessionButton() {
   const handleClick = useCallback(() => {
     trigger("tick");
     cancel();
-    toast("Session cancelled", {
+    notify("Session cancelled", {
       duration: 1500,
     });
   }, [cancel, trigger]);

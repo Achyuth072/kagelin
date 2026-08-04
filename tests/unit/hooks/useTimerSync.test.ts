@@ -16,7 +16,7 @@ import {
 const {
   mockUseAuth,
   mockSetIsSynced,
-  toastMock,
+  notifyMock,
   mockUpsertTimerState,
   hydrate,
   mockRpc,
@@ -29,7 +29,7 @@ const {
       isGuestMode: false,
     }),
     mockSetIsSynced: vi.fn(),
-    toastMock: vi.fn(),
+    notifyMock: vi.fn(),
     mockUpsertTimerState: vi.fn(),
     // Mutable row returned by the initial hydrate SELECT.
     hydrate,
@@ -105,8 +105,8 @@ vi.mock("@/lib/store/uiStore", () => ({
   },
 }));
 
-vi.mock("sonner", () => ({
-  toast: toastMock,
+vi.mock("@/lib/notify", () => ({
+  notify: notifyMock,
 }));
 
 // ===== Test suite =====
@@ -350,7 +350,7 @@ describe("useTimerSync", () => {
     });
 
     // Then: Toast should show "paused" message
-    expect(toastMock).toHaveBeenCalledWith(
+    expect(notifyMock).toHaveBeenCalledWith(
       "Timer paused from another device",
       expect.any(Object),
     );
@@ -386,7 +386,7 @@ describe("useTimerSync", () => {
     });
 
     // Then: Toast should show "stopped" message
-    expect(toastMock).toHaveBeenCalledWith(
+    expect(notifyMock).toHaveBeenCalledWith(
       "Timer stopped from another device",
       expect.any(Object),
     );

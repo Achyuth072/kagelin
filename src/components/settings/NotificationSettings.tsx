@@ -16,7 +16,7 @@ import { usePushNotifications } from "@/lib/hooks/usePushNotifications";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useAuth } from "@/components/AuthProvider";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import { sendPushNotification } from "@/lib/push-api";
 import { useAndroidBatteryHint } from "@/lib/hooks/useAndroidBatteryHint";
 import { AndroidBatteryHint } from "@/components/settings/AndroidBatteryHint";
@@ -132,23 +132,23 @@ export function NotificationSettings() {
     trigger("toggle");
 
     if (!isSupported) {
-      toast.error("Push notifications are not supported in this browser");
+      notify.error("Push notifications are not supported in this browser");
       return;
     }
 
     if (checked) {
       const result = await requestPermission({ forceRefresh: true });
       if (result.permission === "granted" && result.subscription) {
-        toast.success("Notifications enabled");
+        notify.success("Notifications enabled");
         promptBatteryHintIfDue();
       } else if (result.permission === "denied") {
-        toast.error("Permission denied. Enable in browser settings.");
+        notify.error("Permission denied. Enable in browser settings.");
       } else {
-        toast.error("Failed to activate notifications on this device.");
+        notify.error("Failed to activate notifications on this device.");
       }
     } else {
       await unsubscribe();
-      toast.success("Notifications disabled");
+      notify.success("Notifications disabled");
     }
   };
 
@@ -162,14 +162,14 @@ export function NotificationSettings() {
         },
       } as Parameters<typeof updateSettings.mutateAsync>[0]);
     } catch {
-      toast.error("Failed to update settings");
+      notify.error("Failed to update settings");
     }
   };
 
   const handleTestNotification = async () => {
     trigger("toggle");
     if (permission !== "granted") {
-      toast.error("Please enable notifications first");
+      notify.error("Please enable notifications first");
       return;
     }
 
@@ -179,7 +179,7 @@ export function NotificationSettings() {
       });
 
       if (!activeSubscription) {
-        toast.error("Failed to refresh notifications on this device");
+        notify.error("Failed to refresh notifications on this device");
         return;
       }
 
@@ -189,16 +189,16 @@ export function NotificationSettings() {
         body: "This is a server-sent test notification from Kagelin",
         data: { type: "test" },
       });
-      toast.success("Test notification sent to this device");
+      notify.success("Test notification sent to this device");
     } catch {
-      toast.error("Failed to send test notification");
+      notify.error("Failed to send test notification");
     }
   };
 
   const handleLocalTestNotification = () => {
     trigger("toggle");
     if (permission !== "granted") {
-      toast.error("Please enable notifications first");
+      notify.error("Please enable notifications first");
       return;
     }
 
@@ -206,7 +206,7 @@ export function NotificationSettings() {
       body: "This notification was triggered locally from the browser.",
       tag: "kanso-local-test",
     });
-    toast.success("Local notification triggered");
+    notify.success("Local notification triggered");
   };
 
   if (!isSupported) {

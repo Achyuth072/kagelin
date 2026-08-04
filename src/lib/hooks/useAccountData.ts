@@ -9,7 +9,7 @@ import {
 } from "@/lib/backup/export-import";
 import type { BackupData, BackupMetadata } from "@/lib/backup/types";
 import { fetchAllRows } from "@/lib/supabase/paginate";
-import { toast } from "sonner";
+import { notify } from "@/lib/notify";
 import pkg from "../../../package.json";
 
 /**
@@ -21,7 +21,7 @@ export function useAccountData() {
 
   const exportData = async () => {
     if (!user) {
-      toast.error("You must be logged in to export cloud data");
+      notify.error("You must be logged in to export cloud data");
       return;
     }
 
@@ -68,7 +68,7 @@ export function useAccountData() {
       return data;
     };
 
-    return toast.promise(promise(), {
+    return notify.promise(promise(), {
       loading: "Preparing your data export...",
       success: "Data exported successfully",
       error: (err) => `Export failed: ${err.message}`,
@@ -77,7 +77,7 @@ export function useAccountData() {
 
   const importData = async (file: File) => {
     if (!user) {
-      toast.error("You must be logged in to import cloud data");
+      notify.error("You must be logged in to import cloud data");
       return;
     }
 
@@ -153,7 +153,7 @@ export function useAccountData() {
       return data;
     };
 
-    return toast.promise(promise(), {
+    return notify.promise(promise(), {
       loading: "Importing your cloud data...",
       success: "Data imported successfully. Please refresh to see changes.",
       error: (err) => `Import failed: ${err.message}`,
@@ -185,7 +185,7 @@ export function useAccountData() {
       }
     };
 
-    return toast.promise(promise(), {
+    return notify.promise(promise(), {
       loading: "Clearing your cloud data...",
       success: "Cloud data cleared successfully",
       error: (err) => `Clear failed: ${err.message}`,
