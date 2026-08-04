@@ -20,6 +20,7 @@ import { notify } from "@/lib/notify";
 import { sendPushNotification } from "@/lib/push-api";
 import { useAndroidBatteryHint } from "@/lib/hooks/useAndroidBatteryHint";
 import { AndroidBatteryHint } from "@/components/settings/AndroidBatteryHint";
+import { ToggleRow } from "@/components/settings/ToggleRow";
 import {
   Select,
   SelectContent,
@@ -384,7 +385,7 @@ export function NotificationSettings() {
           </div>
 
           <div className="space-y-2">
-            <ScheduleToggle
+            <ToggleRow
               icon={Coffee}
               title="Morning Briefing"
               description="Daily summary at 8:00 AM"
@@ -392,7 +393,7 @@ export function NotificationSettings() {
               onChange={(c) => updateNotifySetting("morning_briefing", c)}
             />
 
-            <ScheduleToggle
+            <ToggleRow
               icon={Moon}
               title="Evening Plan"
               description="Review tonight's tasks at 6:00 PM"
@@ -400,7 +401,7 @@ export function NotificationSettings() {
               onChange={(c) => updateNotifySetting("evening_plan", c)}
             />
 
-            <ScheduleToggle
+            <ToggleRow
               icon={Calendar}
               title="Due Date Alerts"
               description="When a task reaches its deadline"
@@ -408,7 +409,7 @@ export function NotificationSettings() {
               onChange={(c) => updateNotifySetting("due_date_alerts", c)}
             />
 
-            <ScheduleToggle
+            <ToggleRow
               icon={Timer}
               title="Timer Completion"
               description="When your focus or break ends"
@@ -418,33 +419,6 @@ export function NotificationSettings() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function ScheduleToggle({
-  icon: Icon,
-  title,
-  description,
-  checked,
-  onChange,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-  checked: boolean;
-  onChange: (c: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between p-3 rounded-md border border-border/30 bg-muted/20">
-      <div className="flex items-center gap-3">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <div>
-          <p className="text-sm font-medium">{title}</p>
-          <p className="text-[10px] text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange} aria-label={title} />
     </div>
   );
 }

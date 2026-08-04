@@ -26,7 +26,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
+import { ToggleRow } from "@/components/settings/ToggleRow";
 import {
   Select,
   SelectContent,
@@ -268,25 +268,16 @@ function BackupRemindersCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 px-4 pb-5 pt-0">
-        <div className="flex items-center justify-between p-3 rounded-md border border-border/30 bg-muted/20">
-          <div className="flex items-center gap-3">
-            <BellRing className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm font-medium">Remind me to back up</p>
-              <p className="text-[10px] text-muted-foreground">
-                Periodic nudge to export your local data
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={backupReminderEnabled}
-            onCheckedChange={(checked) => {
-              trigger("toggle");
-              setBackupReminderEnabled(checked);
-            }}
-            aria-label="Remind me to back up"
-          />
-        </div>
+        <ToggleRow
+          icon={BellRing}
+          title="Remind me to back up"
+          description="Periodic nudge to export your local data"
+          checked={backupReminderEnabled}
+          onChange={(checked) => {
+            trigger("toggle");
+            setBackupReminderEnabled(checked);
+          }}
+        />
         <Select
           value={String(backupReminderFrequencyDays)}
           onValueChange={(val) => {
