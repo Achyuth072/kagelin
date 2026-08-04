@@ -238,6 +238,47 @@ Two distinct things that both say "export":
 
 ---
 
+## Notifications (disambiguated)
+
+"Notification" is overloaded across three unrelated mechanisms and must always be
+qualified. They differ in who renders them and whether they survive the app being
+closed.
+
+### Toast
+
+An in-app message rendered by Kagelin itself, at the bottom of the viewport. Exists
+only while the page is open and dies with it. Every Toast is **one line of text plus
+at most one action** — a Toast never carries both a secondary description line and an
+action button, and only one Toast is on screen at a time. Used for confirmations,
+errors, and undo affordances.
+_Avoid_: calling a Toast a "notification" — it never reaches the OS.
+
+### Local notification
+
+An OS-level notification raised by the running page for something that just happened
+in this same process (e.g. a focus session completing while the tab is backgrounded).
+Reaches the system tray, but requires the app to still be running.
+
+### Push notification
+
+An OS-level notification delivered through the service worker from Kagelin's server.
+The only mechanism that reaches the user with the app fully closed. "Notification
+settings" in the UI means **Push notification settings** specifically — the
+permission and subscription flow — and governs neither Toasts nor Local
+notifications.
+
+### Backup reminder
+
+The periodic nudge to a **Guest** to export a Backup, because Guest data exists only
+on that device. It is a **Toast**, not a notification of any kind, and is unrelated
+to the push permission flow. Its **cadence** is how often the user may be nudged —
+not merely how stale a Backup must be before nudging becomes eligible. Registered
+and Premium users have no Backup reminder; their data is cloud-persisted.
+_Avoid_: "backup notification"; _avoid_: "biweekly", which ambiguously means both
+twice a week and every two weeks.
+
+---
+
 ## Calendar views
 
 ### Week
