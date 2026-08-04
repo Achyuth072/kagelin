@@ -187,7 +187,7 @@ function Calendar({
           };
           return (
             <Select value={value?.toString()} onValueChange={handleChange}>
-              <SelectTrigger className="pr-1.5 focus:ring-0 h-7 w-fit gap-1 text-sm font-medium border-0 shadow-none bg-transparent hover:bg-accent/50 px-2">
+              <SelectTrigger className="pr-1.5 h-7 w-fit gap-1 text-sm font-medium border-0 shadow-none bg-transparent hover:bg-accent/50 px-2">
                 <SelectValue>{selected?.label ?? value}</SelectValue>
               </SelectTrigger>
               <SelectContent position="popper">
