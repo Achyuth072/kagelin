@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.28.1-preview.2",
+    "date": "2026-08-04",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Use focus-visible and softer ring color on Select/Sheet/Dialog triggers"
+      ]
+    }
+  },
+  {
     "version": "1.28.1-preview.1",
     "date": "2026-08-04",
     "channel": "preview",
@@ -776,20 +786,6 @@
     "sections": {
       "Fixed": [
         "Android keyboard not appearing on time picker"
-      ]
-    }
-  },
-  {
-    "version": "1.19.2-preview.21",
-    "date": "2026-05-20",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Established a clean z-index stack (70/60/50/40 hierarchy)",
-        "Notifications now sit below dialogs and above header/FAB",
-        "Notification z-index lowered below the changelog, with larger touch targets on filter chips",
-        "Added missing isChangelogOpen fields to UiState test mocks",
-        "Consolidated the completed grayscale class onto TaskItem root"
       ]
     }
   }
