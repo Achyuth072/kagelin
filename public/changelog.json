@@ -1,5 +1,25 @@
 [
   {
+    "version": "1.28.1-preview.3",
+    "date": "2026-08-04",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Let guests control Backup reminder cadence/on-off",
+        "Add notify.ts interface wrapping sonner"
+      ],
+      "Improved": [
+        "Drop pointless dynamic import, close error() action hole",
+        "Rename Toaster and migrate all call sites off sonner"
+      ],
+      "Fixed": [
+        "Match select dropdown width to trigger, extract ToggleRow",
+        "Fold description into title on the 3 oversized-Toast sites, enforce via lint",
+        "Separate goals section header and apply ink & matte styling to android battery hint"
+      ]
+    }
+  },
+  {
     "version": "1.28.1-preview.2",
     "date": "2026-08-04",
     "channel": "preview",
@@ -776,16 +796,6 @@
         "Faster, more reliable update detection",
         "More responsive masonry layout on varied screen widths",
         "Tidier header layout"
-      ]
-    }
-  },
-  {
-    "version": "1.20.0",
-    "date": "2026-05-20",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Android keyboard not appearing on time picker"
       ]
     }
   }
