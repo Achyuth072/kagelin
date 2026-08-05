@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.29.1-preview.0",
+    "date": "2026-08-05",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Simplify desktop settings layout"
+      ],
+      "Fixed": [
+        "Prevent mobile changelog drawer from going blank on overscroll"
+      ]
+    }
+  },
+  {
     "version": "1.29.0",
     "date": "2026-08-04",
     "channel": "stable",
@@ -778,32 +791,6 @@
         "Location dropdown clipping on mobile",
         "Manage Calendars dialog opening behind the dropdown menu",
         "AlertDialog appearing behind other overlays"
-      ]
-    }
-  },
-  {
-    "version": "1.21.0",
-    "date": "2026-05-28",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Cross-device timer sync, so a focus session started on one device shows up live on another",
-        "Focus task picker with per-project grouping and overdue/today tabs",
-        "Fullscreen focus mode with picture-in-picture timer",
-        "Cancel session with full rollback for abandoned sessions",
-        "Push notifications re-validate automatically on service worker change or page focus"
-      ],
-      "Improved": [
-        "Focus settings dialog: harmonised sections and cleaner ink & matte styling",
-        "Calendar: centred now-indicator, smoother mobile gestures, week view limited to desktop",
-        "Toasts now size to their content and stay centred on mobile",
-        "Sidebar collapsed icon backgrounds centred reliably",
-        "Toasts suppressed while the changelog is open, hotkeys blocked behind modals"
-      ],
-      "Fixed": [
-        "Overlays stacking incorrectly (portalled overlays now sit at the correct z-index)",
-        "Time-picker keyboard not appearing on Android",
-        "Guest mode push toggle and backend sync now correctly blocked"
       ]
     }
   }
