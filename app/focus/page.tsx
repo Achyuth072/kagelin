@@ -13,7 +13,7 @@ import { FullscreenToggle } from "@/components/FullscreenToggle";
 import type { TimerMode } from "@/lib/types/timer";
 import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/utils/time";
-import { useRouter } from "next/navigation";
+import { useSmartBack } from "@/lib/hooks/useSmartBack";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { usePiP } from "@/components/providers/PiPProvider";
@@ -34,7 +34,7 @@ const sideControlCls = cn(
 );
 
 export default function FocusPage() {
-  const router = useRouter();
+  const smartBack = useSmartBack();
   const { state, settings, start, pause, stop, skip } = useTimer();
   const { trigger, isPhone } = useHaptic();
   const { isPiPSupported, isPiPActive, openPiP, closePiP } = usePiP();
@@ -88,7 +88,7 @@ export default function FocusPage() {
       )}
     >
       <motion.button
-        onClick={() => router.back()}
+        onClick={smartBack}
         onTapStart={() => trigger("thud")}
         whileTap={isPhone ? { scale: 0.95 } : {}}
         className={cn(

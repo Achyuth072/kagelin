@@ -68,7 +68,7 @@ serve(async (req: Request) => {
           payload: {
             title: "Morning Briefing",
             body: body,
-            data: { url: "/today" },
+            data: { url: "/" },
           },
         });
         results.morning_scheduled++;
@@ -107,7 +107,7 @@ serve(async (req: Request) => {
           payload: {
             title: "Evening Plan",
             body: body,
-            data: { url: "/focus" },
+            data: { url: "/" },
           },
         });
         results.evening_scheduled++;

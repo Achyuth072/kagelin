@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { motion } from "framer-motion";
+import { recordNavigation } from "@/lib/hooks/useSmartBack";
 
 // No `y` transform — it'd break position:fixed/absolute descendants (e.g. the focus page's PiP button).
 const pageVariants = {
@@ -16,6 +18,11 @@ const pageTransition = {
 };
 
 export default function Template({ children }: { children: React.ReactNode }) {
+  // Remounts on every navigation — doubles as useSmartBack's counter.
+  useEffect(() => {
+    recordNavigation();
+  }, []);
+
   return (
     <motion.div
       variants={pageVariants}
