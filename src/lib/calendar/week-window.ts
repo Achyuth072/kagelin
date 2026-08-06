@@ -10,7 +10,7 @@ const MIN_VISIBLE_DAYS = 3;
 // Must stay under 7, or it's just desktop's TimeGrid (see CONTEXT.md "Day window").
 const MAX_VISIBLE_DAYS = 6;
 
-// Pre-measurement geometry guess: the window's own minimum footprint.
+// Placeholder for the pre-measurement render, not tuned.
 export const INITIAL_WIDTH_GUESS_PX = MIN_VISIBLE_DAYS * MIN_COL_PX + GUTTER_PX;
 
 export function computeWindowGeometry(

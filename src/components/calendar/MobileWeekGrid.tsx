@@ -37,7 +37,6 @@ const PAGE_EDGE: Record<PageDirection, "start" | "end"> = {
 const SCROLL_SETTLE_MS = 120;
 const BRIDGE_TIMEOUT_MS = 600;
 
-// See CONTEXT.md "Bridge".
 type Bridge = {
   direction: PageDirection;
   columns: ReturnType<typeof layoutDayRange>;
@@ -45,8 +44,8 @@ type Bridge = {
 };
 
 /**
- * 3-6 day window onto the 7-day week (see CONTEXT.md "Calendar views").
- * Doesn't use useSwipe — it fires mid-scroll and fights the scroller.
+ * 3-6 day window onto the 7-day week.
+ * Doesn't use useSwipe, it fires mid-scroll and fights the scroller.
  */
 export function MobileWeekGrid({
   events,
@@ -64,6 +63,7 @@ export function MobileWeekGrid({
   const scrollRef = useRef<HTMLDivElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
 
+  // Overwritten before first paint by the effect below.
   const [layout, setLayout] = useState(() =>
     computeWindowGeometry(INITIAL_WIDTH_GUESS_PX, GUTTER_PX),
   );
@@ -71,14 +71,26 @@ export function MobileWeekGrid({
   const touch = useRef<{ x: number; y: number; left: number } | null>(null);
   const [bridge, setBridge] = useState<Bridge | null>(null);
 
-  // Measured, not a %: a % would grow unbounded past a few columns.
+  const measureLayout = (width: number) => {
+    const gutterPx = gutterRef.current?.clientWidth ?? GUTTER_PX;
+    setLayout(computeWindowGeometry(width, gutterPx));
+  };
+
+  // Runs before paint; ResizeObserver's callback is a frame too late.
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    measureLayout(el.clientWidth);
+  }, []);
+
+  // Resizes after mount (rotation, split-screen). Its first callback
+  // just repeats the measurement above.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      const gutterPx = gutterRef.current?.clientWidth ?? GUTTER_PX;
-      setLayout(computeWindowGeometry(entry.contentRect.width, gutterPx));
-    });
+    const observer = new ResizeObserver(([entry]) =>
+      measureLayout(entry.contentRect.width),
+    );
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -113,7 +125,7 @@ export function MobileWeekGrid({
     scrollRef,
   ]);
 
-  // Commits the paged-to week and hands off to the land effect above.
+  // Commits the paged week; the effect above lands the scroll position.
   const finishBridge = (direction: PageDirection) => {
     pendingEdge.current = PAGE_EDGE[direction];
     setBridge(null);

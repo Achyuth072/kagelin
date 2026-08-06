@@ -1,19 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { seedGuestMode } from "./support/guest-mode";
 
 async function seedGuestAndOpenWeek(page: import("@playwright/test").Page) {
-  await page.context().addCookies([
-    {
-      name: "kanso_guest_mode",
-      value: "true",
-      url: "http://localhost:3000/",
-    },
-  ]);
-  await page.addInitScript(() => {
-    localStorage.setItem("kanso_guest_mode", "true");
-  });
-  await page.goto("http://localhost:3000/calendar", {
-    waitUntil: "domcontentloaded",
-  });
+  await seedGuestMode(page);
   await page.locator('[role="combobox"]').first().click();
   await page.getByRole("option", { name: "Week", exact: true }).click();
   await page.locator('[data-testid="mobile-week-grid"]').waitFor();
@@ -170,9 +159,8 @@ test.describe("mobile week view", () => {
       );
     });
 
-    // Paging backward lands at the end edge, not scrollLeft 0 — poll for the
-    // scroller's max, which exercises the prepend-jump path that the
-    // forward-paging test above never touches.
+    // Paging backward lands at the end edge, not scrollLeft 0 — exercises
+    // the prepend-jump path the forward-paging test above doesn't touch.
     await expect
       .poll(
         () =>
