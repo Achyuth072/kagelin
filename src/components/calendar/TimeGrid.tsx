@@ -13,8 +13,6 @@ import { DayColumn } from "./DayColumn";
 
 interface TimeGridProps {
   startDate: Date;
-  // 1 for Day, 4 for Desktop, 7 for Week; "auto" derives it from measured
-  // width for the mobile rolling view (see CONTEXT.md "Rolling view").
   daysToShow: number | "auto";
   events: CalendarEvent[];
   onDateNumberClick?: (date: Date) => void;

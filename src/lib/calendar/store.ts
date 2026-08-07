@@ -24,8 +24,6 @@ interface CalendarStore {
   setView: (view: CalendarView) => void;
   setDate: (date: Date) => void;
   goToToday: () => void;
-  // days overrides 3day's fixed count with a measured one; ignored by every
-  // other view.
   next: (days?: number) => void;
   prev: (days?: number) => void;
   addEvent: (event: CalendarEventUI) => void;

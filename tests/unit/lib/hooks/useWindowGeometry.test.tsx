@@ -44,14 +44,13 @@ describe("useWindowGeometry", () => {
 
     const { result } = renderHook(() => useWindowGeometry(ref, noGutter));
 
-    // 600px container, default gutter → same as computeWindowGeometry(600).
     expect(result.current.visibleDays).toBe(5);
   });
 
   it("reads the gutter's measured width instead of the fallback", () => {
     vi.stubGlobal("ResizeObserver", TestResizeObserver);
     const container = elementWithWidth(600);
-    const gutter = elementWithWidth(64); // wider than GUTTER_PX (48)
+    const gutter = elementWithWidth(64);
     const ref = { current: container };
     const gutterRef = { current: gutter };
 
@@ -84,7 +83,6 @@ describe("useWindowGeometry", () => {
   it("falls back to GUTTER_PX before a container is available", () => {
     const ref = { current: null };
     const { result } = renderHook(() => useWindowGeometry(ref, noGutter));
-    // No container to measure yet — stays at the pre-measurement guess.
     expect(result.current.colWidth).toBeGreaterThan(0);
     expect(GUTTER_PX).toBe(48);
   });
@@ -105,7 +103,6 @@ describe("useWindowGeometry", () => {
       useWindowGeometry(ref, noGutter, { enabled: false }),
     );
 
-    // Stays at the pre-measurement guess — the 600px container was never read.
     expect(result.current).toEqual(
       computeWindowGeometry(INITIAL_WIDTH_GUESS_PX, GUTTER_PX),
     );

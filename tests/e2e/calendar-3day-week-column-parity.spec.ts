@@ -1,14 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { seedGuestMode } from "./support/guest-mode";
 
-// Regression test: below 768px, 3-Day derives its day count from measured
-// width the same way Week's Day window does. At 600px (inside the
-// 464-767px band) they must agree — see CONTEXT.md "Rolling view".
-//
-// Week always renders all 7 days in the DOM (it's a scroller, not a
-// fixed-count grid), so column count alone can't be compared directly.
-// Instead this derives how many columns actually fit Week's visible width
-// from rendered pixels, the same way computeWindowGeometry does.
+// 3-Day and Week column fit parity at 600px viewport.
 async function selectView(page: Page, name: string) {
   await page.locator('[role="combobox"]').first().click();
   await page.getByRole("option", { name, exact: true }).click();
