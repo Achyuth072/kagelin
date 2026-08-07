@@ -5,6 +5,10 @@ type PipWindow = Window & { __pipSamples: number[]; __pipDone: boolean };
 
 test.describe("Focus page PiP button positioning", () => {
   test.use({ viewport: { width: 1400, height: 900 } });
+  test.skip(
+    ({ browserName }) => browserName !== "chromium",
+    "documentPictureInPicture is Chromium-only, so the button never renders",
+  );
 
   test("PiP button never renders near the top of the screen during page-enter transition", async ({
     page,

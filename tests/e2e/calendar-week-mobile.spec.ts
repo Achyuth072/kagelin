@@ -83,7 +83,9 @@ test.describe("mobile week view", () => {
 
   test("a swipe from the end edge pages to next week, landing at the start", async ({
     page,
+    browserName,
   }) => {
+    test.skip(browserName === "webkit", "WebKit has no Touch constructor");
     await page.setViewportSize({ width: 360, height: 780 });
     await seedGuestAndOpenWeek(page);
 
@@ -131,7 +133,9 @@ test.describe("mobile week view", () => {
 
   test("a swipe from the start edge pages to prev week, landing at the end", async ({
     page,
+    browserName,
   }) => {
+    test.skip(browserName === "webkit", "WebKit has no Touch constructor");
     await page.setViewportSize({ width: 360, height: 780 });
     await seedGuestAndOpenWeek(page);
 
