@@ -291,7 +291,17 @@ window below), never the span itself.
 
 The contiguous run of days visible at once within a Week: all 7 on desktop,
 3–6 on narrow viewports (derived from available width, clamped to that
-range). Scrolling moves the window; it does not change the Week.
+range). Scrolling moves the window; it does not change the Week. Not to be
+confused with the rolling view below, which isn't bounded by the Week at all.
+
+### Rolling view (3-Day / 4-Day)
+
+The `3day`/`4day` calendar views: a fixed-count span that starts at
+`currentDate` and pages by its own day count, crossing Week boundaries
+freely. Unlike the Day window, it's **today-anchored, not Week-aligned** — it
+has no notion of a Week to clamp against. The two can show different dates
+for the same day count near a Week boundary; that divergence is intentional,
+not a bug (see ADR 0009).
 
 ### Window scroll vs. Week paging
 

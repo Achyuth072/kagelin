@@ -471,6 +471,11 @@ select {
   .scrollbar-none::-webkit-scrollbar {
     display: none; /* Chromium and Safari */
   }
+
+  /* No Firefox equivalent — scrollbar-width has no per-axis control. */
+  .no-horizontal-scrollbar::-webkit-scrollbar:horizontal {
+    display: none;
+  }
 }
 
 @layer base {

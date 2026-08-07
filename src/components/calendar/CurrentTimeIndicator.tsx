@@ -8,14 +8,9 @@ import { HOUR_HEIGHT, HEADER_HEIGHT } from "@/lib/calendar/grid-constants";
 
 interface CurrentTimeIndicatorProps {
   className?: string;
-  // Smaller label for narrow (mobile week) columns.
-  compact?: boolean;
 }
 
-export function CurrentTimeIndicator({
-  className,
-  compact = false,
-}: CurrentTimeIndicatorProps) {
+export function CurrentTimeIndicator({ className }: CurrentTimeIndicatorProps) {
   const now = useCurrentTime(60000);
   const { formatTime } = useTimeFormat();
 
@@ -38,20 +33,8 @@ export function CurrentTimeIndicator({
 
       {/* Painted after the line, so it stacks on top. */}
       <div className="absolute left-0 flex items-center h-0 overflow-visible -translate-y-1/2">
-        <div
-          className={cn(
-            "rounded-full bg-brand",
-            compact ? "w-[2px] h-3.5 md:h-4" : "w-[2px] h-4 md:h-5",
-          )}
-        />
-        <span
-          className={cn(
-            "rounded bg-brand text-white font-bold leading-none whitespace-nowrap shadow-sm",
-            compact
-              ? "ml-0.5 md:ml-2 px-0.5 md:px-1.5 py-0.5 text-[8px] md:text-[10px] tracking-normal md:tracking-wider normal-case md:uppercase"
-              : "ml-2 px-1.5 py-0.5 text-[9px] md:text-[10px] uppercase tracking-wider",
-          )}
-        >
+        <div className="rounded-full bg-brand w-[2px] h-4 md:h-5" />
+        <span className="rounded bg-brand text-white font-bold leading-none whitespace-nowrap shadow-sm ml-2 px-1.5 py-0.5 text-[9px] md:text-[10px] uppercase tracking-wider">
           {formatTime(now)}
         </span>
       </div>

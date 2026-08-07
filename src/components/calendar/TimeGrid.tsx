@@ -72,7 +72,6 @@ export function TimeGrid({
               key={column.date.toString()}
               column={column}
               className="min-w-0 md:min-w-[120px]"
-              compactIndicator={daysToShow === 7}
               onDateNumberClick={onDateNumberClick}
               onEventClick={onEventClick}
             />

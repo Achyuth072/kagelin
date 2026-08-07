@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page, type Locator } from "@playwright/test";
 import { seedGuestMode } from "./support/guest-mode";
 
 // Regression test: switching into week view flashed the 360px-guessed
@@ -12,6 +12,31 @@ type SampleWindow = Window & {
 
 function maxJump(samples: number[]) {
   return Math.max(...samples.slice(1).map((v, i) => Math.abs(v - samples[i])));
+}
+
+async function selectView(page: Page, name: string) {
+  await page.locator('[role="combobox"]').first().click();
+  await page.getByRole("option", { name, exact: true }).click();
+}
+
+function readIndicatorStyle(el: Element) {
+  const s = getComputedStyle(el);
+  return {
+    fontSize: s.fontSize,
+    marginLeft: s.marginLeft,
+    paddingLeft: s.paddingLeft,
+    textTransform: s.textTransform,
+  };
+}
+
+async function captureIndicatorStyle(scope: Page | Locator) {
+  const label = scope.locator('[data-testid="current-time-indicator"] span');
+  await label.waitFor();
+  // A class's first use on the page can read back blank a beat before CSS injects.
+  await expect
+    .poll(() => label.evaluate((el) => getComputedStyle(el).fontSize))
+    .not.toBe("");
+  return label.evaluate(readIndicatorStyle);
 }
 
 test.describe("mobile week view mount", () => {
@@ -51,8 +76,7 @@ test.describe("mobile week view mount", () => {
       requestAnimationFrame(tick);
     });
 
-    await page.locator('[role="combobox"]').first().click();
-    await page.getByRole("option", { name: "Week", exact: true }).click();
+    await selectView(page, "Week");
 
     await page.waitForFunction(
       () => (window as unknown as SampleWindow).__done,
@@ -72,5 +96,24 @@ test.describe("mobile week view mount", () => {
     expect(colSamples.length).toBeGreaterThan(2);
     expect(maxJump(colSamples)).toBeLessThanOrEqual(1);
     expect(maxJump(scrollSamples)).toBeLessThanOrEqual(1);
+  });
+
+  // Regression test: the indicator used to render at two sizes (a `compact`
+  // variant only MobileWeekGrid opted into), changing mid-transition.
+  test("current-time indicator styles match switching between 3-Day and Week", async ({
+    page,
+  }) => {
+    await seedGuestMode(page);
+    await page.locator('[role="combobox"]').first().waitFor();
+
+    await selectView(page, "3-Day");
+    const threeDayStyle = await captureIndicatorStyle(page);
+
+    await selectView(page, "Week");
+    const weekGrid = page.locator('[data-testid="mobile-week-grid"]');
+    await weekGrid.waitFor();
+    const weekStyle = await captureIndicatorStyle(weekGrid);
+
+    expect(weekStyle).toEqual(threeDayStyle);
   });
 });

@@ -8,6 +8,7 @@ import { useScrollSettle } from "@/lib/hooks/useScrollSettle";
 import { getDayRange, layoutDayRange } from "@/lib/calendar/engine";
 import { scrollTopForNow } from "@/lib/calendar/grid-constants";
 import {
+  alignTarget,
   clampWindowStart,
   computeWindowGeometry,
   decideSwipeGesture,
@@ -149,6 +150,21 @@ export function MobileWeekGrid({
     { settleMs: SCROLL_SETTLE_MS, timeoutMs: BRIDGE_TIMEOUT_MS },
   );
 
+  // No scroll-snap CSS: WebKit drops it on the programmatic scrollLeft the
+  // effects above rely on, so this corrects a mid-column rest after the
+  // fact. Gated outside a bridge — that has its own settle listener above.
+  useScrollSettle(
+    scrollRef,
+    bridge === null,
+    () => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const target = alignTarget(el.scrollLeft, layout.colWidth);
+      if (target !== null) el.scrollTo({ left: target, behavior: "smooth" });
+    },
+    { settleMs: SCROLL_SETTLE_MS, repeat: true },
+  );
+
   const startBridge = (direction: PageDirection) => {
     const isPrev = direction === "prev";
     const newWeekStart = addDays(
@@ -218,7 +234,7 @@ export function MobileWeekGrid({
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchCancel}
         data-testid="mobile-week-grid"
-        className="flex flex-1 min-h-0 overflow-auto bg-background custom-scrollbar touch-auto overscroll-contain"
+        className="flex flex-1 min-h-0 overflow-auto bg-background custom-scrollbar no-horizontal-scrollbar touch-auto overscroll-contain"
       >
         <TimeGutter ref={gutterRef} />
         <div
@@ -233,7 +249,6 @@ export function MobileWeekGrid({
               column={column}
               className="shrink-0"
               style={{ width: `${layout.colWidth}px` }}
-              compactIndicator
               onDateNumberClick={onDateNumberClick}
               onEventClick={onEventClick}
             />

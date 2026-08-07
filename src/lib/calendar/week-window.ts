@@ -3,6 +3,7 @@ export const MIN_COL_PX = 104; // narrowest a day column can read at
 export const WEEK_LENGTH = 7;
 export const EDGE_TOLERANCE_PX = 4;
 export const SWIPE_THRESHOLD_PX = 50;
+export const ALIGN_TOLERANCE_PX = 1;
 
 export type PageDirection = "next" | "prev";
 
@@ -24,6 +25,13 @@ export function computeWindowGeometry(
   );
   const colWidth = (containerWidth - gutterPx) / visibleDays;
   return { visibleDays, colWidth };
+}
+
+// Target to realign a rested scroll to, or null if already at a boundary.
+export function alignTarget(scrollLeft: number, colWidth: number) {
+  if (colWidth <= 0) return null;
+  const target = Math.round(scrollLeft / colWidth) * colWidth;
+  return Math.abs(target - scrollLeft) <= ALIGN_TOLERANCE_PX ? null : target;
 }
 
 export function clampWindowStart(start: number, visibleDays: number) {

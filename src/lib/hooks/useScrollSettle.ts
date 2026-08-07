@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 import type { RefObject } from "react";
 
 // Detects when a scroller stops: native `scrollend`, else a debounced
-// scroll-quiet-gap fallback, with a timeout backstop.
+// scroll-quiet-gap fallback. `repeat: true` fires on every settle with no
+// timeout backstop; the default fires once, backstopped by a timeout.
 export function useScrollSettle(
   ref: RefObject<HTMLElement | null>,
   active: boolean,
@@ -10,7 +11,8 @@ export function useScrollSettle(
   {
     settleMs = 150,
     timeoutMs = 800,
-  }: { settleMs?: number; timeoutMs?: number } = {},
+    repeat = false,
+  }: { settleMs?: number; timeoutMs?: number; repeat?: boolean } = {},
 ) {
   const onSettleRef = useRef(onSettle);
   useEffect(() => {
@@ -21,17 +23,24 @@ export function useScrollSettle(
     const el = ref.current;
     if (!el || !active) return;
 
+    const oneShot = !repeat;
     let finished = false;
     const finish = () => {
-      if (finished) return;
-      finished = true;
+      if (oneShot) {
+        if (finished) return;
+        finished = true;
+      }
       onSettleRef.current();
     };
 
-    const safetyTimer = setTimeout(finish, timeoutMs);
+    const safetyTimer = oneShot ? setTimeout(finish, timeoutMs) : undefined;
 
     if ("onscrollend" in window) {
-      el.addEventListener("scrollend", finish, { once: true });
+      el.addEventListener(
+        "scrollend",
+        finish,
+        oneShot ? { once: true } : undefined,
+      );
       return () => {
         el.removeEventListener("scrollend", finish);
         clearTimeout(safetyTimer);
@@ -50,5 +59,5 @@ export function useScrollSettle(
       clearTimeout(settleTimer);
       clearTimeout(safetyTimer);
     };
-  }, [ref, active, settleMs, timeoutMs]);
+  }, [ref, active, settleMs, timeoutMs, repeat]);
 }
