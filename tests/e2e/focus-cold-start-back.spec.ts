@@ -58,7 +58,19 @@ test("focus page reached via in-app navigation still goes back to the previous p
   await seedGuestMode(page, "http://localhost:3000/");
   assertNotRedirectedToLogin(page);
 
-  await page.getByRole("link", { name: "Focus" }).first().click();
+  // Mobile hides Focus in a sidebar sheet; on desktop the same trigger collapses it.
+  const focusLink = page.getByRole("link", { name: "Focus" }).first();
+  const sidebarTrigger = page
+    .getByRole("button", { name: "Toggle Sidebar" })
+    .first();
+  await expect(focusLink.or(sidebarTrigger).first()).toBeVisible({
+    timeout: 10000,
+  });
+  if (!(await focusLink.isVisible())) {
+    await sidebarTrigger.click();
+    await expect(focusLink).toBeVisible({ timeout: 10000 });
+  }
+  await focusLink.click();
   await page.waitForURL(/\/focus/);
 
   await clickBackButton(page);
