@@ -15,7 +15,12 @@ vi.mock("next/font/google", () => ({
 // Mock everything early
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(),
-  useRouter: vi.fn(() => ({ push: vi.fn(), prefetch: vi.fn() })),
+  useRouter: vi.fn(() => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    prefetch: vi.fn(),
+  })),
   useSearchParams: vi.fn(() => ({ get: vi.fn() })),
 }));
 

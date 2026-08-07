@@ -1,27 +1,45 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
-// True once a second page has been seen in this window — resets on a fresh
-// page load, e.g. clients.openWindow() from a notificationclick (app/sw.ts).
-let mounted = false;
-let hasInAppHistory = false;
+// Raw history.pushState doesn't work here — it desyncs App Router's history
+// tracking, so a later router.push() silently no-ops. Must also run
+// somewhere that survives its own replace() call — AppShell, not Template,
+// which remounts every navigation.
+let trapSettled: Promise<void> = Promise.resolve();
+let resolveTrapSettled: (() => void) | null = null;
 
-export function recordNavigation() {
-  if (mounted) hasInAppHistory = true;
-  mounted = true;
+export function useColdOpenBackTrap() {
+  const router = useRouter();
+  const pathname = usePathname();
+  // undefined = unchecked; null = idle/settled; string = pending push target.
+  const trap = useRef<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (trap.current === undefined) {
+      trap.current = pathname === "/" ? null : pathname + location.search;
+      if (trap.current) {
+        trapSettled = new Promise((resolve) => {
+          resolveTrapSettled = resolve;
+        });
+        router.replace("/");
+      }
+      return;
+    }
+    if (trap.current && pathname === "/") {
+      const target = trap.current;
+      trap.current = null;
+      router.push(target);
+      resolveTrapSettled?.();
+    }
+  }, [pathname, router]);
 }
 
-// router.back() with nothing behind it is a no-op (stuck) or, on Android
-// standalone/TWA, exits the PWA.
+// Waits for the trap to settle so back() doesn't fire into its replace()/push() gap.
 export function useSmartBack() {
   const router = useRouter();
-
   return () => {
-    if (hasInAppHistory) {
-      router.back();
-    } else {
-      router.push("/");
-    }
+    trapSettled.then(() => router.back());
   };
 }

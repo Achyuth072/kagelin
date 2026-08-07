@@ -31,6 +31,27 @@ test("focus page opened cold (as notification click would) falls back in-app ins
   expect(urlAfterBack.replace("http://localhost:3000", "")).toBe("/");
 });
 
+// Regression: page.goBack() drives the real history stack via popstate,
+// bypassing useSmartBack's button gate — exercises OS/gesture back once the
+// cold-open trap (useSmartBack.ts) has settled.
+test("focus page opened cold falls back on real browser back navigation once the deep-link trap settles", async ({
+  page,
+}) => {
+  await seedGuestMode(page, "http://localhost:3000/focus");
+  assertNotRedirectedToLogin(page);
+
+  await page.waitForFunction(() => window.history.length > 2, undefined, {
+    timeout: 10000,
+  });
+
+  await page.goBack();
+  await page.waitForURL("http://localhost:3000/", { timeout: 10000 });
+
+  const urlAfterBack = page.url();
+  expect(urlAfterBack).not.toBe("about:blank");
+  expect(urlAfterBack.replace("http://localhost:3000", "")).toBe("/");
+});
+
 test("focus page reached via in-app navigation still goes back to the previous page", async ({
   page,
 }) => {
