@@ -30,23 +30,27 @@ test.describe("Focus page PiP button positioning", () => {
         `Guest-mode bypass failed: still on ${page.url()} after seeding cookie+localStorage`,
       );
     }
-    // Ensures GlobalHotkeys has mounted before pressing "f" below.
     await expect(page.getByRole("link", { name: "Focus" }).first()).toBeVisible(
       { timeout: 15000 },
     );
 
-    // Sample position every frame for 2s, well past the ~150ms transition.
+    // Samples until 1s after the button first appears — a fixed window could
+    // expire while the route is still compiling.
     await page.evaluate(() => {
       const win = window as unknown as PipWindow;
       win.__pipSamples = [];
       win.__pipDone = false;
       const t0 = performance.now();
+      let firstSeen: number | null = null;
       function tick() {
         const el = document.querySelector('[title*="Picture-in-Picture"]');
         if (el) {
+          firstSeen ??= performance.now();
           win.__pipSamples.push(Math.round(el.getBoundingClientRect().y));
         }
-        if (performance.now() - t0 < 2000) {
+        const settled =
+          firstSeen !== null && performance.now() - firstSeen > 1000;
+        if (!settled && performance.now() - t0 < 20000) {
           requestAnimationFrame(tick);
         } else {
           win.__pipDone = true;
@@ -55,11 +59,16 @@ test.describe("Focus page PiP button positioning", () => {
       requestAnimationFrame(tick);
     });
 
-    // "f" hotkey navigates to /focus.
-    await page.keyboard.press("f");
+    // GlobalHotkeys attaches after hydration, which can land after paint —
+    // retry instead of racing a fixed sleep.
+    await expect(async () => {
+      await page.keyboard.press("f");
+      await expect(page).toHaveURL(/\/focus/, { timeout: 1000 });
+    }).toPass({ timeout: 15000 });
+
     await page.waitForFunction(
       () => (window as unknown as PipWindow).__pipDone,
-      { timeout: 10000 },
+      { timeout: 25000 },
     );
 
     const samples = await page.evaluate(

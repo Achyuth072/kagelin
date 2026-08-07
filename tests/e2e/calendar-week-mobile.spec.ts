@@ -140,8 +140,9 @@ test.describe("mobile week view", () => {
       .locator('[data-testid="day-column"]')
       .evaluateAll((els) => els.map((el) => el.getAttribute("data-date")));
 
-    // Already parked at the start edge (scrollLeft: 0) by default.
+    // scrollLeft isn't 0 by default — the opening position tracks today's weekday.
     await scroller.evaluate((el) => {
+      el.scrollLeft = 0;
       const rect = el.getBoundingClientRect();
       const y = rect.y + 100;
       const touchInit = (x: number) => ({
