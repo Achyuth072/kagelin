@@ -24,8 +24,10 @@ interface CalendarStore {
   setView: (view: CalendarView) => void;
   setDate: (date: Date) => void;
   goToToday: () => void;
-  next: () => void;
-  prev: () => void;
+  // days overrides 3day's fixed count with a measured one; ignored by every
+  // other view.
+  next: (days?: number) => void;
+  prev: (days?: number) => void;
   addEvent: (event: CalendarEventUI) => void;
   updateEvent: (id: string, updates: Partial<CalendarEventUI>) => void;
   deleteEvent: (id: string) => void;
@@ -58,7 +60,7 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
       todayNonce: state.todayNonce + 1,
     })),
 
-  next: () => {
+  next: (days) => {
     const { currentDate, view } = get();
     let newDate: Date;
 
@@ -67,7 +69,7 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
         newDate = addDays(currentDate, 1);
         break;
       case "3day":
-        newDate = addDays(currentDate, 3);
+        newDate = addDays(currentDate, days ?? 3);
         break;
       case "4day":
         newDate = addDays(currentDate, 4);
@@ -88,7 +90,7 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
     set({ currentDate: newDate });
   },
 
-  prev: () => {
+  prev: (days) => {
     const { currentDate, view } = get();
     let newDate: Date;
 
@@ -97,7 +99,7 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
         newDate = subDays(currentDate, 1);
         break;
       case "3day":
-        newDate = subDays(currentDate, 3);
+        newDate = subDays(currentDate, days ?? 3);
         break;
       case "4day":
         newDate = subDays(currentDate, 4);

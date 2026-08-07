@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useSwipe } from "@/lib/hooks/useSwipe";
+import { useWindowGeometry } from "@/lib/hooks/useWindowGeometry";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { cn } from "@/lib/utils";
 import { getDayRange, layoutDayRange } from "@/lib/calendar/engine";
@@ -12,7 +13,9 @@ import { DayColumn } from "./DayColumn";
 
 interface TimeGridProps {
   startDate: Date;
-  daysToShow: number; // 1 for Day, 3 for Mobile, 4 for Desktop, 7 for Week
+  // 1 for Day, 4 for Desktop, 7 for Week; "auto" derives it from measured
+  // width for the mobile rolling view (see CONTEXT.md "Rolling view").
+  daysToShow: number | "auto";
   events: CalendarEvent[];
   onDateNumberClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
@@ -30,15 +33,24 @@ export function TimeGrid({
   "data-testid": testId,
 }: TimeGridProps) {
   const { next, prev, todayNonce } = useCalendarStore();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
+  const isAuto = daysToShow === "auto";
+  const { visibleDays } = useWindowGeometry(containerRef, gutterRef, {
+    enabled: isAuto,
+  });
+  const numDays = isAuto ? visibleDays : daysToShow;
+  const overrideDays = isAuto ? numDays : undefined;
+
   const swipeHandlers = useSwipe({
-    onSwipeLeft: () => next(),
-    onSwipeRight: () => prev(),
+    onSwipeLeft: () => next(overrideDays),
+    onSwipeRight: () => prev(overrideDays),
   });
 
-  const dates = getDayRange(startDate, daysToShow);
+  const dates = getDayRange(startDate, numDays);
   const columns = useMemo(() => layoutDayRange(events, dates), [events, dates]);
 
-  const gridTemplateColumns = `repeat(${daysToShow}, 1fr)`;
+  const gridTemplateColumns = `repeat(${numDays}, 1fr)`;
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +63,7 @@ export function TimeGrid({
 
   return (
     <div
+      ref={containerRef}
       {...swipeHandlers}
       data-testid={testId || "time-grid"}
       className={cn("h-full flex flex-col", className)}
@@ -62,7 +75,7 @@ export function TimeGrid({
           "touch-pan-y overscroll-contain",
         )}
       >
-        <TimeGutter />
+        <TimeGutter ref={gutterRef} />
         <div
           className="flex-1 grid divide-x divide-border/40 h-fit"
           style={{ gridTemplateColumns }}

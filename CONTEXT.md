@@ -296,12 +296,18 @@ confused with the rolling view below, which isn't bounded by the Week at all.
 
 ### Rolling view (3-Day / 4-Day)
 
-The `3day`/`4day` calendar views: a fixed-count span that starts at
+The `3day`/`4day` calendar views: a today-anchored span that starts at
 `currentDate` and pages by its own day count, crossing Week boundaries
-freely. Unlike the Day window, it's **today-anchored, not Week-aligned** — it
-has no notion of a Week to clamp against. The two can show different dates
-for the same day count near a Week boundary; that divergence is intentional,
-not a bug (see ADR 0009).
+freely. Unlike the Day window, it has no notion of a Week to clamp against —
+the two can show different dates for the same day count near a Week
+boundary; that divergence is intentional, not a bug (see ADR 0009).
+
+`3day` (mobile) derives its day count from available width using the same
+geometry as the Day window, so the two agree at every width where both can
+appear. `4day` (desktop) stays a fixed count of 4. The `3-Day` label and the
+`3day` view id don't change when the derived count is more than three —
+three is the floor it guarantees, not a promise of exactly three. See ADR
+0010 for the one width where this disagrees with the desktop breakpoint.
 
 ### Window scroll vs. Week paging
 

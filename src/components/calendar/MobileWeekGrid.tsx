@@ -5,17 +5,15 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useScrollSettle } from "@/lib/hooks/useScrollSettle";
+import { useWindowGeometry } from "@/lib/hooks/useWindowGeometry";
 import { getDayRange, layoutDayRange } from "@/lib/calendar/engine";
 import { scrollTopForNow } from "@/lib/calendar/grid-constants";
 import {
   alignTarget,
   clampWindowStart,
-  computeWindowGeometry,
   decideSwipeGesture,
   edgeAt,
   EDGE_TOLERANCE_PX,
-  GUTTER_PX,
-  INITIAL_WIDTH_GUESS_PX,
   SWIPE_THRESHOLD_PX,
   WEEK_LENGTH,
   type PageDirection,
@@ -64,37 +62,10 @@ export function MobileWeekGrid({
   const scrollRef = useRef<HTMLDivElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
 
-  // Overwritten before first paint by the effect below.
-  const [layout, setLayout] = useState(() =>
-    computeWindowGeometry(INITIAL_WIDTH_GUESS_PX, GUTTER_PX),
-  );
+  const layout = useWindowGeometry(containerRef, gutterRef);
   const pendingEdge = useRef<"start" | "end" | null>(null);
   const touch = useRef<{ x: number; y: number; left: number } | null>(null);
   const [bridge, setBridge] = useState<Bridge | null>(null);
-
-  const measureLayout = (width: number) => {
-    const gutterPx = gutterRef.current?.clientWidth ?? GUTTER_PX;
-    setLayout(computeWindowGeometry(width, gutterPx));
-  };
-
-  // Runs before paint; ResizeObserver's callback is a frame too late.
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    measureLayout(el.clientWidth);
-  }, []);
-
-  // Resizes after mount (rotation, split-screen). Its first callback
-  // just repeats the measurement above.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(([entry]) =>
-      measureLayout(entry.contentRect.width),
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   // Duplicated in TimeGrid.tsx — a shared hook trips the compiler's mutation check.
   useEffect(() => {
