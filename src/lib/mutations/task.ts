@@ -3,6 +3,30 @@ import { mockStore } from "@/lib/mock/mock-store";
 import { calculateNextDueDate } from "@/lib/utils/recurrence";
 import type { Task, CreateTaskInput, UpdateTaskInput } from "@/lib/types/task";
 
+// A hard-deleted task is re-inserted rather than updated, so it needs its
+// full row shape rebuilt from the in-memory Task — shared by taskMutations
+// .restore for both the parent and its subtasks.
+function toRestorePayload(task: Task) {
+  return {
+    id: task.id,
+    user_id: task.user_id,
+    project_id: task.project_id,
+    parent_id: task.parent_id,
+    content: task.content,
+    description: task.description,
+    priority: task.priority,
+    due_date: task.due_date,
+    do_date: task.do_date,
+    is_evening: task.is_evening,
+    is_completed: task.is_completed,
+    completed_at: task.completed_at,
+    day_order: task.day_order,
+    recurrence: task.recurrence,
+    google_event_id: task.google_event_id,
+    google_etag: task.google_etag,
+  };
+}
+
 export const taskMutations = {
   create: async (
     input: CreateTaskInput & { _clientId?: string },
@@ -332,19 +356,52 @@ export const taskMutations = {
     return data as Task;
   },
 
-  delete: async (id: string): Promise<void> => {
+  // Hard-deletes a task. tasks.parent_id cascades at the DB level, so any
+  // subtasks are destroyed along with it — fetched here first and returned
+  // so the caller can restore the whole subtree if the user hits Undo.
+  delete: async (id: string): Promise<Task[]> => {
     const isGuest =
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
 
     if (isGuest) {
+      // mockStore.deleteTask doesn't cascade, so subtasks aren't lost here —
+      // nothing to capture for restore.
       mockStore.deleteTask(id);
-      return;
+      return [];
     }
 
     const supabase = createClient();
+
+    const { data: subtasks, error: subtasksError } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("parent_id", id);
+    if (subtasksError) throw new Error(subtasksError.message);
+
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) throw new Error(error.message);
+
+    return (subtasks as Task[]) ?? [];
+  },
+
+  // Re-inserts a hard-deleted task for useDeleteTask's Undo action, along
+  // with any subtasks the delete cascaded away. Parent goes first since
+  // subtasks' parent_id references it.
+  restore: async (task: Task, subtasks: Task[] = []): Promise<void> => {
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from("tasks")
+      .insert(toRestorePayload(task));
+    if (error) throw new Error(error.message);
+
+    if (subtasks.length > 0) {
+      const { error: subtasksError } = await supabase
+        .from("tasks")
+        .insert(subtasks.map(toRestorePayload));
+      if (subtasksError) throw new Error(subtasksError.message);
+    }
   },
 
   // Accepts pre-computed {id, day_order} pairs produced by the slot-value-swap
