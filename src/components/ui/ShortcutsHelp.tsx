@@ -15,7 +15,10 @@ interface ShortcutGroup {
   shortcuts: { keys: string[]; description: string }[];
 }
 
-const getShortcuts = (platformKey: string): ShortcutGroup[] => [
+const getShortcuts = (
+  platformKey: string,
+  isBoardViewOnTasks: boolean,
+): ShortcutGroup[] => [
   {
     title: "Navigation",
     shortcuts: [
@@ -33,7 +36,12 @@ const getShortcuts = (platformKey: string): ShortcutGroup[] => [
     title: "Actions",
     shortcuts: [
       { keys: ["n"], description: "New Task" },
-      { keys: ["h"], description: "Create Habit" },
+      // h is claimed by board-view horizontal navigation on the tasks page,
+      // so New Habit doesn't bind there — see
+      // .scratch/vim-keyboard-navigation/issues/01-board-view-2d-navigation.md.
+      ...(isBoardViewOnTasks
+        ? []
+        : [{ keys: ["h"], description: "Create Habit" }]),
       { keys: ["e"], description: "New Event" },
       { keys: ["p"], description: "New Project" },
       { keys: ["a"], description: "Archived Projects" },
@@ -55,11 +63,14 @@ const getShortcuts = (platformKey: string): ShortcutGroup[] => [
   {
     title: "Task List (Vim)",
     shortcuts: [
-      { keys: ["j"], description: "Select Next Task" },
-      { keys: ["k"], description: "Select Previous Task" },
-      { keys: ["d"], description: "Delete Selected" },
-      { keys: ["e"], description: "Edit Selected" },
-      { keys: ["Space"], description: "Toggle Completion" },
+      { keys: ["j", "↓"], description: "Select Next Task" },
+      { keys: ["k", "↑"], description: "Select Previous Task" },
+      { keys: ["h", "←"], description: "Select Column Left (Board)" },
+      { keys: ["l", "→"], description: "Select Column Right (Board)" },
+      { keys: ["Enter", "o"], description: "Open Selected" },
+      { keys: ["Space", "x"], description: "Toggle Completion" },
+      { keys: ["d", "Backspace"], description: "Delete Selected" },
+      { keys: ["Esc"], description: "Clear Selection" },
     ],
   },
 ];
@@ -67,11 +78,16 @@ const getShortcuts = (platformKey: string): ShortcutGroup[] => [
 interface ShortcutsHelpProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isBoardViewOnTasks?: boolean;
 }
 
-export function ShortcutsHelp({ open, onOpenChange }: ShortcutsHelpProps) {
+export function ShortcutsHelp({
+  open,
+  onOpenChange,
+  isBoardViewOnTasks = false,
+}: ShortcutsHelpProps) {
   const platformKey = getPlatformKey();
-  const shortcuts = getShortcuts(platformKey);
+  const shortcuts = getShortcuts(platformKey, isBoardViewOnTasks);
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>

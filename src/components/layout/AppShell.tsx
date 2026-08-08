@@ -49,6 +49,7 @@ import { useWeeklyBackup } from "@/lib/hooks/useWeeklyBackup";
 import { GlobalFabs } from "@/components/layout/GlobalFabs";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Toaster } from "@/components/ui/toaster";
+import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
@@ -206,6 +207,7 @@ function GlobalOverlays({
   const setArchivedProjectsOpen = useUiStore(
     (state) => state.setArchivedProjectsOpen,
   );
+  const isBoardViewOnTasks = useIsBoardViewOnTasks();
 
   return (
     <>
@@ -225,6 +227,7 @@ function GlobalOverlays({
       <ShortcutsHelp
         open={isShortcutsHelpOpen}
         onOpenChange={setShortcutsHelpOpen}
+        isBoardViewOnTasks={isBoardViewOnTasks}
       />
       <CreateEventDialog
         open={isCreateEventOpen}

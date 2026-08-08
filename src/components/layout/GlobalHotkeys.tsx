@@ -9,6 +9,8 @@ import { useHabitActions } from "@/components/habits/HabitActionsProvider";
 import { useProjectActions } from "@/components/ProjectActionsProvider";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useCalendarStore } from "@/lib/calendar/store";
+import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
+import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
 
 interface GlobalHotkeysProps {
   setCommandOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
@@ -24,30 +26,17 @@ export function GlobalHotkeys({
   const router = useRouter();
   const pathname = usePathname();
   const { setTheme, resolvedTheme } = useTheme();
-  const { openAddTask, isAddTaskOpen } = useTaskActions();
+  const { openAddTask } = useTaskActions();
   const { openSheet: openCompletedSheet } = useCompletedTasks();
-  const { openAddHabit, isHabitSheetOpen } = useHabitActions();
-  const { openCreateProject, isCreateProjectOpen } = useProjectActions();
-  const { openCreateEvent, isCreateEventOpen } = useCalendarStore();
-  const viewMode = useUiStore((state) => state.viewMode);
+  const { openAddHabit } = useHabitActions();
+  const { openCreateProject } = useProjectActions();
+  const { openCreateEvent } = useCalendarStore();
   const setViewMode = useUiStore((state) => state.setViewMode);
   const setArchivedProjectsOpen = useUiStore(
     (state) => state.setArchivedProjectsOpen,
   );
-  const isShortcutsHelpOpen = useUiStore((state) => state.isShortcutsHelpOpen);
-  const isArchivedProjectsOpen = useUiStore(
-    (state) => state.isArchivedProjectsOpen,
-  );
-  const isChangelogOpen = useUiStore((state) => state.isChangelogOpen);
 
-  const isOtherModalOpen =
-    isAddTaskOpen ||
-    isHabitSheetOpen ||
-    isCreateProjectOpen ||
-    isCreateEventOpen ||
-    isShortcutsHelpOpen ||
-    isArchivedProjectsOpen ||
-    isChangelogOpen;
+  const isOtherModalOpen = useIsAnyModalOpen();
   const isAnyModalOpen = isOtherModalOpen || !!commandOpen;
 
   const options = {
@@ -56,8 +45,7 @@ export function GlobalHotkeys({
     enabled: !isAnyModalOpen,
   };
 
-  const isTasksPage = pathname === "/" || pathname?.startsWith("/tasks");
-  const isBoardViewOnTasks = isTasksPage && viewMode === "board";
+  const isBoardViewOnTasks = useIsBoardViewOnTasks();
   const habitHotkeyOptions = {
     ...options,
     enabled: !isAnyModalOpen && !isBoardViewOnTasks,

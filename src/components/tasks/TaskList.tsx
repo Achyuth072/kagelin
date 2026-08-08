@@ -51,6 +51,7 @@ import {
 } from "@/lib/hooks/useTaskMutations";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTaskViewData, getBoardColumns } from "@/lib/hooks/useTaskViewData";
 import { TaskListView } from "./TaskListView";
@@ -632,26 +633,7 @@ function TaskListBase({
     return list;
   }, [processedTasks]);
 
-  const isShortcutsHelpOpen = useUiStore((state) => state.isShortcutsHelpOpen);
-  const isArchivedProjectsOpen = useUiStore(
-    (state) => state.isArchivedProjectsOpen,
-  );
-  const isChangelogOpen = useUiStore((state) => state.isChangelogOpen);
-
-  const isDOMModalOpen =
-    typeof document !== "undefined" &&
-    Boolean(
-      document.querySelector(
-        '[role="dialog"], [role="alertdialog"], [data-state="open"]',
-      ),
-    );
-
-  const isAnyModalOpen =
-    !!selectedTask ||
-    isShortcutsHelpOpen ||
-    isArchivedProjectsOpen ||
-    isChangelogOpen ||
-    isDOMModalOpen;
+  const isAnyModalOpen = useIsAnyModalOpen() || !!selectedTask;
 
   const boardColumns = useMemo<TaskGroup[]>(
     () => getBoardColumns(processedTasks),
@@ -748,31 +730,53 @@ function TaskListBase({
     }
   };
 
+  const hasSelection = !!keyboardSelectedId;
+
+  // j/k/h/l/x/enter/o/d/backspace have no native browser behaviour worth
+  // preserving, so they can always claim the keypress. arrowdown/up/left/right
+  // and space drive page scrolling until a task is actually selected — only
+  // claim those once vim mode is armed, or scrolling with nothing selected
+  // breaks.
   const hotkeyOptions = {
     preventDefault: true,
     enabled: !isAnyModalOpen,
   };
+  const arrowHotkeyOptions = {
+    preventDefault: hasSelection,
+    enabled: !isAnyModalOpen,
+  };
 
-  useHotkeys(["j", "arrowdown"], () => handleNavVertical(1), hotkeyOptions);
-  useHotkeys(["k", "arrowup"], () => handleNavVertical(-1), hotkeyOptions);
-  useHotkeys(["l", "arrowright"], () => handleNavHorizontal(1), hotkeyOptions);
-  useHotkeys(["h", "arrowleft"], () => handleNavHorizontal(-1), hotkeyOptions);
+  useHotkeys("j", () => handleNavVertical(1), hotkeyOptions);
+  useHotkeys("arrowdown", () => handleNavVertical(1), arrowHotkeyOptions);
+  useHotkeys("k", () => handleNavVertical(-1), hotkeyOptions);
+  useHotkeys("arrowup", () => handleNavVertical(-1), arrowHotkeyOptions);
+  useHotkeys("l", () => handleNavHorizontal(1), hotkeyOptions);
+  useHotkeys("arrowright", () => handleNavHorizontal(1), arrowHotkeyOptions);
+  useHotkeys("h", () => handleNavHorizontal(-1), hotkeyOptions);
+  useHotkeys("arrowleft", () => handleNavHorizontal(-1), arrowHotkeyOptions);
 
+  const toggleSelected = () => {
+    if (keyboardSelectedId) {
+      const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
+      if (task) {
+        toggleMutation.mutate({
+          id: task.id,
+          is_completed: !task.is_completed,
+        });
+      }
+    }
+  };
+
+  useHotkeys("x", toggleSelected, hotkeyOptions);
   useHotkeys(
-    ["space", "x"],
+    "space",
     (e) => {
-      e.preventDefault();
       if (keyboardSelectedId) {
-        const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
-        if (task) {
-          toggleMutation.mutate({
-            id: task.id,
-            is_completed: !task.is_completed,
-          });
-        }
+        e.preventDefault();
+        toggleSelected();
       }
     },
-    hotkeyOptions,
+    arrowHotkeyOptions,
   );
 
   useHotkeys(
@@ -797,6 +801,10 @@ function TaskListBase({
     },
     hotkeyOptions,
   );
+
+  useHotkeys("escape", () => setKeyboardSelectedId(null), {
+    enabled: !isAnyModalOpen && hasSelection,
+  });
 
   const overlayContent = useMemo(() => {
     if (!activeTask) return null;
