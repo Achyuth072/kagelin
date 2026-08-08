@@ -306,10 +306,9 @@ export function useReorderTasks() {
         queryClient.setQueryData<Task[]>(queryKey, (old) => {
           if (!old) return old;
 
-          // Pairs come from computeMoveOrders (reorder.ts / task-dnd.ts) with each
-          // task's final day_order already computed — just apply in place.
-          // Consumers sort by day_order themselves (e.g. useTaskViewData), so the
-          // cache array doesn't need reshuffling.
+          // Pairs already carry each task's final day_order (computeMoveOrders in
+          // reorder.ts / task-dnd.ts) — apply in place. Consumers (e.g.
+          // useTaskViewData) sort by day_order themselves, so no reshuffling here.
           return old.map((task) => {
             const newOrder = pairById.get(task.id);
             return newOrder === undefined || task.day_order === newOrder

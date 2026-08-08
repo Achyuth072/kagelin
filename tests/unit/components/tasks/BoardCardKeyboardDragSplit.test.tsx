@@ -4,13 +4,10 @@ import { DndContext } from "@dnd-kit/core";
 import { SortableContext } from "@dnd-kit/sortable";
 import type { Task } from "@/lib/types/task";
 
-/**
- * Regression guard for issue 04 — dnd-kit's KeyboardSensor activates on
- * Space/Enter, the same keys TaskList binds to toggle-complete / open-sheet.
- * On desktop the fix confines dnd-kit's role/tabIndex/onKeyDown to a
- * dedicated drag handle so the card body no longer double-fires on those
- * keys; pointer dragging stays card-wide via the remaining listeners.
- */
+// Regression guard: dnd-kit's KeyboardSensor activates on Space/Enter, the
+// same keys TaskList binds to toggle-complete / open-sheet. On desktop
+// dnd-kit's role/tabIndex/onKeyDown is confined to a dedicated drag handle
+// so the card body no longer double-fires on those keys.
 
 vi.mock("@/components/tasks/TaskItem", () => {
   const Spy = () => <div data-testid="task-item" />;

@@ -1,14 +1,9 @@
-/**
- * Regression test for issue 05 — the keyboard focus model.
- *
- * Vim nav (j/k/h/l) drives `keyboardSelectedId` as React state; DOM focus
- * never moves to a card. That's virtual focus, so screen readers only learn
- * about the selection through `aria-activedescendant` wired up on the
- * scroll container — not through native tab order. This exercises the real
- * TaskListView/TaskBoard + card components (only dnd-kit primitives are
- * stubbed) so the assertions land on the actual DOM contract: container
- * role + aria-activedescendant, and per-card id + aria-selected.
- */
+// Vim nav (j/k/h/l) drives `keyboardSelectedId` as React state; DOM focus
+// never moves to a card. Screen readers learn the selection only through
+// `aria-activedescendant` on the scroll container, not native tab order.
+// Exercises the real TaskListView/TaskBoard + card components (only
+// dnd-kit primitives are stubbed) so assertions land on the actual DOM
+// contract: container role + aria-activedescendant, per-card id + aria-selected.
 
 import type { ReactNode } from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";

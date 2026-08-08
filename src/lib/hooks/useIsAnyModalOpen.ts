@@ -4,12 +4,10 @@ import { useProjectActions } from "@/components/ProjectActionsProvider";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useCalendarStore } from "@/lib/calendar/store";
 
-// Shared by GlobalHotkeys and TaskList so task-level and app-level hotkeys
-// agree on what counts as "a modal is open" — state-derived, not a DOM probe,
-// so it's correct on the same render the modal opens and safe under the
-// React Compiler. The command menu is deliberately excluded: it's
-// AppShell-local state and its own text input already filters keystrokes via
-// react-hotkeys-hook's enableOnFormTags: false.
+// Shared by GlobalHotkeys and TaskList so hotkeys agree on what counts as
+// "a modal is open" — state-derived, not a DOM probe, so it's correct on the
+// same render the modal opens. Command menu is excluded: it's AppShell-local
+// state whose own input already filters keystrokes via enableOnFormTags: false.
 export function useIsAnyModalOpen(): boolean {
   const { isAddTaskOpen } = useTaskActions();
   const { isHabitSheetOpen } = useHabitActions();

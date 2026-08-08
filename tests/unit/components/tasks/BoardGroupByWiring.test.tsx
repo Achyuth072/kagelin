@@ -137,12 +137,10 @@ vi.mock("@/lib/calendar/store", () => ({
   }),
 }));
 
-/**
- * TaskBoard has always accepted groupBy, but TaskList never passed it, so the
- * board silently ran on getTaskUpdatesForGroup's heuristic cascade — where a
- * project named "Today" is read as a date bucket. The util is covered in
- * task-dnd.test.ts; what regressed was the wiring, so that is what this asserts.
- */
+// Regression guard: TaskList once forgot to pass groupBy to TaskBoard, so the
+// board fell back to getTaskUpdatesForGroup's heuristic cascade — a project
+// named "Today" read as a date bucket. task-dnd.test.ts covers the util;
+// this asserts the wiring.
 describe("TaskList -> TaskBoard groupBy wiring", () => {
   beforeEach(() => {
     boardProps.mockClear();

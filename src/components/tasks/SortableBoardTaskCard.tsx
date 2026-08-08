@@ -36,11 +36,10 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
     isDragging,
   } = useSortable({ id: task.id });
 
-  // Desktop: keyboard-drag activation (Space/Enter) collides with the Vim
-  // shortcuts bound to the same keys, so it moves to a dedicated handle —
-  // pointer dragging stays card-wide via the onMouseDown/onTouchStart
-  // listeners left on the wrapper. Mobile keeps the old full spread;
-  // keyboard drag isn't a mobile concern and there's no handle to hit.
+  // Desktop: keyboard-drag (Space/Enter) collides with the Vim shortcuts on
+  // the same keys, so it moves to a dedicated handle; pointer dragging stays
+  // card-wide via the remaining listeners. Mobile keeps the full spread —
+  // no keyboard drag, no handle needed.
   const { onKeyDown: _onKeyDown, ...pointerListeners } = listeners ?? {};
   const cardAttributes = isDesktop ? undefined : attributes;
   const cardListeners = isDesktop ? pointerListeners : listeners;
@@ -91,9 +90,8 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
           dragListeners={listeners}
           variant="desktop"
           // Right-edge, vertically centered — the header row's Play button
-          // already claims the top-right corner on hover. Also revealed on
-          // focus-within (not just hover), so tabbing to it doesn't land on
-          // an invisible control.
+          // already claims the top-right corner. Also revealed on
+          // focus-within so tabbing to it isn't an invisible control.
           className="absolute right-1 top-1/2 -translate-y-1/2 z-20 rounded-md p-1 hover:bg-secondary/60 group-focus-within:opacity-100"
         />
       )}

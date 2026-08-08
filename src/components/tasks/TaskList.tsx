@@ -111,12 +111,9 @@ function TaskListBase({
     null,
   );
   // keyboardSelectedId is virtual focus — DOM focus never moves to a card.
-  // Decision: expose it via aria-activedescendant on this container (role
-  // listbox/grid below), not true roving tabindex, because (a) it matches
-  // the state-driven selection that's already built, and (b) roving
-  // tabindex would mean calling .focus() on board cards, which re-arms the
-  // Space/Enter drag collision dnd-kit's KeyboardSensor has with the same
-  // keys (see the desktop DragHandle split in SortableBoardTaskCard).
+  // Exposed via aria-activedescendant (role listbox/grid below), not roving
+  // tabindex, since focusing cards would re-arm dnd-kit's Space/Enter drag
+  // collision (see the DragHandle split in SortableBoardTaskCard).
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const queryClient = useQueryClient();
@@ -546,7 +543,7 @@ function TaskListBase({
           return;
         }
 
-        // CRITICAL ORDERING: lockLocal BEFORE activeId — see comment above.
+        // lockLocal must precede activeId — see the reset branch above.
         setLockLocal(true);
         if (sortBy !== "custom") {
           setCustomSortEnteredViaDrag(true);
@@ -750,11 +747,9 @@ function TaskListBase({
     }
   }, [hasSelection]);
 
-  // j/k/h/l/x/enter/o/d/backspace have no native browser behaviour worth
-  // preserving, so they can always claim the keypress. arrowdown/up/left/right
-  // and space drive page scrolling until a task is actually selected — only
-  // claim those once vim mode is armed, or scrolling with nothing selected
-  // breaks.
+  // Vim keys have no native behaviour worth preserving, so they always claim
+  // the keypress. Arrow keys/space drive page scroll until a task is
+  // selected, so they only claim the key once vim mode is armed.
   const hotkeyOptions = {
     preventDefault: true,
     enabled: !isAnyModalOpen,
