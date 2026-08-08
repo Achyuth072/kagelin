@@ -115,6 +115,7 @@ function TaskListBase({
   // tabindex, since focusing cards would re-arm dnd-kit's Space/Enter drag
   // collision (see the DragHandle split in SortableBoardTaskCard).
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastGPressedRef = useRef<number>(0);
 
   const queryClient = useQueryClient();
   const reorderMutation = useReorderTasks();
@@ -736,6 +737,34 @@ function TaskListBase({
     }
   };
 
+  const handleNavTop = () => {
+    if (viewMode === "board") {
+      const firstCol = boardColumns.find((c) => c.tasks.length > 0);
+      if (firstCol && firstCol.tasks.length > 0) {
+        setKeyboardSelectedId(firstCol.tasks[0].id);
+      }
+    } else {
+      if (navigableTasks.length > 0) {
+        setKeyboardSelectedId(navigableTasks[0].id);
+      }
+    }
+  };
+
+  const handleNavBottom = () => {
+    if (viewMode === "board") {
+      const lastCol = [...boardColumns]
+        .reverse()
+        .find((c) => c.tasks.length > 0);
+      if (lastCol && lastCol.tasks.length > 0) {
+        setKeyboardSelectedId(lastCol.tasks[lastCol.tasks.length - 1].id);
+      }
+    } else {
+      if (navigableTasks.length > 0) {
+        setKeyboardSelectedId(navigableTasks[navigableTasks.length - 1].id);
+      }
+    }
+  };
+
   const hasSelection = !!keyboardSelectedId;
 
   // aria-activedescendant is inert unless the owning container has DOM
@@ -767,6 +796,29 @@ function TaskListBase({
   useHotkeys("arrowright", () => handleNavHorizontal(1), arrowHotkeyOptions);
   useHotkeys("h", () => handleNavHorizontal(-1), hotkeyOptions);
   useHotkeys("arrowleft", () => handleNavHorizontal(-1), arrowHotkeyOptions);
+  useHotkeys(
+    "g",
+    (e) => {
+      if (e.shiftKey) return;
+      const now = Date.now();
+      if (now - lastGPressedRef.current < 500 && lastGPressedRef.current > 0) {
+        lastGPressedRef.current = 0;
+        handleNavTop();
+      } else {
+        lastGPressedRef.current = now;
+      }
+    },
+    hotkeyOptions,
+  );
+  useHotkeys(
+    ["shift+g", "G"],
+    (e) => {
+      if (!e.shiftKey) return;
+      lastGPressedRef.current = 0;
+      handleNavBottom();
+    },
+    hotkeyOptions,
+  );
 
   const toggleSelected = () => {
     if (keyboardSelectedId) {

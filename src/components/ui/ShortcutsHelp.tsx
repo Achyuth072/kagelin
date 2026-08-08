@@ -67,6 +67,8 @@ const getShortcuts = (
       { keys: ["k", "↑"], description: "Select Previous Task" },
       { keys: ["h", "←"], description: "Select Column Left (Board)" },
       { keys: ["l", "→"], description: "Select Column Right (Board)" },
+      { keys: ["g", "g"], description: "Jump to First Task" },
+      { keys: ["G"], description: "Jump to Last Task" },
       { keys: ["Enter", "o"], description: "Open Selected" },
       { keys: ["Space", "x"], description: "Toggle Completion" },
       { keys: ["d", "Backspace"], description: "Delete Selected" },

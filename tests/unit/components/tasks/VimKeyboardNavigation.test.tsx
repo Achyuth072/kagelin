@@ -418,5 +418,90 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
       );
       expect(screen.getByTestId("task-sheet").textContent).toBe("closed");
     });
+
+    it("gg jumps to the first task and G jumps to the last task in List view", async () => {
+      uiState.viewMode = "list";
+      taskState.tasks = [
+        buildTask({ id: "a", content: "Alpha", day_order: 0 }),
+        buildTask({ id: "b", content: "Bravo", day_order: 1 }),
+        buildTask({ id: "c", content: "Charlie", day_order: 2 }),
+      ];
+      await renderTaskList();
+      const ids = ["a", "b", "c"];
+
+      // Select middle task first
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      expect(selectedId(ids)).toBe("b");
+
+      // Press G to jump to last task
+      fireEvent.keyDown(document, { key: "G", code: "KeyG", shiftKey: true });
+      expect(selectedId(ids)).toBe("c");
+
+      // Press gg to jump to first task
+      fireEvent.keyDown(document, { key: "g", code: "KeyG" });
+      fireEvent.keyDown(document, { key: "g", code: "KeyG" });
+      expect(selectedId(ids)).toBe("a");
+    });
+
+    it("gg jumps to the first task and G jumps to the last task in Board view", async () => {
+      uiState.viewMode = "board";
+      taskState.tasks = [
+        buildTask({ id: "a1", content: "A1", day_order: 0 }),
+        buildTask({ id: "a2", content: "A2", day_order: 1 }),
+        buildTask({
+          id: "e1",
+          content: "E1",
+          day_order: 0,
+          is_evening: true,
+        }),
+        buildTask({
+          id: "e2",
+          content: "E2",
+          day_order: 1,
+          is_evening: true,
+        }),
+      ];
+      await renderTaskList();
+      const ids = ["a1", "a2", "e1", "e2"];
+
+      // Press G to jump to bottom of last column
+      fireEvent.keyDown(document, { key: "G", code: "KeyG", shiftKey: true });
+      expect(selectedId(ids)).toBe("e2");
+
+      // Press gg to jump to top of first column
+      fireEvent.keyDown(document, { key: "g", code: "KeyG" });
+      fireEvent.keyDown(document, { key: "g", code: "KeyG" });
+      expect(selectedId(ids)).toBe("a1");
+    });
+
+    it("gg sequence expires if second g is delayed", async () => {
+      vi.useFakeTimers();
+      uiState.viewMode = "list";
+      taskState.tasks = [
+        buildTask({ id: "a", content: "Alpha", day_order: 0 }),
+        buildTask({ id: "b", content: "Bravo", day_order: 1 }),
+        buildTask({ id: "c", content: "Charlie", day_order: 2 }),
+      ];
+      await renderTaskList();
+      const ids = ["a", "b", "c"];
+
+      // Select last task
+      fireEvent.keyDown(document, { key: "G", code: "KeyG", shiftKey: true });
+      expect(selectedId(ids)).toBe("c");
+
+      // First g press
+      fireEvent.keyDown(document, { key: "g", code: "KeyG" });
+      expect(selectedId(ids)).toBe("c");
+
+      // Advance time beyond the 500ms sequence window
+      vi.advanceTimersByTime(600);
+
+      // Second g press (now treated as a new first g)
+      fireEvent.keyDown(document, { key: "g", code: "KeyG" });
+      expect(selectedId(ids)).toBe("c");
+
+      vi.useRealTimers();
+    });
   });
 });
