@@ -9,6 +9,7 @@ import {
   priorityCheckboxClasses,
   formatDueDate,
   priorityTextClasses,
+  taskDomId,
 } from "./task-utils";
 import { KanbanBoardCardButton } from "@/components/kanban";
 
@@ -35,6 +36,9 @@ export function BoardTaskCard({
 }: BoardTaskCardProps) {
   return (
     <div
+      id={taskDomId(task.id)}
+      role="gridcell"
+      aria-selected={isKeyboardSelected}
       className={cn(
         "relative bg-background border border-border/80 hover:border-border transition-all cursor-pointer group/card rounded-xl overflow-hidden",
         isKeyboardSelected &&

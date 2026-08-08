@@ -10,6 +10,7 @@ import {
   priorityCheckboxClasses,
   formatDueDate,
   isOverdue,
+  taskDomId,
 } from "./task-utils";
 import {
   DraggableAttributes,
@@ -55,6 +56,9 @@ export function ListTaskCard({
 }: ListTaskCardProps) {
   return (
     <div
+      id={taskDomId(task.id)}
+      role="option"
+      aria-selected={isKeyboardSelected}
       className={cn(
         "flex items-center w-full gap-2 md:gap-3 group relative bg-background border-b border-border/10 hover:bg-secondary/15 transition-all px-4 py-3 touch-manipulation",
         isKeyboardSelected &&

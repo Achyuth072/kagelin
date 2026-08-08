@@ -513,7 +513,10 @@ const KanbanColumn = memo(function KanbanColumn({
         items={group.tasks.map((t) => t.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="px-3 pb-4 space-y-3 flex-1 overflow-y-auto scrollbar-hide">
+        <div
+          role="row"
+          className="px-3 pb-4 space-y-3 flex-1 overflow-y-auto scrollbar-hide"
+        >
           {group.tasks.map((task) => (
             <TaskCardWrapper
               key={task.id}

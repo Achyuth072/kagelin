@@ -58,6 +58,7 @@ import { TaskListView } from "./TaskListView";
 import { TaskBoard } from "./TaskBoard";
 import { TaskGhost } from "./TaskGhost";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { taskDomId } from "./task-utils";
 
 // dnd-kit announces on every onDragOver by default, thrashing aria-live at
 // drag-over frequency — no-op it and keep only start/end/cancel announcements.
@@ -109,6 +110,14 @@ function TaskListBase({
   const [keyboardSelectedId, setKeyboardSelectedId] = useState<string | null>(
     null,
   );
+  // keyboardSelectedId is virtual focus — DOM focus never moves to a card.
+  // Decision: expose it via aria-activedescendant on this container (role
+  // listbox/grid below), not true roving tabindex, because (a) it matches
+  // the state-driven selection that's already built, and (b) roving
+  // tabindex would mean calling .focus() on board cards, which re-arms the
+  // Space/Enter drag collision dnd-kit's KeyboardSensor has with the same
+  // keys (see the desktop DragHandle split in SortableBoardTaskCard).
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const queryClient = useQueryClient();
   const reorderMutation = useReorderTasks();
@@ -732,6 +741,15 @@ function TaskListBase({
 
   const hasSelection = !!keyboardSelectedId;
 
+  // aria-activedescendant is inert unless the owning container has DOM
+  // focus, so arm it the moment vim nav picks a task. Cheap to call again
+  // on every selection change — an already-focused element is a no-op.
+  useEffect(() => {
+    if (hasSelection) {
+      scrollContainerRef.current?.focus({ preventScroll: true });
+    }
+  }, [hasSelection]);
+
   // j/k/h/l/x/enter/o/d/backspace have no native browser behaviour worth
   // preserving, so they can always claim the keypress. arrowdown/up/left/right
   // and space drive page scrolling until a task is actually selected — only
@@ -888,7 +906,14 @@ function TaskListBase({
         }}
       >
         <div
+          ref={scrollContainerRef}
           data-task-list-scroll-container="true"
+          role={viewMode === "board" ? "grid" : "listbox"}
+          aria-label={viewMode === "board" ? "Task board" : "Task list"}
+          tabIndex={0}
+          aria-activedescendant={
+            keyboardSelectedId ? taskDomId(keyboardSelectedId) : undefined
+          }
           className="flex-1 h-full overflow-y-auto scrollbar-hide relative overscroll-contain"
           style={{ contain: "strict" }}
         >

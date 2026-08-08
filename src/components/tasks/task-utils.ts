@@ -37,3 +37,11 @@ export function isOverdue(dateString: string | null | undefined): boolean {
   const date = parseISO(dateString);
   return isBefore(date, startOfDay(new Date())) && !isToday(date);
 }
+
+/**
+ * Stable DOM id for a task card, used as the `aria-activedescendant` target
+ * on the scroll container that owns keyboard (Vim) navigation.
+ */
+export function taskDomId(taskId: string): string {
+  return `task-item-${taskId}`;
+}
