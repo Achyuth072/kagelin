@@ -241,16 +241,6 @@ function TaskListBase({
     setCustomSortEnteredViaDrag,
   ]);
 
-  // Opens the edit sheet for a task picked in the command menu. Clears the id
-  // only once found — the list may still be loading on first navigation.
-  useEffect(() => {
-    if (!selectedTaskId) return;
-    const task = tasks.find((t) => t.id === selectedTaskId);
-    if (!task) return;
-    setSelectedTask(task);
-    setSelectedTaskId(null);
-  }, [selectedTaskId, tasks, setSelectedTaskId]);
-
   const handleTaskClick = useCallback(
     (task: Task) => {
       (document.activeElement as HTMLElement)?.blur();
@@ -262,6 +252,16 @@ function TaskListBase({
     },
     [onTaskSelect],
   );
+
+  // Opens the edit sheet for a task picked in the command menu. Clears the id
+  // only once found — the list may still be loading on first navigation.
+  useEffect(() => {
+    if (!selectedTaskId) return;
+    const task = tasks.find((t) => t.id === selectedTaskId);
+    if (!task) return;
+    handleTaskClick(task);
+    setSelectedTaskId(null);
+  }, [selectedTaskId, tasks, setSelectedTaskId, handleTaskClick]);
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -802,7 +802,7 @@ function TaskListBase({
     () => {
       if (keyboardSelectedId) {
         const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
-        if (task) setSelectedTask(task);
+        if (task) handleTaskClick(task);
       }
     },
     hotkeyOptions,

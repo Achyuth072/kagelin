@@ -130,13 +130,13 @@ function selectedId(taskIds: string[]): string | undefined {
   return taskIds.find((id) => isSelected(id));
 }
 
-async function renderTaskList() {
+async function renderTaskList(props?: { onTaskSelect?: (task: Task) => void }) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return render(
     <QueryClientProvider client={qc}>
-      <TaskList />
+      <TaskList {...props} />
     </QueryClientProvider>,
   );
 }
@@ -399,6 +399,24 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
       });
       expect(arrowResult).toBe(true); // arms selection without claiming the key
       expect(selectedId(["a"])).toBe("a");
+    });
+
+    it("Enter/o routes through onTaskSelect when provided instead of opening TaskSheet", async () => {
+      uiState.viewMode = "list";
+      const onTaskSelect = vi.fn();
+      taskState.tasks = [
+        buildTask({ id: "a", content: "Alpha", day_order: 0 }),
+      ];
+      await renderTaskList({ onTaskSelect });
+
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      expect(selectedId(["a"])).toBe("a");
+
+      fireEvent.keyDown(document, { key: "Enter", code: "Enter" });
+      expect(onTaskSelect).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "a" }),
+      );
+      expect(screen.getByTestId("task-sheet").textContent).toBe("closed");
     });
   });
 });
