@@ -914,7 +914,7 @@ function TaskListBase({
           aria-activedescendant={
             keyboardSelectedId ? taskDomId(keyboardSelectedId) : undefined
           }
-          className="flex-1 h-full overflow-y-auto scrollbar-hide relative overscroll-contain"
+          className="flex-1 h-full overflow-y-auto scrollbar-hide relative overscroll-contain focus-visible:outline-none"
           style={{ contain: "strict" }}
         >
           {viewMode === "board" ? (

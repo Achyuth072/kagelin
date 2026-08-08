@@ -515,7 +515,7 @@ const KanbanColumn = memo(function KanbanColumn({
       >
         <div
           role="row"
-          className="px-3 pb-4 space-y-3 flex-1 overflow-y-auto scrollbar-hide"
+          className="px-3 pt-1.5 pb-4 scroll-py-1.5 space-y-3 flex-1 overflow-y-auto scrollbar-hide"
         >
           {group.tasks.map((task) => (
             <TaskCardWrapper
