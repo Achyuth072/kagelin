@@ -52,7 +52,7 @@ import {
 import { useUiStore } from "@/lib/store/uiStore";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useTaskViewData } from "@/lib/hooks/useTaskViewData";
+import { useTaskViewData, getBoardColumns } from "@/lib/hooks/useTaskViewData";
 import { TaskListView } from "./TaskListView";
 import { TaskBoard } from "./TaskBoard";
 import { TaskGhost } from "./TaskGhost";
@@ -632,7 +632,33 @@ function TaskListBase({
     return list;
   }, [processedTasks]);
 
-  const handleNav = (direction: 1 | -1) => {
+  const isShortcutsHelpOpen = useUiStore((state) => state.isShortcutsHelpOpen);
+  const isArchivedProjectsOpen = useUiStore(
+    (state) => state.isArchivedProjectsOpen,
+  );
+  const isChangelogOpen = useUiStore((state) => state.isChangelogOpen);
+
+  const isDOMModalOpen =
+    typeof document !== "undefined" &&
+    Boolean(
+      document.querySelector(
+        '[role="dialog"], [role="alertdialog"], [data-state="open"]',
+      ),
+    );
+
+  const isAnyModalOpen =
+    !!selectedTask ||
+    isShortcutsHelpOpen ||
+    isArchivedProjectsOpen ||
+    isChangelogOpen ||
+    isDOMModalOpen;
+
+  const boardColumns = useMemo<TaskGroup[]>(
+    () => getBoardColumns(processedTasks),
+    [processedTasks],
+  );
+
+  const handleListNav = (direction: 1 | -1) => {
     if (navigableTasks.length === 0) return;
     const currentIndex = navigableTasks.findIndex(
       (t) => t.id === keyboardSelectedId,
@@ -647,38 +673,130 @@ function TaskListBase({
     }
   };
 
-  useHotkeys("j", () => handleNav(1), { preventDefault: true });
-  useHotkeys("k", () => handleNav(-1), { preventDefault: true });
-  useHotkeys("space", (e) => {
-    e.preventDefault();
+  const handleBoardNav = (dirX: number, dirY: number) => {
+    const totalBoardTasks = boardColumns.reduce(
+      (acc, col) => acc + col.tasks.length,
+      0,
+    );
+    if (totalBoardTasks === 0) return;
+
+    let currentColIndex = -1;
+    let currentRowIndex = -1;
+
     if (keyboardSelectedId) {
-      const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
-      if (task) {
-        toggleMutation.mutate({
-          id: task.id,
-          is_completed: !task.is_completed,
-        });
+      for (let c = 0; c < boardColumns.length; c++) {
+        const r = boardColumns[c].tasks.findIndex(
+          (t) => t.id === keyboardSelectedId,
+        );
+        if (r !== -1) {
+          currentColIndex = c;
+          currentRowIndex = r;
+          break;
+        }
       }
     }
-  });
+
+    if (currentColIndex === -1 || currentRowIndex === -1) {
+      const firstNonEmptyCol = boardColumns.find((c) => c.tasks.length > 0);
+      if (firstNonEmptyCol && firstNonEmptyCol.tasks.length > 0) {
+        setKeyboardSelectedId(firstNonEmptyCol.tasks[0].id);
+      }
+      return;
+    }
+
+    if (dirY !== 0) {
+      const col = boardColumns[currentColIndex];
+      const nextRow = currentRowIndex + dirY;
+      if (nextRow >= 0 && nextRow < col.tasks.length) {
+        setKeyboardSelectedId(col.tasks[nextRow].id);
+      }
+    } else if (dirX !== 0) {
+      let targetColIndex = currentColIndex + dirX;
+      while (
+        targetColIndex >= 0 &&
+        targetColIndex < boardColumns.length &&
+        boardColumns[targetColIndex].tasks.length === 0
+      ) {
+        targetColIndex += dirX;
+      }
+      if (
+        targetColIndex >= 0 &&
+        targetColIndex < boardColumns.length &&
+        boardColumns[targetColIndex].tasks.length > 0
+      ) {
+        const targetCol = boardColumns[targetColIndex];
+        const targetRowIndex = Math.min(
+          currentRowIndex,
+          targetCol.tasks.length - 1,
+        );
+        setKeyboardSelectedId(targetCol.tasks[targetRowIndex].id);
+      }
+    }
+  };
+
+  const handleNavVertical = (dir: 1 | -1) => {
+    if (viewMode === "board") {
+      handleBoardNav(0, dir);
+    } else {
+      handleListNav(dir);
+    }
+  };
+
+  const handleNavHorizontal = (dir: 1 | -1) => {
+    if (viewMode === "board") {
+      handleBoardNav(dir, 0);
+    }
+  };
+
+  const hotkeyOptions = {
+    preventDefault: true,
+    enabled: !isAnyModalOpen,
+  };
+
+  useHotkeys(["j", "arrowdown"], () => handleNavVertical(1), hotkeyOptions);
+  useHotkeys(["k", "arrowup"], () => handleNavVertical(-1), hotkeyOptions);
+  useHotkeys(["l", "arrowright"], () => handleNavHorizontal(1), hotkeyOptions);
+  useHotkeys(["h", "arrowleft"], () => handleNavHorizontal(-1), hotkeyOptions);
 
   useHotkeys(
-    ["enter", "e"],
+    ["space", "x"],
+    (e) => {
+      e.preventDefault();
+      if (keyboardSelectedId) {
+        const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
+        if (task) {
+          toggleMutation.mutate({
+            id: task.id,
+            is_completed: !task.is_completed,
+          });
+        }
+      }
+    },
+    hotkeyOptions,
+  );
+
+  useHotkeys(
+    ["enter", "o"],
     () => {
       if (keyboardSelectedId) {
         const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
         if (task) setSelectedTask(task);
       }
     },
-    { preventDefault: true },
+    hotkeyOptions,
   );
 
-  useHotkeys(["d", "backspace"], () => {
-    if (keyboardSelectedId) {
-      deleteMutation.mutate(keyboardSelectedId);
-      handleNav(1);
-    }
-  });
+  useHotkeys(
+    ["d", "backspace"],
+    () => {
+      if (keyboardSelectedId) {
+        const deletedId = keyboardSelectedId;
+        handleNavVertical(1);
+        deleteMutation.mutate(deletedId);
+      }
+    },
+    hotkeyOptions,
+  );
 
   const overlayContent = useMemo(() => {
     if (!activeTask) return null;
@@ -777,6 +895,7 @@ function TaskListBase({
               // Omitting this drops getTaskUpdatesForGroup to its heuristic
               // cascade, where a project named "Today" reads as a date.
               groupBy={groupBy}
+              keyboardSelectedId={keyboardSelectedId}
             />
           ) : (
             <TaskListView

@@ -97,6 +97,13 @@ vi.mock("@/lib/hooks/useTaskViewData", () => {
       completed: [],
       groups: null,
     })),
+    getBoardColumns: vi.fn(
+      ({ groups, active, evening }: Record<string, unknown>) =>
+        groups ?? [
+          { title: "Tasks", tasks: active },
+          { title: "This Evening", tasks: evening },
+        ],
+    ),
   };
 });
 

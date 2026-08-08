@@ -31,6 +31,20 @@ export interface ProcessedTasks {
   groups: TaskGroup[] | null;
 }
 
+// Board view columns: real groups if grouped, else Tasks/This Evening.
+// Empty columns are kept — an empty "This Evening" is a valid drop target.
+export function getBoardColumns({
+  groups,
+  active,
+  evening,
+}: ProcessedTasks): TaskGroup[] {
+  if (groups && groups.length > 0) return groups;
+  return [
+    { title: "Tasks", tasks: active },
+    { title: "This Evening", tasks: evening },
+  ];
+}
+
 export function useTaskViewData({
   tasks,
   sortBy,

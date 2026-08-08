@@ -29,6 +29,7 @@ export function GlobalHotkeys({
   const { openAddHabit, isHabitSheetOpen } = useHabitActions();
   const { openCreateProject, isCreateProjectOpen } = useProjectActions();
   const { openCreateEvent, isCreateEventOpen } = useCalendarStore();
+  const viewMode = useUiStore((state) => state.viewMode);
   const setViewMode = useUiStore((state) => state.setViewMode);
   const setArchivedProjectsOpen = useUiStore(
     (state) => state.setArchivedProjectsOpen,
@@ -55,13 +56,20 @@ export function GlobalHotkeys({
     enabled: !isAnyModalOpen,
   };
 
+  const isTasksPage = pathname === "/" || pathname?.startsWith("/tasks");
+  const isBoardViewOnTasks = isTasksPage && viewMode === "board";
+  const habitHotkeyOptions = {
+    ...options,
+    enabled: !isAnyModalOpen && !isBoardViewOnTasks,
+  };
+
   // --- ACTIONS ---
 
   // New Task (n)
   useHotkeys("n", () => openAddTask(), options);
 
   // New Habit (h)
-  useHotkeys("h", () => openAddHabit(), options);
+  useHotkeys("h", () => openAddHabit(), habitHotkeyOptions);
 
   // New Event (e)
   useHotkeys("e", () => openCreateEvent(), options);

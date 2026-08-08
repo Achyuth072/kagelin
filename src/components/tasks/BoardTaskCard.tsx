@@ -21,6 +21,7 @@ interface BoardTaskCardProps {
   shouldAnimate?: boolean;
   toggleExpand?: (e: React.MouseEvent) => void;
   isExpanded?: boolean;
+  isKeyboardSelected?: boolean;
 }
 
 export function BoardTaskCard({
@@ -30,11 +31,14 @@ export function BoardTaskCard({
   handlePlayFocus,
   onClick,
   shouldAnimate,
+  isKeyboardSelected,
 }: BoardTaskCardProps) {
   return (
     <div
       className={cn(
         "relative bg-background border border-border/80 hover:border-border transition-all cursor-pointer group/card rounded-xl overflow-hidden",
+        isKeyboardSelected &&
+          "ring-2 ring-primary ring-offset-1 ring-offset-background bg-secondary/40 z-10",
       )}
       onClick={onClick}
     >

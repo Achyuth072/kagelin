@@ -33,7 +33,11 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { useJsLoaded } from "@/lib/hooks/use-js-loaded";
-import type { ProcessedTasks, TaskGroup } from "@/lib/hooks/useTaskViewData";
+import {
+  getBoardColumns,
+  type ProcessedTasks,
+  type TaskGroup,
+} from "@/lib/hooks/useTaskViewData";
 import type { Task, Project } from "@/lib/types/task";
 import type { GroupOption } from "@/lib/types/sorting";
 import { SortableBoardTaskCard } from "./SortableBoardTaskCard";
@@ -62,6 +66,7 @@ interface TaskBoardProps {
   triggerHaptic: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   setActiveTaskId: (taskId: string) => void;
   groupBy?: GroupOption;
+  keyboardSelectedId?: string | null;
 }
 
 export function TaskBoard({
@@ -72,9 +77,9 @@ export function TaskBoard({
   triggerHaptic,
   setActiveTaskId,
   groupBy,
+  keyboardSelectedId,
 }: TaskBoardProps) {
   const isJsLoaded = useJsLoaded();
-  const { groups, active, evening } = processedTasks;
   const updateTaskMutation = useUpdateTask();
   const reorderMutation = useReorderTasks();
   const sortBy = useUiStore((state) => state.sortBy);
@@ -89,9 +94,8 @@ export function TaskBoard({
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   // While set, displayColumns reads local drag state instead of server data.
   const [lockLocal, setLockLocal] = useState(false);
-  // On a cross-column drop reorderMutation usually settles before
-  // updateMutation, so a refetch can briefly show the task in its old column.
-  // Releasing the lock on that would snap it back — wait for the destination.
+  // Cross-column drop: wait for the server to confirm the destination
+  // column before releasing the lock, or a stale refetch snaps it back.
   const [pendingLockRelease, setPendingLockRelease] = useState<{
     taskId: string;
     columnTitle: string;
@@ -101,15 +105,10 @@ export function TaskBoard({
   // day_order of the slots being reordered.
   const preDragFlatTasksRef = useRef<Task[]>([]);
 
-  // Empty columns are kept: an empty "This Evening" is the drop target that
-  // defers a task to tonight.
-  const boardColumns = useMemo<TaskGroup[]>(() => {
-    if (groups && groups.length > 0) return groups;
-    return [
-      { title: "Tasks", tasks: active },
-      { title: "This Evening", tasks: evening },
-    ];
-  }, [groups, active, evening]);
+  const boardColumns = useMemo<TaskGroup[]>(
+    () => getBoardColumns(processedTasks),
+    [processedTasks],
+  );
 
   const [localColumns, setLocalColumns] = useState<TaskGroup[]>(boardColumns);
 
@@ -429,6 +428,14 @@ export function TaskBoard({
             setActiveTaskId={setActiveTaskId}
             triggerHaptic={triggerHaptic}
             isDndActive={!!activeId}
+            // Only the owning column gets a non-null id, so memo on the
+            // other columns holds instead of every column re-rendering
+            // on each arrow-key press.
+            keyboardSelectedId={
+              group.tasks.some((t) => t.id === keyboardSelectedId)
+                ? keyboardSelectedId
+                : null
+            }
           />
         ))}
       </div>
@@ -473,6 +480,7 @@ const KanbanColumn = memo(function KanbanColumn({
   setActiveTaskId,
   triggerHaptic,
   isDndActive,
+  keyboardSelectedId,
 }: {
   group: TaskGroup;
   projectsMap: Map<string, Project>;
@@ -481,6 +489,7 @@ const KanbanColumn = memo(function KanbanColumn({
   setActiveTaskId: (taskId: string) => void;
   triggerHaptic: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   isDndActive: boolean;
+  keyboardSelectedId?: string | null;
 }) {
   const { setNodeRef } = useDroppable({ id: group.title });
 
@@ -515,6 +524,7 @@ const KanbanColumn = memo(function KanbanColumn({
               setActiveTaskId={setActiveTaskId}
               triggerHaptic={triggerHaptic}
               _isDndActive={isDndActive}
+              isKeyboardSelected={task.id === keyboardSelectedId}
             />
           ))}
           {group.tasks.length === 0 && (
@@ -538,6 +548,7 @@ const TaskCardWrapper = memo(function TaskCardWrapper({
   setActiveTaskId,
   triggerHaptic,
   _isDndActive,
+  isKeyboardSelected,
 }: {
   task: Task;
   project: Project | undefined;
@@ -546,6 +557,7 @@ const TaskCardWrapper = memo(function TaskCardWrapper({
   setActiveTaskId: (taskId: string) => void;
   triggerHaptic: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   _isDndActive: boolean;
+  isKeyboardSelected?: boolean;
 }) {
   return (
     <SortableBoardTaskCard
@@ -557,6 +569,7 @@ const TaskCardWrapper = memo(function TaskCardWrapper({
       onSelect={onSelect}
       triggerHaptic={triggerHaptic}
       setActiveTaskId={setActiveTaskId}
+      isKeyboardSelected={isKeyboardSelected}
     />
   );
 });
