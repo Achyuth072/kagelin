@@ -66,19 +66,30 @@ test.describe("mobile week view", () => {
     }
 
     await page.setViewportSize({ width: 767, height: 780 });
-    await page.waitForTimeout(200); // let the ResizeObserver settle
 
-    const scrollerBox767 = await scroller.boundingBox();
-    const columnBoxes767 = await columns.evaluateAll((els) =>
-      els.map((el) => {
-        const r = el.getBoundingClientRect();
-        return { x: r.x, width: r.width };
-      }),
-    );
-    expect(scrollerBox767).toBeTruthy();
-    if (scrollerBox767) {
-      expect(visibleColumnCount(columnBoxes767, scrollerBox767)).toBe(6);
-    }
+    // Poll instead of sleep — the ResizeObserver settles on its own schedule.
+    await expect
+      .poll(
+        async () => {
+          const { scrollerBox, columnBoxes } = await scroller.evaluate(
+            (el) => ({
+              scrollerBox: {
+                x: el.getBoundingClientRect().x,
+                width: el.getBoundingClientRect().width,
+              },
+              columnBoxes: Array.from(
+                el.querySelectorAll('[data-testid="day-column"]'),
+              ).map((c) => {
+                const r = c.getBoundingClientRect();
+                return { x: r.x, width: r.width };
+              }),
+            }),
+          );
+          return visibleColumnCount(columnBoxes, scrollerBox);
+        },
+        { timeout: 5000 },
+      )
+      .toBe(6);
   });
 
   test("a swipe from the end edge pages to next week, landing at the start", async ({
@@ -164,8 +175,7 @@ test.describe("mobile week view", () => {
       );
     });
 
-    // Paging backward lands at the end edge, not scrollLeft 0 — exercises
-    // the prepend-jump path the forward-paging test above doesn't touch.
+    // Paging backward lands at the end edge — exercises the prepend-jump path.
     await expect
       .poll(
         () =>

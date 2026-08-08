@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Target } from "lucide-react";
 import { Vibrate } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useSmartBack } from "@/lib/hooks/useSmartBack";
+import { useAnchoredBack } from "@/lib/hooks/useBackAnchor";
 import { useQueryClient } from "@tanstack/react-query";
 import { mockStore } from "@/lib/mock/mock-store";
 import { notify } from "@/lib/notify";
@@ -74,7 +74,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const setGoals = useUiStore((state) => state.setGoals);
   const { user, signOut, isGuestMode } = useAuth();
   const router = useRouter();
-  const smartBack = useSmartBack();
+  const anchoredBack = useAnchoredBack();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
@@ -160,7 +160,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
               variant="ghost"
               size="icon"
               onPointerDown={() => trigger("toggle")}
-              onClick={smartBack}
+              onClick={anchoredBack}
               className="h-9 w-9 shadow-none transition-seijaku-fast"
             >
               <ArrowLeft className="h-4 w-4" />

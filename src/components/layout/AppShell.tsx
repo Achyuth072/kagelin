@@ -14,7 +14,7 @@ import {
   useProjectActions,
 } from "@/components/ProjectActionsProvider";
 import { useRealtimeSync } from "@/lib/hooks/useRealtimeSync";
-import { useColdOpenBackTrap } from "@/lib/hooks/useSmartBack";
+import { useBackAnchor } from "@/lib/hooks/useBackAnchor";
 import { PiPProvider } from "@/components/providers/PiPProvider";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar as SidebarComponent } from "@/components/layout/AppSidebar";
@@ -365,7 +365,7 @@ export default function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
 
-  useColdOpenBackTrap(); // must stay mounted across navigation — see useSmartBack.ts
+  useBackAnchor(); // must stay mounted across navigation — see useBackAnchor.ts
 
   useEffect(() => {
     purgeLegacyStorage();

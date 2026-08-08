@@ -333,6 +333,29 @@ normal 7-day Week once the scroll settles. Not a user-facing concept — see
 
 ---
 
+## Navigation
+
+### Cold open
+
+The app starting directly at a non-root route with no history behind it — a
+notification click, a PWA shortcut, a shared URL. Distinct from in-app
+navigation, where the previous route is already on the history stack.
+_Avoid_: cold start, deep link.
+
+### Back anchor
+
+The synthetic `/` history entry placed beneath a cold-opened route, so that in-app
+back navigation has an in-app destination instead of exiting the PWA. Exists only
+on cold open, and only for routes that are in-app destinations — an auth boundary
+like `/login` is not one, and is never anchored.
+_Avoid_: back trap, deep-link trap.
+
+### Settled (back anchor)
+
+The point at which the anchor is no longer in flight — either it is in place, or
+the bounce that would have created it was interrupted. Back navigation waits for
+settled, never for success, so a lost anchor degrades back rather than disabling it.
+
 ## Calendar connection
 
 ### Connect Calendar (vs. login identity)

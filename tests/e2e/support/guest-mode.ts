@@ -1,11 +1,8 @@
 import type { Page } from "@playwright/test";
 
-type TrapWindow = Window & { __historyLengthAtLoad: number };
-
 /**
  * Seeds guest mode (cookie + localStorage) and lands on `url`.
- * Shared across e2e specs — Playwright forbids importing one spec file from
- * another, so this can't live inside a `*.spec.ts`.
+ * Lives here, not in a `*.spec.ts`, because Playwright forbids cross-spec imports.
  */
 export async function seedGuestMode(
   page: Page,
@@ -21,33 +18,27 @@ export async function seedGuestMode(
     ]),
     page.addInitScript(() => {
       localStorage.setItem("kanso_guest_mode", "true");
-      (window as unknown as TrapWindow).__historyLengthAtLoad =
-        window.history.length;
     }),
   ]);
   await page.goto(url, { waitUntil: "domcontentloaded" });
 
   const { pathname } = new URL(url);
   if (pathname !== "/") {
-    await waitForColdOpenSettle(page, pathname);
+    await waitForBackAnchor(page, pathname);
   }
 }
 
 /**
- * Waits out the cold-open back-nav trap (useColdOpenBackTrap) so locators
- * don't race a subtree that's about to be torn down. Also works after a
- * `page.reload()`, which re-triggers the trap.
+ * Waits out the back anchor's bounce so locators don't race a subtree that's
+ * about to be torn down. Also works after `page.reload()`.
  */
-export async function waitForColdOpenSettle(page: Page, pathname: string) {
+export async function waitForBackAnchor(page: Page, pathname: string) {
   await page.waitForFunction(
-    (target) => {
-      const win = window as unknown as TrapWindow;
-      return (
-        window.location.pathname === target &&
-        window.history.length > win.__historyLengthAtLoad
-      );
-    },
+    (target) =>
+      window.__backAnchorSettled === true &&
+      window.location.pathname === target,
     pathname,
-    { timeout: 15000 },
+    // Dev-server hydration under parallel workers can exceed 15s.
+    { timeout: 25000 },
   );
 }
