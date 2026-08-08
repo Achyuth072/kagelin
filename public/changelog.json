@@ -1,5 +1,24 @@
 [
   {
+    "version": "1.29.1",
+    "date": "2026-08-08",
+    "channel": "stable",
+    "sections": {
+      "Improved": [
+        "Simplified the desktop settings layout"
+      ],
+      "Fixed": [
+        "Fixed focus settings occasionally showing stale values right after the app loads",
+        "Fixed signing in sometimes getting stuck on the login screen",
+        "Fixed the mobile 3-Day view showing the wrong number of days on some screen sizes",
+        "Made the mobile 3-Day and Week views' today indicator, scrolling, and scrollbar consistent",
+        "Fixed tapping back after opening a notification sometimes exiting the app instead of returning to the previous screen",
+        "Fixed a brief flash when opening the mobile Week view",
+        "Fixed the changelog drawer going blank when overscrolled on mobile"
+      ]
+    }
+  },
+  {
     "version": "1.29.1-preview.1",
     "date": "2026-08-08",
     "channel": "preview",
@@ -773,19 +792,6 @@
         "Inline clear button for location combobox",
         "Location dropdown trigger restyled with mobile alignment fixes",
         "Notes textarea styling harmonised with other dialog inputs"
-      ]
-    }
-  },
-  {
-    "version": "1.22.0-preview.1",
-    "date": "2026-06-08",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Toast notifications dismiss on left and right swipe gestures",
-        "Detail panel close button repositioned to a header bar so it never overlaps content",
-        "Fullscreen toggle on mobile, works on Android and iOS Safari",
-        "Focus settings dialog re-runs validation every time it opens, not just once"
       ]
     }
   }
