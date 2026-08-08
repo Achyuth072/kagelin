@@ -503,5 +503,32 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
 
       vi.useRealTimers();
     });
+
+    it("gg sequence is cleared when another navigation key is pressed", async () => {
+      uiState.viewMode = "list";
+      taskState.tasks = [
+        buildTask({ id: "a", content: "Alpha", day_order: 0 }),
+        buildTask({ id: "b", content: "Bravo", day_order: 1 }),
+        buildTask({ id: "c", content: "Charlie", day_order: 2 }),
+      ];
+      await renderTaskList();
+      const ids = ["a", "b", "c"];
+
+      // Select middle task initially
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      expect(selectedId(ids)).toBe("b");
+
+      // Press g once
+      fireEvent.keyDown(document, { key: "g", code: "KeyG" });
+
+      // Intervening navigation key j
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      expect(selectedId(ids)).toBe("c");
+
+      // Press g again (should start new sequence, NOT trigger gg to top)
+      fireEvent.keyDown(document, { key: "g", code: "KeyG" });
+      expect(selectedId(ids)).toBe("c");
+    });
   });
 });

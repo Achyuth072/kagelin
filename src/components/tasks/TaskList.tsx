@@ -67,6 +67,8 @@ const dndAnnouncements = {
   onDragOver: () => undefined,
 };
 
+const VIM_DOUBLE_PRESS_TIMEOUT_MS = 500;
+
 // Pure and hoisted to module scope — dnd-kit calls this every auto-scroll tick during a drag.
 function canScrollTaskListContainer(element: Element): boolean {
   if (!(element instanceof HTMLElement)) {
@@ -115,7 +117,7 @@ function TaskListBase({
   // tabindex, since focusing cards would re-arm dnd-kit's Space/Enter drag
   // collision (see the DragHandle split in SortableBoardTaskCard).
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const lastGPressedRef = useRef<number>(0);
+  const lastGPressTimestampRef = useRef<number>(0);
 
   const queryClient = useQueryClient();
   const reorderMutation = useReorderTasks();
@@ -723,7 +725,12 @@ function TaskListBase({
     }
   };
 
+  const resetGSequence = () => {
+    lastGPressTimestampRef.current = 0;
+  };
+
   const handleNavVertical = (dir: 1 | -1) => {
+    resetGSequence();
     if (viewMode === "board") {
       handleBoardNav(0, dir);
     } else {
@@ -732,37 +739,37 @@ function TaskListBase({
   };
 
   const handleNavHorizontal = (dir: 1 | -1) => {
+    resetGSequence();
     if (viewMode === "board") {
       handleBoardNav(dir, 0);
     }
   };
 
-  const handleNavTop = () => {
+  const getExtremeTask = (position: "first" | "last"): Task | undefined => {
     if (viewMode === "board") {
-      const firstCol = boardColumns.find((c) => c.tasks.length > 0);
-      if (firstCol && firstCol.tasks.length > 0) {
-        setKeyboardSelectedId(firstCol.tasks[0].id);
-      }
-    } else {
-      if (navigableTasks.length > 0) {
-        setKeyboardSelectedId(navigableTasks[0].id);
-      }
+      const cols =
+        position === "first" ? boardColumns : [...boardColumns].reverse();
+      const targetCol = cols.find((c) => c.tasks.length > 0);
+      if (!targetCol || targetCol.tasks.length === 0) return undefined;
+      return position === "first"
+        ? targetCol.tasks[0]
+        : targetCol.tasks[targetCol.tasks.length - 1];
     }
+    if (navigableTasks.length === 0) return undefined;
+    return position === "first"
+      ? navigableTasks[0]
+      : navigableTasks[navigableTasks.length - 1];
+  };
+
+  const handleNavTop = () => {
+    const task = getExtremeTask("first");
+    if (task) setKeyboardSelectedId(task.id);
   };
 
   const handleNavBottom = () => {
-    if (viewMode === "board") {
-      const lastCol = [...boardColumns]
-        .reverse()
-        .find((c) => c.tasks.length > 0);
-      if (lastCol && lastCol.tasks.length > 0) {
-        setKeyboardSelectedId(lastCol.tasks[lastCol.tasks.length - 1].id);
-      }
-    } else {
-      if (navigableTasks.length > 0) {
-        setKeyboardSelectedId(navigableTasks[navigableTasks.length - 1].id);
-      }
-    }
+    resetGSequence();
+    const task = getExtremeTask("last");
+    if (task) setKeyboardSelectedId(task.id);
   };
 
   const hasSelection = !!keyboardSelectedId;
@@ -801,11 +808,14 @@ function TaskListBase({
     (e) => {
       if (e.shiftKey) return;
       const now = Date.now();
-      if (now - lastGPressedRef.current < 500 && lastGPressedRef.current > 0) {
-        lastGPressedRef.current = 0;
+      if (
+        now - lastGPressTimestampRef.current < VIM_DOUBLE_PRESS_TIMEOUT_MS &&
+        lastGPressTimestampRef.current > 0
+      ) {
+        resetGSequence();
         handleNavTop();
       } else {
-        lastGPressedRef.current = now;
+        lastGPressTimestampRef.current = now;
       }
     },
     hotkeyOptions,
@@ -814,13 +824,13 @@ function TaskListBase({
     ["shift+g", "G"],
     (e) => {
       if (!e.shiftKey) return;
-      lastGPressedRef.current = 0;
       handleNavBottom();
     },
     hotkeyOptions,
   );
 
   const toggleSelected = () => {
+    resetGSequence();
     if (keyboardSelectedId) {
       const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
       if (task) {
@@ -847,6 +857,7 @@ function TaskListBase({
   useHotkeys(
     ["enter", "o"],
     () => {
+      resetGSequence();
       if (keyboardSelectedId) {
         const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
         if (task) handleTaskClick(task);
@@ -858,6 +869,7 @@ function TaskListBase({
   useHotkeys(
     ["d", "backspace"],
     () => {
+      resetGSequence();
       if (keyboardSelectedId) {
         const deletedId = keyboardSelectedId;
         handleNavVertical(1);
@@ -867,9 +879,16 @@ function TaskListBase({
     hotkeyOptions,
   );
 
-  useHotkeys("escape", () => setKeyboardSelectedId(null), {
-    enabled: !isAnyModalOpen && hasSelection,
-  });
+  useHotkeys(
+    "escape",
+    () => {
+      resetGSequence();
+      setKeyboardSelectedId(null);
+    },
+    {
+      enabled: !isAnyModalOpen && hasSelection,
+    },
+  );
 
   const overlayContent = useMemo(() => {
     if (!activeTask) return null;
