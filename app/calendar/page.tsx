@@ -104,7 +104,7 @@ export default function CalendarPage() {
         return (
           <TimeGrid
             startDate={currentDate}
-            daysToShow={3}
+            daysToShow="auto"
             events={events}
             onDateNumberClick={handleDateNumberClick}
             onEventClick={handleEventClick}

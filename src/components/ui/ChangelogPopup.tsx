@@ -69,8 +69,8 @@ export function ChangelogPopup({ open, onOpenChange }: ChangelogPopupProps) {
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-130 border-border/80 shadow-none p-0">
-        <ResponsiveDialogHeader className="p-6 pb-3 border-b border-border/80">
+      <ResponsiveDialogContent className="sm:max-w-130 border-border/80 shadow-none p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+        <ResponsiveDialogHeader className="p-6 pb-3 border-b border-border/80 shrink-0">
           <ResponsiveDialogTitle className="flex items-center gap-2.5 text-[24px] font-semibold tracking-[-0.02em] text-foreground">
             <Sparkles className="h-5 w-5 text-muted-foreground" />
             What&apos;s New
@@ -82,7 +82,7 @@ export function ChangelogPopup({ open, onOpenChange }: ChangelogPopupProps) {
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <div className="max-h-[55vh] overflow-y-auto scrollbar-hide p-6 space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide p-6 space-y-6 max-h-[60vh] sm:max-h-[55vh]">
           {loading && (
             <div className="flex items-center justify-center py-8">
               <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground/70" />

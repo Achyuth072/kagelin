@@ -408,13 +408,13 @@ BEGIN
        AND NEW.due_date IS NOT NULL AND NEW.due_date > now() THEN
       payload_title := 'Task Due Soon';
       payload_body := 'Your task "' || NEW.content || '" is due now.';
-      
+
       INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
-      VALUES (NEW.user_id, NEW.due_date, 'due_date', 
+      VALUES (NEW.user_id, NEW.due_date, 'due_date',
               jsonb_build_object(
-                'title', payload_title, 
-                'body', payload_body, 
-                'data', jsonb_build_object('url', '/today', 'taskId', NEW.id)
+                'title', payload_title,
+                'body', payload_body,
+                'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
               ),
               NEW.id);
     END IF;
@@ -426,11 +426,11 @@ BEGIN
       payload_body := 'Scheduled: ' || NEW.content;
 
       INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
-      VALUES (NEW.user_id, NEW.do_date, 'do_date', 
+      VALUES (NEW.user_id, NEW.do_date, 'do_date',
               jsonb_build_object(
-                'title', payload_title, 
-                'body', payload_body, 
-                'data', jsonb_build_object('url', '/today', 'taskId', NEW.id)
+                'title', payload_title,
+                'body', payload_body,
+                'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
               ),
               NEW.id);
     END IF;

@@ -32,7 +32,9 @@ test.describe("Login page on a short mobile viewport", () => {
 
   test("Guest button is reachable by scrolling when it doesn't fit", async ({
     page,
+    browserName,
   }) => {
+    test.skip(browserName === "webkit", "mobile WebKit has no mouse.wheel");
     await page.goto("/login", { waitUntil: "domcontentloaded" });
 
     await page.waitForSelector("[data-testid='fake-turnstile-widget']", {

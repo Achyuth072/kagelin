@@ -1,5 +1,39 @@
 [
   {
+    "version": "1.29.1-preview.1",
+    "date": "2026-08-08",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Simplify code comments and configure playwright webserver"
+      ],
+      "Fixed": [
+        "Resync focus settings after late hydration, harden task-creation e2e",
+        "Rename cold-open back trap to back anchor, fix login sign-in wedge",
+        "Reach Focus via the mobile sidebar sheet in the in-app back-nav e2e",
+        "E2e cold-open trap wait, mobile week scroll-park, and PiP hotkey retry flake",
+        "Derive mobile 3-Day's day count from measured width, matching Week",
+        "Unify 3-Day/mobile-Week indicator, scroll-align, and scrollbar",
+        "Cold-opened notification back-nav via real history trap, not a counter",
+        "Notification cold-open back navigation exits the PWA",
+        "Measure mobile week grid width before first paint to stop mount flash"
+      ]
+    }
+  },
+  {
+    "version": "1.29.1-preview.0",
+    "date": "2026-08-05",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Simplify desktop settings layout"
+      ],
+      "Fixed": [
+        "Prevent mobile changelog drawer from going blank on overscroll"
+      ]
+    }
+  },
+  {
     "version": "1.29.0",
     "date": "2026-08-04",
     "channel": "stable",
@@ -752,58 +786,6 @@
         "Detail panel close button repositioned to a header bar so it never overlaps content",
         "Fullscreen toggle on mobile, works on Android and iOS Safari",
         "Focus settings dialog re-runs validation every time it opens, not just once"
-      ]
-    }
-  },
-  {
-    "version": "1.22.0-preview.0",
-    "date": "2026-06-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Connect Google, Outlook, or CalDAV calendars with two-way sync and conflict resolution",
-        "Recurrence indicator in the focus task picker"
-      ],
-      "Improved": [
-        "Focus timer rebuilt on a deadline model for accurate cross-device sync",
-        "Recurring events are now read-only in the create/edit dialog (edit them at the source)",
-        "Calendar reconnects re-link and revive existing events automatically",
-        "Changelog grouped by release channel"
-      ],
-      "Fixed": [
-        "All-day event dates syncing incorrectly with Google Calendar",
-        "Deleted or edited events reappearing after a sync",
-        "Refresh tokens dropped on temporary provider errors",
-        "Settings save button staying greyed out after opening",
-        "Location dropdown clipping on mobile",
-        "Manage Calendars dialog opening behind the dropdown menu",
-        "AlertDialog appearing behind other overlays"
-      ]
-    }
-  },
-  {
-    "version": "1.21.0",
-    "date": "2026-05-28",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Cross-device timer sync, so a focus session started on one device shows up live on another",
-        "Focus task picker with per-project grouping and overdue/today tabs",
-        "Fullscreen focus mode with picture-in-picture timer",
-        "Cancel session with full rollback for abandoned sessions",
-        "Push notifications re-validate automatically on service worker change or page focus"
-      ],
-      "Improved": [
-        "Focus settings dialog: harmonised sections and cleaner ink & matte styling",
-        "Calendar: centred now-indicator, smoother mobile gestures, week view limited to desktop",
-        "Toasts now size to their content and stay centred on mobile",
-        "Sidebar collapsed icon backgrounds centred reliably",
-        "Toasts suppressed while the changelog is open, hotkeys blocked behind modals"
-      ],
-      "Fixed": [
-        "Overlays stacking incorrectly (portalled overlays now sit at the correct z-index)",
-        "Time-picker keyboard not appearing on Android",
-        "Guest mode push toggle and backend sync now correctly blocked"
       ]
     }
   }

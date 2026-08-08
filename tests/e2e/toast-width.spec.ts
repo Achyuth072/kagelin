@@ -1,28 +1,33 @@
 import { test, expect, chromium } from "@playwright/test";
 
 /**
- * TDD test for sonner toast width.
- *
- * Bug: rendered Sonner toast is wider than its content (extra empty space on
- * the right). The Toaster wrapper sets `width: fit-content` via toastOptions.style
- * and `w-fit` via toastOptions.classNames, but the toast still expands.
- *
- * Expectation: the visible toast `<li data-sonner-toast>` width should be
- * close to its content (icon + text + horizontal padding), NOT the Sonner
- * default 356px.
- *
- * Connects to a CDP endpoint at localhost:9222 (system Chrome) because
- * Playwright's bundled chromium is missing system libs in this WSL env.
+ * Toast width should hug its content, not Sonner's default 356px.
+ * Connects to CDP at localhost:9222 (system Chrome) — Playwright's bundled
+ * chromium is missing system libs in this WSL env.
  */
+const CDP_ENDPOINT = "http://localhost:9222";
+
+// No CI or teammate machine launches Chrome with --remote-debugging-port=9222;
+// probe first so those runs skip instead of failing on a connection error.
+async function cdpReachable() {
+  try {
+    const res = await fetch(`${CDP_ENDPOINT}/json/version`, {
+      signal: AbortSignal.timeout(1000),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 test.describe("Sonner toast width", () => {
   test.setTimeout(90_000);
   test("toast width hugs content (no excess empty space)", async () => {
-    const browser = await chromium.connectOverCDP("http://localhost:9222");
-    // Use the first existing context, create new page
+    test.skip(!(await cdpReachable()), `no CDP endpoint at ${CDP_ENDPOINT}`);
+    const browser = await chromium.connectOverCDP(CDP_ENDPOINT);
     const context = browser.contexts()[0] ?? (await browser.newContext());
-    // Pre-seed guest mode so we skip /login entirely (the Guest button's
-    // signInAsGuest()+router.push("/") races against the home page auth guard
-    // under CDP, producing a redirect-loop back to /login).
+    // Pre-seed guest mode — the Guest button's signInAsGuest()+push races the
+    // auth guard under CDP, redirect-looping back to /login.
     await context.addCookies([
       {
         name: "kanso_guest_mode",
@@ -37,9 +42,7 @@ test.describe("Sonner toast width", () => {
         localStorage.setItem("kanso_guest_mode", "true");
       });
 
-      // Navigate directly to /settings — skips the home page and the Settings
-      // nav button click (two failure points eliminated). Reset Demo button
-      // lives in the Account section of SettingsClient.
+      // Skips the home page and the Settings nav click.
       await page.goto("http://localhost:3000/settings", {
         waitUntil: "domcontentloaded",
         timeout: 30000,
@@ -132,13 +135,10 @@ test.describe("Sonner toast width", () => {
         "[toast-width measurement]\n" + JSON.stringify(measurement, null, 2),
       );
 
-      // Primary assertion: toast should NOT be at the default ~356px width
-      // (or anywhere near it). A "Demo data reset successfully" + small icon
-      // should be well under 280px with normal padding.
+      // Well under Sonner's ~356px default.
       expect(measurement.liWidth).toBeLessThan(280);
 
-      // The gap between the content's right edge and the toast's inner right
-      // edge should be ≤ 12px (essentially flush — small flex gap tolerance).
+      // Flush, with tolerance for the flex gap.
       expect(measurement.gapRightInside).toBeLessThan(12);
     } finally {
       await page.close();
@@ -147,7 +147,8 @@ test.describe("Sonner toast width", () => {
   });
 
   test("short toast renders on a single line on desktop", async () => {
-    const browser = await chromium.connectOverCDP("http://localhost:9222");
+    test.skip(!(await cdpReachable()), `no CDP endpoint at ${CDP_ENDPOINT}`);
+    const browser = await chromium.connectOverCDP(CDP_ENDPOINT);
     const context = browser.contexts()[0] ?? (await browser.newContext());
     await context.addCookies([
       {
@@ -242,8 +243,7 @@ test.describe("Sonner toast width", () => {
         throw new Error(`Measurement failed: ${measurement.reason}`);
       }
 
-      // Single-line proof: titleHeight should be approximately one line-height.
-      // 30% tolerance covers sub-pixel rounding; a 2-line wrap would be ~2x lineHeight.
+      // 30% tolerance for rounding; a 2-line wrap would be ~2x lineHeight.
       expect(measurement.titleHeight).toBeLessThanOrEqual(
         measurement.titleLineHeight * 1.3,
       );
@@ -254,8 +254,7 @@ test.describe("Sonner toast width", () => {
   });
 
   test("toast is horizontally centered on mobile viewport (360px)", async () => {
-    // Uses Playwright's bundled Chromium (no CDP / no system Chrome required).
-    // Viewport is fixed at context creation so Sonner's ≤600px mobile rules fire.
+    // Bundled Chromium, no CDP. Fixed viewport so Sonner's mobile rules fire.
     const browser = await chromium.launch();
     const context = await browser.newContext({
       viewport: { width: 360, height: 640 },

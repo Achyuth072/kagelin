@@ -4,6 +4,8 @@ import {
   clampWindowStart,
   edgeAt,
   decideSwipeGesture,
+  alignTarget,
+  ALIGN_TOLERANCE_PX,
 } from "@/lib/calendar/week-window";
 
 describe("computeWindowGeometry", () => {
@@ -64,6 +66,25 @@ describe("edgeAt", () => {
 
   it("reports null in the middle of the track", () => {
     expect(edgeAt(150, 300, tolerance)).toBeNull();
+  });
+});
+
+describe("alignTarget", () => {
+  it("rounds down when resting closer to the boundary behind it", () => {
+    expect(alignTarget(210, 104)).toBe(208); // 210/104 = 2.019
+  });
+
+  it("rounds up when resting closer to the boundary ahead of it", () => {
+    expect(alignTarget(300, 104)).toBe(312); // 300/104 = 2.885
+  });
+
+  it("returns null once already within tolerance of a boundary", () => {
+    expect(alignTarget(312, 104)).toBeNull();
+    expect(alignTarget(312 + ALIGN_TOLERANCE_PX, 104)).toBeNull();
+  });
+
+  it("returns null instead of dividing by zero before the first measurement", () => {
+    expect(alignTarget(150, 0)).toBeNull();
   });
 });
 

@@ -40,6 +40,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTimer } from "@/components/TimerProvider";
+import { useTimerStore } from "@/lib/store/timerStore";
 import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
 
 import {
@@ -422,6 +423,18 @@ export function FocusSettingsDialog() {
   useEffect(() => {
     updateSettingsRef.current = updateSettings;
   }, [updateSettings]);
+
+  // defaultValues snapshots settings at mount, but hydration can land after
+  // that — resync now, and again once hydration finishes, unless the user
+  // has already started editing.
+  useEffect(() => {
+    const resync = () => {
+      if (!methods.formState.isDirty) reset(useTimerStore.getState().settings);
+    };
+    resync();
+    if (useTimerStore.persist.hasHydrated()) return;
+    return useTimerStore.persist.onFinishHydration(resync);
+  }, [methods, reset]);
 
   // Persist on every form change so edits apply even while the dialog is open.
   useEffect(() => {

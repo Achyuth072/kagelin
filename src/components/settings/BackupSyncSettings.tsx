@@ -56,6 +56,8 @@ import { useAuth } from "@/components/AuthProvider";
 import { useAccountData } from "@/lib/hooks/useAccountData";
 import { ImportDialog } from "./ImportDialog";
 
+const SETTINGS_CARD_CLASS = "border-border/50 shadow-none bg-background/50";
+
 interface CloudSyncCardProps {
   credentials: WebDAVCredentials;
   onCredentialsChange: (
@@ -83,7 +85,7 @@ function CloudSyncCard({
 }: CloudSyncCardProps) {
   return (
     <TabsContent value="cloud" className="mt-0 outline-none">
-      <Card className="border-border/50 shadow-none bg-background/50">
+      <Card className={SETTINGS_CARD_CLASS}>
         <CardHeader className="pb-3 px-4 pt-5">
           <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
             <Cloud className="h-4 w-4 text-brand" strokeWidth={2.25} />
@@ -256,7 +258,7 @@ function BackupRemindersCard() {
   );
 
   return (
-    <Card className="border-border/50 shadow-none bg-background/50">
+    <Card className={SETTINGS_CARD_CLASS}>
       <CardHeader className="pb-3 px-4 pt-5">
         <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
           <BellRing className="h-4 w-4 text-brand" strokeWidth={2.25} />
@@ -606,71 +608,76 @@ export function BackupSyncSettings() {
         </TabsList>
 
         <TabsContent value="local" className="mt-0 outline-none">
-          <Card className="border-border/50 shadow-none bg-background/50">
-            <CardHeader className="pb-3 px-4 pt-5">
-              <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
-                <HardDrive className="h-4 w-4 text-brand" strokeWidth={2.25} />
-                Local Backup
-              </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground/80 lowercase">
-                Export your {isGuestMode ? "local" : "cloud"} data to a ZIP file
-                or restore from a backup.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex gap-3 px-4 pb-5 pt-0">
-              <Button
-                variant="outline"
-                onClick={handleExport}
-                disabled={isExporting}
-                className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
-              >
-                {isExporting ? (
-                  <Loader2
-                    className="h-4 w-4 animate-spin"
+          <div
+            className={cn(
+              isGuestMode && "flex flex-col gap-4 md:grid md:grid-cols-2",
+            )}
+          >
+            <Card className={SETTINGS_CARD_CLASS}>
+              <CardHeader className="pb-3 px-4 pt-5">
+                <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
+                  <HardDrive
+                    className="h-4 w-4 text-brand"
                     strokeWidth={2.25}
                   />
-                ) : (
-                  <Download className="h-4 w-4" strokeWidth={2.25} />
-                )}
-                Export
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleImportClick}
-                disabled={isImporting}
-                className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
-              >
-                {isImporting ? (
-                  <Loader2
-                    className="h-4 w-4 animate-spin"
-                    strokeWidth={2.25}
-                  />
-                ) : (
-                  <Upload className="h-4 w-4" strokeWidth={2.25} />
-                )}
-                Import
-              </Button>
-            </CardContent>
-            <Separator className="bg-border/20 mx-4" />
-            <div className="px-4 pb-4 pt-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-xs text-muted-foreground hover:text-brand transition-colors h-8"
-                onClick={() => {
-                  trigger("toggle");
-                  setShowExternalImport(true);
-                }}
-              >
-                Import from other apps
-              </Button>
-            </div>
-          </Card>
-          {isGuestMode && (
-            <div className="mt-4">
-              <BackupRemindersCard />
-            </div>
-          )}
+                  Local Backup
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground/80 lowercase">
+                  Export your {isGuestMode ? "local" : "cloud"} data to a ZIP
+                  file or restore from a backup.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex gap-3 px-4 pb-5 pt-0">
+                <Button
+                  variant="outline"
+                  onClick={handleExport}
+                  disabled={isExporting}
+                  className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
+                >
+                  {isExporting ? (
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      strokeWidth={2.25}
+                    />
+                  ) : (
+                    <Download className="h-4 w-4" strokeWidth={2.25} />
+                  )}
+                  Export
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleImportClick}
+                  disabled={isImporting}
+                  className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
+                >
+                  {isImporting ? (
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      strokeWidth={2.25}
+                    />
+                  ) : (
+                    <Upload className="h-4 w-4" strokeWidth={2.25} />
+                  )}
+                  Import
+                </Button>
+              </CardContent>
+              <Separator className="bg-border/20 mx-4" />
+              <div className="px-4 pb-4 pt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs text-muted-foreground hover:text-brand transition-colors h-8"
+                  onClick={() => {
+                    trigger("toggle");
+                    setShowExternalImport(true);
+                  }}
+                >
+                  Import from other apps
+                </Button>
+              </div>
+            </Card>
+            {isGuestMode && <BackupRemindersCard />}
+          </div>
         </TabsContent>
 
         {showCloudSync && (

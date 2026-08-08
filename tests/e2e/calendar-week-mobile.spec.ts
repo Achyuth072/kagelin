@@ -1,19 +1,8 @@
 import { test, expect } from "@playwright/test";
+import { seedGuestMode } from "./support/guest-mode";
 
 async function seedGuestAndOpenWeek(page: import("@playwright/test").Page) {
-  await page.context().addCookies([
-    {
-      name: "kanso_guest_mode",
-      value: "true",
-      url: "http://localhost:3000/",
-    },
-  ]);
-  await page.addInitScript(() => {
-    localStorage.setItem("kanso_guest_mode", "true");
-  });
-  await page.goto("http://localhost:3000/calendar", {
-    waitUntil: "domcontentloaded",
-  });
+  await seedGuestMode(page);
   await page.locator('[role="combobox"]').first().click();
   await page.getByRole("option", { name: "Week", exact: true }).click();
   await page.locator('[data-testid="mobile-week-grid"]').waitFor();
@@ -77,24 +66,37 @@ test.describe("mobile week view", () => {
     }
 
     await page.setViewportSize({ width: 767, height: 780 });
-    await page.waitForTimeout(200); // let the ResizeObserver settle
 
-    const scrollerBox767 = await scroller.boundingBox();
-    const columnBoxes767 = await columns.evaluateAll((els) =>
-      els.map((el) => {
-        const r = el.getBoundingClientRect();
-        return { x: r.x, width: r.width };
-      }),
-    );
-    expect(scrollerBox767).toBeTruthy();
-    if (scrollerBox767) {
-      expect(visibleColumnCount(columnBoxes767, scrollerBox767)).toBe(6);
-    }
+    // Poll instead of sleep — the ResizeObserver settles on its own schedule.
+    await expect
+      .poll(
+        async () => {
+          const { scrollerBox, columnBoxes } = await scroller.evaluate(
+            (el) => ({
+              scrollerBox: {
+                x: el.getBoundingClientRect().x,
+                width: el.getBoundingClientRect().width,
+              },
+              columnBoxes: Array.from(
+                el.querySelectorAll('[data-testid="day-column"]'),
+              ).map((c) => {
+                const r = c.getBoundingClientRect();
+                return { x: r.x, width: r.width };
+              }),
+            }),
+          );
+          return visibleColumnCount(columnBoxes, scrollerBox);
+        },
+        { timeout: 5000 },
+      )
+      .toBe(6);
   });
 
   test("a swipe from the end edge pages to next week, landing at the start", async ({
     page,
+    browserName,
   }) => {
+    test.skip(browserName === "webkit", "WebKit has no Touch constructor");
     await page.setViewportSize({ width: 360, height: 780 });
     await seedGuestAndOpenWeek(page);
 
@@ -142,7 +144,9 @@ test.describe("mobile week view", () => {
 
   test("a swipe from the start edge pages to prev week, landing at the end", async ({
     page,
+    browserName,
   }) => {
+    test.skip(browserName === "webkit", "WebKit has no Touch constructor");
     await page.setViewportSize({ width: 360, height: 780 });
     await seedGuestAndOpenWeek(page);
 
@@ -151,8 +155,9 @@ test.describe("mobile week view", () => {
       .locator('[data-testid="day-column"]')
       .evaluateAll((els) => els.map((el) => el.getAttribute("data-date")));
 
-    // Already parked at the start edge (scrollLeft: 0) by default.
+    // scrollLeft isn't 0 by default — the opening position tracks today's weekday.
     await scroller.evaluate((el) => {
+      el.scrollLeft = 0;
       const rect = el.getBoundingClientRect();
       const y = rect.y + 100;
       const touchInit = (x: number) => ({
@@ -170,9 +175,7 @@ test.describe("mobile week view", () => {
       );
     });
 
-    // Paging backward lands at the end edge, not scrollLeft 0 — poll for the
-    // scroller's max, which exercises the prepend-jump path that the
-    // forward-paging test above never touches.
+    // Paging backward lands at the end edge — exercises the prepend-jump path.
     await expect
       .poll(
         () =>

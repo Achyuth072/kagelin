@@ -18,7 +18,6 @@ interface DayColumnProps {
   column: DayColumnData;
   className?: string;
   style?: React.CSSProperties;
-  compactIndicator?: boolean;
   onDateNumberClick?: (date: Date) => void;
   onEventClick?: (event: CalendarEvent) => void;
 }
@@ -27,7 +26,6 @@ export function DayColumn({
   column,
   className,
   style,
-  compactIndicator = false,
   onDateNumberClick,
   onEventClick,
 }: DayColumnProps) {
@@ -79,7 +77,7 @@ export function DayColumn({
         />
       ))}
 
-      {isToday && <CurrentTimeIndicator compact={compactIndicator} />}
+      {isToday && <CurrentTimeIndicator />}
 
       {column.events.map((event) => {
         const topPx = (event.top / 100) * (24 * HOUR_HEIGHT);

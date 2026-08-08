@@ -238,6 +238,11 @@ async function dragDown(
 }
 
 test.describe("DnD frame-drop measurement", () => {
+  test.skip(
+    ({ browserName }) => browserName !== "chromium",
+    "CPU throttling needs a Chromium CDP session",
+  );
+
   test("A: same-board reorder (single dense column, 40 tasks)", async ({
     page,
   }) => {

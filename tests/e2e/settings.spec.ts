@@ -1,53 +1,49 @@
 import { test, expect } from "@playwright/test";
+import { seedGuestMode, waitForBackAnchor } from "./support/guest-mode";
+
+// Focus Duration lives in /focus's dialog, not /settings — see FocusSettingsDialog.tsx.
 
 test.describe("Focus Settings (Guest Mode)", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/");
-    if (page.url().includes("/login")) {
-      const guestBtn = page.getByRole("button", { name: /continue as guest/i });
-      await expect(guestBtn).toBeVisible({ timeout: 10000 });
-      await guestBtn.click();
-      await page.waitForURL("/", { timeout: 10000 });
-    }
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await seedGuestMode(page, "http://localhost:3000/focus");
+    await expect(
+      page.getByRole("button", { name: /adjust settings/i }),
+    ).toBeVisible();
   });
 
   test("should persist focus duration changes", async ({ page }) => {
-    const settingsBtn = page.getByRole("button", { name: "Settings" });
+    await page.getByRole("button", { name: /adjust settings/i }).click();
 
-    if (await settingsBtn.isVisible()) {
-      await settingsBtn.click();
-    } else {
-      const menuBtn = page.getByRole("button", { name: /open menu/i });
-      if (await menuBtn.isVisible()) await menuBtn.click();
-      await settingsBtn.click();
-    }
+    const durationInput = page.getByRole("spinbutton", {
+      name: "Focus Duration",
+    });
+    await expect(durationInput).toBeVisible();
+    await durationInput.fill("40");
 
-    await expect(
-      page.getByRole("heading", { name: /settings/i }).first(),
-    ).toBeVisible();
+    await page.getByRole("button", { name: "Save changes" }).click();
 
-    const slider = page.getByRole("slider", { name: "Focus Duration" });
-    await slider.focus();
-    for (let i = 0; i < 5; i++) {
-      await page.keyboard.press("ArrowRight");
-    }
-
-    await page.getByRole("button", { name: "Save Changes" }).click();
+    // zustand persist flushes a tick after watch(); reload too soon rereads stale data.
+    await page.waitForFunction(
+      () =>
+        JSON.parse(localStorage.getItem("kanso-timer-storage") ?? "{}").state
+          ?.settings?.focusDuration === 40,
+      undefined,
+      { timeout: 5_000 },
+    );
 
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await waitForBackAnchor(page, "/focus");
+    const adjustSettingsBtn = page.getByRole("button", {
+      name: /adjust settings/i,
+    });
+    await expect(adjustSettingsBtn).toBeVisible();
+    // force: true — the guest-mode "back up now" toast can overlap this button.
+    await adjustSettingsBtn.click({ force: true });
 
-    if (await settingsBtn.isVisible()) {
-      await settingsBtn.click();
-    } else {
-      await page.getByRole("button", { name: /open menu/i }).click();
-      await settingsBtn.click();
-    }
-
-    const newSlider = page.getByRole("slider", { name: "Focus Duration" });
-    const value = await newSlider.getAttribute("aria-valuenow");
-
-    expect(Number(value)).toBeGreaterThan(25);
+    // defaultValues race async rehydration; toHaveValue retries until correct.
+    const newDurationInput = page.getByRole("spinbutton", {
+      name: "Focus Duration",
+    });
+    await expect(newDurationInput).toHaveValue("40");
   });
 });

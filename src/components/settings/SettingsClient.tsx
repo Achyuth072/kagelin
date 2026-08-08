@@ -24,10 +24,12 @@ import dynamic from "next/dynamic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useUiStore, type GoalsState } from "@/lib/store/uiStore";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Target } from "lucide-react";
 import { Vibrate } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useAnchoredBack } from "@/lib/hooks/useBackAnchor";
 import { useQueryClient } from "@tanstack/react-query";
 import { mockStore } from "@/lib/mock/mock-store";
 import { notify } from "@/lib/notify";
@@ -47,6 +49,17 @@ const SignOutConfirmation = dynamic(
   { ssr: false },
 );
 
+const SECTION_TAB_TRIGGER_CLASS =
+  "rounded-md gap-2 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-seijaku-fast h-9 border border-transparent data-[state=active]:border-brand/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40";
+const DESKTOP_SECTION_TAB_TRIGGER_CLASS = cn(
+  SECTION_TAB_TRIGGER_CLASS,
+  "w-full justify-start text-left px-3.5",
+);
+
+// Sections that read as a single column share one cap; the Preferences
+// grid intentionally spans the full main width instead.
+const SECTION_MAX_WIDTH = "max-w-5xl";
+
 interface SettingsClientProps {
   version: string;
 }
@@ -61,6 +74,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const setGoals = useUiStore((state) => state.setGoals);
   const { user, signOut, isGuestMode } = useAuth();
   const router = useRouter();
+  const anchoredBack = useAnchoredBack();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
@@ -85,6 +99,11 @@ export function SettingsClient({ version }: SettingsClientProps) {
   if (!user) {
     return <LoaderOverlay message="Signing out..." />;
   }
+
+  const handleTabChange = (v: string) => {
+    trigger("toggle");
+    setActiveTab(v as "appearance" | "preferences" | "account");
+  };
 
   const handleSignOut = async () => {
     setShowSignOutConfirm(false);
@@ -141,7 +160,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
               variant="ghost"
               size="icon"
               onPointerDown={() => trigger("toggle")}
-              onClick={() => router.back()}
+              onClick={anchoredBack}
               className="h-9 w-9 shadow-none transition-seijaku-fast"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -157,10 +176,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
         <div className="md:hidden sticky top-0 z-20 -mx-4 border-b border-border/50 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <Tabs
             value={activeTab}
-            onValueChange={(v) => {
-              trigger("toggle");
-              setActiveTab(v as "appearance" | "preferences" | "account");
-            }}
+            onValueChange={handleTabChange}
             className="w-full"
           >
             <TabsList className="grid grid-cols-3 bg-secondary/10 p-1 rounded-lg h-11 border border-border/40 shadow-none">
@@ -168,9 +184,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className={cn(
-                    "rounded-md gap-2 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-seijaku-fast h-9 border border-transparent data-[state=active]:border-brand/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40",
-                  )}
+                  className={SECTION_TAB_TRIGGER_CLASS}
                 >
                   {tab.label}
                 </TabsTrigger>
@@ -179,39 +193,44 @@ export function SettingsClient({ version }: SettingsClientProps) {
           </Tabs>
         </div>
 
-        <div className="grid md:grid-cols-[240px_1fr] gap-12 flex-1">
-          <aside className="hidden md:block">
-            <div className="sticky top-6 space-y-1">
-              <h1 className="type-h1 mb-2">Settings</h1>
-              <p className="text-sm text-muted-foreground mb-6">
-                Manage your account and preferences
-              </p>
-              <nav className="space-y-1">
+        <div className="hidden md:block">
+          <h1 className="type-h1 mb-1">Settings</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage your account and preferences
+          </p>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start w-full flex-1">
+          <aside className="hidden md:block w-56 shrink-0 sticky top-6">
+            <Tabs
+              value={activeTab}
+              onValueChange={handleTabChange}
+              className="w-full"
+            >
+              <TabsList className="flex flex-col h-auto w-full bg-transparent p-0 border-0 shadow-none gap-1">
                 {sectionTabs.map((tab) => (
-                  <button
+                  <TabsTrigger
                     key={tab.value}
-                    onClick={() => setActiveTab(tab.value)}
-                    className={cn(
-                      "block w-full rounded-md px-3 py-2 text-left text-sm transition-seijaku-fast",
-                      activeTab === tab.value
-                        ? "bg-brand text-brand-foreground font-medium"
-                        : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground",
-                    )}
+                    value={tab.value}
+                    className={DESKTOP_SECTION_TAB_TRIGGER_CLASS}
                   >
                     {tab.label}
-                  </button>
+                  </TabsTrigger>
                 ))}
-              </nav>
-            </div>
+              </TabsList>
+            </Tabs>
           </aside>
 
-          <main className="space-y-8 md:space-y-12 flex flex-col md:pt-[96px]">
+          <Separator
+            orientation="vertical"
+            className="hidden md:block self-stretch bg-brand/20 shrink-0"
+          />
+
+          <main className="space-y-8 md:space-y-12 flex flex-col flex-1 min-w-0 max-w-6xl w-full">
             {activeTab === "appearance" && (
-              <section className="space-y-4">
+              <section className={cn("space-y-4", SECTION_MAX_WIDTH)}>
                 <div>
-                  <h2 className="type-micro font-medium uppercase">
-                    Appearance
-                  </h2>
+                  <h2 className="type-h3">Appearance</h2>
                 </div>
 
                 <div className="space-y-2">
@@ -255,12 +274,10 @@ export function SettingsClient({ version }: SettingsClientProps) {
             )}
 
             {activeTab === "preferences" && (
-              <>
+              <div className="grid gap-8 xl:grid-cols-2 xl:gap-6">
                 <section className="space-y-4">
                   <div>
-                    <h2 className="type-micro font-medium uppercase">
-                      Preferences
-                    </h2>
+                    <h2 className="type-h3">Preferences</h2>
                   </div>
 
                   <div className="space-y-3">
@@ -335,7 +352,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
 
                 <section className="space-y-4">
                   <div>
-                    <h2 className="type-micro font-medium uppercase">Goals</h2>
+                    <h2 className="type-h3">Goals</h2>
                   </div>
 
                   <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-background">
@@ -374,15 +391,13 @@ export function SettingsClient({ version }: SettingsClientProps) {
                     />
                   </div>
                 </section>
-              </>
+              </div>
             )}
 
             {isGuestMode && activeTab === "account" && (
-              <section className="space-y-4">
+              <section className={cn("space-y-4", SECTION_MAX_WIDTH)}>
                 <div>
-                  <h2 className="type-micro font-medium uppercase">
-                    Guest Mode
-                  </h2>
+                  <h2 className="type-h3">Guest Mode</h2>
                 </div>
 
                 <div className="space-y-3">
@@ -436,9 +451,9 @@ export function SettingsClient({ version }: SettingsClientProps) {
             )}
 
             {activeTab === "account" && (
-              <section className="space-y-4">
+              <section className={cn("space-y-4", SECTION_MAX_WIDTH)}>
                 <div>
-                  <h2 className="type-micro font-medium uppercase">Account</h2>
+                  <h2 className="type-h3">Account</h2>
                 </div>
 
                 <div className="space-y-3">

@@ -291,7 +291,23 @@ window below), never the span itself.
 
 The contiguous run of days visible at once within a Week: all 7 on desktop,
 3–6 on narrow viewports (derived from available width, clamped to that
-range). Scrolling moves the window; it does not change the Week.
+range). Scrolling moves the window; it does not change the Week. Not to be
+confused with the rolling view below, which isn't bounded by the Week at all.
+
+### Rolling view (3-Day / 4-Day)
+
+The `3day`/`4day` calendar views: a today-anchored span that starts at
+`currentDate` and pages by its own day count, crossing Week boundaries
+freely. Unlike the Day window, it has no notion of a Week to clamp against —
+the two can show different dates for the same day count near a Week
+boundary; that divergence is intentional, not a bug (see ADR 0009).
+
+`3day` (mobile) derives its day count from available width using the same
+geometry as the Day window, so the two agree at every width where both can
+appear. `4day` (desktop) stays a fixed count of 4. The `3-Day` label and the
+`3day` view id don't change when the derived count is more than three —
+three is the floor it guarantees, not a promise of exactly three. See ADR
+0010 for the one width where this disagrees with the desktop breakpoint.
 
 ### Window scroll vs. Week paging
 
@@ -316,6 +332,29 @@ normal 7-day Week once the scroll settles. Not a user-facing concept — see
 `MobileWeekGrid.tsx`.
 
 ---
+
+## Navigation
+
+### Cold open
+
+The app starting directly at a non-root route with no history behind it — a
+notification click, a PWA shortcut, a shared URL. Distinct from in-app
+navigation, where the previous route is already on the history stack.
+_Avoid_: cold start, deep link.
+
+### Back anchor
+
+The synthetic `/` history entry placed beneath a cold-opened route, so that in-app
+back navigation has an in-app destination instead of exiting the PWA. Exists only
+on cold open, and only for routes that are in-app destinations — an auth boundary
+like `/login` is not one, and is never anchored.
+_Avoid_: back trap, deep-link trap.
+
+### Settled (back anchor)
+
+The point at which the anchor is no longer in flight — either it is in place, or
+the bounce that would have created it was interrupted. Back navigation waits for
+settled, never for success, so a lost anchor degrades back rather than disabling it.
 
 ## Calendar connection
 

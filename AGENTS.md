@@ -16,13 +16,13 @@ npm run validate           # format:check + lint:strict + typecheck + test, in p
 npm run test               # vitest (watch mode)
 npx vitest run <path>      # run a single unit test file
 npx vitest run <path> -t "<name>"  # run a single test by name
-npm run e2e                 # playwright (requires `npm run dev` already running on :3000)
+npm run e2e                 # playwright (automatically starts dev server if not running)
 npx playwright test <path>  # run a single e2e spec
 npm run dead-code           # knip — unused exports/files
 npm run unused-deps          # depcheck
 ```
 
-Dev server must already be running for `npm run e2e`; `playwright.config.ts` has no `webServer` block.
+Playwright automatically manages the dev server via the `webServer` block in `playwright.config.ts`.
 
 The service worker (Serwist) is **disabled** under `npm run dev` (Turbopack skips the Serwist wrapper entirely). To reproduce SW/offline/PWA behavior you must `npm run build && npm start`. See [`.claude/skills/verify/SKILL.md`](.claude/skills/verify/SKILL.md) for driving the app end-to-end, including how to seed guest mode for Playwright without racing the auth guard.
 

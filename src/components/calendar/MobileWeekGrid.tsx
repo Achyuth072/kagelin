@@ -5,16 +5,15 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useScrollSettle } from "@/lib/hooks/useScrollSettle";
+import { useWindowGeometry } from "@/lib/hooks/useWindowGeometry";
 import { getDayRange, layoutDayRange } from "@/lib/calendar/engine";
 import { scrollTopForNow } from "@/lib/calendar/grid-constants";
 import {
+  alignTarget,
   clampWindowStart,
-  computeWindowGeometry,
   decideSwipeGesture,
   edgeAt,
   EDGE_TOLERANCE_PX,
-  GUTTER_PX,
-  INITIAL_WIDTH_GUESS_PX,
   SWIPE_THRESHOLD_PX,
   WEEK_LENGTH,
   type PageDirection,
@@ -37,7 +36,6 @@ const PAGE_EDGE: Record<PageDirection, "start" | "end"> = {
 const SCROLL_SETTLE_MS = 120;
 const BRIDGE_TIMEOUT_MS = 600;
 
-// See CONTEXT.md "Bridge".
 type Bridge = {
   direction: PageDirection;
   columns: ReturnType<typeof layoutDayRange>;
@@ -45,8 +43,8 @@ type Bridge = {
 };
 
 /**
- * 3-6 day window onto the 7-day week (see CONTEXT.md "Calendar views").
- * Doesn't use useSwipe — it fires mid-scroll and fights the scroller.
+ * 3-6 day window onto the 7-day week.
+ * Doesn't use useSwipe, it fires mid-scroll and fights the scroller.
  */
 export function MobileWeekGrid({
   events,
@@ -64,24 +62,10 @@ export function MobileWeekGrid({
   const scrollRef = useRef<HTMLDivElement>(null);
   const gutterRef = useRef<HTMLDivElement>(null);
 
-  const [layout, setLayout] = useState(() =>
-    computeWindowGeometry(INITIAL_WIDTH_GUESS_PX, GUTTER_PX),
-  );
+  const layout = useWindowGeometry(containerRef, gutterRef);
   const pendingEdge = useRef<"start" | "end" | null>(null);
   const touch = useRef<{ x: number; y: number; left: number } | null>(null);
   const [bridge, setBridge] = useState<Bridge | null>(null);
-
-  // Measured, not a %: a % would grow unbounded past a few columns.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(([entry]) => {
-      const gutterPx = gutterRef.current?.clientWidth ?? GUTTER_PX;
-      setLayout(computeWindowGeometry(entry.contentRect.width, gutterPx));
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   // Duplicated in TimeGrid.tsx — a shared hook trips the compiler's mutation check.
   useEffect(() => {
@@ -113,7 +97,7 @@ export function MobileWeekGrid({
     scrollRef,
   ]);
 
-  // Commits the paged-to week and hands off to the land effect above.
+  // Commits the paged week; the effect above lands the scroll position.
   const finishBridge = (direction: PageDirection) => {
     pendingEdge.current = PAGE_EDGE[direction];
     setBridge(null);
@@ -135,6 +119,21 @@ export function MobileWeekGrid({
     bridge !== null,
     () => bridge && finishBridge(bridge.direction),
     { settleMs: SCROLL_SETTLE_MS, timeoutMs: BRIDGE_TIMEOUT_MS },
+  );
+
+  // No scroll-snap CSS: WebKit drops it on the programmatic scrollLeft the
+  // effects above rely on, so this corrects a mid-column rest after the
+  // fact. Gated outside a bridge — that has its own settle listener above.
+  useScrollSettle(
+    scrollRef,
+    bridge === null,
+    () => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const target = alignTarget(el.scrollLeft, layout.colWidth);
+      if (target !== null) el.scrollTo({ left: target, behavior: "smooth" });
+    },
+    { settleMs: SCROLL_SETTLE_MS, repeat: true },
   );
 
   const startBridge = (direction: PageDirection) => {
@@ -206,7 +205,7 @@ export function MobileWeekGrid({
         onTouchEnd={onTouchEnd}
         onTouchCancel={onTouchCancel}
         data-testid="mobile-week-grid"
-        className="flex flex-1 min-h-0 overflow-auto bg-background custom-scrollbar touch-auto overscroll-contain"
+        className="flex flex-1 min-h-0 overflow-auto bg-background custom-scrollbar no-horizontal-scrollbar touch-auto overscroll-contain"
       >
         <TimeGutter ref={gutterRef} />
         <div
@@ -221,7 +220,6 @@ export function MobileWeekGrid({
               column={column}
               className="shrink-0"
               style={{ width: `${layout.colWidth}px` }}
-              compactIndicator
               onDateNumberClick={onDateNumberClick}
               onEventClick={onEventClick}
             />

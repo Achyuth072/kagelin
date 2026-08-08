@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -68,7 +74,9 @@ describe("MagicLinkAuth (Turnstile wiring)", () => {
 
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
 
-    capturedOnVerify?.("captcha-token-abc");
+    act(() => {
+      capturedOnVerify?.("captcha-token-abc");
+    });
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled(),
@@ -81,7 +89,9 @@ describe("MagicLinkAuth (Turnstile wiring)", () => {
     fireEvent.change(screen.getByLabelText("Email address"), {
       target: { value: "user@example.com" },
     });
-    capturedOnVerify?.("captcha-token-abc");
+    act(() => {
+      capturedOnVerify?.("captcha-token-abc");
+    });
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Continue" })).toBeEnabled(),
