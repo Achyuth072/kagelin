@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
 
 // history.pushState() desyncs App Router's tracking, so use replace()/push().
 // Must run somewhere that survives its own replace() — AppShell, not Template.
@@ -30,6 +31,25 @@ export function useBackAnchor() {
 
   useEffect(() => {
     if (anchor.current === undefined) {
+      if (pathname === "/") {
+        const searchParams = new URLSearchParams(window.location.search);
+        const redirectParam = searchParams.get("redirect");
+        const safeRedirect = redirectParam
+          ? sanitizeNextPath(redirectParam)
+          : null;
+
+        if (safeRedirect && safeRedirect !== "/") {
+          anchor.current = null;
+          anchorSettled = new Promise((resolve) => {
+            resolveAnchorSettled = resolve;
+          });
+          router.replace("/");
+          router.push(safeRedirect);
+          settle();
+          return;
+        }
+      }
+
       anchor.current =
         pathname === "/" || UNANCHORED_ROUTES.has(pathname)
           ? null

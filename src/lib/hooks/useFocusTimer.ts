@@ -163,6 +163,7 @@ export function useFocusTimer() {
               // Matches the queued push's tag so they replace, not stack.
               tag: "timer_end",
               renotify: true,
+              data: { url: "/focus" },
             } as NotificationOptions,
           );
         }

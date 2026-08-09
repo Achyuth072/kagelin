@@ -189,7 +189,11 @@ self.addEventListener("notificationclick", (event) => {
       }
 
       if (self.clients.openWindow) {
-        return self.clients.openWindow(url);
+        const openUrl =
+          url !== "/" && url.startsWith("/")
+            ? `/?redirect=${encodeURIComponent(url)}`
+            : url;
+        return self.clients.openWindow(openUrl);
       }
     })(),
   );

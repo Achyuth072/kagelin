@@ -1,11 +1,14 @@
 # Synthetic back anchor for cold-opened routes
 
-A notification click (`clients.openWindow` in `app/sw.ts`) opens Kagelin directly at
-a deep route such as `/focus` with an empty history stack, so the in-app back
-affordance's `router.back()` closed the PWA instead of navigating. On cold open at
-a non-root route we therefore synthesise history: `router.replace("/")` followed by
-`router.push(target)`, leaving a **back anchor** — a `/` entry beneath the route the
-user actually asked for. Back navigation then lands on the home page, in-app.
+A notification click (`clients.openWindow` in `app/sw.ts`) opens Kagelin with an
+empty history stack, so the in-app back affordance's `router.back()` closed the PWA
+instead of navigating. Cold notification clicks now open `/?redirect=<target>`,
+anchoring history naturally at `/` on cold boot before pushing the target, so the user
+transitions cleanly from home to the target without bouncing. On cold opens directly at
+a deep route (e.g. direct URL entry), we synthesise history as a fallback:
+`router.replace("/")` followed by `router.push(target)`, leaving a **back anchor** — a
+`/` entry beneath the route the user actually asked for. Back navigation then lands on
+the home page, in-app.
 
 ## Considered Options
 
