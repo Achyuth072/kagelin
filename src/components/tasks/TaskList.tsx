@@ -39,6 +39,7 @@ import type { SortOption, GroupOption } from "@/lib/types/sorting";
 import type { TaskGroup } from "@/lib/hooks/useTaskViewData";
 import {
   getTaskUpdatesForGroup,
+  getPasteOverrides,
   computeReorderPairs,
   computeFreezeOrderPairs,
   isDropBlockedGroup,
@@ -948,13 +949,34 @@ function TaskListBase({
         return;
       }
       e.preventDefault();
-      duplicateMutation.mutate(yankedTask, {
-        onSuccess: (newDuplicateTask) => {
-          if (newDuplicateTask?.id) {
-            setKeyboardSelectedId(newDuplicateTask.id);
-          }
-        },
+      // Where "here" is: the project/filter this view is scoped to, plus —
+      // in board view — whichever column the cursor currently sits in. Without
+      // this a paste always lands back on the yanked task's own project (see
+      // toDuplicatePayload), so pasting into a different board/project/filter
+      // view silently duplicated into the *source* location instead.
+      const targetColumn =
+        viewMode === "board"
+          ? boardColumns.find((c) =>
+              c.tasks.some((t) => t.id === keyboardSelectedId),
+            )
+          : undefined;
+      const overrides = getPasteOverrides({
+        projectId,
+        filter,
+        targetColumnTitle: targetColumn?.title,
+        projectsMap,
+        groupBy,
       });
+      duplicateMutation.mutate(
+        { sourceTask: yankedTask, overrides },
+        {
+          onSuccess: (newDuplicateTask) => {
+            if (newDuplicateTask?.id) {
+              setKeyboardSelectedId(newDuplicateTask.id);
+            }
+          },
+        },
+      );
     },
     hotkeyOptions,
   );

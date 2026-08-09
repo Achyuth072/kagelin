@@ -1,6 +1,7 @@
 import { render, fireEvent } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { ComponentProps } from "react";
 import TaskList from "@/components/tasks/TaskList";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Task } from "@/lib/types/task";
@@ -95,7 +96,10 @@ function buildTask(overrides: Partial<Task> & { id: string }): Task {
   };
 }
 
-async function renderTaskList(qc?: QueryClient) {
+async function renderTaskList(
+  qc?: QueryClient,
+  props?: Partial<ComponentProps<typeof TaskList>>,
+) {
   const client =
     qc ??
     new QueryClient({
@@ -103,7 +107,7 @@ async function renderTaskList(qc?: QueryClient) {
     });
   return render(
     <QueryClientProvider client={client}>
-      <TaskList />
+      <TaskList {...props} />
     </QueryClientProvider>,
   );
 }
@@ -137,7 +141,7 @@ describe("Vim Yank & Paste Controls (yy / p)", () => {
 
     expect(mutations.duplicateMutate).toHaveBeenCalledTimes(1);
     expect(mutations.duplicateMutate).toHaveBeenCalledWith(
-      taskA,
+      { sourceTask: taskA, overrides: expect.any(Object) },
       expect.any(Object),
     );
   });
@@ -154,7 +158,7 @@ describe("Vim Yank & Paste Controls (yy / p)", () => {
 
     expect(mutations.duplicateMutate).toHaveBeenCalledTimes(1);
     expect(mutations.duplicateMutate).toHaveBeenCalledWith(
-      taskA,
+      { sourceTask: taskA, overrides: expect.any(Object) },
       expect.any(Object),
     );
   });
@@ -190,7 +194,7 @@ describe("Vim Yank & Paste Controls (yy / p)", () => {
     fireEvent.keyDown(document, { key: "p", code: "KeyP" });
 
     expect(mutations.duplicateMutate).toHaveBeenCalledWith(
-      editedTaskA,
+      { sourceTask: editedTaskA, overrides: expect.any(Object) },
       expect.any(Object),
     );
   });
@@ -216,7 +220,7 @@ describe("Vim Yank & Paste Controls (yy / p)", () => {
     fireEvent.keyDown(document, { key: "p", code: "KeyP" });
 
     expect(mutations.duplicateMutate).toHaveBeenCalledWith(
-      taskA,
+      { sourceTask: taskA, overrides: expect.any(Object) },
       expect.any(Object),
     );
   });
@@ -246,5 +250,31 @@ describe("Vim Yank & Paste Controls (yy / p)", () => {
 
     fireEvent.keyDown(document, { key: "p", code: "KeyP" });
     expect(mutations.duplicateMutate).not.toHaveBeenCalled();
+  });
+
+  it("p on a different project's view overrides project_id to that project, not the yanked task's own", async () => {
+    // Regression: yanking on project-a then pasting while viewing project-b
+    // used to duplicate straight back into project-a (the source's own
+    // project_id, baked in by toDuplicatePayload) — the paste looked like a
+    // no-op from project-b's perspective.
+    const taskA = buildTask({
+      id: "a",
+      content: "Alpha Task",
+      project_id: "project-a",
+    });
+    taskState.tasks = [taskA];
+    useUiStore.setState({ yankedTaskId: taskA.id });
+
+    await renderTaskList(undefined, { projectId: "project-b" });
+
+    fireEvent.keyDown(document, { key: "p", code: "KeyP" });
+
+    expect(mutations.duplicateMutate).toHaveBeenCalledWith(
+      {
+        sourceTask: taskA,
+        overrides: expect.objectContaining({ project_id: "project-b" }),
+      },
+      expect.any(Object),
+    );
   });
 });

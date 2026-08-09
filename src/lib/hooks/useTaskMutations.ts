@@ -401,7 +401,13 @@ export function useDuplicateTask() {
 
   return useMutation({
     mutationKey: ["duplicateTask"],
-    mutationFn: taskMutations.duplicate,
+    mutationFn: ({
+      sourceTask,
+      overrides,
+    }: {
+      sourceTask: Task;
+      overrides?: Partial<Task>;
+    }) => taskMutations.duplicate(sourceTask, overrides),
     onSuccess: (newTask) => {
       trigger("success");
       notify("Task duplicated");

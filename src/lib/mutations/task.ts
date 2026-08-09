@@ -485,15 +485,19 @@ export const taskMutations = {
     if (error) throw new Error(error.message);
   },
 
-  duplicate: async (sourceTask: Task): Promise<Task> => {
+  duplicate: async (
+    sourceTask: Task,
+    overrides?: Partial<Task>,
+  ): Promise<Task> => {
     const isGuest =
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
 
     if (isGuest) {
-      const duplicatedTask = mockStore.addTask(
-        toDuplicatePayload(sourceTask, sourceTask.parent_id || null),
-      );
+      const duplicatedTask = mockStore.addTask({
+        ...toDuplicatePayload(sourceTask, sourceTask.parent_id || null),
+        ...overrides,
+      });
 
       const duplicateSubtasksRecursively = (
         originalParentId: string,
@@ -533,6 +537,7 @@ export const taskMutations = {
       .insert({
         user_id: user.id,
         ...toDuplicatePayload(sourceTask, sourceTask.parent_id || null),
+        ...overrides,
         day_order: nextDayOrder,
       })
       .select()
