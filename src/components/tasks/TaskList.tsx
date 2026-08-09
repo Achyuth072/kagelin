@@ -880,6 +880,16 @@ function TaskListBase({
   );
 
   useHotkeys(
+    "u",
+    () => {
+      resetGSequence();
+      const triggerLastUndoAction = useUiStore.getState().triggerLastUndoAction;
+      void triggerLastUndoAction();
+    },
+    hotkeyOptions,
+  );
+
+  useHotkeys(
     "escape",
     () => {
       resetGSequence();

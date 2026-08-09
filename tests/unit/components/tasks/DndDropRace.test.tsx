@@ -308,6 +308,9 @@ describe("TaskList drop race condition (residual snap-back)", () => {
           weeklyTasksCompleted: null,
         },
         setGoals: vi.fn(),
+        lastUndoAction: null,
+        setLastUndoAction: vi.fn(),
+        triggerLastUndoAction: vi.fn(),
       }),
     );
   });

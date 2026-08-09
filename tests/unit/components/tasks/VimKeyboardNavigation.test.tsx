@@ -30,6 +30,17 @@ const uiState = vi.hoisted(() => ({
   isShortcutsHelpOpen: false,
   isArchivedProjectsOpen: false,
   isChangelogOpen: false,
+  lastUndoAction: null as (() => void | Promise<void>) | null,
+  setLastUndoAction: vi.fn((action: (() => void | Promise<void>) | null) => {
+    uiState.lastUndoAction = action;
+  }),
+  triggerLastUndoAction: vi.fn(() => {
+    const action = uiState.lastUndoAction;
+    if (action) {
+      uiState.lastUndoAction = null;
+      return action();
+    }
+  }),
 }));
 const mutations = vi.hoisted(() => ({
   toggleMutate: vi.fn(),
@@ -91,8 +102,10 @@ vi.mock("@/components/tasks/TaskSheet", () => ({
 }));
 
 vi.mock("@/lib/store/uiStore", () => ({
-  useUiStore: (selector: (state: typeof uiState) => unknown) =>
-    selector(uiState),
+  useUiStore: Object.assign(
+    (selector: (state: typeof uiState) => unknown) => selector(uiState),
+    { getState: () => uiState },
+  ),
 }));
 
 function buildTask(overrides: Partial<Task> & { id: string }): Task {
@@ -529,6 +542,22 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
       // Press g again (should start new sequence, NOT trigger gg to top)
       fireEvent.keyDown(document, { key: "g", code: "KeyG" });
       expect(selectedId(ids)).toBe("c");
+    });
+
+    it("u key triggers the stored undo action from uiStore", async () => {
+      uiState.viewMode = "list";
+      taskState.tasks = [
+        buildTask({ id: "a", content: "Alpha", day_order: 0 }),
+      ];
+      await renderTaskList();
+
+      const undoFn = vi.fn();
+      uiState.setLastUndoAction(undoFn);
+
+      fireEvent.keyDown(document, { key: "u", code: "KeyU" });
+      expect(uiState.triggerLastUndoAction).toHaveBeenCalled();
+      expect(undoFn).toHaveBeenCalledTimes(1);
+      expect(uiState.lastUndoAction).toBeNull();
     });
   });
 });

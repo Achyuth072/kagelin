@@ -232,6 +232,9 @@ describe("TaskList DnD layout shift protection", () => {
           weeklyTasksCompleted: null,
         },
         setGoals: vi.fn(),
+        lastUndoAction: null,
+        setLastUndoAction: vi.fn(),
+        triggerLastUndoAction: vi.fn(),
       }),
     );
   });

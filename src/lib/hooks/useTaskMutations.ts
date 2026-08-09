@@ -13,6 +13,7 @@ import { notify } from "@/lib/notify";
 
 import { taskMutations } from "@/lib/mutations/task";
 import { mockStore } from "@/lib/mock/mock-store";
+import { useUiStore } from "@/lib/store/uiStore";
 
 function invalidateTaskCaches(queryClient: QueryClient): void {
   void Promise.all([
@@ -240,37 +241,42 @@ export function useDeleteTask() {
 
       trigger("success");
 
+      const undoAction = async () => {
+        useUiStore.getState().setLastUndoAction(null);
+        if (isGuestMode) {
+          mockStore.addTask(taskToRestore);
+          queryClient.invalidateQueries({ queryKey: ["tasks"] });
+          trigger("success");
+          notify("Task restored");
+          return;
+        }
+
+        // Task was hard-deleted, so undo re-inserts rather than updates —
+        // parent first, then any subtasks the delete cascaded away.
+        try {
+          await taskMutations.restore(taskToRestore, subtasksToRestore);
+          trigger("success");
+          notify("Task restored");
+        } catch (err) {
+          console.error("Failed to restore task:", err);
+          trigger("thud");
+          notify.error("Failed to restore task");
+        }
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        queryClient.invalidateQueries({
+          queryKey: ["subtasks", taskToRestore.id],
+        });
+      };
+
+      useUiStore.getState().setLastUndoAction(undoAction);
+
       // Task content is unbounded user text, so it's dropped rather than
       // folded into the title like other toasts (see ADR 0008).
       notify("Task deleted", {
         duration: 5000,
         action: {
           label: "Undo",
-          onClick: async () => {
-            if (isGuestMode) {
-              mockStore.addTask(taskToRestore);
-              queryClient.invalidateQueries({ queryKey: ["tasks"] });
-              trigger("success");
-              notify("Task restored");
-              return;
-            }
-
-            // Task was hard-deleted, so undo re-inserts rather than updates —
-            // parent first, then any subtasks the delete cascaded away.
-            try {
-              await taskMutations.restore(taskToRestore, subtasksToRestore);
-              trigger("success");
-              notify("Task restored");
-            } catch (err) {
-              console.error("Failed to restore task:", err);
-              trigger("thud");
-              notify.error("Failed to restore task");
-            }
-            queryClient.invalidateQueries({ queryKey: ["tasks"] });
-            queryClient.invalidateQueries({
-              queryKey: ["subtasks", taskToRestore.id],
-            });
-          },
+          onClick: undoAction,
         },
       });
     },
