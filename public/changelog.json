@@ -1,5 +1,33 @@
 [
   {
+    "version": "1.30.0-preview.0",
+    "date": "2026-08-09",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add yank and paste task controls (yy / p)",
+        "Add keyboard-driven undo via 'u' shortcut",
+        "Add gg and G vim navigation shortcuts",
+        "Wire aria-activedescendant keyboard focus model for task nav",
+        "2D keyboard navigation for task board view"
+      ],
+      "Improved": [
+        "Refine vim navigation sequence tracking and helper DRYness"
+      ],
+      "Fixed": [
+        "Scope yy/p paste destination to the pasted-into view",
+        "Address vim controls code-review findings (undo expiry, yank staleness, g/y collision)",
+        "Release yanked task on Escape, surface subtask duplication errors",
+        "Scope New Project 'p' suppression to tasks page, test Supabase duplicate branch",
+        "Restore subtasks (not just the parent) when undoing a task delete",
+        "Route vim Enter/o keybinding through onTaskSelect in list view",
+        "Resolve focus ring cutoff and phantom outline artifacts",
+        "Stop dnd-kit keyboard drag from colliding with board Space/Enter",
+        "Derive modal-open hotkey gating from state, not a DOM probe race"
+      ]
+    }
+  },
+  {
     "version": "1.29.1",
     "date": "2026-08-08",
     "channel": "stable",
@@ -779,19 +807,6 @@
         "Location history now persists across event deletions",
         "Scroll in the location suggestion list (wheel and touch were silently broken)",
         "Spurious network errors on the calendar page in guest mode"
-      ]
-    }
-  },
-  {
-    "version": "1.22.0-preview.2",
-    "date": "2026-06-08",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Custom location quick-select item in dropdown when typed input matches no suggestion",
-        "Inline clear button for location combobox",
-        "Location dropdown trigger restyled with mobile alignment fixes",
-        "Notes textarea styling harmonised with other dialog inputs"
       ]
     }
   }
