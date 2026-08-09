@@ -15,6 +15,9 @@ const withSerwist = withSerwistInit({
   swDest: "public/sw.js",
   disable:
     process.env.NODE_ENV === "development" && process.env.ENABLE_PWA !== "true",
+  // App Router routes are reached via client-side navigation, so a document
+  // fetch never happens for them unless we cache it ourselves on navigate.
+  cacheOnNavigation: true,
 });
 
 const isMobile = process.env.NEXT_PUBLIC_IS_CAPACITOR === "true";

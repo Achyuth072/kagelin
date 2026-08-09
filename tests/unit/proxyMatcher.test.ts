@@ -16,6 +16,10 @@ describe("proxy matcher", () => {
     expect(matches("/some/nested/module.wasm")).toBe(false);
   });
 
+  it("does not gate the offline fallback page behind auth", () => {
+    expect(matches("/offline.html")).toBe(false);
+  });
+
   it("still gates app routes", () => {
     expect(matches("/settings")).toBe(true);
     expect(matches("/habits")).toBe(true);

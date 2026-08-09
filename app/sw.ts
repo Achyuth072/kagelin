@@ -3,6 +3,7 @@ import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import {
   Serwist,
   NetworkFirst,
+  ExpirationPlugin,
   type RuntimeCaching,
   type SerwistPlugin,
 } from "serwist";
@@ -48,7 +49,25 @@ const patchedCache = defaultCache.map((entry) => {
   return entry;
 });
 
+const OFFLINE_URL = "/offline.html";
+const NAVIGATION_CACHE = PAGES_CACHE_NAME.html;
+
+const usableForNavigation: SerwistPlugin = {
+  cacheWillUpdate: async ({ response }) =>
+    response.status === 200 && !response.redirected ? response : null,
+};
+
+const navigationRoute: RuntimeCaching = {
+  matcher: ({ request }) => request.mode === "navigate",
+  handler: new NetworkFirst({
+    cacheName: NAVIGATION_CACHE,
+    networkTimeoutSeconds: 3,
+    plugins: [usableForNavigation, new ExpirationPlugin({ maxEntries: 64 })],
+  }),
+};
+
 const finalCache: RuntimeCaching[] = [
+  navigationRoute,
   ...patchedCache.filter((e) => {
     const isCatchAll =
       e.matcher instanceof RegExp &&
@@ -72,17 +91,24 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: false,
   runtimeCaching: finalCache,
-  // Serves /~offline directly (no redirect) on failed navigations, to avoid infinite loops.
   fallbacks: {
     entries: [
       {
-        url: "/~offline",
+        url: OFFLINE_URL,
         matcher({ request }) {
           return request.destination === "document";
         },
       },
     ],
   },
+});
+
+serwist.setCatchHandler(async ({ request }) => {
+  if (request.destination === "document") {
+    const cached = await serwist.matchPrecache(OFFLINE_URL);
+    if (cached) return cached;
+  }
+  return Response.error();
 });
 
 serwist.addEventListeners();
