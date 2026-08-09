@@ -64,6 +64,7 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
   useDeleteTask: vi.fn(() => ({ mutate: vi.fn() })),
   useToggleTask: vi.fn(() => ({ mutate: vi.fn() })),
   useCreateTask: vi.fn(() => ({ mutate: vi.fn() })),
+  useDuplicateTask: vi.fn(() => ({ mutate: vi.fn() })),
 }));
 
 vi.mock("@/lib/hooks/useTaskViewData", () => {

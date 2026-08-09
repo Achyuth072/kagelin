@@ -72,6 +72,8 @@ const getShortcuts = (
       { keys: ["Enter", "o"], description: "Open Selected" },
       { keys: ["Space", "x"], description: "Toggle Completion" },
       { keys: ["d", "Backspace"], description: "Delete Selected" },
+      { keys: ["y", "y"], description: "Yank Selected Task" },
+      { keys: ["p"], description: "Paste Yanked Task" },
       { keys: ["Esc"], description: "Clear Selection" },
     ],
   },

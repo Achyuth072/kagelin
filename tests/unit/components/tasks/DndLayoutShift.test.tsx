@@ -104,6 +104,7 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
   useUpdateTask: () => ({ isPending: false, mutate: vi.fn() }),
   useDeleteTask: () => ({ mutate: vi.fn() }),
   useToggleTask: () => ({ mutate: vi.fn() }),
+  useDuplicateTask: () => ({ mutate: vi.fn() }),
 }));
 
 vi.mock("@/lib/store/uiStore", () => ({
@@ -235,6 +236,8 @@ describe("TaskList DnD layout shift protection", () => {
         lastUndoAction: null,
         setLastUndoAction: vi.fn(),
         triggerLastUndoAction: vi.fn(),
+        yankedTask: null,
+        setYankedTask: vi.fn(),
       }),
     );
   });

@@ -381,3 +381,29 @@ export function useClearCompletedTasks() {
     },
   });
 }
+
+export function useDuplicateTask() {
+  const queryClient = useQueryClient();
+  const { trigger } = useHaptic();
+
+  return useMutation({
+    mutationKey: ["duplicateTask"],
+    mutationFn: taskMutations.duplicate,
+    onSuccess: (newTask) => {
+      trigger("success");
+      notify("Task duplicated");
+      invalidateTaskCaches(queryClient);
+      if (newTask.parent_id) {
+        queryClient.invalidateQueries({
+          queryKey: ["subtasks", newTask.parent_id],
+        });
+      }
+    },
+    onError: (err) => {
+      handleMutationError(err);
+    },
+    onSettled: () => {
+      invalidateTaskCaches(queryClient);
+    },
+  });
+}

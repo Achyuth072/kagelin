@@ -99,6 +99,10 @@ interface UiState {
   setLastUndoAction: (action: (() => void | Promise<void>) | null) => void;
   triggerLastUndoAction: () => void | Promise<void>;
 
+  // Ephemeral Yanked Task State (for vim yy / p)
+  yankedTask: import("@/lib/types/task").Task | null;
+  setYankedTask: (task: import("@/lib/types/task").Task | null) => void;
+
   // Hydration state
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
@@ -213,6 +217,10 @@ export const useUiStore = create<UiState>()(
         }
       },
 
+      // Yanked Task defaults
+      yankedTask: null,
+      setYankedTask: (task) => set({ yankedTask: task }),
+
       // Hydration
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
@@ -245,6 +253,8 @@ export const useUiStore = create<UiState>()(
           lastUndoAction: _lastUndoAction,
           setLastUndoAction: _setLastUndoAction,
           triggerLastUndoAction: _triggerLastUndoAction,
+          yankedTask: _yankedTask,
+          setYankedTask: _setYankedTask,
           ...rest
         } = state;
         return rest;

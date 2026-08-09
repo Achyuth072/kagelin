@@ -63,7 +63,14 @@ export function GlobalHotkeys({
   useHotkeys("e", () => openCreateEvent(), options);
 
   // New Project (p)
-  useHotkeys("p", () => openCreateProject(), options);
+  useHotkeys(
+    "p",
+    () => {
+      if (useUiStore.getState().yankedTask) return;
+      openCreateProject();
+    },
+    options,
+  );
 
   // Archived Projects (a)
   useHotkeys("a", () => setArchivedProjectsOpen(true), options);

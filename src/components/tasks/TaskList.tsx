@@ -48,8 +48,10 @@ import {
   useUpdateTask,
   useDeleteTask,
   useToggleTask,
+  useDuplicateTask,
 } from "@/lib/hooks/useTaskMutations";
 import { useUiStore } from "@/lib/store/uiStore";
+import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 import { useHotkeys } from "react-hotkeys-hook";
@@ -118,12 +120,14 @@ function TaskListBase({
   // collision (see the DragHandle split in SortableBoardTaskCard).
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastGPressTimestampRef = useRef<number>(0);
+  const lastYPressTimestampRef = useRef<number>(0);
 
   const queryClient = useQueryClient();
   const reorderMutation = useReorderTasks();
   const updateMutation = useUpdateTask();
   const deleteMutation = useDeleteTask();
   const toggleMutation = useToggleTask();
+  const duplicateMutation = useDuplicateTask();
   const setSortBy = useUiStore((state) => state.setSortBy);
   const customSortEnteredViaDrag = useUiStore(
     (state) => state.customSortEnteredViaDrag,
@@ -727,6 +731,7 @@ function TaskListBase({
 
   const resetGSequence = () => {
     lastGPressTimestampRef.current = 0;
+    lastYPressTimestampRef.current = 0;
   };
 
   const handleNavVertical = (dir: 1 | -1) => {
@@ -885,6 +890,50 @@ function TaskListBase({
       resetGSequence();
       const triggerLastUndoAction = useUiStore.getState().triggerLastUndoAction;
       void triggerLastUndoAction();
+    },
+    hotkeyOptions,
+  );
+
+  useHotkeys(
+    "y",
+    (e) => {
+      if (e.shiftKey) return;
+      const now = Date.now();
+      if (
+        now - lastYPressTimestampRef.current < VIM_DOUBLE_PRESS_TIMEOUT_MS &&
+        lastYPressTimestampRef.current > 0
+      ) {
+        resetGSequence();
+        if (keyboardSelectedId) {
+          const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
+          if (task) {
+            useUiStore.getState().setYankedTask(task);
+            triggerHaptic("toggle");
+            notify("Task yanked");
+          }
+        }
+      } else {
+        lastYPressTimestampRef.current = now;
+      }
+    },
+    hotkeyOptions,
+  );
+
+  useHotkeys(
+    "p",
+    (e) => {
+      resetGSequence();
+      const yankedTask = useUiStore.getState().yankedTask;
+      if (yankedTask) {
+        e.preventDefault();
+        duplicateMutation.mutate(yankedTask, {
+          onSuccess: (newDuplicateTask) => {
+            if (newDuplicateTask?.id) {
+              setKeyboardSelectedId(newDuplicateTask.id);
+            }
+          },
+        });
+      }
     },
     hotkeyOptions,
   );

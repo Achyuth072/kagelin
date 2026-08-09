@@ -41,6 +41,8 @@ const uiState = vi.hoisted(() => ({
       return action();
     }
   }),
+  yankedTask: null as Task | null,
+  setYankedTask: vi.fn(),
 }));
 const mutations = vi.hoisted(() => ({
   toggleMutate: vi.fn(),
@@ -85,6 +87,7 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
   useUpdateTask: () => ({ mutate: vi.fn() }),
   useDeleteTask: () => ({ mutate: mutations.deleteMutate }),
   useToggleTask: () => ({ mutate: mutations.toggleMutate }),
+  useDuplicateTask: () => ({ mutate: vi.fn() }),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({

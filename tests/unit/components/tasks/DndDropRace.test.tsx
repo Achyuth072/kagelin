@@ -156,6 +156,7 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
   useUpdateTask: vi.fn(),
   useDeleteTask: vi.fn(),
   useToggleTask: vi.fn(),
+  useDuplicateTask: vi.fn(() => ({ mutate: vi.fn() })),
 }));
 
 vi.mock("@/lib/store/uiStore", () => ({
@@ -311,6 +312,8 @@ describe("TaskList drop race condition (residual snap-back)", () => {
         lastUndoAction: null,
         setLastUndoAction: vi.fn(),
         triggerLastUndoAction: vi.fn(),
+        yankedTask: null,
+        setYankedTask: vi.fn(),
       }),
     );
   });

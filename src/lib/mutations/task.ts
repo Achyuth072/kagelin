@@ -459,4 +459,141 @@ export const taskMutations = {
 
     if (error) throw new Error(error.message);
   },
+
+  duplicate: async (sourceTask: Task): Promise<Task> => {
+    const isGuest =
+      typeof window !== "undefined" &&
+      localStorage.getItem("kanso_guest_mode") === "true";
+
+    if (isGuest) {
+      const duplicatedTask = mockStore.addTask({
+        content: sourceTask.content,
+        description: sourceTask.description || null,
+        priority: sourceTask.priority || 4,
+        due_date: sourceTask.due_date || null,
+        do_date: sourceTask.do_date || null,
+        is_evening: sourceTask.is_evening || false,
+        project_id: sourceTask.project_id || null,
+        parent_id: sourceTask.parent_id || null,
+        recurrence: null,
+        recurring_series_id: null,
+        is_completed: false,
+        completed_at: null,
+        google_event_id: null,
+        google_etag: null,
+      });
+
+      const duplicateSubtasksRecursively = (
+        originalParentId: string,
+        newParentId: string,
+      ) => {
+        const subtasks = mockStore
+          .getTasks()
+          .filter((t) => t.parent_id === originalParentId);
+        for (const subtask of subtasks) {
+          const newSubtask = mockStore.addTask({
+            content: subtask.content,
+            description: subtask.description || null,
+            priority: subtask.priority || 4,
+            due_date: subtask.due_date || null,
+            do_date: subtask.do_date || null,
+            is_evening: subtask.is_evening || false,
+            project_id: subtask.project_id || null,
+            parent_id: newParentId,
+            recurrence: null,
+            recurring_series_id: null,
+            is_completed: false,
+            completed_at: null,
+            google_event_id: null,
+            google_etag: null,
+          });
+          duplicateSubtasksRecursively(subtask.id, newSubtask.id);
+        }
+      };
+
+      duplicateSubtasksRecursively(sourceTask.id, duplicatedTask.id);
+
+      return duplicatedTask;
+    }
+
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const { data: lastTask } = await supabase
+      .from("tasks")
+      .select("day_order")
+      .eq("user_id", user.id)
+      .order("day_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextDayOrder = (lastTask?.day_order ?? -1) + 1;
+
+    const { data: duplicatedTask, error } = await supabase
+      .from("tasks")
+      .insert({
+        user_id: user.id,
+        content: sourceTask.content,
+        description: sourceTask.description || null,
+        priority: sourceTask.priority || 4,
+        due_date: sourceTask.due_date || null,
+        do_date: sourceTask.do_date || null,
+        is_evening: sourceTask.is_evening || false,
+        project_id: sourceTask.project_id || null,
+        parent_id: sourceTask.parent_id || null,
+        recurrence: null,
+        recurring_series_id: null,
+        day_order: nextDayOrder,
+        is_completed: false,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    const duplicateSubtasksRecursively = async (
+      originalParentId: string,
+      newParentId: string,
+    ) => {
+      const { data: subtasks, error: subtasksError } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("parent_id", originalParentId);
+
+      if (subtasksError || !subtasks || subtasks.length === 0) return;
+
+      for (const subtask of subtasks) {
+        const { data: newSubtask, error: insertError } = await supabase
+          .from("tasks")
+          .insert({
+            user_id: user.id,
+            content: subtask.content,
+            description: subtask.description || null,
+            priority: subtask.priority || 4,
+            due_date: subtask.due_date || null,
+            do_date: subtask.do_date || null,
+            is_evening: subtask.is_evening || false,
+            project_id: subtask.project_id || null,
+            parent_id: newParentId,
+            recurrence: null,
+            recurring_series_id: null,
+            day_order: subtask.day_order ?? 0,
+            is_completed: false,
+          })
+          .select()
+          .single();
+
+        if (!insertError && newSubtask) {
+          await duplicateSubtasksRecursively(subtask.id, newSubtask.id);
+        }
+      }
+    };
+
+    await duplicateSubtasksRecursively(sourceTask.id, duplicatedTask.id);
+
+    return duplicatedTask as Task;
+  },
 };

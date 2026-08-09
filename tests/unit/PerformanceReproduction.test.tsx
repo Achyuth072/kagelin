@@ -28,6 +28,7 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
   useUpdateTask: () => ({ isPending: false }),
   useDeleteTask: () => ({ isPending: false }),
   useToggleTask: () => ({ isPending: false }),
+  useDuplicateTask: () => ({ isPending: false }),
 }));
 vi.mock("@/components/AuthProvider");
 vi.mock("@/lib/store/uiStore");
