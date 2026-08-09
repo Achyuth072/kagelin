@@ -2,7 +2,7 @@
  * Regression test for the "p" collision between GlobalHotkeys' New Project
  * and TaskList's vim paste: New Project must only step aside while the
  * tasks page is actually mounted, and never linger past a route change —
- * unlike a bare `yankedTask` store check, which stayed suppressed app-wide
+ * unlike a bare `yankedTaskId` store check, which stayed suppressed app-wide
  * until a hard reload.
  */
 
@@ -10,7 +10,6 @@ import { render, fireEvent, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GlobalHotkeys } from "@/components/layout/GlobalHotkeys";
 import { useUiStore } from "@/lib/store/uiStore";
-import type { Task } from "@/lib/types/task";
 
 vi.mock("next/navigation", () => ({
   usePathname: vi.fn(),
@@ -44,28 +43,6 @@ vi.mock("@/lib/calendar/store", () => ({
   }),
 }));
 
-const makeTask = (): Task => ({
-  id: "task-1",
-  user_id: "guest",
-  content: "Yanked",
-  description: null,
-  is_completed: false,
-  completed_at: null,
-  priority: 4,
-  project_id: null,
-  day_order: 0,
-  created_at: "2026-05-06T00:00:00.000Z",
-  updated_at: "2026-05-06T00:00:00.000Z",
-  due_date: null,
-  do_date: null,
-  is_evening: false,
-  parent_id: null,
-  recurrence: null,
-  recurring_series_id: null,
-  google_event_id: null,
-  google_etag: null,
-});
-
 async function renderGlobalHotkeys(pathname: string) {
   const { usePathname } = await import("next/navigation");
   vi.mocked(usePathname).mockReturnValue(pathname);
@@ -79,7 +56,7 @@ describe("GlobalHotkeys — New Project vs. paste 'p' collision", () => {
     openCreateProject.mockClear();
     useUiStore.setState({
       viewMode: "list",
-      yankedTask: null,
+      yankedTaskId: null,
       isShortcutsHelpOpen: false,
       isArchivedProjectsOpen: false,
       isChangelogOpen: false,
@@ -89,7 +66,7 @@ describe("GlobalHotkeys — New Project vs. paste 'p' collision", () => {
   it("suppresses New Project on the tasks page while a task is yanked", async () => {
     await renderGlobalHotkeys("/");
     act(() => {
-      useUiStore.setState({ yankedTask: makeTask() });
+      useUiStore.setState({ yankedTaskId: "task-1" });
     });
 
     fireEvent.keyDown(document, { key: "p", code: "KeyP" });
@@ -100,7 +77,7 @@ describe("GlobalHotkeys — New Project vs. paste 'p' collision", () => {
   it("still opens New Project elsewhere in the app even with a stale yanked task", async () => {
     await renderGlobalHotkeys("/habits");
     act(() => {
-      useUiStore.setState({ yankedTask: makeTask() });
+      useUiStore.setState({ yankedTaskId: "task-1" });
     });
 
     fireEvent.keyDown(document, { key: "p", code: "KeyP" });
@@ -110,7 +87,7 @@ describe("GlobalHotkeys — New Project vs. paste 'p' collision", () => {
 
   it("opens New Project on the tasks page once nothing is yanked", async () => {
     await renderGlobalHotkeys("/");
-    // yankedTask stays null (set in beforeEach)
+    // yankedTaskId stays null (set in beforeEach)
 
     fireEvent.keyDown(document, { key: "p", code: "KeyP" });
 
@@ -120,13 +97,13 @@ describe("GlobalHotkeys — New Project vs. paste 'p' collision", () => {
   it("opens New Project again once the yanked task is released (e.g. via Escape in TaskList)", async () => {
     await renderGlobalHotkeys("/");
     act(() => {
-      useUiStore.setState({ yankedTask: makeTask() });
+      useUiStore.setState({ yankedTaskId: "task-1" });
     });
     fireEvent.keyDown(document, { key: "p", code: "KeyP" });
     expect(openCreateProject).not.toHaveBeenCalled();
 
     act(() => {
-      useUiStore.setState({ yankedTask: null });
+      useUiStore.setState({ yankedTaskId: null });
     });
     fireEvent.keyDown(document, { key: "p", code: "KeyP" });
 

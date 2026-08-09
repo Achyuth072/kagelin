@@ -31,8 +31,9 @@ function toRestorePayload(task: Task) {
 // both the parent and every subtask, guest and Supabase alike. Recurrence
 // and series identity are always stripped — a pasted occurrence must never
 // rejoin its source series — and completion state resets since a duplicate
-// starts as fresh, uncompleted work.
-function toDuplicatePayload(task: Task) {
+// starts as fresh, uncompleted work. parentId is threaded through explicitly
+// since a subtask's copy must land under its *new* parent, not the source's.
+function toDuplicatePayload(task: Task, parentId: string | null) {
   return {
     content: task.content,
     description: task.description || null,
@@ -40,6 +41,8 @@ function toDuplicatePayload(task: Task) {
     due_date: task.due_date || null,
     do_date: task.do_date || null,
     is_evening: task.is_evening || false,
+    project_id: task.project_id || null,
+    parent_id: parentId,
     recurrence: null,
     recurring_series_id: null,
     is_completed: false,
@@ -488,25 +491,18 @@ export const taskMutations = {
       localStorage.getItem("kanso_guest_mode") === "true";
 
     if (isGuest) {
-      const duplicatedTask = mockStore.addTask({
-        ...toDuplicatePayload(sourceTask),
-        project_id: sourceTask.project_id || null,
-        parent_id: sourceTask.parent_id || null,
-      });
+      const duplicatedTask = mockStore.addTask(
+        toDuplicatePayload(sourceTask, sourceTask.parent_id || null),
+      );
 
       const duplicateSubtasksRecursively = (
         originalParentId: string,
         newParentId: string,
       ) => {
-        const subtasks = mockStore
-          .getTasks()
-          .filter((t) => t.parent_id === originalParentId);
-        for (const subtask of subtasks) {
-          const newSubtask = mockStore.addTask({
-            ...toDuplicatePayload(subtask),
-            project_id: subtask.project_id || null,
-            parent_id: newParentId,
-          });
+        for (const subtask of mockStore.getSubtasks(originalParentId)) {
+          const newSubtask = mockStore.addTask(
+            toDuplicatePayload(subtask, newParentId),
+          );
           duplicateSubtasksRecursively(subtask.id, newSubtask.id);
         }
       };
@@ -536,9 +532,7 @@ export const taskMutations = {
       .from("tasks")
       .insert({
         user_id: user.id,
-        ...toDuplicatePayload(sourceTask),
-        project_id: sourceTask.project_id || null,
-        parent_id: sourceTask.parent_id || null,
+        ...toDuplicatePayload(sourceTask, sourceTask.parent_id || null),
         day_order: nextDayOrder,
       })
       .select()
@@ -566,9 +560,7 @@ export const taskMutations = {
           .from("tasks")
           .insert({
             user_id: user.id,
-            ...toDuplicatePayload(subtask),
-            project_id: subtask.project_id || null,
-            parent_id: newParentId,
+            ...toDuplicatePayload(subtask, newParentId),
             day_order: subtask.day_order ?? 0,
           })
           .select()

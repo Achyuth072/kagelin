@@ -57,6 +57,7 @@ vi.mock("@/lib/notify", () => ({ notify: notifyFn }));
 
 import { useDeleteTask } from "@/lib/hooks/useTaskMutations";
 import { notify } from "@/lib/notify";
+import { useUiStore } from "@/lib/store/uiStore";
 
 const createWrapper = (queryClient: QueryClient) => {
   return function Wrapper({ children }: { children: React.ReactNode }) {
@@ -205,5 +206,68 @@ describe("useDeleteTask", () => {
 
     expect(notify.error).toHaveBeenCalledWith("Failed to restore task");
     expect(notify).not.toHaveBeenCalledWith("Task restored");
+  });
+
+  it("expires the keyboard undo binding once the toast's own duration elapses", async () => {
+    vi.useFakeTimers();
+    try {
+      queryClient.setQueryData(["tasks"], [makeTask("expiring-1")]);
+
+      const { result } = renderHook(() => useDeleteTask(), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      result.current.mutate("expiring-1");
+
+      await vi.waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(useUiStore.getState().lastUndoAction).not.toBeNull();
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(useUiStore.getState().lastUndoAction).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not expire the undo binding early if Undo was already clicked", async () => {
+    vi.useFakeTimers();
+    try {
+      queryClient.setQueryData(["tasks"], [makeTask("clicked-1")]);
+
+      const { result } = renderHook(() => useDeleteTask(), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      result.current.mutate("clicked-1");
+
+      await vi.waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      await getUndoHandler()();
+      expect(useUiStore.getState().lastUndoAction).toBeNull();
+
+      // A later delete's undo action must survive the earlier one's expiry
+      // timer firing — the timer only clears its own action by reference.
+      queryClient.setQueryData(["tasks"], [makeTask("clicked-2")]);
+      result.current.mutate("clicked-2");
+      await vi.waitFor(() => {
+        expect(useUiStore.getState().lastUndoAction).not.toBeNull();
+      });
+      const secondUndoAction = useUiStore.getState().lastUndoAction;
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(useUiStore.getState().lastUndoAction).toBeNull();
+      // Sanity: it was in fact the second delete's own expiry that fired,
+      // not a leftover timer from the first.
+      expect(secondUndoAction).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

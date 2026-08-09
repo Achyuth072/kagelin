@@ -55,12 +55,12 @@ export function GlobalHotkeys({
   // TaskList binds its own "p" for pasting a yanked task, scoped to whenever
   // it's mounted (the tasks page). Both listeners fire on the same keydown,
   // so New Project only steps aside there — never app-wide, and never past
-  // a route change, unlike a check against the yankedTask store flag alone.
+  // a route change, unlike a check against the yankedTaskId store flag alone.
   const isTasksPage = useIsTasksPage();
-  const yankedTask = useUiStore((state) => state.yankedTask);
+  const yankedTaskId = useUiStore((state) => state.yankedTaskId);
   const newProjectHotkeyOptions = {
     ...options,
-    enabled: !isAnyModalOpen && !(isTasksPage && !!yankedTask),
+    enabled: !isAnyModalOpen && !(isTasksPage && !!yankedTaskId),
   };
 
   // --- ACTIONS ---

@@ -15,6 +15,11 @@ import { taskMutations } from "@/lib/mutations/task";
 import { mockStore } from "@/lib/mock/mock-store";
 import { useUiStore } from "@/lib/store/uiStore";
 
+// Matches the Undo toast's duration below — once the toast is gone, the
+// keyboard `u` shortcut shouldn't be able to resurrect a task the user has
+// no visible way to associate with an undo action anymore.
+const UNDO_TOAST_DURATION_MS = 5000;
+
 function invalidateTaskCaches(queryClient: QueryClient): void {
   void Promise.all([
     queryClient.invalidateQueries({ queryKey: ["tasks"] }),
@@ -269,11 +274,19 @@ export function useDeleteTask() {
       };
 
       useUiStore.getState().setLastUndoAction(undoAction);
+      // Expire the keyboard undo binding alongside the toast. Guarded by
+      // reference equality so it's a no-op if undoAction already ran (which
+      // clears lastUndoAction itself) or a later delete replaced it.
+      setTimeout(() => {
+        if (useUiStore.getState().lastUndoAction === undoAction) {
+          useUiStore.getState().setLastUndoAction(null);
+        }
+      }, UNDO_TOAST_DURATION_MS);
 
       // Task content is unbounded user text, so it's dropped rather than
       // folded into the title like other toasts (see ADR 0008).
       notify("Task deleted", {
-        duration: 5000,
+        duration: UNDO_TOAST_DURATION_MS,
         action: {
           label: "Undo",
           onClick: undoAction,

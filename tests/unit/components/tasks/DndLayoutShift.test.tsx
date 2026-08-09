@@ -236,8 +236,8 @@ describe("TaskList DnD layout shift protection", () => {
         lastUndoAction: null,
         setLastUndoAction: vi.fn(),
         triggerLastUndoAction: vi.fn(),
-        yankedTask: null,
-        setYankedTask: vi.fn(),
+        yankedTaskId: null,
+        setYankedTaskId: vi.fn(),
       }),
     );
   });

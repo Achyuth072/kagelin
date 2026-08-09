@@ -41,8 +41,8 @@ const uiState = vi.hoisted(() => ({
       return action();
     }
   }),
-  yankedTask: null as Task | null,
-  setYankedTask: vi.fn(),
+  yankedTaskId: null as string | null,
+  setYankedTaskId: vi.fn(),
 }));
 const mutations = vi.hoisted(() => ({
   toggleMutate: vi.fn(),
@@ -545,6 +545,33 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
       // Press g again (should start new sequence, NOT trigger gg to top)
       fireEvent.keyDown(document, { key: "g", code: "KeyG" });
       expect(selectedId(ids)).toBe("c");
+    });
+
+    it("a stray g does not arm a later yy, and a stray y does not arm a later gg", async () => {
+      uiState.viewMode = "list";
+      taskState.tasks = [
+        buildTask({ id: "a", content: "Alpha", day_order: 0 }),
+        buildTask({ id: "b", content: "Bravo", day_order: 1 }),
+      ];
+      await renderTaskList();
+      const ids = ["a", "b"];
+
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      expect(selectedId(ids)).toBe("a");
+
+      // g then y within the timeout must not fire gg (jump to top) — the
+      // pending press was for "g", not "y".
+      fireEvent.keyDown(document, { key: "g", code: "KeyG" });
+      fireEvent.keyDown(document, { key: "y", code: "KeyY" });
+      expect(selectedId(ids)).toBe("a");
+
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      expect(selectedId(ids)).toBe("b");
+
+      // y then g within the timeout must not fire yy (yank) either.
+      fireEvent.keyDown(document, { key: "y", code: "KeyY" });
+      fireEvent.keyDown(document, { key: "g", code: "KeyG" });
+      expect(uiState.setYankedTaskId).not.toHaveBeenCalled();
     });
 
     it("u key triggers the stored undo action from uiStore", async () => {

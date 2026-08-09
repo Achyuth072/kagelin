@@ -4,7 +4,6 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { GroupOption, SortOption, TaskViewMode } from "@/lib/types/sorting";
 import { StatsPeriod } from "@/lib/types/stats";
-import type { Task } from "@/lib/types/task";
 
 const RETIRED_VIEW_MODES = new Set(["split", "grid"]);
 
@@ -95,14 +94,15 @@ interface UiState {
   hasChangelogUpdate: boolean;
   setHasChangelogUpdate: (has: boolean) => void;
 
-  // Ephemeral Undo Action State
   lastUndoAction: (() => void | Promise<void>) | null;
   setLastUndoAction: (action: (() => void | Promise<void>) | null) => void;
   triggerLastUndoAction: () => void | Promise<void>;
 
-  // Ephemeral Yanked Task State (for vim yy / p)
-  yankedTask: Task | null;
-  setYankedTask: (task: Task | null) => void;
+  // Id of the task yanked via vim `yy`, resolved against TanStack Query's
+  // task cache at paste time rather than snapshotted here — the snapshot
+  // would otherwise go stale if the task is edited between yank and paste.
+  yankedTaskId: string | null;
+  setYankedTaskId: (id: string | null) => void;
 
   // Hydration state
   _hasHydrated: boolean;
@@ -207,7 +207,6 @@ export const useUiStore = create<UiState>()(
       hasChangelogUpdate: false,
       setHasChangelogUpdate: (has) => set({ hasChangelogUpdate: has }),
 
-      // Undo Action defaults
       lastUndoAction: null,
       setLastUndoAction: (action) => set({ lastUndoAction: action }),
       triggerLastUndoAction: () => {
@@ -218,9 +217,8 @@ export const useUiStore = create<UiState>()(
         }
       },
 
-      // Yanked Task defaults
-      yankedTask: null,
-      setYankedTask: (task) => set({ yankedTask: task }),
+      yankedTaskId: null,
+      setYankedTaskId: (id) => set({ yankedTaskId: id }),
 
       // Hydration
       _hasHydrated: false,
@@ -254,8 +252,8 @@ export const useUiStore = create<UiState>()(
           lastUndoAction: _lastUndoAction,
           setLastUndoAction: _setLastUndoAction,
           triggerLastUndoAction: _triggerLastUndoAction,
-          yankedTask: _yankedTask,
-          setYankedTask: _setYankedTask,
+          yankedTaskId: _yankedTaskId,
+          setYankedTaskId: _setYankedTaskId,
           ...rest
         } = state;
         return rest;

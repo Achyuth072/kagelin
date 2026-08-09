@@ -119,8 +119,13 @@ function TaskListBase({
   // tabindex, since focusing cards would re-arm dnd-kit's Space/Enter drag
   // collision (see the DragHandle split in SortableBoardTaskCard).
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const lastGPressTimestampRef = useRef<number>(0);
-  const lastYPressTimestampRef = useRef<number>(0);
+  // Tracks the single most recent double-press candidate (gg / yy) so an
+  // interleaved different key (e.g. `g` then `y`) can't be mistaken for
+  // that key's own double-press.
+  const pendingDoublePressRef = useRef<{
+    key: "g" | "y";
+    timestamp: number;
+  } | null>(null);
 
   const queryClient = useQueryClient();
   const reorderMutation = useReorderTasks();
@@ -139,7 +144,7 @@ function TaskListBase({
   const isDesktop = useUiStore((state) => state.isDesktop);
   const selectedTaskId = useUiStore((state) => state.selectedTaskId);
   const setSelectedTaskId = useUiStore((state) => state.setSelectedTaskId);
-  const hasYankedTask = useUiStore((state) => !!state.yankedTask);
+  const hasYankedTask = useUiStore((state) => !!state.yankedTaskId);
   const { openAddTask } = useTaskActions();
   const { trigger: triggerHaptic } = useHaptic();
   const setActiveTaskId = useTimerStore((state) => state.setActiveTaskId);
@@ -730,32 +735,29 @@ function TaskListBase({
     }
   };
 
-  const resetDoublePressTimers = () => {
-    lastGPressTimestampRef.current = 0;
-    lastYPressTimestampRef.current = 0;
+  const clearPendingDoublePress = () => {
+    pendingDoublePressRef.current = null;
   };
 
   // Shared "press the same key twice within the timeout" detection behind
-  // `gg` and `yy` — each caller owns its own timestamp ref and its own
-  // double-press action.
-  const handleDoublePress = (
-    timestampRef: { current: number },
-    onDouble: () => void,
-  ) => {
+  // `gg` and `yy`.
+  const handleDoublePress = (key: "g" | "y", onDouble: () => void) => {
+    const pending = pendingDoublePressRef.current;
     const now = Date.now();
     if (
-      now - timestampRef.current < VIM_DOUBLE_PRESS_TIMEOUT_MS &&
-      timestampRef.current > 0
+      pending &&
+      pending.key === key &&
+      now - pending.timestamp < VIM_DOUBLE_PRESS_TIMEOUT_MS
     ) {
-      resetDoublePressTimers();
+      clearPendingDoublePress();
       onDouble();
     } else {
-      timestampRef.current = now;
+      pendingDoublePressRef.current = { key, timestamp: now };
     }
   };
 
   const handleNavVertical = (dir: 1 | -1) => {
-    resetDoublePressTimers();
+    clearPendingDoublePress();
     if (viewMode === "board") {
       handleBoardNav(0, dir);
     } else {
@@ -764,7 +766,7 @@ function TaskListBase({
   };
 
   const handleNavHorizontal = (dir: 1 | -1) => {
-    resetDoublePressTimers();
+    clearPendingDoublePress();
     if (viewMode === "board") {
       handleBoardNav(dir, 0);
     }
@@ -792,7 +794,7 @@ function TaskListBase({
   };
 
   const handleNavBottom = () => {
-    resetDoublePressTimers();
+    clearPendingDoublePress();
     const task = getExtremeTask("last");
     if (task) setKeyboardSelectedId(task.id);
   };
@@ -832,7 +834,7 @@ function TaskListBase({
     "g",
     (e) => {
       if (e.shiftKey) return;
-      handleDoublePress(lastGPressTimestampRef, handleNavTop);
+      handleDoublePress("g", handleNavTop);
     },
     hotkeyOptions,
   );
@@ -846,7 +848,7 @@ function TaskListBase({
   );
 
   const toggleSelected = () => {
-    resetDoublePressTimers();
+    clearPendingDoublePress();
     if (keyboardSelectedId) {
       const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
       if (task) {
@@ -873,7 +875,7 @@ function TaskListBase({
   useHotkeys(
     ["enter", "o"],
     () => {
-      resetDoublePressTimers();
+      clearPendingDoublePress();
       if (keyboardSelectedId) {
         const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
         if (task) handleTaskClick(task);
@@ -885,7 +887,7 @@ function TaskListBase({
   useHotkeys(
     ["d", "backspace"],
     () => {
-      resetDoublePressTimers();
+      clearPendingDoublePress();
       if (keyboardSelectedId) {
         const deletedId = keyboardSelectedId;
         handleNavVertical(1);
@@ -898,7 +900,7 @@ function TaskListBase({
   useHotkeys(
     "u",
     () => {
-      resetDoublePressTimers();
+      clearPendingDoublePress();
       const triggerLastUndoAction = useUiStore.getState().triggerLastUndoAction;
       void triggerLastUndoAction();
     },
@@ -909,11 +911,11 @@ function TaskListBase({
     "y",
     (e) => {
       if (e.shiftKey) return;
-      handleDoublePress(lastYPressTimestampRef, () => {
+      handleDoublePress("y", () => {
         if (keyboardSelectedId) {
           const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
           if (task) {
-            useUiStore.getState().setYankedTask(task);
+            useUiStore.getState().setYankedTaskId(task.id);
             triggerHaptic("toggle");
             notify("Task yanked");
           }
@@ -926,18 +928,33 @@ function TaskListBase({
   useHotkeys(
     "p",
     (e) => {
-      resetDoublePressTimers();
-      const yankedTask = useUiStore.getState().yankedTask;
-      if (yankedTask) {
-        e.preventDefault();
-        duplicateMutation.mutate(yankedTask, {
-          onSuccess: (newDuplicateTask) => {
-            if (newDuplicateTask?.id) {
-              setKeyboardSelectedId(newDuplicateTask.id);
-            }
-          },
-        });
+      clearPendingDoublePress();
+      const yankedTaskId = useUiStore.getState().yankedTaskId;
+      if (!yankedTaskId) return;
+      // Resolved fresh from the query cache rather than a store snapshot —
+      // the task may have been edited since it was yanked. Falls through to
+      // every ["tasks", ...] query, not just this view's own `tasks` — the
+      // yank is meant to survive project/filter switches, and the task may
+      // now live in a view this TaskList instance isn't currently showing.
+      const yankedTask =
+        tasks.find((t) => t.id === yankedTaskId) ??
+        queryClient
+          .getQueriesData<Task[]>({ queryKey: ["tasks"] })
+          .flatMap(([, data]) => data ?? [])
+          .find((t) => t.id === yankedTaskId);
+      if (!yankedTask) {
+        useUiStore.getState().setYankedTaskId(null);
+        notify.error("Yanked task no longer exists");
+        return;
       }
+      e.preventDefault();
+      duplicateMutation.mutate(yankedTask, {
+        onSuccess: (newDuplicateTask) => {
+          if (newDuplicateTask?.id) {
+            setKeyboardSelectedId(newDuplicateTask.id);
+          }
+        },
+      });
     },
     hotkeyOptions,
   );
@@ -945,12 +962,12 @@ function TaskListBase({
   useHotkeys(
     "escape",
     () => {
-      resetDoublePressTimers();
+      clearPendingDoublePress();
       setKeyboardSelectedId(null);
       // Release the yanked task too — otherwise it survives Escape and
       // keeps suppressing GlobalHotkeys' New Project 'p' on this page
       // (see GlobalHotkeys.tsx) until a hard reload clears the store.
-      if (hasYankedTask) useUiStore.getState().setYankedTask(null);
+      if (hasYankedTask) useUiStore.getState().setYankedTaskId(null);
     },
     {
       enabled: !isAnyModalOpen && (hasSelection || hasYankedTask),

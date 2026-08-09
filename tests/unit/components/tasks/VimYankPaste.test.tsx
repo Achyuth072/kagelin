@@ -95,12 +95,14 @@ function buildTask(overrides: Partial<Task> & { id: string }): Task {
   };
 }
 
-async function renderTaskList() {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  });
+async function renderTaskList(qc?: QueryClient) {
+  const client =
+    qc ??
+    new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
   return render(
-    <QueryClientProvider client={qc}>
+    <QueryClientProvider client={client}>
       <TaskList />
     </QueryClientProvider>,
   );
@@ -115,11 +117,11 @@ describe("Vim Yank & Paste Controls (yy / p)", () => {
       viewMode: "list",
       isDesktop: true,
       selectedTaskId: null,
-      yankedTask: null,
+      yankedTaskId: null,
     });
   });
 
-  it("yy yanks the selected task into uiStore", async () => {
+  it("yy yanks the selected task, so a later p pastes it", async () => {
     const taskA = buildTask({ id: "a", content: "Alpha Task" });
     const taskB = buildTask({ id: "b", content: "Bravo Task" });
     taskState.tasks = [taskA, taskB];
@@ -128,20 +130,22 @@ describe("Vim Yank & Paste Controls (yy / p)", () => {
     // Select task A with j
     fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
 
-    // Double press y
+    // Double press y, then paste
     fireEvent.keyDown(document, { key: "y", code: "KeyY" });
     fireEvent.keyDown(document, { key: "y", code: "KeyY" });
+    fireEvent.keyDown(document, { key: "p", code: "KeyP" });
 
-    const yanked = useUiStore.getState().yankedTask;
-    expect(yanked).toBeDefined();
-    expect(yanked?.id).toBe("a");
-    expect(yanked?.content).toBe("Alpha Task");
+    expect(mutations.duplicateMutate).toHaveBeenCalledTimes(1);
+    expect(mutations.duplicateMutate).toHaveBeenCalledWith(
+      taskA,
+      expect.any(Object),
+    );
   });
 
   it("p triggers duplicate mutation for the yanked task", async () => {
     const taskA = buildTask({ id: "a", content: "Alpha Task" });
     taskState.tasks = [taskA];
-    useUiStore.setState({ yankedTask: taskA });
+    useUiStore.setState({ yankedTaskId: taskA.id });
 
     await renderTaskList();
 
@@ -158,7 +162,7 @@ describe("Vim Yank & Paste Controls (yy / p)", () => {
   it("p does nothing if no task is yanked", async () => {
     const taskA = buildTask({ id: "a", content: "Alpha Task" });
     taskState.tasks = [taskA];
-    useUiStore.setState({ yankedTask: null });
+    useUiStore.setState({ yankedTaskId: null });
 
     await renderTaskList();
 
@@ -167,16 +171,78 @@ describe("Vim Yank & Paste Controls (yy / p)", () => {
     expect(mutations.duplicateMutate).not.toHaveBeenCalled();
   });
 
+  it("p re-resolves the yanked task from the task cache, tolerating edits since the yank", async () => {
+    const taskA = buildTask({ id: "a", content: "Alpha Task" });
+    const taskB = buildTask({ id: "b", content: "Bravo Task" });
+    taskState.tasks = [taskA, taskB];
+    useUiStore.setState({ yankedTaskId: taskA.id });
+    await renderTaskList();
+
+    // The task is edited after being yanked, before paste.
+    const editedTaskA = { ...taskA, content: "Alpha Task (edited)" };
+    taskState.tasks = [editedTaskA, taskB];
+
+    // Force a re-render (the test's useTasks mock isn't reactive) by
+    // navigating away and back before pasting.
+    fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+    fireEvent.keyDown(document, { key: "k", code: "KeyK" });
+
+    fireEvent.keyDown(document, { key: "p", code: "KeyP" });
+
+    expect(mutations.duplicateMutate).toHaveBeenCalledWith(
+      editedTaskA,
+      expect.any(Object),
+    );
+  });
+
+  it("p resolves a yanked task from another view's cached query, not just this view's own tasks", async () => {
+    // Simulates yanking on one project view, then navigating to a different
+    // one before pasting — the current view's `tasks` no longer contains
+    // it, but a still-cached ["tasks", ...] query for the original view
+    // does. The yank must survive that (see 03-yank-paste.md: "yanked task
+    // state to survive navigating between the list and board views").
+    const taskA = buildTask({ id: "a", content: "Alpha Task" });
+    const taskB = buildTask({ id: "b", content: "Bravo Task" });
+    taskState.tasks = [taskB]; // current view no longer has taskA
+    useUiStore.setState({ yankedTaskId: taskA.id });
+
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    qc.setQueryData(["tasks", { projectId: "other-project" }], [taskA]);
+
+    await renderTaskList(qc);
+
+    fireEvent.keyDown(document, { key: "p", code: "KeyP" });
+
+    expect(mutations.duplicateMutate).toHaveBeenCalledWith(
+      taskA,
+      expect.any(Object),
+    );
+  });
+
+  it("p clears the yank and surfaces an error if the yanked task no longer exists", async () => {
+    const { notify } = await import("@/lib/notify");
+    taskState.tasks = [];
+    useUiStore.setState({ yankedTaskId: "deleted-id" });
+
+    await renderTaskList();
+
+    fireEvent.keyDown(document, { key: "p", code: "KeyP" });
+
+    expect(mutations.duplicateMutate).not.toHaveBeenCalled();
+    expect(notify.error).toHaveBeenCalledWith("Yanked task no longer exists");
+    expect(useUiStore.getState().yankedTaskId).toBeNull();
+  });
+
   it("escape releases the yanked task, so a later p no longer pastes", async () => {
     const taskA = buildTask({ id: "a", content: "Alpha Task" });
     taskState.tasks = [taskA];
-    useUiStore.setState({ yankedTask: taskA });
+    useUiStore.setState({ yankedTaskId: taskA.id });
 
     await renderTaskList();
 
     fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
-
-    expect(useUiStore.getState().yankedTask).toBeNull();
 
     fireEvent.keyDown(document, { key: "p", code: "KeyP" });
     expect(mutations.duplicateMutate).not.toHaveBeenCalled();

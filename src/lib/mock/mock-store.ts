@@ -681,6 +681,10 @@ class MockStore {
     return this.data.tasks.find((t) => t.id === id) || null;
   }
 
+  getSubtasks(parentId: string): Task[] {
+    return this.data.tasks.filter((t) => t.parent_id === parentId);
+  }
+
   addTask(
     task: Partial<
       Omit<Task, "id" | "user_id" | "created_at" | "updated_at">
