@@ -139,6 +139,7 @@ function TaskListBase({
   const isDesktop = useUiStore((state) => state.isDesktop);
   const selectedTaskId = useUiStore((state) => state.selectedTaskId);
   const setSelectedTaskId = useUiStore((state) => state.setSelectedTaskId);
+  const hasYankedTask = useUiStore((state) => !!state.yankedTask);
   const { openAddTask } = useTaskActions();
   const { trigger: triggerHaptic } = useHaptic();
   const setActiveTaskId = useTimerStore((state) => state.setActiveTaskId);
@@ -729,13 +730,32 @@ function TaskListBase({
     }
   };
 
-  const resetGSequence = () => {
+  const resetDoublePressTimers = () => {
     lastGPressTimestampRef.current = 0;
     lastYPressTimestampRef.current = 0;
   };
 
+  // Shared "press the same key twice within the timeout" detection behind
+  // `gg` and `yy` — each caller owns its own timestamp ref and its own
+  // double-press action.
+  const handleDoublePress = (
+    timestampRef: { current: number },
+    onDouble: () => void,
+  ) => {
+    const now = Date.now();
+    if (
+      now - timestampRef.current < VIM_DOUBLE_PRESS_TIMEOUT_MS &&
+      timestampRef.current > 0
+    ) {
+      resetDoublePressTimers();
+      onDouble();
+    } else {
+      timestampRef.current = now;
+    }
+  };
+
   const handleNavVertical = (dir: 1 | -1) => {
-    resetGSequence();
+    resetDoublePressTimers();
     if (viewMode === "board") {
       handleBoardNav(0, dir);
     } else {
@@ -744,7 +764,7 @@ function TaskListBase({
   };
 
   const handleNavHorizontal = (dir: 1 | -1) => {
-    resetGSequence();
+    resetDoublePressTimers();
     if (viewMode === "board") {
       handleBoardNav(dir, 0);
     }
@@ -772,7 +792,7 @@ function TaskListBase({
   };
 
   const handleNavBottom = () => {
-    resetGSequence();
+    resetDoublePressTimers();
     const task = getExtremeTask("last");
     if (task) setKeyboardSelectedId(task.id);
   };
@@ -812,16 +832,7 @@ function TaskListBase({
     "g",
     (e) => {
       if (e.shiftKey) return;
-      const now = Date.now();
-      if (
-        now - lastGPressTimestampRef.current < VIM_DOUBLE_PRESS_TIMEOUT_MS &&
-        lastGPressTimestampRef.current > 0
-      ) {
-        resetGSequence();
-        handleNavTop();
-      } else {
-        lastGPressTimestampRef.current = now;
-      }
+      handleDoublePress(lastGPressTimestampRef, handleNavTop);
     },
     hotkeyOptions,
   );
@@ -835,7 +846,7 @@ function TaskListBase({
   );
 
   const toggleSelected = () => {
-    resetGSequence();
+    resetDoublePressTimers();
     if (keyboardSelectedId) {
       const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
       if (task) {
@@ -862,7 +873,7 @@ function TaskListBase({
   useHotkeys(
     ["enter", "o"],
     () => {
-      resetGSequence();
+      resetDoublePressTimers();
       if (keyboardSelectedId) {
         const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
         if (task) handleTaskClick(task);
@@ -874,7 +885,7 @@ function TaskListBase({
   useHotkeys(
     ["d", "backspace"],
     () => {
-      resetGSequence();
+      resetDoublePressTimers();
       if (keyboardSelectedId) {
         const deletedId = keyboardSelectedId;
         handleNavVertical(1);
@@ -887,7 +898,7 @@ function TaskListBase({
   useHotkeys(
     "u",
     () => {
-      resetGSequence();
+      resetDoublePressTimers();
       const triggerLastUndoAction = useUiStore.getState().triggerLastUndoAction;
       void triggerLastUndoAction();
     },
@@ -898,12 +909,7 @@ function TaskListBase({
     "y",
     (e) => {
       if (e.shiftKey) return;
-      const now = Date.now();
-      if (
-        now - lastYPressTimestampRef.current < VIM_DOUBLE_PRESS_TIMEOUT_MS &&
-        lastYPressTimestampRef.current > 0
-      ) {
-        resetGSequence();
+      handleDoublePress(lastYPressTimestampRef, () => {
         if (keyboardSelectedId) {
           const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
           if (task) {
@@ -912,9 +918,7 @@ function TaskListBase({
             notify("Task yanked");
           }
         }
-      } else {
-        lastYPressTimestampRef.current = now;
-      }
+      });
     },
     hotkeyOptions,
   );
@@ -922,7 +926,7 @@ function TaskListBase({
   useHotkeys(
     "p",
     (e) => {
-      resetGSequence();
+      resetDoublePressTimers();
       const yankedTask = useUiStore.getState().yankedTask;
       if (yankedTask) {
         e.preventDefault();
@@ -941,11 +945,15 @@ function TaskListBase({
   useHotkeys(
     "escape",
     () => {
-      resetGSequence();
+      resetDoublePressTimers();
       setKeyboardSelectedId(null);
+      // Release the yanked task too — otherwise it survives Escape and
+      // keeps suppressing GlobalHotkeys' New Project 'p' on this page
+      // (see GlobalHotkeys.tsx) until a hard reload clears the store.
+      if (hasYankedTask) useUiStore.getState().setYankedTask(null);
     },
     {
-      enabled: !isAnyModalOpen && hasSelection,
+      enabled: !isAnyModalOpen && (hasSelection || hasYankedTask),
     },
   );
 

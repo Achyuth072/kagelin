@@ -27,6 +27,28 @@ function toRestorePayload(task: Task) {
   };
 }
 
+// Fields common to a duplicated row, shared by taskMutations.duplicate for
+// both the parent and every subtask, guest and Supabase alike. Recurrence
+// and series identity are always stripped — a pasted occurrence must never
+// rejoin its source series — and completion state resets since a duplicate
+// starts as fresh, uncompleted work.
+function toDuplicatePayload(task: Task) {
+  return {
+    content: task.content,
+    description: task.description || null,
+    priority: task.priority || 4,
+    due_date: task.due_date || null,
+    do_date: task.do_date || null,
+    is_evening: task.is_evening || false,
+    recurrence: null,
+    recurring_series_id: null,
+    is_completed: false,
+    completed_at: null,
+    google_event_id: null,
+    google_etag: null,
+  };
+}
+
 export const taskMutations = {
   create: async (
     input: CreateTaskInput & { _clientId?: string },
@@ -467,20 +489,9 @@ export const taskMutations = {
 
     if (isGuest) {
       const duplicatedTask = mockStore.addTask({
-        content: sourceTask.content,
-        description: sourceTask.description || null,
-        priority: sourceTask.priority || 4,
-        due_date: sourceTask.due_date || null,
-        do_date: sourceTask.do_date || null,
-        is_evening: sourceTask.is_evening || false,
+        ...toDuplicatePayload(sourceTask),
         project_id: sourceTask.project_id || null,
         parent_id: sourceTask.parent_id || null,
-        recurrence: null,
-        recurring_series_id: null,
-        is_completed: false,
-        completed_at: null,
-        google_event_id: null,
-        google_etag: null,
       });
 
       const duplicateSubtasksRecursively = (
@@ -492,20 +503,9 @@ export const taskMutations = {
           .filter((t) => t.parent_id === originalParentId);
         for (const subtask of subtasks) {
           const newSubtask = mockStore.addTask({
-            content: subtask.content,
-            description: subtask.description || null,
-            priority: subtask.priority || 4,
-            due_date: subtask.due_date || null,
-            do_date: subtask.do_date || null,
-            is_evening: subtask.is_evening || false,
+            ...toDuplicatePayload(subtask),
             project_id: subtask.project_id || null,
             parent_id: newParentId,
-            recurrence: null,
-            recurring_series_id: null,
-            is_completed: false,
-            completed_at: null,
-            google_event_id: null,
-            google_etag: null,
           });
           duplicateSubtasksRecursively(subtask.id, newSubtask.id);
         }
@@ -536,24 +536,19 @@ export const taskMutations = {
       .from("tasks")
       .insert({
         user_id: user.id,
-        content: sourceTask.content,
-        description: sourceTask.description || null,
-        priority: sourceTask.priority || 4,
-        due_date: sourceTask.due_date || null,
-        do_date: sourceTask.do_date || null,
-        is_evening: sourceTask.is_evening || false,
+        ...toDuplicatePayload(sourceTask),
         project_id: sourceTask.project_id || null,
         parent_id: sourceTask.parent_id || null,
-        recurrence: null,
-        recurring_series_id: null,
         day_order: nextDayOrder,
-        is_completed: false,
       })
       .select()
       .single();
 
     if (error) throw new Error(error.message);
 
+    // Throws (rather than swallowing) on either a fetch or insert error, so
+    // a broken subtree surfaces as a failed paste instead of a silent
+    // partial copy reported to the user as a success.
     const duplicateSubtasksRecursively = async (
       originalParentId: string,
       newParentId: string,
@@ -563,32 +558,24 @@ export const taskMutations = {
         .select("*")
         .eq("parent_id", originalParentId);
 
-      if (subtasksError || !subtasks || subtasks.length === 0) return;
+      if (subtasksError) throw new Error(subtasksError.message);
+      if (!subtasks || subtasks.length === 0) return;
 
       for (const subtask of subtasks) {
         const { data: newSubtask, error: insertError } = await supabase
           .from("tasks")
           .insert({
             user_id: user.id,
-            content: subtask.content,
-            description: subtask.description || null,
-            priority: subtask.priority || 4,
-            due_date: subtask.due_date || null,
-            do_date: subtask.do_date || null,
-            is_evening: subtask.is_evening || false,
+            ...toDuplicatePayload(subtask),
             project_id: subtask.project_id || null,
             parent_id: newParentId,
-            recurrence: null,
-            recurring_series_id: null,
             day_order: subtask.day_order ?? 0,
-            is_completed: false,
           })
           .select()
           .single();
 
-        if (!insertError && newSubtask) {
-          await duplicateSubtasksRecursively(subtask.id, newSubtask.id);
-        }
+        if (insertError) throw new Error(insertError.message);
+        await duplicateSubtasksRecursively(subtask.id, newSubtask.id);
       }
     };
 

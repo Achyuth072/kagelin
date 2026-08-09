@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { GroupOption, SortOption, TaskViewMode } from "@/lib/types/sorting";
 import { StatsPeriod } from "@/lib/types/stats";
+import type { Task } from "@/lib/types/task";
 
 const RETIRED_VIEW_MODES = new Set(["split", "grid"]);
 
@@ -100,8 +101,8 @@ interface UiState {
   triggerLastUndoAction: () => void | Promise<void>;
 
   // Ephemeral Yanked Task State (for vim yy / p)
-  yankedTask: import("@/lib/types/task").Task | null;
-  setYankedTask: (task: import("@/lib/types/task").Task | null) => void;
+  yankedTask: Task | null;
+  setYankedTask: (task: Task | null) => void;
 
   // Hydration state
   _hasHydrated: boolean;

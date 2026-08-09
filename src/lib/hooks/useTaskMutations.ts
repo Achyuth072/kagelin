@@ -392,7 +392,6 @@ export function useDuplicateTask() {
     onSuccess: (newTask) => {
       trigger("success");
       notify("Task duplicated");
-      invalidateTaskCaches(queryClient);
       if (newTask.parent_id) {
         queryClient.invalidateQueries({
           queryKey: ["subtasks", newTask.parent_id],

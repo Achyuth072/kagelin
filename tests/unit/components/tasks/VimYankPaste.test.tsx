@@ -166,4 +166,19 @@ describe("Vim Yank & Paste Controls (yy / p)", () => {
 
     expect(mutations.duplicateMutate).not.toHaveBeenCalled();
   });
+
+  it("escape releases the yanked task, so a later p no longer pastes", async () => {
+    const taskA = buildTask({ id: "a", content: "Alpha Task" });
+    taskState.tasks = [taskA];
+    useUiStore.setState({ yankedTask: taskA });
+
+    await renderTaskList();
+
+    fireEvent.keyDown(document, { key: "Escape", code: "Escape" });
+
+    expect(useUiStore.getState().yankedTask).toBeNull();
+
+    fireEvent.keyDown(document, { key: "p", code: "KeyP" });
+    expect(mutations.duplicateMutate).not.toHaveBeenCalled();
+  });
 });

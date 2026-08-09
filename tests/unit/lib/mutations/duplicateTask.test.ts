@@ -122,10 +122,16 @@ describe("taskMutations.duplicate — authenticated (Supabase)", () => {
     dayOrder = null,
     subtasksByParentId = {},
     hasSession = true,
+    subtaskFetchErrorForParentId,
+    subtaskInsertErrorForContent,
   }: {
     dayOrder?: number | null;
     subtasksByParentId?: Record<string, Record<string, unknown>[]>;
     hasSession?: boolean;
+    // Simulates a failed subtree fetch for a specific parent id.
+    subtaskFetchErrorForParentId?: string;
+    // Simulates a failed insert for a specific subtask's content.
+    subtaskInsertErrorForContent?: string;
   } = {}) {
     const insertedRows: Record<string, unknown>[] = [];
     const maybeSingle = vi.fn().mockResolvedValue({
@@ -141,14 +147,18 @@ describe("taskMutations.duplicate — authenticated (Supabase)", () => {
             }
           : {
               eq: (_col: string, parentId: string) =>
-                Promise.resolve({
-                  data: subtasksByParentId[parentId] ?? [],
-                  error: null,
-                }),
+                Promise.resolve(
+                  parentId === subtaskFetchErrorForParentId
+                    ? { data: null, error: { message: "fetch failed" } }
+                    : { data: subtasksByParentId[parentId] ?? [], error: null },
+                ),
             },
       insert: (row: Record<string, unknown>) => ({
         select: () => ({
           single: vi.fn().mockImplementation(async () => {
+            if (row.content === subtaskInsertErrorForContent) {
+              return { data: null, error: { message: "insert failed" } };
+            }
             const newRow = { ...row, id: `dup-${insertedRows.length}` };
             insertedRows.push(newRow);
             return { data: newRow, error: null };
@@ -260,5 +270,32 @@ describe("taskMutations.duplicate — authenticated (Supabase)", () => {
       "Not authenticated",
     );
     expect(from).not.toHaveBeenCalled();
+  });
+
+  it("throws rather than silently truncating the tree when a subtask fetch fails", async () => {
+    makeSupabaseMock({
+      dayOrder: -1,
+      subtaskFetchErrorForParentId: "task-1",
+    });
+
+    await expect(taskMutations.duplicate(makeTask())).rejects.toThrow(
+      "fetch failed",
+    );
+  });
+
+  it("throws rather than silently dropping a subtask when its insert fails", async () => {
+    makeSupabaseMock({
+      dayOrder: -1,
+      subtasksByParentId: {
+        "task-1": [
+          { id: "sub-1", content: "Subtask 1", day_order: 1, priority: 2 },
+        ],
+      },
+      subtaskInsertErrorForContent: "Subtask 1",
+    });
+
+    await expect(taskMutations.duplicate(makeTask())).rejects.toThrow(
+      "insert failed",
+    );
   });
 });

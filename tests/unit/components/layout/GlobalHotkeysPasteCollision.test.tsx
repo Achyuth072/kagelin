@@ -116,4 +116,20 @@ describe("GlobalHotkeys — New Project vs. paste 'p' collision", () => {
 
     expect(openCreateProject).toHaveBeenCalledTimes(1);
   });
+
+  it("opens New Project again once the yanked task is released (e.g. via Escape in TaskList)", async () => {
+    await renderGlobalHotkeys("/");
+    act(() => {
+      useUiStore.setState({ yankedTask: makeTask() });
+    });
+    fireEvent.keyDown(document, { key: "p", code: "KeyP" });
+    expect(openCreateProject).not.toHaveBeenCalled();
+
+    act(() => {
+      useUiStore.setState({ yankedTask: null });
+    });
+    fireEvent.keyDown(document, { key: "p", code: "KeyP" });
+
+    expect(openCreateProject).toHaveBeenCalledTimes(1);
+  });
 });
