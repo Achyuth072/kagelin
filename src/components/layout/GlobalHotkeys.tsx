@@ -11,6 +11,7 @@ import { useUiStore } from "@/lib/store/uiStore";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
+import { useIsTasksPage } from "@/lib/hooks/useIsTasksPage";
 
 interface GlobalHotkeysProps {
   setCommandOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
@@ -51,6 +52,17 @@ export function GlobalHotkeys({
     enabled: !isAnyModalOpen && !isBoardViewOnTasks,
   };
 
+  // TaskList binds its own "p" for pasting a yanked task, scoped to whenever
+  // it's mounted (the tasks page). Both listeners fire on the same keydown,
+  // so New Project only steps aside there — never app-wide, and never past
+  // a route change, unlike a check against the yankedTask store flag alone.
+  const isTasksPage = useIsTasksPage();
+  const yankedTask = useUiStore((state) => state.yankedTask);
+  const newProjectHotkeyOptions = {
+    ...options,
+    enabled: !isAnyModalOpen && !(isTasksPage && !!yankedTask),
+  };
+
   // --- ACTIONS ---
 
   // New Task (n)
@@ -63,14 +75,7 @@ export function GlobalHotkeys({
   useHotkeys("e", () => openCreateEvent(), options);
 
   // New Project (p)
-  useHotkeys(
-    "p",
-    () => {
-      if (useUiStore.getState().yankedTask) return;
-      openCreateProject();
-    },
-    options,
-  );
+  useHotkeys("p", () => openCreateProject(), newProjectHotkeyOptions);
 
   // Archived Projects (a)
   useHotkeys("a", () => setArchivedProjectsOpen(true), options);
