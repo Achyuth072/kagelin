@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.30.0-preview.2",
+    "date": "2026-08-10",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Remove unused DragHandle from board view and update tests",
+        "Bring OfflineIndicator typography and motion",
+        "Reposition OfflineIndicator to a top strip on mobile, centred pill on desktop",
+        "Cache app shell offline instead of expiring after 24h"
+      ]
+    }
+  },
+  {
     "version": "1.30.0-preview.1",
     "date": "2026-08-09",
     "channel": "preview",
@@ -790,21 +803,6 @@
     "sections": {
       "Added": [
         "add lightweight version polling endpoint"
-      ]
-    }
-  },
-  {
-    "version": "1.22.0-preview.4",
-    "date": "2026-06-09",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Guest mode calendar connection status no longer errors",
-        "Focus settings dialog validation fixed to run on mount"
-      ],
-      "Improved": [
-        "Location combobox state synced with the form controller for consistency",
-        "Fullscreen vendor-prefix helpers consolidated into a single object"
       ]
     }
   }
