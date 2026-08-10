@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.30.0-preview.3",
+    "date": "2026-08-10",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Update task views, shortcuts and cloud data details in README",
+        "Enhance shortcut interface"
+      ]
+    }
+  },
+  {
     "version": "1.30.0-preview.2",
     "date": "2026-08-10",
     "channel": "preview",
@@ -795,15 +806,5 @@
     "date": "2026-06-10",
     "channel": "preview",
     "sections": {}
-  },
-  {
-    "version": "1.22.0-preview.5",
-    "date": "2026-06-10",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "add lightweight version polling endpoint"
-      ]
-    }
   }
 ]
