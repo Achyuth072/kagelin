@@ -85,6 +85,12 @@
   }
 }
 
+/* Layout tokens - shared by Header, AppShell and OfflineIndicator */
+:root {
+  --mobile-header-height: calc(4rem + env(safe-area-inset-top, 0px));
+  --offline-banner-height: 2.25rem;
+}
+
 /* Light mode variables - Zen-Modernist (Matte & Ink) */
 :root {
   --background: 40 20% 99%; /* #FCFCFA - Warm Washi */

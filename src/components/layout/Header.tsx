@@ -119,7 +119,7 @@ export const Header = React.memo(function Header({
   const hasNewVersion = isNewerThan(effectiveVersion, lastDismissedVersion);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-[calc(4rem+env(safe-area-inset-top,0px))] px-4 pt-[env(safe-area-inset-top,0px)] border-b bg-sidebar md:hidden">
+    <header className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-[var(--mobile-header-height)] px-4 pt-[env(safe-area-inset-top,0px)] border-b bg-sidebar md:hidden">
       {/* Left group: Hamburger + What's New indicator */}
       <div className="flex items-center gap-1.5 shrink-0">
         <SidebarTrigger className="h-9 w-9 active:scale-95 transition-all [&_svg]:stroke-[2.25px]" />
