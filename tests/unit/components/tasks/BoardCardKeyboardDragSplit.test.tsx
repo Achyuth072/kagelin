@@ -55,7 +55,7 @@ function renderCard(isDesktop: boolean) {
 }
 
 describe("SortableBoardTaskCard keyboard-drag / Vim key split", () => {
-  it("desktop: card body carries no dnd-kit role/tabIndex; a single dedicated handle does", () => {
+  it("desktop: card body carries no dnd-kit role/tabIndex and no separate handle is rendered", () => {
     const { container } = renderCard(true);
 
     const cardBody = container.querySelector(
@@ -65,9 +65,7 @@ describe("SortableBoardTaskCard keyboard-drag / Vim key split", () => {
     expect(cardBody.getAttribute("tabindex")).toBeNull();
 
     const activators = container.querySelectorAll('[role="button"]');
-    expect(activators.length).toBe(1);
-    expect(activators[0]).not.toBe(cardBody);
-    expect(activators[0].getAttribute("tabindex")).toBe("0");
+    expect(activators.length).toBe(0);
   });
 
   it("mobile: card body keeps the full spread — no separate handle needed", () => {

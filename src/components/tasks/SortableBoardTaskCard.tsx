@@ -3,7 +3,6 @@
 import React, { memo } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { TaskItem } from "./TaskItem";
-import { DragHandle } from "./DragHandle";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
 
@@ -30,17 +29,12 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
     attributes,
     listeners,
     setNodeRef,
-    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
   } = useSortable({ id: task.id });
 
-  // Desktop: keyboard-drag (Space/Enter) collides with the Vim shortcuts on
-  // the same keys, so it moves to a dedicated handle; pointer dragging stays
-  // card-wide via the remaining listeners. Mobile keeps the full spread —
-  // no keyboard drag, no handle needed.
-  const { onKeyDown: _onKeyDown, ...pointerListeners } = listeners ?? {};
+  const { onKeyDown: _, ...pointerListeners } = listeners ?? {};
   const cardAttributes = isDesktop ? undefined : attributes;
   const cardListeners = isDesktop ? pointerListeners : listeners;
 
@@ -83,18 +77,6 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
           isKeyboardSelected={isKeyboardSelected}
         />
       </div>
-      {isDesktop && (
-        <DragHandle
-          ref={setActivatorNodeRef}
-          dragAttributes={attributes}
-          dragListeners={listeners}
-          variant="desktop"
-          // Right-edge, vertically centered — the header row's Play button
-          // already claims the top-right corner. Also revealed on
-          // focus-within so tabbing to it isn't an invisible control.
-          className="absolute right-1 top-1/2 -translate-y-1/2 z-20 rounded-md p-1 hover:bg-secondary/60 group-focus-within:opacity-100"
-        />
-      )}
     </div>
   );
 });
