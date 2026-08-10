@@ -4,11 +4,13 @@ import { WifiOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsOnline } from "@/lib/hooks/useIsOnline";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { cn } from "@/lib/utils";
 
 export function OfflineIndicator() {
   const isOnline = useIsOnline();
   const isMobile = useIsMobile();
+  const prefersReducedMotion = usePrefersReducedMotion();
   // Mobile enters from above the header, desktop rises from the bottom of the content column
   const offscreenY = isMobile ? -16 : 16;
 
@@ -20,12 +22,16 @@ export function OfflineIndicator() {
           initial={{ y: offscreenY, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: offscreenY, opacity: 0 }}
-          transition={{
-            type: "spring",
-            mass: 1,
-            stiffness: 280,
-            damping: 60,
-          }}
+          transition={
+            prefersReducedMotion
+              ? { duration: 0 }
+              : {
+                  type: "spring",
+                  mass: 1,
+                  stiffness: 280,
+                  damping: 60,
+                }
+          }
           className={cn(
             "fixed inset-x-0 top-[var(--offline-banner-top,var(--mobile-header-height))] z-30",
             "md:absolute md:inset-x-0 md:top-auto md:bottom-6 md:z-40 md:flex md:justify-center md:pointer-events-none",
@@ -42,7 +48,7 @@ export function OfflineIndicator() {
               <WifiOff className="w-4 h-4" />
             </div>
             <div className="flex items-center gap-1.5 md:flex-col md:items-start md:gap-0 md:leading-tight">
-              <span className="text-[13px] font-semibold tracking-tight">
+              <span className="text-[13px] font-medium tracking-[0.01em]">
                 You are offline
               </span>
               <span
@@ -51,7 +57,7 @@ export function OfflineIndicator() {
               >
                 ·
               </span>
-              <span className="text-[11px] text-muted-foreground font-normal">
+              <span className="text-[11px] text-muted-foreground font-normal tracking-[0.02em]">
                 Changes will sync when back online
               </span>
             </div>
