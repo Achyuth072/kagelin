@@ -1,0 +1,53 @@
+name: Bug report
+description: Something in Kagelin isn't working the way it should.
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: checkboxes
+    id: duplicate-check
+    attributes:
+      label: Check first
+      options:
+        - label: I searched existing issues and didn't find this already reported.
+          required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: dropdown
+    id: account-type
+    attributes:
+      label: Account type
+      options:
+        - Guest (no account, local-only)
+        - Registered (free, cloud sync)
+        - Premium
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser/OS or device
+      description: Include "installed PWA" if you're using it installed rather than in a browser tab.
+      placeholder: e.g. Chrome 128 on macOS, or installed PWA on iOS 18
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, console errors, anything else
+    validations:
+      required: false
