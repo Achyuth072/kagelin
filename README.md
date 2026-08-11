@@ -16,6 +16,7 @@
 
 [![Stable](https://img.shields.io/github/v/release/Achyuth072/kagelin?style=flat&label=Stable&labelColor=06599d&color=043b69)](../../releases)
 [![Preview](https://img.shields.io/github/package-json/v/Achyuth072/kagelin/dev?style=flat&label=Preview&labelColor=2c2c47&color=1c1c39)](../../releases)
+[![Sponsor](https://img.shields.io/github/sponsors/Achyuth072?style=flat&logo=githubsponsors&labelColor=24292e)](https://github.com/sponsors/Achyuth072)
 
 ## Use it
 
