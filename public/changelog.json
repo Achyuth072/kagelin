@@ -1,5 +1,27 @@
 [
   {
+    "version": "1.30.0",
+    "date": "2026-08-12",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Vim-style keyboard shortcuts for tasks: yank/paste with yy and p, undo with u, and gg/G to jump to the top or bottom of the list",
+        "Full keyboard navigation across the task board, with a visible focus indicator as you move"
+      ],
+      "Improved": [
+        "The app now stays available offline instead of losing its cached shell after 24 hours",
+        "Refreshed the offline indicator with clearer typography and motion — a top strip on mobile, a centered pill on desktop",
+        "Polished keyboard shortcut interactions to feel more consistent"
+      ],
+      "Fixed": [
+        "Fixed undoing a task delete not restoring its subtasks",
+        "Fixed keyboard paste sometimes landing in the wrong view or colliding with drag-and-drop",
+        "Fixed notifications opened from a cold start sometimes bouncing back instead of landing on the right page",
+        "Fixed a focus outline that could get cut off or linger after it shouldn't"
+      ]
+    }
+  },
+  {
     "version": "1.30.0-preview.3",
     "date": "2026-08-10",
     "channel": "preview",
@@ -800,11 +822,5 @@
         "fall back to request origin for calendar OAuth redirect"
       ]
     }
-  },
-  {
-    "version": "1.22.0-preview.6",
-    "date": "2026-06-10",
-    "channel": "preview",
-    "sections": {}
   }
 ]
