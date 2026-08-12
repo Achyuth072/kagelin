@@ -62,9 +62,9 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
 
   return (
     <div className="h-dvh w-full overflow-y-auto bg-background">
-      <div className="min-h-full flex items-center justify-center p-4">
+      <div className="min-h-full flex items-center justify-center px-2 py-4 sm:p-4">
         <motion.div {...slideUp} className="max-w-md w-full space-y-6">
-          <div className="p-8 rounded-2xl border border-border bg-card shadow-sm">
+          <div className="px-4 py-8 sm:p-8 rounded-2xl border border-border bg-card shadow-sm">
             <div className="flex flex-col items-center gap-8">
               <Image
                 src="/kagelin-icon.png"
