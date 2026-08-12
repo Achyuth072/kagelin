@@ -99,6 +99,8 @@ describe("useMigrationStrategy", () => {
       signInWithOAuth: vi.fn(),
       signInWithMagicLink: vi.fn(),
       signInAsGuest: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      signInWithPassword: vi.fn(),
     });
 
     setupMockSequence([
@@ -138,6 +140,8 @@ describe("useMigrationStrategy", () => {
       signInWithOAuth: vi.fn(),
       signInWithMagicLink: vi.fn(),
       signInAsGuest: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      signInWithPassword: vi.fn(),
     });
 
     setupMockSequence([
@@ -194,6 +198,8 @@ describe("useMigrationStrategy", () => {
       signInWithOAuth: vi.fn(),
       signInWithMagicLink: vi.fn(),
       signInAsGuest: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      signInWithPassword: vi.fn(),
     });
 
     setupMockSequence([

@@ -24,6 +24,8 @@ function mockAuth(overrides: Partial<ReturnType<typeof useAuth>> = {}) {
     isGuestMode: false,
     signInWithOAuth: vi.fn(),
     signInWithMagicLink: vi.fn().mockResolvedValue({ error: null }),
+    signUpWithPassword: vi.fn().mockResolvedValue({ error: null }),
+    signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
     signInAsGuest: vi.fn(),
     signOut: vi.fn(),
     ...overrides,
@@ -80,6 +82,28 @@ describe("AuthPage", () => {
     for (const providerBtn of providerButtons) {
       expect(providerBtn.parentElement).not.toBe(guestBtn.parentElement);
     }
+  });
+
+  it("shows the password form by default, with magic link demoted to a text action beneath it", () => {
+    render(<AuthPage initialMode="sign-in" />);
+
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Email me a link instead" }),
+    ).toBeInTheDocument();
+  });
+
+  it("swaps to the magic-link form when 'Email me a link instead' is clicked", () => {
+    render(<AuthPage initialMode="sign-in" />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Email me a link instead" }),
+    );
+
+    expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Use a password instead" }),
+    ).toBeInTheDocument();
   });
 
   it("signs in as guest and navigates home when the guest link is clicked", () => {

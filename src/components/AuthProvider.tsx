@@ -21,6 +21,16 @@ type AuthContextType = {
     email: string,
     captchaToken: string,
   ) => Promise<{ error: AuthError | null }>;
+  signUpWithPassword: (
+    email: string,
+    password: string,
+    captchaToken: string,
+  ) => Promise<{ error: AuthError | null }>;
+  signInWithPassword: (
+    email: string,
+    password: string,
+    captchaToken: string,
+  ) => Promise<{ error: AuthError | null }>;
   signInAsGuest: () => void;
   signOut: () => Promise<void>;
 };
@@ -136,6 +146,33 @@ export function AuthProvider({
     [supabase.auth],
   );
 
+  const signUpWithPassword = useCallback(
+    async (email: string, password: string, captchaToken: string) => {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          captchaToken,
+        },
+      });
+      return { error };
+    },
+    [supabase.auth],
+  );
+
+  const signInWithPassword = useCallback(
+    async (email: string, password: string, captchaToken: string) => {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+        options: { captchaToken },
+      });
+      return { error };
+    },
+    [supabase.auth],
+  );
+
   const signInAsGuest = useCallback(() => {
     setGuestFlag();
     setUser(makeGuestUser());
@@ -161,6 +198,8 @@ export function AuthProvider({
         isGuestMode,
         signInWithOAuth,
         signInWithMagicLink,
+        signUpWithPassword,
+        signInWithPassword,
         signInAsGuest,
         signOut,
       }}

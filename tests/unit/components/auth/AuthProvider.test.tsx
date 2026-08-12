@@ -22,6 +22,8 @@ function mockSupabase(session: Session | null) {
       }),
       signInWithOAuth: vi.fn(),
       signInWithOtp: vi.fn(),
+      signUp: vi.fn().mockResolvedValue({ error: null }),
+      signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
       signOut: vi.fn(),
     },
   };
@@ -98,6 +100,63 @@ describe("AuthProvider", () => {
     expect(supabase.auth.signInWithOAuth).toHaveBeenCalledWith({
       provider: "gitlab",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+  });
+
+  it("passes email, password, captcha token and redirect target through to supabase.auth.signUp", async () => {
+    const supabase = mockSupabase(null);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.signUpWithPassword(
+      "new@user.com",
+      "hunter22",
+      "captcha-token-abc",
+    );
+
+    expect(supabase.auth.signUp).toHaveBeenCalledWith({
+      email: "new@user.com",
+      password: "hunter22",
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        captchaToken: "captcha-token-abc",
+      },
+    });
+  });
+
+  it("passes email, password and captcha token through to supabase.auth.signInWithPassword", async () => {
+    const supabase = mockSupabase(null);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.signInWithPassword(
+      "real@user.com",
+      "hunter22",
+      "captcha-token-abc",
+    );
+
+    expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
+      email: "real@user.com",
+      password: "hunter22",
+      options: { captchaToken: "captcha-token-abc" },
     });
   });
 
