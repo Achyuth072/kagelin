@@ -8,6 +8,7 @@ import {
   useCallback,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import type { OAuthProviderId } from "@/lib/auth/providers";
 import type { User, Session, AuthError } from "@supabase/supabase-js";
 
 type AuthContextType = {
@@ -15,7 +16,7 @@ type AuthContextType = {
   session: Session | null;
   loading: boolean;
   isGuestMode: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithOAuth: (provider: OAuthProviderId) => Promise<void>;
   signInWithMagicLink: (
     email: string,
     captchaToken: string,
@@ -111,12 +112,15 @@ export function AuthProvider({
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
 
-  const signInWithGoogle = useCallback(async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-  }, [supabase.auth]);
+  const signInWithOAuth = useCallback(
+    async (provider: OAuthProviderId) => {
+      await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+    },
+    [supabase.auth],
+  );
 
   const signInWithMagicLink = useCallback(
     async (email: string, captchaToken: string) => {
@@ -155,7 +159,7 @@ export function AuthProvider({
         session,
         loading,
         isGuestMode,
-        signInWithGoogle,
+        signInWithOAuth,
         signInWithMagicLink,
         signInAsGuest,
         signOut,

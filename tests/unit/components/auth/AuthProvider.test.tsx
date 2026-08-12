@@ -78,4 +78,68 @@ describe("AuthProvider", () => {
     expect(result.current.isGuestMode).toBe(true);
     expect(result.current.user?.id).toBe("guest");
   });
+
+  it("passes the given Provider straight through to supabase.auth.signInWithOAuth, redirect included", async () => {
+    const supabase = mockSupabase(null);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.signInWithOAuth("gitlab");
+
+    expect(supabase.auth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: "gitlab",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+  });
+
+  it("signs out a guest by clearing the local flag, without calling Supabase", async () => {
+    localStorage.setItem("kanso_guest_mode", "true");
+    const supabase = mockSupabase(null);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={true}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.isGuestMode).toBe(true));
+
+    await result.current.signOut();
+
+    await waitFor(() => expect(result.current.isGuestMode).toBe(false));
+    expect(supabase.auth.signOut).not.toHaveBeenCalled();
+    expect(result.current.user).toBeNull();
+    expect(localStorage.getItem("kanso_guest_mode")).toBeNull();
+  });
+
+  it("signs out a registered user via Supabase, not the guest-flag path", async () => {
+    const supabase = mockSupabase(mockSession);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.user?.id).toBe("real-user-id"));
+
+    await result.current.signOut();
+
+    expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
+  });
 });

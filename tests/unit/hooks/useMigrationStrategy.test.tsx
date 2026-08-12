@@ -96,7 +96,7 @@ describe("useMigrationStrategy", () => {
       signOut: vi.fn(),
       session: null,
       loading: false,
-      signInWithGoogle: vi.fn(),
+      signInWithOAuth: vi.fn(),
       signInWithMagicLink: vi.fn(),
       signInAsGuest: vi.fn(),
     });
@@ -135,7 +135,7 @@ describe("useMigrationStrategy", () => {
       signOut: vi.fn(),
       session: null,
       loading: false,
-      signInWithGoogle: vi.fn(),
+      signInWithOAuth: vi.fn(),
       signInWithMagicLink: vi.fn(),
       signInAsGuest: vi.fn(),
     });
@@ -191,7 +191,7 @@ describe("useMigrationStrategy", () => {
       signOut: vi.fn(),
       session: null,
       loading: false,
-      signInWithGoogle: vi.fn(),
+      signInWithOAuth: vi.fn(),
       signInWithMagicLink: vi.fn(),
       signInAsGuest: vi.fn(),
     });

@@ -11,7 +11,7 @@ import { UserCircle } from "lucide-react";
 import { slideUp } from "@/lib/motion";
 
 function LoginContent() {
-  const { user, loading, isGuestMode, signInWithGoogle, signInAsGuest } =
+  const { user, loading, isGuestMode, signInWithOAuth, signInAsGuest } =
     useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -78,7 +78,7 @@ function LoginContent() {
               <div className="grid grid-cols-2 gap-3 w-full">
                 <Button
                   variant="outline"
-                  onClick={signInWithGoogle}
+                  onClick={() => signInWithOAuth("google")}
                   className="flex items-center justify-center gap-2 h-11 bg-background/50 border-border hover:bg-accent transition-all duration-200"
                 >
                   <svg
