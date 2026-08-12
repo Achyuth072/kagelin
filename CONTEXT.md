@@ -39,6 +39,54 @@ with users. A **paid / premium** capability, deferred.
 
 ---
 
+## Accounts and sign-in
+
+### Account
+
+The person's single record in Kagelin — one `auth.users` row, one `auth.uid()`.
+Tiers attach to an Account. A **Guest** has no Account at all, which is what
+"no server identity" means.
+
+### Identity
+
+One proven way into an Account. An Account has one or more, each recording the
+**Provider** that vouched for it. Not a synonym for Account: "my GitHub
+identity" is a way in, not a second person.
+
+### Provider
+
+The issuer standing behind an Identity — Google, GitHub, GitLab, or `email` for
+anything Kagelin verifies itself.
+
+### Sign-in method
+
+What the login page actually offers. Deliberately **not** one-to-one with
+Provider: password and magic link are two methods over the single `email`
+Provider, while "Continue with GitHub" is one method over one Provider. Guest
+is not a sign-in method — it creates no Account.
+
+### Linking
+
+Attaching an additional Identity to an Account that already exists, so a second
+Provider signs into the same data. Two kinds, both supported:
+
+- **Automatic** — the Provider vouches for an email Kagelin already holds as
+  verified, and the Identity joins that Account with no one asking.
+- **Manual** — the signed-in user attaches a Provider deliberately, from
+  Settings. The only route when the emails differ.
+
+Linking is not **merging**, and the distinction is the whole point: linking
+only ever attaches an Identity that belongs to nobody yet.
+
+### Merging
+
+Consolidating two Accounts that both already exist, into one. Kagelin does not
+do this — there is no self-serve path and no feature. A person who reaches two
+Accounts has two sets of data, and recovering from that is an operator action.
+See `docs/adr/0012-identity-linking.md`.
+
+---
+
 ## Tiers
 
 ### Guest
