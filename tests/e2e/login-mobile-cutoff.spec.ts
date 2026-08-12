@@ -41,7 +41,7 @@ test.describe("Login page on a short mobile viewport", () => {
       timeout: 15000,
     });
 
-    const guestBtn = page.getByRole("button", { name: "Guest" });
+    const guestBtn = page.getByRole("button", { name: "Continue as guest" });
     await expect(guestBtn).toBeVisible();
 
     // Real wheel event, not scrollIntoViewIfNeeded() — that bypasses overflow:hidden.

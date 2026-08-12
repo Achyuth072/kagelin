@@ -54,7 +54,6 @@ import { useIsOnline } from "@/lib/hooks/useIsOnline";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
-// Global Overlays (Lazy Loaded)
 const TaskSheet = dynamic(() => import("@/components/tasks/TaskSheet"), {
   ssr: false,
 });
@@ -286,10 +285,9 @@ function AppShellContent({ children }: AppShellProps) {
     setIsDesktop(isDesktop);
   }, [isDesktop, setIsDesktop]);
 
-  // Global realtime sync - stays alive during navigation
+  // Stays alive during navigation
   useRealtimeSync();
 
-  // Global backup reminder for guest mode
   useWeeklyBackup();
 
   // Reset scroll position on navigation to prevent layout shifts
@@ -308,13 +306,10 @@ function AppShellContent({ children }: AppShellProps) {
           setHelpOpen={setShortcutsHelpOpen}
           commandOpen={commandOpen}
         />
-        {/* Mobile Top Bar - hidden on Focus and Settings pages */}
         {!hideMobileNav && <Header setCommandOpen={setCommandOpen} />}
 
-        {/* Desktop Sidebar - hidden only on Focus page */}
         {!isFocus && <AppSidebar />}
 
-        {/* Main Content with proper inset */}
         <SidebarInset
           className="relative"
           style={
@@ -363,13 +358,11 @@ function AppShellContent({ children }: AppShellProps) {
           <Toaster />
         </SidebarInset>
 
-        {/* Mobile Bottom Nav - hidden on Focus and Settings pages */}
         {!hideMobileNav && <MobileNav />}
 
-        {/* FABs - Rendered outside template animation to prevent shifts */}
+        {/* Rendered outside template animation to prevent shifts */}
         <GlobalFabs />
 
-        {/* Global Overlays */}
         <GlobalOverlays
           commandOpen={commandOpen}
           onCommandOpenChange={setCommandOpen}
@@ -383,7 +376,7 @@ export default function AppShell({ children }: AppShellProps) {
   const { user, loading } = useAuth();
   const { isMigrating } = useMigrationStrategy();
   const pathname = usePathname();
-  const isLoginPage = pathname === "/login";
+  const isLoginPage = pathname === "/login" || pathname === "/signup";
 
   useBackAnchor(); // must stay mounted across navigation — see useBackAnchor.ts
 

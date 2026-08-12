@@ -77,7 +77,7 @@ export function MagicLinkAuth() {
                   id="email"
                   type="email"
                   placeholder="name@example.com"
-                  className="pl-9 h-10"
+                  className="pl-9 h-11 text-base md:text-base"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={loading}
