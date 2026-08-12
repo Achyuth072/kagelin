@@ -24,6 +24,8 @@ function mockSupabase(session: Session | null) {
       signInWithOtp: vi.fn(),
       signUp: vi.fn().mockResolvedValue({ error: null }),
       signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
+      resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
+      updateUser: vi.fn().mockResolvedValue({ error: null }),
       signOut: vi.fn(),
     },
   };
@@ -157,6 +159,55 @@ describe("AuthProvider", () => {
       email: "real@user.com",
       password: "hunter22",
       options: { captchaToken: "captcha-token-abc" },
+    });
+  });
+
+  it("passes email, captcha token and the update-password redirect through to supabase.auth.resetPasswordForEmail", async () => {
+    const supabase = mockSupabase(null);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.resetPasswordForEmail(
+      "real@user.com",
+      "captcha-token-abc",
+    );
+
+    expect(supabase.auth.resetPasswordForEmail).toHaveBeenCalledWith(
+      "real@user.com",
+      {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/auth/update-password")}`,
+        captchaToken: "captcha-token-abc",
+      },
+    );
+  });
+
+  it("passes the new password through to supabase.auth.updateUser", async () => {
+    const supabase = mockSupabase(mockSession);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.updatePassword("new-hunter22");
+
+    expect(supabase.auth.updateUser).toHaveBeenCalledWith({
+      password: "new-hunter22",
     });
   });
 

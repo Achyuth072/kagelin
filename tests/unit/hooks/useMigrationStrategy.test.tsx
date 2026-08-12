@@ -101,6 +101,8 @@ describe("useMigrationStrategy", () => {
       signInAsGuest: vi.fn(),
       signUpWithPassword: vi.fn(),
       signInWithPassword: vi.fn(),
+      resetPasswordForEmail: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     setupMockSequence([
@@ -142,6 +144,8 @@ describe("useMigrationStrategy", () => {
       signInAsGuest: vi.fn(),
       signUpWithPassword: vi.fn(),
       signInWithPassword: vi.fn(),
+      resetPasswordForEmail: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     setupMockSequence([
@@ -200,6 +204,8 @@ describe("useMigrationStrategy", () => {
       signInAsGuest: vi.fn(),
       signUpWithPassword: vi.fn(),
       signInWithPassword: vi.fn(),
+      resetPasswordForEmail: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     setupMockSequence([

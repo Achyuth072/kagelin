@@ -9,18 +9,23 @@ import { motion } from "framer-motion";
 import { Turnstile, type TurnstileHandle } from "@/components/auth/Turnstile";
 import type { AuthMode } from "@/components/auth/AuthPage";
 import { isPasswordBreached } from "@/lib/auth/password-breach-check";
+import {
+  MIN_PASSWORD_LENGTH,
+  isPasswordTooShort,
+} from "@/lib/auth/password-policy";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-const MIN_PASSWORD_LENGTH = 8;
 
 // Same confirmation copy for every sign-up success — Supabase gives no
 // signal to distinguish a new email from an already-registered one.
 export function PasswordAuth({
   mode,
   onSwitchToSignIn,
+  onForgotPassword,
 }: {
   mode: AuthMode;
   onSwitchToSignIn: () => void;
+  onForgotPassword?: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,8 +39,7 @@ export function PasswordAuth({
   const { signUpWithPassword, signInWithPassword } = useAuth();
   const handleCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
 
-  const passwordTooShort =
-    password.length > 0 && password.length < MIN_PASSWORD_LENGTH;
+  const passwordTooShort = isPasswordTooShort(password);
 
   // Blur, not keystroke, so the HIBP prefix doesn't narrow with every
   // character typed. lastCheckedPasswordRef dedupes and guards against a
@@ -185,6 +189,15 @@ export function PasswordAuth({
             This password has appeared in known data breaches. You can still use
             it, but choosing a different one is safer.
           </p>
+        )}
+        {mode === "sign-in" && onForgotPassword && (
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
+          >
+            Forgot password?
+          </button>
         )}
       </div>
 

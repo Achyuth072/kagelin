@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { MagicLinkAuth } from "@/components/auth/MagicLinkAuth";
 import { PasswordAuth } from "@/components/auth/PasswordAuth";
+import { ResetPasswordAuth } from "@/components/auth/ResetPasswordAuth";
 import { OAuthProviderRow } from "@/components/auth/OAuthProviderRow";
 import { slideUp } from "@/lib/motion";
 
@@ -35,7 +36,7 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
   const searchParams = useSearchParams();
   const error = searchParams?.get("error");
   const [mode, setMode] = useState<AuthMode>(initialMode);
-  const [emailMethod, setEmailMethod] = useState<"password" | "magic-link">(
+  const [view, setView] = useState<"password" | "magic-link" | "reset">(
     "password",
   );
 
@@ -86,7 +87,10 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
 
               <button
                 type="button"
-                onClick={() => setMode(copy.toggleTarget)}
+                onClick={() => {
+                  setView((v) => (v === "reset" ? "password" : v));
+                  setMode(copy.toggleTarget);
+                }}
                 className="text-sm font-medium text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors -mt-4"
               >
                 {copy.toggleLabel}
@@ -101,29 +105,32 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
                 </p>
               )}
 
-              {emailMethod === "password" ? (
+              {view === "reset" ? (
+                <ResetPasswordAuth onBackToSignIn={() => setView("password")} />
+              ) : view === "password" ? (
                 <PasswordAuth
                   key={mode}
                   mode={mode}
                   onSwitchToSignIn={() => setMode("sign-in")}
+                  onForgotPassword={() => setView("reset")}
                 />
               ) : (
                 <MagicLinkAuth key={mode} />
               )}
 
-              <button
-                type="button"
-                onClick={() =>
-                  setEmailMethod(
-                    emailMethod === "password" ? "magic-link" : "password",
-                  )
-                }
-                className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
-              >
-                {emailMethod === "password"
-                  ? "Email me a link instead"
-                  : "Use a password instead"}
-              </button>
+              {view !== "reset" && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setView(view === "password" ? "magic-link" : "password")
+                  }
+                  className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
+                >
+                  {view === "password"
+                    ? "Email me a link instead"
+                    : "Use a password instead"}
+                </button>
+              )}
 
               <div className="relative w-full">
                 <div className="absolute inset-0 flex items-center">

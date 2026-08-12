@@ -222,6 +222,31 @@ describe("PasswordAuth", () => {
     expect(onSwitchToSignIn).toHaveBeenCalledTimes(1);
   });
 
+  it("shows 'Forgot password?' in sign-in mode and calls onForgotPassword when clicked", async () => {
+    const onForgotPassword = vi.fn();
+    await renderWithSiteKey("test-site-key", {
+      mode: "sign-in",
+      onSwitchToSignIn,
+      onForgotPassword,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Forgot password?" }));
+    expect(onForgotPassword).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not show 'Forgot password?' in sign-up mode", async () => {
+    const onForgotPassword = vi.fn();
+    await renderWithSiteKey("test-site-key", {
+      mode: "sign-up",
+      onSwitchToSignIn,
+      onForgotPassword,
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Forgot password?" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("does not render the widget or block submit when no site key is configured", async () => {
     await renderWithSiteKey(undefined, { mode: "sign-in", onSwitchToSignIn });
 

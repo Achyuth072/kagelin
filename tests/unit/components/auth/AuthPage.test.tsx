@@ -26,6 +26,8 @@ function mockAuth(overrides: Partial<ReturnType<typeof useAuth>> = {}) {
     signInWithMagicLink: vi.fn().mockResolvedValue({ error: null }),
     signUpWithPassword: vi.fn().mockResolvedValue({ error: null }),
     signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
+    resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
+    updatePassword: vi.fn().mockResolvedValue({ error: null }),
     signInAsGuest: vi.fn(),
     signOut: vi.fn(),
     ...overrides,
@@ -104,6 +106,25 @@ describe("AuthPage", () => {
     expect(
       screen.getByRole("button", { name: "Use a password instead" }),
     ).toBeInTheDocument();
+  });
+
+  it("swaps to the reset-password form when 'Forgot password?' is clicked, and back on 'Back to sign in'", () => {
+    render(<AuthPage initialMode="sign-in" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Forgot password?" }));
+
+    expect(screen.queryByLabelText("Password")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Email address")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Send reset link" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Email me a link instead" }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to sign in" }));
+
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
   });
 
   it("signs in as guest and navigates home when the guest link is clicked", () => {

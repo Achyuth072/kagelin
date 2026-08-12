@@ -31,6 +31,11 @@ type AuthContextType = {
     password: string,
     captchaToken: string,
   ) => Promise<{ error: AuthError | null }>;
+  resetPasswordForEmail: (
+    email: string,
+    captchaToken: string,
+  ) => Promise<{ error: AuthError | null }>;
+  updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
   signInAsGuest: () => void;
   signOut: () => Promise<void>;
 };
@@ -173,6 +178,27 @@ export function AuthProvider({
     [supabase.auth],
   );
 
+  const resetPasswordForEmail = useCallback(
+    async (email: string, captchaToken: string) => {
+      // Routes back through the callback route's existing `next` handling —
+      // no separate recovery-detection logic needed there.
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/auth/update-password")}`,
+        captchaToken,
+      });
+      return { error };
+    },
+    [supabase.auth],
+  );
+
+  const updatePassword = useCallback(
+    async (password: string) => {
+      const { error } = await supabase.auth.updateUser({ password });
+      return { error };
+    },
+    [supabase.auth],
+  );
+
   const signInAsGuest = useCallback(() => {
     setGuestFlag();
     setUser(makeGuestUser());
@@ -200,6 +226,8 @@ export function AuthProvider({
         signInWithMagicLink,
         signUpWithPassword,
         signInWithPassword,
+        resetPasswordForEmail,
+        updatePassword,
         signInAsGuest,
         signOut,
       }}
