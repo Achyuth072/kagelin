@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -61,9 +62,14 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
         <motion.div {...slideUp} className="max-w-md w-full space-y-6">
           <div className="p-8 rounded-2xl border border-border bg-card shadow-sm">
             <div className="flex flex-col items-center gap-8">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                <span className="text-3xl font-bold">K</span>
-              </div>
+              <Image
+                src="/kagelin-icon.png"
+                alt="Kagelin"
+                width={64}
+                height={64}
+                priority
+                className="h-16 w-16 rounded-2xl shrink-0"
+              />
 
               <div className="text-center space-y-2">
                 <h1 className="text-3xl font-bold tracking-tight">
@@ -118,8 +124,25 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
               Continue as guest
             </Button>
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              By continuing, you agree to our Terms of Service and Privacy
-              Policy. Guest data is stored locally and will be lost if cleared.
+              By continuing, you agree to our{" "}
+              <a
+                href="https://www.kagelin.app/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                Terms of Service
+              </a>{" "}
+              and{" "}
+              <a
+                href="https://www.kagelin.app/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                Privacy Policy
+              </a>
+              . Guest data is stored locally and will be lost if cleared.
             </p>
           </div>
         </motion.div>
