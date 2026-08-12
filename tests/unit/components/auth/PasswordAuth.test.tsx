@@ -13,6 +13,11 @@ vi.mock("@/components/AuthProvider", () => ({
   useAuth: vi.fn(),
 }));
 
+const mockIsPasswordBreached = vi.fn();
+vi.mock("@/lib/auth/password-breach-check", () => ({
+  isPasswordBreached: (...args: unknown[]) => mockIsPasswordBreached(...args),
+}));
+
 let capturedOnVerify: ((token: string) => void) | null = null;
 const mockTurnstileReset = vi.fn();
 
@@ -66,6 +71,7 @@ describe("PasswordAuth", () => {
     } as unknown as ReturnType<typeof useAuth>);
     mockSignUpWithPassword.mockResolvedValue({ error: null });
     mockSignInWithPassword.mockResolvedValue({ error: null });
+    mockIsPasswordBreached.mockResolvedValue(false);
   });
 
   afterEach(() => {
@@ -183,8 +189,6 @@ describe("PasswordAuth", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Invalid login credentials",
     );
-    // The captcha token is single-use — a failed attempt must reset it too,
-    // not just a successful one.
     expect(mockTurnstileReset).toHaveBeenCalled();
   });
 
@@ -230,5 +234,151 @@ describe("PasswordAuth", () => {
 
     expect(screen.queryByTestId("turnstile-widget")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  });
+
+  it("checks for a breached password on blur in sign-up mode and shows an advisory warning", async () => {
+    mockIsPasswordBreached.mockResolvedValue(true);
+    await renderWithSiteKey("test-site-key", {
+      mode: "sign-up",
+      onSwitchToSignIn,
+    });
+
+    fireEvent.change(screen.getByLabelText("Email address"), {
+      target: { value: "new@user.com" },
+    });
+    const passwordInput = screen.getByLabelText("Password");
+    fireEvent.change(passwordInput, { target: { value: "hunter22" } });
+    expect(mockIsPasswordBreached).not.toHaveBeenCalled();
+
+    fireEvent.blur(passwordInput);
+
+    expect(
+      await screen.findByText(/appeared in known data breaches/),
+    ).toBeInTheDocument();
+    expect(mockIsPasswordBreached).toHaveBeenCalledWith("hunter22");
+    verifyCaptcha();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Create account" }),
+      ).toBeEnabled(),
+    );
+  });
+
+  it("does not check for breach on blur in sign-in mode", async () => {
+    await renderWithSiteKey("test-site-key", {
+      mode: "sign-in",
+      onSwitchToSignIn,
+    });
+
+    const passwordInput = screen.getByLabelText("Password");
+    fireEvent.change(passwordInput, { target: { value: "hunter22" } });
+    fireEvent.blur(passwordInput);
+
+    expect(mockIsPasswordBreached).not.toHaveBeenCalled();
+  });
+
+  it("ignores a stale breach result that resolves after a newer check has started", async () => {
+    let resolveFirst: (breached: boolean) => void = () => {};
+    let resolveSecond: (breached: boolean) => void = () => {};
+    mockIsPasswordBreached
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveFirst = resolve)),
+      )
+      .mockImplementationOnce(
+        () => new Promise((resolve) => (resolveSecond = resolve)),
+      );
+
+    await renderWithSiteKey("test-site-key", {
+      mode: "sign-up",
+      onSwitchToSignIn,
+    });
+
+    const passwordInput = screen.getByLabelText("Password");
+    fireEvent.change(passwordInput, { target: { value: "hunter22" } });
+    fireEvent.blur(passwordInput);
+    fireEvent.change(passwordInput, { target: { value: "hunter2222" } });
+    fireEvent.blur(passwordInput);
+
+    expect(mockIsPasswordBreached).toHaveBeenCalledTimes(2);
+
+    resolveSecond(false);
+    await waitFor(() =>
+      expect(
+        screen.queryByText(/appeared in known data breaches/),
+      ).not.toBeInTheDocument(),
+    );
+    resolveFirst(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(
+      screen.queryByText(/appeared in known data breaches/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not re-fire the check on a second blur when the password hasn't changed", async () => {
+    await renderWithSiteKey("test-site-key", {
+      mode: "sign-up",
+      onSwitchToSignIn,
+    });
+
+    const passwordInput = screen.getByLabelText("Password");
+    fireEvent.change(passwordInput, { target: { value: "hunter22" } });
+    fireEvent.blur(passwordInput);
+    fireEvent.blur(passwordInput);
+
+    await waitFor(() =>
+      expect(mockIsPasswordBreached).toHaveBeenCalledTimes(1),
+    );
+  });
+
+  it("clears the breach warning once the password is edited again", async () => {
+    mockIsPasswordBreached.mockResolvedValue(true);
+    await renderWithSiteKey("test-site-key", {
+      mode: "sign-up",
+      onSwitchToSignIn,
+    });
+
+    const passwordInput = screen.getByLabelText("Password");
+    fireEvent.change(passwordInput, { target: { value: "hunter22" } });
+    fireEvent.blur(passwordInput);
+    expect(
+      await screen.findByText(/appeared in known data breaches/),
+    ).toBeInTheDocument();
+
+    fireEvent.change(passwordInput, { target: { value: "hunter222" } });
+
+    expect(
+      screen.queryByText(/appeared in known data breaches/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("never blocks sign-up when the breach check rejects (fails open)", async () => {
+    mockIsPasswordBreached.mockRejectedValue(new Error("network error"));
+    await renderWithSiteKey("test-site-key", {
+      mode: "sign-up",
+      onSwitchToSignIn,
+    });
+
+    fireEvent.change(screen.getByLabelText("Email address"), {
+      target: { value: "new@user.com" },
+    });
+    const passwordInput = screen.getByLabelText("Password");
+    fireEvent.change(passwordInput, { target: { value: "hunter22" } });
+    fireEvent.blur(passwordInput);
+    verifyCaptcha();
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Create account" }),
+      ).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    await waitFor(() =>
+      expect(mockSignUpWithPassword).toHaveBeenCalledWith(
+        "new@user.com",
+        "hunter22",
+        "captcha-token-abc",
+      ),
+    );
   });
 });

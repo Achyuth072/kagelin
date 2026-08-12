@@ -8,18 +8,13 @@ import { Mail, Lock, Loader2, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Turnstile, type TurnstileHandle } from "@/components/auth/Turnstile";
 import type { AuthMode } from "@/components/auth/AuthPage";
+import { isPasswordBreached } from "@/lib/auth/password-breach-check";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 const MIN_PASSWORD_LENGTH = 8;
 
-/**
- * Email + password sign-up/sign-in. Sign-up success never distinguishes a
- * brand-new email from one that already has an Account — Supabase itself
- * returns the same no-error response for both (an obfuscated user, no mail
- * sent, for the collision case), so rendering the same confirmation copy
- * for every non-error result is what keeps this from leaking Account
- * existence. See spec §Existing-email collision.
- */
+// Same confirmation copy for every sign-up success — Supabase gives no
+// signal to distinguish a new email from an already-registered one.
 export function PasswordAuth({
   mode,
   onSwitchToSignIn,
@@ -33,12 +28,33 @@ export function PasswordAuth({
   const [error, setError] = useState<string | null>(null);
   const [signedUp, setSignedUp] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [breached, setBreached] = useState(false);
   const turnstileRef = useRef<TurnstileHandle>(null);
+  const lastCheckedPasswordRef = useRef<string | null>(null);
   const { signUpWithPassword, signInWithPassword } = useAuth();
   const handleCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
 
   const passwordTooShort =
     password.length > 0 && password.length < MIN_PASSWORD_LENGTH;
+
+  // Blur, not keystroke, so the HIBP prefix doesn't narrow with every
+  // character typed. lastCheckedPasswordRef dedupes and guards against a
+  // stale response overwriting a newer check's result.
+  const handlePasswordBlur = useCallback(() => {
+    if (mode !== "sign-up" || passwordTooShort || password.length === 0) {
+      return;
+    }
+    if (lastCheckedPasswordRef.current === password) return;
+    lastCheckedPasswordRef.current = password;
+
+    isPasswordBreached(password)
+      .then((result) => {
+        if (lastCheckedPasswordRef.current === password) setBreached(result);
+      })
+      .catch(() => {
+        if (lastCheckedPasswordRef.current === password) setBreached(false);
+      });
+  }, [mode, password, passwordTooShort]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,9 +70,7 @@ export function PasswordAuth({
           : await signInWithPassword(email, password, captchaToken);
 
       if (authError) {
-        // Supabase already returns the same "Invalid login credentials"
-        // message whether the email is unknown or the password is wrong —
-        // rendered as-is, this stays generic without extra branching.
+        // Supabase's message is already generic re: email-vs-password.
         setError(authError.message || "Authentication failed");
       } else if (mode === "sign-up") {
         setSignedUp(true);
@@ -65,8 +79,7 @@ export function PasswordAuth({
       setError("An unexpected error occurred");
       console.error(err);
     } finally {
-      // Turnstile tokens are single-use — reset so the next attempt gets a
-      // fresh one, whether this attempt succeeded or failed.
+      // Turnstile tokens are single-use.
       setCaptchaToken(null);
       turnstileRef.current?.reset();
       setLoading(false);
@@ -149,7 +162,11 @@ export function PasswordAuth({
             placeholder="••••••••"
             className="pl-9 h-11 text-base md:text-base"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setBreached(false);
+            }}
+            onBlur={handlePasswordBlur}
             disabled={loading}
             autoComplete={
               mode === "sign-up" ? "new-password" : "current-password"
@@ -161,6 +178,12 @@ export function PasswordAuth({
         {passwordTooShort && (
           <p className="text-xs text-muted-foreground">
             Password must be at least {MIN_PASSWORD_LENGTH} characters.
+          </p>
+        )}
+        {breached && (
+          <p className="text-xs text-amber-600 dark:text-amber-500">
+            This password has appeared in known data breaches. You can still use
+            it, but choosing a different one is safer.
           </p>
         )}
       </div>
