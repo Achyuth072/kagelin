@@ -28,6 +28,7 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
   useUpdateTask: () => ({ isPending: false }),
   useDeleteTask: () => ({ isPending: false }),
   useToggleTask: () => ({ isPending: false }),
+  useDuplicateTask: () => ({ isPending: false }),
 }));
 vi.mock("@/components/AuthProvider");
 vi.mock("@/lib/store/uiStore");
@@ -35,7 +36,22 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: vi.fn() }),
 }));
 vi.mock("@/components/TaskActionsProvider", () => ({
-  useTaskActions: () => ({ openAddTask: vi.fn() }),
+  useTaskActions: () => ({ openAddTask: vi.fn(), isAddTaskOpen: false }),
+}));
+vi.mock("@/components/habits/HabitActionsProvider", () => ({
+  useHabitActions: () => ({ openAddHabit: vi.fn(), isHabitSheetOpen: false }),
+}));
+vi.mock("@/components/ProjectActionsProvider", () => ({
+  useProjectActions: () => ({
+    openCreateProject: vi.fn(),
+    isCreateProjectOpen: false,
+  }),
+}));
+vi.mock("@/lib/calendar/store", () => ({
+  useCalendarStore: () => ({
+    openCreateEvent: vi.fn(),
+    isCreateEventOpen: false,
+  }),
 }));
 vi.mock("@/components/TimerProvider", () => ({
   useTimer: () => ({ start: vi.fn() }),

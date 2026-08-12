@@ -3,39 +3,61 @@
 import { WifiOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsOnline } from "@/lib/hooks/useIsOnline";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { cn } from "@/lib/utils";
 
 export function OfflineIndicator() {
   const isOnline = useIsOnline();
+  const isMobile = useIsMobile();
+  const prefersReducedMotion = usePrefersReducedMotion();
+  // Mobile enters from above the header, desktop rises from the bottom of the content column
+  const offscreenY = isMobile ? -16 : 16;
 
   return (
     <AnimatePresence>
       {!isOnline && (
         <motion.div
-          initial={{ y: 20, opacity: 0 }}
+          data-testid="offline-indicator"
+          initial={{ y: offscreenY, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 20, opacity: 0 }}
-          transition={{
-            type: "spring",
-            mass: 1,
-            stiffness: 280,
-            damping: 60,
-          }}
+          exit={{ y: offscreenY, opacity: 0 }}
+          transition={
+            prefersReducedMotion
+              ? { duration: 0 }
+              : {
+                  type: "spring",
+                  mass: 1,
+                  stiffness: 280,
+                  damping: 60,
+                }
+          }
           className={cn(
-            "fixed z-40 pointer-events-none flex justify-center",
-            "left-0 right-0 px-4 bottom-[calc(4.5rem+env(safe-area-inset-bottom)+16px)]", // Mobile: Bottom Center above nav
-            "md:left-[calc(var(--sidebar-width)+24px)] md:bottom-6 md:top-auto md:right-auto md:px-0 md:justify-start", // Desktop: Bottom Left of content
+            "fixed inset-x-0 top-[var(--offline-banner-top,var(--mobile-header-height))] z-30",
+            "md:absolute md:inset-x-0 md:top-auto md:bottom-6 md:z-40 md:flex md:justify-center md:pointer-events-none",
           )}
         >
-          <div className="bg-card text-foreground py-2 px-4 rounded-lg border border-border/80 pointer-events-auto flex items-center gap-3 shadow-none">
-            <div className="flex-shrink-0 w-8 h-8 rounded-md bg-muted flex items-center justify-center text-muted-foreground">
+          <div
+            className={cn(
+              "flex items-center gap-2 bg-card text-foreground border-border/80 pointer-events-auto",
+              "h-[var(--offline-banner-height)] w-full justify-center border-b px-4",
+              "md:h-auto md:w-auto md:justify-start md:gap-3 md:rounded-lg md:border md:px-4 md:py-2",
+            )}
+          >
+            <div className="flex-shrink-0 flex items-center justify-center text-muted-foreground md:w-8 md:h-8 md:rounded-md md:bg-muted">
               <WifiOff className="w-4 h-4" />
             </div>
-            <div className="flex flex-col leading-tight">
-              <span className="text-[13px] font-semibold tracking-tight">
+            <div className="flex items-center gap-1.5 md:flex-col md:items-start md:gap-0 md:leading-tight">
+              <span className="text-[13px] font-medium tracking-[0.01em]">
                 You are offline
               </span>
-              <span className="text-[11px] text-muted-foreground font-normal">
+              <span
+                aria-hidden="true"
+                className="text-[11px] text-muted-foreground md:hidden"
+              >
+                ·
+              </span>
+              <span className="text-[11px] text-muted-foreground font-normal tracking-[0.02em]">
                 Changes will sync when back online
               </span>
             </div>

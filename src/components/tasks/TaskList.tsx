@@ -39,6 +39,7 @@ import type { SortOption, GroupOption } from "@/lib/types/sorting";
 import type { TaskGroup } from "@/lib/hooks/useTaskViewData";
 import {
   getTaskUpdatesForGroup,
+  getPasteOverrides,
   computeReorderPairs,
   computeFreezeOrderPairs,
   isDropBlockedGroup,
@@ -48,15 +49,19 @@ import {
   useUpdateTask,
   useDeleteTask,
   useToggleTask,
+  useDuplicateTask,
 } from "@/lib/hooks/useTaskMutations";
 import { useUiStore } from "@/lib/store/uiStore";
+import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 import { useHotkeys } from "react-hotkeys-hook";
-import { useTaskViewData } from "@/lib/hooks/useTaskViewData";
+import { useTaskViewData, getBoardColumns } from "@/lib/hooks/useTaskViewData";
 import { TaskListView } from "./TaskListView";
 import { TaskBoard } from "./TaskBoard";
 import { TaskGhost } from "./TaskGhost";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { taskDomId } from "./task-utils";
 
 // dnd-kit announces on every onDragOver by default, thrashing aria-live at
 // drag-over frequency — no-op it and keep only start/end/cancel announcements.
@@ -64,6 +69,8 @@ const dndAnnouncements = {
   ...defaultAnnouncements,
   onDragOver: () => undefined,
 };
+
+const VIM_DOUBLE_PRESS_TIMEOUT_MS = 500;
 
 // Pure and hoisted to module scope — dnd-kit calls this every auto-scroll tick during a drag.
 function canScrollTaskListContainer(element: Element): boolean {
@@ -108,12 +115,25 @@ function TaskListBase({
   const [keyboardSelectedId, setKeyboardSelectedId] = useState<string | null>(
     null,
   );
+  // keyboardSelectedId is virtual focus — DOM focus never moves to a card.
+  // Exposed via aria-activedescendant (role listbox/grid below), not roving
+  // tabindex, since focusing cards would re-arm dnd-kit's Space/Enter drag
+  // collision (see the DragHandle split in SortableBoardTaskCard).
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // Tracks the single most recent double-press candidate (gg / yy) so an
+  // interleaved different key (e.g. `g` then `y`) can't be mistaken for
+  // that key's own double-press.
+  const pendingDoublePressRef = useRef<{
+    key: "g" | "y";
+    timestamp: number;
+  } | null>(null);
 
   const queryClient = useQueryClient();
   const reorderMutation = useReorderTasks();
   const updateMutation = useUpdateTask();
   const deleteMutation = useDeleteTask();
   const toggleMutation = useToggleTask();
+  const duplicateMutation = useDuplicateTask();
   const setSortBy = useUiStore((state) => state.setSortBy);
   const customSortEnteredViaDrag = useUiStore(
     (state) => state.customSortEnteredViaDrag,
@@ -125,6 +145,7 @@ function TaskListBase({
   const isDesktop = useUiStore((state) => state.isDesktop);
   const selectedTaskId = useUiStore((state) => state.selectedTaskId);
   const setSelectedTaskId = useUiStore((state) => state.setSelectedTaskId);
+  const hasYankedTask = useUiStore((state) => !!state.yankedTaskId);
   const { openAddTask } = useTaskActions();
   const { trigger: triggerHaptic } = useHaptic();
   const setActiveTaskId = useTimerStore((state) => state.setActiveTaskId);
@@ -231,16 +252,6 @@ function TaskListBase({
     setCustomSortEnteredViaDrag,
   ]);
 
-  // Opens the edit sheet for a task picked in the command menu. Clears the id
-  // only once found — the list may still be loading on first navigation.
-  useEffect(() => {
-    if (!selectedTaskId) return;
-    const task = tasks.find((t) => t.id === selectedTaskId);
-    if (!task) return;
-    setSelectedTask(task);
-    setSelectedTaskId(null);
-  }, [selectedTaskId, tasks, setSelectedTaskId]);
-
   const handleTaskClick = useCallback(
     (task: Task) => {
       (document.activeElement as HTMLElement)?.blur();
@@ -252,6 +263,16 @@ function TaskListBase({
     },
     [onTaskSelect],
   );
+
+  // Opens the edit sheet for a task picked in the command menu. Clears the id
+  // only once found — the list may still be loading on first navigation.
+  useEffect(() => {
+    if (!selectedTaskId) return;
+    const task = tasks.find((t) => t.id === selectedTaskId);
+    if (!task) return;
+    handleTaskClick(task);
+    setSelectedTaskId(null);
+  }, [selectedTaskId, tasks, setSelectedTaskId, handleTaskClick]);
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -536,7 +557,7 @@ function TaskListBase({
           return;
         }
 
-        // CRITICAL ORDERING: lockLocal BEFORE activeId — see comment above.
+        // lockLocal must precede activeId — see the reset branch above.
         setLockLocal(true);
         if (sortBy !== "custom") {
           setCustomSortEnteredViaDrag(true);
@@ -632,7 +653,14 @@ function TaskListBase({
     return list;
   }, [processedTasks]);
 
-  const handleNav = (direction: 1 | -1) => {
+  const isAnyModalOpen = useIsAnyModalOpen() || !!selectedTask;
+
+  const boardColumns = useMemo<TaskGroup[]>(
+    () => getBoardColumns(processedTasks),
+    [processedTasks],
+  );
+
+  const handleListNav = (direction: 1 | -1) => {
     if (navigableTasks.length === 0) return;
     const currentIndex = navigableTasks.findIndex(
       (t) => t.id === keyboardSelectedId,
@@ -647,10 +675,181 @@ function TaskListBase({
     }
   };
 
-  useHotkeys("j", () => handleNav(1), { preventDefault: true });
-  useHotkeys("k", () => handleNav(-1), { preventDefault: true });
-  useHotkeys("space", (e) => {
-    e.preventDefault();
+  const handleBoardNav = (dirX: number, dirY: number) => {
+    const totalBoardTasks = boardColumns.reduce(
+      (acc, col) => acc + col.tasks.length,
+      0,
+    );
+    if (totalBoardTasks === 0) return;
+
+    let currentColIndex = -1;
+    let currentRowIndex = -1;
+
+    if (keyboardSelectedId) {
+      for (let c = 0; c < boardColumns.length; c++) {
+        const r = boardColumns[c].tasks.findIndex(
+          (t) => t.id === keyboardSelectedId,
+        );
+        if (r !== -1) {
+          currentColIndex = c;
+          currentRowIndex = r;
+          break;
+        }
+      }
+    }
+
+    if (currentColIndex === -1 || currentRowIndex === -1) {
+      const firstNonEmptyCol = boardColumns.find((c) => c.tasks.length > 0);
+      if (firstNonEmptyCol && firstNonEmptyCol.tasks.length > 0) {
+        setKeyboardSelectedId(firstNonEmptyCol.tasks[0].id);
+      }
+      return;
+    }
+
+    if (dirY !== 0) {
+      const col = boardColumns[currentColIndex];
+      const nextRow = currentRowIndex + dirY;
+      if (nextRow >= 0 && nextRow < col.tasks.length) {
+        setKeyboardSelectedId(col.tasks[nextRow].id);
+      }
+    } else if (dirX !== 0) {
+      let targetColIndex = currentColIndex + dirX;
+      while (
+        targetColIndex >= 0 &&
+        targetColIndex < boardColumns.length &&
+        boardColumns[targetColIndex].tasks.length === 0
+      ) {
+        targetColIndex += dirX;
+      }
+      if (
+        targetColIndex >= 0 &&
+        targetColIndex < boardColumns.length &&
+        boardColumns[targetColIndex].tasks.length > 0
+      ) {
+        const targetCol = boardColumns[targetColIndex];
+        const targetRowIndex = Math.min(
+          currentRowIndex,
+          targetCol.tasks.length - 1,
+        );
+        setKeyboardSelectedId(targetCol.tasks[targetRowIndex].id);
+      }
+    }
+  };
+
+  const clearPendingDoublePress = () => {
+    pendingDoublePressRef.current = null;
+  };
+
+  // Shared "press the same key twice within the timeout" detection behind
+  // `gg` and `yy`.
+  const handleDoublePress = (key: "g" | "y", onDouble: () => void) => {
+    const pending = pendingDoublePressRef.current;
+    const now = Date.now();
+    if (
+      pending &&
+      pending.key === key &&
+      now - pending.timestamp < VIM_DOUBLE_PRESS_TIMEOUT_MS
+    ) {
+      clearPendingDoublePress();
+      onDouble();
+    } else {
+      pendingDoublePressRef.current = { key, timestamp: now };
+    }
+  };
+
+  const handleNavVertical = (dir: 1 | -1) => {
+    clearPendingDoublePress();
+    if (viewMode === "board") {
+      handleBoardNav(0, dir);
+    } else {
+      handleListNav(dir);
+    }
+  };
+
+  const handleNavHorizontal = (dir: 1 | -1) => {
+    clearPendingDoublePress();
+    if (viewMode === "board") {
+      handleBoardNav(dir, 0);
+    }
+  };
+
+  const getExtremeTask = (position: "first" | "last"): Task | undefined => {
+    if (viewMode === "board") {
+      const cols =
+        position === "first" ? boardColumns : [...boardColumns].reverse();
+      const targetCol = cols.find((c) => c.tasks.length > 0);
+      if (!targetCol || targetCol.tasks.length === 0) return undefined;
+      return position === "first"
+        ? targetCol.tasks[0]
+        : targetCol.tasks[targetCol.tasks.length - 1];
+    }
+    if (navigableTasks.length === 0) return undefined;
+    return position === "first"
+      ? navigableTasks[0]
+      : navigableTasks[navigableTasks.length - 1];
+  };
+
+  const handleNavTop = () => {
+    const task = getExtremeTask("first");
+    if (task) setKeyboardSelectedId(task.id);
+  };
+
+  const handleNavBottom = () => {
+    clearPendingDoublePress();
+    const task = getExtremeTask("last");
+    if (task) setKeyboardSelectedId(task.id);
+  };
+
+  const hasSelection = !!keyboardSelectedId;
+
+  // aria-activedescendant is inert unless the owning container has DOM
+  // focus, so arm it the moment vim nav picks a task. Cheap to call again
+  // on every selection change — an already-focused element is a no-op.
+  useEffect(() => {
+    if (hasSelection) {
+      scrollContainerRef.current?.focus({ preventScroll: true });
+    }
+  }, [hasSelection]);
+
+  // Vim keys have no native behaviour worth preserving, so they always claim
+  // the keypress. Arrow keys/space drive page scroll until a task is
+  // selected, so they only claim the key once vim mode is armed.
+  const hotkeyOptions = {
+    preventDefault: true,
+    enabled: !isAnyModalOpen,
+  };
+  const arrowHotkeyOptions = {
+    preventDefault: hasSelection,
+    enabled: !isAnyModalOpen,
+  };
+
+  useHotkeys("j", () => handleNavVertical(1), hotkeyOptions);
+  useHotkeys("arrowdown", () => handleNavVertical(1), arrowHotkeyOptions);
+  useHotkeys("k", () => handleNavVertical(-1), hotkeyOptions);
+  useHotkeys("arrowup", () => handleNavVertical(-1), arrowHotkeyOptions);
+  useHotkeys("l", () => handleNavHorizontal(1), hotkeyOptions);
+  useHotkeys("arrowright", () => handleNavHorizontal(1), arrowHotkeyOptions);
+  useHotkeys("h", () => handleNavHorizontal(-1), hotkeyOptions);
+  useHotkeys("arrowleft", () => handleNavHorizontal(-1), arrowHotkeyOptions);
+  useHotkeys(
+    "g",
+    (e) => {
+      if (e.shiftKey) return;
+      handleDoublePress("g", handleNavTop);
+    },
+    hotkeyOptions,
+  );
+  useHotkeys(
+    ["shift+g", "G"],
+    (e) => {
+      if (!e.shiftKey) return;
+      handleNavBottom();
+    },
+    hotkeyOptions,
+  );
+
+  const toggleSelected = () => {
+    clearPendingDoublePress();
     if (keyboardSelectedId) {
       const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
       if (task) {
@@ -660,25 +859,142 @@ function TaskListBase({
         });
       }
     }
-  });
+  };
 
+  useHotkeys("x", toggleSelected, hotkeyOptions);
   useHotkeys(
-    ["enter", "e"],
-    () => {
+    "space",
+    (e) => {
       if (keyboardSelectedId) {
-        const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
-        if (task) setSelectedTask(task);
+        e.preventDefault();
+        toggleSelected();
       }
     },
-    { preventDefault: true },
+    arrowHotkeyOptions,
   );
 
-  useHotkeys(["d", "backspace"], () => {
-    if (keyboardSelectedId) {
-      deleteMutation.mutate(keyboardSelectedId);
-      handleNav(1);
-    }
-  });
+  useHotkeys(
+    ["enter", "o"],
+    () => {
+      clearPendingDoublePress();
+      if (keyboardSelectedId) {
+        const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
+        if (task) handleTaskClick(task);
+      }
+    },
+    hotkeyOptions,
+  );
+
+  useHotkeys(
+    ["d", "backspace"],
+    () => {
+      clearPendingDoublePress();
+      if (keyboardSelectedId) {
+        const deletedId = keyboardSelectedId;
+        handleNavVertical(1);
+        deleteMutation.mutate(deletedId);
+      }
+    },
+    hotkeyOptions,
+  );
+
+  useHotkeys(
+    "u",
+    () => {
+      clearPendingDoublePress();
+      const triggerLastUndoAction = useUiStore.getState().triggerLastUndoAction;
+      void triggerLastUndoAction();
+    },
+    hotkeyOptions,
+  );
+
+  useHotkeys(
+    "y",
+    (e) => {
+      if (e.shiftKey) return;
+      handleDoublePress("y", () => {
+        if (keyboardSelectedId) {
+          const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
+          if (task) {
+            useUiStore.getState().setYankedTaskId(task.id);
+            triggerHaptic("toggle");
+            notify("Task yanked");
+          }
+        }
+      });
+    },
+    hotkeyOptions,
+  );
+
+  useHotkeys(
+    "p",
+    (e) => {
+      clearPendingDoublePress();
+      const yankedTaskId = useUiStore.getState().yankedTaskId;
+      if (!yankedTaskId) return;
+      // Resolved fresh from the query cache rather than a store snapshot —
+      // the task may have been edited since it was yanked. Falls through to
+      // every ["tasks", ...] query, not just this view's own `tasks` — the
+      // yank is meant to survive project/filter switches, and the task may
+      // now live in a view this TaskList instance isn't currently showing.
+      const yankedTask =
+        tasks.find((t) => t.id === yankedTaskId) ??
+        queryClient
+          .getQueriesData<Task[]>({ queryKey: ["tasks"] })
+          .flatMap(([, data]) => data ?? [])
+          .find((t) => t.id === yankedTaskId);
+      if (!yankedTask) {
+        useUiStore.getState().setYankedTaskId(null);
+        notify.error("Yanked task no longer exists");
+        return;
+      }
+      e.preventDefault();
+      // Where "here" is: the project/filter this view is scoped to, plus —
+      // in board view — whichever column the cursor currently sits in. Without
+      // this a paste always lands back on the yanked task's own project (see
+      // toDuplicatePayload), so pasting into a different board/project/filter
+      // view silently duplicated into the *source* location instead.
+      const targetColumn =
+        viewMode === "board"
+          ? boardColumns.find((c) =>
+              c.tasks.some((t) => t.id === keyboardSelectedId),
+            )
+          : undefined;
+      const overrides = getPasteOverrides({
+        projectId,
+        filter,
+        targetColumnTitle: targetColumn?.title,
+        projectsMap,
+        groupBy,
+      });
+      duplicateMutation.mutate(
+        { sourceTask: yankedTask, overrides },
+        {
+          onSuccess: (newDuplicateTask) => {
+            if (newDuplicateTask?.id) {
+              setKeyboardSelectedId(newDuplicateTask.id);
+            }
+          },
+        },
+      );
+    },
+    hotkeyOptions,
+  );
+
+  useHotkeys(
+    "escape",
+    () => {
+      clearPendingDoublePress();
+      setKeyboardSelectedId(null);
+      // Release the yanked task too — otherwise it survives Escape and
+      // keeps suppressing GlobalHotkeys' New Project 'p' on this page
+      // (see GlobalHotkeys.tsx) until a hard reload clears the store.
+      if (hasYankedTask) useUiStore.getState().setYankedTaskId(null);
+    },
+    {
+      enabled: !isAnyModalOpen && (hasSelection || hasYankedTask),
+    },
+  );
 
   const overlayContent = useMemo(() => {
     if (!activeTask) return null;
@@ -762,8 +1078,15 @@ function TaskListBase({
         }}
       >
         <div
+          ref={scrollContainerRef}
           data-task-list-scroll-container="true"
-          className="flex-1 h-full overflow-y-auto scrollbar-hide relative overscroll-contain"
+          role={viewMode === "board" ? "grid" : "listbox"}
+          aria-label={viewMode === "board" ? "Task board" : "Task list"}
+          tabIndex={0}
+          aria-activedescendant={
+            keyboardSelectedId ? taskDomId(keyboardSelectedId) : undefined
+          }
+          className="flex-1 h-full overflow-y-auto scrollbar-hide relative overscroll-contain focus-visible:outline-none"
           style={{ contain: "strict" }}
         >
           {viewMode === "board" ? (
@@ -777,6 +1100,7 @@ function TaskListBase({
               // Omitting this drops getTaskUpdatesForGroup to its heuristic
               // cascade, where a project named "Today" reads as a date.
               groupBy={groupBy}
+              keyboardSelectedId={keyboardSelectedId}
             />
           ) : (
             <TaskListView

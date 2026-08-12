@@ -104,6 +104,70 @@ export function getTaskUpdatesForGroup(
 }
 
 /**
+ * Calculates the properties a pasted task must satisfy to actually show up
+ * in the view's own `filter` (see useTasks) — there's no separate "filter"
+ * property on a task, only the fields the filter reads. Reuses the same
+ * bucket logic as a board drop into "Today"/"Critical" so a paste and a drag
+ * land a task in the same state. "today" sets both do_date and due_date
+ * (like the date bucket does) rather than due_date alone, since the filter
+ * itself only reads due_date but the two dates are kept in lockstep
+ * everywhere else a task is scheduled.
+ */
+export function getFilterOverrides(filter?: string): Partial<Task> {
+  switch (filter) {
+    case "today":
+      return dateBucketUpdates("today") ?? {};
+    case "p1":
+      return priorityBucketUpdates("critical") ?? {};
+    default:
+      return {};
+  }
+}
+
+/**
+ * The single place that resolves "where is `p` pasting into" for a
+ * TaskList — folds the view's project scoping, its `filter` prop, and (in
+ * board view) whichever column the cursor sits in into one overrides object
+ * for taskMutations.duplicate. Kept alongside getTaskUpdatesForGroup /
+ * getFilterOverrides rather than assembled ad hoc at the callsite, since a
+ * future view type only needs to teach this function its own scoping rule.
+ * Board column wins on any overlapping field — it's the most specific signal
+ * of the three, being exactly where the cursor is parked.
+ */
+export function getPasteOverrides({
+  projectId,
+  filter,
+  targetColumnTitle,
+  projectsMap,
+  groupBy,
+}: {
+  projectId?: string | null;
+  filter?: string;
+  targetColumnTitle?: string;
+  projectsMap: Map<string, Project>;
+  groupBy?: GroupOption;
+}): Partial<Task> {
+  const overrides: Partial<Task> = {};
+
+  if (projectId === "inbox") {
+    overrides.project_id = null;
+  } else if (projectId && projectId !== "all") {
+    overrides.project_id = projectId;
+  }
+
+  Object.assign(overrides, getFilterOverrides(filter));
+
+  if (targetColumnTitle !== undefined) {
+    Object.assign(
+      overrides,
+      getTaskUpdatesForGroup(targetColumnTitle, projectsMap, groupBy),
+    );
+  }
+
+  return overrides;
+}
+
+/**
  * Computes {id, day_order} pairs for a single-task drag. Thin wrapper over
  * computeMoveOrders (see reorder.ts): the drag is modeled as one task moving
  * within the shared flat list, so only the slots between its old and new flat

@@ -49,6 +49,8 @@ import { useWeeklyBackup } from "@/lib/hooks/useWeeklyBackup";
 import { GlobalFabs } from "@/components/layout/GlobalFabs";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Toaster } from "@/components/ui/toaster";
+import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
+import { useIsOnline } from "@/lib/hooks/useIsOnline";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
@@ -206,6 +208,7 @@ function GlobalOverlays({
   const setArchivedProjectsOpen = useUiStore(
     (state) => state.setArchivedProjectsOpen,
   );
+  const isBoardViewOnTasks = useIsBoardViewOnTasks();
 
   return (
     <>
@@ -225,6 +228,7 @@ function GlobalOverlays({
       <ShortcutsHelp
         open={isShortcutsHelpOpen}
         onOpenChange={setShortcutsHelpOpen}
+        isBoardViewOnTasks={isBoardViewOnTasks}
       />
       <CreateEventDialog
         open={isCreateEventOpen}
@@ -239,7 +243,6 @@ function GlobalOverlays({
         onOpenChange={setArchivedProjectsOpen}
       />
       <FloatingTimer />
-      <OfflineIndicator />
       <ChangelogPopupWatcher />
       <ChangelogManualTrigger />
     </>
@@ -269,6 +272,7 @@ function AppShellContent({ children }: AppShellProps) {
   const pathname = usePathname();
   const isFocus = pathname === "/focus";
   const hideMobileNav = pathname === "/focus" || pathname === "/settings";
+  const isOnline = useIsOnline();
 
   const setShortcutsHelpOpen = useUiStore(
     (state) => state.setShortcutsHelpOpen,
@@ -311,7 +315,18 @@ function AppShellContent({ children }: AppShellProps) {
         {!isFocus && <AppSidebar />}
 
         {/* Main Content with proper inset */}
-        <SidebarInset className="relative">
+        <SidebarInset
+          className="relative"
+          style={
+            {
+              "--offline-banner-top": hideMobileNav
+                ? "env(safe-area-inset-top, 0px)"
+                : "var(--mobile-header-height)",
+              // --offline-banner-height (2.25rem) + the original md:mb-5 gap (1.25rem) — lifts desktop toasts clear of the pill
+              "--offline-pill-offset": isOnline ? "0px" : "3.5rem",
+            } as React.CSSProperties
+          }
+        >
           <div
             ref={scrollContainerRef}
             data-testid="scroll-container"
@@ -323,7 +338,11 @@ function AppShellContent({ children }: AppShellProps) {
                 pathname === "/habits"
                 ? "overflow-hidden"
                 : "overflow-y-auto overflow-x-hidden scrollbar-hide",
-              !hideMobileNav && "pt-[calc(4rem+env(safe-area-inset-top,0px))]",
+              !hideMobileNav && isOnline && "pt-[var(--mobile-header-height)]",
+              !hideMobileNav &&
+                !isOnline &&
+                "pt-[calc(var(--mobile-header-height)+var(--offline-banner-height))]",
+              hideMobileNav && !isOnline && "pt-[var(--offline-banner-height)]",
             )}
           >
             {children}
@@ -340,6 +359,7 @@ function AppShellContent({ children }: AppShellProps) {
               />
             )}
           </div>
+          <OfflineIndicator />
           <Toaster />
         </SidebarInset>
 

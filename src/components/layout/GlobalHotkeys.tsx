@@ -9,6 +9,9 @@ import { useHabitActions } from "@/components/habits/HabitActionsProvider";
 import { useProjectActions } from "@/components/ProjectActionsProvider";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useCalendarStore } from "@/lib/calendar/store";
+import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
+import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
+import { useIsTasksPage } from "@/lib/hooks/useIsTasksPage";
 
 interface GlobalHotkeysProps {
   setCommandOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
@@ -24,29 +27,17 @@ export function GlobalHotkeys({
   const router = useRouter();
   const pathname = usePathname();
   const { setTheme, resolvedTheme } = useTheme();
-  const { openAddTask, isAddTaskOpen } = useTaskActions();
+  const { openAddTask } = useTaskActions();
   const { openSheet: openCompletedSheet } = useCompletedTasks();
-  const { openAddHabit, isHabitSheetOpen } = useHabitActions();
-  const { openCreateProject, isCreateProjectOpen } = useProjectActions();
-  const { openCreateEvent, isCreateEventOpen } = useCalendarStore();
+  const { openAddHabit } = useHabitActions();
+  const { openCreateProject } = useProjectActions();
+  const { openCreateEvent } = useCalendarStore();
   const setViewMode = useUiStore((state) => state.setViewMode);
   const setArchivedProjectsOpen = useUiStore(
     (state) => state.setArchivedProjectsOpen,
   );
-  const isShortcutsHelpOpen = useUiStore((state) => state.isShortcutsHelpOpen);
-  const isArchivedProjectsOpen = useUiStore(
-    (state) => state.isArchivedProjectsOpen,
-  );
-  const isChangelogOpen = useUiStore((state) => state.isChangelogOpen);
 
-  const isOtherModalOpen =
-    isAddTaskOpen ||
-    isHabitSheetOpen ||
-    isCreateProjectOpen ||
-    isCreateEventOpen ||
-    isShortcutsHelpOpen ||
-    isArchivedProjectsOpen ||
-    isChangelogOpen;
+  const isOtherModalOpen = useIsAnyModalOpen();
   const isAnyModalOpen = isOtherModalOpen || !!commandOpen;
 
   const options = {
@@ -55,19 +46,36 @@ export function GlobalHotkeys({
     enabled: !isAnyModalOpen,
   };
 
+  const isBoardViewOnTasks = useIsBoardViewOnTasks();
+  const habitHotkeyOptions = {
+    ...options,
+    enabled: !isAnyModalOpen && !isBoardViewOnTasks,
+  };
+
+  // TaskList binds its own "p" for pasting a yanked task, scoped to whenever
+  // it's mounted (the tasks page). Both listeners fire on the same keydown,
+  // so New Project only steps aside there — never app-wide, and never past
+  // a route change, unlike a check against the yankedTaskId store flag alone.
+  const isTasksPage = useIsTasksPage();
+  const yankedTaskId = useUiStore((state) => state.yankedTaskId);
+  const newProjectHotkeyOptions = {
+    ...options,
+    enabled: !isAnyModalOpen && !(isTasksPage && !!yankedTaskId),
+  };
+
   // --- ACTIONS ---
 
   // New Task (n)
   useHotkeys("n", () => openAddTask(), options);
 
   // New Habit (h)
-  useHotkeys("h", () => openAddHabit(), options);
+  useHotkeys("h", () => openAddHabit(), habitHotkeyOptions);
 
   // New Event (e)
   useHotkeys("e", () => openCreateEvent(), options);
 
   // New Project (p)
-  useHotkeys("p", () => openCreateProject(), options);
+  useHotkeys("p", () => openCreateProject(), newProjectHotkeyOptions);
 
   // Archived Projects (a)
   useHotkeys("a", () => setArchivedProjectsOpen(true), options);

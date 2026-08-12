@@ -14,10 +14,8 @@ export const priorityTextClasses: Record<1 | 2 | 3 | 4, string> = {
   4: "text-muted-foreground",
 };
 
-/**
- * Universal High-Contrast Ink Checkbox Mapping
- * All priorities use the same high-intensity tokens for component-level predictability.
- */
+// All priorities share the same high-contrast tokens, kept explicit per key
+// for predictability.
 export const priorityCheckboxClasses: Record<1 | 2 | 3 | 4, string> = {
   1: "border-foreground/80 data-[state=checked]:bg-foreground data-[state=checked]:border-foreground",
   2: "border-foreground/80 data-[state=checked]:bg-foreground data-[state=checked]:border-foreground",
@@ -36,4 +34,12 @@ export function isOverdue(dateString: string | null | undefined): boolean {
   if (!dateString) return false;
   const date = parseISO(dateString);
   return isBefore(date, startOfDay(new Date())) && !isToday(date);
+}
+
+/**
+ * Stable DOM id for a task card, used as the `aria-activedescendant` target
+ * on the scroll container that owns keyboard (Vim) navigation.
+ */
+export function taskDomId(taskId: string): string {
+  return `task-item-${taskId}`;
 }

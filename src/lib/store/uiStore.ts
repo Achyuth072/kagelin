@@ -94,6 +94,16 @@ interface UiState {
   hasChangelogUpdate: boolean;
   setHasChangelogUpdate: (has: boolean) => void;
 
+  lastUndoAction: (() => void | Promise<void>) | null;
+  setLastUndoAction: (action: (() => void | Promise<void>) | null) => void;
+  triggerLastUndoAction: () => void | Promise<void>;
+
+  // Id of the task yanked via vim `yy`, resolved against TanStack Query's
+  // task cache at paste time rather than snapshotted here — the snapshot
+  // would otherwise go stale if the task is edited between yank and paste.
+  yankedTaskId: string | null;
+  setYankedTaskId: (id: string | null) => void;
+
   // Hydration state
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
@@ -101,7 +111,7 @@ interface UiState {
 
 export const useUiStore = create<UiState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // Sidebar defaults
       isProjectsOpen: true,
       toggleProjectsOpen: () =>
@@ -197,6 +207,19 @@ export const useUiStore = create<UiState>()(
       hasChangelogUpdate: false,
       setHasChangelogUpdate: (has) => set({ hasChangelogUpdate: has }),
 
+      lastUndoAction: null,
+      setLastUndoAction: (action) => set({ lastUndoAction: action }),
+      triggerLastUndoAction: () => {
+        const action = get().lastUndoAction;
+        if (action) {
+          set({ lastUndoAction: null });
+          return action();
+        }
+      },
+
+      yankedTaskId: null,
+      setYankedTaskId: (id) => set({ yankedTaskId: id }),
+
       // Hydration
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
@@ -226,6 +249,11 @@ export const useUiStore = create<UiState>()(
           setHasChangelogUpdate: _setHasChangelogUpdate,
           customSortEnteredViaDrag: _customSortEnteredViaDrag,
           setCustomSortEnteredViaDrag: _setCustomSortEnteredViaDrag,
+          lastUndoAction: _lastUndoAction,
+          setLastUndoAction: _setLastUndoAction,
+          triggerLastUndoAction: _triggerLastUndoAction,
+          yankedTaskId: _yankedTaskId,
+          setYankedTaskId: _setYankedTaskId,
           ...rest
         } = state;
         return rest;

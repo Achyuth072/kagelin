@@ -104,6 +104,7 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
   useUpdateTask: () => ({ isPending: false, mutate: vi.fn() }),
   useDeleteTask: () => ({ mutate: vi.fn() }),
   useToggleTask: () => ({ mutate: vi.fn() }),
+  useDuplicateTask: () => ({ mutate: vi.fn() }),
 }));
 
 vi.mock("@/lib/store/uiStore", () => ({
@@ -111,7 +112,25 @@ vi.mock("@/lib/store/uiStore", () => ({
 }));
 
 vi.mock("@/components/TaskActionsProvider", () => ({
-  useTaskActions: () => ({ openAddTask: vi.fn() }),
+  useTaskActions: () => ({ openAddTask: vi.fn(), isAddTaskOpen: false }),
+}));
+
+vi.mock("@/components/habits/HabitActionsProvider", () => ({
+  useHabitActions: () => ({ openAddHabit: vi.fn(), isHabitSheetOpen: false }),
+}));
+
+vi.mock("@/components/ProjectActionsProvider", () => ({
+  useProjectActions: () => ({
+    openCreateProject: vi.fn(),
+    isCreateProjectOpen: false,
+  }),
+}));
+
+vi.mock("@/lib/calendar/store", () => ({
+  useCalendarStore: () => ({
+    openCreateEvent: vi.fn(),
+    isCreateEventOpen: false,
+  }),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -214,6 +233,11 @@ describe("TaskList DnD layout shift protection", () => {
           weeklyTasksCompleted: null,
         },
         setGoals: vi.fn(),
+        lastUndoAction: null,
+        setLastUndoAction: vi.fn(),
+        triggerLastUndoAction: vi.fn(),
+        yankedTaskId: null,
+        setYankedTaskId: vi.fn(),
       }),
     );
   });

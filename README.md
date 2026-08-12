@@ -16,6 +16,7 @@
 
 [![Stable](https://img.shields.io/github/v/release/Achyuth072/kagelin?style=flat&label=Stable&labelColor=06599d&color=043b69)](../../releases)
 [![Preview](https://img.shields.io/github/package-json/v/Achyuth072/kagelin/dev?style=flat&label=Preview&labelColor=2c2c47&color=1c1c39)](../../releases)
+[![Sponsor](https://img.shields.io/github/sponsors/Achyuth072?style=flat&logo=githubsponsors&labelColor=24292e)](https://github.com/sponsors/Achyuth072)
 
 ## Use it
 
@@ -53,7 +54,8 @@ Most productivity apps want your email before you've written a single task, and 
 ### Tasks & Organization
 
 - **Search** (`Ctrl/Cmd+K`): instant search across tasks, habits, and events, plus navigation and actions.
-- **Three views**: Masonry Grid, Board, and List — switch with `Shift+1/2/3`.
+- **Task views**: Board and List view with 2D keyboard navigation.
+- **Vim navigation & task controls**: `gg`/`G` navigation, `yy` yank, `p` paste, and `u` undo.
 - **Split View**: Desktop List opens a master-detail panel automatically.
 - **Projects**: multi-level project structure with archiving and mobile drawers.
 - **Group & Filter**: group by project, priority, or due date with drag-and-drop across groups.
@@ -79,7 +81,7 @@ Most productivity apps want your email before you've written a single task, and 
 
 - **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed.
 - **WebDAV sync**: registered users can sync with personal servers (Nextcloud, Synology). Credentials are session-only for now — not yet persisted.
-- **Backups**: encrypted `.zip` export/import for everyone, guest or registered. Registered users can also permanently delete all cloud data.
+- **Backups**: configurable guest backup reminder cadence, plus encrypted `.zip` export/import for everyone. Registered users can instantly delete all cloud data (tasks, habits, focus logs, calendar events); full account deletion is handled manually during beta — see [privacy policy](https://kagelin.app/privacy).
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
 
 ### Stats & Insights
@@ -97,19 +99,21 @@ Most productivity apps want your email before you've written a single task, and 
 
 ## Shortcuts
 
-| Shortcut          | Action                                                            |
-| ----------------- | ----------------------------------------------------------------- |
-| `1–6`             | Quick navigation (Home, Habits, Calendar, Stats, Focus, Settings) |
-| `Shift+1 / 2 / 3` | Switch view (Grid / Board / List)                                 |
-| `Ctrl/Cmd+K`      | Open Command Palette                                              |
-| `Ctrl/Cmd+B`      | Toggle Sidebar                                                    |
-| `N / H / E / P`   | Create new (Task, Habit, Event, Project)                          |
-| `Shift+H`         | View all shortcuts                                                |
+| Shortcut        | Action                                                            |
+| --------------- | ----------------------------------------------------------------- |
+| `1–6`           | Quick navigation (Home, Habits, Calendar, Stats, Focus, Settings) |
+| `Shift+1 / 2`   | Switch view (Board / List)                                        |
+| `gg / G`        | Jump to top / bottom of task list or board                        |
+| `yy / p / u`    | Yank task / paste task / undo action                              |
+| `Ctrl/Cmd+K`    | Open Command Palette                                              |
+| `Ctrl/Cmd+B`    | Toggle Sidebar                                                    |
+| `N / H / E / P` | Create new (Task, Habit, Event, Project)                          |
+| `Shift+H`       | View all shortcuts                                                |
 
 <details>
 <summary><strong>Stack</strong></summary>
 
-- **Next.js 16.2.10** (App Router) + **React 19.2.3** (React Compiler)
+- **Next.js 16.2.10** (App Router) + **React 19.2.7** (React Compiler)
 - **Supabase** (Postgres, Auth, Realtime)
 - **TanStack Query v5** (IndexedDB persistence) + **Zustand v5**
 - **Tailwind CSS v4** + **Shadcn UI** (Radix)

@@ -56,8 +56,49 @@ cross-device mirroring, background auto-sync, or push.
 
 ### Premium (paid)
 
-A registered user who pays. Adds realtime cross-device mirroring, background
-auto-sync, and push notifications on top of the registered-free capabilities.
+A registered user with the Premium entitlement. Adds realtime cross-device
+mirroring, background auto-sync, and push notifications on top of the
+registered-free capabilities. Usually paid for, but a **founding grant** confers
+the same entitlement without payment — the tier records the entitlement, never
+its source.
+
+---
+
+## Founding cohort
+
+### Founding cohort
+
+The first N waitlist signups, N set by kagelin-web's `WAITLIST_FOUNDING_CAP`
+env var (read once at module load, so changing it needs a redeploy — not
+"without a deploy", an earlier wrong assumption). The cap closes silently:
+once it is reached, later signups fall into the
+**general** cohort and see the general-launch message instead. "Beta users" is
+not a term here — membership in the founding cohort is the whole definition.
+
+### Invited
+
+A founding-cohort signup who has been emailed the offer. Records an action taken
+by the operator; confers no entitlement and gates nothing. A signup can join the
+app having never been invited, and being invited does not imply having joined —
+the two facts are independent and neither orders the other.
+
+### Founding grant
+
+The Premium entitlement given for founding-cohort membership, in two phases:
+
+1. **Free**, for the duration of the **beta period**. Ends when the beta
+   period ends — a single event the operator declares, not a per-user clock —
+   so no user-level expiry date exists or should be invented.
+2. **Discounted, for life**, from then on. The discount itself never expires
+   or gets re-evaluated — "permanent" means permanent, not "permanent until
+   some future decision."
+
+Earned by **joining the app while in the founding cohort** — not by being
+invited. Distinguished from a paid Premium subscription by the grant date
+recorded against the waitlist signup (provenance only — it does not compute
+when phase 1 ends; that's the operator-declared beta-end event, not derived
+from this date); a user with no such date holds Premium for some other
+reason.
 
 ---
 

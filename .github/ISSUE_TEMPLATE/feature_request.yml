@@ -1,0 +1,31 @@
+name: Feature request
+description: Suggest something Kagelin should do that it doesn't today.
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: checkboxes
+    id: duplicate-check
+    attributes:
+      label: Check first
+      options:
+        - label: I searched existing issues and didn't find this already suggested.
+          required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the situation this would help with, not just the feature itself.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you want to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything you've tried as a workaround?
+    validations:
+      required: false

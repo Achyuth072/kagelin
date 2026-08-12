@@ -51,13 +51,15 @@ vi.mock("@/lib/hooks/useFocusSounds", () => ({
   useFocusSounds: vi.fn(() => ({ play: vi.fn() })),
 }));
 
-vi.mock("@/lib/hooks/usePushNotifications", () => ({
-  usePushNotifications: vi.fn(() => ({ showNotification: vi.fn() })),
+const { notifyMock, showNotificationMock } = vi.hoisted(() => ({
+  notifyMock: vi.fn(),
+  showNotificationMock: vi.fn(),
 }));
 
-// Use vi.hoisted() so notifyMock is available in vi.mock factory
-const { notifyMock } = vi.hoisted(() => ({
-  notifyMock: vi.fn(),
+vi.mock("@/lib/hooks/usePushNotifications", () => ({
+  usePushNotifications: vi.fn(() => ({
+    showNotification: showNotificationMock,
+  })),
 }));
 
 vi.mock("@/lib/notify", () => ({
@@ -256,5 +258,33 @@ describe("useFocusTimer - Reconciliation", () => {
     // client-side scheduling call left to make.
     expect(useTimerStore.getState().state.endsAt).toBe(baseTime + 1500 * 1000);
     expect(upsertTimerStateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("fires showNotification with data.url = /focus on completion when document is hidden", async () => {
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      value: true,
+    });
+
+    renderHook(() => useFocusTimer());
+
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("timer-complete", {
+          detail: {
+            prevState: { mode: "focus", endsAt: null },
+            nextState: { isRunning: false, mode: "shortBreak" },
+          },
+        }),
+      );
+    });
+
+    expect(showNotificationMock).toHaveBeenCalledWith(
+      "Focus Complete",
+      expect.objectContaining({
+        tag: "timer_end",
+        data: { url: "/focus" },
+      }),
+    );
   });
 });

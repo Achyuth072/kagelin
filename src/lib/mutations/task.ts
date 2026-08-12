@@ -3,6 +3,55 @@ import { mockStore } from "@/lib/mock/mock-store";
 import { calculateNextDueDate } from "@/lib/utils/recurrence";
 import type { Task, CreateTaskInput, UpdateTaskInput } from "@/lib/types/task";
 
+// A hard-deleted task is re-inserted rather than updated, so it needs its
+// full row shape rebuilt from the in-memory Task — shared by taskMutations
+// .restore for both the parent and its subtasks.
+function toRestorePayload(task: Task) {
+  return {
+    id: task.id,
+    user_id: task.user_id,
+    project_id: task.project_id,
+    parent_id: task.parent_id,
+    content: task.content,
+    description: task.description,
+    priority: task.priority,
+    due_date: task.due_date,
+    do_date: task.do_date,
+    is_evening: task.is_evening,
+    is_completed: task.is_completed,
+    completed_at: task.completed_at,
+    day_order: task.day_order,
+    recurrence: task.recurrence,
+    google_event_id: task.google_event_id,
+    google_etag: task.google_etag,
+  };
+}
+
+// Fields common to a duplicated row, shared by taskMutations.duplicate for
+// both the parent and every subtask, guest and Supabase alike. Recurrence
+// and series identity are always stripped — a pasted occurrence must never
+// rejoin its source series — and completion state resets since a duplicate
+// starts as fresh, uncompleted work. parentId is threaded through explicitly
+// since a subtask's copy must land under its *new* parent, not the source's.
+function toDuplicatePayload(task: Task, parentId: string | null) {
+  return {
+    content: task.content,
+    description: task.description || null,
+    priority: task.priority || 4,
+    due_date: task.due_date || null,
+    do_date: task.do_date || null,
+    is_evening: task.is_evening || false,
+    project_id: task.project_id || null,
+    parent_id: parentId,
+    recurrence: null,
+    recurring_series_id: null,
+    is_completed: false,
+    completed_at: null,
+    google_event_id: null,
+    google_etag: null,
+  };
+}
+
 export const taskMutations = {
   create: async (
     input: CreateTaskInput & { _clientId?: string },
@@ -332,19 +381,52 @@ export const taskMutations = {
     return data as Task;
   },
 
-  delete: async (id: string): Promise<void> => {
+  // Hard-deletes a task. tasks.parent_id cascades at the DB level, so any
+  // subtasks are destroyed along with it — fetched here first and returned
+  // so the caller can restore the whole subtree if the user hits Undo.
+  delete: async (id: string): Promise<Task[]> => {
     const isGuest =
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
 
     if (isGuest) {
+      // mockStore.deleteTask doesn't cascade, so subtasks aren't lost here —
+      // nothing to capture for restore.
       mockStore.deleteTask(id);
-      return;
+      return [];
     }
 
     const supabase = createClient();
+
+    const { data: subtasks, error: subtasksError } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("parent_id", id);
+    if (subtasksError) throw new Error(subtasksError.message);
+
     const { error } = await supabase.from("tasks").delete().eq("id", id);
     if (error) throw new Error(error.message);
+
+    return (subtasks as Task[]) ?? [];
+  },
+
+  // Re-inserts a hard-deleted task for useDeleteTask's Undo action, along
+  // with any subtasks the delete cascaded away. Parent goes first since
+  // subtasks' parent_id references it.
+  restore: async (task: Task, subtasks: Task[] = []): Promise<void> => {
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from("tasks")
+      .insert(toRestorePayload(task));
+    if (error) throw new Error(error.message);
+
+    if (subtasks.length > 0) {
+      const { error: subtasksError } = await supabase
+        .from("tasks")
+        .insert(subtasks.map(toRestorePayload));
+      if (subtasksError) throw new Error(subtasksError.message);
+    }
   },
 
   // Accepts pre-computed {id, day_order} pairs produced by the slot-value-swap
@@ -401,5 +483,101 @@ export const taskMutations = {
       .eq("is_completed", true);
 
     if (error) throw new Error(error.message);
+  },
+
+  duplicate: async (
+    sourceTask: Task,
+    overrides?: Partial<Task>,
+  ): Promise<Task> => {
+    const isGuest =
+      typeof window !== "undefined" &&
+      localStorage.getItem("kanso_guest_mode") === "true";
+
+    if (isGuest) {
+      const duplicatedTask = mockStore.addTask({
+        ...toDuplicatePayload(sourceTask, sourceTask.parent_id || null),
+        ...overrides,
+      });
+
+      const duplicateSubtasksRecursively = (
+        originalParentId: string,
+        newParentId: string,
+      ) => {
+        for (const subtask of mockStore.getSubtasks(originalParentId)) {
+          const newSubtask = mockStore.addTask(
+            toDuplicatePayload(subtask, newParentId),
+          );
+          duplicateSubtasksRecursively(subtask.id, newSubtask.id);
+        }
+      };
+
+      duplicateSubtasksRecursively(sourceTask.id, duplicatedTask.id);
+
+      return duplicatedTask;
+    }
+
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) throw new Error("Not authenticated");
+
+    const { data: lastTask } = await supabase
+      .from("tasks")
+      .select("day_order")
+      .eq("user_id", user.id)
+      .order("day_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextDayOrder = (lastTask?.day_order ?? -1) + 1;
+
+    const { data: duplicatedTask, error } = await supabase
+      .from("tasks")
+      .insert({
+        user_id: user.id,
+        ...toDuplicatePayload(sourceTask, sourceTask.parent_id || null),
+        ...overrides,
+        day_order: nextDayOrder,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    // Throws (rather than swallowing) on either a fetch or insert error, so
+    // a broken subtree surfaces as a failed paste instead of a silent
+    // partial copy reported to the user as a success.
+    const duplicateSubtasksRecursively = async (
+      originalParentId: string,
+      newParentId: string,
+    ) => {
+      const { data: subtasks, error: subtasksError } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("parent_id", originalParentId);
+
+      if (subtasksError) throw new Error(subtasksError.message);
+      if (!subtasks || subtasks.length === 0) return;
+
+      for (const subtask of subtasks) {
+        const { data: newSubtask, error: insertError } = await supabase
+          .from("tasks")
+          .insert({
+            user_id: user.id,
+            ...toDuplicatePayload(subtask, newParentId),
+            day_order: subtask.day_order ?? 0,
+          })
+          .select()
+          .single();
+
+        if (insertError) throw new Error(insertError.message);
+        await duplicateSubtasksRecursively(subtask.id, newSubtask.id);
+      }
+    };
+
+    await duplicateSubtasksRecursively(sourceTask.id, duplicatedTask.id);
+
+    return duplicatedTask as Task;
   },
 };

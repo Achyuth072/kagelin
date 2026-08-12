@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>You're Offline — Kagelin</title>
+    <style>
+      :root {
+        --background: #fcfcfa;
+        --foreground: #2e2e2e;
+        --muted: #f7f7f5;
+        --muted-foreground: #6e6e6e;
+        --border: #999999;
+        --primary: #2e2e2e;
+        --primary-foreground: #fff;
+        --secondary: transparent;
+        --secondary-foreground: #2e2e2e;
+        --brand: #4b6cb7;
+        --brand-foreground: #fff;
+      }
+
+      .dark {
+        --background: #1a1a1a;
+        --foreground: #e5e5e5;
+        --muted: #202020;
+        --muted-foreground: #a1a1a1;
+        --border: #575757;
+        --primary: #e5e5e5;
+        --primary-foreground: #1a1a1a;
+        --secondary: transparent;
+        --secondary-foreground: #e5e5e5;
+        --brand: #4b6cb7;
+        --brand-foreground: #fff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 1.5rem;
+        text-align: center;
+        background: var(--background);
+        color: var(--foreground);
+        font-family:
+          "Inter",
+          ui-sans-serif,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      .icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 4.5rem;
+        height: 4.5rem;
+        margin-bottom: 1.5rem;
+        border-radius: 9999px;
+        background: var(--muted);
+        color: var(--muted-foreground);
+      }
+
+      h1 {
+        margin: 0 0 0.5rem;
+        font-size: 2rem;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        line-height: 1.1;
+      }
+
+      p {
+        max-width: 24rem;
+        margin: 0 0 2rem;
+        font-size: 0.9375rem;
+        line-height: 1.5;
+        color: var(--muted-foreground);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        height: 2.25rem;
+        padding: 0 1.25rem;
+        border-radius: 0.625rem;
+        border: 1px solid transparent;
+        font-family: inherit;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        text-decoration: none;
+        cursor: pointer;
+        transition: opacity 0.15s cubic-bezier(0.1, 1, 0.2, 1);
+      }
+
+      .btn:hover {
+        opacity: 0.9;
+      }
+
+      .btn-primary {
+        background: var(--brand);
+        color: var(--brand-foreground);
+      }
+
+      .btn-secondary {
+        background: var(--secondary);
+        border-color: var(--border);
+        color: var(--secondary-foreground);
+      }
+
+      .footnote {
+        margin-top: 3rem;
+        margin-bottom: 0;
+        font-size: 0.6875rem;
+        letter-spacing: 0.02em;
+        color: var(--muted-foreground);
+      }
+    </style>
+    <script>
+      (function () {
+        var stored = null;
+        try {
+          stored = localStorage.getItem("theme");
+        } catch {}
+        var isDark =
+          stored === "dark" ||
+          (stored !== "light" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (isDark) document.documentElement.classList.add("dark");
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="icon">
+      <svg
+        width="28"
+        height="28"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <line x1="1" y1="1" x2="23" y2="23"></line>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path>
+        <path d="M10.71 5.05A16 16 0 0 1 22.58 9"></path>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+        <line x1="12" y1="20" x2="12.01" y2="20"></line>
+      </svg>
+    </div>
+
+    <h1>You're Offline</h1>
+    <p>
+      It looks like you've lost your internet connection. Kagelin is designed
+      to work offline, but this page hasn't been cached yet.
+    </p>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="window.location.reload()">
+        Try Again
+      </button>
+      <a class="btn btn-secondary" href="/">Go Home</a>
+    </div>
+
+    <p class="footnote">
+      Once you're back online, your changes will sync automatically.
+    </p>
+  </body>
+</html>

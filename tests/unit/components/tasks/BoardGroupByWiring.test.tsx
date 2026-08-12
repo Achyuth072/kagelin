@@ -64,6 +64,7 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
   useDeleteTask: vi.fn(() => ({ mutate: vi.fn() })),
   useToggleTask: vi.fn(() => ({ mutate: vi.fn() })),
   useCreateTask: vi.fn(() => ({ mutate: vi.fn() })),
+  useDuplicateTask: vi.fn(() => ({ mutate: vi.fn() })),
 }));
 
 vi.mock("@/lib/hooks/useTaskViewData", () => {
@@ -97,6 +98,13 @@ vi.mock("@/lib/hooks/useTaskViewData", () => {
       completed: [],
       groups: null,
     })),
+    getBoardColumns: vi.fn(
+      ({ groups, active, evening }: Record<string, unknown>) =>
+        groups ?? [
+          { title: "Tasks", tasks: active },
+          { title: "This Evening", tasks: evening },
+        ],
+    ),
   };
 });
 
@@ -109,15 +117,31 @@ vi.mock("@/components/TimerProvider", () => ({
 }));
 
 vi.mock("@/components/TaskActionsProvider", () => ({
-  useTaskActions: vi.fn(() => ({ openAddTask: vi.fn() })),
+  useTaskActions: vi.fn(() => ({ openAddTask: vi.fn(), isAddTaskOpen: false })),
 }));
 
-/**
- * TaskBoard has always accepted groupBy, but TaskList never passed it, so the
- * board silently ran on getTaskUpdatesForGroup's heuristic cascade — where a
- * project named "Today" is read as a date bucket. The util is covered in
- * task-dnd.test.ts; what regressed was the wiring, so that is what this asserts.
- */
+vi.mock("@/components/habits/HabitActionsProvider", () => ({
+  useHabitActions: () => ({ openAddHabit: vi.fn(), isHabitSheetOpen: false }),
+}));
+
+vi.mock("@/components/ProjectActionsProvider", () => ({
+  useProjectActions: () => ({
+    openCreateProject: vi.fn(),
+    isCreateProjectOpen: false,
+  }),
+}));
+
+vi.mock("@/lib/calendar/store", () => ({
+  useCalendarStore: () => ({
+    openCreateEvent: vi.fn(),
+    isCreateEventOpen: false,
+  }),
+}));
+
+// Regression guard: TaskList once forgot to pass groupBy to TaskBoard, so the
+// board fell back to getTaskUpdatesForGroup's heuristic cascade — a project
+// named "Today" read as a date bucket. task-dnd.test.ts covers the util;
+// this asserts the wiring.
 describe("TaskList -> TaskBoard groupBy wiring", () => {
   beforeEach(() => {
     boardProps.mockClear();

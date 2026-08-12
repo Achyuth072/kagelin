@@ -10,12 +10,32 @@ import {
 import { Keyboard } from "lucide-react";
 import { getPlatformKey } from "@/lib/utils/platform";
 
-interface ShortcutGroup {
-  title: string;
-  shortcuts: { keys: string[]; description: string }[];
+interface Shortcut {
+  keys: string[];
+  description: string;
+  // How the keys combine. Omit for a chord (press together, e.g. ⌘+B).
+  // "alt": either key works (e.g. j/↓). "sequence": pressed one after another (e.g. g g).
+  keyRelation?: "alt" | "sequence";
 }
 
-const getShortcuts = (platformKey: string): ShortcutGroup[] => [
+interface ShortcutGroup {
+  title: string;
+  shortcuts: Shortcut[];
+}
+
+const keyConnector: Record<
+  NonNullable<Shortcut["keyRelation"]> | "chord",
+  string | null
+> = {
+  chord: "+",
+  alt: "/",
+  sequence: null,
+};
+
+const getShortcuts = (
+  platformKey: string,
+  isBoardViewOnTasks: boolean,
+): ShortcutGroup[] => [
   {
     title: "Navigation",
     shortcuts: [
@@ -33,7 +53,12 @@ const getShortcuts = (platformKey: string): ShortcutGroup[] => [
     title: "Actions",
     shortcuts: [
       { keys: ["n"], description: "New Task" },
-      { keys: ["h"], description: "Create Habit" },
+      // h is claimed by board-view horizontal navigation on the tasks page,
+      // so New Habit doesn't bind there — see
+      // .scratch/vim-keyboard-navigation/issues/01-board-view-2d-navigation.md.
+      ...(isBoardViewOnTasks
+        ? []
+        : [{ keys: ["h"], description: "Create Habit" }]),
       { keys: ["e"], description: "New Event" },
       { keys: ["p"], description: "New Project" },
       { keys: ["a"], description: "Archived Projects" },
@@ -55,11 +80,51 @@ const getShortcuts = (platformKey: string): ShortcutGroup[] => [
   {
     title: "Task List (Vim)",
     shortcuts: [
-      { keys: ["j"], description: "Select Next Task" },
-      { keys: ["k"], description: "Select Previous Task" },
-      { keys: ["d"], description: "Delete Selected" },
-      { keys: ["e"], description: "Edit Selected" },
-      { keys: ["Space"], description: "Toggle Completion" },
+      { keys: ["j", "↓"], description: "Select Next Task", keyRelation: "alt" },
+      {
+        keys: ["k", "↑"],
+        description: "Select Previous Task",
+        keyRelation: "alt",
+      },
+      {
+        keys: ["h", "←"],
+        description: "Select Column Left (Board)",
+        keyRelation: "alt",
+      },
+      {
+        keys: ["l", "→"],
+        description: "Select Column Right (Board)",
+        keyRelation: "alt",
+      },
+      {
+        keys: ["g", "g"],
+        description: "Jump to First Task",
+        keyRelation: "sequence",
+      },
+      { keys: ["G"], description: "Jump to Last Task" },
+      {
+        keys: ["Enter", "o"],
+        description: "Open Selected",
+        keyRelation: "alt",
+      },
+      {
+        keys: ["Space", "x"],
+        description: "Toggle Completion",
+        keyRelation: "alt",
+      },
+      {
+        keys: ["d", "Backspace"],
+        description: "Delete Selected",
+        keyRelation: "alt",
+      },
+      { keys: ["u"], description: "Undo" },
+      {
+        keys: ["y", "y"],
+        description: "Yank Selected Task",
+        keyRelation: "sequence",
+      },
+      { keys: ["p"], description: "Paste Yanked Task" },
+      { keys: ["Esc"], description: "Clear Selection" },
     ],
   },
 ];
@@ -67,11 +132,16 @@ const getShortcuts = (platformKey: string): ShortcutGroup[] => [
 interface ShortcutsHelpProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  isBoardViewOnTasks?: boolean;
 }
 
-export function ShortcutsHelp({ open, onOpenChange }: ShortcutsHelpProps) {
+export function ShortcutsHelp({
+  open,
+  onOpenChange,
+  isBoardViewOnTasks = false,
+}: ShortcutsHelpProps) {
   const platformKey = getPlatformKey();
-  const shortcuts = getShortcuts(platformKey);
+  const shortcuts = getShortcuts(platformKey, isBoardViewOnTasks);
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
@@ -102,14 +172,21 @@ export function ShortcutsHelp({ open, onOpenChange }: ShortcutsHelpProps) {
                       <span className="text-foreground/90 font-medium">
                         {shortcut.description}
                       </span>
-                      <div className="flex items-center gap-2.5">
-                        {shortcut.keys.map((key) => (
-                          <kbd
-                            key={key}
-                            className="pointer-events-none h-6.5 min-w-[28px] select-none items-center justify-center rounded border border-border bg-sidebar px-2 font-mono text-[12px] font-medium text-foreground shadow-none flex"
-                          >
-                            {key}
-                          </kbd>
+                      <div className="flex items-center gap-1.5">
+                        {shortcut.keys.map((key, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            {i > 0 && (
+                              <span
+                                aria-hidden="true"
+                                className="text-[11px] font-normal tracking-[0.02em] text-muted-foreground/50"
+                              >
+                                {keyConnector[shortcut.keyRelation ?? "chord"]}
+                              </span>
+                            )}
+                            <kbd className="pointer-events-none h-6.5 min-w-[28px] select-none items-center justify-center rounded border border-border bg-sidebar px-2 font-mono text-[13px] font-medium tracking-[0.01em] text-foreground shadow-none flex">
+                              {key}
+                            </kbd>
+                          </div>
                         ))}
                       </div>
                     </div>

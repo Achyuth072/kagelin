@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { useDeleteTask, useToggleTask } from "@/lib/hooks/useTaskMutations";
@@ -56,6 +56,7 @@ function TaskItemBase({
   triggerHaptic,
   setActiveTaskId,
 }: TaskItemProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
   const [_isChecking, setIsChecking] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(false);
@@ -67,6 +68,15 @@ function TaskItemBase({
   const deleteMutation = useDeleteTask();
   const toggleMutation = useToggleTask();
   const router = useRouter();
+
+  useEffect(() => {
+    if (isKeyboardSelected && cardRef.current) {
+      cardRef.current.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
+  }, [isKeyboardSelected]);
 
   const handlePlayFocus = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -111,13 +121,11 @@ function TaskItemBase({
     setIsExpanded(!isExpanded);
   };
 
-  const contentClassName = cn(
-    "relative flex group items-center cursor-pointer",
-    isKeyboardSelected && "ring-2 ring-primary bg-secondary/40 z-10 rounded-xl",
-  );
+  const contentClassName = "relative flex group items-center cursor-pointer";
 
   return (
     <div
+      ref={cardRef}
       className={cn(
         "group/item",
         isDesktop && isExpanded && "pb-4",
@@ -133,6 +141,7 @@ function TaskItemBase({
           handlePlayFocus={handlePlayFocus}
           onClick={() => onSelect?.(task)}
           shouldAnimate={shouldAnimate}
+          isKeyboardSelected={isKeyboardSelected}
         />
       ) : isDesktop ? (
         /* Desktop fast path: no Framer Motion wrapper, which thrashed
@@ -161,6 +170,7 @@ function TaskItemBase({
             onHandlePointerUp={() => setIsHandleActive(false)}
             dragActivatorRef={dragActivatorRef}
             shouldAnimate={shouldAnimate}
+            isKeyboardSelected={isKeyboardSelected}
           />
         </div>
       ) : (
@@ -208,6 +218,7 @@ function TaskItemBase({
             onHandlePointerUp={() => setIsHandleActive(false)}
             dragActivatorRef={dragActivatorRef}
             shouldAnimate={shouldAnimate}
+            isKeyboardSelected={isKeyboardSelected}
           />
         </SwipeableTaskContent>
       )}

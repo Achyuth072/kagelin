@@ -48,6 +48,21 @@ test("focus page opened cold (as notification click would) falls back in-app ins
   expect(urlAfterBack.replace("http://localhost:3000", "")).toBe("/");
 });
 
+test("notification click opening /?redirect=/focus navigates forward to /focus and back button returns to root", async ({
+  page,
+}) => {
+  await seedGuestMode(page, "http://localhost:3000/?redirect=/focus");
+  assertNotRedirectedToLogin(page);
+
+  await page.waitForURL(/\/focus/, { timeout: 10000 });
+  await clickBackButton(page);
+  await page.waitForURL("http://localhost:3000/", { timeout: 10000 });
+
+  const urlAfterBack = page.url();
+  expect(urlAfterBack).not.toBe("about:blank");
+  expect(urlAfterBack.replace("http://localhost:3000", "")).toBe("/");
+});
+
 // Regression: page.goBack() drives the real history stack via popstate,
 // bypassing useAnchoredBack's button gate — exercises OS/gesture back once the
 // anchor has settled, which seedGuestMode already waits for.

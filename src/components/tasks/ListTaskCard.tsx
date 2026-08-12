@@ -10,6 +10,7 @@ import {
   priorityCheckboxClasses,
   formatDueDate,
   isOverdue,
+  taskDomId,
 } from "./task-utils";
 import {
   DraggableAttributes,
@@ -33,6 +34,7 @@ interface ListTaskCardProps {
   onHandlePointerUp?: () => void;
   dragActivatorRef?: (element: HTMLElement | null) => void;
   shouldAnimate?: boolean;
+  isKeyboardSelected?: boolean;
 }
 
 export function ListTaskCard({
@@ -50,11 +52,17 @@ export function ListTaskCard({
   onHandlePointerUp,
   dragActivatorRef,
   shouldAnimate = false,
+  isKeyboardSelected = false,
 }: ListTaskCardProps) {
   return (
     <div
+      id={taskDomId(task.id)}
+      role="option"
+      aria-selected={isKeyboardSelected}
       className={cn(
         "flex items-center w-full gap-2 md:gap-3 group relative bg-background border-b border-border/10 hover:bg-secondary/15 transition-all px-4 py-3 touch-manipulation",
+        isKeyboardSelected &&
+          "ring-2 ring-primary ring-inset bg-secondary/40 z-10 rounded-xl",
       )}
       data-task-row
       data-testid="task-list-row"

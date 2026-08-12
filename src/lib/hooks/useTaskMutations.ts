@@ -5,7 +5,6 @@ import {
   useQueryClient,
   QueryClient,
 } from "@tanstack/react-query";
-import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import type { Task, CreateTaskInput } from "@/lib/types/task";
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -14,6 +13,12 @@ import { notify } from "@/lib/notify";
 
 import { taskMutations } from "@/lib/mutations/task";
 import { mockStore } from "@/lib/mock/mock-store";
+import { useUiStore } from "@/lib/store/uiStore";
+
+// Matches the Undo toast's duration below — once the toast is gone, the
+// keyboard `u` shortcut shouldn't be able to resurrect a task the user has
+// no visible way to associate with an undo action anymore.
+const UNDO_TOAST_DURATION_MS = 5000;
 
 function invalidateTaskCaches(queryClient: QueryClient): void {
   void Promise.all([
@@ -188,7 +193,6 @@ export function useDeleteTask() {
   const queryClient = useQueryClient();
   const { trigger } = useHaptic();
   const { isGuestMode } = useAuth();
-  const supabase = createClient();
 
   return useMutation({
     mutationKey: ["deleteTask"],
@@ -217,64 +221,83 @@ export function useDeleteTask() {
         );
       }
 
-      if (deletedTask) {
-        const taskToRestore = { ...deletedTask };
-
-        trigger("success");
-
-        // Task content is unbounded user text, so it's dropped rather than
-        // folded into the title like other toasts (see ADR 0008).
-        notify("Task deleted", {
-          duration: 5000,
-          action: {
-            label: "Undo",
-            onClick: async () => {
-              if (isGuestMode) {
-                mockStore.addTask(taskToRestore);
-                queryClient.invalidateQueries({ queryKey: ["tasks"] });
-                trigger("success");
-                notify("Task restored");
-                return;
-              }
-
-              // Task was hard-deleted, so undo re-inserts rather than updates.
-              const { error } = await supabase.from("tasks").insert({
-                id: taskToRestore.id,
-                user_id: taskToRestore.user_id,
-                project_id: taskToRestore.project_id,
-                parent_id: taskToRestore.parent_id,
-                content: taskToRestore.content,
-                description: taskToRestore.description,
-                priority: taskToRestore.priority,
-                due_date: taskToRestore.due_date,
-                do_date: taskToRestore.do_date,
-                is_evening: taskToRestore.is_evening,
-                is_completed: taskToRestore.is_completed,
-                completed_at: taskToRestore.completed_at,
-                day_order: taskToRestore.day_order,
-                recurrence: taskToRestore.recurrence,
-                google_event_id: taskToRestore.google_event_id,
-                google_etag: taskToRestore.google_etag,
-              });
-
-              if (error) {
-                console.error("Failed to restore task:", error);
-                trigger("thud");
-                notify.error("Failed to restore task");
-              } else {
-                trigger("success");
-                notify("Task restored");
-              }
-              queryClient.invalidateQueries({ queryKey: ["tasks"] });
-            },
-          },
-        });
+      // Deleting the parent cascades at the DB level, so any subtasks list
+      // currently on screen for it goes stale the instant the delete lands —
+      // clear it optimistically rather than leaving orphaned rows visible.
+      for (const [queryKey] of queryClient.getQueriesData<Task[]>({
+        queryKey: ["subtasks", id],
+      })) {
+        queryClient.setQueryData<Task[]>(queryKey, []);
       }
 
       return { deletedTask };
     },
-    onError: (err, _id, _context) => {
+    // Fires after the delete (and its cascade) is confirmed, using the
+    // subtasks taskMutations.delete fetched before removing them — not the
+    // cache from onMutate, which may be empty if the subtask list was never
+    // opened. Waiting for confirmation also avoids offering an "Undo" for a
+    // delete that never actually happened.
+    onSuccess: (deletedSubtasks, _id, context) => {
+      const deletedTask = context?.deletedTask;
+      if (!deletedTask) return;
+
+      const taskToRestore = { ...deletedTask };
+      const subtasksToRestore = deletedSubtasks;
+
+      trigger("success");
+
+      const undoAction = async () => {
+        useUiStore.getState().setLastUndoAction(null);
+        if (isGuestMode) {
+          mockStore.addTask(taskToRestore);
+          queryClient.invalidateQueries({ queryKey: ["tasks"] });
+          trigger("success");
+          notify("Task restored");
+          return;
+        }
+
+        // Task was hard-deleted, so undo re-inserts rather than updates —
+        // parent first, then any subtasks the delete cascaded away.
+        try {
+          await taskMutations.restore(taskToRestore, subtasksToRestore);
+          trigger("success");
+          notify("Task restored");
+        } catch (err) {
+          console.error("Failed to restore task:", err);
+          trigger("thud");
+          notify.error("Failed to restore task");
+        }
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        queryClient.invalidateQueries({
+          queryKey: ["subtasks", taskToRestore.id],
+        });
+      };
+
+      useUiStore.getState().setLastUndoAction(undoAction);
+      // Expire the keyboard undo binding alongside the toast. Guarded by
+      // reference equality so it's a no-op if undoAction already ran (which
+      // clears lastUndoAction itself) or a later delete replaced it.
+      setTimeout(() => {
+        if (useUiStore.getState().lastUndoAction === undoAction) {
+          useUiStore.getState().setLastUndoAction(null);
+        }
+      }, UNDO_TOAST_DURATION_MS);
+
+      // Task content is unbounded user text, so it's dropped rather than
+      // folded into the title like other toasts (see ADR 0008).
+      notify("Task deleted", {
+        duration: UNDO_TOAST_DURATION_MS,
+        action: {
+          label: "Undo",
+          onClick: undoAction,
+        },
+      });
+    },
+    onError: (err, id, _context) => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      // Undoes the optimistic subtasks-cache clear from onMutate — the
+      // delete never landed, so the subtree is still there.
+      queryClient.invalidateQueries({ queryKey: ["subtasks", id] });
       handleMutationError(err);
     },
     onSettled: () => {
@@ -302,10 +325,9 @@ export function useReorderTasks() {
         queryClient.setQueryData<Task[]>(queryKey, (old) => {
           if (!old) return old;
 
-          // Pairs come from computeMoveOrders (reorder.ts / task-dnd.ts) with each
-          // task's final day_order already computed — just apply in place.
-          // Consumers sort by day_order themselves (e.g. useTaskViewData), so the
-          // cache array doesn't need reshuffling.
+          // Pairs already carry each task's final day_order (computeMoveOrders in
+          // reorder.ts / task-dnd.ts) — apply in place. Consumers (e.g.
+          // useTaskViewData) sort by day_order themselves, so no reshuffling here.
           return old.map((task) => {
             const newOrder = pairById.get(task.id);
             return newOrder === undefined || task.day_order === newOrder
@@ -369,6 +391,37 @@ export function useClearCompletedTasks() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
+    },
+  });
+}
+
+export function useDuplicateTask() {
+  const queryClient = useQueryClient();
+  const { trigger } = useHaptic();
+
+  return useMutation({
+    mutationKey: ["duplicateTask"],
+    mutationFn: ({
+      sourceTask,
+      overrides,
+    }: {
+      sourceTask: Task;
+      overrides?: Partial<Task>;
+    }) => taskMutations.duplicate(sourceTask, overrides),
+    onSuccess: (newTask) => {
+      trigger("success");
+      notify("Task duplicated");
+      if (newTask.parent_id) {
+        queryClient.invalidateQueries({
+          queryKey: ["subtasks", newTask.parent_id],
+        });
+      }
+    },
+    onError: (err) => {
+      handleMutationError(err);
+    },
+    onSettled: () => {
+      invalidateTaskCaches(queryClient);
     },
   });
 }
