@@ -11,6 +11,7 @@ import { PasswordAuth } from "@/components/auth/PasswordAuth";
 import { ResetPasswordAuth } from "@/components/auth/ResetPasswordAuth";
 import { OAuthProviderRow } from "@/components/auth/OAuthProviderRow";
 import { slideUp } from "@/lib/motion";
+import { REPO_URL, PRIVACY_URL, TERMS_URL } from "@/lib/links";
 
 export type AuthMode = "sign-in" | "sign-up";
 
@@ -159,7 +160,7 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
             <p className="text-[11px] leading-relaxed text-muted-foreground">
               By continuing, you agree to our{" "}
               <a
-                href="https://www.kagelin.app/terms"
+                href={TERMS_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline underline-offset-2 hover:text-foreground"
@@ -168,14 +169,24 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
               </a>{" "}
               and{" "}
               <a
-                href="https://www.kagelin.app/privacy"
+                href={PRIVACY_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline underline-offset-2 hover:text-foreground"
               >
                 Privacy Policy
               </a>
-              . Guest data is stored locally and will be lost if cleared.
+              . Guest data is stored locally and will be lost if cleared.{" "}
+              Kagelin is open source —{" "}
+              <a
+                href={REPO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                view the source
+              </a>
+              .
             </p>
           </div>
         </motion.div>

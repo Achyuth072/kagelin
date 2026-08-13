@@ -40,7 +40,9 @@ import { AccountSection } from "@/components/settings/AccountSection";
 import { useAccountData } from "@/lib/hooks/useAccountData";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChangelogPopup } from "@/components/ui/ChangelogPopup";
-import { Sparkles } from "lucide-react";
+import { AboutSheet } from "@/components/settings/AboutSheet";
+import { PreviewBadge } from "@/components/ui/PreviewBadge";
+import { Info } from "lucide-react";
 
 const SignOutConfirmation = dynamic(
   () =>
@@ -57,8 +59,7 @@ const DESKTOP_SECTION_TAB_TRIGGER_CLASS = cn(
   "w-full justify-start text-left px-3.5",
 );
 
-// Sections that read as a single column share one cap; the Preferences
-// grid intentionally spans the full main width instead.
+// Preferences intentionally spans full width instead of this cap.
 const SECTION_MAX_WIDTH = "max-w-5xl";
 
 interface SettingsClientProps {
@@ -83,6 +84,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "appearance" | "preferences" | "account"
   >(() => {
@@ -96,7 +98,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const { trigger } = useHaptic();
   const { clearCloudData } = useAccountData();
 
-  // Prevent flash during sign-out remount
+  // user goes null before the redirect to /login lands; avoids a flash.
   if (!user) {
     return <LoaderOverlay message="Signing out..." />;
   }
@@ -527,7 +529,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
                 type="button"
                 onClick={() => {
                   trigger("toggle");
-                  setIsChangelogOpen(true);
+                  setIsAboutOpen(true);
                 }}
                 className="group mx-auto flex flex-col items-center gap-2 transition-seijaku-fast"
               >
@@ -535,15 +537,11 @@ export function SettingsClient({ version }: SettingsClientProps) {
                   <span className="type-micro text-muted-foreground/80 group-hover:text-foreground transition-colors">
                     Kagelin • v{version}
                   </span>
-                  {version.includes("preview") && (
-                    <span className="px-1.5 py-0.5 rounded-[3px] bg-brand/10 text-brand text-[9px] font-bold uppercase tracking-[0.08em] border border-brand/20 leading-none">
-                      Preview
-                    </span>
-                  )}
+                  <PreviewBadge version={version} />
                 </div>
                 <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors tracking-[0.04em] uppercase font-medium">
-                  <Sparkles className="h-2.5 w-2.5" />
-                  What&apos;s New
+                  <Info className="h-2.5 w-2.5" />
+                  About
                 </span>
               </button>
             </div>
@@ -568,6 +566,17 @@ export function SettingsClient({ version }: SettingsClientProps) {
         onOpenChange={setIsChangelogOpen}
       />
 
+      <AboutSheet
+        open={isAboutOpen}
+        onOpenChange={setIsAboutOpen}
+        version={version}
+        onOpenChangelog={() => {
+          // Nested Radix dialogs are janky — hand off instead of stacking.
+          setIsAboutOpen(false);
+          setIsChangelogOpen(true);
+        }}
+      />
+
       {isSigningOut && <LoaderOverlay message="Signing out..." />}
     </>
   );
@@ -579,14 +588,13 @@ interface GoalFieldProps {
   onCommit: (value: number | null) => void;
 }
 
-/** Local draft text so keystrokes don't hit the store; commits on blur. */
+/** Local draft; commits to the store on blur. */
 function GoalField({ label, value, onCommit }: GoalFieldProps) {
   const [text, setText] = useState(value != null ? String(value) : "");
   const [prevValue, setPrevValue] = useState(value);
 
-  // Resync the draft when the store value changes externally (e.g. reset
-  // demo data) — adjusted during render per React's "don't setState in an
-  // effect for derived state" guidance, not via useEffect.
+  // Resync on external store changes (e.g. demo reset), during render per
+  // React's derived-state guidance rather than useEffect.
   if (value !== prevValue) {
     setPrevValue(value);
     setText(value != null ? String(value) : "");
