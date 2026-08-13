@@ -172,7 +172,7 @@ export function AccountSection() {
             Manage single sign-in providers connected to your account.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3 px-4 pb-5 pt-0">
+        <CardContent className="px-4 pb-3 pt-0">
           {SIGNIN_OAUTH_PROVIDERS.map((provider) => {
             const Icon = PROVIDER_ICONS[provider.id];
             const identity = identities.find(
@@ -183,12 +183,10 @@ export function AccountSection() {
             return (
               <div
                 key={provider.id}
-                className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-background/30"
+                className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-md bg-secondary/30">
-                    <Icon className="h-4 w-4" />
-                  </div>
+                  <Icon className="h-5 w-5 text-foreground/70" />
                   <div>
                     <p className="text-sm font-medium">{provider.label}</p>
                     <p className="text-xs text-muted-foreground">
@@ -208,7 +206,7 @@ export function AccountSection() {
                     }
                     aria-label={`Disconnect ${provider.label}`}
                     className={cn(
-                      "h-8 gap-1.5 text-xs font-medium border-border/50",
+                      "h-11 sm:h-8 gap-1.5 text-xs font-medium border-border/50",
                       isLastIdentity && "opacity-50 cursor-not-allowed",
                     )}
                   >
@@ -232,7 +230,7 @@ export function AccountSection() {
                     disabled={loadingProvider === provider.id}
                     onClick={() => handleConnect(provider.id, provider.label)}
                     aria-label={`Connect ${provider.label}`}
-                    className="h-8 gap-1.5 text-xs font-medium border-border/50 hover:bg-secondary/40"
+                    className="h-11 sm:h-8 gap-1.5 text-xs font-medium border-border/50 hover:bg-secondary/40"
                   >
                     {loadingProvider === provider.id ? (
                       <>
@@ -281,7 +279,7 @@ export function AccountSection() {
                   id="account-password-input"
                   type="password"
                   placeholder="••••••••"
-                  className="pl-9 h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all text-sm"
+                  className="pl-9 h-11 sm:h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all text-base sm:text-sm"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={passwordSubmitting}
@@ -306,7 +304,7 @@ export function AccountSection() {
             <Button
               type="submit"
               disabled={passwordSubmitting || !password || passwordTooShort}
-              className="h-9 px-4 text-xs font-semibold bg-brand hover:bg-brand/90 text-brand-foreground transition-all"
+              className="h-11 sm:h-9 px-4 text-xs font-semibold bg-brand hover:bg-brand/90 text-brand-foreground transition-all"
             >
               {passwordSubmitting ? (
                 <>
