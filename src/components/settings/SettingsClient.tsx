@@ -516,7 +516,12 @@ export function SettingsClient({ version }: SettingsClientProps) {
               </section>
             )}
 
-            <div className="pt-16 pb-12 transition-all duration-300">
+            <div
+              className={cn(
+                "pt-16 pb-12 transition-all duration-300",
+                SECTION_MAX_WIDTH,
+              )}
+            >
               <div className="border-t border-border/40 w-16 mx-auto mb-8 opacity-50" />
               <button
                 type="button"
