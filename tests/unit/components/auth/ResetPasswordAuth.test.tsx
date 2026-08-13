@@ -4,6 +4,7 @@ import {
   fireEvent,
   waitFor,
   act,
+  cleanup,
 } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useAuth } from "@/components/AuthProvider";
@@ -77,6 +78,7 @@ describe("ResetPasswordAuth", () => {
   });
 
   afterEach(() => {
+    cleanup();
     if (originalSiteKey === undefined) {
       delete process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
     } else {

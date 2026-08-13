@@ -9,7 +9,12 @@ import {
 } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { OAuthProviderId } from "@/lib/auth/providers";
-import type { User, Session, AuthError } from "@supabase/supabase-js";
+import type {
+  User,
+  Session,
+  AuthError,
+  UserIdentity,
+} from "@supabase/supabase-js";
 
 type AuthContextType = {
   user: User | null;
@@ -36,6 +41,12 @@ type AuthContextType = {
     captchaToken: string,
   ) => Promise<{ error: AuthError | null }>;
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
+  linkIdentity: (
+    provider: OAuthProviderId,
+  ) => Promise<{ error: AuthError | null }>;
+  unlinkIdentity: (
+    identity: UserIdentity,
+  ) => Promise<{ error: AuthError | null }>;
   signInAsGuest: () => void;
   signOut: () => Promise<void>;
 };
@@ -199,6 +210,36 @@ export function AuthProvider({
     [supabase.auth],
   );
 
+  const linkIdentity = useCallback(
+    async (provider: OAuthProviderId) => {
+      const { error } = await supabase.auth.linkIdentity({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/settings?tab=account")}`,
+        },
+      });
+      return { error };
+    },
+    [supabase.auth],
+  );
+
+  const unlinkIdentity = useCallback(
+    async (identity: UserIdentity) => {
+      const { error } = await supabase.auth.unlinkIdentity(identity);
+      if (!error) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          setSession(session);
+          setUser(session.user);
+        }
+      }
+      return { error };
+    },
+    [supabase.auth],
+  );
+
   const signInAsGuest = useCallback(() => {
     setGuestFlag();
     setUser(makeGuestUser());
@@ -228,6 +269,8 @@ export function AuthProvider({
         signInWithPassword,
         resetPasswordForEmail,
         updatePassword,
+        linkIdentity,
+        unlinkIdentity,
         signInAsGuest,
         signOut,
       }}

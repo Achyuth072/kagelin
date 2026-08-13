@@ -103,6 +103,8 @@ describe("useMigrationStrategy", () => {
       signInWithPassword: vi.fn(),
       resetPasswordForEmail: vi.fn(),
       updatePassword: vi.fn(),
+      linkIdentity: vi.fn(),
+      unlinkIdentity: vi.fn(),
     });
 
     setupMockSequence([
@@ -146,6 +148,8 @@ describe("useMigrationStrategy", () => {
       signInWithPassword: vi.fn(),
       resetPasswordForEmail: vi.fn(),
       updatePassword: vi.fn(),
+      linkIdentity: vi.fn(),
+      unlinkIdentity: vi.fn(),
     });
 
     setupMockSequence([
@@ -206,6 +210,8 @@ describe("useMigrationStrategy", () => {
       signInWithPassword: vi.fn(),
       resetPasswordForEmail: vi.fn(),
       updatePassword: vi.fn(),
+      linkIdentity: vi.fn(),
+      unlinkIdentity: vi.fn(),
     });
 
     setupMockSequence([

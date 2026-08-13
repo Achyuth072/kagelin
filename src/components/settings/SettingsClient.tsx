@@ -36,6 +36,7 @@ import { notify } from "@/lib/notify";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
 import { BackupSyncSettings } from "@/components/settings/BackupSyncSettings";
+import { AccountSection } from "@/components/settings/AccountSection";
 import { useAccountData } from "@/lib/hooks/useAccountData";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChangelogPopup } from "@/components/ui/ChangelogPopup";
@@ -470,6 +471,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
                       </div>
                     </div>
                   </div>
+
+                  {!isGuestMode && <AccountSection />}
 
                   <BackupSyncSettings />
 

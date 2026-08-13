@@ -26,6 +26,8 @@ function mockSupabase(session: Session | null) {
       signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
       resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
       updateUser: vi.fn().mockResolvedValue({ error: null }),
+      linkIdentity: vi.fn().mockResolvedValue({ error: null }),
+      unlinkIdentity: vi.fn().mockResolvedValue({ error: null }),
       signOut: vi.fn(),
     },
   };
@@ -251,5 +253,54 @@ describe("AuthProvider", () => {
     await result.current.signOut();
 
     expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes provider and redirect target to supabase.auth.linkIdentity", async () => {
+    const supabase = mockSupabase(mockSession);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.linkIdentity("github");
+
+    expect(supabase.auth.linkIdentity).toHaveBeenCalledWith({
+      provider: "github",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/settings?tab=account")}`,
+      },
+    });
+  });
+
+  it("passes identity to supabase.auth.unlinkIdentity", async () => {
+    const supabase = mockSupabase(mockSession);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    const identity = {
+      identity_id: "id-123",
+      id: "id-123",
+      user_id: "real-user-id",
+      provider: "github",
+    };
+    await result.current.unlinkIdentity(identity);
+
+    expect(supabase.auth.unlinkIdentity).toHaveBeenCalledWith(identity);
   });
 });

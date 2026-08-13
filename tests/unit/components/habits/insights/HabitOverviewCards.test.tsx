@@ -53,11 +53,8 @@ describe("HabitOverviewCards", () => {
   });
 
   it("shows non-zero score with entries", () => {
-    const entries = [
-      entry("2026-06-08", 1),
-      entry("2026-06-09", 1),
-      entry("2026-06-10", 1),
-    ];
+    const todayStr = new Date().toISOString().split("T")[0];
+    const entries = [entry(todayStr, 1)];
     render(<HabitOverviewCards habit={dailyHabit} entries={entries} />);
 
     // Score should be > 0%
