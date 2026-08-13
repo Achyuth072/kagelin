@@ -1,5 +1,30 @@
 [
   {
+    "version": "1.31.0-preview.0",
+    "date": "2026-08-13",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Broaden handle_new_user display_name fallback to include OAuth metadata",
+        "Implement settings account section for provider management and password setup",
+        "Add forgot-password reset flow and new-password route",
+        "Warn on breached passwords via HIBP range API on sign-up",
+        "Add password sign-up/sign-in with existing-email collision screen",
+        "Replace logo with image and update terms/privacy policy links in AuthPage",
+        "Rebuild login/signup page with OAuth row and mode toggle",
+        "Grant Premium to the founding waitlist cohort on email confirmation"
+      ],
+      "Improved": [
+        "Collapse signInWithGoogle into signInWithOAuth(provider)"
+      ],
+      "Fixed": [
+        "Apply Icon-Led Row pattern and mobile touch targets to Account section",
+        "Align identity linking error message",
+        "Keep Turnstile widget inside auth card on mobile viewports"
+      ]
+    }
+  },
+  {
     "version": "1.30.0",
     "date": "2026-08-12",
     "channel": "stable",
@@ -810,16 +835,6 @@
         "Focus timer no longer completes early or loses a session after a network blip or app restart",
         "Manage Calendars dialog no longer leaves another menu open behind it",
         "Confirmation dialogs now appear above other overlays correctly"
-      ]
-    }
-  },
-  {
-    "version": "1.22.0-preview.7",
-    "date": "2026-06-10",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "fall back to request origin for calendar OAuth redirect"
       ]
     }
   }
