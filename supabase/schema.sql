@@ -173,7 +173,15 @@ RETURNS TRIGGER AS $$
 BEGIN
   -- Create profile (use ON CONFLICT to avoid duplicates)
   INSERT INTO public.profiles (id, display_name)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email))
+  VALUES (
+    NEW.id,
+    COALESCE(
+      NEW.raw_user_meta_data->>'full_name',
+      NEW.raw_user_meta_data->>'name',
+      NEW.raw_user_meta_data->>'username',
+      NEW.email
+    )
+  )
   ON CONFLICT (id) DO NOTHING;
 
   -- Create default Inbox project (only if not exists)
