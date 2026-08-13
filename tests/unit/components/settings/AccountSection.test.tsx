@@ -56,7 +56,16 @@ describe("AccountSection", () => {
       message: "Identity is already linked",
     };
     expect(formatLinkError(err, "GitHub")).toBe(
-      "That GitHub account is already signed in to a different Kagelin account.",
+      "That GitHub account is already linked to a different Kagelin account.",
+    );
+  });
+
+  it("formatLinkError formats URL error strings and default labels", () => {
+    expect(formatLinkError("Identity is already claimed")).toBe(
+      "That social account is already linked to a different Kagelin account.",
+    );
+    expect(formatLinkError("Custom error message")).toBe(
+      "Custom error message",
     );
   });
 
@@ -180,7 +189,7 @@ describe("AccountSection", () => {
       expect(mockLinkIdentity).toHaveBeenCalledWith("github");
       expect(
         screen.getByText(
-          "That GitHub account is already signed in to a different Kagelin account.",
+          "That GitHub account is already linked to a different Kagelin account.",
         ),
       ).toBeInTheDocument();
     });

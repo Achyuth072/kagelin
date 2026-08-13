@@ -36,7 +36,7 @@ built and one is refused:
 **Order matters, and the failure is silent.** Manual linking only works while
 the Identity is unclaimed. Sign in with GitHub once before linking it, and a
 second Account already exists — "Connect GitHub" then fails with
-identity-already-exists. The Settings error must say so plainly ("that GitHub
+`identity_already_exists`. The Settings error must say so plainly ("that GitHub
 account is already linked to a different Kagelin account"), not surface the
 raw provider message.
 

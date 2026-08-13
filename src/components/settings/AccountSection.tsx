@@ -34,7 +34,7 @@ const SETTINGS_CARD_CLASS = "border-border/50 shadow-none bg-background/50";
 
 export function formatLinkError(
   error: { code?: string; message?: string } | Error | string,
-  providerLabel?: string,
+  providerLabel = "social",
 ): string {
   const message = typeof error === "string" ? error : error.message || "";
   const code =
@@ -42,18 +42,13 @@ export function formatLinkError(
       ? error.code
       : undefined;
 
-  const label = providerLabel ? providerLabel : "social";
-
-  if (
+  const isAlreadyLinked =
     code === "identity_already_exists" ||
-    message.toLowerCase().includes("already linked") ||
-    message.toLowerCase().includes("already exists") ||
-    message.toLowerCase().includes("already claimed") ||
-    message.toLowerCase().includes("identity is already linked")
-  ) {
-    return `That ${label} account is already signed in to a different Kagelin account.`;
-  }
-  return message;
+    /already (linked|exists|claimed)/i.test(message);
+
+  return isAlreadyLinked
+    ? `That ${providerLabel} account is already linked to a different Kagelin account.`
+    : message;
 }
 
 export function AccountSection() {
@@ -71,12 +66,12 @@ export function AccountSection() {
   const urlError =
     searchParams?.get("error") || searchParams?.get("error_description");
   const displayError =
-    providerError || (urlError ? formatLinkError(urlError, "social") : null);
+    providerError || (urlError ? formatLinkError(urlError) : null);
 
-  const identities: UserIdentity[] = user?.identities ?? [];
-  const totalIdentitiesCount =
+  const identities = user?.identities ?? [];
+  const totalIdentities =
     identities.length > 0 ? identities.length : user?.email ? 1 : 0;
-  const isLastIdentity = totalIdentitiesCount <= 1;
+  const isLastIdentity = totalIdentities <= 1;
 
   const hasPassword = identities.some((id) => id.provider === "email");
   const passwordTooShort = isPasswordTooShort(password);
