@@ -4,10 +4,12 @@ import { useCallback, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Mail, Lock, Loader2, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Turnstile, type TurnstileHandle } from "@/components/auth/Turnstile";
 import type { AuthMode } from "@/components/auth/AuthPage";
+import { AUTH_LINK_CLASS } from "@/components/auth/authLinkClass";
 import { isPasswordBreached } from "@/lib/auth/password-breach-check";
 import {
   MIN_PASSWORD_LENGTH,
@@ -22,10 +24,12 @@ export function PasswordAuth({
   mode,
   onSwitchToSignIn,
   onForgotPassword,
+  onSwitchToMagicLink,
 }: {
   mode: AuthMode;
   onSwitchToSignIn: () => void;
   onForgotPassword?: () => void;
+  onSwitchToMagicLink?: () => void;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -40,6 +44,7 @@ export function PasswordAuth({
   const handleCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
 
   const passwordTooShort = isPasswordTooShort(password);
+  const showForgotPassword = mode === "sign-in" && !!onForgotPassword;
 
   // Blur, not keystroke, so the HIBP prefix doesn't narrow with every
   // character typed. lastCheckedPasswordRef dedupes and guards against a
@@ -124,12 +129,9 @@ export function PasswordAuth({
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
       <div className="space-y-2">
-        <label
-          htmlFor="password-auth-email"
-          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-        >
+        <Label htmlFor="password-auth-email" className="text-[13px]">
           Email address
-        </label>
+        </Label>
         <div className="relative">
           <Mail
             className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
@@ -149,12 +151,9 @@ export function PasswordAuth({
       </div>
 
       <div className="space-y-2">
-        <label
-          htmlFor="password-auth-password"
-          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-        >
+        <Label htmlFor="password-auth-password" className="text-[13px]">
           Password
-        </label>
+        </Label>
         <div className="relative">
           <Lock
             className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
@@ -190,14 +189,27 @@ export function PasswordAuth({
             it, but choosing a different one is safer.
           </p>
         )}
-        {mode === "sign-in" && onForgotPassword && (
-          <button
-            type="button"
-            onClick={onForgotPassword}
-            className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
-          >
-            Forgot password?
-          </button>
+        {(showForgotPassword || onSwitchToMagicLink) && (
+          <div className="flex items-center justify-between gap-4">
+            {showForgotPassword && (
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                className={AUTH_LINK_CLASS}
+              >
+                Forgot password?
+              </button>
+            )}
+            {onSwitchToMagicLink && (
+              <button
+                type="button"
+                onClick={onSwitchToMagicLink}
+                className={AUTH_LINK_CLASS}
+              >
+                Email me a link instead
+              </button>
+            )}
+          </div>
         )}
       </div>
 

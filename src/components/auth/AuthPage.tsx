@@ -11,7 +11,7 @@ import { PasswordAuth } from "@/components/auth/PasswordAuth";
 import { ResetPasswordAuth } from "@/components/auth/ResetPasswordAuth";
 import { OAuthProviderRow } from "@/components/auth/OAuthProviderRow";
 import { slideUp } from "@/lib/motion";
-import { REPO_URL, PRIVACY_URL, TERMS_URL } from "@/lib/links";
+import { PRIVACY_URL, TERMS_URL } from "@/lib/links";
 
 export type AuthMode = "sign-in" | "sign-up";
 
@@ -65,37 +65,36 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
   return (
     <div className="h-dvh w-full overflow-y-auto bg-background">
       <div className="min-h-full flex items-center justify-center px-2 py-4 sm:p-4">
-        <motion.div {...slideUp} className="max-w-md w-full space-y-6">
-          <div className="px-4 py-8 sm:p-8 rounded-2xl border border-border bg-card shadow-sm">
-            <div className="flex flex-col items-center gap-8">
+        <motion.div {...slideUp} className="max-w-md w-full space-y-5">
+          <div className="px-4 py-6 sm:p-8 rounded-2xl border border-border bg-card shadow-sm">
+            <div className="flex flex-col items-center gap-5 sm:gap-6">
               <Image
                 src="/kagelin-icon.png"
                 alt="Kagelin"
                 width={64}
                 height={64}
                 priority
-                className="h-16 w-16 rounded-2xl shrink-0"
+                className="h-12 w-12 sm:h-16 sm:w-16 rounded-2xl shrink-0"
               />
 
-              <div className="text-center space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight">
+              <div className="text-center space-y-1.5">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
                   {copy.heading}
                 </h1>
                 <p className="text-[13px] font-medium text-muted-foreground/80 lowercase tracking-wide">
                   Work quietly. Own everything.
                 </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setView((v) => (v === "reset" ? "password" : v));
+                    setMode(copy.toggleTarget);
+                  }}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors pt-1"
+                >
+                  {copy.toggleLabel}
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setView((v) => (v === "reset" ? "password" : v));
-                  setMode(copy.toggleTarget);
-                }}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors -mt-4"
-              >
-                {copy.toggleLabel}
-              </button>
 
               {error && (
                 <p className="text-sm text-destructive font-medium text-center bg-destructive/10 p-3 rounded-lg w-full">
@@ -114,23 +113,13 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
                   mode={mode}
                   onSwitchToSignIn={() => setMode("sign-in")}
                   onForgotPassword={() => setView("reset")}
+                  onSwitchToMagicLink={() => setView("magic-link")}
                 />
               ) : (
-                <MagicLinkAuth key={mode} />
-              )}
-
-              {view !== "reset" && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setView(view === "password" ? "magic-link" : "password")
-                  }
-                  className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors"
-                >
-                  {view === "password"
-                    ? "Email me a link instead"
-                    : "Use a password instead"}
-                </button>
+                <MagicLinkAuth
+                  key={mode}
+                  onSwitchToPassword={() => setView("password")}
+                />
               )}
 
               <div className="relative w-full">
@@ -145,19 +134,20 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
               </div>
 
               <OAuthProviderRow />
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleGuestSignIn}
+                className="w-full h-11 text-base font-medium transition-all"
+              >
+                Continue as guest
+              </Button>
             </div>
           </div>
 
-          <div className="space-y-3 text-center px-4">
-            <Button
-              type="button"
-              variant="link"
-              onClick={handleGuestSignIn}
-              className="h-auto p-0 text-sm text-muted-foreground hover:text-foreground"
-            >
-              Continue as guest
-            </Button>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
+          <div className="px-4">
+            <p className="text-[11px] leading-relaxed text-muted-foreground text-center">
               By continuing, you agree to our{" "}
               <a
                 href={TERMS_URL}
@@ -176,17 +166,7 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
               >
                 Privacy Policy
               </a>
-              . Guest data is stored locally and will be lost if cleared.{" "}
-              Kagelin is open source —{" "}
-              <a
-                href={REPO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                view the source
-              </a>
-              .
+              . Guest data is stored locally and will be lost if cleared.
             </p>
           </div>
         </motion.div>

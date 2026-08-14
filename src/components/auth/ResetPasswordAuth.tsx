@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Mail, Loader2, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Turnstile, type TurnstileHandle } from "@/components/auth/Turnstile";
@@ -78,12 +79,9 @@ export function ResetPasswordAuth({
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
       <div className="space-y-2">
-        <label
-          htmlFor="reset-password-email"
-          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-        >
+        <Label htmlFor="reset-password-email" className="text-[13px]">
           Email address
-        </label>
+        </Label>
         <div className="relative">
           <Mail
             className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"

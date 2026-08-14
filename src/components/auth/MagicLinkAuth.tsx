@@ -4,13 +4,19 @@ import { useCallback, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Mail, Loader2, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Turnstile, type TurnstileHandle } from "@/components/auth/Turnstile";
+import { AUTH_LINK_CLASS } from "@/components/auth/authLinkClass";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
-export function MagicLinkAuth() {
+export function MagicLinkAuth({
+  onSwitchToPassword,
+}: {
+  onSwitchToPassword?: () => void;
+}) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,12 +68,9 @@ export function MagicLinkAuth() {
             className="space-y-4"
           >
             <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
+              <Label htmlFor="email" className="text-[13px]">
                 Email address
-              </label>
+              </Label>
               <div className="relative">
                 <Mail
                   className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
@@ -84,6 +87,15 @@ export function MagicLinkAuth() {
                   required
                 />
               </div>
+              {onSwitchToPassword && (
+                <button
+                  type="button"
+                  onClick={onSwitchToPassword}
+                  className={AUTH_LINK_CLASS}
+                >
+                  Use a password instead
+                </button>
+              )}
             </div>
 
             {TURNSTILE_SITE_KEY && (

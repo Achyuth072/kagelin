@@ -14,6 +14,7 @@ interface TurnstileRenderOptions {
   "error-callback"?: () => void;
   theme?: "light" | "dark" | "auto";
   size?: "normal" | "compact" | "flexible";
+  appearance?: "always" | "execute" | "interaction-only";
 }
 
 declare global {
@@ -83,6 +84,7 @@ export function Turnstile({
       "expired-callback": onExpire,
       theme: resolvedTheme === "dark" ? "dark" : "light",
       size: "flexible",
+      appearance: "interaction-only",
     });
   }, [siteKey, onVerify, onExpire, resolvedTheme]);
 
