@@ -15,6 +15,10 @@ import {
   MIN_PASSWORD_LENGTH,
   isPasswordTooShort,
 } from "@/lib/auth/password-policy";
+import {
+  SIGNUP_DISABLED_MESSAGE,
+  isSignupDisabledError,
+} from "@/lib/auth/format-auth-error";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -80,7 +84,10 @@ export function PasswordAuth({
 
       if (authError) {
         // Supabase's message is already generic re: email-vs-password.
-        setError(authError.message || "Authentication failed");
+        const message = authError.message || "Authentication failed";
+        setError(
+          isSignupDisabledError(message) ? SIGNUP_DISABLED_MESSAGE : message,
+        );
       } else if (mode === "sign-up") {
         setSignedUp(true);
       }

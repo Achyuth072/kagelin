@@ -3,6 +3,15 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
 
+// Redirects to `next` instead of always /login, so page-local error UI
+// (e.g. AccountSection's formatLinkError) gets a chance to render.
+function redirectWithError(origin: string, next: string, message: string) {
+  const target = next === "/" ? "/login" : next;
+  const url = new URL(target, origin);
+  url.searchParams.set("error", message);
+  return NextResponse.redirect(url);
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -10,15 +19,12 @@ export async function GET(request: Request) {
   const next = sanitizeNextPath(searchParams.get("next"));
 
   if (errorDescription) {
-    return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(errorDescription)}`,
-    );
+    return redirectWithError(origin, next, errorDescription);
   }
 
   if (code) {
     const cookieStore = await cookies();
 
-    // Track cookies that need to be set on the response
     const cookiesToSet: Array<{
       name: string;
       value: string;
@@ -34,7 +40,6 @@ export async function GET(request: Request) {
             return cookieStore.getAll();
           },
           setAll(cookies) {
-            // Collect cookies to set on response
             cookiesToSet.push(
               ...cookies.map((c) => ({
                 name: c.name,
@@ -58,9 +63,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
-      return NextResponse.redirect(
-        `${origin}/login?error=${encodeURIComponent(error.message)}`,
-      );
+      return redirectWithError(origin, next, error.message);
     }
 
     // Create redirect response and manually attach all session cookies
@@ -72,5 +75,5 @@ export async function GET(request: Request) {
     return response;
   }
 
-  return NextResponse.redirect(`${origin}/login?error=no_code_received`);
+  return redirectWithError(origin, next, "no_code_received");
 }

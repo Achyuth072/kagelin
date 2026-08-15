@@ -56,4 +56,34 @@ describe("GET /auth/callback (H-3)", () => {
     );
     expect(response.headers.get("location")).toBe("http://localhost/");
   });
+
+  it("redirects an upstream error to the sanitized next path, not /login", async () => {
+    const response = await GET(
+      request(
+        "?error_description=identity_already_exists&next=%2Fsettings%3Ftab%3Daccount",
+      ),
+    );
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/settings?tab=account&error=identity_already_exists",
+    );
+  });
+
+  it("falls back to /login for an upstream error when next is absent", async () => {
+    const response = await GET(request("?error_description=access_denied"));
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/login?error=access_denied",
+    );
+  });
+
+  it("redirects a code-exchange failure to the sanitized next path, not /login", async () => {
+    mockExchangeCodeForSession.mockResolvedValue({
+      error: { message: "invalid_grant" },
+    });
+    const response = await GET(
+      request("?code=abc&next=%2Fauth%2Fupdate-password"),
+    );
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/auth/update-password?error=invalid_grant",
+    );
+  });
 });

@@ -97,6 +97,16 @@ describe("useBackAnchor", () => {
     expect(pushMock).not.toHaveBeenCalled();
   });
 
+  it("skips /auth/update-password like /login and /signup", () => {
+    vi.mocked(usePathname).mockReturnValue("/auth/update-password");
+    setLocation("http://localhost:3000/auth/update-password");
+
+    renderHook(() => useBackAnchor());
+
+    expect(replaceMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
   it("useAnchoredBack triggers router.back once settled", async () => {
     vi.mocked(usePathname).mockReturnValue("/");
     setLocation("http://localhost:3000/?redirect=%2Ffocus");

@@ -9,9 +9,13 @@ import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
 let anchorSettled: Promise<void> = Promise.resolve();
 let resolveAnchorSettled: (() => void) | null = null;
 
-// /login and /signup's redirect swallows the bounce before "/" ever renders —
-// skip them rather than wait out SETTLE_BACKSTOP_MS.
-const UNANCHORED_ROUTES = new Set(["/login", "/signup"]);
+// /login, /signup, and /auth/update-password's redirect swallows the bounce
+// before "/" ever renders — skip them rather than wait out SETTLE_BACKSTOP_MS.
+const UNANCHORED_ROUTES = new Set([
+  "/login",
+  "/signup",
+  "/auth/update-password",
+]);
 
 // Guarantees settle() fires even if a bounce silently stalls.
 const SETTLE_BACKSTOP_MS = 3000;

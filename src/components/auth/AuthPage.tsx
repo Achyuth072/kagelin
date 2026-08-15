@@ -12,6 +12,10 @@ import { ResetPasswordAuth } from "@/components/auth/ResetPasswordAuth";
 import { OAuthProviderRow } from "@/components/auth/OAuthProviderRow";
 import { slideUp } from "@/lib/motion";
 import { PRIVACY_URL, TERMS_URL } from "@/lib/links";
+import {
+  SIGNUP_DISABLED_MESSAGE,
+  isSignupDisabledError,
+} from "@/lib/auth/format-auth-error";
 
 export type AuthMode = "sign-in" | "sign-up";
 
@@ -98,9 +102,8 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
 
               {error && (
                 <p className="text-sm text-destructive font-medium text-center bg-destructive/10 p-3 rounded-lg w-full">
-                  {error.includes("Signups not allowed") ||
-                  error.includes("signup_disabled")
-                    ? "This app is private. Only authorized users can sign in."
+                  {isSignupDisabledError(error)
+                    ? SIGNUP_DISABLED_MESSAGE
                     : "Authentication failed. Please try again."}
                 </p>
               )}

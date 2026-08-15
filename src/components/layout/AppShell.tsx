@@ -376,7 +376,9 @@ export default function AppShell({ children }: AppShellProps) {
   const { user, loading } = useAuth();
   const { isMigrating } = useMigrationStrategy();
   const pathname = usePathname();
-  const isLoginPage = pathname === "/login" || pathname === "/signup";
+  const isLoginPage = ["/login", "/signup", "/auth/update-password"].includes(
+    pathname,
+  );
 
   useBackAnchor(); // must stay mounted across navigation — see useBackAnchor.ts
 

@@ -192,6 +192,34 @@ describe("PasswordAuth", () => {
     expect(mockTurnstileReset).toHaveBeenCalled();
   });
 
+  it("translates a signup-disabled error into the friendly private-app message", async () => {
+    mockSignUpWithPassword.mockResolvedValue({
+      error: { message: "Signups not allowed for this instance" },
+    });
+    await renderWithSiteKey("test-site-key", {
+      mode: "sign-up",
+      onSwitchToSignIn,
+    });
+
+    fireEvent.change(screen.getByLabelText("Email address"), {
+      target: { value: "new@user.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "hunter22" },
+    });
+    verifyCaptcha();
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Create account" }),
+      ).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This app is private. Only authorized users can sign in.",
+    );
+  });
+
   it("renders the same collision confirmation screen on sign-up success, regardless of whether the account already existed", async () => {
     await renderWithSiteKey("test-site-key", {
       mode: "sign-up",
