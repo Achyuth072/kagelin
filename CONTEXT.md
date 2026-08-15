@@ -134,18 +134,16 @@ the two facts are independent and neither orders the other.
 
 The Premium entitlement given for founding-cohort membership, in two phases:
 
-1. **Free**, for the duration of the **beta period**. Ends when the beta
-   period ends — a single event the operator declares, not a per-user clock —
-   so no user-level expiry date exists or should be invented.
+1. **Free, for 1 year**, on a per-user clock starting at the grant date —
+   not tied to when the beta period itself ends.
 2. **Discounted, for life**, from then on. The discount itself never expires
    or gets re-evaluated — "permanent" means permanent, not "permanent until
    some future decision."
 
 Earned by **joining the app while in the founding cohort** — not by being
 invited. Distinguished from a paid Premium subscription by the grant date
-recorded against the waitlist signup (provenance only — it does not compute
-when phase 1 ends; that's the operator-declared beta-end event, not derived
-from this date); a user with no such date holds Premium for some other
+recorded against the waitlist signup — that date is what phase 1's 1-year
+clock runs from; a user with no such date holds Premium for some other
 reason.
 
 ---
