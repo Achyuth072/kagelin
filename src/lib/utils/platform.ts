@@ -39,3 +39,32 @@ export function isAndroidChrome(): boolean {
 
   return isAndroid && isChrome;
 }
+
+// iPadOS reports as "MacIntel" in `navigator.platform` but exposes touch
+// support, which desktop Macs don't — the standard way to tell them apart.
+export function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+
+  const ua = navigator.userAgent;
+  if (/iPhone|iPod|iPad/i.test(ua)) return true;
+
+  return (
+    navigator.platform === "MacIntel" &&
+    typeof navigator.maxTouchPoints === "number" &&
+    navigator.maxTouchPoints > 1
+  );
+}
+
+export function isStandalone(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.matchMedia?.("(display-mode: standalone)").matches) return true;
+  // iOS Safari has no `display-mode: standalone` support; this is the only signal.
+  return (
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+export function supportsInstallPrompt(): boolean {
+  if (typeof window === "undefined") return false;
+  return "onbeforeinstallprompt" in window;
+}

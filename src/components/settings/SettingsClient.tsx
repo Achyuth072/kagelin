@@ -34,6 +34,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { mockStore } from "@/lib/mock/mock-store";
 import { notify } from "@/lib/notify";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
+import { PwaInstallRow } from "@/components/settings/PwaInstallRow";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
 import { BackupSyncSettings } from "@/components/settings/BackupSyncSettings";
 import { AccountSection } from "@/components/settings/AccountSection";
@@ -350,6 +351,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
                     </div>
 
                     <NotificationSettings />
+
+                    <PwaInstallRow />
                   </div>
                 </section>
 

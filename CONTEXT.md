@@ -368,6 +368,35 @@ twice a week and every two weeks.
 
 ---
 
+## Installation
+
+### Installed
+
+Kagelin launched from the Home Screen or app launcher rather than a browser tab.
+A property of **one device**, not of an Account — the same person is Installed on
+their phone and not on their laptop, and the server never knows either way. It
+confers no entitlement and belongs to no Tier: a Guest can be Installed and a
+Premium user need not be.
+
+Load-bearing asymmetry: on iOS, **push notifications require Installed** — the
+capability is absent from a browser tab and appears only once the app is on the
+Home Screen. On Android it is a convenience, not a prerequisite.
+_Avoid_: "the PWA" as a noun for this state; _avoid_: "app mode".
+
+### Standalone
+
+The display mode a browser reports when the app is **Installed** — the signal by
+which Kagelin recognises the state. Not a synonym for Installed: Standalone is
+how we can tell, Installed is what is true.
+
+### Add to Home Screen
+
+The user-facing name for becoming **Installed** on iOS, matching Apple's own
+share-sheet wording. Android's equivalent is **Install**. These are the only two
+phrasings used in the UI — the platform's own word, never a third invented one.
+
+---
+
 ## Calendar views
 
 ### Week
