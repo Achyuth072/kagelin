@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.31.0-preview.1",
+    "date": "2026-08-15",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add PWA install prompt for mobile, fix iOS notifications messaging",
+        "Add About section to Settings for AGPL source-offer compliance"
+      ],
+      "Fixed": [
+        "Compact and declutter the auth page layout",
+        "Press feedback, focus/tap-highlight, and haptics on offline.html buttons",
+        "Center the footer wrapper"
+      ]
+    }
+  },
+  {
     "version": "1.31.0-preview.0",
     "date": "2026-08-13",
     "channel": "preview",
@@ -801,40 +817,6 @@
     "sections": {
       "Fixed": [
         "Focus timer no longer gets stuck at 00:00 if the server clock check fails"
-      ]
-    }
-  },
-  {
-    "version": "1.22.0",
-    "date": "2026-06-10",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Connect Google Calendar (and other providers) to sync events both ways, with conflict resolution",
-        "In-app notification when a new app update is available",
-        "Recurring events now show a recurrence indicator and can no longer be edited individually (only the whole series)"
-      ],
-      "Improved": [
-        "Focus timer rewritten on a deadline-based model for more reliable session tracking across reloads and devices",
-        "Location field redesigned: clear button, custom \"Use\" entries, and fixed mobile alignment/clipping",
-        "Notes field styling now matches the rest of the dialog",
-        "Toasts can be dismissed with a left/right swipe",
-        "Fullscreen toggle now works on Android, iOS, and Safari",
-        "Detail panel close button repositioned to avoid overlapping content",
-        "Settings dialog validates correctly every time it's reopened"
-      ],
-      "Fixed": [
-        "Calendar OAuth sign-in redirect issues",
-        "Guests no longer see errors from calendar connection checks",
-        "Deleted calendar events no longer reappear after a sync, and edited events sync correctly",
-        "All-day events from Google Calendar now show the correct date",
-        "Calendar connection no longer drops on temporary network errors",
-        "Archived events are restored correctly when reconnecting a calendar",
-        "Location history is preserved when deleting events",
-        "Settings dialog Save button no longer stays greyed out incorrectly",
-        "Focus timer no longer completes early or loses a session after a network blip or app restart",
-        "Manage Calendars dialog no longer leaves another menu open behind it",
-        "Confirmation dialogs now appear above other overlays correctly"
       ]
     }
   }
