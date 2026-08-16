@@ -212,10 +212,14 @@ export function AuthProvider({
 
   const linkIdentity = useCallback(
     async (provider: OAuthProviderId) => {
+      // `connecting` round-trips through the callback's error redirect so
+      // AccountSection can still name the provider if linking fails
+      // (identity_already_exists) — see docs/adr/0012-identity-linking.md.
+      const next = `/settings?tab=account&connecting=${provider}`;
       const { error } = await supabase.auth.linkIdentity({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/settings?tab=account")}`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
         },
       });
       return { error };

@@ -3,18 +3,13 @@
 import { useState } from "react";
 import { Download, Share } from "lucide-react";
 import { usePwaInstall } from "@/lib/hooks/usePwaInstall";
-import { useIsMobile } from "@/lib/hooks/useIsMobile";
-import { shouldShowInstallRow } from "@/lib/utils/pwaInstall";
 import { Button } from "@/components/ui/button";
 
 export function PwaInstallRow() {
-  const { isInstalled, isIOS, canInstall, promptInstall } = usePwaInstall();
-  const isMobile = useIsMobile();
+  const { isIOS, canInstall, promptInstall, shouldShowRow } = usePwaInstall();
   const [showIosInstructions, setShowIosInstructions] = useState(false);
 
-  if (!shouldShowInstallRow({ isInstalled, isMobile, isIOS, canInstall })) {
-    return null;
-  }
+  if (!shouldShowRow) return null;
 
   const Icon = isIOS ? Share : Download;
   const label = isIOS ? "Add to Home Screen" : "Install app";

@@ -67,3 +67,10 @@ the Settings connect flow carries real weight.
 Test with one such account: sign in, then read the stored email in the
 Supabase dashboard's user list. Record the answer here and delete this
 section.
+
+Separately, `handle_new_user`'s display-name fallback
+(`full_name -> name -> username -> email`, migration
+`20260813120000_display_name_fallback.sql`) assumes GitHub and GitLab
+populate `name`/`username` in `raw_user_meta_data`. Confirm which of
+`name`/`user_name`/`preferred_username`/etc. each provider actually sends,
+and adjust the fallback order if this assumption is wrong.

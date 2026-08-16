@@ -3,19 +3,16 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
+import { AUTH_STANDALONE_ROUTES } from "@/lib/auth/authRoutes";
 
 // history.pushState() desyncs App Router's tracking, so use replace()/push().
 // Must run somewhere that survives its own replace() — AppShell, not Template.
 let anchorSettled: Promise<void> = Promise.resolve();
 let resolveAnchorSettled: (() => void) | null = null;
 
-// /login, /signup, and /auth/update-password's redirect swallows the bounce
-// before "/" ever renders — skip them rather than wait out SETTLE_BACKSTOP_MS.
-const UNANCHORED_ROUTES = new Set([
-  "/login",
-  "/signup",
-  "/auth/update-password",
-]);
+// These routes' own redirect swallows the bounce before "/" ever renders —
+// skip them rather than wait out SETTLE_BACKSTOP_MS.
+const UNANCHORED_ROUTES = new Set(AUTH_STANDALONE_ROUTES);
 
 // Guarantees settle() fires even if a bounce silently stalls.
 const SETTLE_BACKSTOP_MS = 3000;

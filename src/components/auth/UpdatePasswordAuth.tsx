@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Lock, Loader2, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { PasswordBreachWarning } from "@/components/auth/PasswordBreachWarning";
+import { usePasswordBreachCheck } from "@/lib/hooks/usePasswordBreachCheck";
 import {
   MIN_PASSWORD_LENGTH,
   isPasswordTooShort,
@@ -20,6 +22,7 @@ export function UpdatePasswordAuth() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updated, setUpdated] = useState(false);
+  const { breached, checkOnBlur, clearBreach } = usePasswordBreachCheck();
 
   const passwordTooShort = isPasswordTooShort(password);
 
@@ -120,7 +123,11 @@ export function UpdatePasswordAuth() {
                     placeholder="••••••••"
                     className="pl-9 h-11 text-base md:text-base"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      clearBreach();
+                    }}
+                    onBlur={() => checkOnBlur(password, passwordTooShort)}
                     disabled={submitting}
                     autoComplete="new-password"
                     minLength={MIN_PASSWORD_LENGTH}
@@ -132,6 +139,7 @@ export function UpdatePasswordAuth() {
                     Password must be at least {MIN_PASSWORD_LENGTH} characters.
                   </p>
                 )}
+                <PasswordBreachWarning breached={breached} />
               </div>
 
               {error && (

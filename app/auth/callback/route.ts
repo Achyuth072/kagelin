@@ -3,8 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
 
-// Redirects to `next` instead of always /login, so page-local error UI
-// (e.g. AccountSection's formatLinkError) gets a chance to render.
+// Redirects to `next` so page-local error UI (e.g. AccountSection) can render.
 function redirectWithError(origin: string, next: string, message: string) {
   const target = next === "/" ? "/login" : next;
   const url = new URL(target, origin);
@@ -47,7 +46,6 @@ export async function GET(request: Request) {
                 options: c.options as Record<string, unknown>,
               })),
             );
-            // Also try to set on cookieStore (may silently fail)
             try {
               cookies.forEach(({ name, value, options }) =>
                 cookieStore.set(name, value, options),
@@ -66,7 +64,6 @@ export async function GET(request: Request) {
       return redirectWithError(origin, next, error.message);
     }
 
-    // Create redirect response and manually attach all session cookies
     const response = NextResponse.redirect(`${origin}${next}`);
     cookiesToSet.forEach(({ name, value, options }) => {
       response.cookies.set(name, value, options);

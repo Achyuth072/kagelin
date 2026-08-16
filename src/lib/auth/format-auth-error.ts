@@ -7,3 +7,22 @@ export function isSignupDisabledError(message: string): boolean {
     message.includes("signup_disabled")
   );
 }
+
+export function formatLinkError(
+  error: { code?: string; message?: string } | Error | string,
+  providerLabel = "social",
+): string {
+  const message = typeof error === "string" ? error : error.message || "";
+  const code =
+    typeof error === "object" && error !== null && "code" in error
+      ? error.code
+      : undefined;
+
+  const isAlreadyLinked =
+    code === "identity_already_exists" ||
+    /already (linked|exists|claimed)/i.test(message);
+
+  return isAlreadyLinked
+    ? `That ${providerLabel} account is already linked to a different Kagelin account.`
+    : message;
+}

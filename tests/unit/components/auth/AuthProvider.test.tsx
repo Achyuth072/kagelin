@@ -274,7 +274,7 @@ describe("AuthProvider", () => {
     expect(supabase.auth.linkIdentity).toHaveBeenCalledWith({
       provider: "github",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/settings?tab=account")}`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/settings?tab=account&connecting=github")}`,
       },
     });
   });

@@ -9,6 +9,7 @@ import {
   recordAppOpen,
   hasReachedOpenThreshold,
   shouldShowInstallBanner,
+  shouldShowInstallRow,
   OPEN_COUNT_THRESHOLD,
 } from "@/lib/utils/pwaInstall";
 
@@ -61,13 +62,20 @@ export function usePwaInstall() {
 
   const canInstall = deferredEvent !== null;
 
-  const isOpen = shouldShowInstallBanner({
+  const shouldShowBanner = shouldShowInstallBanner({
     isInstalled,
     isMobile,
     isIOS,
     canInstall,
     dismissed,
     openThresholdReached,
+  });
+
+  const shouldShowRow = shouldShowInstallRow({
+    isInstalled,
+    isMobile,
+    isIOS,
+    canInstall,
   });
 
   const promptInstall = async () => {
@@ -89,5 +97,13 @@ export function usePwaInstall() {
     setDismissed(true);
   };
 
-  return { canInstall, promptInstall, isInstalled, isIOS, isOpen, dismiss };
+  return {
+    canInstall,
+    promptInstall,
+    isInstalled,
+    isIOS,
+    shouldShowBanner,
+    shouldShowRow,
+    dismiss,
+  };
 }

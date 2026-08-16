@@ -1,9 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import {
-  AccountSection,
-  formatLinkError,
-} from "@/components/settings/AccountSection";
+import { AccountSection } from "@/components/settings/AccountSection";
+import { formatLinkError } from "@/lib/auth/format-auth-error";
 import { useAuth } from "@/components/AuthProvider";
 import type { User, UserIdentity } from "@supabase/supabase-js";
 
@@ -11,8 +9,9 @@ vi.mock("@/components/AuthProvider", () => ({
   useAuth: vi.fn(),
 }));
 
+const mockUseSearchParams = vi.fn(() => new URLSearchParams());
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => mockUseSearchParams(),
 }));
 
 describe("AccountSection", () => {
@@ -22,6 +21,7 @@ describe("AccountSection", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseSearchParams.mockReturnValue(new URLSearchParams());
   });
 
   function setupAuth(userOverrides: Partial<User> = {}, isGuestMode = false) {
@@ -193,5 +193,22 @@ describe("AccountSection", () => {
         ),
       ).toBeInTheDocument();
     });
+  });
+
+  it("names the provider from the `connecting` param when the error round-trips through the OAuth redirect", () => {
+    setupAuth();
+    mockUseSearchParams.mockReturnValue(
+      new URLSearchParams(
+        "error=Identity+is+already+claimed&connecting=github",
+      ),
+    );
+
+    render(<AccountSection />);
+
+    expect(
+      screen.getByText(
+        "That GitHub account is already linked to a different Kagelin account.",
+      ),
+    ).toBeInTheDocument();
   });
 });

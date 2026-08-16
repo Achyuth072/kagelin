@@ -5,9 +5,9 @@ import { usePwaInstall } from "@/lib/hooks/usePwaInstall";
 import { Button } from "@/components/ui/button";
 
 export function PwaInstallHint() {
-  const { isOpen, isIOS, promptInstall, dismiss } = usePwaInstall();
+  const { shouldShowBanner, isIOS, promptInstall, dismiss } = usePwaInstall();
 
-  if (!isOpen) return null;
+  if (!shouldShowBanner) return null;
 
   const Icon = isIOS ? Share : Download;
   const title = isIOS ? "Add Kagelin to your Home Screen" : "Install Kagelin";

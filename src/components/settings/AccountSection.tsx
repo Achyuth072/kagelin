@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { SIGNIN_OAUTH_PROVIDERS } from "@/lib/auth/providers";
+import {
+  SIGNIN_OAUTH_PROVIDERS,
+  type OAuthProviderId,
+} from "@/lib/auth/providers";
 import { PROVIDER_ICONS } from "@/components/auth/ProviderIcons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,34 +25,19 @@ import {
   KeyRound,
   AlertCircle,
 } from "lucide-react";
+import { PasswordBreachWarning } from "@/components/auth/PasswordBreachWarning";
+import { usePasswordBreachCheck } from "@/lib/hooks/usePasswordBreachCheck";
 import {
   MIN_PASSWORD_LENGTH,
   isPasswordTooShort,
 } from "@/lib/auth/password-policy";
+import { formatLinkError } from "@/lib/auth/format-auth-error";
 import { notify } from "@/lib/notify";
 import type { UserIdentity } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
+import { ICON_LED_ROW_CLASS } from "@/components/settings/iconLedRowClass";
 
 const SETTINGS_CARD_CLASS = "border-border/50 shadow-none bg-background/50";
-
-export function formatLinkError(
-  error: { code?: string; message?: string } | Error | string,
-  providerLabel = "social",
-): string {
-  const message = typeof error === "string" ? error : error.message || "";
-  const code =
-    typeof error === "object" && error !== null && "code" in error
-      ? error.code
-      : undefined;
-
-  const isAlreadyLinked =
-    code === "identity_already_exists" ||
-    /already (linked|exists|claimed)/i.test(message);
-
-  return isAlreadyLinked
-    ? `That ${providerLabel} account is already linked to a different Kagelin account.`
-    : message;
-}
 
 export function AccountSection() {
   const { user, linkIdentity, unlinkIdentity, updatePassword, isGuestMode } =
@@ -65,8 +53,13 @@ export function AccountSection() {
 
   const urlError =
     searchParams?.get("error") || searchParams?.get("error_description");
+  const connectingProviderId = searchParams?.get("connecting");
+  const connectingLabel = SIGNIN_OAUTH_PROVIDERS.find(
+    (p) => p.id === connectingProviderId,
+  )?.label;
   const displayError =
-    providerError || (urlError ? formatLinkError(urlError) : null);
+    providerError ||
+    (urlError ? formatLinkError(urlError, connectingLabel) : null);
 
   const identities = user?.identities ?? [];
   const totalIdentities =
@@ -75,11 +68,9 @@ export function AccountSection() {
 
   const hasPassword = identities.some((id) => id.provider === "email");
   const passwordTooShort = isPasswordTooShort(password);
+  const { breached, checkOnBlur, clearBreach } = usePasswordBreachCheck();
 
-  const handleConnect = async (
-    providerId: "google" | "github" | "gitlab",
-    label: string,
-  ) => {
+  const handleConnect = async (providerId: OAuthProviderId, label: string) => {
     setLoadingProvider(providerId);
     setProviderError(null);
 
@@ -161,15 +152,14 @@ export function AccountSection() {
         </div>
       )}
 
-      {/* Connected Providers Card */}
       <Card className={SETTINGS_CARD_CLASS}>
         <CardHeader className="pb-3 px-4 pt-5">
           <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
             <Link2 className="h-4 w-4 text-brand" strokeWidth={2.25} />
-            Connected Accounts
+            Connected Providers
           </CardTitle>
           <CardDescription className="text-xs text-muted-foreground/80 lowercase">
-            Manage single sign-in providers connected to your account.
+            Manage the providers connected to your account.
           </CardDescription>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">
@@ -183,7 +173,7 @@ export function AccountSection() {
             return (
               <div
                 key={provider.id}
-                className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast"
+                className={cn(ICON_LED_ROW_CLASS, "justify-between")}
               >
                 <div className="flex items-center gap-3">
                   <Icon className="h-5 w-5 text-foreground/70" />
@@ -251,7 +241,6 @@ export function AccountSection() {
         </CardContent>
       </Card>
 
-      {/* Set or Change Password Card */}
       <Card className={SETTINGS_CARD_CLASS}>
         <CardHeader className="pb-3 px-4 pt-5">
           <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
@@ -281,7 +270,11 @@ export function AccountSection() {
                   placeholder="••••••••"
                   className="pl-9 h-11 sm:h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all text-base sm:text-sm"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    clearBreach();
+                  }}
+                  onBlur={() => checkOnBlur(password, passwordTooShort)}
                   disabled={passwordSubmitting}
                   autoComplete="new-password"
                   minLength={MIN_PASSWORD_LENGTH}
@@ -293,6 +286,7 @@ export function AccountSection() {
                   Password must be at least {MIN_PASSWORD_LENGTH} characters.
                 </p>
               )}
+              <PasswordBreachWarning breached={breached} />
             </div>
 
             {passwordError && (

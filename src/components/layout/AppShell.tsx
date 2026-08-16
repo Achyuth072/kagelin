@@ -15,6 +15,7 @@ import {
 } from "@/components/ProjectActionsProvider";
 import { useRealtimeSync } from "@/lib/hooks/useRealtimeSync";
 import { useBackAnchor } from "@/lib/hooks/useBackAnchor";
+import { AUTH_STANDALONE_ROUTES } from "@/lib/auth/authRoutes";
 import { PiPProvider } from "@/components/providers/PiPProvider";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar as SidebarComponent } from "@/components/layout/AppSidebar";
@@ -114,7 +115,6 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
-// Watches app version, syncs hasChangelogUpdate to store, renders the popup
 function ChangelogPopupWatcher() {
   const lastDismissedVersion = useUiStore(
     (state) => state.lastDismissedVersion,
@@ -183,7 +183,6 @@ function ChangelogPopupWatcher() {
   );
 }
 
-// Separate Overlay layer to isolate modal/sheet state
 function GlobalOverlays({
   commandOpen,
   onCommandOpenChange,
@@ -248,7 +247,6 @@ function GlobalOverlays({
   );
 }
 
-// Allows ?changelog query param to manually open the popup
 function ChangelogManualTrigger() {
   const [forceVersion, setForceVersion] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -285,12 +283,10 @@ function AppShellContent({ children }: AppShellProps) {
     setIsDesktop(isDesktop);
   }, [isDesktop, setIsDesktop]);
 
-  // Stays alive during navigation
   useRealtimeSync();
 
   useWeeklyBackup();
 
-  // Reset scroll position on navigation to prevent layout shifts
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (scrollContainerRef.current) {
@@ -376,9 +372,7 @@ export default function AppShell({ children }: AppShellProps) {
   const { user, loading } = useAuth();
   const { isMigrating } = useMigrationStrategy();
   const pathname = usePathname();
-  const isLoginPage = ["/login", "/signup", "/auth/update-password"].includes(
-    pathname,
-  );
+  const isLoginPage = AUTH_STANDALONE_ROUTES.includes(pathname);
 
   useBackAnchor(); // must stay mounted across navigation — see useBackAnchor.ts
 

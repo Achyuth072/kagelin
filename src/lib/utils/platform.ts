@@ -1,5 +1,5 @@
 export const getPlatformKey = () => {
-  if (typeof window === "undefined") return "Ctrl"; // Default for SSR
+  if (typeof window === "undefined") return "Ctrl";
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
   return isMac ? "⌘" : "Ctrl";
 };
@@ -58,7 +58,8 @@ export function isIOS(): boolean {
 export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
   if (window.matchMedia?.("(display-mode: standalone)").matches) return true;
-  // iOS Safari has no `display-mode: standalone` support; this is the only signal.
+  // `display-mode: standalone` also works on iOS 12.2+, but `standalone` is
+  // the one signal specific to iOS Safari — keep it as a fallback.
   return (
     (navigator as Navigator & { standalone?: boolean }).standalone === true
   );

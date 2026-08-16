@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { GitHubIcon } from "@/components/auth/ProviderIcons";
 import { REPO_URL, PRIVACY_URL, TERMS_URL } from "@/lib/links";
+import { ICON_LED_ROW_CLASS } from "@/components/settings/iconLedRowClass";
+import { cn } from "@/lib/utils";
 
 interface AboutSheetProps {
   open: boolean;
@@ -29,8 +31,7 @@ interface AboutSheetProps {
   onOpenChangelog: () => void;
 }
 
-const ROW_CLASS =
-  "flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast w-full text-left";
+const ROW_CLASS = cn(ICON_LED_ROW_CLASS, "w-full text-left");
 
 function AboutRow({
   icon: Icon,

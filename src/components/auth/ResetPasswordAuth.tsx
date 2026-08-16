@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Mail, Loader2, CheckCircle2 } from "lucide-react";
-import { motion } from "framer-motion";
-import { Turnstile, type TurnstileHandle } from "@/components/auth/Turnstile";
+import { Turnstile } from "@/components/auth/Turnstile";
+import { AuthEmailField } from "@/components/auth/AuthEmailField";
+import { AuthConfirmationCard } from "@/components/auth/AuthConfirmationCard";
+import { useTurnstileCaptcha } from "@/lib/hooks/useTurnstileCaptcha";
+import { Loader2 } from "lucide-react";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -22,10 +22,14 @@ export function ResetPasswordAuth({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [requested, setRequested] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const turnstileRef = useRef<TurnstileHandle>(null);
+  const {
+    captchaToken,
+    setCaptchaToken,
+    turnstileRef,
+    handleCaptchaExpire,
+    resetCaptcha,
+  } = useTurnstileCaptcha();
   const { resetPasswordForEmail } = useAuth();
-  const handleCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
 
   const captchaMissing = !!TURNSTILE_SITE_KEY && !captchaToken;
 
@@ -37,10 +41,7 @@ export function ResetPasswordAuth({
     try {
       await resetPasswordForEmail(email, captchaToken ?? "");
     } finally {
-      // Turnstile tokens are single-use. The confirmation always shows,
-      // regardless of what resetPasswordForEmail returned or threw.
-      setCaptchaToken(null);
-      turnstileRef.current?.reset();
+      resetCaptcha();
       setLoading(false);
       setRequested(true);
     }
@@ -48,57 +49,29 @@ export function ResetPasswordAuth({
 
   if (requested) {
     return (
-      <motion.div
-        key="reset-requested"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="w-full flex flex-col items-center justify-center p-6 text-center space-y-4 rounded-lg bg-primary/5 border border-primary/20"
-      >
-        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-          <CheckCircle2 className="h-6 w-6 text-primary" strokeWidth={2.25} />
-        </div>
-        <div className="space-y-1">
-          <h3 className="font-semibold text-lg">Check your inbox</h3>
-          <p className="text-sm text-muted-foreground max-w-[260px] mx-auto">
+      <AuthConfirmationCard
+        motionKey="reset-requested"
+        title="Check your inbox"
+        description={
+          <>
             If <span className="font-medium text-foreground">{email}</span> has
             an account, we&apos;ve sent a link to reset the password.
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBackToSignIn}
-          className="text-xs text-muted-foreground hover:text-foreground"
-        >
-          Back to sign in
-        </Button>
-      </motion.div>
+          </>
+        }
+        actionLabel="Back to sign in"
+        onAction={onBackToSignIn}
+      />
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="reset-password-email" className="text-[13px]">
-          Email address
-        </Label>
-        <div className="relative">
-          <Mail
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-            strokeWidth={2.25}
-          />
-          <Input
-            id="reset-password-email"
-            type="email"
-            placeholder="name@example.com"
-            className="pl-9 h-11 text-base md:text-base"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loading}
-            required
-          />
-        </div>
-      </div>
+      <AuthEmailField
+        id="reset-password-email"
+        value={email}
+        onChange={setEmail}
+        disabled={loading}
+      />
 
       {TURNSTILE_SITE_KEY && (
         <Turnstile
