@@ -60,10 +60,7 @@ export function useBackAnchor() {
           ? null
           : pathname + location.search;
       if (isOAuthConnect && pathname === "/settings") {
-        // /calendar's landing params (connected/oauth_error) are already
-        // stripped by their own owning components; /settings' "connecting"
-        // isn't stripped anywhere else — leaving it would re-suppress the
-        // back-anchor on a later hard reload of the stale URL.
+        // "connecting" isn't stripped elsewhere — left alone it'd re-suppress the back-anchor on a stale reload.
         const params = new URLSearchParams(location.search);
         params.delete("connecting");
         const cleaned = params.toString();

@@ -43,10 +43,8 @@ export function DeleteUserDataDialog({
   const [confirmText, setConfirmText] = useState("");
   const isMatch = confirmText.toLowerCase() === "delete";
 
-  // Handle back navigation on mobile
   useBackNavigation(open && !isDesktop, () => onOpenChange(false));
 
-  // Reset state when dialog opens or closes
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -55,7 +53,6 @@ export function DeleteUserDataDialog({
     }
   }
 
-  // Haptic on open
   useEffect(() => {
     if (open) {
       trigger("thud");

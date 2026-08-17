@@ -12,11 +12,7 @@ interface MetricCardProps {
     value: number;
     isPositive: boolean;
   };
-  /**
-   * "compact" tightens padding and value scale for dense contexts like the
-   * task/habit insights panels inside the sheet; "default" keeps the larger
-   * stats-page scale.
-   */
+  /** "compact" tightens padding/scale for dense contexts (e.g. insights panels); "default" is the stats-page scale. */
   size?: "default" | "compact";
   className?: string;
 }

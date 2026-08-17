@@ -1,8 +1,6 @@
 "use client";
 
-// The CalDAV connect flow was removed pre-beta, it was a facade
-// (nothing persisted server-side) and it wrote credentials to localStorage
-// in plaintext. The legacy-credential purge lives in `src/lib/storage-cleanup.ts`.
+// CalDAV connect was removed pre-beta; legacy-credential purge lives in `src/lib/storage-cleanup.ts`.
 
 import React, { useState, useCallback } from "react";
 import {

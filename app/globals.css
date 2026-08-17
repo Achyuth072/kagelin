@@ -481,7 +481,6 @@ input[type="password"]:has(+ button)::-ms-clear {
     );
   }
 
-  /* Resizable panel collapse animation */
   [data-panel] {
     transition: flex-grow 300ms var(--ease-seijaku);
   }
@@ -522,9 +521,8 @@ input[type="password"]:has(+ button)::-ms-clear {
 }
 /* eslint-enable tailwindcss/no-important */
 
-/* Sonner's mobile <ol> overflows 16px past the viewport edge, which shifts
-   the <li>'s left:50% off-center — re-anchor the <ol> instead. Must stay
-   inside @layer or Tailwind v4 drops this @media block. */
+/* Sonner's mobile <ol> overflows past the viewport, shifting the <li> off-center — re-anchor the <ol> instead.
+   Must stay inside @layer or Tailwind v4 drops this @media block. */
 @layer utilities {
   /* eslint-disable tailwindcss/no-important */
   @media (max-width: 600px) {

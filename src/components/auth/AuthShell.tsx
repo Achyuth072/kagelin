@@ -4,9 +4,6 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { slideUp } from "@/lib/motion";
 
-// Shared chrome for standalone auth routes (sign-in/up, and one-off pages like
-// /auth/email-confirmed) — logo + card container + background, kept in sync
-// across both so neither drifts from the design system on its own.
 export function AuthShell({
   children,
   footer,

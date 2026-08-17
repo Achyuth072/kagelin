@@ -85,9 +85,7 @@ export function AuthProvider({
   initialIsGuest = false,
 }: {
   children: React.ReactNode;
-  // Mirrors the `kanso_guest_mode` cookie, read server-side by the root
-  // layout, so the first client render agrees with the SSR output instead
-  // of branching on `typeof window` and diverging from it (hydration error).
+  // Mirrors the server-side `kanso_guest_mode` cookie so first render matches SSR output (avoids a hydration error).
   initialIsGuest?: boolean;
 }) {
   const [isGuestMode, setIsGuestMode] = useState<boolean>(initialIsGuest);
@@ -192,8 +190,7 @@ export function AuthProvider({
 
   const resetPasswordForEmail = useCallback(
     async (email: string, captchaToken: string) => {
-      // Routes back through the callback route's existing `next` handling —
-      // no separate recovery-detection logic needed there.
+      // Routes through the callback's existing `next` handling — no separate recovery-detection logic needed there.
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/auth/update-password")}`,
         captchaToken,
@@ -213,18 +210,13 @@ export function AuthProvider({
 
   const linkIdentity = useCallback(
     async (provider: OAuthProviderId) => {
-      // `connecting` round-trips through the callback's error redirect so
-      // AccountSection can still name the provider if linking fails
-      // (identity_already_exists) — see docs/adr/0012-identity-linking.md.
+      // `connecting` lets AccountSection name the provider on a linking failure — see docs/adr/0012-identity-linking.md.
       const next = `/settings?tab=account&connecting=${provider}`;
       const { error } = await supabase.auth.linkIdentity({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-          // Without this, linking silently reuses whichever Google account
-          // is already active in the browser instead of prompting — easy to
-          // link the wrong one with multiple accounts signed in. GitHub/GitLab
-          // don't expose an equivalent account-chooser param.
+          // Forces Google's account picker; otherwise linking silently reuses whichever account is already signed in.
           ...(provider === "google" && {
             queryParams: { prompt: "select_account" },
           }),
@@ -239,11 +231,7 @@ export function AuthProvider({
     async (identity: UserIdentity) => {
       const { error } = await supabase.auth.unlinkIdentity(identity);
       if (!error) {
-        // getSession() would hand back the cached session, whose `identities`
-        // is a snapshot taken at sign-in that unlinking never rewrites — the
-        // disconnected Provider would keep showing as connected, across
-        // reloads, until the access token next refreshed. Only a refresh
-        // re-reads identities from the server and re-persists them.
+        // getSession() would return the stale cached `identities`, still showing the disconnected provider as connected.
         const {
           data: { session },
         } = await supabase.auth.refreshSession();
