@@ -54,8 +54,9 @@ export function ResetPasswordAuth({
         title="Check your inbox"
         description={
           <>
-            If <span className="font-medium text-foreground">{email}</span> has
-            an account, we&apos;ve sent a link to reset the password.
+            {"If "}
+            <span className="font-medium text-foreground">{email}</span>
+            {" has an account, we've sent a link to reset the password."}
           </>
         }
         actionLabel="Back to sign in"

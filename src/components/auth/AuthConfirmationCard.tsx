@@ -25,7 +25,7 @@ export function AuthConfirmationCard({
       key={motionKey}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="w-full flex flex-col items-center justify-center p-6 text-center space-y-4 rounded-lg bg-primary/5 border border-primary/20"
+      className="w-full flex flex-col items-center justify-center text-center space-y-4"
     >
       <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
         <CheckCircle2 className="h-6 w-6 text-primary" strokeWidth={2.25} />

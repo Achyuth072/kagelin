@@ -99,9 +99,11 @@ export function PasswordAuth({
         title="Check your inbox"
         description={
           <>
-            If <span className="font-medium text-foreground">{email}</span> is
-            new, we&apos;ve sent a link to finish setting up your account.
-            Already have an account? Sign in instead.
+            {"If "}
+            <span className="font-medium text-foreground">{email}</span>
+            {
+              " is new, we've sent a link to finish setting up your account. Already have an account? Sign in instead."
+            }
           </>
         }
         actionLabel="Sign in instead"
