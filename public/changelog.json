@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.31.0-preview.2",
+    "date": "2026-08-17",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Correct handle_new_user OAuth display_name fallback field",
+        "Auth error labelling, duplication, and naming cleanups",
+        "Auth callback error routing, update-password shell, signup-disabled message"
+      ]
+    }
+  },
+  {
     "version": "1.31.0-preview.1",
     "date": "2026-08-15",
     "channel": "preview",
@@ -807,16 +819,6 @@
         "Empty states redesigned across tasks, habits, calendar, and search",
         "Habit completion checkmarks stay legible on light habit colors",
         "Icon-only buttons now have screen-reader labels, and animations respect reduced-motion settings"
-      ]
-    }
-  },
-  {
-    "version": "1.22.1",
-    "date": "2026-06-11",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Focus timer no longer gets stuck at 00:00 if the server clock check fails"
       ]
     }
   }
