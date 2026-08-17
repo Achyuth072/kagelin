@@ -12,6 +12,7 @@ import { AUTH_LINK_CLASS } from "@/components/auth/authLinkClass";
 import { AuthEmailField } from "@/components/auth/AuthEmailField";
 import { AuthConfirmationCard } from "@/components/auth/AuthConfirmationCard";
 import { PasswordBreachWarning } from "@/components/auth/PasswordBreachWarning";
+import { PasswordVisibilityToggle } from "@/components/auth/PasswordVisibilityToggle";
 import { useTurnstileCaptcha } from "@/lib/hooks/useTurnstileCaptcha";
 import { usePasswordBreachCheck } from "@/lib/hooks/usePasswordBreachCheck";
 import {
@@ -40,6 +41,7 @@ export function PasswordAuth({
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedUp, setSignedUp] = useState(false);
@@ -128,9 +130,9 @@ export function PasswordAuth({
           />
           <Input
             id="password-auth-password"
-            type="password"
+            type={showPassword ? "text" : "password"}
             placeholder="••••••••"
-            className="pl-9 h-11 text-base md:text-base"
+            className="pl-9 pr-9 h-11 text-base md:text-base"
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);
@@ -143,6 +145,10 @@ export function PasswordAuth({
             }
             minLength={MIN_PASSWORD_LENGTH}
             required
+          />
+          <PasswordVisibilityToggle
+            visible={showPassword}
+            onToggle={() => setShowPassword((v) => !v)}
           />
         </div>
         {passwordTooShort && (

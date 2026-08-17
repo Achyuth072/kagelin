@@ -158,6 +158,17 @@ describe("AccountSection", () => {
     ).toBeInTheDocument();
   });
 
+  it("toggles password visibility when the eye icon is clicked", () => {
+    setupAuth();
+    render(<AccountSection />);
+
+    const passwordInput = screen.getByLabelText("New Password");
+    expect(passwordInput).toHaveAttribute("type", "password");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+    expect(passwordInput).toHaveAttribute("type", "text");
+  });
+
   it("renders ADR 0012 explanation when linking an already-claimed identity", async () => {
     const identities: UserIdentity[] = [
       {

@@ -5,30 +5,35 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Lock, Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { PasswordBreachWarning } from "@/components/auth/PasswordBreachWarning";
+import { AuthPasswordField } from "@/components/auth/AuthPasswordField";
 import { usePasswordBreachCheck } from "@/lib/hooks/usePasswordBreachCheck";
 import {
   MIN_PASSWORD_LENGTH,
   isPasswordTooShort,
+  doPasswordsMatch,
 } from "@/lib/auth/password-policy";
 
 export function UpdatePasswordAuth() {
   const { user, loading, isGuestMode, updatePassword } = useAuth();
   const router = useRouter();
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updated, setUpdated] = useState(false);
   const { breached, checkOnBlur, clearBreach } = usePasswordBreachCheck();
 
   const passwordTooShort = isPasswordTooShort(password);
+  const passwordsMismatch =
+    confirmPassword.length > 0 && !doPasswordsMatch(password, confirmPassword);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password || passwordTooShort) return;
+    if (!password || !confirmPassword || passwordTooShort || passwordsMismatch)
+      return;
 
     setSubmitting(true);
     setError(null);
@@ -105,42 +110,41 @@ export function UpdatePasswordAuth() {
               <h1 className="text-xl font-semibold">Choose a new password</h1>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label
-                  htmlFor="update-password-new"
-                  className="text-sm font-medium leading-none"
-                >
-                  New password
-                </label>
-                <div className="relative">
-                  <Lock
-                    className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-                    strokeWidth={2.25}
-                  />
-                  <Input
-                    id="update-password-new"
-                    type="password"
-                    placeholder="••••••••"
-                    className="pl-9 h-11 text-base md:text-base"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      clearBreach();
-                    }}
-                    onBlur={() => checkOnBlur(password, passwordTooShort)}
-                    disabled={submitting}
-                    autoComplete="new-password"
-                    minLength={MIN_PASSWORD_LENGTH}
-                    required
-                  />
-                </div>
+              <AuthPasswordField
+                id="update-password-new"
+                label="New password"
+                value={password}
+                onChange={(value) => {
+                  setPassword(value);
+                  clearBreach();
+                }}
+                onBlur={() => checkOnBlur(password, passwordTooShort)}
+                disabled={submitting}
+                minLength={MIN_PASSWORD_LENGTH}
+                toggleLabel="new password"
+              >
                 {passwordTooShort && (
                   <p className="text-xs text-muted-foreground">
                     Password must be at least {MIN_PASSWORD_LENGTH} characters.
                   </p>
                 )}
                 <PasswordBreachWarning breached={breached} />
-              </div>
+              </AuthPasswordField>
+
+              <AuthPasswordField
+                id="update-password-confirm"
+                label="Confirm password"
+                value={confirmPassword}
+                onChange={setConfirmPassword}
+                disabled={submitting}
+                toggleLabel="confirm password"
+              >
+                {passwordsMismatch && (
+                  <p className="text-xs text-destructive">
+                    Passwords do not match.
+                  </p>
+                )}
+              </AuthPasswordField>
 
               {error && (
                 <p
@@ -154,7 +158,13 @@ export function UpdatePasswordAuth() {
               <Button
                 type="submit"
                 className="w-full h-11 text-base font-medium"
-                disabled={submitting || !password || passwordTooShort}
+                disabled={
+                  submitting ||
+                  !password ||
+                  !confirmPassword ||
+                  passwordTooShort ||
+                  passwordsMismatch
+                }
               >
                 {submitting ? (
                   <>

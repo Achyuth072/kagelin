@@ -26,6 +26,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { PasswordBreachWarning } from "@/components/auth/PasswordBreachWarning";
+import { PasswordVisibilityToggle } from "@/components/auth/PasswordVisibilityToggle";
 import { usePasswordBreachCheck } from "@/lib/hooks/usePasswordBreachCheck";
 import {
   MIN_PASSWORD_LENGTH,
@@ -45,6 +46,7 @@ export function AccountSection() {
   const searchParams = useSearchParams();
 
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
@@ -266,9 +268,9 @@ export function AccountSection() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="account-password-input"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
-                  className="pl-9 h-11 sm:h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all text-base sm:text-sm"
+                  className="pl-9 pr-9 h-11 sm:h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all text-base sm:text-sm"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -279,6 +281,10 @@ export function AccountSection() {
                   autoComplete="new-password"
                   minLength={MIN_PASSWORD_LENGTH}
                   required
+                />
+                <PasswordVisibilityToggle
+                  visible={showPassword}
+                  onToggle={() => setShowPassword((v) => !v)}
                 />
               </div>
               {passwordTooShort && (

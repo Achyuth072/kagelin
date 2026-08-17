@@ -63,12 +63,61 @@ describe("UpdatePasswordAuth", () => {
     fireEvent.change(screen.getByLabelText("New password"), {
       target: { value: "new-hunter22" },
     });
+    fireEvent.change(screen.getByLabelText("Confirm password"), {
+      target: { value: "new-hunter22" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Update password" }));
 
     await waitFor(() =>
       expect(updatePassword).toHaveBeenCalledWith("new-hunter22"),
     );
     expect(await screen.findByText("Password updated")).toBeInTheDocument();
+  });
+
+  it("toggles password visibility on both fields independently", () => {
+    mockAuth();
+    render(<UpdatePasswordAuth />);
+
+    const newPasswordInput = screen.getByLabelText("New password");
+    const confirmPasswordInput = screen.getByLabelText("Confirm password");
+    expect(newPasswordInput).toHaveAttribute("type", "password");
+    expect(confirmPasswordInput).toHaveAttribute("type", "password");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show new password" }));
+    expect(newPasswordInput).toHaveAttribute("type", "text");
+    expect(confirmPasswordInput).toHaveAttribute("type", "password");
+  });
+
+  it("disables submit and shows an error when the confirmation doesn't match", () => {
+    mockAuth();
+    render(<UpdatePasswordAuth />);
+
+    fireEvent.change(screen.getByLabelText("New password"), {
+      target: { value: "new-hunter22" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirm password"), {
+      target: { value: "new-hunter23" },
+    });
+
+    expect(screen.getByText("Passwords do not match.")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Update password" }),
+    ).toBeDisabled();
+  });
+
+  it("does not call updatePassword when the confirmation is empty", () => {
+    const updatePassword = vi.fn().mockResolvedValue({ error: null });
+    mockAuth({ updatePassword });
+    render(<UpdatePasswordAuth />);
+
+    fireEvent.change(screen.getByLabelText("New password"), {
+      target: { value: "new-hunter22" },
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Update password" }),
+    ).toBeDisabled();
+    expect(updatePassword).not.toHaveBeenCalled();
   });
 
   it("renders the error returned by updatePassword", async () => {
@@ -79,6 +128,9 @@ describe("UpdatePasswordAuth", () => {
     render(<UpdatePasswordAuth />);
 
     fireEvent.change(screen.getByLabelText("New password"), {
+      target: { value: "new-hunter22" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirm password"), {
       target: { value: "new-hunter22" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Update password" }));

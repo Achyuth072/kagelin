@@ -404,6 +404,22 @@ describe("PasswordAuth", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("toggles password visibility when the eye icon is clicked", async () => {
+    await renderWithSiteKey("test-site-key", {
+      mode: "sign-in",
+      onSwitchToSignIn,
+    });
+
+    const passwordInput = screen.getByLabelText("Password");
+    expect(passwordInput).toHaveAttribute("type", "password");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show password" }));
+    expect(passwordInput).toHaveAttribute("type", "text");
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide password" }));
+    expect(passwordInput).toHaveAttribute("type", "password");
+  });
+
   it("never blocks sign-up when the breach check rejects (fails open)", async () => {
     mockIsPasswordBreached.mockRejectedValue(new Error("network error"));
     await renderWithSiteKey("test-site-key", {
