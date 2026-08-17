@@ -173,10 +173,10 @@ export function PasswordAuth({
         {loading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            {mode === "sign-up" ? "Creating account..." : "Signing in..."}
+            {mode === "sign-up" ? "Signing up..." : "Signing in..."}
           </>
         ) : mode === "sign-up" ? (
-          "Create account"
+          "Sign up"
         ) : (
           "Sign in"
         )}

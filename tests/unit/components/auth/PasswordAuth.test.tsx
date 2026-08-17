@@ -95,9 +95,7 @@ describe("PasswordAuth", () => {
     expect(
       screen.getByText("Password must be at least 8 characters."),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Create account" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Sign up" })).toBeDisabled();
   });
 
   it("keeps submit disabled until the captcha verifies, then calls signUpWithPassword with the right args", async () => {
@@ -113,18 +111,14 @@ describe("PasswordAuth", () => {
       target: { value: "hunter22" },
     });
 
-    expect(
-      screen.getByRole("button", { name: "Create account" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Sign up" })).toBeDisabled();
 
     verifyCaptcha();
 
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Create account" }),
-      ).toBeEnabled(),
+      expect(screen.getByRole("button", { name: "Sign up" })).toBeEnabled(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
 
     await waitFor(() =>
       expect(mockSignUpWithPassword).toHaveBeenCalledWith(
@@ -209,11 +203,9 @@ describe("PasswordAuth", () => {
     });
     verifyCaptcha();
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Create account" }),
-      ).toBeEnabled(),
+      expect(screen.getByRole("button", { name: "Sign up" })).toBeEnabled(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "This app is private. Only authorized users can sign in.",
@@ -234,11 +226,9 @@ describe("PasswordAuth", () => {
     });
     verifyCaptcha();
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Create account" }),
-      ).toBeEnabled(),
+      expect(screen.getByRole("button", { name: "Sign up" })).toBeEnabled(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
 
     expect(await screen.findByText("Check your inbox")).toBeInTheDocument();
     const signInAction = screen.getByRole("button", {
@@ -311,9 +301,7 @@ describe("PasswordAuth", () => {
     expect(mockIsPasswordBreached).toHaveBeenCalledWith("hunter22");
     verifyCaptcha();
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Create account" }),
-      ).toBeEnabled(),
+      expect(screen.getByRole("button", { name: "Sign up" })).toBeEnabled(),
     );
   });
 
@@ -436,11 +424,9 @@ describe("PasswordAuth", () => {
     verifyCaptcha();
 
     await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: "Create account" }),
-      ).toBeEnabled(),
+      expect(screen.getByRole("button", { name: "Sign up" })).toBeEnabled(),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign up" }));
 
     await waitFor(() =>
       expect(mockSignUpWithPassword).toHaveBeenCalledWith(
