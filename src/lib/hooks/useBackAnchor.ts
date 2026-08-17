@@ -6,7 +6,7 @@ import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
 import {
   AUTH_STANDALONE_ROUTES,
   isOAuthConnectRedirect,
-} from "@/lib/auth/authRoutes";
+} from "@/lib/auth/auth-routes";
 
 // history.pushState() desyncs App Router's tracking, so use replace()/push().
 // Must run somewhere that survives its own replace() — AppShell, not Template.

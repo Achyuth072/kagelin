@@ -9,7 +9,6 @@ import {
 } from "@/lib/auth/providers";
 import { PROVIDER_ICONS } from "@/components/auth/ProviderIcons";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -18,7 +17,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Lock,
   Loader2,
   Link2,
   Unlink,
@@ -26,28 +24,28 @@ import {
   AlertCircle,
   Mail,
 } from "lucide-react";
+import { AuthPasswordField } from "@/components/auth/AuthPasswordField";
 import { PasswordBreachWarning } from "@/components/auth/PasswordBreachWarning";
-import { PasswordVisibilityToggle } from "@/components/auth/PasswordVisibilityToggle";
 import { usePasswordBreachCheck } from "@/lib/hooks/usePasswordBreachCheck";
 import {
   MIN_PASSWORD_LENGTH,
   isPasswordTooShort,
 } from "@/lib/auth/password-policy";
 import { formatLinkError } from "@/lib/auth/format-auth-error";
+import { useHasPassword } from "@/lib/hooks/useHasPassword";
 import { notify } from "@/lib/notify";
 import type { UserIdentity } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
 import { ICON_LED_ROW_CLASS } from "@/components/settings/iconLedRowClass";
-
-const SETTINGS_CARD_CLASS = "border-border/50 shadow-none bg-background/50";
+import { SETTINGS_CARD_CLASS } from "@/components/settings/settingsCardClass";
 
 export function AccountSection() {
   const { user, linkIdentity, unlinkIdentity, updatePassword, isGuestMode } =
     useAuth();
   const searchParams = useSearchParams();
+  const { hasPassword, refetchHasPassword } = useHasPassword();
 
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
@@ -56,21 +54,23 @@ export function AccountSection() {
 
   const urlError =
     searchParams?.get("error") || searchParams?.get("error_description");
+  const urlErrorCode = searchParams?.get("error_code");
   const connectingProviderId = searchParams?.get("connecting");
   const connectingLabel = SIGNIN_OAUTH_PROVIDERS.find(
     (p) => p.id === connectingProviderId,
   )?.label;
   const displayError =
     providerError ||
-    (urlError ? formatLinkError(urlError, connectingLabel) : null);
+    (urlError
+      ? formatLinkError(urlError, connectingLabel, urlErrorCode)
+      : null);
 
   const identities = user?.identities ?? [];
   const totalIdentities =
     identities.length > 0 ? identities.length : user?.email ? 1 : 0;
   const isLastIdentity = totalIdentities <= 1;
 
-  const emailIdentity = identities.find((id) => id.provider === "email");
-  const hasPassword = !!emailIdentity;
+  const emailIdentity = identities.find((entry) => entry.provider === "email");
   const passwordTooShort = isPasswordTooShort(password);
   const { breached, checkOnBlur, clearBreach } = usePasswordBreachCheck();
 
@@ -132,6 +132,7 @@ export function AccountSection() {
             : "Password set successfully",
         );
         setPassword("");
+        refetchHasPassword();
       }
     } catch {
       setPasswordError("An unexpected error occurred");
@@ -168,12 +169,14 @@ export function AccountSection() {
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">
           {emailIdentity && (
-            // Display-only: unlinking `email` doesn't revoke the password itself.
+            // The `email` Provider backs both password and magic-link sign-in;
+            // this row is about the Provider connection, not whether a
+            // password is set — that's the card below.
             <div className={cn(ICON_LED_ROW_CLASS, "justify-between")}>
               <div className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-foreground/70" />
                 <div>
-                  <p className="text-sm font-medium">Email &amp; Password</p>
+                  <p className="text-sm font-medium">Email</p>
                   <p className="text-xs text-muted-foreground">Connected</p>
                 </div>
               </div>
@@ -183,7 +186,7 @@ export function AccountSection() {
           {SIGNIN_OAUTH_PROVIDERS.map((provider) => {
             const Icon = PROVIDER_ICONS[provider.id];
             const identity = identities.find(
-              (id) => id.provider === provider.id,
+              (entry) => entry.provider === provider.id,
             );
             const isConnected = !!identity;
 
@@ -272,43 +275,27 @@ export function AccountSection() {
         </CardHeader>
         <CardContent className="px-4 pb-5 pt-0">
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label
-                htmlFor="account-password-input"
-                className="text-[11px] uppercase tracking-wider text-muted-foreground/60"
-              >
-                New Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="account-password-input"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  className="pl-9 pr-9 h-11 sm:h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all text-base sm:text-sm"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    clearBreach();
-                  }}
-                  onBlur={() => checkOnBlur(password, passwordTooShort)}
-                  disabled={passwordSubmitting}
-                  autoComplete="new-password"
-                  minLength={MIN_PASSWORD_LENGTH}
-                  required
-                />
-                <PasswordVisibilityToggle
-                  visible={showPassword}
-                  onToggle={() => setShowPassword((v) => !v)}
-                />
-              </div>
+            <AuthPasswordField
+              id="account-password-input"
+              label="New Password"
+              labelClassName="text-[11px] uppercase tracking-wider text-muted-foreground/60"
+              inputClassName="h-11 sm:h-10 bg-background/30 border-border/40 focus:border-brand/50 focus:ring-0 transition-all text-base sm:text-sm"
+              value={password}
+              onChange={(value) => {
+                setPassword(value);
+                clearBreach();
+              }}
+              onBlur={() => checkOnBlur(password, passwordTooShort)}
+              disabled={passwordSubmitting}
+              minLength={MIN_PASSWORD_LENGTH}
+            >
               {passwordTooShort && (
                 <p className="text-xs text-muted-foreground">
                   Password must be at least {MIN_PASSWORD_LENGTH} characters.
                 </p>
               )}
               <PasswordBreachWarning breached={breached} />
-            </div>
+            </AuthPasswordField>
 
             {passwordError && (
               <p role="alert" className="text-xs text-destructive font-medium">

@@ -3,13 +3,11 @@
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { Turnstile } from "@/components/auth/Turnstile";
+import { AuthCaptcha } from "@/components/auth/AuthCaptcha";
 import { AuthEmailField } from "@/components/auth/AuthEmailField";
 import { AuthConfirmationCard } from "@/components/auth/AuthConfirmationCard";
 import { useTurnstileCaptcha } from "@/lib/hooks/useTurnstileCaptcha";
 import { Loader2 } from "lucide-react";
-
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 // Same confirmation copy whether or not the email is registered — Supabase's
 // own resetPasswordForEmail gives no signal to distinguish the two, and
@@ -22,16 +20,9 @@ export function ResetPasswordAuth({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [requested, setRequested] = useState(false);
-  const {
-    captchaToken,
-    setCaptchaToken,
-    turnstileRef,
-    handleCaptchaExpire,
-    resetCaptcha,
-  } = useTurnstileCaptcha();
+  const turnstile = useTurnstileCaptcha();
+  const { captchaToken, resetCaptcha, captchaMissing } = turnstile;
   const { resetPasswordForEmail } = useAuth();
-
-  const captchaMissing = !!TURNSTILE_SITE_KEY && !captchaToken;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,14 +65,7 @@ export function ResetPasswordAuth({
         disabled={loading}
       />
 
-      {TURNSTILE_SITE_KEY && (
-        <Turnstile
-          siteKey={TURNSTILE_SITE_KEY}
-          onVerify={setCaptchaToken}
-          onExpire={handleCaptchaExpire}
-          handleRef={turnstileRef}
-        />
-      )}
+      <AuthCaptcha {...turnstile} />
 
       <Button
         type="submit"

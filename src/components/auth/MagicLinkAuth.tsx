@@ -5,13 +5,11 @@ import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Turnstile } from "@/components/auth/Turnstile";
+import { AuthCaptcha } from "@/components/auth/AuthCaptcha";
 import { AUTH_LINK_CLASS } from "@/components/auth/authLinkClass";
 import { AuthEmailField } from "@/components/auth/AuthEmailField";
 import { AuthConfirmationCard } from "@/components/auth/AuthConfirmationCard";
 import { useTurnstileCaptcha } from "@/lib/hooks/useTurnstileCaptcha";
-
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 export function MagicLinkAuth({
   onSwitchToPassword,
@@ -22,13 +20,8 @@ export function MagicLinkAuth({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-  const {
-    captchaToken,
-    setCaptchaToken,
-    turnstileRef,
-    handleCaptchaExpire,
-    resetCaptcha,
-  } = useTurnstileCaptcha();
+  const turnstile = useTurnstileCaptcha();
+  const { captchaToken, resetCaptcha, captchaMissing } = turnstile;
   const { signInWithMagicLink } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,25 +79,18 @@ export function MagicLinkAuth({
               )}
             </AuthEmailField>
 
-            {TURNSTILE_SITE_KEY && (
-              <Turnstile
-                siteKey={TURNSTILE_SITE_KEY}
-                onVerify={setCaptchaToken}
-                onExpire={handleCaptchaExpire}
-                handleRef={turnstileRef}
-              />
-            )}
+            <AuthCaptcha {...turnstile} />
 
             {error && (
-              <p className="text-sm text-destructive font-medium">{error}</p>
+              <p role="alert" className="text-sm text-destructive font-medium">
+                {error}
+              </p>
             )}
 
             <Button
               type="submit"
               className="w-full h-11 text-base font-medium transition-all"
-              disabled={
-                loading || !email || (!!TURNSTILE_SITE_KEY && !captchaToken)
-              }
+              disabled={loading || !email || captchaMissing}
             >
               {loading ? (
                 <>

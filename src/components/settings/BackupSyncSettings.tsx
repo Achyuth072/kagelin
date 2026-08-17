@@ -55,8 +55,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/AuthProvider";
 import { useAccountData } from "@/lib/hooks/useAccountData";
 import { ImportDialog } from "./ImportDialog";
-
-const SETTINGS_CARD_CLASS = "border-border/50 shadow-none bg-background/50";
+import { SETTINGS_CARD_CLASS } from "@/components/settings/settingsCardClass";
 
 interface CloudSyncCardProps {
   credentials: WebDAVCredentials;

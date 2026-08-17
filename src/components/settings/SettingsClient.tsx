@@ -16,6 +16,7 @@ import {
   RotateCcw,
   Trash2,
   Clock,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +64,30 @@ const DESKTOP_SECTION_TAB_TRIGGER_CLASS = cn(
 
 // Preferences intentionally spans full width instead of this cap.
 const SECTION_MAX_WIDTH = "max-w-5xl";
+
+function AccountInfoRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-full bg-secondary/30">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground">{value}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface SettingsClientProps {
   version: string;
@@ -467,34 +492,18 @@ export function SettingsClient({ version }: SettingsClientProps) {
                 <div className="space-y-3">
                   {profile?.display_name &&
                     profile.display_name !== user?.email && (
-                      <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-full bg-secondary/30">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium">Name</p>
-                            <p className="text-xs text-muted-foreground">
-                              {profile.display_name}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                      <AccountInfoRow
+                        icon={User}
+                        label="Name"
+                        value={profile.display_name}
+                      />
                     )}
 
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-full bg-secondary/30">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Email</p>
-                        <p className="text-xs text-muted-foreground">
-                          {user?.email || "Not signed in"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <AccountInfoRow
+                    icon={User}
+                    label="Email"
+                    value={user?.email || "Not signed in"}
+                  />
 
                   {!isGuestMode && <AccountSection />}
 

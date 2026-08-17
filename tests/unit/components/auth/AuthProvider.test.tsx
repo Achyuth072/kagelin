@@ -21,7 +21,7 @@ function mockSupabase(session: Session | null) {
         return { data: { subscription: { unsubscribe: vi.fn() } } };
       }),
       signInWithOAuth: vi.fn(),
-      signInWithOtp: vi.fn(),
+      signInWithOtp: vi.fn().mockResolvedValue({ error: null }),
       signUp: vi.fn().mockResolvedValue({ error: null }),
       signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
       resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
@@ -105,6 +105,34 @@ describe("AuthProvider", () => {
     expect(supabase.auth.signInWithOAuth).toHaveBeenCalledWith({
       provider: "gitlab",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+  });
+
+  it("passes email, captcha token and the callback redirect through to supabase.auth.signInWithOtp", async () => {
+    const supabase = mockSupabase(null);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.signInWithMagicLink(
+      "real@user.com",
+      "captcha-token-abc",
+    );
+
+    expect(supabase.auth.signInWithOtp).toHaveBeenCalledWith({
+      email: "real@user.com",
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        captchaToken: "captcha-token-abc",
+      },
     });
   });
 

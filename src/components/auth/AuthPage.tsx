@@ -112,7 +112,10 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
       </div>
 
       {error && (
-        <p className="text-sm text-destructive font-medium text-center bg-destructive-surface p-3 rounded-lg w-full">
+        <p
+          role="alert"
+          className="text-sm text-destructive font-medium text-center bg-destructive-surface p-3 rounded-lg w-full"
+        >
           {isSignupDisabledError(error)
             ? SIGNUP_DISABLED_MESSAGE
             : "Authentication failed. Please try again."}

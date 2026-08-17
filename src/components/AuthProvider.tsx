@@ -8,7 +8,7 @@ import {
   useCallback,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { EMAIL_CONFIRMED_PATH } from "@/lib/auth/authRoutes";
+import { EMAIL_CONFIRMED_PATH } from "@/lib/auth/auth-routes";
 import type { OAuthProviderId } from "@/lib/auth/providers";
 import type {
   User,

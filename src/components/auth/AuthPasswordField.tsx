@@ -4,33 +4,43 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Lock } from "lucide-react";
 import { PasswordVisibilityToggle } from "@/components/auth/PasswordVisibilityToggle";
+import { cn } from "@/lib/utils";
 
 export function AuthPasswordField({
   id,
   label,
+  labelClassName,
   value,
   onChange,
   onBlur,
   disabled,
   minLength,
   toggleLabel,
+  autoComplete = "new-password",
+  inputClassName,
   children,
 }: {
   id: string;
   label: string;
+  labelClassName?: string;
   value: string;
   onChange: (value: string) => void;
   onBlur?: () => void;
   disabled?: boolean;
   minLength?: number;
   toggleLabel?: string;
+  autoComplete?: string;
+  inputClassName?: string;
   children?: React.ReactNode;
 }) {
   const [visible, setVisible] = useState(false);
 
   return (
     <div className="space-y-2">
-      <label htmlFor={id} className="text-sm font-medium leading-none">
+      <label
+        htmlFor={id}
+        className={cn("text-sm font-medium leading-none", labelClassName)}
+      >
         {label}
       </label>
       <div className="relative">
@@ -42,12 +52,15 @@ export function AuthPasswordField({
           id={id}
           type={visible ? "text" : "password"}
           placeholder="••••••••"
-          className="pl-9 pr-9 h-11 text-base md:text-base"
+          className={cn(
+            "pl-9 pr-9 h-11 text-base md:text-base",
+            inputClassName,
+          )}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onBlur={onBlur}
           disabled={disabled}
-          autoComplete="new-password"
+          autoComplete={autoComplete}
           minLength={minLength}
           required
         />

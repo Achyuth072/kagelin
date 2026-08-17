@@ -14,7 +14,6 @@ import { usePasswordBreachCheck } from "@/lib/hooks/usePasswordBreachCheck";
 import {
   MIN_PASSWORD_LENGTH,
   isPasswordTooShort,
-  doPasswordsMatch,
 } from "@/lib/auth/password-policy";
 
 export function UpdatePasswordAuth() {
@@ -29,7 +28,7 @@ export function UpdatePasswordAuth() {
 
   const passwordTooShort = isPasswordTooShort(password);
   const passwordsMismatch =
-    confirmPassword.length > 0 && !doPasswordsMatch(password, confirmPassword);
+    confirmPassword.length > 0 && password !== confirmPassword;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

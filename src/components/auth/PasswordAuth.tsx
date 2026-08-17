@@ -3,16 +3,14 @@
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Lock, Loader2 } from "lucide-react";
-import { Turnstile } from "@/components/auth/Turnstile";
+import { Loader2 } from "lucide-react";
+import { AuthCaptcha } from "@/components/auth/AuthCaptcha";
 import type { AuthMode } from "@/components/auth/AuthPage";
 import { AUTH_LINK_CLASS } from "@/components/auth/authLinkClass";
 import { AuthEmailField } from "@/components/auth/AuthEmailField";
+import { AuthPasswordField } from "@/components/auth/AuthPasswordField";
 import { AuthConfirmationCard } from "@/components/auth/AuthConfirmationCard";
 import { PasswordBreachWarning } from "@/components/auth/PasswordBreachWarning";
-import { PasswordVisibilityToggle } from "@/components/auth/PasswordVisibilityToggle";
 import { useTurnstileCaptcha } from "@/lib/hooks/useTurnstileCaptcha";
 import { usePasswordBreachCheck } from "@/lib/hooks/usePasswordBreachCheck";
 import {
@@ -23,8 +21,6 @@ import {
   SIGNUP_DISABLED_MESSAGE,
   isSignupDisabledError,
 } from "@/lib/auth/format-auth-error";
-
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
 // Same confirmation copy for every sign-up success — Supabase gives no
 // signal to distinguish a new email from an already-registered one.
@@ -41,17 +37,11 @@ export function PasswordAuth({
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedUp, setSignedUp] = useState(false);
-  const {
-    captchaToken,
-    setCaptchaToken,
-    turnstileRef,
-    handleCaptchaExpire,
-    resetCaptcha,
-  } = useTurnstileCaptcha();
+  const turnstile = useTurnstileCaptcha();
+  const { captchaToken, resetCaptcha, captchaMissing } = turnstile;
   const { breached, checkOnBlur, clearBreach } = usePasswordBreachCheck();
   const { signUpWithPassword, signInWithPassword } = useAuth();
 
@@ -95,7 +85,7 @@ export function PasswordAuth({
   if (signedUp) {
     return (
       <AuthConfirmationCard
-        motionKey="collision-message"
+        motionKey="signup-confirmation"
         title="Check your inbox"
         description={
           <>
@@ -121,38 +111,20 @@ export function PasswordAuth({
         disabled={loading}
       />
 
-      <div className="space-y-2">
-        <Label htmlFor="password-auth-password" className="text-[13px]">
-          Password
-        </Label>
-        <div className="relative">
-          <Lock
-            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-            strokeWidth={2.25}
-          />
-          <Input
-            id="password-auth-password"
-            type={showPassword ? "text" : "password"}
-            placeholder="••••••••"
-            className="pl-9 pr-9 h-11 text-base md:text-base"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              clearBreach();
-            }}
-            onBlur={handlePasswordBlur}
-            disabled={loading}
-            autoComplete={
-              mode === "sign-up" ? "new-password" : "current-password"
-            }
-            minLength={MIN_PASSWORD_LENGTH}
-            required
-          />
-          <PasswordVisibilityToggle
-            visible={showPassword}
-            onToggle={() => setShowPassword((v) => !v)}
-          />
-        </div>
+      <AuthPasswordField
+        id="password-auth-password"
+        label="Password"
+        labelClassName="text-[13px]"
+        value={password}
+        onChange={(value) => {
+          setPassword(value);
+          clearBreach();
+        }}
+        onBlur={handlePasswordBlur}
+        disabled={loading}
+        autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
+        minLength={MIN_PASSWORD_LENGTH}
+      >
         {passwordTooShort && (
           <p className="text-xs text-muted-foreground">
             Password must be at least {MIN_PASSWORD_LENGTH} characters.
@@ -181,16 +153,9 @@ export function PasswordAuth({
             )}
           </div>
         )}
-      </div>
+      </AuthPasswordField>
 
-      {TURNSTILE_SITE_KEY && (
-        <Turnstile
-          siteKey={TURNSTILE_SITE_KEY}
-          onVerify={setCaptchaToken}
-          onExpire={handleCaptchaExpire}
-          handleRef={turnstileRef}
-        />
-      )}
+      <AuthCaptcha {...turnstile} />
 
       {error && (
         <p role="alert" className="text-sm text-destructive font-medium">
@@ -202,11 +167,7 @@ export function PasswordAuth({
         type="submit"
         className="w-full h-11 text-base font-medium transition-all"
         disabled={
-          loading ||
-          !email ||
-          !password ||
-          passwordTooShort ||
-          (!!TURNSTILE_SITE_KEY && !captchaToken)
+          loading || !email || !password || passwordTooShort || captchaMissing
         }
       >
         {loading ? (

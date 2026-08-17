@@ -2,15 +2,24 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
-import { EMAIL_CONFIRMED_PATH } from "@/lib/auth/authRoutes";
+import { EMAIL_CONFIRMED_PATH } from "@/lib/auth/auth-routes";
 
 // Redirects to `next` so page-local error UI can render — except
 // /auth/email-confirmed, which has none, so that falls back to /login.
-function redirectWithError(origin: string, next: string, message: string) {
+// `errorCode` is GoTrue's stable error identifier (e.g.
+// "identity_already_exists"), forwarded alongside the prose `message` so the
+// client can branch on the code instead of matching the message text.
+function redirectWithError(
+  origin: string,
+  next: string,
+  message: string,
+  errorCode?: string | null,
+) {
   const target =
     next === "/" || next === EMAIL_CONFIRMED_PATH ? "/login" : next;
   const url = new URL(target, origin);
   url.searchParams.set("error", message);
+  if (errorCode) url.searchParams.set("error_code", errorCode);
   return NextResponse.redirect(url);
 }
 
@@ -18,10 +27,11 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const errorDescription = searchParams.get("error_description");
+  const errorCode = searchParams.get("error_code");
   const next = sanitizeNextPath(searchParams.get("next"));
 
   if (errorDescription) {
-    return redirectWithError(origin, next, errorDescription);
+    return redirectWithError(origin, next, errorDescription, errorCode);
   }
 
   if (code) {
@@ -70,7 +80,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
-      return redirectWithError(origin, next, error.message);
+      return redirectWithError(origin, next, error.message, error.code);
     }
 
     const response = NextResponse.redirect(`${origin}${next}`);
