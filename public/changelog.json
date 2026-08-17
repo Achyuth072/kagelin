@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.31.0-preview.4",
+    "date": "2026-08-17",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Force account picker for GitHub too, not just Google, when linking",
+        "Close two translucent destructive spots missed in the finding-9 sweep",
+        "Show account display name, restyle email-confirmed, fix connect flash and destructive surfaces"
+      ]
+    }
+  },
+  {
     "version": "1.31.0-preview.3",
     "date": "2026-08-17",
     "channel": "preview",
@@ -803,16 +815,6 @@
         "Improve contrast for muted/destructive/border tokens",
         "Match project dropdown to trigger width",
         "Stop dialog clipping location popover"
-      ]
-    }
-  },
-  {
-    "version": "1.23.0-preview.1",
-    "date": "2026-06-14",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Show active task on mobile header in guest mode"
       ]
     }
   }
