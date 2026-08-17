@@ -206,6 +206,25 @@ describe("AccountSection", () => {
     });
   });
 
+  it("lists the email identity as connected for an email-only user, with no disconnect action", () => {
+    const emailIdentity: UserIdentity = {
+      identity_id: "id-1",
+      id: "id-1",
+      user_id: "user-123",
+      provider: "email",
+      created_at: new Date().toISOString(),
+    };
+
+    setupAuth({ identities: [emailIdentity] });
+
+    render(<AccountSection />);
+
+    expect(screen.getByText("Email & Password")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Disconnect Email/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("names the provider from the `connecting` param when the error round-trips through the OAuth redirect", () => {
     setupAuth();
     mockUseSearchParams.mockReturnValue(

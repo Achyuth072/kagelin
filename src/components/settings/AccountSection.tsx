@@ -24,6 +24,7 @@ import {
   Unlink,
   KeyRound,
   AlertCircle,
+  Mail,
 } from "lucide-react";
 import { PasswordBreachWarning } from "@/components/auth/PasswordBreachWarning";
 import { PasswordVisibilityToggle } from "@/components/auth/PasswordVisibilityToggle";
@@ -68,7 +69,8 @@ export function AccountSection() {
     identities.length > 0 ? identities.length : user?.email ? 1 : 0;
   const isLastIdentity = totalIdentities <= 1;
 
-  const hasPassword = identities.some((id) => id.provider === "email");
+  const emailIdentity = identities.find((id) => id.provider === "email");
+  const hasPassword = !!emailIdentity;
   const passwordTooShort = isPasswordTooShort(password);
   const { breached, checkOnBlur, clearBreach } = usePasswordBreachCheck();
 
@@ -165,6 +167,19 @@ export function AccountSection() {
           </CardDescription>
         </CardHeader>
         <CardContent className="px-4 pb-3 pt-0">
+          {emailIdentity && (
+            // Display-only: unlinking `email` doesn't revoke the password itself.
+            <div className={cn(ICON_LED_ROW_CLASS, "justify-between")}>
+              <div className="flex items-center gap-3">
+                <Mail className="h-5 w-5 text-foreground/70" />
+                <div>
+                  <p className="text-sm font-medium">Email &amp; Password</p>
+                  <p className="text-xs text-muted-foreground">Connected</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {SIGNIN_OAUTH_PROVIDERS.map((provider) => {
             const Icon = PROVIDER_ICONS[provider.id];
             const identity = identities.find(
