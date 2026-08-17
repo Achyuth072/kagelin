@@ -221,6 +221,13 @@ export function AuthProvider({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          // Without this, linking silently reuses whichever Google account
+          // is already active in the browser instead of prompting — easy to
+          // link the wrong one with multiple accounts signed in. GitHub/GitLab
+          // don't expose an equivalent account-chooser param.
+          ...(provider === "google" && {
+            queryParams: { prompt: "select_account" },
+          }),
         },
       });
       return { error };

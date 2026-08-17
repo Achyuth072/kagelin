@@ -38,6 +38,9 @@
   --color-accent-foreground: hsl(var(--accent-foreground));
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-surface: hsl(var(--destructive-surface));
+  --color-destructive-surface-hover: hsl(var(--destructive-surface-hover));
+  --color-destructive-surface-border: hsl(var(--destructive-surface-border));
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -109,6 +112,10 @@
   --accent-foreground: 0 0% 18%;
   --destructive: 12 40% 45%; /* Darkened Terracotta for AA contrast */
   --destructive-foreground: 0 0% 98%;
+  /* Opaque terracotta wash for alert surfaces — no translucent bg-destructive/N overlays (see DESIGN_SYSTEM.md "opaque matte"). */
+  --destructive-surface: 12 45% 95%;
+  --destructive-surface-hover: 12 45% 91%;
+  --destructive-surface-border: 12 30% 78%;
   --border: 0 0% 60%; /* AA non-text contrast (1.4.11) on light backgrounds */
   --input: 0 0% 60%;
   --ring: 0 0% 18%;
@@ -142,6 +149,9 @@
   --accent-foreground: 0 0% 90%;
   --destructive: 12 32% 52%; /* Lightened Terracotta for AA text contrast */
   --destructive-foreground: 0 0% 98%;
+  --destructive-surface: 12 25% 20%;
+  --destructive-surface-hover: 12 25% 25%;
+  --destructive-surface-border: 12 25% 34%;
   --border: 0 0% 34%; /* AA non-text contrast (1.4.11) on dark backgrounds */
   --input: 0 0% 34%;
   --ring: 0 0% 90%;

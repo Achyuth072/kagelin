@@ -67,7 +67,7 @@ export function MetricCard({
                   ? "text-muted-foreground bg-secondary/50 border-border/50"
                   : trend.isPositive
                     ? "text-brand bg-brand/15 border-brand/20"
-                    : "text-destructive bg-destructive/15 border-destructive/20",
+                    : "text-destructive bg-destructive-surface border-destructive-surface-border",
               )}
             >
               <span className="text-xs md:text-sm" aria-hidden="true">

@@ -26,7 +26,7 @@ export default function ErrorBoundary({
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <motion.div {...slideUp} className="text-center space-y-6">
         <div className="flex justify-center">
-          <div className="h-20 w-20 rounded-full bg-destructive/10 flex items-center justify-center">
+          <div className="h-20 w-20 rounded-full bg-destructive-surface flex items-center justify-center">
             <AlertTriangle className="h-10 w-10 text-destructive" />
           </div>
         </div>

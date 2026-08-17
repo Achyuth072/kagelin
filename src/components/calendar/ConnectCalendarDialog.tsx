@@ -249,7 +249,7 @@ export function ConnectCalendarDialog({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive-surface-hover"
                     title={`Disconnect ${p}`}
                     aria-label={`Disconnect ${p}`}
                     onClick={async () => {

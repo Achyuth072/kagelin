@@ -39,6 +39,7 @@ import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog
 import { BackupSyncSettings } from "@/components/settings/BackupSyncSettings";
 import { AccountSection } from "@/components/settings/AccountSection";
 import { useAccountData } from "@/lib/hooks/useAccountData";
+import { useProfile } from "@/lib/hooks/useProfile";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChangelogPopup } from "@/components/ui/ChangelogPopup";
 import { AboutSheet } from "@/components/settings/AboutSheet";
@@ -98,6 +99,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { trigger } = useHaptic();
   const { clearCloudData } = useAccountData();
+  const { profile } = useProfile({ enabled: activeTab === "account" });
 
   // user goes null before the redirect to /login lands; avoids a flash.
   if (!user) {
@@ -463,6 +465,23 @@ export function SettingsClient({ version }: SettingsClientProps) {
                 </div>
 
                 <div className="space-y-3">
+                  {profile?.display_name &&
+                    profile.display_name !== user?.email && (
+                      <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-full bg-secondary/30">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">Name</p>
+                            <p className="text-xs text-muted-foreground">
+                              {profile.display_name}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                   <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
                     <div className="flex items-center gap-3">
                       <div className="p-2 rounded-full bg-secondary/30">
@@ -484,7 +503,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
                   {!isGuestMode && (
                     <Button
                       variant="outline"
-                      className="w-full justify-start shadow-none text-destructive border-destructive/20 hover:border-destructive/40 hover:bg-destructive/5 transition-all"
+                      className="w-full justify-start shadow-none text-destructive border-destructive-surface-border hover:border-destructive/40 hover:bg-destructive-surface-hover transition-all"
                       onClick={() => {
                         trigger("thud");
                         setIsDeleteDialogOpen(true);

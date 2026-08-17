@@ -75,7 +75,7 @@ export function DeleteUserDataDialog({
 
   const content = (
     <div className="space-y-4 py-2">
-      <div className="p-3 rounded-lg bg-destructive/5 border border-destructive/20 flex items-start gap-3">
+      <div className="p-3 rounded-lg bg-destructive-surface border border-destructive-surface-border flex items-start gap-3">
         <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
         <p className="text-sm text-foreground/90 font-medium leading-relaxed">
           {description}

@@ -147,7 +147,7 @@ export function AccountSection() {
       {displayError && (
         <div
           role="alert"
-          className="flex items-center gap-2 p-3.5 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive text-sm font-medium"
+          className="flex items-center gap-2 p-3.5 rounded-lg border border-destructive-surface-border bg-destructive-surface text-destructive text-sm font-medium"
         >
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{displayError}</span>

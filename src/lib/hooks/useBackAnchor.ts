@@ -3,7 +3,10 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
-import { AUTH_STANDALONE_ROUTES } from "@/lib/auth/authRoutes";
+import {
+  AUTH_STANDALONE_ROUTES,
+  isOAuthConnectRedirect,
+} from "@/lib/auth/authRoutes";
 
 // history.pushState() desyncs App Router's tracking, so use replace()/push().
 // Must run somewhere that survives its own replace() — AppShell, not Template.
@@ -51,10 +54,25 @@ export function useBackAnchor() {
         }
       }
 
+      const isOAuthConnect = isOAuthConnectRedirect(pathname, location.search);
       anchor.current =
-        pathname === "/" || UNANCHORED_ROUTES.has(pathname)
+        pathname === "/" || UNANCHORED_ROUTES.has(pathname) || isOAuthConnect
           ? null
           : pathname + location.search;
+      if (isOAuthConnect && pathname === "/settings") {
+        // /calendar's landing params (connected/oauth_error) are already
+        // stripped by their own owning components; /settings' "connecting"
+        // isn't stripped anywhere else — leaving it would re-suppress the
+        // back-anchor on a later hard reload of the stale URL.
+        const params = new URLSearchParams(location.search);
+        params.delete("connecting");
+        const cleaned = params.toString();
+        window.history.replaceState(
+          {},
+          "",
+          pathname + (cleaned ? `?${cleaned}` : ""),
+        );
+      }
       if (anchor.current) {
         anchorSettled = new Promise((resolve) => {
           resolveAnchorSettled = resolve;
