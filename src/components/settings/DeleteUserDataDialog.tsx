@@ -90,7 +90,7 @@ export function DeleteUserDataDialog({
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
           placeholder="Type 'delete'..."
-          className="h-11 bg-secondary/30 border-border/50 focus:border-destructive/30 focus:ring-destructive/10 transition-all font-medium"
+          className="h-11 bg-secondary/30 border-border/50 focus:border-destructive focus:ring-0 transition-all font-medium"
           autoFocus={isDesktop}
         />
       </div>

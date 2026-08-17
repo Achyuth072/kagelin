@@ -503,7 +503,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
                   {!isGuestMode && (
                     <Button
                       variant="outline"
-                      className="w-full justify-start shadow-none text-destructive border-destructive-surface-border hover:border-destructive/40 hover:bg-destructive-surface-hover transition-all"
+                      className="w-full justify-start shadow-none text-destructive border-destructive-surface-border hover:border-destructive hover:bg-destructive-surface-hover transition-all"
                       onClick={() => {
                         trigger("thud");
                         setIsDeleteDialogOpen(true);
