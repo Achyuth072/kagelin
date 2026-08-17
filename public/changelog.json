@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.31.0-preview.3",
+    "date": "2026-08-17",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Refresh session from server after unlinking an identity",
+        "Flatten AuthConfirmationCard and restore missing space in confirmation copy",
+        "Require explicit sign-in after signup confirmation and password reset",
+        "Add password visibility toggle and confirm-password field"
+      ]
+    }
+  },
+  {
     "version": "1.31.0-preview.2",
     "date": "2026-08-17",
     "channel": "preview",
@@ -800,25 +813,6 @@
     "sections": {
       "Added": [
         "Show active task on mobile header in guest mode"
-      ]
-    }
-  },
-  {
-    "version": "1.23.0-preview.0",
-    "date": "2026-06-14",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Compact list view for habits with a tappable rolling-7 day strip — toggle between Grid and Compact",
-        "Drag-and-drop reordering for habits in Compact view",
-        "Global search (Cmd+K) now finds tasks, habits, and events, with a search button in the mobile header"
-      ],
-      "Improved": [
-        "Habit, task, project, and other dialogs redesigned with a consistent icon-led layout",
-        "Tablet and landscape layouts fixed to avoid clipping on narrow or short screens",
-        "Empty states redesigned across tasks, habits, calendar, and search",
-        "Habit completion checkmarks stay legible on light habit colors",
-        "Icon-only buttons now have screen-reader labels, and animations respect reduced-motion settings"
       ]
     }
   }
