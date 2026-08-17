@@ -2,7 +2,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
-import type { Session, User } from "@supabase/supabase-js";
+import type { Session, User, UserIdentity } from "@supabase/supabase-js";
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: vi.fn(),
@@ -28,6 +28,7 @@ function mockSupabase(session: Session | null) {
       updateUser: vi.fn().mockResolvedValue({ error: null }),
       linkIdentity: vi.fn().mockResolvedValue({ error: null }),
       unlinkIdentity: vi.fn().mockResolvedValue({ error: null }),
+      refreshSession: vi.fn().mockResolvedValue({ data: { session } }),
       signOut: vi.fn(),
     },
   };
@@ -302,5 +303,52 @@ describe("AuthProvider", () => {
     await result.current.unlinkIdentity(identity);
 
     expect(supabase.auth.unlinkIdentity).toHaveBeenCalledWith(identity);
+  });
+
+  it("refreshes the session after unlinking so the removed provider stops showing as connected (Finding 6)", async () => {
+    const emailIdentity = {
+      identity_id: "email-1",
+      id: "email-1",
+      user_id: "real-user-id",
+      provider: "email",
+    } as UserIdentity;
+    const githubIdentity = {
+      identity_id: "github-1",
+      id: "github-1",
+      user_id: "real-user-id",
+      provider: "github",
+    } as UserIdentity;
+
+    const linkedSession = {
+      user: { ...mockUser, identities: [emailIdentity, githubIdentity] },
+    } as Session;
+    const supabase = mockSupabase(linkedSession);
+    // getSession keeps serving the cached pre-unlink snapshot, which is what
+    // makes it the wrong call to refresh from.
+    supabase.auth.refreshSession = vi.fn().mockResolvedValue({
+      data: {
+        session: { user: { ...mockUser, identities: [emailIdentity] } },
+      },
+    });
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.unlinkIdentity(githubIdentity);
+
+    expect(supabase.auth.refreshSession).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(result.current.user?.identities?.map((i) => i.provider)).toEqual([
+        "email",
+      ]),
+    );
   });
 });

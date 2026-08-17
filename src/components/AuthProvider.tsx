@@ -232,9 +232,14 @@ export function AuthProvider({
     async (identity: UserIdentity) => {
       const { error } = await supabase.auth.unlinkIdentity(identity);
       if (!error) {
+        // getSession() would hand back the cached session, whose `identities`
+        // is a snapshot taken at sign-in that unlinking never rewrites — the
+        // disconnected Provider would keep showing as connected, across
+        // reloads, until the access token next refreshed. Only a refresh
+        // re-reads identities from the server and re-persists them.
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = await supabase.auth.refreshSession();
         if (session) {
           setSession(session);
           setUser(session.user);
