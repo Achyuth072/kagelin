@@ -68,9 +68,12 @@ Test with one such account: sign in, then read the stored email in the
 Supabase dashboard's user list. Record the answer here and delete this
 section.
 
-Separately, `handle_new_user`'s display-name fallback
-(`full_name -> name -> username -> email`, migration
-`20260813120000_display_name_fallback.sql`) assumes GitHub and GitLab
-populate `name`/`username` in `raw_user_meta_data`. Confirm which of
-`name`/`user_name`/`preferred_username`/etc. each provider actually sends,
-and adjust the fallback order if this assumption is wrong.
+Separately, `handle_new_user`'s display-name fallback was
+`full_name -> name -> username -> email` (migration
+`20260813120000_display_name_fallback.sql`), assuming GitHub and GitLab
+populate `username` in `raw_user_meta_data`. Checked against Supabase Auth's
+provider mapping (`internal/api/provider/{github,gitlab,provider}.go`):
+GitHub sets `name`/`full_name` from its display name and `user_name` (plus
+`preferred_username`, same value) from the login — never bare `username`.
+GitLab sets only `name`/`full_name`, no username-like field at all. The
+`username` step was dead code; fixed to `user_name`.

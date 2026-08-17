@@ -2,7 +2,10 @@
 -- Broaden handle_new_user display_name fallback
 -- =============================================================================
 -- Falls back through provider-specific metadata fields before defaulting to email:
---   full_name -> name -> username -> email
+--   full_name -> name -> user_name -> email
+-- GitHub sets user_name (and preferred_username, same value) from the login;
+-- GitLab sets neither, so it falls through name/full_name to email. Verified
+-- against Supabase Auth's provider mapping (internal/api/provider/{github,gitlab}.go).
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION handle_new_user()
@@ -14,7 +17,7 @@ BEGIN
     COALESCE(
       NEW.raw_user_meta_data->>'full_name',
       NEW.raw_user_meta_data->>'name',
-      NEW.raw_user_meta_data->>'username',
+      NEW.raw_user_meta_data->>'user_name',
       NEW.email
     )
   )
