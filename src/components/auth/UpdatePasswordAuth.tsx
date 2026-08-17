@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2 } from "lucide-react";
@@ -17,7 +18,7 @@ import {
 } from "@/lib/auth/password-policy";
 
 export function UpdatePasswordAuth() {
-  const { user, loading, isGuestMode, updatePassword } = useAuth();
+  const { user, loading, isGuestMode, updatePassword, signOut } = useAuth();
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -43,6 +44,9 @@ export function UpdatePasswordAuth() {
       if (updateError) {
         setError(updateError.message || "Failed to update password");
       } else {
+        // Not awaited — the render below already tolerates `user` clearing
+        // on a later render, so waiting here would only add latency.
+        void signOut().catch((err) => Sentry.captureException(err));
         setUpdated(true);
       }
     } catch (err) {
@@ -61,8 +65,8 @@ export function UpdatePasswordAuth() {
     );
   }
 
-  // No live recovery session — the link is invalid, expired, or already used.
-  if (!user || isGuestMode) {
+  // Must be checked before `!user` — success signs the user out too.
+  if (!updated && (!user || isGuestMode)) {
     return (
       <div className="h-dvh w-full flex items-center justify-center px-4 bg-background">
         <div className="max-w-md w-full space-y-4 text-center px-4 py-8 sm:p-8 rounded-2xl border border-border bg-card shadow-sm">
@@ -100,8 +104,11 @@ export function UpdatePasswordAuth() {
                 You can now use your new password to sign in.
               </p>
             </div>
-            <Button className="w-full h-11" onClick={() => router.push("/")}>
-              Continue
+            <Button
+              className="w-full h-11"
+              onClick={() => router.push("/login")}
+            >
+              Sign in
             </Button>
           </div>
         ) : (

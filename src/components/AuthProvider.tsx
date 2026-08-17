@@ -8,6 +8,7 @@ import {
   useCallback,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { EMAIL_CONFIRMED_PATH } from "@/lib/auth/authRoutes";
 import type { OAuthProviderId } from "@/lib/auth/providers";
 import type {
   User,
@@ -168,7 +169,7 @@ export function AuthProvider({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(EMAIL_CONFIRMED_PATH)}`,
           captchaToken,
         },
       });

@@ -2,10 +2,13 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
+import { EMAIL_CONFIRMED_PATH } from "@/lib/auth/authRoutes";
 
-// Redirects to `next` so page-local error UI (e.g. AccountSection) can render.
+// Redirects to `next` so page-local error UI can render — except
+// /auth/email-confirmed, which has none, so that falls back to /login.
 function redirectWithError(origin: string, next: string, message: string) {
-  const target = next === "/" ? "/login" : next;
+  const target =
+    next === "/" || next === EMAIL_CONFIRMED_PATH ? "/login" : next;
   const url = new URL(target, origin);
   url.searchParams.set("error", message);
   return NextResponse.redirect(url);
@@ -22,6 +25,12 @@ export async function GET(request: Request) {
   }
 
   if (code) {
+    // GoTrue already confirmed the email before this redirect, so no
+    // exchange is needed — skip it and no session ever lands in this browser.
+    if (next === EMAIL_CONFIRMED_PATH) {
+      return NextResponse.redirect(`${origin}${next}`);
+    }
+
     const cookieStore = await cookies();
 
     const cookiesToSet: Array<{

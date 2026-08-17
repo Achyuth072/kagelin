@@ -107,7 +107,7 @@ describe("AuthProvider", () => {
     });
   });
 
-  it("passes email, password, captcha token and redirect target through to supabase.auth.signUp", async () => {
+  it("passes email, password, captcha token and the email-confirmed redirect through to supabase.auth.signUp (Finding 3: no auto sign-in after signup confirmation)", async () => {
     const supabase = mockSupabase(null);
     vi.mocked(createClient).mockReturnValue(
       supabase as unknown as ReturnType<typeof createClient>,
@@ -131,7 +131,7 @@ describe("AuthProvider", () => {
       email: "new@user.com",
       password: "hunter22",
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/auth/email-confirmed")}`,
         captchaToken: "captcha-token-abc",
       },
     });

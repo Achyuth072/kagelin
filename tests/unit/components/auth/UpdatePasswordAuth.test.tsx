@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as Sentry from "@sentry/nextjs";
 import { useAuth } from "@/components/AuthProvider";
 import { UpdatePasswordAuth } from "@/components/auth/UpdatePasswordAuth";
 import type { User } from "@supabase/supabase-js";
@@ -7,6 +8,8 @@ import type { User } from "@supabase/supabase-js";
 vi.mock("@/components/AuthProvider", () => ({
   useAuth: vi.fn(),
 }));
+
+vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -31,6 +34,7 @@ function mockAuth(overrides: Partial<ReturnType<typeof useAuth>> = {}) {
     loading: false,
     isGuestMode: false,
     updatePassword: vi.fn().mockResolvedValue({ error: null }),
+    signOut: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   } as unknown as ReturnType<typeof useAuth>);
 }
@@ -72,6 +76,55 @@ describe("UpdatePasswordAuth", () => {
       expect(updatePassword).toHaveBeenCalledWith("new-hunter22"),
     );
     expect(await screen.findByText("Password updated")).toBeInTheDocument();
+  });
+
+  it("signs out on success and keeps showing the confirmation even once the session is gone, sending the user to sign in (Finding 3: no auto sign-in after password reset)", async () => {
+    const updatePassword = vi.fn().mockResolvedValue({ error: null });
+    // Mirrors the real AuthProvider: signOut() clears `user`, which only
+    // takes effect on the component's next render — same race as production.
+    const signOut = vi.fn().mockImplementation(async () => {
+      mockAuth({ updatePassword, signOut, user: null });
+    });
+    mockAuth({ updatePassword, signOut });
+    render(<UpdatePasswordAuth />);
+
+    fireEvent.change(screen.getByLabelText("New password"), {
+      target: { value: "new-hunter22" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirm password"), {
+      target: { value: "new-hunter22" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Update password" }));
+
+    expect(await screen.findByText("Password updated")).toBeInTheDocument();
+    expect(signOut).toHaveBeenCalled();
+    expect(screen.queryByText("Link expired")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(mockPush).toHaveBeenCalledWith("/login");
+  });
+
+  it("shows the confirmation without waiting on signOut, and reports a signOut failure to Sentry instead of blocking it", async () => {
+    vi.mocked(Sentry.captureException).mockClear();
+    const updatePassword = vi.fn().mockResolvedValue({ error: null });
+    const signOutError = new Error("network error");
+    const signOut = vi.fn().mockRejectedValue(signOutError);
+    mockAuth({ updatePassword, signOut });
+    render(<UpdatePasswordAuth />);
+
+    fireEvent.change(screen.getByLabelText("New password"), {
+      target: { value: "new-hunter22" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirm password"), {
+      target: { value: "new-hunter22" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Update password" }));
+
+    expect(await screen.findByText("Password updated")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(Sentry.captureException).toHaveBeenCalledWith(signOutError),
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("toggles password visibility on both fields independently", () => {

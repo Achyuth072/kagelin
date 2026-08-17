@@ -86,4 +86,25 @@ describe("GET /auth/callback (H-3)", () => {
       "http://localhost/auth/update-password?error=invalid_grant",
     );
   });
+
+  it("routes an upstream error on the signup-confirmation redirect to /login, not /auth/email-confirmed", async () => {
+    const response = await GET(
+      request(
+        "?error_description=Email+link+is+invalid+or+has+expired&next=%2Fauth%2Femail-confirmed",
+      ),
+    );
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/login?error=Email+link+is+invalid+or+has+expired",
+    );
+  });
+
+  it("skips the code exchange and redirects straight to /auth/email-confirmed (Finding 3: no auto sign-in after signup confirmation)", async () => {
+    const response = await GET(
+      request("?code=abc&next=%2Fauth%2Femail-confirmed"),
+    );
+    expect(mockExchangeCodeForSession).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/auth/email-confirmed",
+    );
+  });
 });
