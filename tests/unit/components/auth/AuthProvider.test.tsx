@@ -256,7 +256,7 @@ describe("AuthProvider", () => {
     expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
   });
 
-  it("passes provider and redirect target to supabase.auth.linkIdentity", async () => {
+  it("forces the account picker for google and github", async () => {
     const supabase = mockSupabase(mockSession);
     vi.mocked(createClient).mockReturnValue(
       supabase as unknown as ReturnType<typeof createClient>,
@@ -276,6 +276,41 @@ describe("AuthProvider", () => {
       provider: "github",
       options: {
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/settings?tab=account&connecting=github")}`,
+        queryParams: { prompt: "select_account" },
+      },
+    });
+
+    await result.current.linkIdentity("google");
+
+    expect(supabase.auth.linkIdentity).toHaveBeenCalledWith({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/settings?tab=account&connecting=google")}`,
+        queryParams: { prompt: "select_account" },
+      },
+    });
+  });
+
+  it("does not force an account picker for gitlab", async () => {
+    const supabase = mockSupabase(mockSession);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.linkIdentity("gitlab");
+
+    expect(supabase.auth.linkIdentity).toHaveBeenCalledWith({
+      provider: "gitlab",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/settings?tab=account&connecting=gitlab")}`,
       },
     });
   });

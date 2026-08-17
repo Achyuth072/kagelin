@@ -216,8 +216,8 @@ export function AuthProvider({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-          // Forces Google's account picker; otherwise linking silently reuses whichever account is already signed in.
-          ...(provider === "google" && {
+          // Forces the account picker; otherwise linking silently reuses whichever account is already signed in.
+          ...((provider === "google" || provider === "github") && {
             queryParams: { prompt: "select_account" },
           }),
         },
