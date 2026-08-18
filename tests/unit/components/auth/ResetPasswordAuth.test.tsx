@@ -112,6 +112,18 @@ describe("ResetPasswordAuth", () => {
     expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
   });
 
+  it("offers a support contact on the confirmation screen for a reset the owner didn't request", async () => {
+    mockResetPasswordForEmail.mockResolvedValue({ error: null });
+    await renderResetPasswordAuth(onBackToSignIn, "test-site-key");
+
+    await submitRequest("real@user.com");
+    await screen.findByText("Check your inbox");
+
+    expect(
+      screen.getByRole("link", { name: "contact support" }),
+    ).toHaveAttribute("href", "mailto:support@kagelin.app");
+  });
+
   it("returns to sign-in when the confirmation's back link is clicked", async () => {
     mockResetPasswordForEmail.mockResolvedValue({ error: null });
     await renderResetPasswordAuth(onBackToSignIn, "test-site-key");

@@ -8,6 +8,7 @@ import { AuthEmailField } from "@/components/auth/AuthEmailField";
 import { AuthConfirmationCard } from "@/components/auth/AuthConfirmationCard";
 import { useTurnstileCaptcha } from "@/lib/hooks/useTurnstileCaptcha";
 import { Loader2 } from "lucide-react";
+import { SUPPORT_EMAIL } from "@/lib/links";
 
 // Same confirmation copy whether or not the email is registered — Supabase's
 // own resetPasswordForEmail gives no signal to distinguish the two, and
@@ -50,11 +51,22 @@ export function ResetPasswordAuth({
       <AuthConfirmationCard
         motionKey="reset-requested"
         title="Check your inbox"
+        descriptionMaxWidthClassName="max-w-[320px]"
         description={
           <>
             {"If "}
             <span className="font-medium text-foreground">{email}</span>
             {" has an account, we've sent a link to reset the password."}
+            <br />
+            <br />
+            {"Didn't request this? You can ignore the email, or "}
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              contact support
+            </a>
+            .
           </>
         }
         actionLabel="Back to sign in"
