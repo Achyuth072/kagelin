@@ -21,6 +21,7 @@ import { sendPushNotification } from "@/lib/push-api";
 import { useAndroidBatteryHint } from "@/lib/hooks/useAndroidBatteryHint";
 import { AndroidBatteryHint } from "@/components/settings/AndroidBatteryHint";
 import { ToggleRow } from "@/components/settings/ToggleRow";
+import { isIOS, isStandalone } from "@/lib/utils/platform";
 import {
   Select,
   SelectContent,
@@ -206,16 +207,24 @@ export function NotificationSettings() {
   };
 
   if (!isSupported) {
+    // iOS only exposes push APIs once installed to the Home Screen — "not
+    // supported" here means the browser tab, not the device.
+    const iosNeedsInstall = isIOS() && !isStandalone();
+
     return (
       <div className="p-4 rounded-lg border border-border/50 bg-muted/30">
         <div className="flex items-center gap-3 mb-2">
           <BellOff className="h-4 w-4 text-muted-foreground" />
           <p className="text-sm font-medium text-muted-foreground">
-            Notifications Not Supported
+            {iosNeedsInstall
+              ? "Add Kagelin to your Home Screen to turn on notifications"
+              : "Notifications Not Supported"}
           </p>
         </div>
         <p className="text-xs text-muted-foreground">
-          Your browser doesn&apos;t support push notifications
+          {iosNeedsInstall
+            ? "Tap Share, then Add to Home Screen."
+            : "Your browser doesn't support push notifications"}
         </p>
       </div>
     );

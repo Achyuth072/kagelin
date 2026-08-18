@@ -5,9 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { Profile, UserSettings, DEFAULT_USER_SETTINGS } from "../types/profile";
 
-export function useProfile() {
+export function useProfile(options?: { enabled?: boolean }) {
   const { user, isGuestMode } = useAuth();
   const queryClient = useQueryClient();
+  const enabled = options?.enabled ?? true;
 
   const query = useQuery({
     queryKey: ["profile", user?.id],
@@ -40,7 +41,7 @@ export function useProfile() {
         },
       };
     },
-    enabled: !!user && !isGuestMode,
+    enabled: !!user && !isGuestMode && enabled,
   });
 
   const updateProfile = useMutation({

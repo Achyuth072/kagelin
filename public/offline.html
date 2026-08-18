@@ -112,16 +112,35 @@
         letter-spacing: 0.01em;
         text-decoration: none;
         cursor: pointer;
-        transition: opacity 0.15s cubic-bezier(0.1, 1, 0.2, 1);
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        transition:
+          opacity 0.15s cubic-bezier(0.1, 1, 0.2, 1),
+          transform 0.15s cubic-bezier(0.1, 1, 0.2, 1);
       }
 
       .btn:hover {
         opacity: 0.9;
       }
 
+      .btn:active {
+        transform: scale(0.95);
+      }
+
+      .btn:focus:not(:focus-visible) {
+        outline: none;
+      }
+
+      .btn:focus-visible {
+        outline: 2px solid var(--foreground);
+        outline-offset: 2px;
+      }
+
       .btn-primary {
         background: var(--brand);
         color: var(--brand-foreground);
+        box-shadow: 0 1px 2px 0 rgba(75, 108, 183, 0.1);
       }
 
       .btn-secondary {
@@ -181,14 +200,40 @@
     </p>
 
     <div class="actions">
-      <button class="btn btn-primary" onclick="window.location.reload()">
-        Try Again
-      </button>
-      <a class="btn btn-secondary" href="/">Go Home</a>
+      <button class="btn btn-primary" id="retry-btn">Try Again</button>
+      <a class="btn btn-secondary" href="/" id="home-btn">Go Home</a>
     </div>
 
     <p class="footnote">
       Once you're back online, your changes will sync automatically.
     </p>
+
+    <script>
+      (function () {
+        // Mirrors src/lib/hooks/useHaptic.ts, which this static page can't import.
+        function triggerHaptic() {
+          try {
+            var isPhone = window.matchMedia(
+              "(max-width: 640px) or ((hover: none) and (pointer: coarse))",
+            ).matches;
+            var stored = JSON.parse(localStorage.getItem("kanso-ui-state"));
+            var hapticsEnabled = stored?.state?.hapticsEnabled !== false;
+            if (isPhone && hapticsEnabled && navigator.vibrate) {
+              navigator.vibrate(15); // "toggle" tier — navigation action, see DESIGN_SYSTEM.md
+            }
+          } catch {}
+        }
+
+        document
+          .getElementById("retry-btn")
+          .addEventListener("click", function () {
+            triggerHaptic();
+            window.location.reload();
+          });
+        document
+          .getElementById("home-btn")
+          .addEventListener("click", triggerHaptic);
+      })();
+    </script>
   </body>
 </html>

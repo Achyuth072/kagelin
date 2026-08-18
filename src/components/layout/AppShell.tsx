@@ -15,6 +15,7 @@ import {
 } from "@/components/ProjectActionsProvider";
 import { useRealtimeSync } from "@/lib/hooks/useRealtimeSync";
 import { useBackAnchor } from "@/lib/hooks/useBackAnchor";
+import { AUTH_STANDALONE_ROUTES } from "@/lib/auth/auth-routes";
 import { PiPProvider } from "@/components/providers/PiPProvider";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar as SidebarComponent } from "@/components/layout/AppSidebar";
@@ -54,7 +55,6 @@ import { useIsOnline } from "@/lib/hooks/useIsOnline";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
-// Global Overlays (Lazy Loaded)
 const TaskSheet = dynamic(() => import("@/components/tasks/TaskSheet"), {
   ssr: false,
 });
@@ -115,7 +115,6 @@ interface AppShellProps {
   children: React.ReactNode;
 }
 
-// Watches app version, syncs hasChangelogUpdate to store, renders the popup
 function ChangelogPopupWatcher() {
   const lastDismissedVersion = useUiStore(
     (state) => state.lastDismissedVersion,
@@ -184,7 +183,6 @@ function ChangelogPopupWatcher() {
   );
 }
 
-// Separate Overlay layer to isolate modal/sheet state
 function GlobalOverlays({
   commandOpen,
   onCommandOpenChange,
@@ -249,7 +247,6 @@ function GlobalOverlays({
   );
 }
 
-// Allows ?changelog query param to manually open the popup
 function ChangelogManualTrigger() {
   const [forceVersion, setForceVersion] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -286,13 +283,10 @@ function AppShellContent({ children }: AppShellProps) {
     setIsDesktop(isDesktop);
   }, [isDesktop, setIsDesktop]);
 
-  // Global realtime sync - stays alive during navigation
   useRealtimeSync();
 
-  // Global backup reminder for guest mode
   useWeeklyBackup();
 
-  // Reset scroll position on navigation to prevent layout shifts
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (scrollContainerRef.current) {
@@ -308,13 +302,10 @@ function AppShellContent({ children }: AppShellProps) {
           setHelpOpen={setShortcutsHelpOpen}
           commandOpen={commandOpen}
         />
-        {/* Mobile Top Bar - hidden on Focus and Settings pages */}
         {!hideMobileNav && <Header setCommandOpen={setCommandOpen} />}
 
-        {/* Desktop Sidebar - hidden only on Focus page */}
         {!isFocus && <AppSidebar />}
 
-        {/* Main Content with proper inset */}
         <SidebarInset
           className="relative"
           style={
@@ -363,13 +354,11 @@ function AppShellContent({ children }: AppShellProps) {
           <Toaster />
         </SidebarInset>
 
-        {/* Mobile Bottom Nav - hidden on Focus and Settings pages */}
         {!hideMobileNav && <MobileNav />}
 
-        {/* FABs - Rendered outside template animation to prevent shifts */}
+        {/* Rendered outside template animation to prevent shifts */}
         <GlobalFabs />
 
-        {/* Global Overlays */}
         <GlobalOverlays
           commandOpen={commandOpen}
           onCommandOpenChange={setCommandOpen}
@@ -383,7 +372,7 @@ export default function AppShell({ children }: AppShellProps) {
   const { user, loading } = useAuth();
   const { isMigrating } = useMigrationStrategy();
   const pathname = usePathname();
-  const isLoginPage = pathname === "/login";
+  const isAuthStandaloneRoute = AUTH_STANDALONE_ROUTES.includes(pathname);
 
   useBackAnchor(); // must stay mounted across navigation — see useBackAnchor.ts
 
@@ -396,7 +385,7 @@ export default function AppShell({ children }: AppShellProps) {
       <TaskActionsProvider>
         <HabitActionsProvider>
           <PiPProvider>
-            {loading || !user || isLoginPage ? (
+            {loading || !user || isAuthStandaloneRoute ? (
               <>{children}</>
             ) : (
               <AppShellContent>{children}</AppShellContent>

@@ -96,9 +96,16 @@ describe("useMigrationStrategy", () => {
       signOut: vi.fn(),
       session: null,
       loading: false,
-      signInWithGoogle: vi.fn(),
+      signInWithOAuth: vi.fn(),
       signInWithMagicLink: vi.fn(),
       signInAsGuest: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      signInWithPassword: vi.fn(),
+      resetPasswordForEmail: vi.fn(),
+      updatePassword: vi.fn(),
+      reauthenticate: vi.fn(),
+      linkIdentity: vi.fn(),
+      unlinkIdentity: vi.fn(),
     });
 
     setupMockSequence([
@@ -135,9 +142,16 @@ describe("useMigrationStrategy", () => {
       signOut: vi.fn(),
       session: null,
       loading: false,
-      signInWithGoogle: vi.fn(),
+      signInWithOAuth: vi.fn(),
       signInWithMagicLink: vi.fn(),
       signInAsGuest: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      signInWithPassword: vi.fn(),
+      resetPasswordForEmail: vi.fn(),
+      updatePassword: vi.fn(),
+      reauthenticate: vi.fn(),
+      linkIdentity: vi.fn(),
+      unlinkIdentity: vi.fn(),
     });
 
     setupMockSequence([
@@ -191,9 +205,16 @@ describe("useMigrationStrategy", () => {
       signOut: vi.fn(),
       session: null,
       loading: false,
-      signInWithGoogle: vi.fn(),
+      signInWithOAuth: vi.fn(),
       signInWithMagicLink: vi.fn(),
       signInAsGuest: vi.fn(),
+      signUpWithPassword: vi.fn(),
+      signInWithPassword: vi.fn(),
+      resetPasswordForEmail: vi.fn(),
+      updatePassword: vi.fn(),
+      reauthenticate: vi.fn(),
+      linkIdentity: vi.fn(),
+      unlinkIdentity: vi.fn(),
     });
 
     setupMockSequence([

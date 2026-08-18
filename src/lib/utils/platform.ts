@@ -1,5 +1,5 @@
 export const getPlatformKey = () => {
-  if (typeof window === "undefined") return "Ctrl"; // Default for SSR
+  if (typeof window === "undefined") return "Ctrl";
   const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
   return isMac ? "⌘" : "Ctrl";
 };
@@ -38,4 +38,34 @@ export function isAndroidChrome(): boolean {
     /Chrome\//i.test(ua) && !/SamsungBrowser|EdgA|OPR|Firefox/i.test(ua);
 
   return isAndroid && isChrome;
+}
+
+// iPadOS reports as "MacIntel" in `navigator.platform` but exposes touch
+// support, which desktop Macs don't — the standard way to tell them apart.
+export function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+
+  const ua = navigator.userAgent;
+  if (/iPhone|iPod|iPad/i.test(ua)) return true;
+
+  return (
+    navigator.platform === "MacIntel" &&
+    typeof navigator.maxTouchPoints === "number" &&
+    navigator.maxTouchPoints > 1
+  );
+}
+
+export function isStandalone(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.matchMedia?.("(display-mode: standalone)").matches) return true;
+  // `display-mode: standalone` also works on iOS 12.2+, but `standalone` is
+  // the one signal specific to iOS Safari — keep it as a fallback.
+  return (
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
+export function supportsInstallPrompt(): boolean {
+  if (typeof window === "undefined") return false;
+  return "onbeforeinstallprompt" in window;
 }

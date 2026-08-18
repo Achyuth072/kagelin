@@ -43,10 +43,8 @@ export function DeleteUserDataDialog({
   const [confirmText, setConfirmText] = useState("");
   const isMatch = confirmText.toLowerCase() === "delete";
 
-  // Handle back navigation on mobile
   useBackNavigation(open && !isDesktop, () => onOpenChange(false));
 
-  // Reset state when dialog opens or closes
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -55,7 +53,6 @@ export function DeleteUserDataDialog({
     }
   }
 
-  // Haptic on open
   useEffect(() => {
     if (open) {
       trigger("thud");
@@ -75,7 +72,7 @@ export function DeleteUserDataDialog({
 
   const content = (
     <div className="space-y-4 py-2">
-      <div className="p-3 rounded-lg bg-destructive/5 border border-destructive/20 flex items-start gap-3">
+      <div className="p-3 rounded-lg bg-destructive-surface border border-destructive-surface-border flex items-start gap-3">
         <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
         <p className="text-sm text-foreground/90 font-medium leading-relaxed">
           {description}
@@ -90,7 +87,7 @@ export function DeleteUserDataDialog({
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
           placeholder="Type 'delete'..."
-          className="h-11 bg-secondary/30 border-border/50 focus:border-destructive/30 focus:ring-destructive/10 transition-all font-medium"
+          className="h-11 bg-secondary/30 border-border/50 focus:border-destructive focus:ring-0 transition-all font-medium"
           autoFocus={isDesktop}
         />
       </div>

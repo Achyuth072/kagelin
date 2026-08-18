@@ -1,24 +1,36 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Mail, Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Turnstile, type TurnstileHandle } from "@/components/auth/Turnstile";
+import { AuthCaptcha } from "@/components/auth/AuthCaptcha";
+import { AuthErrorMessage } from "@/components/auth/AuthErrorMessage";
+import { AUTH_LINK_CLASS } from "@/components/auth/authLinkClass";
+import { AuthEmailField } from "@/components/auth/AuthEmailField";
+import { AuthConfirmationCard } from "@/components/auth/AuthConfirmationCard";
+import { useTurnstileCaptcha } from "@/lib/hooks/useTurnstileCaptcha";
 
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
-
-export function MagicLinkAuth() {
+export function MagicLinkAuth({
+  onSwitchToPassword,
+}: {
+  onSwitchToPassword?: () => void;
+}) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const turnstileRef = useRef<TurnstileHandle>(null);
+  const {
+    siteKey,
+    captchaToken,
+    setCaptchaToken,
+    turnstileRef,
+    handleCaptchaExpire,
+    resetCaptcha,
+    captchaMissing,
+  } = useTurnstileCaptcha();
   const { signInWithMagicLink } = useAuth();
-  const handleCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,10 +53,7 @@ export function MagicLinkAuth() {
       setError("An unexpected error occurred");
       console.error(err);
     } finally {
-      // Turnstile tokens are single-use — reset so the next attempt gets a
-      // fresh one, whether this attempt succeeded or failed.
-      setCaptchaToken(null);
-      turnstileRef.current?.reset();
+      resetCaptcha();
       setLoading(false);
     }
   };
@@ -61,50 +70,36 @@ export function MagicLinkAuth() {
             onSubmit={handleSubmit}
             className="space-y-4"
           >
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Email address
-              </label>
-              <div className="relative">
-                <Mail
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-                  strokeWidth={2.25}
-                />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="name@example.com"
-                  className="pl-9 h-10"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                  required
-                />
-              </div>
-            </div>
+            <AuthEmailField
+              id="email"
+              value={email}
+              onChange={setEmail}
+              disabled={loading}
+            >
+              {onSwitchToPassword && (
+                <button
+                  type="button"
+                  onClick={onSwitchToPassword}
+                  className={AUTH_LINK_CLASS}
+                >
+                  Use a password instead
+                </button>
+              )}
+            </AuthEmailField>
 
-            {TURNSTILE_SITE_KEY && (
-              <Turnstile
-                siteKey={TURNSTILE_SITE_KEY}
-                onVerify={setCaptchaToken}
-                onExpire={handleCaptchaExpire}
-                handleRef={turnstileRef}
-              />
-            )}
+            <AuthCaptcha
+              siteKey={siteKey}
+              setCaptchaToken={setCaptchaToken}
+              handleCaptchaExpire={handleCaptchaExpire}
+              turnstileRef={turnstileRef}
+            />
 
-            {error && (
-              <p className="text-sm text-destructive font-medium">{error}</p>
-            )}
+            <AuthErrorMessage error={error} />
 
             <Button
               type="submit"
               className="w-full h-11 text-base font-medium transition-all"
-              disabled={
-                loading || !email || (!!TURNSTILE_SITE_KEY && !captchaToken)
-              }
+              disabled={loading || !email || captchaMissing}
             >
               {loading ? (
                 <>
@@ -117,35 +112,20 @@ export function MagicLinkAuth() {
             </Button>
           </motion.form>
         ) : (
-          <motion.div
-            key="success-message"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center p-6 text-center space-y-4 rounded-lg bg-primary/5 border border-primary/20"
-          >
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <CheckCircle2
-                className="h-6 w-6 text-primary"
-                strokeWidth={2.25}
-              />
-            </div>
-            <div className="space-y-1">
-              <h3 className="font-semibold text-lg">Check your email</h3>
-              <p className="text-sm text-muted-foreground max-w-[240px] mx-auto">
+          <AuthConfirmationCard
+            motionKey="success-message"
+            title="Check your email"
+            descriptionMaxWidthClassName="max-w-[240px]"
+            description={
+              <>
                 We&apos;ve sent a magic link to{" "}
                 <span className="font-medium text-foreground">{email}</span>.
                 Click it to sign in.
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSent(false)}
-              className="text-xs text-muted-foreground hover:text-foreground"
-            >
-              Didn&apos;t get the email? Try again
-            </Button>
-          </motion.div>
+              </>
+            }
+            actionLabel="Didn't get the email? Try again"
+            onAction={() => setSent(false)}
+          />
         )}
       </AnimatePresence>
     </div>

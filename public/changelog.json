@@ -1,5 +1,113 @@
 [
   {
+    "version": "1.31.0-preview.6",
+    "date": "2026-08-18",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add support-contact reassurance to password-reset confirmation",
+        "Support Secure Password Change reauthentication in AccountSection"
+      ],
+      "Fixed": [
+        "Don't reflect raw URL error text in AccountSection alert",
+        "Reject control-character next params to close open redirect (H-3)"
+      ]
+    }
+  },
+  {
+    "version": "1.31.0-preview.5",
+    "date": "2026-08-18",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Simplify has_password RPC hook and auth captcha/error components"
+      ],
+      "Fixed": [
+        "Change sign-up button label to Sign up",
+        "Has_password RPC, redirect error_code threading, and auth code-review cleanup",
+        "Show email/password sign-in in Settings connected identities (#149)"
+      ]
+    }
+  },
+  {
+    "version": "1.31.0-preview.4",
+    "date": "2026-08-17",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Force account picker for GitHub too, not just Google, when linking",
+        "Close two translucent destructive spots missed in the finding-9 sweep",
+        "Show account display name, restyle email-confirmed, fix connect flash and destructive surfaces"
+      ]
+    }
+  },
+  {
+    "version": "1.31.0-preview.3",
+    "date": "2026-08-17",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Refresh session from server after unlinking an identity",
+        "Flatten AuthConfirmationCard and restore missing space in confirmation copy",
+        "Require explicit sign-in after signup confirmation and password reset",
+        "Add password visibility toggle and confirm-password field"
+      ]
+    }
+  },
+  {
+    "version": "1.31.0-preview.2",
+    "date": "2026-08-17",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Correct handle_new_user OAuth display_name fallback field",
+        "Auth error labelling, duplication, and naming cleanups",
+        "Auth callback error routing, update-password shell, signup-disabled message"
+      ]
+    }
+  },
+  {
+    "version": "1.31.0-preview.1",
+    "date": "2026-08-15",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add PWA install prompt for mobile, fix iOS notifications messaging",
+        "Add About section to Settings for AGPL source-offer compliance"
+      ],
+      "Fixed": [
+        "Compact and declutter the auth page layout",
+        "Press feedback, focus/tap-highlight, and haptics on offline.html buttons",
+        "Center the footer wrapper"
+      ]
+    }
+  },
+  {
+    "version": "1.31.0-preview.0",
+    "date": "2026-08-13",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Broaden handle_new_user display_name fallback to include OAuth metadata",
+        "Implement settings account section for provider management and password setup",
+        "Add forgot-password reset flow and new-password route",
+        "Warn on breached passwords via HIBP range API on sign-up",
+        "Add password sign-up/sign-in with existing-email collision screen",
+        "Replace logo with image and update terms/privacy policy links in AuthPage",
+        "Rebuild login/signup page with OAuth row and mode toggle",
+        "Grant Premium to the founding waitlist cohort on email confirmation"
+      ],
+      "Improved": [
+        "Collapse signInWithGoogle into signInWithOAuth(provider)"
+      ],
+      "Fixed": [
+        "Apply Icon-Led Row pattern and mobile touch targets to Account section",
+        "Align identity linking error message",
+        "Keep Turnstile widget inside auth card on mobile viewports"
+      ]
+    }
+  },
+  {
     "version": "1.30.0",
     "date": "2026-08-12",
     "channel": "stable",
@@ -709,117 +817,6 @@
         "Improved contrast for muted, destructive, and border colors",
         "Project dropdown now matches the width of its trigger",
         "Location popover no longer gets clipped inside dialogs"
-      ]
-    }
-  },
-  {
-    "version": "1.23.0-preview.3",
-    "date": "2026-06-15",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Render markdown preview in notes row",
-        "Add fullscreen TaskNotesEditor with markdown toolbar",
-        "Generate GitHub release notes from changelog.json"
-      ],
-      "Fixed": [
-        "Resolve ci:validate failures from UI redesigns",
-        "Restore caret/focus after notes toolbar edits"
-      ]
-    }
-  },
-  {
-    "version": "1.23.0-preview.2",
-    "date": "2026-06-15",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Improve contrast for muted/destructive/border tokens",
-        "Match project dropdown to trigger width",
-        "Stop dialog clipping location popover"
-      ]
-    }
-  },
-  {
-    "version": "1.23.0-preview.1",
-    "date": "2026-06-14",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Show active task on mobile header in guest mode"
-      ]
-    }
-  },
-  {
-    "version": "1.23.0-preview.0",
-    "date": "2026-06-14",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Compact list view for habits with a tappable rolling-7 day strip — toggle between Grid and Compact",
-        "Drag-and-drop reordering for habits in Compact view",
-        "Global search (Cmd+K) now finds tasks, habits, and events, with a search button in the mobile header"
-      ],
-      "Improved": [
-        "Habit, task, project, and other dialogs redesigned with a consistent icon-led layout",
-        "Tablet and landscape layouts fixed to avoid clipping on narrow or short screens",
-        "Empty states redesigned across tasks, habits, calendar, and search",
-        "Habit completion checkmarks stay legible on light habit colors",
-        "Icon-only buttons now have screen-reader labels, and animations respect reduced-motion settings"
-      ]
-    }
-  },
-  {
-    "version": "1.22.1",
-    "date": "2026-06-11",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Focus timer no longer gets stuck at 00:00 if the server clock check fails"
-      ]
-    }
-  },
-  {
-    "version": "1.22.0",
-    "date": "2026-06-10",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Connect Google Calendar (and other providers) to sync events both ways, with conflict resolution",
-        "In-app notification when a new app update is available",
-        "Recurring events now show a recurrence indicator and can no longer be edited individually (only the whole series)"
-      ],
-      "Improved": [
-        "Focus timer rewritten on a deadline-based model for more reliable session tracking across reloads and devices",
-        "Location field redesigned: clear button, custom \"Use\" entries, and fixed mobile alignment/clipping",
-        "Notes field styling now matches the rest of the dialog",
-        "Toasts can be dismissed with a left/right swipe",
-        "Fullscreen toggle now works on Android, iOS, and Safari",
-        "Detail panel close button repositioned to avoid overlapping content",
-        "Settings dialog validates correctly every time it's reopened"
-      ],
-      "Fixed": [
-        "Calendar OAuth sign-in redirect issues",
-        "Guests no longer see errors from calendar connection checks",
-        "Deleted calendar events no longer reappear after a sync, and edited events sync correctly",
-        "All-day events from Google Calendar now show the correct date",
-        "Calendar connection no longer drops on temporary network errors",
-        "Archived events are restored correctly when reconnecting a calendar",
-        "Location history is preserved when deleting events",
-        "Settings dialog Save button no longer stays greyed out incorrectly",
-        "Focus timer no longer completes early or loses a session after a network blip or app restart",
-        "Manage Calendars dialog no longer leaves another menu open behind it",
-        "Confirmation dialogs now appear above other overlays correctly"
-      ]
-    }
-  },
-  {
-    "version": "1.22.0-preview.7",
-    "date": "2026-06-10",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "fall back to request origin for calendar OAuth redirect"
       ]
     }
   }

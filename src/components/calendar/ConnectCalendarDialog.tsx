@@ -1,8 +1,6 @@
 "use client";
 
-// The CalDAV connect flow was removed pre-beta, it was a facade
-// (nothing persisted server-side) and it wrote credentials to localStorage
-// in plaintext. The legacy-credential purge lives in `src/lib/storage-cleanup.ts`.
+// CalDAV connect was removed pre-beta; legacy-credential purge lives in `src/lib/storage-cleanup.ts`.
 
 import React, { useState, useCallback } from "react";
 import {
@@ -249,7 +247,7 @@ export function ConnectCalendarDialog({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive-surface-hover"
                     title={`Disconnect ${p}`}
                     aria-label={`Disconnect ${p}`}
                     onClick={async () => {

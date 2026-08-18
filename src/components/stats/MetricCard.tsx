@@ -12,11 +12,7 @@ interface MetricCardProps {
     value: number;
     isPositive: boolean;
   };
-  /**
-   * "compact" tightens padding and value scale for dense contexts like the
-   * task/habit insights panels inside the sheet; "default" keeps the larger
-   * stats-page scale.
-   */
+  /** "compact" tightens padding/scale for dense contexts (e.g. insights panels); "default" is the stats-page scale. */
   size?: "default" | "compact";
   className?: string;
 }
@@ -67,7 +63,7 @@ export function MetricCard({
                   ? "text-muted-foreground bg-secondary/50 border-border/50"
                   : trend.isPositive
                     ? "text-brand bg-brand/15 border-brand/20"
-                    : "text-destructive bg-destructive/15 border-destructive/20",
+                    : "text-destructive bg-destructive-surface border-destructive-surface-border",
               )}
             >
               <span className="text-xs md:text-sm" aria-hidden="true">

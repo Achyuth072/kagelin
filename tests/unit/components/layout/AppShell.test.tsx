@@ -245,4 +245,17 @@ describe("AppShell", () => {
 
     expect(screen.queryByTestId("mobile-nav")).not.toBeInTheDocument();
   });
+
+  it("renders /auth/update-password unwrapped, like /login and /signup", async () => {
+    vi.mocked(usePathname).mockReturnValue("/auth/update-password");
+
+    render(
+      <AppShell>
+        <div data-testid="content">Content</div>
+      </AppShell>,
+    );
+
+    expect(screen.getByTestId("content")).toBeInTheDocument();
+    expect(screen.queryByTestId("sidebar-inset")).not.toBeInTheDocument();
+  });
 });

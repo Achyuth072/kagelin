@@ -16,6 +16,7 @@ import {
   RotateCcw,
   Trash2,
   Clock,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,12 +35,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import { mockStore } from "@/lib/mock/mock-store";
 import { notify } from "@/lib/notify";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
+import { PwaInstallRow } from "@/components/settings/PwaInstallRow";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
 import { BackupSyncSettings } from "@/components/settings/BackupSyncSettings";
+import { AccountSection } from "@/components/settings/AccountSection";
 import { useAccountData } from "@/lib/hooks/useAccountData";
+import { useProfile } from "@/lib/hooks/useProfile";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChangelogPopup } from "@/components/ui/ChangelogPopup";
-import { Sparkles } from "lucide-react";
+import { AboutSheet } from "@/components/settings/AboutSheet";
+import { PreviewBadge } from "@/components/ui/PreviewBadge";
+import { Info } from "lucide-react";
 
 const SignOutConfirmation = dynamic(
   () =>
@@ -56,9 +62,32 @@ const DESKTOP_SECTION_TAB_TRIGGER_CLASS = cn(
   "w-full justify-start text-left px-3.5",
 );
 
-// Sections that read as a single column share one cap; the Preferences
-// grid intentionally spans the full main width instead.
+// Preferences intentionally spans full width instead of this cap.
 const SECTION_MAX_WIDTH = "max-w-5xl";
+
+function AccountInfoRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-full bg-secondary/30">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">{label}</p>
+          <p className="text-xs text-muted-foreground">{value}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface SettingsClientProps {
   version: string;
@@ -82,6 +111,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<
     "appearance" | "preferences" | "account"
   >(() => {
@@ -94,8 +124,9 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { trigger } = useHaptic();
   const { clearCloudData } = useAccountData();
+  const { profile } = useProfile({ enabled: activeTab === "account" });
 
-  // Prevent flash during sign-out remount
+  // user goes null before the redirect to /login lands; avoids a flash.
   if (!user) {
     return <LoaderOverlay message="Signing out..." />;
   }
@@ -347,6 +378,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
                     </div>
 
                     <NotificationSettings />
+
+                    <PwaInstallRow />
                   </div>
                 </section>
 
@@ -457,26 +490,29 @@ export function SettingsClient({ version }: SettingsClientProps) {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-full bg-secondary/30">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">Email</p>
-                        <p className="text-xs text-muted-foreground">
-                          {user?.email || "Not signed in"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  {profile?.display_name &&
+                    profile.display_name !== user?.email && (
+                      <AccountInfoRow
+                        icon={User}
+                        label="Name"
+                        value={profile.display_name}
+                      />
+                    )}
+
+                  <AccountInfoRow
+                    icon={User}
+                    label="Email"
+                    value={user?.email || "Not signed in"}
+                  />
+
+                  {!isGuestMode && <AccountSection />}
 
                   <BackupSyncSettings />
 
                   {!isGuestMode && (
                     <Button
                       variant="outline"
-                      className="w-full justify-start shadow-none text-destructive border-destructive/20 hover:border-destructive/40 hover:bg-destructive/5 transition-all"
+                      className="w-full justify-start shadow-none text-destructive border-destructive-surface-border hover:border-destructive hover:bg-destructive-surface-hover transition-all"
                       onClick={() => {
                         trigger("thud");
                         setIsDeleteDialogOpen(true);
@@ -513,13 +549,18 @@ export function SettingsClient({ version }: SettingsClientProps) {
               </section>
             )}
 
-            <div className="pt-16 pb-12 transition-all duration-300">
+            <div
+              className={cn(
+                "pt-16 pb-12 transition-all duration-300",
+                SECTION_MAX_WIDTH,
+              )}
+            >
               <div className="border-t border-border/40 w-16 mx-auto mb-8 opacity-50" />
               <button
                 type="button"
                 onClick={() => {
                   trigger("toggle");
-                  setIsChangelogOpen(true);
+                  setIsAboutOpen(true);
                 }}
                 className="group mx-auto flex flex-col items-center gap-2 transition-seijaku-fast"
               >
@@ -527,15 +568,11 @@ export function SettingsClient({ version }: SettingsClientProps) {
                   <span className="type-micro text-muted-foreground/80 group-hover:text-foreground transition-colors">
                     Kagelin • v{version}
                   </span>
-                  {version.includes("preview") && (
-                    <span className="px-1.5 py-0.5 rounded-[3px] bg-brand/10 text-brand text-[9px] font-bold uppercase tracking-[0.08em] border border-brand/20 leading-none">
-                      Preview
-                    </span>
-                  )}
+                  <PreviewBadge version={version} />
                 </div>
                 <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors tracking-[0.04em] uppercase font-medium">
-                  <Sparkles className="h-2.5 w-2.5" />
-                  What&apos;s New
+                  <Info className="h-2.5 w-2.5" />
+                  About
                 </span>
               </button>
             </div>
@@ -560,6 +597,17 @@ export function SettingsClient({ version }: SettingsClientProps) {
         onOpenChange={setIsChangelogOpen}
       />
 
+      <AboutSheet
+        open={isAboutOpen}
+        onOpenChange={setIsAboutOpen}
+        version={version}
+        onOpenChangelog={() => {
+          // Nested Radix dialogs are janky — hand off instead of stacking.
+          setIsAboutOpen(false);
+          setIsChangelogOpen(true);
+        }}
+      />
+
       {isSigningOut && <LoaderOverlay message="Signing out..." />}
     </>
   );
@@ -571,14 +619,13 @@ interface GoalFieldProps {
   onCommit: (value: number | null) => void;
 }
 
-/** Local draft text so keystrokes don't hit the store; commits on blur. */
+/** Local draft; commits to the store on blur. */
 function GoalField({ label, value, onCommit }: GoalFieldProps) {
   const [text, setText] = useState(value != null ? String(value) : "");
   const [prevValue, setPrevValue] = useState(value);
 
-  // Resync the draft when the store value changes externally (e.g. reset
-  // demo data) — adjusted during render per React's "don't setState in an
-  // effect for derived state" guidance, not via useEffect.
+  // Resync on external store changes (e.g. demo reset), during render per
+  // React's derived-state guidance rather than useEffect.
   if (value !== prevValue) {
     setPrevValue(value);
     setText(value != null ? String(value) : "");

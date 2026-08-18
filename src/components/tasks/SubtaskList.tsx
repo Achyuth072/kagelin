@@ -112,7 +112,6 @@ export default function SubtaskList({
 
   return (
     <div className="flex flex-col gap-1 w-full">
-      {/* Toggle Button (Ma Disclosure) */}
       {hasItems && (
         <button
           onClick={() => {
@@ -149,7 +148,6 @@ export default function SubtaskList({
             className="overflow-hidden"
           >
             <div className="space-y-1 py-1">
-              {/* Existing Subtasks */}
               {items.map((item, index) => {
                 const id =
                   typeof item === "string" ? `draft-${index}` : item.id;
@@ -207,7 +205,7 @@ export default function SubtaskList({
                       variant="ghost"
                       size="icon"
                       aria-label="Delete subtask"
-                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 rounded-lg"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/40 hover:text-destructive hover:bg-destructive-surface-hover rounded-lg"
                       onClick={() => {
                         trigger("tick");
                         handleDeleteSubtask(
@@ -221,7 +219,6 @@ export default function SubtaskList({
                 );
               })}
 
-              {/* Add New Subtask Input */}
               <div className="flex items-center gap-3 px-3 pt-1 group">
                 <div className="flex items-center justify-center w-3.5 h-3.5 shrink-0">
                   <Plus

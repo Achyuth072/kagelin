@@ -94,9 +94,9 @@ export function TaskDatePicker({
             className={cn(
               "ml-1 p-0.5 rounded",
               isCompact
-                ? "hover:bg-destructive/20"
+                ? "hover:bg-destructive-surface-hover"
                 : "rounded-full hover:bg-current/10",
-              error && "hover:bg-destructive/10",
+              error && "hover:bg-destructive-surface-hover",
             )}
             onClick={(e) => {
               e.preventDefault();
@@ -127,7 +127,7 @@ export function TaskDatePicker({
           className={cn(
             "h-9 transition-all shrink-0 group [&_svg]:!size-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none",
             error &&
-              "border-destructive/50 bg-destructive/5 text-destructive hover:bg-destructive/10 hover:text-destructive",
+              "border-destructive-surface-border bg-destructive-surface text-destructive hover:bg-destructive-surface-hover hover:text-destructive",
             isCompact
               ? cn(
                   "w-9 px-0 text-muted-foreground hover:text-foreground",
@@ -179,7 +179,7 @@ export function TaskDatePicker({
           className={cn(
             "h-9 transition-all shrink-0 group [&_svg]:!size-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none",
             error &&
-              "border-destructive/50 bg-destructive/5 text-destructive hover:bg-destructive/10 hover:text-destructive",
+              "border-destructive-surface-border bg-destructive-surface text-destructive hover:bg-destructive-surface-hover hover:text-destructive",
             isCompact
               ? cn(
                   "w-9 px-0 text-muted-foreground hover:text-foreground",

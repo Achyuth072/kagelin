@@ -16,11 +16,13 @@
 
 [![Stable](https://img.shields.io/github/v/release/Achyuth072/kagelin?style=flat&label=Stable&labelColor=06599d&color=043b69)](../../releases)
 [![Preview](https://img.shields.io/github/package-json/v/Achyuth072/kagelin/dev?style=flat&label=Preview&labelColor=2c2c47&color=1c1c39)](../../releases)
+
 [![Sponsor](https://img.shields.io/github/sponsors/Achyuth072?style=flat&logo=githubsponsors&labelColor=24292e)](https://github.com/sponsors/Achyuth072)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-support-FF5E5B?style=flat&logo=kofi&logoColor=white&labelColor=24292e)](https://ko-fi.com/oneakira)
 
 ## Use it
 
-**[kagelin.app](https://kagelin.app)** — installable as a PWA, works fully offline in guest mode. No account needed.
+**[app.kagelin.app](https://app.kagelin.app)** — installable as a PWA, works fully offline in guest mode. No account needed.
 
 _Currently in preview — expect rough edges._
 

@@ -8,17 +8,51 @@ import {
   useCallback,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { User, Session, AuthError } from "@supabase/supabase-js";
+import { EMAIL_CONFIRMED_PATH } from "@/lib/auth/auth-routes";
+import type { OAuthProviderId } from "@/lib/auth/providers";
+import type {
+  User,
+  Session,
+  AuthError,
+  UserIdentity,
+} from "@supabase/supabase-js";
 
 type AuthContextType = {
   user: User | null;
   session: Session | null;
   loading: boolean;
   isGuestMode: boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithOAuth: (provider: OAuthProviderId) => Promise<void>;
   signInWithMagicLink: (
     email: string,
     captchaToken: string,
+  ) => Promise<{ error: AuthError | null }>;
+  signUpWithPassword: (
+    email: string,
+    password: string,
+    captchaToken: string,
+  ) => Promise<{ error: AuthError | null }>;
+  signInWithPassword: (
+    email: string,
+    password: string,
+    captchaToken: string,
+  ) => Promise<{ error: AuthError | null }>;
+  resetPasswordForEmail: (
+    email: string,
+    captchaToken: string,
+  ) => Promise<{ error: AuthError | null }>;
+  updatePassword: (
+    password: string,
+    nonce?: string,
+  ) => Promise<{ error: AuthError | null }>;
+  // Sends a nonce (to the user's email, or phone if no confirmed email) for
+  // the Secure Password Change reauthentication step below.
+  reauthenticate: () => Promise<{ error: AuthError | null }>;
+  linkIdentity: (
+    provider: OAuthProviderId,
+  ) => Promise<{ error: AuthError | null }>;
+  unlinkIdentity: (
+    identity: UserIdentity,
   ) => Promise<{ error: AuthError | null }>;
   signInAsGuest: () => void;
   signOut: () => Promise<void>;
@@ -57,9 +91,7 @@ export function AuthProvider({
   initialIsGuest = false,
 }: {
   children: React.ReactNode;
-  // Mirrors the `kanso_guest_mode` cookie, read server-side by the root
-  // layout, so the first client render agrees with the SSR output instead
-  // of branching on `typeof window` and diverging from it (hydration error).
+  // Mirrors the server-side `kanso_guest_mode` cookie so first render matches SSR output (avoids a hydration error).
   initialIsGuest?: boolean;
 }) {
   const [isGuestMode, setIsGuestMode] = useState<boolean>(initialIsGuest);
@@ -111,12 +143,15 @@ export function AuthProvider({
     return () => subscription.unsubscribe();
   }, [supabase.auth]);
 
-  const signInWithGoogle = useCallback(async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-  }, [supabase.auth]);
+  const signInWithOAuth = useCallback(
+    async (provider: OAuthProviderId) => {
+      await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+    },
+    [supabase.auth],
+  );
 
   const signInWithMagicLink = useCallback(
     async (email: string, captchaToken: string) => {
@@ -127,6 +162,99 @@ export function AuthProvider({
           captchaToken,
         },
       });
+      return { error };
+    },
+    [supabase.auth],
+  );
+
+  const signUpWithPassword = useCallback(
+    async (email: string, password: string, captchaToken: string) => {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(EMAIL_CONFIRMED_PATH)}`,
+          captchaToken,
+        },
+      });
+      return { error };
+    },
+    [supabase.auth],
+  );
+
+  const signInWithPassword = useCallback(
+    async (email: string, password: string, captchaToken: string) => {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+        options: { captchaToken },
+      });
+      return { error };
+    },
+    [supabase.auth],
+  );
+
+  const resetPasswordForEmail = useCallback(
+    async (email: string, captchaToken: string) => {
+      // Routes through the callback's existing `next` handling — no separate recovery-detection logic needed there.
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/auth/update-password")}`,
+        captchaToken,
+      });
+      return { error };
+    },
+    [supabase.auth],
+  );
+
+  const updatePassword = useCallback(
+    async (password: string, nonce?: string) => {
+      const { error } = await supabase.auth.updateUser({ password, nonce });
+      return { error };
+    },
+    [supabase.auth],
+  );
+
+  // Only relevant when Secure Password Change is on and the session is
+  // >24h old — supabase.auth.updateUser() then fails with error code
+  // "reauthentication_needed" until this has been called and its nonce
+  // passed back into updatePassword().
+  const reauthenticate = useCallback(async () => {
+    const { error } = await supabase.auth.reauthenticate();
+    return { error };
+  }, [supabase.auth]);
+
+  const linkIdentity = useCallback(
+    async (provider: OAuthProviderId) => {
+      // `connecting` lets AccountSection name the provider on a linking failure — see docs/adr/0012-identity-linking.md.
+      const next = `/settings?tab=account&connecting=${provider}`;
+      const { error } = await supabase.auth.linkIdentity({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          // Forces the account picker; otherwise linking silently reuses whichever account is already signed in.
+          ...((provider === "google" || provider === "github") && {
+            queryParams: { prompt: "select_account" },
+          }),
+        },
+      });
+      return { error };
+    },
+    [supabase.auth],
+  );
+
+  const unlinkIdentity = useCallback(
+    async (identity: UserIdentity) => {
+      const { error } = await supabase.auth.unlinkIdentity(identity);
+      if (!error) {
+        // getSession() would return the stale cached `identities`, still showing the disconnected provider as connected.
+        const {
+          data: { session },
+        } = await supabase.auth.refreshSession();
+        if (session) {
+          setSession(session);
+          setUser(session.user);
+        }
+      }
       return { error };
     },
     [supabase.auth],
@@ -155,8 +283,15 @@ export function AuthProvider({
         session,
         loading,
         isGuestMode,
-        signInWithGoogle,
+        signInWithOAuth,
         signInWithMagicLink,
+        signUpWithPassword,
+        signInWithPassword,
+        resetPasswordForEmail,
+        updatePassword,
+        reauthenticate,
+        linkIdentity,
+        unlinkIdentity,
         signInAsGuest,
         signOut,
       }}

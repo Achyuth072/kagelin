@@ -3,15 +3,19 @@
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
+import {
+  AUTH_STANDALONE_ROUTES,
+  isOAuthConnectRedirect,
+} from "@/lib/auth/auth-routes";
 
 // history.pushState() desyncs App Router's tracking, so use replace()/push().
 // Must run somewhere that survives its own replace() — AppShell, not Template.
 let anchorSettled: Promise<void> = Promise.resolve();
 let resolveAnchorSettled: (() => void) | null = null;
 
-// /login's redirect swallows the bounce before "/" ever renders — skip it
-// rather than wait out SETTLE_BACKSTOP_MS.
-const UNANCHORED_ROUTES = new Set(["/login"]);
+// These routes' own redirect swallows the bounce before "/" ever renders —
+// skip them rather than wait out SETTLE_BACKSTOP_MS.
+const UNANCHORED_ROUTES = new Set(AUTH_STANDALONE_ROUTES);
 
 // Guarantees settle() fires even if a bounce silently stalls.
 const SETTLE_BACKSTOP_MS = 3000;
@@ -50,10 +54,22 @@ export function useBackAnchor() {
         }
       }
 
+      const isOAuthConnect = isOAuthConnectRedirect(pathname, location.search);
       anchor.current =
-        pathname === "/" || UNANCHORED_ROUTES.has(pathname)
+        pathname === "/" || UNANCHORED_ROUTES.has(pathname) || isOAuthConnect
           ? null
           : pathname + location.search;
+      if (isOAuthConnect && pathname === "/settings") {
+        // "connecting" isn't stripped elsewhere — left alone it'd re-suppress the back-anchor on a stale reload.
+        const params = new URLSearchParams(location.search);
+        params.delete("connecting");
+        const cleaned = params.toString();
+        window.history.replaceState(
+          {},
+          "",
+          pathname + (cleaned ? `?${cleaned}` : ""),
+        );
+      }
       if (anchor.current) {
         anchorSettled = new Promise((resolve) => {
           resolveAnchorSettled = resolve;

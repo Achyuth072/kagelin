@@ -56,4 +56,72 @@ describe("GET /auth/callback (H-3)", () => {
     );
     expect(response.headers.get("location")).toBe("http://localhost/");
   });
+
+  it("redirects an upstream error to the sanitized next path, not /login", async () => {
+    const response = await GET(
+      request(
+        "?error_description=identity_already_exists&next=%2Fsettings%3Ftab%3Daccount",
+      ),
+    );
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/settings?tab=account&error=identity_already_exists",
+    );
+  });
+
+  it("falls back to /login for an upstream error when next is absent", async () => {
+    const response = await GET(request("?error_description=access_denied"));
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/login?error=access_denied",
+    );
+  });
+
+  it("redirects a code-exchange failure to the sanitized next path, not /login", async () => {
+    mockExchangeCodeForSession.mockResolvedValue({
+      error: { message: "invalid_grant" },
+    });
+    const response = await GET(
+      request("?code=abc&next=%2Fauth%2Fupdate-password"),
+    );
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/auth/update-password?error=invalid_grant",
+    );
+  });
+
+  it("routes an upstream error on the signup-confirmation redirect to /login, not /auth/email-confirmed", async () => {
+    const response = await GET(
+      request(
+        "?error_description=Email+link+is+invalid+or+has+expired&next=%2Fauth%2Femail-confirmed",
+      ),
+    );
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/login?error=Email+link+is+invalid+or+has+expired",
+    );
+  });
+
+  it("rejects a tab/newline/CR-smuggled next param that would collapse to //host (open redirect)", async () => {
+    const withCode = await GET(request("?code=abc&next=%2F%09%2Fevil.com"));
+    expect(withCode.headers.get("location")).toBe("http://localhost/");
+
+    const noCode = await GET(request("?next=%2F%0D%2Flogin-kagelin.app"));
+    expect(noCode.headers.get("location")).toBe(
+      "http://localhost/login?error=no_code_received",
+    );
+
+    const errorDescription = await GET(
+      request("?error_description=hi&next=%2F%0A%2Fevil.com"),
+    );
+    expect(errorDescription.headers.get("location")).toBe(
+      "http://localhost/login?error=hi",
+    );
+  });
+
+  it("skips the code exchange and redirects straight to /auth/email-confirmed (Finding 3: no auto sign-in after signup confirmation)", async () => {
+    const response = await GET(
+      request("?code=abc&next=%2Fauth%2Femail-confirmed"),
+    );
+    expect(mockExchangeCodeForSession).not.toHaveBeenCalled();
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/auth/email-confirmed",
+    );
+  });
 });
