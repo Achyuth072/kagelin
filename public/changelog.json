@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.31.0-preview.6",
+    "date": "2026-08-18",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add support-contact reassurance to password-reset confirmation",
+        "Support Secure Password Change reauthentication in AccountSection"
+      ],
+      "Fixed": [
+        "Don't reflect raw URL error text in AccountSection alert",
+        "Reject control-character next params to close open redirect (H-3)"
+      ]
+    }
+  },
+  {
     "version": "1.31.0-preview.5",
     "date": "2026-08-18",
     "channel": "preview",
@@ -802,22 +817,6 @@
         "Improved contrast for muted, destructive, and border colors",
         "Project dropdown now matches the width of its trigger",
         "Location popover no longer gets clipped inside dialogs"
-      ]
-    }
-  },
-  {
-    "version": "1.23.0-preview.3",
-    "date": "2026-06-15",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Render markdown preview in notes row",
-        "Add fullscreen TaskNotesEditor with markdown toolbar",
-        "Generate GitHub release notes from changelog.json"
-      ],
-      "Fixed": [
-        "Resolve ci:validate failures from UI redesigns",
-        "Restore caret/focus after notes toolbar edits"
       ]
     }
   }
