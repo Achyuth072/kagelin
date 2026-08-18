@@ -34,11 +34,13 @@ describe("AccountSection", () => {
   const mockLinkIdentity = vi.fn();
   const mockUnlinkIdentity = vi.fn();
   const mockUpdatePassword = vi.fn();
+  const mockReauthenticate = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseSearchParams.mockReturnValue(new URLSearchParams());
     mockRpc.mockResolvedValue({ data: false, error: null });
+    mockReauthenticate.mockResolvedValue({ error: null });
   });
 
   function setupAuth(userOverrides: Partial<User> = {}, isGuestMode = false) {
@@ -60,6 +62,7 @@ describe("AccountSection", () => {
       signInWithPassword: vi.fn(),
       resetPasswordForEmail: vi.fn(),
       updatePassword: mockUpdatePassword,
+      reauthenticate: mockReauthenticate,
       linkIdentity: mockLinkIdentity,
       unlinkIdentity: mockUnlinkIdentity,
       signInAsGuest: vi.fn(),
@@ -223,10 +226,162 @@ describe("AccountSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Set password" }));
 
     await waitFor(() => {
-      expect(mockUpdatePassword).toHaveBeenCalledWith("hunter2222");
+      expect(mockUpdatePassword).toHaveBeenCalledWith("hunter2222", undefined);
     });
     // Initial mount + the post-success refetch.
     await waitFor(() => expect(mockRpc).toHaveBeenCalledTimes(2));
+  });
+
+  it("prompts for a verification code when GoTrue requires reauthentication, then retries with the nonce", async () => {
+    mockUpdatePassword
+      .mockResolvedValueOnce({
+        error: { code: "reauthentication_needed", message: "Reauth needed" },
+      })
+      .mockResolvedValueOnce({ error: null });
+
+    setupAuth();
+    renderWithQueryClient(<AccountSection />);
+
+    fireEvent.change(screen.getByLabelText("New Password"), {
+      target: { value: "hunter2222" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+
+    // Sends the nonce automatically once GoTrue reports it's required.
+    await waitFor(() => expect(mockReauthenticate).toHaveBeenCalledTimes(1));
+    expect(screen.getByLabelText("Verification code")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Verification code"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirm password change" }),
+    );
+
+    await waitFor(() => {
+      expect(mockUpdatePassword).toHaveBeenLastCalledWith(
+        "hunter2222",
+        "123456",
+      );
+    });
+    expect(
+      screen.queryByLabelText("Verification code"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("trims whitespace from a pasted verification code before submitting it", async () => {
+    mockUpdatePassword
+      .mockResolvedValueOnce({
+        error: { code: "reauthentication_needed", message: "Reauth needed" },
+      })
+      .mockResolvedValueOnce({ error: null });
+
+    setupAuth();
+    renderWithQueryClient(<AccountSection />);
+
+    fireEvent.change(screen.getByLabelText("New Password"), {
+      target: { value: "hunter2222" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    await waitFor(() => expect(mockReauthenticate).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByLabelText("Verification code"), {
+      target: { value: " 123456\n" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirm password change" }),
+    );
+
+    await waitFor(() => {
+      expect(mockUpdatePassword).toHaveBeenLastCalledWith(
+        "hunter2222",
+        "123456",
+      );
+    });
+  });
+
+  it("shows a friendly message and lets the user retry when the entered code is wrong", async () => {
+    mockUpdatePassword
+      .mockResolvedValueOnce({
+        error: { code: "reauthentication_needed", message: "Reauth needed" },
+      })
+      .mockResolvedValueOnce({
+        error: {
+          code: "reauthentication_not_valid",
+          message: "invalid nonce",
+        },
+      });
+
+    setupAuth();
+    renderWithQueryClient(<AccountSection />);
+
+    fireEvent.change(screen.getByLabelText("New Password"), {
+      target: { value: "hunter2222" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    await waitFor(() => expect(mockReauthenticate).toHaveBeenCalledTimes(1));
+
+    fireEvent.change(screen.getByLabelText("Verification code"), {
+      target: { value: "wrong" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirm password change" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "That code wasn't right. Check your email and try again.",
+      ),
+    ).toBeInTheDocument();
+    // Stays on the code-entry step rather than resending automatically.
+    expect(mockReauthenticate).toHaveBeenCalledTimes(1);
+  });
+
+  it("resends the code and links to support from the verification step", async () => {
+    mockUpdatePassword.mockResolvedValueOnce({
+      error: { code: "reauthentication_needed", message: "Reauth needed" },
+    });
+
+    setupAuth();
+    renderWithQueryClient(<AccountSection />);
+
+    fireEvent.change(screen.getByLabelText("New Password"), {
+      target: { value: "hunter2222" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    await waitFor(() => expect(mockReauthenticate).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole("button", { name: "Resend code" }));
+    await waitFor(() => expect(mockReauthenticate).toHaveBeenCalledTimes(2));
+
+    expect(
+      screen.getByRole("link", { name: "Contact support" }),
+    ).toHaveAttribute("href", "mailto:support@kagelin.app");
+  });
+
+  it("surfaces an error and re-enables the resend button when reauthenticate() rejects", async () => {
+    mockUpdatePassword.mockResolvedValueOnce({
+      error: { code: "reauthentication_needed", message: "Reauth needed" },
+    });
+
+    setupAuth();
+    renderWithQueryClient(<AccountSection />);
+
+    fireEvent.change(screen.getByLabelText("New Password"), {
+      target: { value: "hunter2222" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Set password" }));
+    await waitFor(() => expect(mockReauthenticate).toHaveBeenCalledTimes(1));
+
+    mockReauthenticate.mockRejectedValueOnce(new Error("network error"));
+    fireEvent.click(screen.getByRole("button", { name: "Resend code" }));
+
+    expect(
+      await screen.findByText("Failed to send verification code"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Resend code" }),
+    ).not.toBeDisabled();
   });
 
   it("toggles password visibility when the eye icon is clicked", () => {

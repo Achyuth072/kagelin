@@ -9,6 +9,8 @@ import {
 } from "@/lib/auth/providers";
 import { PROVIDER_ICONS } from "@/components/auth/ProviderIcons";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -34,20 +36,32 @@ import {
 import { formatLinkError } from "@/lib/auth/format-auth-error";
 import { useHasPassword } from "@/lib/hooks/useHasPassword";
 import { notify } from "@/lib/notify";
+import { SUPPORT_EMAIL } from "@/lib/links";
 import type { UserIdentity } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
 import { ICON_LED_ROW_CLASS } from "@/components/settings/iconLedRowClass";
 import { SETTINGS_CARD_CLASS } from "@/components/settings/settingsCardClass";
 
 export function AccountSection() {
-  const { user, linkIdentity, unlinkIdentity, updatePassword, isGuestMode } =
-    useAuth();
+  const {
+    user,
+    linkIdentity,
+    unlinkIdentity,
+    updatePassword,
+    reauthenticate,
+    isGuestMode,
+  } = useAuth();
   const searchParams = useSearchParams();
   const { hasPassword, refetchHasPassword } = useHasPassword();
 
   const [password, setPassword] = useState("");
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  // Set once GoTrue rejects the change with "reauthentication_needed" (session
+  // >24h old, Secure Password Change is on) — see AuthProvider.reauthenticate.
+  const [reauthRequired, setReauthRequired] = useState(false);
+  const [nonce, setNonce] = useState("");
+  const [resendingCode, setResendingCode] = useState(false);
 
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
   const [providerError, setProviderError] = useState<string | null>(null);
@@ -117,27 +131,66 @@ export function AccountSection() {
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password || passwordTooShort) return;
+    const trimmedNonce = nonce.trim();
+    if (reauthRequired && !trimmedNonce) return;
 
     setPasswordSubmitting(true);
     setPasswordError(null);
 
     try {
-      const { error } = await updatePassword(password);
-      if (error) {
-        setPasswordError(error.message || "Failed to update password");
-      } else {
+      const { error } = await updatePassword(
+        password,
+        reauthRequired ? trimmedNonce : undefined,
+      );
+      if (!error) {
         notify.success(
           hasPassword
             ? "Password changed successfully"
             : "Password set successfully",
         );
         setPassword("");
+        setNonce("");
+        setReauthRequired(false);
         refetchHasPassword();
+      } else if (error.code === "reauthentication_needed") {
+        setReauthRequired(true);
+        const { error: sendError } = await reauthenticate();
+        if (sendError) {
+          setPasswordError(
+            sendError.message || "Failed to send verification code",
+          );
+        }
+      } else if (
+        error.code === "reauthentication_not_valid" ||
+        error.code === "reauth_nonce_missing"
+      ) {
+        setPasswordError(
+          "That code wasn't right. Check your email and try again.",
+        );
+      } else {
+        setPasswordError(error.message || "Failed to update password");
       }
     } catch {
       setPasswordError("An unexpected error occurred");
     } finally {
       setPasswordSubmitting(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setPasswordError(null);
+    setResendingCode(true);
+    try {
+      const { error } = await reauthenticate();
+      if (error) {
+        setPasswordError(error.message || "Failed to send verification code");
+      } else {
+        notify.success("Verification code resent");
+      }
+    } catch {
+      setPasswordError("Failed to send verification code");
+    } finally {
+      setResendingCode(false);
     }
   };
 
@@ -297,6 +350,46 @@ export function AccountSection() {
               <PasswordBreachWarning breached={breached} />
             </AuthPasswordField>
 
+            {reauthRequired && (
+              <div className="space-y-2">
+                <Label
+                  htmlFor="account-password-nonce"
+                  className="text-[11px] uppercase tracking-wider text-muted-foreground/60"
+                >
+                  Verification code
+                </Label>
+                <Input
+                  id="account-password-nonce"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={nonce}
+                  onChange={(e) => setNonce(e.target.value)}
+                  disabled={passwordSubmitting}
+                  placeholder="Enter the code from your email"
+                  className="h-11 sm:h-10 bg-background/30 border-border/40 focus-visible:border-brand/50 text-base sm:text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  For your security, we sent a code to your email to confirm
+                  this change.{" "}
+                  <button
+                    type="button"
+                    onClick={handleResendCode}
+                    disabled={resendingCode}
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    {resendingCode ? "Resending…" : "Resend code"}
+                  </button>
+                  {" · "}
+                  <a
+                    href={`mailto:${SUPPORT_EMAIL}`}
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    Contact support
+                  </a>
+                </p>
+              </div>
+            )}
+
             {passwordError && (
               <p role="alert" className="text-xs text-destructive font-medium">
                 {passwordError}
@@ -305,14 +398,25 @@ export function AccountSection() {
 
             <Button
               type="submit"
-              disabled={passwordSubmitting || !password || passwordTooShort}
+              disabled={
+                passwordSubmitting ||
+                !password ||
+                passwordTooShort ||
+                (reauthRequired && !nonce.trim())
+              }
               className="h-11 sm:h-9 px-4 text-xs font-semibold bg-brand hover:bg-brand/90 text-brand-foreground transition-all"
             >
               {passwordSubmitting ? (
                 <>
                   <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  {hasPassword ? "Updating..." : "Setting..."}
+                  {reauthRequired
+                    ? "Confirming..."
+                    : hasPassword
+                      ? "Updating..."
+                      : "Setting..."}
                 </>
+              ) : reauthRequired ? (
+                "Confirm password change"
               ) : hasPassword ? (
                 "Change password"
               ) : (

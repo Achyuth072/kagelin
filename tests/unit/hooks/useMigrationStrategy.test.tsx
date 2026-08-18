@@ -103,6 +103,7 @@ describe("useMigrationStrategy", () => {
       signInWithPassword: vi.fn(),
       resetPasswordForEmail: vi.fn(),
       updatePassword: vi.fn(),
+      reauthenticate: vi.fn(),
       linkIdentity: vi.fn(),
       unlinkIdentity: vi.fn(),
     });
@@ -148,6 +149,7 @@ describe("useMigrationStrategy", () => {
       signInWithPassword: vi.fn(),
       resetPasswordForEmail: vi.fn(),
       updatePassword: vi.fn(),
+      reauthenticate: vi.fn(),
       linkIdentity: vi.fn(),
       unlinkIdentity: vi.fn(),
     });
@@ -210,6 +212,7 @@ describe("useMigrationStrategy", () => {
       signInWithPassword: vi.fn(),
       resetPasswordForEmail: vi.fn(),
       updatePassword: vi.fn(),
+      reauthenticate: vi.fn(),
       linkIdentity: vi.fn(),
       unlinkIdentity: vi.fn(),
     });

@@ -41,7 +41,13 @@ type AuthContextType = {
     email: string,
     captchaToken: string,
   ) => Promise<{ error: AuthError | null }>;
-  updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
+  updatePassword: (
+    password: string,
+    nonce?: string,
+  ) => Promise<{ error: AuthError | null }>;
+  // Sends a nonce (to the user's email, or phone if no confirmed email) for
+  // the Secure Password Change reauthentication step below.
+  reauthenticate: () => Promise<{ error: AuthError | null }>;
   linkIdentity: (
     provider: OAuthProviderId,
   ) => Promise<{ error: AuthError | null }>;
@@ -201,12 +207,21 @@ export function AuthProvider({
   );
 
   const updatePassword = useCallback(
-    async (password: string) => {
-      const { error } = await supabase.auth.updateUser({ password });
+    async (password: string, nonce?: string) => {
+      const { error } = await supabase.auth.updateUser({ password, nonce });
       return { error };
     },
     [supabase.auth],
   );
+
+  // Only relevant when Secure Password Change is on and the session is
+  // >24h old — supabase.auth.updateUser() then fails with error code
+  // "reauthentication_needed" until this has been called and its nonce
+  // passed back into updatePassword().
+  const reauthenticate = useCallback(async () => {
+    const { error } = await supabase.auth.reauthenticate();
+    return { error };
+  }, [supabase.auth]);
 
   const linkIdentity = useCallback(
     async (provider: OAuthProviderId) => {
@@ -274,6 +289,7 @@ export function AuthProvider({
         signInWithPassword,
         resetPasswordForEmail,
         updatePassword,
+        reauthenticate,
         linkIdentity,
         unlinkIdentity,
         signInAsGuest,

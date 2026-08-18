@@ -26,6 +26,7 @@ function mockSupabase(session: Session | null) {
       signInWithPassword: vi.fn().mockResolvedValue({ error: null }),
       resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
       updateUser: vi.fn().mockResolvedValue({ error: null }),
+      reauthenticate: vi.fn().mockResolvedValue({ error: null }),
       linkIdentity: vi.fn().mockResolvedValue({ error: null }),
       unlinkIdentity: vi.fn().mockResolvedValue({ error: null }),
       refreshSession: vi.fn().mockResolvedValue({ data: { session } }),
@@ -240,6 +241,47 @@ describe("AuthProvider", () => {
     expect(supabase.auth.updateUser).toHaveBeenCalledWith({
       password: "new-hunter22",
     });
+  });
+
+  it("passes a reauthentication nonce through to supabase.auth.updateUser when provided", async () => {
+    const supabase = mockSupabase(mockSession);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.updatePassword("new-hunter22", "123456");
+
+    expect(supabase.auth.updateUser).toHaveBeenCalledWith({
+      password: "new-hunter22",
+      nonce: "123456",
+    });
+  });
+
+  it("calls supabase.auth.reauthenticate() to send a verification code", async () => {
+    const supabase = mockSupabase(mockSession);
+    vi.mocked(createClient).mockReturnValue(
+      supabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <AuthProvider initialIsGuest={false}>{children}</AuthProvider>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await result.current.reauthenticate();
+
+    expect(supabase.auth.reauthenticate).toHaveBeenCalledTimes(1);
   });
 
   it("signs out a guest by clearing the local flag, without calling Supabase", async () => {
