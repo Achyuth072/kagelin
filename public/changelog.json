@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.31.0-preview.5",
+    "date": "2026-08-18",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Simplify has_password RPC hook and auth captcha/error components"
+      ],
+      "Fixed": [
+        "Change sign-up button label to Sign up",
+        "Has_password RPC, redirect error_code threading, and auth code-review cleanup",
+        "Show email/password sign-in in Settings connected identities (#149)"
+      ]
+    }
+  },
+  {
     "version": "1.31.0-preview.4",
     "date": "2026-08-17",
     "channel": "preview",
@@ -803,18 +818,6 @@
       "Fixed": [
         "Resolve ci:validate failures from UI redesigns",
         "Restore caret/focus after notes toolbar edits"
-      ]
-    }
-  },
-  {
-    "version": "1.23.0-preview.2",
-    "date": "2026-06-15",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Improve contrast for muted/destructive/border tokens",
-        "Match project dropdown to trigger width",
-        "Stop dialog clipping location popover"
       ]
     }
   }
