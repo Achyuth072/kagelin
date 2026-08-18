@@ -75,7 +75,7 @@ tests/unit/*.txt
 
 .vercel/
 
-.planning/
+.scratch/
 .claude/*
 !.claude/settings.json
 !.claude/hooks/

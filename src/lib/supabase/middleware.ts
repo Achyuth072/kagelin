@@ -4,7 +4,6 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  // Check the guest mode cookie first to avoid unnecessary Supabase calls.
   const isGuest = request.cookies.get("kanso_guest_mode")?.value === "true";
   if (isGuest) {
     return supabaseResponse;
@@ -36,13 +35,14 @@ export async function updateSession(request: NextRequest) {
     error,
   } = await supabase.auth.getUser();
 
+  // Distinct from AUTH_STANDALONE_ROUTES: gates server auth redirects
+  // (covering /access-denied and /api/health), not client shell rendering.
   const isPublicRoute =
     request.nextUrl.pathname === "/login" ||
     request.nextUrl.pathname === "/signup" ||
     request.nextUrl.pathname === "/access-denied" ||
     request.nextUrl.pathname.startsWith("/auth/") ||
-    // External uptime monitors send no session/guest cookie — without this,
-    // every check gets redirected to /login before the health route runs.
+    // Uptime checks send no cookies.
     request.nextUrl.pathname === "/api/health";
 
   if (error && !isPublicRoute && !isGuest) {

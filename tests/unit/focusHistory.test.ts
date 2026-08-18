@@ -41,6 +41,15 @@ vi.mock("@/lib/supabase/client", () => ({
     return {
       channel: vi.fn(() => channelObj),
       removeChannel: vi.fn(),
+      // useTimerSync's mount-time hydrate() (#129) selects the current row —
+      // no row exists in this suite's fixtures.
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            maybeSingle: vi.fn(async () => ({ data: null, error: null })),
+          })),
+        })),
+      })),
     };
   }),
 }));

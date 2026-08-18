@@ -13,6 +13,7 @@ import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimerSync } from "@/lib/hooks/useTimerSync";
+import { getDeviceId } from "@/lib/store/deviceId";
 import { TimerState } from "@/lib/types/timer";
 
 type TimerCompleteEvent = CustomEvent<{
@@ -48,7 +49,7 @@ export function useFocusTimer() {
     setLoaded,
   } = useTimerStore();
 
-  const { upsertTimerState, claimTimerCompletion } = useTimerSync();
+  const { upsertTimerState, claimTimerCompletion, hydrate } = useTimerSync();
 
   const syncToServer = useCallback(async () => {
     await upsertTimerState();
@@ -76,23 +77,19 @@ export function useFocusTimer() {
       const customEvent = event as TimerCompleteEvent;
       const { prevState, nextState, options } = customEvent.detail;
 
-      // Claim writes to the DB only if no other device beat us to it; the loser
-      // skips side-effects and mirrors via realtime, so the session is never
-      // double-logged. prevState.endsAt is the deadline that just passed.
+      // Atomic claim prevents duplicate session logs across concurrent devices.
       if (prevState.endsAt != null) {
         try {
           const won = await claimTimerCompletion(prevState.endsAt);
           if (!won) return;
         } catch (err) {
-          // Can't confirm the claim — fail open and log/notify locally. A rare
-          // double-log beats silently dropping the completed session.
+          // Fail open to avoid dropping completed sessions on network errors.
           console.warn(
             "Timer completion claim failed; proceeding locally:",
             err,
           );
         }
       } else {
-        // No deadline to claim against (deploy transient / edge) — just persist.
         try {
           await syncToServer();
         } catch (err) {
@@ -160,7 +157,7 @@ export function useFocusTimer() {
                 prevState.mode === "focus"
                   ? "Your focus session is complete. Take a break!"
                   : "Your break is over. Time to focus!",
-              // Matches the queued push's tag so they replace, not stack.
+              // Replace existing push notifications rather than stacking.
               tag: "timer_end",
               renotify: true,
               data: { url: "/focus" },
@@ -248,7 +245,6 @@ export function useFocusTimer() {
     syncToServer();
   }, [storeCancel, syncToServer]);
 
-  // Settings are per-account: propagate so other devices agree on them.
   const updateSettings = useCallback(
     (newSettings: Parameters<typeof storeUpdateSettings>[0]) => {
       storeUpdateSettings(newSettings);
@@ -257,15 +253,21 @@ export function useFocusTimer() {
     [storeUpdateSettings, syncToServer],
   );
 
-  // Handles reopening the PWA with a timer already running.
+  // Hydrate before syncing on mount to avoid clobbering state updated on another device (#129).
   const hasSyncedRef = useRef(false);
   useEffect(() => {
     if (hasSyncedRef.current) return;
-    if (!isGuestMode && state.isRunning) {
-      syncToServer();
-    }
     hasSyncedRef.current = true;
-  }, [isGuestMode, state.isRunning, syncToServer]);
+    if (isGuestMode || !useTimerStore.getState().state.isRunning) return;
+
+    (async () => {
+      await hydrate();
+      const freshState = useTimerStore.getState().state;
+      if (freshState.isRunning && freshState.sourceDeviceId === getDeviceId()) {
+        syncToServer();
+      }
+    })();
+  }, [isGuestMode, hydrate, syncToServer]);
 
   return {
     state,
@@ -275,9 +277,7 @@ export function useFocusTimer() {
     pause,
     stop,
     cancel,
-    // storeSkip dispatches timer-complete synchronously; the handler persists
-    // the new state (claim or sync), which re-fires the server-side chain
-    // projection — no wrapper needed beyond the stable store action itself.
+    // Dispatches timer-complete synchronously, which handles persistence.
     skip: storeSkip,
     updateSettings,
   };
