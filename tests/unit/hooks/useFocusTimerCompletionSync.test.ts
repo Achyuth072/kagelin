@@ -4,25 +4,23 @@ import { useTimerStore } from "@/lib/store/timerStore";
 import { DEFAULT_TIMER_SETTINGS } from "@/lib/types/timer";
 import { setServerOffset } from "@/lib/store/serverClock";
 
-/**
- * Regression: when the focus timer auto-completes on a foregrounded device, it
- * atomically claims the completion. The winner persists the transition and fires
- * side-effects (logs the focus session); a loser (another device finishing the
- * same session) gets a failed claim and must skip side-effects so the session is
- * never double-logged.
- */
-
-const { mockUpsertTimerState, mockClaimTimerCompletion, mockLogMutate } =
-  vi.hoisted(() => ({
-    mockUpsertTimerState: vi.fn().mockResolvedValue(undefined),
-    mockClaimTimerCompletion: vi.fn().mockResolvedValue(true),
-    mockLogMutate: vi.fn(),
-  }));
+const {
+  mockUpsertTimerState,
+  mockClaimTimerCompletion,
+  mockHydrate,
+  mockLogMutate,
+} = vi.hoisted(() => ({
+  mockUpsertTimerState: vi.fn().mockResolvedValue(undefined),
+  mockClaimTimerCompletion: vi.fn().mockResolvedValue(true),
+  mockHydrate: vi.fn().mockResolvedValue(undefined),
+  mockLogMutate: vi.fn(),
+}));
 
 vi.mock("@/lib/hooks/useTimerSync", () => ({
   useTimerSync: () => ({
     upsertTimerState: mockUpsertTimerState,
     claimTimerCompletion: mockClaimTimerCompletion,
+    hydrate: mockHydrate,
   }),
 }));
 
@@ -64,7 +62,7 @@ function mountRunningSession() {
       remainingSeconds: 2,
       completedSessions: 0,
       activeTaskId: "task-1",
-      endsAt: NOW + 2000, // deadline 2s out
+      endsAt: NOW + 2000,
       sourceDeviceId: "device-a",
     },
     settings: DEFAULT_TIMER_SETTINGS,
@@ -93,14 +91,12 @@ describe("useFocusTimer — completion claim", () => {
 
     await act(async () => {
       vi.setSystemTime(NOW + 3000);
-      vi.advanceTimersByTime(3000); // tick past the deadline
+      vi.advanceTimersByTime(3000);
     });
 
     expect(useTimerStore.getState().state.mode).toBe("shortBreak");
     expect(useTimerStore.getState().state.completedSessions).toBe(1);
-    // Claimed against the deadline that just passed.
     expect(mockClaimTimerCompletion).toHaveBeenCalledWith(NOW + 2000);
-    // Winner logs the focus session.
     expect(mockLogMutate).toHaveBeenCalled();
   });
 
@@ -113,9 +109,7 @@ describe("useFocusTimer — completion claim", () => {
       vi.advanceTimersByTime(3000);
     });
 
-    // Local state still advanced optimistically (will converge via realtime)...
     expect(mockClaimTimerCompletion).toHaveBeenCalledWith(NOW + 2000);
-    // ...but the loser must NOT log the session again.
     expect(mockLogMutate).not.toHaveBeenCalled();
   });
 
@@ -130,7 +124,6 @@ describe("useFocusTimer — completion claim", () => {
     });
 
     expect(mockClaimTimerCompletion).toHaveBeenCalledWith(NOW + 2000);
-    // A transient claim failure must not drop the completed session.
     expect(mockLogMutate).toHaveBeenCalled();
     warnSpy.mockRestore();
   });
