@@ -1,5 +1,28 @@
 [
   {
+    "version": "1.31.0",
+    "date": "2026-08-18",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Rebuilt the login/signup page with a cleaner layout and a Google/GitHub row up top",
+        "Added email + password sign-up and sign-in, with a warning if your chosen password has appeared in known data breaches",
+        "Added a forgot-password flow, including a reset-confirmation screen that reassures you support is available if anything goes wrong",
+        "New Settings → Account section for managing your sign-in methods and setting a password on an OAuth-only account",
+        "Added reauthentication for sensitive account changes, like setting a password"
+      ],
+      "Improved": [
+        "Signing in now shows which identities (Google, GitHub, email/password) are already connected",
+        "Linking/unlinking accounts is more consistent — same account picker behavior for Google and GitHub, refreshed session state after unlinking, clearer error messages",
+        "Cleaned up error messages so raw technical text no longer leaks into account alerts"
+      ],
+      "Fixed": [
+        "Closed an issue where certain crafted redirect links could send you somewhere unintended after signing in",
+        "Tightened up spacing/copy across the auth pages (sign-up button label, password visibility toggle, confirm-password field, small layout fixes)"
+      ]
+    }
+  },
+  {
     "version": "1.31.0-preview.6",
     "date": "2026-08-18",
     "channel": "preview",
@@ -794,29 +817,6 @@
     "sections": {
       "Added": [
         "Add measurable habit data model (type, frequency, target)"
-      ]
-    }
-  },
-  {
-    "version": "1.23.0",
-    "date": "2026-06-15",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Compact list view for habits with a tappable rolling-7 day strip, toggle between Grid and Compact",
-        "Drag-and-drop reordering for habits in Compact view",
-        "Global search (Ctrl/Cmd+K) now finds tasks, habits, and events, with a search option in the mobile header",
-        "Show active task on mobile header in guest mode(added back)",
-        "Notes editor for tasks with a markdown formatting toolbar and live preview"
-      ],
-      "Improved": [
-        "Habit, task, project, and other dialogs redesigned with a consistent icon-led layout",
-        "Tablet and landscape layouts fixed to avoid clipping on narrow or short screens",
-        "Empty states redesigned across tasks, habits, calendar, and search",
-        "Habit completion checkmarks stay legible on light habit colors",
-        "Improved contrast for muted, destructive, and border colors",
-        "Project dropdown now matches the width of its trigger",
-        "Location popover no longer gets clipped inside dialogs"
       ]
     }
   }
