@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AuthCaptcha } from "@/components/auth/AuthCaptcha";
+import { AuthErrorMessage } from "@/components/auth/AuthErrorMessage";
 import { AUTH_LINK_CLASS } from "@/components/auth/authLinkClass";
 import { AuthEmailField } from "@/components/auth/AuthEmailField";
 import { AuthConfirmationCard } from "@/components/auth/AuthConfirmationCard";
@@ -20,8 +21,15 @@ export function MagicLinkAuth({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-  const turnstile = useTurnstileCaptcha();
-  const { captchaToken, resetCaptcha, captchaMissing } = turnstile;
+  const {
+    siteKey,
+    captchaToken,
+    setCaptchaToken,
+    turnstileRef,
+    handleCaptchaExpire,
+    resetCaptcha,
+    captchaMissing,
+  } = useTurnstileCaptcha();
   const { signInWithMagicLink } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,13 +87,14 @@ export function MagicLinkAuth({
               )}
             </AuthEmailField>
 
-            <AuthCaptcha {...turnstile} />
+            <AuthCaptcha
+              siteKey={siteKey}
+              setCaptchaToken={setCaptchaToken}
+              handleCaptchaExpire={handleCaptchaExpire}
+              turnstileRef={turnstileRef}
+            />
 
-            {error && (
-              <p role="alert" className="text-sm text-destructive font-medium">
-                {error}
-              </p>
-            )}
+            <AuthErrorMessage error={error} />
 
             <Button
               type="submit"

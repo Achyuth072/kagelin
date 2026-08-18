@@ -20,8 +20,15 @@ export function ResetPasswordAuth({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [requested, setRequested] = useState(false);
-  const turnstile = useTurnstileCaptcha();
-  const { captchaToken, resetCaptcha, captchaMissing } = turnstile;
+  const {
+    siteKey,
+    captchaToken,
+    setCaptchaToken,
+    turnstileRef,
+    handleCaptchaExpire,
+    resetCaptcha,
+    captchaMissing,
+  } = useTurnstileCaptcha();
   const { resetPasswordForEmail } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -65,7 +72,12 @@ export function ResetPasswordAuth({
         disabled={loading}
       />
 
-      <AuthCaptcha {...turnstile} />
+      <AuthCaptcha
+        siteKey={siteKey}
+        setCaptchaToken={setCaptchaToken}
+        handleCaptchaExpire={handleCaptchaExpire}
+        turnstileRef={turnstileRef}
+      />
 
       <Button
         type="submit"

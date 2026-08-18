@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -8,7 +8,6 @@ import { useAuth } from "@/components/AuthProvider";
 // create an `email` identity, so the RPC reads auth.users server-side instead.
 export function useHasPassword() {
   const { user, isGuestMode } = useAuth();
-  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: ["has-password", user?.id],
@@ -19,14 +18,14 @@ export function useHasPassword() {
       return data ?? false;
     },
     enabled: !!user && !isGuestMode,
+    // Only changes via an explicit refetchHasPassword() call after setting a
+    // password — never refetch it just because the tab regained focus.
+    staleTime: Infinity,
   });
-
-  const refetchHasPassword = () =>
-    queryClient.invalidateQueries({ queryKey: ["has-password", user?.id] });
 
   return {
     hasPassword: query.data ?? false,
     isLoading: query.isLoading,
-    refetchHasPassword,
+    refetchHasPassword: query.refetch,
   };
 }

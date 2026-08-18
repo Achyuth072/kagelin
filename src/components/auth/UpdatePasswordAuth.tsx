@@ -10,6 +10,7 @@ import { Loader2, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { PasswordBreachWarning } from "@/components/auth/PasswordBreachWarning";
 import { AuthPasswordField } from "@/components/auth/AuthPasswordField";
+import { AuthErrorMessage } from "@/components/auth/AuthErrorMessage";
 import { usePasswordBreachCheck } from "@/lib/hooks/usePasswordBreachCheck";
 import {
   MIN_PASSWORD_LENGTH,
@@ -152,14 +153,7 @@ export function UpdatePasswordAuth() {
                 )}
               </AuthPasswordField>
 
-              {error && (
-                <p
-                  role="alert"
-                  className="text-sm text-destructive font-medium"
-                >
-                  {error}
-                </p>
-              )}
+              <AuthErrorMessage error={error} />
 
               <Button
                 type="submit"

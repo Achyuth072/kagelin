@@ -5,6 +5,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { AuthCaptcha } from "@/components/auth/AuthCaptcha";
+import { AuthErrorMessage } from "@/components/auth/AuthErrorMessage";
 import type { AuthMode } from "@/components/auth/AuthPage";
 import { AUTH_LINK_CLASS } from "@/components/auth/authLinkClass";
 import { AuthEmailField } from "@/components/auth/AuthEmailField";
@@ -40,8 +41,15 @@ export function PasswordAuth({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedUp, setSignedUp] = useState(false);
-  const turnstile = useTurnstileCaptcha();
-  const { captchaToken, resetCaptcha, captchaMissing } = turnstile;
+  const {
+    siteKey,
+    captchaToken,
+    setCaptchaToken,
+    turnstileRef,
+    handleCaptchaExpire,
+    resetCaptcha,
+    captchaMissing,
+  } = useTurnstileCaptcha();
   const { breached, checkOnBlur, clearBreach } = usePasswordBreachCheck();
   const { signUpWithPassword, signInWithPassword } = useAuth();
 
@@ -155,13 +163,14 @@ export function PasswordAuth({
         )}
       </AuthPasswordField>
 
-      <AuthCaptcha {...turnstile} />
+      <AuthCaptcha
+        siteKey={siteKey}
+        setCaptchaToken={setCaptchaToken}
+        handleCaptchaExpire={handleCaptchaExpire}
+        turnstileRef={turnstileRef}
+      />
 
-      {error && (
-        <p role="alert" className="text-sm text-destructive font-medium">
-          {error}
-        </p>
-      )}
+      <AuthErrorMessage error={error} />
 
       <Button
         type="submit"
