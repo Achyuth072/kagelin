@@ -9,7 +9,7 @@ public
 *.min.js
 package-lock.json
 .serena
-.planning
+.scratch
 .agent
 .gemini
 .idea

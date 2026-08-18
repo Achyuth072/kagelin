@@ -23,7 +23,7 @@ This repo is single-context:
 
 ## Supplementary reference docs
 
-`.planning/codebase/*.md` holds additional reference docs that complement `CONTEXT.md`:
+`.scratch/codebase/*.md` holds additional reference docs that complement `CONTEXT.md`:
 
 - `ARCHITECTURE.md`
 - `CONVENTIONS.md`
