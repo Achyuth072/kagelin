@@ -81,8 +81,11 @@ describe("AccountSection", () => {
     expect(formatLinkError("Identity is already claimed")).toBe(
       "That social account is already linked to a different Kagelin account.",
     );
+  });
+
+  it("formatLinkError substitutes a generic message for unrecognized URL error strings instead of reflecting them", () => {
     expect(formatLinkError("Custom error message")).toBe(
-      "Custom error message",
+      "Failed to link account. Please try again.",
     );
   });
 
@@ -307,6 +310,22 @@ describe("AccountSection", () => {
       screen.getByText(
         "That GitHub account is already linked to a different Kagelin account.",
       ),
+    ).toBeInTheDocument();
+  });
+
+  it("substitutes a generic message instead of reflecting an arbitrary ?error param verbatim", () => {
+    setupAuth();
+    mockUseSearchParams.mockReturnValue(
+      new URLSearchParams("error=Your+account+has+been+compromised"),
+    );
+
+    renderWithQueryClient(<AccountSection />);
+
+    expect(
+      screen.queryByText("Your account has been compromised"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Failed to link account. Please try again."),
     ).toBeInTheDocument();
   });
 

@@ -1,6 +1,9 @@
 export const SIGNUP_DISABLED_MESSAGE =
   "This app is private. Only authorized users can sign in.";
 
+export const GENERIC_LINK_ERROR_MESSAGE =
+  "Failed to link account. Please try again.";
+
 export function isSignupDisabledError(message: string): boolean {
   return (
     message.includes("Signups not allowed") ||
@@ -28,7 +31,13 @@ export function formatLinkError(
     // prose is ever reworded.
     /already (linked|exists|claimed)/i.test(message);
 
-  return isAlreadyLinked
-    ? `That ${providerLabel} account is already linked to a different Kagelin account.`
-    : message;
+  if (isAlreadyLinked) {
+    return `That ${providerLabel} account is already linked to a different Kagelin account.`;
+  }
+
+  // A string `error` only ever arrives from the `?error`/`?error_description`
+  // redirect params (attacker-controlled, unlike the AuthError objects the
+  // other call sites pass) — substitute a fixed message instead of
+  // reflecting it, mirroring AuthPage's handling of the same params.
+  return typeof error === "string" ? GENERIC_LINK_ERROR_MESSAGE : message;
 }
