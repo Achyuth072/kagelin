@@ -397,13 +397,16 @@ DECLARE
 BEGIN
   -- 1. CLEANUP: cancel only the notifications this trigger itself creates.
   -- timer_end rows share reference_id with the task but are owned by the focus
-  -- timer — cancelling those killed running timers' notifications.
+  -- timer — cancelling those killed running timers' notifications. Scoped to
+  -- scheduled_at > now() (#155) so a row that's already due is left for the
+  -- poller instead of being cancelled by this write.
   IF TG_OP IN ('UPDATE', 'DELETE') THEN
     UPDATE public.notification_queue
     SET status = 'cancelled'
     WHERE reference_id = OLD.id
       AND status = 'pending'
-      AND type IN ('due_date', 'do_date');
+      AND type IN ('due_date', 'do_date')
+      AND scheduled_at > now();
   END IF;
 
   -- 2. CREATE NEW NOTIFICATIONS: If task is created or updated (and not completed)
