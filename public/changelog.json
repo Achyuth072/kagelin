@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.31.1-preview.0",
+    "date": "2026-08-18",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Extract shared PasswordField component (#152)"
+      ],
+      "Fixed": [
+        "Document why middleware's public-route list stays separate from AUTH_STANDALONE_ROUTES (#150)",
+        "Update docs",
+        "Don't blindly re-push a stale local timer session on app reopen (#129)",
+        "Scope task notification cleanup to future rows (#155)",
+        "Scope timer notification cleanup to future rows (#139)"
+      ]
+    }
+  },
+  {
     "version": "1.31.0",
     "date": "2026-08-18",
     "channel": "stable",
@@ -807,16 +824,6 @@
     "sections": {
       "Added": [
         "Port score and frequency-aware streak engine (#72)"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.0",
-    "date": "2026-06-16",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add measurable habit data model (type, frequency, target)"
       ]
     }
   }
