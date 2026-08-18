@@ -9,15 +9,11 @@ import { AuthErrorMessage } from "@/components/auth/AuthErrorMessage";
 import type { AuthMode } from "@/components/auth/AuthPage";
 import { AUTH_LINK_CLASS } from "@/components/auth/authLinkClass";
 import { AuthEmailField } from "@/components/auth/AuthEmailField";
-import { AuthPasswordField } from "@/components/auth/AuthPasswordField";
 import { AuthConfirmationCard } from "@/components/auth/AuthConfirmationCard";
-import { PasswordBreachWarning } from "@/components/auth/PasswordBreachWarning";
+import { PasswordField } from "@/components/auth/PasswordField";
 import { useTurnstileCaptcha } from "@/lib/hooks/useTurnstileCaptcha";
 import { usePasswordBreachCheck } from "@/lib/hooks/usePasswordBreachCheck";
-import {
-  MIN_PASSWORD_LENGTH,
-  isPasswordTooShort,
-} from "@/lib/auth/password-policy";
+import { isPasswordTooShort } from "@/lib/auth/password-policy";
 import {
   SIGNUP_DISABLED_MESSAGE,
   isSignupDisabledError,
@@ -119,7 +115,7 @@ export function PasswordAuth({
         disabled={loading}
       />
 
-      <AuthPasswordField
+      <PasswordField
         id="password-auth-password"
         label="Password"
         labelClassName="text-[13px]"
@@ -131,14 +127,9 @@ export function PasswordAuth({
         onBlur={handlePasswordBlur}
         disabled={loading}
         autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
-        minLength={MIN_PASSWORD_LENGTH}
+        passwordTooShort={passwordTooShort}
+        breached={breached}
       >
-        {passwordTooShort && (
-          <p className="text-xs text-muted-foreground">
-            Password must be at least {MIN_PASSWORD_LENGTH} characters.
-          </p>
-        )}
-        <PasswordBreachWarning breached={breached} />
         {(showForgotPassword || onSwitchToMagicLink) && (
           <div className="flex items-center justify-between gap-4">
             {showForgotPassword && (
@@ -161,7 +152,7 @@ export function PasswordAuth({
             )}
           </div>
         )}
-      </AuthPasswordField>
+      </PasswordField>
 
       <AuthCaptcha
         siteKey={siteKey}

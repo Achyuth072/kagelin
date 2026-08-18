@@ -8,14 +8,11 @@ import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
-import { PasswordBreachWarning } from "@/components/auth/PasswordBreachWarning";
 import { AuthPasswordField } from "@/components/auth/AuthPasswordField";
+import { PasswordField } from "@/components/auth/PasswordField";
 import { AuthErrorMessage } from "@/components/auth/AuthErrorMessage";
 import { usePasswordBreachCheck } from "@/lib/hooks/usePasswordBreachCheck";
-import {
-  MIN_PASSWORD_LENGTH,
-  isPasswordTooShort,
-} from "@/lib/auth/password-policy";
+import { isPasswordTooShort } from "@/lib/auth/password-policy";
 
 export function UpdatePasswordAuth() {
   const { user, loading, isGuestMode, updatePassword, signOut } = useAuth();
@@ -117,7 +114,7 @@ export function UpdatePasswordAuth() {
               <h1 className="text-xl font-semibold">Choose a new password</h1>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <AuthPasswordField
+              <PasswordField
                 id="update-password-new"
                 label="New password"
                 value={password}
@@ -127,16 +124,10 @@ export function UpdatePasswordAuth() {
                 }}
                 onBlur={() => checkOnBlur(password, passwordTooShort)}
                 disabled={submitting}
-                minLength={MIN_PASSWORD_LENGTH}
                 toggleLabel="new password"
-              >
-                {passwordTooShort && (
-                  <p className="text-xs text-muted-foreground">
-                    Password must be at least {MIN_PASSWORD_LENGTH} characters.
-                  </p>
-                )}
-                <PasswordBreachWarning breached={breached} />
-              </AuthPasswordField>
+                passwordTooShort={passwordTooShort}
+                breached={breached}
+              />
 
               <AuthPasswordField
                 id="update-password-confirm"
