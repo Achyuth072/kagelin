@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.31.1",
+    "date": "2026-08-18",
+    "channel": "stable",
+    "sections": {
+      "Improved": [
+        "Made password fields more consistent across sign-up, sign-in, and password reset"
+      ],
+      "Fixed": [
+        "Fixed the focus timer occasionally restarting a stale session from before you closed the app",
+        "Fixed notification cleanup for tasks and the focus timer sometimes touching reminders that had already been sent"
+      ]
+    }
+  },
+  {
     "version": "1.31.1-preview.0",
     "date": "2026-08-18",
     "channel": "preview",
