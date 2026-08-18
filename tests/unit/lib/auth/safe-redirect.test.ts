@@ -32,4 +32,10 @@ describe("sanitizeNextPath (H-3)", () => {
     expect(sanitizeNextPath("https://evil.com")).toBe("/");
     expect(sanitizeNextPath("http://evil.com")).toBe("/");
   });
+
+  it("rejects control characters the URL parser would strip before parsing", () => {
+    expect(sanitizeNextPath("/\t/evil.com")).toBe("/");
+    expect(sanitizeNextPath("/\n/evil.com")).toBe("/");
+    expect(sanitizeNextPath("/\r/evil.com")).toBe("/");
+  });
 });

@@ -18,6 +18,11 @@ function redirectWithError(
   const target =
     next === "/" || next === EMAIL_CONFIRMED_PATH ? "/login" : next;
   const url = new URL(target, origin);
+  // Defense-in-depth: sanitizeNextPath should already guarantee same-origin,
+  // but this is the one call site where `next` reaches new URL(relative, base).
+  if (url.origin !== origin) {
+    return NextResponse.redirect(new URL("/login", origin));
+  }
   url.searchParams.set("error", message);
   if (errorCode) url.searchParams.set("error_code", errorCode);
   return NextResponse.redirect(url);

@@ -98,6 +98,23 @@ describe("GET /auth/callback (H-3)", () => {
     );
   });
 
+  it("rejects a tab/newline/CR-smuggled next param that would collapse to //host (open redirect)", async () => {
+    const withCode = await GET(request("?code=abc&next=%2F%09%2Fevil.com"));
+    expect(withCode.headers.get("location")).toBe("http://localhost/");
+
+    const noCode = await GET(request("?next=%2F%0D%2Flogin-kagelin.app"));
+    expect(noCode.headers.get("location")).toBe(
+      "http://localhost/login?error=no_code_received",
+    );
+
+    const errorDescription = await GET(
+      request("?error_description=hi&next=%2F%0A%2Fevil.com"),
+    );
+    expect(errorDescription.headers.get("location")).toBe(
+      "http://localhost/login?error=hi",
+    );
+  });
+
   it("skips the code exchange and redirects straight to /auth/email-confirmed (Finding 3: no auto sign-in after signup confirmation)", async () => {
     const response = await GET(
       request("?code=abc&next=%2Fauth%2Femail-confirmed"),
