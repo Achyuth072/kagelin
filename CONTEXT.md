@@ -114,7 +114,7 @@ its source.
 
 ## Founding cohort
 
-### Founding cohort
+### Overview
 
 The first N waitlist signups, N set by kagelin-web's `WAITLIST_FOUNDING_CAP`
 env var (read once at module load, so changing it needs a redeploy — not

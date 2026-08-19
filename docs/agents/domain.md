@@ -14,7 +14,7 @@ If any of these files don't exist, **proceed silently**. Don't flag their absenc
 
 This repo is single-context:
 
-```
+```text
 /
 ├── CONTEXT.md
 ├── docs/adr/
