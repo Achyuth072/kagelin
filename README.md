@@ -75,18 +75,16 @@ Most productivity apps want your email before you've written a single task, and 
 ### Calendar
 
 - **Flexible views**: Month, desktop 4-day, mobile week view with edge-gated paging, and rolling 3-day view.
-- **Event creation**: native calendar events with NLP-assisted time parsing.
+- **Event creation**: quick event creation with natural language time parsing.
 - **Multi-provider sync**: Google Calendar and Microsoft Outlook.
 - **ICS portability**: universal `.ics` (RFC 5545) import and export.
-
-> CalDAV (Nextcloud, iCloud) is on pause for now — the old connect flow was half-built and didn't handle credentials carefully enough, so it's pulled until it's rebuilt properly server-side.
 
 ### Data Ownership
 
 - **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed.
 - **Accounts & Auth**: Google, GitHub, or breach-checked email/password sign-in with multi-provider identity linking and password reset.
-- **WebDAV sync**: registered users can sync with personal servers (Nextcloud, Synology). Credentials are session-only for now — not yet persisted.
-- **Backups**: configurable guest backup reminder cadence, plus encrypted `.zip` export/import for everyone. Registered users can instantly delete all cloud data (tasks, habits, focus logs, calendar events); full account deletion is handled manually during beta — see [privacy policy](https://kagelin.app/privacy).
+- **WebDAV sync**: sync with personal servers (Nextcloud, Synology) for self-hosted setups.
+- **Backups & Portability**: encrypted `.zip` export/import, guest backup reminders, and instant cloud data wipe.
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
 
 ### Stats & Insights
