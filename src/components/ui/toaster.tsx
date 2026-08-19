@@ -37,7 +37,7 @@ export function Toaster() {
             "py-2.5 px-4 sm:py-3 sm:px-5",
             "w-fit max-w-sm",
             // --offline-pill-offset is set on SidebarInset; it lifts desktop toasts clear of the centred offline pill
-            "mb-[calc(76px+env(safe-area-inset-bottom))] md:mb-[calc(1.25rem+var(--offline-pill-offset,0px))]",
+            "mb-[calc(66px+env(safe-area-inset-bottom,0px))] md:mb-[calc(1.25rem+var(--offline-pill-offset,0px))]",
             "transition-all duration-300 ease-seijaku",
             "[&_[data-icon]]:text-foreground/60",
           ),

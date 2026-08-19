@@ -24,8 +24,8 @@ export function MobileNav() {
   }, [router]);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-sidebar md:hidden pb-[env(safe-area-inset-bottom)]">
-      <div className="flex items-center justify-around h-[60px] pb-1">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-sidebar md:hidden pb-[env(safe-area-inset-bottom,0px)]">
+      <div className="flex items-center justify-around h-[50px] pt-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.path;
@@ -37,16 +37,14 @@ export function MobileNav() {
               whileTap={isPhone ? { scale: 0.95 } : {}}
               onClick={() => router.push(item.path)}
               className={cn(
-                "flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all cursor-pointer outline-none",
+                "flex flex-col items-center justify-center flex-1 h-full gap-0.5 transition-all cursor-pointer outline-none",
                 isActive
                   ? "text-brand"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <div className="p-1">
-                <Icon className="h-6 w-6" />
-              </div>
-              <span className="text-[13px] font-medium leading-none">
+              <Icon className="h-5 w-5" />
+              <span className="text-[11px] font-medium leading-none">
                 {item.label}
               </span>
             </motion.button>

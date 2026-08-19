@@ -179,7 +179,9 @@
 /* Mobile optimizations & viewport constraint */
 html,
 body {
-  height: 100dvh;
+  height: 100%;
+  min-height: 100%;
+  min-height: -webkit-fill-available;
   overscroll-behavior: none;
   overflow: hidden;
 }
