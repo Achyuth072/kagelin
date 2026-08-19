@@ -52,6 +52,11 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Toaster } from "@/components/ui/toaster";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
 import { useIsOnline } from "@/lib/hooks/useIsOnline";
+import { trackTelemetry } from "@/lib/telemetry/client";
+import {
+  getTelemetryDisplayMode,
+  getTelemetryPlatform,
+} from "@/lib/utils/platform";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
@@ -107,6 +112,13 @@ const ArchivedProjectsDialog = dynamic(
   () =>
     import("@/components/projects/ArchivedProjectsDialog").then(
       (mod) => mod.ArchivedProjectsDialog,
+    ),
+  { ssr: false },
+);
+const TelemetryConsentPrompt = dynamic(
+  () =>
+    import("@/components/telemetry/TelemetryConsentPrompt").then(
+      (mod) => mod.TelemetryConsentPrompt,
     ),
   { ssr: false },
 );
@@ -243,6 +255,7 @@ function GlobalOverlays({
       <FloatingTimer />
       <ChangelogPopupWatcher />
       <ChangelogManualTrigger />
+      <TelemetryConsentPrompt />
     </>
   );
 }
@@ -286,6 +299,13 @@ function AppShellContent({ children }: AppShellProps) {
   useRealtimeSync();
 
   useWeeklyBackup();
+
+  useEffect(() => {
+    trackTelemetry("app_opened", {
+      display_mode: getTelemetryDisplayMode(),
+      platform: getTelemetryPlatform(),
+    });
+  }, []);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {

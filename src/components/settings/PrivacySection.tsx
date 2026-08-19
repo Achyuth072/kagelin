@@ -1,0 +1,59 @@
+"use client";
+
+import { ShieldCheck } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
+import { useHaptic } from "@/lib/hooks/useHaptic";
+import { trackTelemetry } from "@/lib/telemetry/client";
+import {
+  getTelemetryDisplayMode,
+  getTelemetryPlatform,
+} from "@/lib/utils/platform";
+
+export function PrivacySection() {
+  const { consent, setConsent } = useTelemetryConsent();
+  const { trigger } = useHaptic();
+
+  const isEnabled = consent === "granted";
+
+  const handleToggle = (checked: boolean) => {
+    trigger("toggle");
+    const nextStatus = checked ? "granted" : "denied";
+    setConsent(nextStatus);
+
+    if (checked) {
+      trackTelemetry("app_opened", {
+        display_mode: getTelemetryDisplayMode(),
+        platform: getTelemetryPlatform(),
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-background">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="p-2 rounded-full bg-secondary/30 shrink-0 mt-0.5">
+            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium leading-none">
+              Share Anonymous Telemetry
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Help improve Kagelin by sharing anonymous usage metrics (feature
+              usage, timer durations, platform). Personal data, task titles, and
+              notes are never collected or transmitted.
+            </p>
+          </div>
+        </div>
+        <Switch
+          checked={isEnabled}
+          onCheckedChange={handleToggle}
+          aria-label="Share Anonymous Telemetry"
+          className="shrink-0 mt-0.5"
+        />
+      </div>
+    </div>
+  );
+}

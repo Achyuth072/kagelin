@@ -65,6 +65,21 @@ export function isStandalone(): boolean {
   );
 }
 
+export function isAndroid(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /Android/i.test(navigator.userAgent);
+}
+
+export function getTelemetryPlatform(): "ios" | "android" | "desktop" {
+  if (isIOS()) return "ios";
+  if (isAndroid()) return "android";
+  return "desktop";
+}
+
+export function getTelemetryDisplayMode(): "standalone" | "browser" {
+  return isStandalone() ? "standalone" : "browser";
+}
+
 export function supportsInstallPrompt(): boolean {
   if (typeof window === "undefined") return false;
   return "onbeforeinstallprompt" in window;

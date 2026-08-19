@@ -2,6 +2,7 @@ export type TelemetryConsent = "granted" | "denied" | "unprompted";
 
 export const TELEMETRY_CONSENT_KEY = "telemetry_consent";
 export const TELEMETRY_DEVICE_ID_KEY = "telemetry_device_id";
+export const TELEMETRY_CONSENT_EVENT = "kagelin:telemetry-consent";
 
 function isLocalStorageAvailable(): boolean {
   return (
@@ -41,6 +42,15 @@ export function setTelemetryConsent(status: "granted" | "denied"): void {
       if (!existingId) {
         localStorage.setItem(TELEMETRY_DEVICE_ID_KEY, crypto.randomUUID());
       }
+    }
+
+    if (
+      typeof window !== "undefined" &&
+      typeof window.dispatchEvent === "function"
+    ) {
+      window.dispatchEvent(
+        new CustomEvent(TELEMETRY_CONSENT_EVENT, { detail: status }),
+      );
     }
   } catch {}
 }

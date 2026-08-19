@@ -39,6 +39,7 @@ import { PwaInstallRow } from "@/components/settings/PwaInstallRow";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
 import { BackupSyncSettings } from "@/components/settings/BackupSyncSettings";
 import { AccountSection } from "@/components/settings/AccountSection";
+import { PrivacySection } from "@/components/settings/PrivacySection";
 import { useAccountData } from "@/lib/hooks/useAccountData";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -380,6 +381,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
                     <NotificationSettings />
 
                     <PwaInstallRow />
+
+                    <PrivacySection />
                   </div>
                 </section>
 
