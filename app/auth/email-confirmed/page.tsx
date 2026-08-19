@@ -1,11 +1,17 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AuthConfirmationCard } from "@/components/auth/AuthConfirmationCard";
 import { AuthShell } from "@/components/auth/AuthShell";
+import { trackTelemetry } from "@/lib/telemetry/client";
 
 export default function EmailConfirmedPage() {
   const router = useRouter();
+
+  useEffect(() => {
+    trackTelemetry("signup_completed");
+  }, []);
 
   return (
     <AuthShell>

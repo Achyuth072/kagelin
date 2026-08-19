@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/notify";
+import { trackTelemetry } from "@/lib/telemetry/client";
 import type { Task, Project } from "@/lib/types/task";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 
@@ -251,6 +252,8 @@ export function useMigrationStrategy() {
       notify.success(
         "Synchronization complete! Your data is safe in the cloud.",
       );
+
+      trackTelemetry("signup_completed");
 
       window.location.reload();
     } catch (err: unknown) {

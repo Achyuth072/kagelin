@@ -305,6 +305,22 @@ function AppShellContent({ children }: AppShellProps) {
       display_mode: getTelemetryDisplayMode(),
       platform: getTelemetryPlatform(),
     });
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("signup") === "1") {
+        trackTelemetry("signup_completed");
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete("signup");
+        window.history.replaceState(
+          {},
+          "",
+          cleanUrl.pathname +
+            (cleanUrl.search ? cleanUrl.search : "") +
+            cleanUrl.hash,
+        );
+      }
+    }
   }, []);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);

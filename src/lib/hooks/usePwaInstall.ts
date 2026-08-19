@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isIOS as detectIOS, isStandalone } from "@/lib/utils/platform";
+import {
+  isIOS as detectIOS,
+  isStandalone,
+  getTelemetryPlatform,
+} from "@/lib/utils/platform";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { trackTelemetry } from "@/lib/telemetry/client";
 import {
   isInstallHintDismissed,
   dismissInstallHint,
@@ -55,7 +60,12 @@ export function usePwaInstall() {
   }, []);
 
   useEffect(() => {
-    const handleAppInstalled = () => setIsInstalled(true);
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      trackTelemetry("pwa_installed", {
+        platform: getTelemetryPlatform(),
+      });
+    };
     window.addEventListener("appinstalled", handleAppInstalled);
     return () => window.removeEventListener("appinstalled", handleAppInstalled);
   }, []);
