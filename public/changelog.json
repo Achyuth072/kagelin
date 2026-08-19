@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.31.2",
+    "date": "2026-08-19",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Resolve iOS PWA standalone bottom black bar and compact nav bar"
+      ]
+    }
+  },
+  {
     "version": "1.31.1",
     "date": "2026-08-18",
     "channel": "stable",
@@ -818,16 +828,6 @@
     "sections": {
       "Added": [
         "Add Edit/Insights toggle shell for per-item Insights (#74)"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.2",
-    "date": "2026-06-17",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add recurring_series_id for task series identity (#73)"
       ]
     }
   }
