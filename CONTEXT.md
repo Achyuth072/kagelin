@@ -323,6 +323,16 @@ Two distinct things that both say "export":
   payload), scoped to the current period or one item's Insights. Not a backup;
   does not round-trip.
 
+### Telemetry (vs Stats / Insights)
+
+Anonymous, opt-in product analytics sent to Kagelin's server (`/api/telemetry`)
+to measure aggregate app health, adoption, and feature engagement (PWA install
+ratio, timer completion, habit consistency, signups). Strictly zero PII (no
+titles, notes, emails, or IP addresses stored), using an unlinked client-generated
+device ID.
+_Avoid_: conflating "Telemetry" (operator-facing app health) with "Stats"
+(user-facing personal productivity analytics).
+
 ---
 
 ## Notifications (disambiguated)
