@@ -3,31 +3,20 @@ import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 
 /**
- * Rate limiting for beta (H-5 / addendum N-3).
- *
- * An in-memory limiter is a no-op on Vercel serverless — instances are
- * short-lived and don't share memory, so beta needs a shared store. Upstash's
- * free tier covers an invite beta and survives a later hosting move (unlike
- * Vercel WAF rules, which are dashboard-only and tied to the host).
- *
- * If `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` aren't set (local
- * dev, CI, or a beta deploy before the Upstash database is provisioned) this
- * fails open — requests are allowed and a warning is logged once — rather
- * than taking the app down over an unconfigured optional dependency.
+ * Shared Upstash rate limiting for Vercel serverless instances.
+ * Fails open (allows requests + logs warning once) if Redis env vars are missing.
  */
 
 type Window = `${number} ${"s" | "m" | "h" | "d"}`;
 
-/**
- * Per-route limits live here, not at call sites: limiters are cached by
- * name, so two call sites configuring the same name differently would
- * silently diverge — a single table makes that impossible.
- */
+/** Per-route limits declared centrally to prevent cache divergence across call sites. */
 const LIMITS = {
   /** Unauthenticated proxy — limited per IP. */
   webdav: { maxRequests: 60, window: "1 m" },
   /** Authenticated push sends — limited per user. */
   "push-send": { maxRequests: 10, window: "1 m" },
+  /** Telemetry ingestion — limited per IP. */
+  telemetry: { maxRequests: 60, window: "1 m" },
 } as const satisfies Record<string, { maxRequests: number; window: Window }>;
 
 export type RateLimitName = keyof typeof LIMITS;
@@ -92,14 +81,7 @@ export async function checkRateLimit(
     : { allowed: false, limit, remaining, reset };
 }
 
-/**
- * Route-level guard: returns a ready-to-return 429 when the named limit is
- * exceeded, or null when the request may proceed.
- *
- * Usage:
- *   const limited = await enforceRateLimit("webdav", getClientIp(request));
- *   if (limited) return limited;
- */
+/** Returns a 429 response when rate limited, or null when allowed. */
 export async function enforceRateLimit(
   name: RateLimitName,
   identifier: string,
