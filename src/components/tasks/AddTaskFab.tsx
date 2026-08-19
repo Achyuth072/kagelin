@@ -25,7 +25,7 @@ export default function AddTaskFab({
       onPointerDown={onPointerDown}
       className={cn(
         buttonVariants({ size: "lg" }),
-        "fixed bottom-[calc(76px+env(safe-area-inset-bottom))] right-6 h-14 w-14 rounded-xl shadow-lg md:hidden cursor-pointer z-40",
+        "fixed bottom-[calc(66px+env(safe-area-inset-bottom,0px))] right-6 h-14 w-14 rounded-xl shadow-lg md:hidden cursor-pointer z-40",
         "[@media(max-height:400px)]:right-3 [@media(max-height:400px)]:h-10 [@media(max-height:400px)]:w-10",
       )}
     >
