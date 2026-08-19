@@ -8,7 +8,7 @@
 
 # Kagelin
 
-### Work quietly. Own everything.
+## Work quietly. Own everything
 
 [![License: AGPL-3.0](https://img.shields.io/github/license/Achyuth072/kagelin?style=flat&labelColor=24292e)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/Achyuth072/kagelin/ci.yml?branch=main&style=flat&label=CI&logo=github&logoColor=white&labelColor=24292e)](../../actions/workflows/ci.yml)
@@ -30,18 +30,20 @@ _Currently in preview — expect rough edges._
 
 ## Screenshots
 
-<table>
-  <tr>
-    <td width="50%"><img src="public/screenshots/board-view-desktop.webp" alt="Board view" /><br /><sub>Board view</sub></td>
-    <td width="50%"><img src="public/screenshots/habit-grid-desktop.webp" alt="Habit grid" /><br /><sub>Habit grid</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="public/screenshots/timer-with-task.webp" alt="Focus timer" /><br /><sub>Focus timer</sub></td>
-    <td width="50%"><img src="public/screenshots/calendar-monthly.webp" alt="Calendar monthly view" /><br /><sub>Calendar</sub></td>
-  </tr>
-</table>
-
-<p align="center"><img src="public/screenshots/command-pallete-desktop.webp" alt="Command palette" width="70%" /><br /><sub>Command palette (Ctrl/Cmd+K)</sub></p>
+<p align="center">
+  <img src="public/screenshots/board-view-desktop.webp" alt="Board view" width="47%" />
+  &nbsp;
+  <img src="public/screenshots/habit-grid-desktop.webp" alt="Habit grid" width="47%" />
+</p>
+<p align="center">
+  <img src="public/screenshots/timer-with-task.webp" alt="Focus timer" width="47%" />
+  &nbsp;
+  <img src="public/screenshots/calendar-monthly.webp" alt="Calendar monthly view" width="47%" />
+</p>
+<p align="center">
+  <img src="public/screenshots/command-pallete-desktop.webp" alt="Command palette" width="70%" /><br />
+  <sub>Command palette (Ctrl/Cmd+K)</sub>
+</p>
 
 ## Why Kagelin
 
