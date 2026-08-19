@@ -69,23 +69,24 @@ Most productivity apps want your email before you've written a single task, and 
 ### Focus & Habits
 
 - **Focus Timer**: PiP-enabled Pomodoro engine with real-time sync across devices.
+- **Push notifications**: server-derived Web Push notifications for timer completions and task reminders (supporting desktop, Android, and iOS standalone PWA).
 - **Habit tracking**: standardized tracking with longevity streaks and uhabits `.db` import.
 - **Compact habit view**: tappable rolling-7 day strip with drag-and-drop reordering.
 - **Activity heatmap**: visualize focus minutes and habit completions over time.
 
 ### Calendar
 
-- **Event creation**: native calendar events with NLP-assisted time parsing.
+- **Flexible views**: Month, desktop 4-day, mobile week view with edge-gated paging, and rolling 3-day view.
+- **Event creation**: quick event creation with natural language time parsing.
 - **Multi-provider sync**: Google Calendar and Microsoft Outlook.
 - **ICS portability**: universal `.ics` (RFC 5545) import and export.
-
-> CalDAV (Nextcloud, iCloud) is on pause for now — the old connect flow was half-built and didn't handle credentials carefully enough, so it's pulled until it's rebuilt properly server-side.
 
 ### Data Ownership
 
 - **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed.
-- **WebDAV sync**: registered users can sync with personal servers (Nextcloud, Synology). Credentials are session-only for now — not yet persisted.
-- **Backups**: configurable guest backup reminder cadence, plus encrypted `.zip` export/import for everyone. Registered users can instantly delete all cloud data (tasks, habits, focus logs, calendar events); full account deletion is handled manually during beta — see [privacy policy](https://kagelin.app/privacy).
+- **Accounts & Auth**: Google, GitHub, or breach-checked email/password sign-in with multi-provider identity linking and password reset.
+- **WebDAV sync**: sync with personal servers (Nextcloud, Synology) for self-hosted setups.
+- **Backups & Portability**: encrypted `.zip` export/import, guest backup reminders, and instant cloud data wipe.
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
 
 ### Stats & Insights
@@ -132,7 +133,7 @@ Most productivity apps want your email before you've written a single task, and 
 **Prerequisites**: Node.js 20+, a Supabase project with the schema from `supabase/schema.sql` and relevant migrations from `supabase/migrations`.
 
 ```bash
-git clone https://github.com/Achyuth072/Kanso.git
+git clone https://github.com/Achyuth072/kagelin.git
 npm install
 cp .env.example .env.local   # add all relevant keys
 npm run dev
