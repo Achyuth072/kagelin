@@ -3,6 +3,7 @@ import {
   getTelemetryConsent,
   setTelemetryConsent,
   getOrCreateDeviceId,
+  resetTelemetryConsentCache,
   TELEMETRY_CONSENT_KEY,
   TELEMETRY_DEVICE_ID_KEY,
 } from "@/lib/telemetry/store";
@@ -10,6 +11,7 @@ import {
 describe("Telemetry Store", () => {
   beforeEach(() => {
     localStorage.clear();
+    resetTelemetryConsentCache();
     vi.clearAllMocks();
   });
 
@@ -93,6 +95,29 @@ describe("Telemetry Store", () => {
       const deviceId = getOrCreateDeviceId();
       expect(deviceId).toBeTruthy();
       expect(localStorage.getItem(TELEMETRY_DEVICE_ID_KEY)).toBe(deviceId);
+    });
+  });
+
+  describe("consent caching", () => {
+    it("does not observe a same-tab localStorage write that bypasses setTelemetryConsent", () => {
+      expect(getTelemetryConsent()).toBe("unprompted"); // primes the cache
+
+      localStorage.setItem(TELEMETRY_CONSENT_KEY, "granted");
+
+      expect(getTelemetryConsent()).toBe("unprompted");
+    });
+
+    it("picks up consent changes from a cross-tab storage event", () => {
+      expect(getTelemetryConsent()).toBe("unprompted"); // primes the cache + listener
+
+      window.dispatchEvent(
+        new StorageEvent("storage", {
+          key: TELEMETRY_CONSENT_KEY,
+          newValue: "granted",
+        }),
+      );
+
+      expect(getTelemetryConsent()).toBe("granted");
     });
   });
 });

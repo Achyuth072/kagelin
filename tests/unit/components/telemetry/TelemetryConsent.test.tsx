@@ -9,6 +9,7 @@ import {
   TELEMETRY_DEVICE_ID_KEY,
   getTelemetryConsent,
   setTelemetryConsent,
+  resetTelemetryConsentCache,
 } from "@/lib/telemetry/store";
 import * as telemetryClient from "@/lib/telemetry/client";
 
@@ -23,6 +24,7 @@ vi.mock("@/lib/hooks/usePrefersReducedMotion", () => ({
 describe("Telemetry Consent UI and Privacy Settings", () => {
   beforeEach(() => {
     localStorage.clear();
+    resetTelemetryConsentCache();
     vi.clearAllMocks();
     telemetryClient.clearTelemetryQueue();
   });

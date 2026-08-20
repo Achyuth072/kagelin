@@ -8,11 +8,15 @@ import {
   destroyTelemetry,
   TELEMETRY_ENDPOINT,
 } from "@/lib/telemetry/client";
-import { setTelemetryConsent } from "@/lib/telemetry/store";
+import {
+  setTelemetryConsent,
+  resetTelemetryConsentCache,
+} from "@/lib/telemetry/store";
 
 describe("Telemetry Client", () => {
   beforeEach(() => {
     localStorage.clear();
+    resetTelemetryConsentCache();
     clearTelemetryQueue();
     destroyTelemetry();
     vi.clearAllMocks();

@@ -14,12 +14,12 @@ function subscribe(callback: () => void): () => void {
     return () => {};
   }
 
+  // store.ts's own "storage" listener re-dispatches this event for cross-tab
+  // changes too, so it's the only signal this hook needs to listen for.
   window.addEventListener(TELEMETRY_CONSENT_EVENT, callback);
-  window.addEventListener("storage", callback);
 
   return () => {
     window.removeEventListener(TELEMETRY_CONSENT_EVENT, callback);
-    window.removeEventListener("storage", callback);
   };
 }
 
