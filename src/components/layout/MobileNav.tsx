@@ -25,7 +25,7 @@ export function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-sidebar md:hidden pb-[env(safe-area-inset-bottom,0px)]">
-      <div className="flex items-center justify-around h-[50px] pt-1">
+      <div className="flex items-center justify-around h-[56px] pt-1">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.path;
