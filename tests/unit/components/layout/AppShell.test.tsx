@@ -29,7 +29,7 @@ vi.mock("@/components/AuthProvider", () => ({
 }));
 
 vi.mock("@/lib/telemetry/client", () => ({
-  trackTelemetry: vi.fn(),
+  trackSignupCompleted: vi.fn(),
   trackAppOpened: vi.fn(),
 }));
 

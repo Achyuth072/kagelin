@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/notify";
-import { trackTelemetry } from "@/lib/telemetry/client";
+import { trackSignupCompleted } from "@/lib/telemetry/client";
 import type { Task, Project } from "@/lib/types/task";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 
@@ -42,7 +42,6 @@ export function useMigrationStrategy() {
     const guestModeActive = localStorage.getItem("kanso_guest_mode") === "true";
     const guestDataStr = localStorage.getItem("kanso_guest_data_v7");
 
-    // If no guest mode flag OR no data to migrate, just cleanup and exit
     if (!guestModeActive || !guestDataStr) {
       if (guestModeActive) {
         localStorage.removeItem("kanso_guest_mode");
@@ -57,8 +56,7 @@ export function useMigrationStrategy() {
       setIsMigrating(true);
       const guestData = JSON.parse(guestDataStr) as GuestData;
 
-      // Check for existing user data to avoid duplicate migrations
-      // We look for any non-inbox projects as a signal that migration already happened
+      // >1 project (beyond the default inbox) signals migration already ran.
       const { data: userProjects } = await supabase
         .from("projects")
         .select("id, name, is_inbox")
@@ -74,12 +72,10 @@ export function useMigrationStrategy() {
         return;
       }
 
-      // Maps to track ID transitions
       const projectMap = new Map<string, string>();
       const taskMap = new Map<string, string>();
       const habitMap = new Map<string, string>();
 
-      // 1. Migrate Projects
       if (guestData.projects && guestData.projects.length > 0) {
         for (const project of guestData.projects) {
           // Find existing project by name + is_inbox to avoid duplicates
@@ -112,7 +108,6 @@ export function useMigrationStrategy() {
         }
       }
 
-      // 2. Migrate Habits
       if (guestData.habits && guestData.habits.length > 0) {
         const { data: existingHabits } = await supabase
           .from("habits")
@@ -147,7 +142,6 @@ export function useMigrationStrategy() {
         }
       }
 
-      // 3. Migrate Tasks (First pass: create tasks without parent_id)
       if (guestData.tasks && guestData.tasks.length > 0) {
         const tasksToInsert = guestData.tasks.map((t: Task) => ({
           user_id: user.id,
@@ -175,7 +169,8 @@ export function useMigrationStrategy() {
 
         if (error) throw error;
 
-        // Map content+created_at to new IDs for subtask linkage
+        // Insert doesn't return the original guest ID, so match back by
+        // content+created_at instead.
         newTasks.forEach(
           (nt: { id: string; content: string; created_at: string }) => {
             const original = guestData.tasks.find(
@@ -188,7 +183,8 @@ export function useMigrationStrategy() {
           },
         );
 
-        // Second pass: Update parent_id for subtasks
+        // parent_id is set here, in a second pass, since it needs the new
+        // task IDs that only exist after the insert above.
         const subtasks = guestData.tasks.filter(
           (t: Task) => t.parent_id !== null,
         );
@@ -205,7 +201,6 @@ export function useMigrationStrategy() {
         }
       }
 
-      // 4. Migrate Habit Entries
       if (guestData.habit_entries && guestData.habit_entries.length > 0) {
         const entriesToInsert = guestData.habit_entries
           .map((e: HabitEntry) => {
@@ -228,7 +223,6 @@ export function useMigrationStrategy() {
         }
       }
 
-      // 5. Migrate Focus Logs
       if (guestData.focus_logs && guestData.focus_logs.length > 0) {
         const logsToInsert = guestData.focus_logs.map((l: FocusLog) => ({
           user_id: user.id,
@@ -253,7 +247,7 @@ export function useMigrationStrategy() {
         "Synchronization complete! Your data is safe in the cloud.",
       );
 
-      trackTelemetry("signup_completed");
+      trackSignupCompleted();
 
       window.location.reload();
     } catch (err: unknown) {

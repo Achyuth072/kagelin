@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   trackTelemetry,
+  trackSignupCompleted,
   flushTelemetry,
   getTelemetryQueue,
   clearTelemetryQueue,
@@ -107,6 +108,20 @@ describe("Telemetry Client", () => {
 
       expect(sendBeaconMock).toHaveBeenCalledTimes(1);
       expect(getTelemetryQueue()).toHaveLength(0);
+    });
+  });
+
+  describe("trackSignupCompleted", () => {
+    it("tracks once and is a no-op on subsequent calls, even across separate call sites", () => {
+      setTelemetryConsent("granted");
+
+      trackSignupCompleted();
+      trackSignupCompleted();
+
+      const queue = getTelemetryQueue();
+      expect(queue.filter((e) => e.name === "signup_completed")).toHaveLength(
+        1,
+      );
     });
   });
 

@@ -139,6 +139,23 @@ export function trackAppOpened(): void {
   });
 }
 
+const SIGNUP_COMPLETED_TRACKED_KEY = "kagelin_signup_completed_tracked";
+
+// Multiple independent surfaces can observe the same signup (OAuth callback,
+// email confirmation, guest-data migration) — this flag dedupes across them.
+export function trackSignupCompleted(): void {
+  try {
+    if (localStorage.getItem(SIGNUP_COMPLETED_TRACKED_KEY)) {
+      return;
+    }
+    localStorage.setItem(SIGNUP_COMPLETED_TRACKED_KEY, "true");
+  } catch {
+    // trackTelemetry() no-ops anyway if storage is unavailable.
+  }
+
+  trackTelemetry("signup_completed");
+}
+
 export function getTelemetryQueue(): readonly TelemetryEvent[] {
   return eventQueue;
 }

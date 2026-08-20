@@ -52,7 +52,7 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Toaster } from "@/components/ui/toaster";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
 import { useIsOnline } from "@/lib/hooks/useIsOnline";
-import { trackTelemetry, trackAppOpened } from "@/lib/telemetry/client";
+import { trackSignupCompleted, trackAppOpened } from "@/lib/telemetry/client";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
@@ -301,7 +301,7 @@ function AppShellContent({ children }: AppShellProps) {
 
     const params = new URLSearchParams(window.location.search);
     if (params.get("signup") === "1") {
-      trackTelemetry("signup_completed");
+      trackSignupCompleted();
       const cleanUrl = new URL(window.location.href);
       cleanUrl.searchParams.delete("signup");
       window.history.replaceState({}, "", cleanUrl.toString());
