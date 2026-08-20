@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   settings JSONB DEFAULT '{}',
   timezone TEXT DEFAULT 'UTC',
   is_premium BOOLEAN DEFAULT false NOT NULL,
+  is_admin BOOLEAN DEFAULT false NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
@@ -479,6 +480,10 @@ CREATE POLICY "Users can view own profile" ON profiles
   FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
+-- The policy above has no column restriction — without this, any
+-- authenticated user could self-grant admin via
+-- supabase.from('profiles').update({ is_admin: true }).
+REVOKE UPDATE (is_admin) ON profiles FROM authenticated;
 
 -- Projects: Users can only access their own projects
 CREATE POLICY "Users can view own projects" ON projects

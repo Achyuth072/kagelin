@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import AdminMetricsPage from "@/../app/admin/metrics/page";
 
 const mockGetUser = vi.fn();
+const mockSingle = vi.fn();
 const mockGetAdminMetricsSummary = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -9,6 +10,13 @@ vi.mock("@/lib/supabase/server", () => ({
     auth: {
       getUser: mockGetUser,
     },
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          single: mockSingle,
+        })),
+      })),
+    })),
   })),
 }));
 
@@ -25,11 +33,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("app/admin/metrics/page auth gate", () => {
-  const originalEnv = process.env;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env = { ...originalEnv };
     mockGetAdminMetricsSummary.mockResolvedValue({
       kpis: {
         activeDevicesToday: 10,
@@ -56,54 +61,41 @@ describe("app/admin/metrics/page auth gate", () => {
     });
   });
 
-  afterEach(() => {
-    process.env = originalEnv;
-  });
-
   it("calls notFound() when user is not signed in", async () => {
     mockGetUser.mockResolvedValue({ data: { user: null } });
-    process.env.ADMIN_EMAILS = "operator@kagelin.app";
 
     await expect(AdminMetricsPage()).rejects.toThrow("NEXT_NOT_FOUND");
     expect(mockGetAdminMetricsSummary).not.toHaveBeenCalled();
   });
 
-  it("calls notFound() when user email is not in ADMIN_EMAILS", async () => {
+  it("calls notFound() when the user's profile is not admin", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { email: "regular_user@example.com" } },
+      data: { user: { id: "user-1", email: "regular_user@example.com" } },
     });
-    process.env.ADMIN_EMAILS = "admin1@kagelin.app, admin2@kagelin.app";
+    mockSingle.mockResolvedValue({ data: { is_admin: false }, error: null });
 
     await expect(AdminMetricsPage()).rejects.toThrow("NEXT_NOT_FOUND");
     expect(mockGetAdminMetricsSummary).not.toHaveBeenCalled();
   });
 
-  it("calls notFound() when ADMIN_EMAILS is undefined or empty", async () => {
+  it("calls notFound() when the profile lookup errors", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { email: "admin@kagelin.app" } },
+      data: { user: { id: "user-1", email: "admin@kagelin.app" } },
     });
-    delete process.env.ADMIN_EMAILS;
+    mockSingle.mockResolvedValue({
+      data: null,
+      error: { message: "not found" },
+    });
 
     await expect(AdminMetricsPage()).rejects.toThrow("NEXT_NOT_FOUND");
     expect(mockGetAdminMetricsSummary).not.toHaveBeenCalled();
   });
 
-  it("renders metrics dashboard when user email matches ADMIN_EMAILS", async () => {
+  it("renders metrics dashboard when the user's profile is admin", async () => {
     mockGetUser.mockResolvedValue({
-      data: { user: { email: "operator@kagelin.app" } },
+      data: { user: { id: "user-1", email: "operator@kagelin.app" } },
     });
-    process.env.ADMIN_EMAILS = "other@kagelin.app, operator@kagelin.app";
-
-    const component = await AdminMetricsPage();
-    expect(component).toBeDefined();
-    expect(mockGetAdminMetricsSummary).toHaveBeenCalledTimes(1);
-  });
-
-  it("handles case-insensitivity and leading/trailing whitespace in ADMIN_EMAILS", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: { email: "Operator@Kagelin.APP" } },
-    });
-    process.env.ADMIN_EMAILS = "  operator@kagelin.app , test@kagelin.app  ";
+    mockSingle.mockResolvedValue({ data: { is_admin: true }, error: null });
 
     const component = await AdminMetricsPage();
     expect(component).toBeDefined();

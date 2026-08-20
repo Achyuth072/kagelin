@@ -24,15 +24,13 @@ export default async function AdminMetricsPage() {
     notFound();
   }
 
-  const rawAdminEmails = process.env.ADMIN_EMAILS ?? "";
-  const adminEmails = rawAdminEmails
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
 
-  const userEmail = user.email.trim().toLowerCase();
-
-  if (!adminEmails.includes(userEmail)) {
+  if (error || !profile?.is_admin) {
     notFound();
   }
 

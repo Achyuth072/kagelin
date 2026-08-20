@@ -56,7 +56,7 @@ To enable cohort analysis and funnel queries without unbounded database growth o
 ## Operator Surface (`/admin/metrics`)
 
 - Protected internal page at `/admin/metrics`.
-- Access-gated by verifying the authenticated session against the `ADMIN_EMAILS` environment variable.
+- Access-gated by verifying the authenticated session against `profiles.is_admin` (a DB column, promotable via SQL without a redeploy; write-protected from the client via a column-level `REVOKE`). Originally gated by an `ADMIN_EMAILS` environment variable, which required a Vercel redeploy to promote/demote an admin.
 - Visualizes:
   - Total Active Devices (Daily / Weekly / Monthly)
   - PWA vs Browser usage share
