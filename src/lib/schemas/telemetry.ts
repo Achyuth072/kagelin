@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+export const FOCUS_DURATION_MINUTES_MIN = 1;
+export const FOCUS_DURATION_MINUTES_MAX = 720;
+
 export const AppOpenedEventSchema = z
   .object({
     name: z.literal("app_opened"),
@@ -56,7 +59,10 @@ export const FocusSessionEventSchema = z
     properties: z
       .object({
         status: z.enum(["completed", "abandoned"]),
-        duration_minutes: z.number().min(1).max(720),
+        duration_minutes: z
+          .number()
+          .min(FOCUS_DURATION_MINUTES_MIN)
+          .max(FOCUS_DURATION_MINUTES_MAX),
       })
       .strict(),
   })

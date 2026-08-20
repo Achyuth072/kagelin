@@ -3,6 +3,10 @@ import {
   getOrCreateDeviceId,
   getTelemetryConsent,
 } from "@/lib/telemetry/store";
+import {
+  getTelemetryDisplayMode,
+  getTelemetryPlatform,
+} from "@/lib/utils/platform";
 
 export const TELEMETRY_ENDPOINT = "/api/telemetry";
 export const BATCH_FLUSH_THRESHOLD = 20;
@@ -133,6 +137,13 @@ export function trackTelemetry<T extends TelemetryEventName>(
   if (eventQueue.length >= BATCH_FLUSH_THRESHOLD) {
     void flushTelemetry();
   }
+}
+
+export function trackAppOpened(): void {
+  trackTelemetry("app_opened", {
+    display_mode: getTelemetryDisplayMode(),
+    platform: getTelemetryPlatform(),
+  });
 }
 
 export function getTelemetryQueue(): readonly TelemetryEvent[] {

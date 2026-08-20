@@ -4,11 +4,7 @@ import { ShieldCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { trackTelemetry } from "@/lib/telemetry/client";
-import {
-  getTelemetryDisplayMode,
-  getTelemetryPlatform,
-} from "@/lib/utils/platform";
+import { trackAppOpened } from "@/lib/telemetry/client";
 
 export function PrivacySection() {
   const { consent, setConsent } = useTelemetryConsent();
@@ -22,10 +18,7 @@ export function PrivacySection() {
     setConsent(nextStatus);
 
     if (checked) {
-      trackTelemetry("app_opened", {
-        display_mode: getTelemetryDisplayMode(),
-        platform: getTelemetryPlatform(),
-      });
+      trackAppOpened();
     }
   };
 

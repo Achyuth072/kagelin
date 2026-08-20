@@ -2,14 +2,12 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 
-/**
- * Shared Upstash rate limiting for Vercel serverless instances.
- * Fails open (allows requests + logs warning once) if Redis env vars are missing.
- */
+// Upstash-backed since serverless instances don't share memory for an
+// in-memory limiter. Fails open when unconfigured rather than taking the app down.
 
 type Window = `${number} ${"s" | "m" | "h" | "d"}`;
 
-/** Per-route limits declared centrally to prevent cache divergence across call sites. */
+// Centralized so two call sites can't configure the same name differently.
 const LIMITS = {
   /** Unauthenticated proxy — limited per IP. */
   webdav: { maxRequests: 60, window: "1 m" },

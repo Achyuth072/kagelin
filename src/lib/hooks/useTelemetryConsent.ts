@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore, useCallback } from "react";
+import { useSyncExternalStore } from "react";
 import {
   getTelemetryConsent,
   setTelemetryConsent as setStoreConsent,
@@ -38,12 +38,12 @@ export function useTelemetryConsent() {
     getServerSnapshot,
   );
 
-  const setConsent = useCallback((status: "granted" | "denied") => {
+  const setConsent = (status: "granted" | "denied") => {
     setStoreConsent(status);
     if (status === "denied") {
       clearTelemetryQueue();
     }
-  }, []);
+  };
 
   return {
     consent,

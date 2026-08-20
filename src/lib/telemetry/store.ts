@@ -1,3 +1,5 @@
+import * as Sentry from "@sentry/nextjs";
+
 export type TelemetryConsent = "granted" | "denied" | "unprompted";
 
 export const TELEMETRY_CONSENT_KEY = "telemetry_consent";
@@ -52,7 +54,11 @@ export function setTelemetryConsent(status: "granted" | "denied"): void {
         new CustomEvent(TELEMETRY_CONSENT_EVENT, { detail: status }),
       );
     }
-  } catch {}
+  } catch (error) {
+    // Don't throw over a storage write failing — telemetry consent isn't
+    // critical to app function — but report it rather than swallow it.
+    Sentry.captureException(error);
+  }
 }
 
 export function getOrCreateDeviceId(): string | null {

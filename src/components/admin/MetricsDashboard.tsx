@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,6 +36,24 @@ interface MetricsDashboardProps {
 
 type TimeRange = "7d" | "30d" | "all";
 
+function filterTrends(
+  dailyTrends: AdminMetricsSummary["dailyTrends"],
+  timeRange: TimeRange,
+) {
+  if (!dailyTrends || dailyTrends.length === 0) return [];
+  if (timeRange === "7d") return dailyTrends.slice(-7);
+  if (timeRange === "30d") return dailyTrends.slice(-30);
+  return dailyTrends;
+}
+
+function safeFormatDate(dateStr: string, formatStr: string): string {
+  try {
+    return format(parseISO(dateStr), formatStr);
+  } catch {
+    return dateStr;
+  }
+}
+
 const PERIOD_TRIGGER_CLASS =
   "rounded-md px-3.5 h-8 text-xs font-medium tracking-tight border border-transparent text-muted-foreground transition-seijaku-fast hover:text-foreground hover:bg-secondary/40 data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:border-brand/20 data-[state=active]:shadow-none";
 
@@ -46,20 +64,11 @@ export function MetricsDashboard({
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const { kpis, dailyTrends, hasData, generatedAt } = summary;
 
-  const filteredTrends = useMemo(() => {
-    if (!dailyTrends || dailyTrends.length === 0) return [];
-    if (timeRange === "7d") return dailyTrends.slice(-7);
-    if (timeRange === "30d") return dailyTrends.slice(-30);
-    return dailyTrends;
-  }, [dailyTrends, timeRange]);
-
-  const formattedGeneratedAt = useMemo(() => {
-    try {
-      return format(parseISO(generatedAt), "MMM d, yyyy HH:mm:ss");
-    } catch {
-      return generatedAt;
-    }
-  }, [generatedAt]);
+  const filteredTrends = filterTrends(dailyTrends, timeRange);
+  const formattedGeneratedAt = safeFormatDate(
+    generatedAt,
+    "MMM d, yyyy HH:mm:ss",
+  );
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 md:space-y-8">
@@ -316,13 +325,7 @@ export function MetricsDashboard({
                       tickLine={false}
                       axisLine={false}
                       minTickGap={20}
-                      tickFormatter={(d: string) => {
-                        try {
-                          return format(parseISO(d), "MMM d");
-                        } catch {
-                          return d;
-                        }
-                      }}
+                      tickFormatter={(d: string) => safeFormatDate(d, "MMM d")}
                     />
                     <YAxis
                       stroke="hsl(var(--muted-foreground))"
@@ -404,13 +407,7 @@ export function MetricsDashboard({
                       tickLine={false}
                       axisLine={false}
                       minTickGap={20}
-                      tickFormatter={(d: string) => {
-                        try {
-                          return format(parseISO(d), "MMM d");
-                        } catch {
-                          return d;
-                        }
-                      }}
+                      tickFormatter={(d: string) => safeFormatDate(d, "MMM d")}
                     />
                     <YAxis
                       yAxisId="hours"

@@ -52,11 +52,7 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Toaster } from "@/components/ui/toaster";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
 import { useIsOnline } from "@/lib/hooks/useIsOnline";
-import { trackTelemetry } from "@/lib/telemetry/client";
-import {
-  getTelemetryDisplayMode,
-  getTelemetryPlatform,
-} from "@/lib/utils/platform";
+import { trackTelemetry, trackAppOpened } from "@/lib/telemetry/client";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
@@ -301,10 +297,7 @@ function AppShellContent({ children }: AppShellProps) {
   useWeeklyBackup();
 
   useEffect(() => {
-    trackTelemetry("app_opened", {
-      display_mode: getTelemetryDisplayMode(),
-      platform: getTelemetryPlatform(),
-    });
+    trackAppOpened();
 
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);

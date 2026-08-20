@@ -4,11 +4,7 @@ import { ShieldCheck, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
-import { trackTelemetry } from "@/lib/telemetry/client";
-import {
-  getTelemetryDisplayMode,
-  getTelemetryPlatform,
-} from "@/lib/utils/platform";
+import { trackAppOpened } from "@/lib/telemetry/client";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
@@ -23,10 +19,7 @@ export function TelemetryConsentPrompt() {
   const handleEnable = () => {
     trigger("toggle");
     setConsent("granted");
-    trackTelemetry("app_opened", {
-      display_mode: getTelemetryDisplayMode(),
-      platform: getTelemetryPlatform(),
-    });
+    trackAppOpened();
   };
 
   const handleDismiss = () => {

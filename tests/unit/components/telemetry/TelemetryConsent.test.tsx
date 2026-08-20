@@ -67,8 +67,6 @@ describe("Telemetry Consent UI and Privacy Settings", () => {
     });
 
     it("grants consent, generates device id, and tracks app_opened on clicking Enable", async () => {
-      const trackSpy = vi.spyOn(telemetryClient, "trackTelemetry");
-
       render(<TelemetryConsentPrompt />);
 
       await waitFor(() => {
@@ -85,11 +83,14 @@ describe("Telemetry Consent UI and Privacy Settings", () => {
         expect(localStorage.getItem(TELEMETRY_DEVICE_ID_KEY)).toBeTruthy();
       });
 
-      expect(trackSpy).toHaveBeenCalledWith(
-        "app_opened",
+      const queued = telemetryClient.getTelemetryQueue();
+      expect(queued).toContainEqual(
         expect.objectContaining({
-          display_mode: expect.stringMatching(/^(standalone|browser)$/),
-          platform: expect.stringMatching(/^(ios|android|desktop)$/),
+          name: "app_opened",
+          properties: expect.objectContaining({
+            display_mode: expect.stringMatching(/^(standalone|browser)$/),
+            platform: expect.stringMatching(/^(ios|android|desktop)$/),
+          }),
         }),
       );
 
@@ -173,7 +174,6 @@ describe("Telemetry Consent UI and Privacy Settings", () => {
     });
 
     it("enables telemetry when switched from off to on", async () => {
-      const trackSpy = vi.spyOn(telemetryClient, "trackTelemetry");
       render(<PrivacySection />);
 
       const toggle = screen.getByRole("switch", {
@@ -189,11 +189,14 @@ describe("Telemetry Consent UI and Privacy Settings", () => {
         expect(localStorage.getItem(TELEMETRY_DEVICE_ID_KEY)).toBeTruthy();
       });
 
-      expect(trackSpy).toHaveBeenCalledWith(
-        "app_opened",
+      const queued = telemetryClient.getTelemetryQueue();
+      expect(queued).toContainEqual(
         expect.objectContaining({
-          display_mode: expect.stringMatching(/^(standalone|browser)$/),
-          platform: expect.stringMatching(/^(ios|android|desktop)$/),
+          name: "app_opened",
+          properties: expect.objectContaining({
+            display_mode: expect.stringMatching(/^(standalone|browser)$/),
+            platform: expect.stringMatching(/^(ios|android|desktop)$/),
+          }),
         }),
       );
     });

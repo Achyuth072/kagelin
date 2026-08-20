@@ -16,6 +16,7 @@ import { mockStore } from "@/lib/mock/mock-store";
 import { useUiStore } from "@/lib/store/uiStore";
 import { trackTelemetry } from "@/lib/telemetry/client";
 
+// Matches the Undo toast duration — keyboard undo shouldn't outlive it.
 const UNDO_TOAST_DURATION_MS = 5000;
 
 function invalidateTaskCaches(queryClient: QueryClient): void {
@@ -24,6 +25,7 @@ function invalidateTaskCaches(queryClient: QueryClient): void {
     queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
     queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] }),
     queryClient.invalidateQueries({ queryKey: ["focus-tasks"] }),
+    // Task Insights panel reads occurrences via ["task-series", …].
     queryClient.invalidateQueries({ queryKey: ["task-series"] }),
   ]);
 }
@@ -226,7 +228,7 @@ export function useDeleteTask() {
         );
       }
 
-      // Optimistically clear cached subtasks since parent deletion cascades.
+      // Cascades at the DB level — clear cached subtasks now, not orphaned later.
       for (const [queryKey] of queryClient.getQueriesData<Task[]>({
         queryKey: ["subtasks", id],
       })) {
@@ -235,6 +237,8 @@ export function useDeleteTask() {
 
       return { deletedTask };
     },
+    // Uses the delete's cascaded subtasks, not onMutate's cache (may be
+    // empty); confirmed first so Undo isn't offered for a delete that never landed.
     onSuccess: (deletedSubtasks, _id, context) => {
       const deletedTask = context?.deletedTask;
       if (!deletedTask) return;
@@ -254,7 +258,7 @@ export function useDeleteTask() {
           return;
         }
 
-        // Re-insert parent and cascaded subtasks to undo hard delete.
+        // Hard delete, so undo re-inserts rather than updates.
         try {
           await taskMutations.restore(taskToRestore, subtasksToRestore);
           trigger("success");
@@ -271,12 +275,14 @@ export function useDeleteTask() {
       };
 
       useUiStore.getState().setLastUndoAction(undoAction);
+      // Reference-equality guard: no-op if already run or replaced by a later delete.
       setTimeout(() => {
         if (useUiStore.getState().lastUndoAction === undoAction) {
           useUiStore.getState().setLastUndoAction(null);
         }
       }, UNDO_TOAST_DURATION_MS);
 
+      // Dropped, not folded into the title — task content is unbounded user text (ADR 0008).
       notify("Task deleted", {
         duration: UNDO_TOAST_DURATION_MS,
         action: {
@@ -287,6 +293,8 @@ export function useDeleteTask() {
     },
     onError: (err, id, _context) => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      // Undoes the optimistic subtasks-cache clear from onMutate — the
+      // delete never landed, so the subtree is still there.
       queryClient.invalidateQueries({ queryKey: ["subtasks", id] });
       handleMutationError(err);
     },
@@ -315,6 +323,7 @@ export function useReorderTasks() {
         queryClient.setQueryData<Task[]>(queryKey, (old) => {
           if (!old) return old;
 
+          // Pairs already carry final day_order (computeMoveOrders) — apply as-is.
           return old.map((task) => {
             const newOrder = pairById.get(task.id);
             return newOrder === undefined || task.day_order === newOrder

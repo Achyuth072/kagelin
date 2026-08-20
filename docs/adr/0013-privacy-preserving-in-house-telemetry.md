@@ -19,7 +19,7 @@ This ADR defines the architectural invariants, privacy boundaries, event catalog
 
 3. **Opt-in with First-Session Consent**
    - Telemetry is disabled by default until the user explicitly grants permission.
-   - Surfaced on the first session via a non-blocking toast: _"Kagelin is open source & privacy-first. Share anonymous usage stats to help us improve? [Allow] [No thanks]"_.
+   - Surfaced on the first session via a persistent bottom banner (not an auto-dismissing toast, since consent shouldn't lapse before a choice is made): _"Kagelin is open source & privacy-first. Share anonymous telemetry to help improve the app? [Enable] [No thanks]"_.
    - A permanent toggle exists in **Settings → Privacy & Data**.
    - Opting out immediately wipes `device_id` from local storage and halts all telemetry dispatches.
 
@@ -47,7 +47,7 @@ To enable cohort analysis and funnel queries without unbounded database growth o
 | `app_opened`       | `display_mode: 'standalone' \| 'browser'`, `platform: 'ios' \| 'android' \| 'desktop'` | Tracks Daily Active Devices (DAD) & PWA Standalone adoption ratio.    |
 | `pwa_installed`    | `platform: 'ios' \| 'android' \| 'desktop'`                                            | Measures Add to Home Screen conversion.                               |
 | `task_action`      | `action: 'created' \| 'completed'`                                                     | Measures aggregate task throughput.                                   |
-| `habit_logged`     | `streak_milestone?: 7 \| 30 \| 100`                                                    | Measures habit consistency and long-term adherence.                   |
+| `habit_logged`     | `streak_milestone?: '7' \| '30' \| '100'`                                              | Measures habit consistency and long-term adherence.                   |
 | `focus_session`    | `status: 'completed' \| 'abandoned'`, `duration_minutes: number`                       | Measures focus time logged and timer completion vs. abandonment rate. |
 | `signup_completed` | _(None)_                                                                               | Tracks Guest → Registered account conversion volume.                  |
 

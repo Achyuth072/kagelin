@@ -30,9 +30,10 @@ vi.mock("@/components/AuthProvider", () => ({
 
 vi.mock("@/lib/telemetry/client", () => ({
   trackTelemetry: vi.fn(),
+  trackAppOpened: vi.fn(),
 }));
 
-import { trackTelemetry } from "@/lib/telemetry/client";
+import { trackAppOpened } from "@/lib/telemetry/client";
 
 vi.mock("@/components/CompletedTasksProvider", () => {
   const MockProvider = ({ children }: any) => (
@@ -274,12 +275,6 @@ describe("AppShell", () => {
       </AppShell>,
     );
 
-    expect(trackTelemetry).toHaveBeenCalledWith(
-      "app_opened",
-      expect.objectContaining({
-        display_mode: expect.any(String),
-        platform: expect.any(String),
-      }),
-    );
+    expect(trackAppOpened).toHaveBeenCalled();
   });
 });
