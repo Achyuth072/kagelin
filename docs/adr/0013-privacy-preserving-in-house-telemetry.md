@@ -56,7 +56,7 @@ To enable cohort analysis and funnel queries without unbounded database growth o
 ## Operator Surface (`/admin/metrics`)
 
 - Protected internal page at `/admin/metrics`.
-- Access-gated by verifying the authenticated session against `profiles.is_admin` (a DB column, promotable via SQL without a redeploy; write-protected from the client via a column-level `REVOKE`). Originally gated by an `ADMIN_EMAILS` environment variable, which required a Vercel redeploy to promote/demote an admin.
+- Access-gated by verifying the authenticated session against `profiles.is_admin` (a DB column, promotable via SQL without a redeploy; write-protected from the client by dropping table-level `UPDATE` and re-granting it only for user-editable columns, since a column-level `REVOKE` alone cannot subtract from Supabase's default table-level grant). Originally gated by an `ADMIN_EMAILS` environment variable, which required a Vercel redeploy to promote/demote an admin.
 - Visualizes:
   - Total Active Devices (Daily / Weekly / Monthly)
   - PWA vs Browser usage share

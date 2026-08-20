@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import React from "react";
 import { TelemetryConsentPrompt } from "@/components/telemetry/TelemetryConsentPrompt";
@@ -151,6 +152,12 @@ describe("Telemetry Consent UI and Privacy Settings", () => {
         name: /share anonymous telemetry/i,
       });
       expect(toggle).not.toBeChecked();
+    });
+
+    it("renders switch unchecked on the server, before consent has loaded from localStorage", () => {
+      const html = renderToString(<PrivacySection />);
+      expect(html).toContain('aria-checked="false"');
+      expect(html).not.toContain('aria-checked="true"');
     });
 
     it("renders switch unchecked when consent is denied", async () => {

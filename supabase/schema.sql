@@ -483,7 +483,12 @@ CREATE POLICY "Users can update own profile" ON profiles
 -- The policy above has no column restriction — without this, any
 -- authenticated user could self-grant admin via
 -- supabase.from('profiles').update({ is_admin: true }).
-REVOKE UPDATE (is_admin) ON profiles FROM authenticated;
+--
+-- Column-level REVOKE cannot subtract from Supabase's default table-level
+-- GRANT ALL; drop table-level UPDATE and re-grant only user-editable columns.
+-- Any column added to profiles later is non-writable by default (fail closed).
+REVOKE UPDATE ON profiles FROM anon, authenticated;
+GRANT UPDATE (display_name, settings, timezone) ON profiles TO authenticated;
 
 -- Projects: Users can only access their own projects
 CREATE POLICY "Users can view own projects" ON projects

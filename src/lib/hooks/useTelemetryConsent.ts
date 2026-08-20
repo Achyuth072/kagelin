@@ -28,7 +28,7 @@ function getSnapshot(): TelemetryConsent {
 }
 
 function getServerSnapshot(): TelemetryConsent {
-  return "granted";
+  return "unprompted";
 }
 
 export function useTelemetryConsent() {
