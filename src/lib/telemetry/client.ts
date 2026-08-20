@@ -1,8 +1,5 @@
 import type { TelemetryEvent } from "@/lib/schemas/telemetry";
-import {
-  getOrCreateDeviceId,
-  getTelemetryConsent,
-} from "@/lib/telemetry/store";
+import { getOrCreateDeviceId } from "@/lib/telemetry/store";
 import {
   getTelemetryDisplayMode,
   getTelemetryPlatform,
@@ -115,10 +112,6 @@ export function trackTelemetry<T extends TelemetryEventName>(
   name: T,
   properties?: TelemetryEventProperties<T>,
 ): void {
-  if (getTelemetryConsent() !== "granted") {
-    return;
-  }
-
   const deviceId = getOrCreateDeviceId();
   if (!deviceId) {
     return;

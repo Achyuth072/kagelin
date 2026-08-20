@@ -19,14 +19,10 @@ export function getTelemetryConsent(): TelemetryConsent {
 
   try {
     const raw = localStorage.getItem(TELEMETRY_CONSENT_KEY);
-    if (raw === "granted" || raw === "denied") {
-      return raw;
-    }
+    return raw === "granted" || raw === "denied" ? raw : "unprompted";
   } catch {
     return "unprompted";
   }
-
-  return "unprompted";
 }
 
 export function setTelemetryConsent(status: "granted" | "denied"): void {

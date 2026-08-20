@@ -7,7 +7,7 @@ import {
   TELEMETRY_CONSENT_EVENT,
   type TelemetryConsent,
 } from "@/lib/telemetry/store";
-import { clearTelemetryQueue } from "@/lib/telemetry/client";
+import { clearTelemetryQueue, trackAppOpened } from "@/lib/telemetry/client";
 
 function subscribe(callback: () => void): () => void {
   if (typeof window === "undefined") {
@@ -40,7 +40,9 @@ export function useTelemetryConsent() {
 
   const setConsent = (status: "granted" | "denied") => {
     setStoreConsent(status);
-    if (status === "denied") {
+    if (status === "granted") {
+      trackAppOpened();
+    } else {
       clearTelemetryQueue();
     }
   };

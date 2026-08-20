@@ -4,7 +4,6 @@ import { ShieldCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { trackAppOpened } from "@/lib/telemetry/client";
 
 export function PrivacySection() {
   const { consent, setConsent } = useTelemetryConsent();
@@ -14,12 +13,7 @@ export function PrivacySection() {
 
   const handleToggle = (checked: boolean) => {
     trigger("toggle");
-    const nextStatus = checked ? "granted" : "denied";
-    setConsent(nextStatus);
-
-    if (checked) {
-      trackAppOpened();
-    }
+    setConsent(checked ? "granted" : "denied");
   };
 
   return (

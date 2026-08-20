@@ -63,9 +63,6 @@ export interface AdminMetricsSummary {
   generatedAt: string;
 }
 
-/**
- * Pure helper to calculate metrics summary from raw rows.
- */
 export function aggregateMetricsData(
   dailyAggregates: DailyAggregateRow[],
   recentEvents: RawTelemetryEventRow[] = [],
@@ -78,7 +75,6 @@ export function aggregateMetricsData(
 
   const todayIsoDate = referenceDate.toISOString().slice(0, 10);
 
-  // Active device calculation from raw events within time windows
   const todayDevices = new Set<string>();
   const sevenDayDevices = new Set<string>();
   const thirtyDayDevices = new Set<string>();
@@ -109,7 +105,6 @@ export function aggregateMetricsData(
     }
   }
 
-  // Sum metrics across daily aggregates
   let totalPwaDevices = 0;
   let totalBrowserDevices = 0;
   let totalPwaInstalls = 0;
@@ -154,7 +149,7 @@ export function aggregateMetricsData(
     };
   });
 
-  // Calculate unique device counts (prefer recent raw events if available; fallback to rollup values)
+  // Prefer exact counts from raw events; fall back to daily rollups when raw events aren't available
   const activeDevicesToday = Math.max(todayDevices.size, todayAggActive);
   const activeDevices7d = Math.max(
     sevenDayDevices.size,
@@ -225,21 +220,33 @@ export function aggregateMetricsData(
   };
 }
 
-/**
- * Server-only: Queries `telemetry_daily_aggregates` and recent `telemetry_events`
- * using the privileged Supabase admin client.
- */
+// Server-only: uses the privileged Supabase admin client to bypass RLS.
 export async function getAdminMetricsSummary(
   client?: SupabaseClient,
 ): Promise<AdminMetricsSummary> {
   const supabase = client ?? createAdminClient();
 
-  // 1. Fetch daily aggregates (last 90 days)
-  const { data: dailyRows, error: dailyError } = await supabase
-    .from("telemetry_daily_aggregates")
-    .select("*")
-    .order("date", { ascending: true })
-    .limit(90);
+  // Independent queries — fetch in parallel.
+  const thirtyDaysAgoIso = new Date(
+    Date.now() - 30 * 24 * 60 * 60 * 1000,
+  ).toISOString();
+
+  const [
+    { data: dailyRows, error: dailyError },
+    { data: eventRows, error: eventsError },
+  ] = await Promise.all([
+    supabase
+      .from("telemetry_daily_aggregates")
+      .select("*")
+      .order("date", { ascending: true })
+      .limit(90),
+    supabase
+      .from("telemetry_events")
+      .select("device_id, event_name, properties, created_at")
+      .gte("created_at", thirtyDaysAgoIso)
+      .order("created_at", { ascending: false })
+      .limit(10000),
+  ]);
 
   if (dailyError) {
     console.error(
@@ -247,18 +254,6 @@ export async function getAdminMetricsSummary(
       dailyError,
     );
   }
-
-  // 2. Fetch raw events from the last 30 days to compute exact device cardinality
-  const thirtyDaysAgoIso = new Date(
-    Date.now() - 30 * 24 * 60 * 60 * 1000,
-  ).toISOString();
-
-  const { data: eventRows, error: eventsError } = await supabase
-    .from("telemetry_events")
-    .select("device_id, event_name, properties, created_at")
-    .gte("created_at", thirtyDaysAgoIso)
-    .order("created_at", { ascending: false })
-    .limit(10000);
 
   if (eventsError) {
     console.error(

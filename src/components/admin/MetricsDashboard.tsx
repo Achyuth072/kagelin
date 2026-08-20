@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { format, parseISO } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   Clock,
   TrendingUp,
+  type LucideIcon,
 } from "lucide-react";
 
 interface MetricsDashboardProps {
@@ -56,6 +57,53 @@ function safeFormatDate(dateStr: string, formatStr: string): string {
 
 const PERIOD_TRIGGER_CLASS =
   "rounded-md px-3.5 h-8 text-xs font-medium tracking-tight border border-transparent text-muted-foreground transition-seijaku-fast hover:text-foreground hover:bg-secondary/40 data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:border-brand/20 data-[state=active]:shadow-none";
+
+const CHART_AXIS_PROPS = {
+  stroke: "hsl(var(--muted-foreground))",
+  fontSize: 11,
+  tickLine: false,
+  axisLine: false,
+};
+
+const CHART_TOOLTIP_PROPS = {
+  contentStyle: {
+    backgroundColor: "hsl(var(--background))",
+    border: "1px solid hsl(var(--border))",
+    borderRadius: "8px",
+    fontSize: "12px",
+  },
+  labelStyle: { color: "hsl(var(--foreground))" },
+};
+
+interface KpiCardProps {
+  label: string;
+  value: ReactNode;
+  subtext: ReactNode;
+  icon: LucideIcon;
+}
+
+function KpiCard({ label, value, subtext, icon: Icon }: KpiCardProps) {
+  return (
+    <Card className="p-5 border-border/70 bg-card">
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            {label}
+          </p>
+          <p className="text-3xl font-semibold tracking-[-0.02em] font-mono text-foreground">
+            {value}
+          </p>
+          <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
+            {subtext}
+          </div>
+        </div>
+        <div className="p-2 rounded-lg bg-secondary text-foreground/70 shrink-0">
+          <Icon className="w-4 h-4" />
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 export function MetricsDashboard({
   summary,
@@ -105,147 +153,89 @@ export function MetricsDashboard({
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {/* Card 1: Active Devices */}
-        <Card className="p-5 border-border/70 bg-card">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Active Devices
-              </p>
-              <p className="text-3xl font-semibold tracking-[-0.02em] font-mono text-foreground">
-                {kpis.activeDevicesToday}
-              </p>
-              <div className="flex items-center gap-2 pt-1 text-xs text-muted-foreground">
-                <span>
-                  7d:{" "}
-                  <strong className="text-foreground font-mono">
-                    {kpis.activeDevices7d}
-                  </strong>
-                </span>
-                <span>•</span>
-                <span>
-                  30d:{" "}
-                  <strong className="text-foreground font-mono">
-                    {kpis.activeDevices30d}
-                  </strong>
-                </span>
-              </div>
-            </div>
-            <div className="p-2 rounded-lg bg-secondary text-foreground/70 shrink-0">
-              <Smartphone className="w-4 h-4" />
-            </div>
-          </div>
-        </Card>
-
-        {/* Card 2: PWA Adoption Ratio */}
-        <Card className="p-5 border-border/70 bg-card">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                PWA Adoption Rate
-              </p>
-              <p className="text-3xl font-semibold tracking-[-0.02em] font-mono text-foreground">
-                {kpis.pwaRatioPercent}%
-              </p>
-              <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
-                <span>
-                  {kpis.totalPwaDevices} PWA / {kpis.totalBrowserDevices} Web
-                </span>
-                <span>({kpis.totalPwaInstalls} installs)</span>
-              </div>
-            </div>
-            <div className="p-2 rounded-lg bg-secondary text-foreground/70 shrink-0">
-              <AppWindow className="w-4 h-4" />
-            </div>
-          </div>
-        </Card>
-
-        {/* Card 3: Total Focus Hours */}
-        <Card className="p-5 border-border/70 bg-card">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Total Focus Time
-              </p>
-              <p className="text-3xl font-semibold tracking-[-0.02em] font-mono text-foreground">
-                {kpis.totalFocusHours}h
-              </p>
-              <p className="pt-1 text-xs text-muted-foreground">
-                Today:{" "}
+        <KpiCard
+          label="Active Devices"
+          value={kpis.activeDevicesToday}
+          icon={Smartphone}
+          subtext={
+            <>
+              <span>
+                7d:{" "}
                 <strong className="text-foreground font-mono">
-                  {kpis.focusHoursToday}h
-                </strong>{" "}
-                logged
-              </p>
-            </div>
-            <div className="p-2 rounded-lg bg-secondary text-foreground/70 shrink-0">
-              <Timer className="w-4 h-4" />
-            </div>
-          </div>
-        </Card>
+                  {kpis.activeDevices7d}
+                </strong>
+              </span>
+              <span>•</span>
+              <span>
+                30d:{" "}
+                <strong className="text-foreground font-mono">
+                  {kpis.activeDevices30d}
+                </strong>
+              </span>
+            </>
+          }
+        />
 
-        {/* Card 4: Task Throughput */}
-        <Card className="p-5 border-border/70 bg-card">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Tasks Completed
-              </p>
-              <p className="text-3xl font-semibold tracking-[-0.02em] font-mono text-foreground">
-                {kpis.totalTasksCompleted}
-              </p>
-              <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
-                <span>{kpis.totalTasksCreated} created</span>
-                <span>({kpis.taskCompletionRatePercent}% completion)</span>
-              </div>
-            </div>
-            <div className="p-2 rounded-lg bg-secondary text-foreground/70 shrink-0">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-        </Card>
+        <KpiCard
+          label="PWA Adoption Rate"
+          value={`${kpis.pwaRatioPercent}%`}
+          icon={AppWindow}
+          subtext={
+            <>
+              <span>
+                {kpis.totalPwaDevices} PWA / {kpis.totalBrowserDevices} Web
+              </span>
+              <span>({kpis.totalPwaInstalls} installs)</span>
+            </>
+          }
+        />
 
-        {/* Card 5: Timer Completion */}
-        <Card className="p-5 border-border/70 bg-card">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Timer Completion Rate
-              </p>
-              <p className="text-3xl font-semibold tracking-[-0.02em] font-mono text-foreground">
-                {kpis.timerCompletionRatePercent}%
-              </p>
-              <div className="flex items-center gap-1.5 pt-1 text-xs text-muted-foreground">
-                <span>{kpis.totalTimerCompleted} done</span>
-                <span>•</span>
-                <span>{kpis.totalTimerAbandoned} abandoned</span>
-              </div>
-            </div>
-            <div className="p-2 rounded-lg bg-secondary text-foreground/70 shrink-0">
-              <Hourglass className="w-4 h-4" />
-            </div>
-          </div>
-        </Card>
+        <KpiCard
+          label="Total Focus Time"
+          value={`${kpis.totalFocusHours}h`}
+          icon={Timer}
+          subtext={
+            <span>
+              Today:{" "}
+              <strong className="text-foreground font-mono">
+                {kpis.focusHoursToday}h
+              </strong>{" "}
+              logged
+            </span>
+          }
+        />
 
-        {/* Card 6: Signup Conversions */}
-        <Card className="p-5 border-border/70 bg-card">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Registered Signups
-              </p>
-              <p className="text-3xl font-semibold tracking-[-0.02em] font-mono text-foreground">
-                {kpis.totalSignups}
-              </p>
-              <p className="pt-1 text-xs text-muted-foreground">
-                {kpis.totalHabitsLogged} total habit check-ins
-              </p>
-            </div>
-            <div className="p-2 rounded-lg bg-secondary text-foreground/70 shrink-0">
-              <UserCheck className="w-4 h-4" />
-            </div>
-          </div>
-        </Card>
+        <KpiCard
+          label="Tasks Completed"
+          value={kpis.totalTasksCompleted}
+          icon={CheckCircle2}
+          subtext={
+            <>
+              <span>{kpis.totalTasksCreated} created</span>
+              <span>({kpis.taskCompletionRatePercent}% completion)</span>
+            </>
+          }
+        />
+
+        <KpiCard
+          label="Timer Completion Rate"
+          value={`${kpis.timerCompletionRatePercent}%`}
+          icon={Hourglass}
+          subtext={
+            <>
+              <span>{kpis.totalTimerCompleted} done</span>
+              <span>•</span>
+              <span>{kpis.totalTimerAbandoned} abandoned</span>
+            </>
+          }
+        />
+
+        <KpiCard
+          label="Registered Signups"
+          value={kpis.totalSignups}
+          icon={UserCheck}
+          subtext={<span>{kpis.totalHabitsLogged} total habit check-ins</span>}
+        />
       </div>
 
       {/* Main Charts Section */}
@@ -320,30 +310,16 @@ export function MetricsDashboard({
                   >
                     <XAxis
                       dataKey="date"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
+                      {...CHART_AXIS_PROPS}
                       minTickGap={20}
                       tickFormatter={(d: string) => safeFormatDate(d, "MMM d")}
                     />
                     <YAxis
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
+                      {...CHART_AXIS_PROPS}
                       width={30}
                       allowDecimals={false}
                     />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                      }}
-                      labelStyle={{ color: "hsl(var(--foreground))" }}
-                    />
+                    <Tooltip {...CHART_TOOLTIP_PROPS} />
                     <Area
                       type="monotone"
                       dataKey="pwaDevices"
@@ -402,41 +378,24 @@ export function MetricsDashboard({
                   >
                     <XAxis
                       dataKey="date"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
+                      {...CHART_AXIS_PROPS}
                       minTickGap={20}
                       tickFormatter={(d: string) => safeFormatDate(d, "MMM d")}
                     />
                     <YAxis
                       yAxisId="hours"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
+                      {...CHART_AXIS_PROPS}
                       width={32}
                       tickFormatter={(v) => `${v}h`}
                     />
                     <YAxis
                       yAxisId="tasks"
                       orientation="right"
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
+                      {...CHART_AXIS_PROPS}
                       width={28}
                       allowDecimals={false}
                     />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                      }}
-                      labelStyle={{ color: "hsl(var(--foreground))" }}
-                    />
+                    <Tooltip {...CHART_TOOLTIP_PROPS} />
                     <Line
                       yAxisId="hours"
                       type="monotone"
