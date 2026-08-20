@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.31.3-preview.0",
+    "date": "2026-08-20",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Restore Android 48dp touch target on mobile bottom nav"
+      ]
+    }
+  },
+  {
     "version": "1.31.2",
     "date": "2026-08-19",
     "channel": "stable",
@@ -818,16 +828,6 @@
         "Cache useHabit query to avoid refetch on reopen",
         "Shrink masakable icon",
         "Shrink maskable icon content to clear safe-zone circle (#77)"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.3",
-    "date": "2026-06-17",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add Edit/Insights toggle shell for per-item Insights (#74)"
       ]
     }
   }
