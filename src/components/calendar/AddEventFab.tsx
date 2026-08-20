@@ -24,7 +24,7 @@ export default function AddEventFab({ onClick }: AddEventFabProps) {
         "[@media(max-height:400px)]:right-3 [@media(max-height:400px)]:h-10 [@media(max-height:400px)]:w-10",
       )}
       style={{
-        bottom: "calc(66px + env(safe-area-inset-bottom, 0px))",
+        bottom: "calc(72px + env(safe-area-inset-bottom, 0px))",
       }}
       aria-label="Create event"
     >
