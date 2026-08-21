@@ -2,6 +2,7 @@
 
 import { ShieldCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { PrivacyPolicyLink } from "@/components/ui/privacy-policy-link";
 import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
@@ -30,7 +31,8 @@ export function PrivacySection() {
             <p className="text-xs text-muted-foreground leading-relaxed">
               Help improve Kagelin by sharing anonymous usage metrics (feature
               usage, timer durations, platform). Personal data, task titles, and
-              notes are never collected or transmitted.
+              notes are never collected or transmitted. See our{" "}
+              <PrivacyPolicyLink />.
             </p>
           </div>
         </div>

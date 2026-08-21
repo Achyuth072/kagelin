@@ -9,7 +9,8 @@ import { PasswordAuth } from "@/components/auth/PasswordAuth";
 import { ResetPasswordAuth } from "@/components/auth/ResetPasswordAuth";
 import { OAuthProviderRow } from "@/components/auth/OAuthProviderRow";
 import { AuthShell } from "@/components/auth/AuthShell";
-import { PRIVACY_URL, TERMS_URL } from "@/lib/links";
+import { PrivacyPolicyLink } from "@/components/ui/privacy-policy-link";
+import { TERMS_URL } from "@/lib/links";
 import {
   SIGNUP_DISABLED_MESSAGE,
   isSignupDisabledError,
@@ -78,16 +79,8 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
             >
               Terms of Service
             </a>{" "}
-            and{" "}
-            <a
-              href={PRIVACY_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-2 hover:text-foreground"
-            >
-              Privacy Policy
-            </a>
-            . Guest data is stored locally and will be lost if cleared.
+            and <PrivacyPolicyLink />. Guest data is stored locally and will be
+            lost if cleared.
           </p>
         </div>
       }

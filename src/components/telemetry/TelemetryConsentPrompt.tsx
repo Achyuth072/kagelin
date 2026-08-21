@@ -3,6 +3,7 @@
 import { ShieldCheck, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { PrivacyPolicyLink } from "@/components/ui/privacy-policy-link";
 import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -65,7 +66,8 @@ export function TelemetryConsentPrompt() {
               <div className="flex-1 min-w-0 pr-1 sm:pr-0">
                 <p className="text-xs sm:text-sm text-foreground/90 font-normal leading-relaxed">
                   Kagelin is open source &amp; privacy-first. Share anonymous
-                  telemetry to help improve the app?
+                  telemetry to help improve the app? See our{" "}
+                  <PrivacyPolicyLink />.
                 </p>
               </div>
               <Button
@@ -81,10 +83,10 @@ export function TelemetryConsentPrompt() {
 
             <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
                 onClick={handleDismiss}
-                className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground font-medium"
+                className="h-8 px-3 text-xs font-medium"
               >
                 No thanks
               </Button>
