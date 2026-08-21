@@ -29,37 +29,24 @@ export function parseEventInput(
     return { title: trimmed, allDay: false };
   }
 
-  // Use the first result (highest confidence)
   const result = results[0];
   const start = result.start.date();
-
-  // If end is explicit, use it; otherwise default to start + 1 hour
   const end = result.end
     ? result.end.date()
     : new Date(start.getTime() + 3600000);
 
-  // Strip the parsed date text from the title
-  // Example: "Lunch at 1pm" -> result.text is "1pm" or "at 1pm"
+  // result.text is just the matched date fragment (e.g. "1pm" or "at 1pm" out
+  // of "Lunch at 1pm"); strip it and any filler word left dangling by the cut.
   let title = trimmed.replace(result.text, "").trim();
-
-  // Remove filler words that often precede the date if they are at the end of the title
   title = title
     .replace(/\s+(at|on|for|in|from|scheduled for|starting at)$/i, "")
     .trim();
-
-  // Handle the case where the input was just a date (e.g., "Tomorrow")
-  if (!title) {
-    title = "Untitled Event";
-  }
-
-  // Also handle start of title if it was "On Monday buy milk"
   title = title.replace(/^(at|on|for|in|from)\s+/i, "").trim();
 
   if (!title) {
     title = "Untitled Event";
   }
 
-  // Detect all-day: has certain day but uncertain hour
   const allDay =
     result.start.isCertain("day") && !result.start.isCertain("hour");
 

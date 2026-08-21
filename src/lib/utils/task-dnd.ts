@@ -168,23 +168,6 @@ export function getPasteOverrides({
 }
 
 /**
- * Computes {id, day_order} pairs for a single-task drag. Thin wrapper over
- * computeMoveOrders (see reorder.ts): the drag is modeled as one task moving
- * within the shared flat list, so only the slots between its old and new flat
- * positions are reassigned — other sections/groups keep their day_orders and
- * cannot be rearranged by the drop.
- *
- * Returns [] when the drop changes nothing persistent (e.g. dropped back in
- * place, or into an empty column where only the property update matters) —
- * callers should skip the reorder mutation entirely in that case.
- *
- * @param movedId     The dragged task.
- * @param orderedIds  The final section's task IDs in post-drop order.
- * @param flatTasks   The authoritative flat task list (pre-drag). Sorted by
- *                    day_order when sortBy is "custom"; in display order when
- *                    a derived sort is being converted to custom by the drop.
- */
-/**
  * Computes {id, day_order} pairs that bake a currently-visible order into
  * day_order, omitting entries that already match. Used when sortBy switches
  * to "custom" from a derived sort via the sort menu (not a drag): the list
@@ -203,6 +186,23 @@ export function computeFreezeOrderPairs(
   return pairs;
 }
 
+/**
+ * Computes {id, day_order} pairs for a single-task drag. Thin wrapper over
+ * computeMoveOrders (see reorder.ts): the drag is modeled as one task moving
+ * within the shared flat list, so only the slots between its old and new flat
+ * positions are reassigned — other sections/groups keep their day_orders and
+ * cannot be rearranged by the drop.
+ *
+ * Returns [] when the drop changes nothing persistent (e.g. dropped back in
+ * place, or into an empty column where only the property update matters) —
+ * callers should skip the reorder mutation entirely in that case.
+ *
+ * @param movedId     The dragged task.
+ * @param orderedIds  The final section's task IDs in post-drop order.
+ * @param flatTasks   The authoritative flat task list (pre-drag). Sorted by
+ *                    day_order when sortBy is "custom"; in display order when
+ *                    a derived sort is being converted to custom by the drop.
+ */
 export function computeReorderPairs(
   movedId: string,
   orderedIds: string[],

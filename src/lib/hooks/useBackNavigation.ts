@@ -5,12 +5,8 @@ const modalStack: number[] = [];
 let modalIdCounter = 0;
 
 /**
- * Hook to manage browser history for modal/drawer components on mobile.
- * Uses a global stack to ensure only the topmost modal handles back navigation.
- * Highly optimized for minimal latency.
- *
- * @param isOpen - Whether the modal/drawer is currently open
- * @param onClose - Callback to close the modal/drawer
+ * Wires the mobile back button to close a modal/drawer. Uses a global stack
+ * so a stray back press with several modals open only closes the topmost one.
  */
 export function useBackNavigation(isOpen: boolean, onClose: () => void) {
   const onCloseRef = useRef(onClose);
@@ -18,7 +14,6 @@ export function useBackNavigation(isOpen: boolean, onClose: () => void) {
   const historyPushedRef = useRef(false);
   const isClosingViaBackRef = useRef(false);
 
-  // Keep onClose ref up to date
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
@@ -34,7 +29,6 @@ export function useBackNavigation(isOpen: boolean, onClose: () => void) {
 
     const topModalId = modalStack[modalStack.length - 1];
 
-    // Only handle if this is the topmost modal
     if (
       myId === topModalId &&
       historyPushedRef.current &&
@@ -42,14 +36,10 @@ export function useBackNavigation(isOpen: boolean, onClose: () => void) {
     ) {
       isClosingViaBackRef.current = true;
       historyPushedRef.current = false;
-
-      // Remove from stack immediately
       modalStack.pop();
-
-      // Execute closure immediately
       onCloseRef.current();
 
-      // Reset flag in next tick to allow re-opening
+      // Deferred so a re-open in the same tick isn't mistaken for the old close.
       setTimeout(() => {
         isClosingViaBackRef.current = false;
       }, 0);
@@ -58,7 +48,6 @@ export function useBackNavigation(isOpen: boolean, onClose: () => void) {
 
   useEffect(() => {
     if (isOpen) {
-      // Only push if we haven't already
       if (!historyPushedRef.current) {
         modalIdRef.current = ++modalIdCounter;
         modalStack.push(modalIdRef.current);
@@ -72,12 +61,11 @@ export function useBackNavigation(isOpen: boolean, onClose: () => void) {
         window.removeEventListener("popstate", handlePopState);
       };
     } else {
-      // Modal closed programmatically (not via back button)
-      // We need to clean up the history entry we pushed
+      // Closed programmatically (not via back button) — clean up the history
+      // entry we pushed.
       if (historyPushedRef.current && !isClosingViaBackRef.current) {
         historyPushedRef.current = false;
 
-        // Remove from stack
         const idx = modalStack.indexOf(modalIdRef.current!);
         if (idx !== -1) modalStack.splice(idx, 1);
 
