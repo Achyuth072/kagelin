@@ -10,6 +10,7 @@ import {
   useActiveBanner,
 } from "@/components/bannerSlot";
 import { cn } from "@/lib/utils";
+import { NOTIFICATION_LINK_BUTTON_CLASS } from "@/components/ui/notification-link-button";
 
 export function DemoBar() {
   const activeBanner = useActiveBanner();
@@ -24,17 +25,17 @@ export function DemoBar() {
         <div
           className={cn(
             BANNER_SLOT_CARD_CLASS,
-            "bg-brand/10 text-foreground border-brand/20",
+            "bg-card text-foreground border-border/80",
           )}
         >
-          <Sparkles className="w-4 h-4 text-brand shrink-0" />
+          <Sparkles className="w-4 h-4 text-muted-foreground shrink-0" />
           <span className="text-[13px] font-medium tracking-[0.01em]">
             You&apos;re exploring with demo data
           </span>
           <button
             type="button"
             onClick={() => setConfirmOpen(true)}
-            className="text-[13px] font-semibold text-brand underline-offset-2 hover:underline shrink-0"
+            className={cn(NOTIFICATION_LINK_BUTTON_CLASS, "text-brand")}
           >
             Start fresh
           </button>

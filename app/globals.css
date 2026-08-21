@@ -513,11 +513,14 @@ input[type="password"]:has(+ button)::-ms-clear {
 }
 
 /* Sonner's toast <li> defaults to left:0 inside the centered <ol>; re-center
-   it here. Width comes from toastOptions in notification.tsx, not here. */
+   it here. Width comes from toastOptions in toaster.tsx, not here.
+   Composed with var(--y) (not replacing it): --y is Sonner's own per-toast
+   vertical stacking transform, set inline per toast. Overriding it outright
+   collapses every stacked toast onto the same spot instead of stacking them. */
 /* eslint-disable tailwindcss/no-important */
 [data-sonner-toaster][data-x-position="center"] [data-sonner-toast] {
   left: 50% !important;
-  transform: translateX(-50%) !important;
+  transform: translateX(-50%) var(--y) !important;
 }
 /* eslint-enable tailwindcss/no-important */
 

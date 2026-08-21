@@ -108,12 +108,17 @@ describe("offline layout wiring", () => {
     expect(shell).not.toContain("pt-[calc(4rem+env(safe-area-inset-top,0px))]");
   });
 
-  it("lifts desktop toasts clear of the offline pill", () => {
+  it("lifts desktop toasts clear of the offline pill via the Toaster's own offset prop, not a per-toast margin", () => {
     const toaster = source("src/components/ui/toaster.tsx");
 
+    // A per-toast margin isn't visible to Sonner's own inter-toast stacking
+    // math (it measures each toast's border-box height only), so two toasts
+    // stacked at once would overlap. The container-level `offset` prop shifts
+    // the whole stack instead, sidestepping that.
     expect(toaster).toContain(
-      "md:mb-[calc(1.25rem+var(--offline-pill-offset,0px))]",
+      "calc(1.25rem + var(--offline-pill-offset,0px) + var(--telemetry-prompt-offset,0px))",
     );
     expect(toaster).not.toContain("md:mb-5");
+    expect(toaster).not.toContain("mb-[");
   });
 });

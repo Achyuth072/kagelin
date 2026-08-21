@@ -296,6 +296,18 @@ function AppShellContent({ children }: AppShellProps) {
     setIsDesktop(isDesktop);
   }, [isDesktop, setIsDesktop]);
 
+  // --offline-banner-height (2.25rem) + the original md:mb-5 gap (1.25rem) — lifts desktop toasts clear of the pill.
+  // Set on the root (not just SidebarInset) so TelemetryConsentPrompt — a
+  // sibling of SidebarInset, not a descendant — can also read this offset.
+  // useLayoutEffect (not useEffect) so it lands before paint, avoiding a
+  // one-frame flash if hasTopBanner is already true on first mount.
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty(
+      "--offline-pill-offset",
+      hasTopBanner ? "3.5rem" : "0px",
+    );
+  }, [hasTopBanner]);
+
   useRealtimeSync();
 
   useWeeklyBackup();
@@ -338,9 +350,6 @@ function AppShellContent({ children }: AppShellProps) {
               "--offline-banner-top": hideMobileNav
                 ? "env(safe-area-inset-top, 0px)"
                 : "var(--mobile-header-height)",
-              // --offline-banner-height (2.25rem) + the original md:mb-5 gap (1.25rem) — lifts desktop toasts clear of the pill.
-              // Driven by hasTopBanner, not isOnline alone — DemoBar renders as the same desktop pill.
-              "--offline-pill-offset": hasTopBanner ? "3.5rem" : "0px",
             } as React.CSSProperties
           }
         >

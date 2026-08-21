@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { ShieldCheck, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
+import { NOTIFICATION_LINK_BUTTON_CLASS } from "@/components/ui/notification-link-button";
 
 export function TelemetryConsentPrompt() {
   const { consent, setConsent } = useTelemetryConsent();
@@ -15,6 +17,25 @@ export function TelemetryConsentPrompt() {
   const { trigger } = useHaptic();
 
   const isVisible = consent === "unprompted";
+
+  // Height feeds --telemetry-prompt-offset (read by Toaster) so toasts don't overlap this banner.
+  const bannerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = bannerRef.current;
+    if (!isVisible || !node) return;
+    const root = document.documentElement;
+    const observer = new ResizeObserver(([entry]) => {
+      root.style.setProperty(
+        "--telemetry-prompt-offset",
+        `${entry.contentRect.height + 12}px`,
+      );
+    });
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      root.style.setProperty("--telemetry-prompt-offset", "0px");
+    };
+  }, [isVisible]);
 
   const handleEnable = () => {
     trigger("toggle");
@@ -47,22 +68,25 @@ export function TelemetryConsentPrompt() {
                 }
           }
           className={cn(
-            "fixed inset-x-0 bottom-[calc(66px+env(safe-area-inset-bottom,0px)+12px)] md:bottom-6 z-50",
+            // --offline-pill-offset is set on the root by AppShell; it lifts this banner clear of the DemoBar/OfflineIndicator pill, which shares this same bottom-6 anchor on desktop.
+            "fixed inset-x-0 bottom-[calc(66px+env(safe-area-inset-bottom,0px)+12px)] md:bottom-[calc(1.5rem+var(--offline-pill-offset,0px))] z-50",
             "flex justify-center px-4 pointer-events-none",
           )}
         >
           <div
+            ref={bannerRef}
             className={cn(
-              "w-full max-w-lg p-3.5 sm:p-4 rounded-lg",
+              // max-w-md is what mobile actually renders at (the px-4 wrapper
+              // already caps it tighter there); md: widens it once there's
+              // room, so the copy doesn't wrap to 3 lines on desktop.
+              "w-full max-w-md md:max-w-xl p-2.5 sm:p-3 rounded-lg",
               "bg-card text-foreground border border-border/80 shadow-sm",
               "pointer-events-auto flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4",
               "transition-colors duration-200",
             )}
           >
             <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
-              <div className="shrink-0 p-2 rounded-md bg-secondary/30 text-muted-foreground">
-                <ShieldCheck className="h-4 w-4" />
-              </div>
+              <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
               <div className="flex-1 min-w-0 pr-1 sm:pr-0">
                 <p className="text-xs sm:text-sm text-foreground/90 font-normal leading-relaxed">
                   Kagelin is open source &amp; privacy-first. Share anonymous
@@ -81,23 +105,24 @@ export function TelemetryConsentPrompt() {
               </Button>
             </div>
 
-            <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
+            <div className="flex items-center gap-3 self-end sm:self-center shrink-0">
+              <button
+                type="button"
                 onClick={handleDismiss}
-                className="h-8 px-3 text-xs font-medium"
+                className={cn(
+                  NOTIFICATION_LINK_BUTTON_CLASS,
+                  "text-muted-foreground",
+                )}
               >
                 No thanks
-              </Button>
-              <Button
-                variant="default"
-                size="sm"
+              </button>
+              <button
+                type="button"
                 onClick={handleEnable}
-                className="h-8 px-3.5 text-xs bg-brand hover:bg-brand/90 text-brand-foreground font-medium shadow-none transition-seijaku-fast"
+                className={cn(NOTIFICATION_LINK_BUTTON_CLASS, "text-brand")}
               >
                 Enable
-              </Button>
+              </button>
             </div>
           </div>
         </motion.aside>
