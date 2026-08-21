@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { useMigrationStrategy } from "@/lib/hooks/useMigrationStrategy";
 import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
+import { STORAGE_KEY } from "@/lib/mock/mock-store";
 import type { User } from "@supabase/supabase-js";
 
 vi.mock("@/components/AuthProvider", () => ({
@@ -87,7 +88,7 @@ describe("useMigrationStrategy", () => {
   it("MIG-E-01: Skipping migration for existing users", async () => {
     localStorage.setItem("kanso_guest_mode", "true");
     localStorage.setItem(
-      "kanso_guest_data_v7",
+      STORAGE_KEY,
       JSON.stringify({
         tasks: [],
         projects: [],
@@ -140,7 +141,7 @@ describe("useMigrationStrategy", () => {
     };
 
     localStorage.setItem("kanso_guest_mode", "true");
-    localStorage.setItem("kanso_guest_data_v7", JSON.stringify(guestData));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(guestData));
 
     vi.mocked(useAuth).mockReturnValue({
       user: mockUser,
@@ -203,7 +204,7 @@ describe("useMigrationStrategy", () => {
     };
 
     localStorage.setItem("kanso_guest_mode", "true");
-    localStorage.setItem("kanso_guest_data_v7", JSON.stringify(guestData));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(guestData));
 
     vi.mocked(useAuth).mockReturnValue({
       user: mockUser,

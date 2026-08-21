@@ -3,6 +3,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/notify";
 import { trackSignupCompleted } from "@/lib/telemetry/client";
+import { STORAGE_KEY as GUEST_DATA_STORAGE_KEY } from "@/lib/mock/mock-store";
 import type { Task, Project } from "@/lib/types/task";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 
@@ -40,7 +41,7 @@ export function useMigrationStrategy() {
     }
 
     const guestModeActive = localStorage.getItem("kanso_guest_mode") === "true";
-    const guestDataStr = localStorage.getItem("kanso_guest_data_v7");
+    const guestDataStr = localStorage.getItem(GUEST_DATA_STORAGE_KEY);
 
     if (!guestModeActive || !guestDataStr) {
       if (guestModeActive) {
@@ -66,7 +67,7 @@ export function useMigrationStrategy() {
 
       if (hasMigratedBefore) {
         localStorage.removeItem("kanso_guest_mode");
-        localStorage.removeItem("kanso_guest_data_v7");
+        localStorage.removeItem(GUEST_DATA_STORAGE_KEY);
         document.cookie = "kanso_guest_mode=; path=/; max-age=0";
         setIsMigrating(false);
         return;
@@ -240,7 +241,7 @@ export function useMigrationStrategy() {
       }
 
       localStorage.removeItem("kanso_guest_mode");
-      localStorage.removeItem("kanso_guest_data_v7");
+      localStorage.removeItem(GUEST_DATA_STORAGE_KEY);
       document.cookie = "kanso_guest_mode=; path=/; max-age=0";
 
       notify.success(
