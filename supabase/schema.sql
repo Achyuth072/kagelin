@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   settings JSONB DEFAULT '{}',
   timezone TEXT DEFAULT 'UTC',
   is_premium BOOLEAN DEFAULT false NOT NULL,
+  is_admin BOOLEAN DEFAULT false NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
@@ -479,6 +480,15 @@ CREATE POLICY "Users can view own profile" ON profiles
   FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
+-- The policy above has no column restriction — without this, any
+-- authenticated user could self-grant admin via
+-- supabase.from('profiles').update({ is_admin: true }).
+--
+-- Column-level REVOKE cannot subtract from Supabase's default table-level
+-- GRANT ALL; drop table-level UPDATE and re-grant only user-editable columns.
+-- Any column added to profiles later is non-writable by default (fail closed).
+REVOKE UPDATE ON profiles FROM anon, authenticated;
+GRANT UPDATE (display_name, settings, timezone) ON profiles TO authenticated;
 
 -- Projects: Users can only access their own projects
 CREATE POLICY "Users can view own projects" ON projects
@@ -1200,4 +1210,150 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.has_password() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.has_password() TO authenticated;
+
+-- =============================================================================
+-- 20. TELEMETRY: Events, Daily Aggregates, and Retention Pruning
+-- =============================================================================
+
+-- 1. Raw Telemetry Event Buffer (30-day TTL)
+CREATE TABLE IF NOT EXISTS public.telemetry_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  device_id UUID NOT NULL,
+  event_name TEXT NOT NULL,
+  properties JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Index for fast time-window and event aggregations
+CREATE INDEX IF NOT EXISTS idx_telemetry_events_created_at
+  ON public.telemetry_events (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_telemetry_events_name_created
+  ON public.telemetry_events (event_name, created_at DESC);
+
+-- Enable RLS: No public read access; insert only via service role (API route)
+ALTER TABLE public.telemetry_events ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.telemetry_events FROM anon, authenticated;
+
+-- 2. Permanent Daily Aggregates
+CREATE TABLE IF NOT EXISTS public.telemetry_daily_aggregates (
+  date DATE PRIMARY KEY,
+  active_devices INT NOT NULL DEFAULT 0,
+  pwa_devices INT NOT NULL DEFAULT 0,
+  browser_devices INT NOT NULL DEFAULT 0,
+  pwa_installs INT NOT NULL DEFAULT 0,
+  tasks_created INT NOT NULL DEFAULT 0,
+  tasks_completed INT NOT NULL DEFAULT 0,
+  timer_sessions_completed INT NOT NULL DEFAULT 0,
+  timer_sessions_abandoned INT NOT NULL DEFAULT 0,
+  focus_minutes_total INT NOT NULL DEFAULT 0,
+  habits_logged INT NOT NULL DEFAULT 0,
+  signups_completed INT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.telemetry_daily_aggregates ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.telemetry_daily_aggregates FROM anon, authenticated;
+
+-- 3. Automated Retention Cleanup Function (Purges raw events > 30 days)
+CREATE OR REPLACE FUNCTION public.prune_stale_telemetry_events()
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  DELETE FROM public.telemetry_events
+  WHERE created_at < NOW() - INTERVAL '30 days';
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.prune_stale_telemetry_events() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.prune_stale_telemetry_events() FROM anon, authenticated;
+
+-- 4. Nightly Rollup: writes yesterday's raw events into the permanent
+-- daily_aggregates row the admin dashboard reads.
+CREATE OR REPLACE FUNCTION public.aggregate_daily_telemetry(
+  target_date DATE DEFAULT (CURRENT_DATE - INTERVAL '1 day')::DATE
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  day_start TIMESTAMPTZ := (target_date::text || ' 00:00:00+00')::timestamptz;
+  day_end TIMESTAMPTZ := day_start + INTERVAL '1 day';
+BEGIN
+  -- Bounds are explicit UTC timestamptz literals (not a `created_at::date`
+  -- cast) so the query can use idx_telemetry_events_created_at as a range
+  -- scan and stays correct regardless of the session timezone.
+  INSERT INTO public.telemetry_daily_aggregates (
+    date, active_devices, pwa_devices, browser_devices, pwa_installs,
+    tasks_created, tasks_completed, timer_sessions_completed,
+    timer_sessions_abandoned, focus_minutes_total, habits_logged,
+    signups_completed, updated_at
+  )
+  SELECT
+    target_date,
+    COUNT(DISTINCT device_id),
+    COUNT(DISTINCT device_id) FILTER (
+      WHERE event_name = 'app_opened' AND properties->>'display_mode' = 'standalone'
+    ),
+    COUNT(DISTINCT device_id) FILTER (
+      WHERE event_name = 'app_opened' AND properties->>'display_mode' = 'browser'
+    ),
+    COUNT(*) FILTER (WHERE event_name = 'pwa_installed'),
+    COUNT(*) FILTER (WHERE event_name = 'task_action' AND properties->>'action' = 'created'),
+    COUNT(*) FILTER (WHERE event_name = 'task_action' AND properties->>'action' = 'completed'),
+    COUNT(*) FILTER (WHERE event_name = 'focus_session' AND properties->>'status' = 'completed'),
+    COUNT(*) FILTER (WHERE event_name = 'focus_session' AND properties->>'status' = 'abandoned'),
+    COALESCE(
+      SUM((properties->>'duration_minutes')::numeric) FILTER (
+        WHERE event_name = 'focus_session' AND properties->>'status' = 'completed'
+      ),
+      0
+    )::int,
+    COUNT(*) FILTER (WHERE event_name = 'habit_logged'),
+    COUNT(*) FILTER (WHERE event_name = 'signup_completed'),
+    now()
+  FROM public.telemetry_events
+  WHERE created_at >= day_start AND created_at < day_end
+  ON CONFLICT (date) DO UPDATE SET
+    active_devices = EXCLUDED.active_devices,
+    pwa_devices = EXCLUDED.pwa_devices,
+    browser_devices = EXCLUDED.browser_devices,
+    pwa_installs = EXCLUDED.pwa_installs,
+    tasks_created = EXCLUDED.tasks_created,
+    tasks_completed = EXCLUDED.tasks_completed,
+    timer_sessions_completed = EXCLUDED.timer_sessions_completed,
+    timer_sessions_abandoned = EXCLUDED.timer_sessions_abandoned,
+    focus_minutes_total = EXCLUDED.focus_minutes_total,
+    habits_logged = EXCLUDED.habits_logged,
+    signups_completed = EXCLUDED.signups_completed,
+    updated_at = EXCLUDED.updated_at;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.aggregate_daily_telemetry(DATE) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.aggregate_daily_telemetry(DATE) FROM anon, authenticated;
+
+-- Unschedule first so a re-run of this file doesn't error on a duplicate jobname.
+SELECT cron.unschedule(jobname)
+FROM cron.job
+WHERE jobname IN ('telemetry-daily-rollup', 'telemetry-prune-stale-events');
+
+-- 00:05 UTC: roll up yesterday's raw events into the permanent daily row.
+SELECT cron.schedule(
+  'telemetry-daily-rollup',
+  '5 0 * * *',
+  $$SELECT public.aggregate_daily_telemetry()$$
+);
+
+-- 00:15 UTC: prune raw events past the 30-day TTL, after the rollup has read them.
+SELECT cron.schedule(
+  'telemetry-prune-stale-events',
+  '15 0 * * *',
+  $$SELECT public.prune_stale_telemetry_events()$$
+);
+
 

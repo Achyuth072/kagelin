@@ -124,4 +124,24 @@ describe("GET /auth/callback (H-3)", () => {
       "http://localhost/auth/email-confirmed",
     );
   });
+
+  it("appends signup=1 query param when the exchanged user was newly registered", async () => {
+    mockExchangeCodeForSession.mockResolvedValueOnce({
+      data: {
+        session: {
+          user: {
+            id: "user-new",
+            created_at: new Date().toISOString(),
+          },
+        },
+      },
+      error: null,
+    });
+
+    const response = await GET(request("?code=abc&next=/settings"));
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost/settings?signup=1",
+    );
+  });
 });

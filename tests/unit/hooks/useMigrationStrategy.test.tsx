@@ -20,6 +20,12 @@ vi.mock("@/lib/notify", () => ({
   },
 }));
 
+vi.mock("@/lib/telemetry/client", () => ({
+  trackSignupCompleted: vi.fn(),
+}));
+
+import { trackSignupCompleted } from "@/lib/telemetry/client";
+
 type MockSupabaseBuilder = Promise<{ data: unknown; error: unknown }> & {
   from: Mock;
   select: Mock;
@@ -235,6 +241,7 @@ describe("useMigrationStrategy", () => {
         expect(localStorage.removeItem).toHaveBeenCalledWith(
           "kanso_guest_mode",
         );
+        expect(trackSignupCompleted).toHaveBeenCalled();
       },
       { timeout: 5000 },
     );

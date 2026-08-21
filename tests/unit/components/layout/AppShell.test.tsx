@@ -28,6 +28,13 @@ vi.mock("@/components/AuthProvider", () => ({
   useAuth: vi.fn(() => ({ user: { id: "user-1" }, loading: false })),
 }));
 
+vi.mock("@/lib/telemetry/client", () => ({
+  trackSignupCompleted: vi.fn(),
+  trackAppOpened: vi.fn(),
+}));
+
+import { trackAppOpened } from "@/lib/telemetry/client";
+
 vi.mock("@/components/CompletedTasksProvider", () => {
   const MockProvider = ({ children }: any) => (
     <div data-testid="completed-tasks-provider">{children}</div>
@@ -257,5 +264,17 @@ describe("AppShell", () => {
 
     expect(screen.getByTestId("content")).toBeInTheDocument();
     expect(screen.queryByTestId("sidebar-inset")).not.toBeInTheDocument();
+  });
+
+  it("fires app_opened telemetry on mount", async () => {
+    vi.mocked(usePathname).mockReturnValue("/");
+
+    render(
+      <AppShell>
+        <div>Content</div>
+      </AppShell>,
+    );
+
+    expect(trackAppOpened).toHaveBeenCalled();
   });
 });

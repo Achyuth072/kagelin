@@ -14,10 +14,9 @@ import { notify } from "@/lib/notify";
 import { taskMutations } from "@/lib/mutations/task";
 import { mockStore } from "@/lib/mock/mock-store";
 import { useUiStore } from "@/lib/store/uiStore";
+import { trackTelemetry } from "@/lib/telemetry/client";
 
-// Matches the Undo toast's duration below — once the toast is gone, the
-// keyboard `u` shortcut shouldn't be able to resurrect a task the user has
-// no visible way to associate with an undo action anymore.
+// Matches the Undo toast duration — keyboard undo shouldn't outlive it.
 const UNDO_TOAST_DURATION_MS = 5000;
 
 function invalidateTaskCaches(queryClient: QueryClient): void {
@@ -81,6 +80,9 @@ export function useCreateTask() {
 
       return { previousTasks };
     },
+    onSuccess: () => {
+      trackTelemetry("task_action", { action: "created" });
+    },
     onError: (err, _newTask, context) => {
       if (context?.previousTasks) {
         queryClient.setQueryData(
@@ -133,6 +135,11 @@ export function useToggleTask() {
       );
 
       return { previousTasks };
+    },
+    onSuccess: (_data, variables) => {
+      if (variables.is_completed) {
+        trackTelemetry("task_action", { action: "completed" });
+      }
     },
     onError: (err, _vars, context) => {
       if (context?.previousTasks) {
@@ -221,9 +228,7 @@ export function useDeleteTask() {
         );
       }
 
-      // Deleting the parent cascades at the DB level, so any subtasks list
-      // currently on screen for it goes stale the instant the delete lands —
-      // clear it optimistically rather than leaving orphaned rows visible.
+      // Cascades at the DB level — clear cached subtasks now, not orphaned later.
       for (const [queryKey] of queryClient.getQueriesData<Task[]>({
         queryKey: ["subtasks", id],
       })) {
@@ -232,11 +237,8 @@ export function useDeleteTask() {
 
       return { deletedTask };
     },
-    // Fires after the delete (and its cascade) is confirmed, using the
-    // subtasks taskMutations.delete fetched before removing them — not the
-    // cache from onMutate, which may be empty if the subtask list was never
-    // opened. Waiting for confirmation also avoids offering an "Undo" for a
-    // delete that never actually happened.
+    // Uses the delete's cascaded subtasks, not onMutate's cache (may be
+    // empty); confirmed first so Undo isn't offered for a delete that never landed.
     onSuccess: (deletedSubtasks, _id, context) => {
       const deletedTask = context?.deletedTask;
       if (!deletedTask) return;
@@ -256,8 +258,7 @@ export function useDeleteTask() {
           return;
         }
 
-        // Task was hard-deleted, so undo re-inserts rather than updates —
-        // parent first, then any subtasks the delete cascaded away.
+        // Hard delete, so undo re-inserts rather than updates.
         try {
           await taskMutations.restore(taskToRestore, subtasksToRestore);
           trigger("success");
@@ -274,17 +275,14 @@ export function useDeleteTask() {
       };
 
       useUiStore.getState().setLastUndoAction(undoAction);
-      // Expire the keyboard undo binding alongside the toast. Guarded by
-      // reference equality so it's a no-op if undoAction already ran (which
-      // clears lastUndoAction itself) or a later delete replaced it.
+      // Reference-equality guard: no-op if already run or replaced by a later delete.
       setTimeout(() => {
         if (useUiStore.getState().lastUndoAction === undoAction) {
           useUiStore.getState().setLastUndoAction(null);
         }
       }, UNDO_TOAST_DURATION_MS);
 
-      // Task content is unbounded user text, so it's dropped rather than
-      // folded into the title like other toasts (see ADR 0008).
+      // Dropped, not folded into the title — task content is unbounded user text (ADR 0008).
       notify("Task deleted", {
         duration: UNDO_TOAST_DURATION_MS,
         action: {
@@ -325,9 +323,7 @@ export function useReorderTasks() {
         queryClient.setQueryData<Task[]>(queryKey, (old) => {
           if (!old) return old;
 
-          // Pairs already carry each task's final day_order (computeMoveOrders in
-          // reorder.ts / task-dnd.ts) — apply in place. Consumers (e.g.
-          // useTaskViewData) sort by day_order themselves, so no reshuffling here.
+          // Pairs already carry final day_order (computeMoveOrders) — apply as-is.
           return old.map((task) => {
             const newOrder = pairById.get(task.id);
             return newOrder === undefined || task.day_order === newOrder
@@ -409,6 +405,7 @@ export function useDuplicateTask() {
       overrides?: Partial<Task>;
     }) => taskMutations.duplicate(sourceTask, overrides),
     onSuccess: (newTask) => {
+      trackTelemetry("task_action", { action: "created" });
       trigger("success");
       notify("Task duplicated");
       if (newTask.parent_id) {
