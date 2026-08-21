@@ -6,6 +6,7 @@ import { handleMutationError } from "@/lib/utils/mutation-error";
 import type { HabitEntry, HabitWithEntries } from "@/lib/types/habit";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { trackTelemetry } from "@/lib/telemetry/client";
+import { mockStore } from "@/lib/mock/mock-store";
 
 import { habitMutations } from "@/lib/mutations/habit";
 
@@ -173,6 +174,10 @@ export function useMarkHabitComplete() {
       return { previousHabits };
     },
     onSuccess: (_data, variables) => {
+      // Guests get a year of pre-seeded demo habits; interacting with them
+      // shouldn't inflate the "Habit Consistency" telemetry KPI.
+      if (isGuestMode && mockStore.isSeedId(variables.habitId)) return;
+
       if ((variables.value ?? 1) >= 1) {
         const habits = queryClient.getQueryData<HabitWithEntries[]>([
           "habits",

@@ -115,6 +115,65 @@ describe("MockStore (Guest Mode Data)", () => {
     expect(seriesTasks.some((t) => !t.is_completed)).toBe(true);
     expect(seriesTasks.every((t) => t.recurrence !== null)).toBe(true);
   });
+
+  it("recognizes seeded habit and task ids as seed ids, and survives a reload", () => {
+    mockStore.reset();
+
+    const seedHabitId = mockStore.getHabits()[0].id;
+    const seedTaskId = mockStore.getTasks()[0].id;
+    expect(mockStore.isSeedId(seedHabitId)).toBe(true);
+    expect(mockStore.isSeedId(seedTaskId)).toBe(true);
+    expect(mockStore.isSeedId("user-created-id")).toBe(false);
+
+    // Simulate a page reload: a fresh MockStore instance re-reads the same
+    // localStorage blob instead of regenerating (getInitialData only runs
+    // once per guest), so the seed-id set must round-trip through storage.
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    expect(stored.seed_ids).toEqual(
+      expect.arrayContaining([seedHabitId, seedTaskId]),
+    );
+  });
+
+  it("has no seed ids after clearData or restoreBackup — those aren't demo content", () => {
+    mockStore.reset();
+    mockStore.clearData();
+    expect(mockStore.isSeedId("anything")).toBe(false);
+  });
+
+  it("propagates the seed exemption to a new occurrence spawned from a seeded recurring series", () => {
+    mockStore.reset();
+    const seedSeriesId = mockStore
+      .getTasks()
+      .find((t) => t.recurring_series_id !== null)?.recurring_series_id;
+    if (!seedSeriesId) throw new Error("expected a seeded recurring series");
+
+    const nextOccurrence = mockStore.addTask({
+      content: "Weekly Review",
+      recurring_series_id: seedSeriesId,
+      recurrence: { freq: "WEEKLY", interval: 1 },
+      is_completed: false,
+    });
+
+    expect(mockStore.isSeedId(nextOccurrence.id)).toBe(true);
+  });
+
+  it("does not exempt a new occurrence of a series the guest created themselves", () => {
+    mockStore.reset();
+    const ownSeriesId = "user-series-1";
+    const firstOwn = mockStore.addTask({
+      content: "My recurring task",
+      recurring_series_id: ownSeriesId,
+      is_completed: false,
+    });
+    expect(mockStore.isSeedId(firstOwn.id)).toBe(false);
+
+    const nextOwn = mockStore.addTask({
+      content: "My recurring task",
+      recurring_series_id: ownSeriesId,
+      is_completed: false,
+    });
+    expect(mockStore.isSeedId(nextOwn.id)).toBe(false);
+  });
 });
 
 // A Loop Habit Tracker import writes thousands of entries at once. Saving on

@@ -137,6 +137,10 @@ export function useToggleTask() {
       return { previousTasks };
     },
     onSuccess: (_data, variables) => {
+      // Guests get a year of pre-seeded demo tasks; interacting with them
+      // shouldn't inflate the "Engagement & Throughput" telemetry KPI.
+      if (isGuestMode && mockStore.isSeedId(variables.id)) return;
+
       if (variables.is_completed) {
         trackTelemetry("task_action", { action: "completed" });
       }

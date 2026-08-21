@@ -26,6 +26,7 @@ vi.mock("@/lib/telemetry/client", () => ({
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { trackTelemetry } from "@/lib/telemetry/client";
+import { mockStore } from "@/lib/mock/mock-store";
 
 const mockCreateClient = vi.mocked(createClient);
 const mockUseAuth = vi.mocked(useAuth);
@@ -515,6 +516,65 @@ describe("useHabitMutations", () => {
         });
 
         expect(trackTelemetry).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("guest demo-data telemetry exemption", () => {
+      beforeEach(() => {
+        localStorage.setItem("kanso_guest_mode", "true");
+      });
+
+      it("does not fire habit_logged when completing a seeded demo habit", async () => {
+        mockUseAuth.mockReturnValue({ isGuestMode: true } as any);
+        mockStore.reset();
+        const seedHabitId = mockStore.getHabits()[0].id;
+
+        const { result } = renderHook(() => useMarkHabitComplete(), {
+          wrapper,
+        });
+
+        await act(async () => {
+          await result.current.mutateAsync({
+            habitId: seedHabitId,
+            date: "2024-01-15",
+            value: 1,
+          });
+        });
+
+        expect(trackTelemetry).not.toHaveBeenCalled();
+      });
+
+      it("still fires habit_logged for a habit the guest created themselves", async () => {
+        mockUseAuth.mockReturnValue({ isGuestMode: true } as any);
+        mockStore.reset();
+        const ownHabit = mockStore.addHabit({
+          name: "My own habit",
+          description: null,
+          color: "#000000",
+          icon: null,
+          archived_at: null,
+          start_date: "2024-01-01",
+          habit_type: "boolean",
+          frequency_count: 1,
+          frequency_period: "day",
+          target_type: "at_least",
+          target_value: null,
+          unit: null,
+        });
+
+        const { result } = renderHook(() => useMarkHabitComplete(), {
+          wrapper,
+        });
+
+        await act(async () => {
+          await result.current.mutateAsync({
+            habitId: ownHabit.id,
+            date: "2024-01-15",
+            value: 1,
+          });
+        });
+
+        expect(trackTelemetry).toHaveBeenCalledWith("habit_logged", {});
       });
     });
   });

@@ -11,6 +11,8 @@ import { computeReorderPairs } from "@/lib/utils/task-dnd";
 import type { Task } from "@/lib/types/task";
 import React from "react";
 import { trackTelemetry } from "@/lib/telemetry/client";
+import { mockStore } from "@/lib/mock/mock-store";
+import { useAuth } from "@/components/AuthProvider";
 
 // Mock dependencies
 vi.mock("@/lib/supabase/client", () => ({
@@ -28,7 +30,7 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 vi.mock("@/components/AuthProvider", () => ({
-  useAuth: () => ({ isGuestMode: false, user: { id: "test-user" } }),
+  useAuth: vi.fn(() => ({ isGuestMode: false, user: { id: "test-user" } })),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -366,6 +368,10 @@ describe("task_action telemetry", () => {
       },
     });
     vi.clearAllMocks();
+    vi.mocked(useAuth).mockReturnValue({
+      isGuestMode: false,
+      user: { id: "test-user" },
+    } as unknown as ReturnType<typeof useAuth>);
   });
 
   it("fires task_action created telemetry when a task is created", async () => {
@@ -443,6 +449,53 @@ describe("task_action telemetry", () => {
 
     expect(trackTelemetry).toHaveBeenCalledWith("task_action", {
       action: "created",
+    });
+  });
+
+  describe("guest demo-data telemetry exemption", () => {
+    beforeEach(() => {
+      vi.mocked(useAuth).mockReturnValue({
+        isGuestMode: true,
+        user: { id: "guest" },
+      } as unknown as ReturnType<typeof useAuth>);
+    });
+
+    it("does not fire task_action completed when toggling a seeded demo task", async () => {
+      localStorage.clear();
+      mockStore.reset();
+      const seedTaskId = mockStore.getTasks()[0].id;
+
+      const { result } = renderHook(() => useToggleTask(), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      result.current.mutate({ id: seedTaskId, is_completed: true });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(trackTelemetry).not.toHaveBeenCalled();
+    });
+
+    it("still fires task_action completed for a task the guest created themselves", async () => {
+      localStorage.clear();
+      mockStore.reset();
+      const ownTask = mockStore.addTask({ content: "My own task" });
+
+      const { result } = renderHook(() => useToggleTask(), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      result.current.mutate({ id: ownTask.id, is_completed: true });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(trackTelemetry).toHaveBeenCalledWith("task_action", {
+        action: "completed",
+      });
     });
   });
 });
