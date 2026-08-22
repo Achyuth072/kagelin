@@ -2,24 +2,21 @@
 
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
-import { useDemoMode } from "@/lib/hooks/useDemoMode";
-import { useIsOnline } from "@/lib/hooks/useIsOnline";
 import { useClearGuestData } from "@/lib/hooks/useGuestStoreActions";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
 import {
   BANNER_SLOT_WRAPPER_CLASS,
   BANNER_SLOT_CARD_CLASS,
+  useActiveBanner,
 } from "@/components/bannerSlot";
 import { cn } from "@/lib/utils";
 
 export function DemoBar() {
-  const isDemoMode = useDemoMode();
-  const isOnline = useIsOnline();
+  const activeBanner = useActiveBanner();
   const clearGuestData = useClearGuestData();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  // Never stacks with OfflineIndicator — both occupy the same banner slot.
-  if (!isDemoMode || !isOnline) return null;
+  if (activeBanner !== "demo") return null;
 
   return (
     <>

@@ -51,8 +51,7 @@ import { GlobalFabs } from "@/components/layout/GlobalFabs";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Toaster } from "@/components/ui/toaster";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
-import { useIsOnline } from "@/lib/hooks/useIsOnline";
-import { useDemoMode } from "@/lib/hooks/useDemoMode";
+import { useActiveBanner } from "@/components/bannerSlot";
 import { trackSignupCompleted, trackAppOpened } from "@/lib/telemetry/client";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
@@ -283,10 +282,7 @@ function AppShellContent({ children }: AppShellProps) {
   const pathname = usePathname();
   const isFocus = pathname === "/focus";
   const hideMobileNav = pathname === "/focus" || pathname === "/settings";
-  const isOnline = useIsOnline();
-  const isDemoMode = useDemoMode();
-  // Offline takes priority — the two banners share one slot and never stack.
-  const hasTopBanner = !isOnline || isDemoMode;
+  const hasTopBanner = useActiveBanner() !== null;
 
   const setShortcutsHelpOpen = useUiStore(
     (state) => state.setShortcutsHelpOpen,

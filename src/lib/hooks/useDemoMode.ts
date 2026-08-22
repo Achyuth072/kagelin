@@ -11,7 +11,7 @@ export function useDemoMode() {
   const { data } = useQuery({
     queryKey: ["demo-mode", { isGuestMode }],
     staleTime: 60000,
-    queryFn: async () => (isGuestMode ? mockStore.isInDemoMode() : false),
+    queryFn: () => (isGuestMode ? mockStore.isInDemoMode() : false),
   });
 
   return data ?? false;
