@@ -6,7 +6,6 @@
 /* eslint-disable tailwindcss/no-invalid-at-rules */
 @custom-variant dark (&:is(.dark *));
 
-/* Theme configuration for Tailwind v4 */
 @theme inline {
   --radius: 0.625rem;
   --radius-sm: calc(var(--radius) - 4px);
@@ -88,7 +87,7 @@
   }
 }
 
-/* Layout tokens - shared by Header, AppShell and OfflineIndicator */
+/* Layout tokens - shared by Header, AppShell, OfflineIndicator and DemoBar */
 :root {
   --mobile-header-height: calc(4rem + env(safe-area-inset-top, 0px));
   --offline-banner-height: 2.25rem;
@@ -102,7 +101,7 @@
   --card-foreground: 0 0% 18%;
   --popover: 40 20% 99%;
   --popover-foreground: 0 0% 18%;
-  --primary: 0 0% 18%; /* Ink for primary actions */
+  --primary: 0 0% 18%; /* Ink */
   --primary-foreground: 0 0% 100%;
   --secondary: 60 9% 96%; /* #F7F7F5 - Kept for sidebar */
   --secondary-foreground: 0 0% 18%;
@@ -139,7 +138,7 @@
   --card-foreground: 0 0% 90%;
   --popover: 0 0% 13%;
   --popover-foreground: 0 0% 90%;
-  --primary: 0 0% 90%; /* Light Ink for dark mode */
+  --primary: 0 0% 90%; /* Light Ink */
   --primary-foreground: 0 0% 10%;
   --secondary: 0 0% 13%; /* #202020 */
   --secondary-foreground: 0 0% 90%;
@@ -176,7 +175,6 @@
   }
 }
 
-/* Mobile optimizations & viewport constraint */
 html,
 body {
   height: 100%;

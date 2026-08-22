@@ -49,7 +49,6 @@ class MockStore {
       .toISOString()
       .split("T")[0];
 
-    // Base Projects
     const pWork = "demo-project-work";
     const pPersonal = "demo-project-personal";
     const pSide = "demo-project-side";
@@ -96,7 +95,6 @@ class MockStore {
     const entries: HabitEntry[] = [];
     const events: CalendarEvent[] = [];
 
-    // Generators
     const generateId = () => Math.random().toString(36).substr(2, 9);
     const pick = <T>(options: readonly T[]) =>
       options[Math.floor(Math.random() * options.length)];
@@ -183,7 +181,6 @@ class MockStore {
       } = options;
       const date = dayAt(dayOffset);
 
-      // Randomize start time
       const randomHour = isEvening
         ? 18 + Math.random() * 4 // 18:00 - 22:00
         : 8 + Math.random() * 6; // 08:00 - 14:00
@@ -218,7 +215,6 @@ class MockStore {
         google_etag: null,
       });
 
-      // Add focus log if completed (simulate work done)
       if (isCompleted) {
         const durationSeconds = 900 + Math.floor(Math.random() * 7200); // 15m to 2h
         logs.push({
@@ -247,7 +243,6 @@ class MockStore {
       if (monthOffset > 4) probability = 0.6;
       if (monthOffset > 8) probability = 0.45;
 
-      // Special case: Very High density in the last 30 days
       if (Math.abs(i) <= 30) probability = 0.92;
 
       if (Math.random() > probability) continue;
@@ -291,9 +286,7 @@ class MockStore {
       }
     }
 
-    // Generate Today & Future 30 Days
     for (let i = 0; i <= 30; i++) {
-      // Today specific
       if (i === 0) {
         const parentId = createTask(
           "Ship search filters to staging",
@@ -409,7 +402,6 @@ class MockStore {
       });
     }
 
-    // Generate Habits
     const hWater = "habit-water";
     const hExercise = "habit-exercise";
     const hRead = "habit-read";
@@ -555,7 +547,6 @@ class MockStore {
       { habitId: hLogOff, weekday: 0.85, weekend: 0 },
     ];
 
-    // Generate Habit Entries for the last 365 days
     for (let i = -365; i <= 0; i++) {
       const date = dayAt(i);
       const dateStr = date.toISOString().split("T")[0];
@@ -574,7 +565,6 @@ class MockStore {
       }
     }
 
-    // Generate Mock Events (Past and Future)
     const mockLocations = ["Coffee Shop", "Office", "Zoom", "Gym", "Home"];
     const workdayEvents = [
       "Design review",
@@ -597,7 +587,6 @@ class MockStore {
       const date = dayAt(i);
       const weekend = isWeekend(date);
 
-      // Add random event
       if (Math.random() > 0.4) {
         const randomHour = weekend
           ? 11 + Math.floor(Math.random() * 8) // 11am to 6pm
@@ -680,7 +669,6 @@ class MockStore {
     }
   }
 
-  // Task Operations
   getTasks(): Task[] {
     return this.data.tasks;
   }
@@ -768,7 +756,6 @@ class MockStore {
     return true;
   }
 
-  // Project Operations
   getProjects(): Project[] {
     return this.data.projects;
   }
@@ -845,7 +832,6 @@ class MockStore {
     }
   }
 
-  // Focus Logs
   getFocusLogs(): FocusLog[] {
     return this.data.focus_logs || [];
   }
@@ -864,7 +850,6 @@ class MockStore {
     return newLog;
   }
 
-  // Habit Operations
   getHabits(): Habit[] {
     return this.data.habits || [];
   }
@@ -921,7 +906,6 @@ class MockStore {
     if (index === -1) return false;
 
     this.data.habits = this.data.habits.filter((h) => h.id !== id);
-    // Also delete entries
     this.data.habit_entries = this.data.habit_entries.filter(
       (e) => e.habit_id !== id,
     );
@@ -979,7 +963,6 @@ class MockStore {
     return newEntry;
   }
 
-  // Event Operations
   getEvents(): CalendarEvent[] {
     return this.data.events || [];
   }
@@ -1090,7 +1073,12 @@ class MockStore {
     return (this.data.seed_ids ?? []).includes(id);
   }
 
-  // Utility
+  // True while any Demo item remains. See CONTEXT.md → Guest showcase content
+  // → Demo mode.
+  isInDemoMode(): boolean {
+    return (this.data.seed_ids ?? []).length > 0;
+  }
+
   reset(): void {
     this.data = this.getInitialData();
     this.saveToStorage();
@@ -1116,7 +1104,6 @@ class MockStore {
   }
 }
 
-// Singleton instance
 export const mockStore = new MockStore();
 
 // Pure so migration can strip a guest blob before it reaches the singleton. See ADR 0014.

@@ -153,6 +153,14 @@ describe("MockStore (Guest Mode Data)", () => {
     expect(mockStore.isSeedId("anything")).toBe(false);
   });
 
+  it("reports Demo mode while a seeded item remains, and leaves it once cleared", () => {
+    mockStore.reset();
+    expect(mockStore.isInDemoMode()).toBe(true);
+
+    mockStore.clearData();
+    expect(mockStore.isInDemoMode()).toBe(false);
+  });
+
   it("propagates the seed exemption to a new occurrence spawned from a seeded recurring series", () => {
     mockStore.reset();
     const seedSeriesId = mockStore
