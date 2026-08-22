@@ -112,6 +112,52 @@ its source.
 
 ---
 
+## Guest showcase content
+
+### Demo data
+
+The fabricated tasks, projects, habits, habit entries, focus logs and calendar
+events a **Guest** is given on arrival, so the app is populated on first sight
+rather than empty. It exists to showcase Kagelin — to someone evaluating it from
+a résumé, and to a prospective user who has no wiki or docs to read instead.
+Demo data is a **Guest**-only concept: it is never created for a Registered or
+Premium user, and never reaches the cloud.
+_Avoid_: "mock data" (the legacy spelling, surviving in the `src/lib/mock/` path
+and the `mockStore` singleton); _avoid_: "sample data", "dummy data".
+
+### Demo item
+
+One record within Demo data. Demo-ness is a property of the **record**, tracked
+per id, not of the account or the session — a Guest's own tasks sit alongside
+Demo items in the same store. Internally the id list is spelled `seed_ids` and
+the predicate `isSeedId`; **seed** is the code spelling of **demo** and carries
+no separate meaning.
+
+Demo-ness is **permanent and inherited**: editing a Demo item does not make it
+the Guest's own, and completing a recurring Demo item makes the next occurrence
+a Demo item too. See
+`docs/adr/0014-demo-data-stripped-on-signup-migration.md`.
+
+### Demo mode
+
+The state of a Guest whose store still contains at least one Demo item. It is
+what the demo bar reports, and it ends only when no Demo item remains.
+Not a tier and not an entitlement — a Guest is in Demo mode by default and
+leaves it by clearing, never by upgrading.
+
+### Start fresh
+
+The Guest-facing action that empties the store — **all** of it, Demo items and
+the Guest's own records alike — leaving Demo mode behind. Deliberately not a
+demo-only removal: a partial clear would leave surviving Demo items whose
+demo-ness has to be re-adjudicated, and there is no defensible answer for a Demo
+project that now holds the Guest's real work. Destructive, so it is always
+confirmed.
+_Avoid_: "reset", which in the UI means the opposite — **Reset Demo** restores
+Demo data rather than removing it.
+
+---
+
 ## Founding cohort
 
 ### Overview

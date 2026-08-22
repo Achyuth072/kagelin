@@ -3,26 +3,14 @@ import { useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { notify } from "@/lib/notify";
 import { trackSignupCompleted } from "@/lib/telemetry/client";
-import { STORAGE_KEY as GUEST_DATA_STORAGE_KEY } from "@/lib/mock/mock-store";
-import type { Task, Project } from "@/lib/types/task";
-import type { Habit, HabitEntry } from "@/lib/types/habit";
-
-interface FocusLog {
-  user_id: string;
-  task_id: string | null;
-  start_time: string;
-  end_time: string | null;
-  duration_seconds: number;
-  created_at: string;
-}
-
-interface GuestData {
-  tasks: Task[];
-  projects: Project[];
-  habits: Habit[];
-  habit_entries: HabitEntry[];
-  focus_logs: FocusLog[];
-}
+import {
+  STORAGE_KEY as GUEST_DATA_STORAGE_KEY,
+  stripDemoData,
+  type GuestData,
+} from "@/lib/mock/mock-store";
+import type { Task } from "@/lib/types/task";
+import type { HabitEntry } from "@/lib/types/habit";
+import type { FocusLog } from "@/lib/types/focus";
 
 export function useMigrationStrategy() {
   const { user, isGuestMode } = useAuth();
@@ -55,17 +43,35 @@ export function useMigrationStrategy() {
 
     try {
       setIsMigrating(true);
-      const guestData = JSON.parse(guestDataStr) as GuestData;
+      // Prevents fabricated history from becoming the user's real streaks/scores. See ADR 0014.
+      const guestData = stripDemoData(JSON.parse(guestDataStr) as GuestData);
 
-      // >1 project (beyond the default inbox) signals migration already ran.
       const { data: userProjects } = await supabase
         .from("projects")
         .select("id, name, is_inbox")
         .eq("user_id", user.id);
 
-      const hasMigratedBefore = userProjects && userProjects.length > 1;
+      // Demo projects are stripped above, so project count alone can't signal an established account.
+      const hasManualProject = userProjects?.some((p) => !p.is_inbox) ?? false;
 
-      if (hasMigratedBefore) {
+      const [{ count: existingTaskCount }, { count: existingHabitCount }] =
+        await Promise.all([
+          supabase
+            .from("tasks")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id),
+          supabase
+            .from("habits")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", user.id),
+        ]);
+
+      const hasExistingContent =
+        hasManualProject ||
+        (existingTaskCount ?? 0) > 0 ||
+        (existingHabitCount ?? 0) > 0;
+
+      if (hasExistingContent) {
         localStorage.removeItem("kanso_guest_mode");
         localStorage.removeItem(GUEST_DATA_STORAGE_KEY);
         document.cookie = "kanso_guest_mode=; path=/; max-age=0";
@@ -245,7 +251,7 @@ export function useMigrationStrategy() {
       document.cookie = "kanso_guest_mode=; path=/; max-age=0";
 
       notify.success(
-        "Synchronization complete! Your data is safe in the cloud.",
+        "Synchronization complete! Your data is safe in the cloud. Demo content wasn't carried over.",
       );
 
       trackSignupCompleted();
