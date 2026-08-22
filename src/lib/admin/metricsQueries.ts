@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface DailyAggregateRow {
@@ -231,27 +232,32 @@ export async function getAdminMetricsSummary(
     Date.now() - 30 * 24 * 60 * 60 * 1000,
   ).toISOString();
 
-  const [
-    { data: dailyRows, error: dailyError },
-    { data: eventRows, error: eventsError },
-  ] = await Promise.all([
-    supabase
-      .from("telemetry_daily_aggregates")
-      .select("*")
-      .order("date", { ascending: true })
-      .limit(90),
-    supabase
-      .from("telemetry_events")
-      .select("device_id, event_name, properties, created_at")
-      .gte("created_at", thirtyDaysAgoIso)
-      .order("created_at", { ascending: false })
-      .limit(10000),
-  ]);
+  const [dailyAggregatesResult, { data: eventRows, error: eventsError }] =
+    await Promise.all([
+      // PostgREST caps a single response at 1000 rows regardless of the
+      // requested range — page through with fetchAllRows so history beyond
+      // ~2.7 years doesn't silently truncate again.
+      fetchAllRows<DailyAggregateRow>((from, to) =>
+        supabase
+          .from("telemetry_daily_aggregates")
+          .select("*")
+          .order("date", { ascending: true })
+          .range(from, to),
+      )
+        .then((data) => ({ data, error: null }))
+        .catch((error) => ({ data: null, error })),
+      supabase
+        .from("telemetry_events")
+        .select("device_id, event_name, properties, created_at")
+        .gte("created_at", thirtyDaysAgoIso)
+        .order("created_at", { ascending: false })
+        .limit(10000),
+    ]);
 
-  if (dailyError) {
+  if (dailyAggregatesResult.error) {
     console.error(
       "[Admin Metrics] Error fetching daily aggregates:",
-      dailyError,
+      dailyAggregatesResult.error,
     );
   }
 
@@ -262,7 +268,7 @@ export async function getAdminMetricsSummary(
     );
   }
 
-  const aggregates = (dailyRows as DailyAggregateRow[]) || [];
+  const aggregates = dailyAggregatesResult.data || [];
   const events = (eventRows as RawTelemetryEventRow[]) || [];
 
   const { kpis, dailyTrends, hasData } = aggregateMetricsData(

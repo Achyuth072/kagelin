@@ -17,6 +17,9 @@ export interface UserSettings {
     do_date_alerts: boolean;
     timer_alerts: boolean;
   };
+  // Admin-only: where an admin lands after login. Irrelevant (and unused)
+  // for non-admin accounts.
+  adminLandingPage?: "tasks" | "metrics";
 }
 
 export const DEFAULT_USER_SETTINGS: UserSettings = {
@@ -27,4 +30,5 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
     do_date_alerts: true,
     timer_alerts: true,
   },
+  adminLandingPage: "tasks",
 };

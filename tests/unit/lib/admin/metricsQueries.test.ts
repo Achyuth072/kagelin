@@ -158,7 +158,7 @@ describe("getAdminMetricsSummary", () => {
   it("queries supabase admin client and returns structured summary", async () => {
     const mockSelectAggregates = vi.fn().mockReturnValue({
       order: vi.fn().mockReturnValue({
-        limit: vi.fn().mockResolvedValue({
+        range: vi.fn().mockResolvedValue({
           data: [
             {
               date: "2026-08-19",
@@ -214,5 +214,62 @@ describe("getAdminMetricsSummary", () => {
     expect(summary.kpis.totalFocusHours).toBe(2);
     expect(summary.dailyTrends.length).toBe(1);
     expect(summary.generatedAt).toBeDefined();
+  });
+
+  it("pages past PostgREST's 1000-row response cap instead of truncating history", async () => {
+    const makeRow = (i: number): DailyAggregateRow => ({
+      date: `2026-01-${String((i % 28) + 1).padStart(2, "0")}`,
+      active_devices: 1,
+      pwa_devices: 1,
+      browser_devices: 0,
+      pwa_installs: 0,
+      tasks_created: 1,
+      tasks_completed: 1,
+      timer_sessions_completed: 0,
+      timer_sessions_abandoned: 0,
+      focus_minutes_total: 0,
+      habits_logged: 0,
+      signups_completed: 0,
+    });
+    const page1 = Array.from({ length: 1000 }, (_, i) => makeRow(i));
+    const page2 = Array.from({ length: 5 }, (_, i) => makeRow(1000 + i));
+
+    const mockRange = vi.fn((from: number) =>
+      Promise.resolve({
+        data: from === 0 ? page1 : page2,
+        error: null,
+      }),
+    );
+    const mockSelectAggregates = vi.fn().mockReturnValue({
+      order: vi.fn().mockReturnValue({ range: mockRange }),
+    });
+
+    const mockSelectEvents = vi.fn().mockReturnValue({
+      gte: vi.fn().mockReturnValue({
+        order: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      }),
+    });
+
+    const mockClient = {
+      from: vi.fn((table: string) => {
+        if (table === "telemetry_daily_aggregates") {
+          return { select: mockSelectAggregates };
+        }
+        if (table === "telemetry_events") {
+          return { select: mockSelectEvents };
+        }
+        return { select: vi.fn() };
+      }),
+    };
+
+    const summary = await getAdminMetricsSummary(
+      mockClient as unknown as SupabaseClient,
+    );
+
+    expect(mockRange).toHaveBeenCalledTimes(2);
+    expect(summary.dailyTrends.length).toBe(1005);
+    expect(summary.kpis.totalTasksCreated).toBe(1005);
   });
 });

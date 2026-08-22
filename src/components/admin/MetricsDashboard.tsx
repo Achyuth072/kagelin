@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ToggleRow } from "@/components/settings/ToggleRow";
+import { useProfile } from "@/lib/hooks/useProfile";
+import { notify } from "@/lib/notify";
 import type { AdminMetricsSummary } from "@/lib/admin/metricsQueries";
 import {
   ResponsiveContainer,
@@ -27,6 +31,8 @@ import {
   ShieldCheck,
   Clock,
   TrendingUp,
+  ArrowLeft,
+  LogIn,
   type LucideIcon,
 } from "lucide-react";
 
@@ -111,6 +117,7 @@ export function MetricsDashboard({
 }: MetricsDashboardProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const { kpis, dailyTrends, hasData, generatedAt } = summary;
+  const { profile, updateSettings } = useProfile();
 
   const filteredTrends = filterTrends(dailyTrends, timeRange);
   const formattedGeneratedAt = safeFormatDate(
@@ -118,11 +125,30 @@ export function MetricsDashboard({
     "MMM d, yyyy HH:mm:ss",
   );
 
+  const landsHereAfterLogin = profile?.settings?.adminLandingPage === "metrics";
+
+  const handleLandingPageChange = async (checked: boolean) => {
+    try {
+      await updateSettings.mutateAsync({
+        adminLandingPage: checked ? "metrics" : "tasks",
+      });
+    } catch {
+      notify.error("Failed to update settings");
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 md:space-y-8">
+    <div className="px-4 md:px-8 py-6 md:py-8 space-y-6 md:space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/40">
         <div>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Tasks
+          </Link>
           <div className="flex items-center gap-2.5">
             <h1 className="text-2xl md:text-3xl font-semibold tracking-[-0.03em] text-foreground">
               Operator Metrics
@@ -149,6 +175,16 @@ export function MetricsDashboard({
             <span>Updated: {formattedGeneratedAt}</span>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-md">
+        <ToggleRow
+          icon={LogIn}
+          title="Land here after login"
+          description="Go straight to Operator Metrics instead of Tasks"
+          checked={landsHereAfterLogin}
+          onChange={handleLandingPageChange}
+        />
       </div>
 
       {/* KPI Cards Grid */}

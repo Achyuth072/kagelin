@@ -1,16 +1,39 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AuthPage } from "@/components/auth/AuthPage";
 import { useAuth } from "@/components/AuthProvider";
+import { createClient } from "@/lib/supabase/client";
 
 vi.mock("@/components/AuthProvider", () => ({
   useAuth: vi.fn(),
 }));
 
+const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: mockPush }),
   useSearchParams: () => new URLSearchParams(),
 }));
+
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: vi.fn(),
+}));
+
+function mockProfileLookup(
+  profile: {
+    is_admin: boolean;
+    settings: Record<string, unknown>;
+  } | null,
+) {
+  vi.mocked(createClient).mockReturnValue({
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: profile }),
+        }),
+      }),
+    }),
+  } as unknown as ReturnType<typeof createClient>);
+}
 
 vi.mock("@/components/auth/Turnstile", () => ({
   Turnstile: () => <div data-testid="turnstile-widget" />,
@@ -134,5 +157,53 @@ describe("AuthPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Continue as guest" }));
     expect(signInAsGuest).toHaveBeenCalledTimes(1);
+  });
+
+  it("redirects a non-admin user to / after login", async () => {
+    mockProfileLookup({ is_admin: false, settings: {} });
+    mockAuth({
+      user: { id: "user-1" } as unknown as ReturnType<typeof useAuth>["user"],
+    });
+    render(<AuthPage initialMode="sign-in" />);
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/"));
+  });
+
+  it("redirects an admin without the landing-page setting to /", async () => {
+    mockProfileLookup({ is_admin: true, settings: {} });
+    mockAuth({
+      user: { id: "admin-1" } as unknown as ReturnType<typeof useAuth>["user"],
+    });
+    render(<AuthPage initialMode="sign-in" />);
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/"));
+  });
+
+  it("redirects an admin with adminLandingPage: metrics to /admin/metrics", async () => {
+    mockProfileLookup({
+      is_admin: true,
+      settings: { adminLandingPage: "metrics" },
+    });
+    mockAuth({
+      user: { id: "admin-1" } as unknown as ReturnType<typeof useAuth>["user"],
+    });
+    render(<AuthPage initialMode="sign-in" />);
+
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith("/admin/metrics"),
+    );
+  });
+
+  it("does not redirect a non-admin user even with adminLandingPage: metrics stored", async () => {
+    mockProfileLookup({
+      is_admin: false,
+      settings: { adminLandingPage: "metrics" },
+    });
+    mockAuth({
+      user: { id: "user-1" } as unknown as ReturnType<typeof useAuth>["user"],
+    });
+    render(<AuthPage initialMode="sign-in" />);
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/"));
   });
 });

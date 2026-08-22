@@ -1,7 +1,20 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { MetricsDashboard } from "@/components/admin/MetricsDashboard";
+import { useProfile } from "@/lib/hooks/useProfile";
 import type { AdminMetricsSummary } from "@/lib/admin/metricsQueries";
+
+vi.mock("@/lib/hooks/useProfile");
+
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+  }: {
+    href: string;
+    children: React.ReactNode;
+  }) => <a href={href}>{children}</a>,
+}));
 
 vi.mock("recharts", () => ({
   AreaChart: ({ children }: { children: React.ReactNode }) => (
@@ -105,6 +118,14 @@ const mockEmptySummary: AdminMetricsSummary = {
 };
 
 describe("MetricsDashboard Component", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (useProfile as Mock).mockReturnValue({
+      profile: { settings: {} },
+      updateSettings: { mutateAsync: vi.fn() },
+    });
+  });
+
   it("renders empty state when hasData is false", () => {
     render(<MetricsDashboard summary={mockEmptySummary} />);
 
@@ -154,5 +175,59 @@ describe("MetricsDashboard Component", () => {
 
     fireEvent.mouseDown(weekTab);
     expect(weekTab).toHaveAttribute("data-state", "active");
+  });
+
+  it("persists the landing-page setting when the toggle is switched on", async () => {
+    const mutateAsync = vi.fn().mockResolvedValue(undefined);
+    (useProfile as Mock).mockReturnValue({
+      profile: { settings: {} },
+      updateSettings: { mutateAsync },
+    });
+
+    render(<MetricsDashboard summary={mockSummaryWithData} />);
+
+    const toggle = screen.getByRole("switch", {
+      name: "Land here after login",
+    });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+
+    fireEvent.click(toggle);
+
+    await vi.waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({ adminLandingPage: "metrics" }),
+    );
+  });
+
+  it("reflects an already-persisted landing-page setting as checked", () => {
+    (useProfile as Mock).mockReturnValue({
+      profile: { settings: { adminLandingPage: "metrics" } },
+      updateSettings: { mutateAsync: vi.fn() },
+    });
+
+    render(<MetricsDashboard summary={mockSummaryWithData} />);
+
+    expect(
+      screen.getByRole("switch", { name: "Land here after login" }),
+    ).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("shows an error toast when persisting the setting fails", async () => {
+    const notifyModule = await import("@/lib/notify");
+    const errorSpy = vi.spyOn(notifyModule.notify, "error");
+    (useProfile as Mock).mockReturnValue({
+      profile: { settings: {} },
+      updateSettings: {
+        mutateAsync: vi.fn().mockRejectedValue(new Error("boom")),
+      },
+    });
+
+    render(<MetricsDashboard summary={mockSummaryWithData} />);
+    fireEvent.click(
+      screen.getByRole("switch", { name: "Land here after login" }),
+    );
+
+    await vi.waitFor(() =>
+      expect(errorSpy).toHaveBeenCalledWith("Failed to update settings"),
+    );
   });
 });

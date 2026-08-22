@@ -412,7 +412,10 @@ export default function AppShell({ children }: AppShellProps) {
   const { user, loading } = useAuth();
   const { isMigrating } = useMigrationStrategy();
   const pathname = usePathname();
-  const isAuthStandaloneRoute = AUTH_STANDALONE_ROUTES.includes(pathname);
+  // Admin routes are self-contained pages with their own nav — they never
+  // need the app sidebar/header shell.
+  const isBareRoute =
+    AUTH_STANDALONE_ROUTES.includes(pathname) || pathname.startsWith("/admin");
 
   useBackAnchor(); // must stay mounted across navigation — see useBackAnchor.ts
 
@@ -425,7 +428,7 @@ export default function AppShell({ children }: AppShellProps) {
       <TaskActionsProvider>
         <HabitActionsProvider>
           <PiPProvider>
-            {loading || !user || isAuthStandaloneRoute ? (
+            {loading || !user || isBareRoute ? (
               <>{children}</>
             ) : (
               <AppShellContent>{children}</AppShellContent>
