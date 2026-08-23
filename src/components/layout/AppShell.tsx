@@ -15,7 +15,7 @@ import {
 } from "@/components/ProjectActionsProvider";
 import { useRealtimeSync } from "@/lib/hooks/useRealtimeSync";
 import { useBackAnchor } from "@/lib/hooks/useBackAnchor";
-import { AUTH_STANDALONE_ROUTES } from "@/lib/auth/auth-routes";
+import { AUTH_STANDALONE_ROUTES, isAdminRoute } from "@/lib/auth/auth-routes";
 import { PiPProvider } from "@/components/providers/PiPProvider";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar as SidebarComponent } from "@/components/layout/AppSidebar";
@@ -415,7 +415,7 @@ export default function AppShell({ children }: AppShellProps) {
   // Admin routes are self-contained pages with their own nav — they never
   // need the app sidebar/header shell.
   const isBareRoute =
-    AUTH_STANDALONE_ROUTES.includes(pathname) || pathname.startsWith("/admin");
+    AUTH_STANDALONE_ROUTES.includes(pathname) || isAdminRoute(pathname);
 
   useBackAnchor(); // must stay mounted across navigation — see useBackAnchor.ts
 

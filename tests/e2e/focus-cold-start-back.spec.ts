@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { seedGuestMode } from "./support/guest-mode";
+import { seedGuestMode, waitForBackAnchor } from "./support/guest-mode";
 
 function assertNotRedirectedToLogin(page: Page) {
   if (page.url().includes("/login")) {
@@ -54,7 +54,9 @@ test("notification click opening /?redirect=/focus navigates forward to /focus a
   await seedGuestMode(page, "http://localhost:3000/?redirect=/focus");
   assertNotRedirectedToLogin(page);
 
-  await page.waitForURL(/\/focus/, { timeout: 10000 });
+  // Not page.waitForURL(/\/focus/) — that regex also matches the seed URL's
+  // own "?redirect=/focus", resolving before the bounce even starts.
+  await waitForBackAnchor(page, "/focus");
   await clickBackButton(page);
   await page.waitForURL("http://localhost:3000/", { timeout: 10000 });
 

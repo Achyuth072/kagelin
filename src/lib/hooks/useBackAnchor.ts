@@ -5,24 +5,24 @@ import { usePathname, useRouter } from "next/navigation";
 import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
 import {
   AUTH_STANDALONE_ROUTES,
+  isAdminRoute,
   isOAuthConnectRedirect,
 } from "@/lib/auth/auth-routes";
 
 // history.pushState() desyncs App Router's tracking, so use replace()/push().
-// Must run somewhere that survives its own replace() — AppShell, not Template.
 let anchorSettled: Promise<void> = Promise.resolve();
 let resolveAnchorSettled: (() => void) | null = null;
 
-// These routes' own redirect swallows the bounce before "/" ever renders —
-// skip them rather than wait out SETTLE_BACKSTOP_MS.
+// These routes redirect before "/" ever renders, so skip the bounce.
 const UNANCHORED_ROUTES = new Set(AUTH_STANDALONE_ROUTES);
 
-// Guarantees settle() fires even if a bounce silently stalls.
 const SETTLE_BACKSTOP_MS = 3000;
+
+// Survives the full document load a failed bounce causes, which a ref cannot.
+const PENDING_BOUNCE_KEY = "kanso_back_anchor_pending";
 
 declare global {
   interface Window {
-    // Read by e2e/support/guest-mode.ts.
     __backAnchorSettled?: boolean;
   }
 }
@@ -34,6 +34,10 @@ export function useBackAnchor() {
   const anchor = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
+    const here = pathname + location.search;
+    const wasPending = sessionStorage.getItem(PENDING_BOUNCE_KEY) === here;
+    if (wasPending) sessionStorage.removeItem(PENDING_BOUNCE_KEY);
+
     if (anchor.current === undefined) {
       if (pathname === "/") {
         const searchParams = new URLSearchParams(window.location.search);
@@ -47,7 +51,10 @@ export function useBackAnchor() {
           anchorSettled = new Promise((resolve) => {
             resolveAnchorSettled = resolve;
           });
-          router.replace("/");
+          // replace("/") is superseded by the push() below and never lands,
+          // leaving "?redirect=..." (not "/") beneath the target — so set
+          // the URL directly instead.
+          window.history.replaceState({}, "", "/");
           router.push(safeRedirect);
           settle();
           return;
@@ -56,9 +63,13 @@ export function useBackAnchor() {
 
       const isOAuthConnect = isOAuthConnectRedirect(pathname, location.search);
       anchor.current =
-        pathname === "/" || UNANCHORED_ROUTES.has(pathname) || isOAuthConnect
+        pathname === "/" ||
+        UNANCHORED_ROUTES.has(pathname) ||
+        // Admin pages exit the app on back and link home themselves.
+        isAdminRoute(pathname) ||
+        isOAuthConnect
           ? null
-          : pathname + location.search;
+          : here;
       if (isOAuthConnect && pathname === "/settings") {
         // "connecting" isn't stripped elsewhere — left alone it'd re-suppress the back-anchor on a stale reload.
         const params = new URLSearchParams(location.search);
@@ -71,6 +82,15 @@ export function useBackAnchor() {
         );
       }
       if (anchor.current) {
+        // A 404 target reloads the document instead of soft-navigating,
+        // remounting this hook and re-arming the bounce forever. The marker
+        // outlives that reload, so a second attempt stands down instead.
+        if (wasPending) {
+          anchor.current = null;
+          settle();
+          return;
+        }
+        sessionStorage.setItem(PENDING_BOUNCE_KEY, anchor.current);
         anchorSettled = new Promise((resolve) => {
           resolveAnchorSettled = resolve;
         });

@@ -528,6 +528,34 @@ The point at which the anchor is no longer in flight — either it is in place, 
 the bounce that would have created it was interrupted. Back navigation waits for
 settled, never for success, so a lost anchor degrades back rather than disabling it.
 
+### Bounce
+
+The two-step navigation that installs a back anchor: `replace("/")`, then
+`push(<target>)`. The `/` render is real, not a repaint artifact, so a bounce is
+visible — a beat of the tasks page before the target appears. Routes that cannot
+afford that flicker are unanchored instead.
+_Avoid_: redirect, double navigation.
+
+### Unanchored route
+
+A route that skips the bounce entirely — for one of two unrelated reasons, which
+is worth keeping straight. For auth boundaries (`/login`, `/signup`, …) and
+OAuth-connect returns, an anchor is impossible or pointless: the route redirects
+away, or history already has entries, so skipping costs nothing. For admin routes
+an anchor is possible and wanted, and is given up anyway to avoid showing the
+bounce's `/` render as a flash — so those, and only those, exit the app on back.
+_Avoid_: standalone route, bare route (both name **shell rendering**, a separate
+concern that happens to cover the same paths).
+
+### Pending bounce marker
+
+A `sessionStorage` record of a bounce that started but never landed. A target that
+404s cannot soft-navigate, so the return `push()` reloads the document and remounts
+the shell — resetting the in-memory guard and re-arming the bounce forever. The
+marker outlives that reload, so a second attempt at the same target stands down.
+Without it, any URL that 404s looped at roughly two full page loads per second
+until the tab was closed.
+
 ## Calendar connection
 
 ### Connect Calendar (vs. login identity)

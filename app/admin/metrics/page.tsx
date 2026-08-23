@@ -5,6 +5,7 @@ import { getAdminMetricsSummary } from "@/lib/admin/metricsQueries";
 import { MetricsDashboard } from "@/components/admin/MetricsDashboard";
 
 export const dynamic = "force-dynamic";
+// No loading.tsx: it made Firefox abort the stream and loop-reload this route.
 
 export const metadata: Metadata = {
   title: "Admin Metrics — Kagelin",
