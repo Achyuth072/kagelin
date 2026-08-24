@@ -161,6 +161,19 @@ describe("MockStore (Guest Mode Data)", () => {
     expect(mockStore.isInDemoMode()).toBe(false);
   });
 
+  it("exits Demo mode once every seeded item has been deleted individually", () => {
+    mockStore.reset();
+    expect(mockStore.isInDemoMode()).toBe(true);
+
+    for (const task of mockStore.getTasks()) mockStore.deleteTask(task.id);
+    for (const habit of mockStore.getHabits()) mockStore.deleteHabit(habit.id);
+    for (const project of mockStore.getProjects())
+      mockStore.deleteProject(project.id);
+    for (const event of mockStore.getEvents()) mockStore.deleteEvent(event.id);
+
+    expect(mockStore.isInDemoMode()).toBe(false);
+  });
+
   it("propagates the seed exemption to a new occurrence spawned from a seeded recurring series", () => {
     mockStore.reset();
     const seedSeriesId = mockStore

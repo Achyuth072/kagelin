@@ -145,12 +145,68 @@ describe("metricsQueries / aggregateMetricsData", () => {
     expect(result.kpis.totalHabitsLogged).toBe(80);
 
     // Active devices:
-    // Today: max(2 raw devs, 8 agg) = 8
-    // 7d: max(3 raw devs, 10+15+8=33 agg) = 33
-    // 30d: max(4 raw devs, 33 agg) = 33
+    // Today: max(2 raw devs, 8 agg) = 8 — the rollup hasn't run for today
+    // yet, so raw events are the only way to see same-day activity.
+    // 7d/30d: exact distinct-device counts from raw events. The daily
+    // rollup's active_devices is a per-day count, not a set — summing it
+    // across days would double-count any device active on multiple days,
+    // so it can't be used as a stand-in for a multi-day unique count.
     expect(result.kpis.activeDevicesToday).toBe(8);
-    expect(result.kpis.activeDevices7d).toBe(33);
-    expect(result.kpis.activeDevices30d).toBe(33);
+    expect(result.kpis.activeDevices7d).toBe(3);
+    expect(result.kpis.activeDevices30d).toBe(4);
+  });
+
+  it("doesn't inflate the 7d/30d count by summing per-day active_devices for a device active on multiple days", () => {
+    const dailyAggregates: DailyAggregateRow[] = [
+      {
+        date: "2026-08-19",
+        active_devices: 5,
+        pwa_devices: 0,
+        browser_devices: 0,
+        pwa_installs: 0,
+        tasks_created: 0,
+        tasks_completed: 0,
+        timer_sessions_completed: 0,
+        timer_sessions_abandoned: 0,
+        focus_minutes_total: 0,
+        habits_logged: 0,
+        signups_completed: 0,
+      },
+      {
+        date: "2026-08-20",
+        active_devices: 5,
+        pwa_devices: 0,
+        browser_devices: 0,
+        pwa_installs: 0,
+        tasks_created: 0,
+        tasks_completed: 0,
+        timer_sessions_completed: 0,
+        timer_sessions_abandoned: 0,
+        focus_minutes_total: 0,
+        habits_logged: 0,
+        signups_completed: 0,
+      },
+    ];
+    // The same device shows up in the raw events on both days.
+    const recentEvents: RawTelemetryEventRow[] = [
+      {
+        device_id: "dev-1",
+        event_name: "app_opened",
+        created_at: "2026-08-19T10:00:00.000Z",
+      },
+      {
+        device_id: "dev-1",
+        event_name: "app_opened",
+        created_at: "2026-08-20T10:00:00.000Z",
+      },
+    ];
+
+    const result = aggregateMetricsData(dailyAggregates, recentEvents, refDate);
+
+    // Naively summing the daily rollup (5 + 5 = 10) would double-count
+    // dev-1; the true 7d/30d unique count is 1.
+    expect(result.kpis.activeDevices7d).toBe(1);
+    expect(result.kpis.activeDevices30d).toBe(1);
   });
 });
 

@@ -398,6 +398,7 @@ export function useClearCompletedTasks() {
 export function useDuplicateTask() {
   const queryClient = useQueryClient();
   const { trigger } = useHaptic();
+  const { isGuestMode } = useAuth();
 
   return useMutation({
     mutationKey: ["duplicateTask"],
@@ -408,8 +409,12 @@ export function useDuplicateTask() {
       sourceTask: Task;
       overrides?: Partial<Task>;
     }) => taskMutations.duplicate(sourceTask, overrides),
-    onSuccess: (newTask) => {
-      trackTelemetry("task_action", { action: "created" });
+    onSuccess: (newTask, variables) => {
+      // Guests get a year of pre-seeded demo tasks; interacting with them
+      // shouldn't inflate the "Engagement & Throughput" telemetry KPI.
+      if (!(isGuestMode && mockStore.isSeedId(variables.sourceTask.id))) {
+        trackTelemetry("task_action", { action: "created" });
+      }
       trigger("success");
       notify("Task duplicated");
       if (newTask.parent_id) {

@@ -752,6 +752,7 @@ class MockStore {
     if (index === -1) return false;
 
     this.data.tasks = this.data.tasks.filter((t) => t.id !== id);
+    this.unmarkSeedId(id);
     this.saveToStorage();
     return true;
   }
@@ -804,6 +805,7 @@ class MockStore {
     if (index === -1) return false;
 
     this.data.projects = this.data.projects.filter((p) => p.id !== id);
+    this.unmarkSeedId(id);
     this.saveToStorage();
     return true;
   }
@@ -909,6 +911,7 @@ class MockStore {
     this.data.habit_entries = this.data.habit_entries.filter(
       (e) => e.habit_id !== id,
     );
+    this.unmarkSeedId(id);
 
     this.saveToStorage();
     return true;
@@ -1009,6 +1012,7 @@ class MockStore {
     if (index === -1) return false;
 
     this.data.events = this.data.events.filter((e) => e.id !== id);
+    this.unmarkSeedId(id);
     this.saveToStorage();
     return true;
   }
@@ -1077,6 +1081,12 @@ class MockStore {
   // → Demo mode.
   isInDemoMode(): boolean {
     return (this.data.seed_ids ?? []).length > 0;
+  }
+
+  // Deleting a seeded item should stop counting it toward Demo mode.
+  private unmarkSeedId(id: string): void {
+    if (!this.data.seed_ids?.includes(id)) return;
+    this.data.seed_ids = this.data.seed_ids.filter((seedId) => seedId !== id);
   }
 
   reset(): void {

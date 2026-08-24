@@ -151,20 +151,15 @@ export function aggregateMetricsData(
     };
   });
 
-  // Prefer exact counts from raw events; fall back to daily rollups when raw events aren't available
+  // Today isn't rolled up yet, so raw events are the only source — reconcile
+  // against the (likely stale/zero) aggregate for the case the rollup ran
+  // mid-day. For 7d/30d, raw events already cover the full window, so the
+  // Set is the exact distinct-device count; the daily rollup's active_devices
+  // is a per-day count, not a set, so summing it across days would
+  // double-count any device active on more than one day.
   const activeDevicesToday = Math.max(todayDevices.size, todayAggActive);
-  const activeDevices7d = Math.max(
-    sevenDayDevices.size,
-    dailyAggregates
-      .slice(-7)
-      .reduce((acc, r) => acc + (r.active_devices ?? 0), 0),
-  );
-  const activeDevices30d = Math.max(
-    thirtyDayDevices.size,
-    dailyAggregates
-      .slice(-30)
-      .reduce((acc, r) => acc + (r.active_devices ?? 0), 0),
-  );
+  const activeDevices7d = sevenDayDevices.size;
+  const activeDevices30d = thirtyDayDevices.size;
 
   const totalDeviceLaunches = totalPwaDevices + totalBrowserDevices;
   const pwaRatioPercent =

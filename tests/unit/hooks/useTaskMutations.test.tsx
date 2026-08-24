@@ -497,5 +497,23 @@ describe("task_action telemetry", () => {
         action: "completed",
       });
     });
+
+    it("does not fire task_action created telemetry when duplicating a seeded demo task", async () => {
+      localStorage.clear();
+      mockStore.reset();
+      const seedTask = mockStore.getTasks()[0];
+
+      const { result } = renderHook(() => useDuplicateTask(), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      result.current.mutate({ sourceTask: seedTask as unknown as Task });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(trackTelemetry).not.toHaveBeenCalled();
+    });
   });
 });
