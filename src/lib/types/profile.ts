@@ -9,6 +9,14 @@ export interface Profile {
   updated_at: string;
 }
 
+// Mirrors the column-level GRANT on public.profiles. Every other column is
+// non-writable by the `authenticated` role, so widening this without widening
+// the GRANT buys a runtime 42501 instead of a compile error.
+export type EditableProfileFields = Pick<
+  Profile,
+  "display_name" | "settings" | "timezone"
+>;
+
 export interface UserSettings {
   notifications?: {
     morning_briefing: boolean;
