@@ -5,6 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useIsOnline } from "@/lib/hooks/useIsOnline";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
+import {
+  BANNER_SLOT_WRAPPER_CLASS,
+  BANNER_SLOT_CARD_CLASS,
+} from "@/components/bannerSlot";
 import { cn } from "@/lib/utils";
 
 export function OfflineIndicator() {
@@ -32,16 +36,12 @@ export function OfflineIndicator() {
                   damping: 60,
                 }
           }
-          className={cn(
-            "fixed inset-x-0 top-[var(--offline-banner-top,var(--mobile-header-height))] z-30",
-            "md:absolute md:inset-x-0 md:top-auto md:bottom-6 md:z-40 md:flex md:justify-center md:pointer-events-none",
-          )}
+          className={BANNER_SLOT_WRAPPER_CLASS}
         >
           <div
             className={cn(
-              "flex items-center gap-2 bg-card text-foreground border-border/80 pointer-events-auto",
-              "h-[var(--offline-banner-height)] w-full justify-center border-b px-4",
-              "md:h-auto md:w-auto md:justify-start md:gap-3 md:rounded-lg md:border md:px-4 md:py-2",
+              BANNER_SLOT_CARD_CLASS,
+              "bg-card text-foreground border-border/80",
             )}
           >
             <div className="flex-shrink-0 flex items-center justify-center text-muted-foreground md:w-8 md:h-8 md:rounded-md md:bg-muted">

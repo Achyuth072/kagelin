@@ -32,13 +32,16 @@ import { Vibrate } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useAnchoredBack } from "@/lib/hooks/useBackAnchor";
 import { useQueryClient } from "@tanstack/react-query";
-import { mockStore } from "@/lib/mock/mock-store";
-import { notify } from "@/lib/notify";
+import {
+  useClearGuestData,
+  useResetDemoData,
+} from "@/lib/hooks/useGuestStoreActions";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { PwaInstallRow } from "@/components/settings/PwaInstallRow";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
 import { BackupSyncSettings } from "@/components/settings/BackupSyncSettings";
 import { AccountSection } from "@/components/settings/AccountSection";
+import { PrivacySection } from "@/components/settings/PrivacySection";
 import { useAccountData } from "@/lib/hooks/useAccountData";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -106,6 +109,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const anchoredBack = useAnchoredBack();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const clearGuestData = useClearGuestData();
+  const resetDemoData = useResetDemoData();
 
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
@@ -143,31 +148,13 @@ export function SettingsClient({ version }: SettingsClientProps) {
     router.push("/login");
   };
 
-  const handleResetDemo = () => {
-    mockStore.reset();
-    queryClient.removeQueries({ queryKey: ["tasks"] });
-    queryClient.removeQueries({ queryKey: ["projects"] });
-    queryClient.removeQueries({ queryKey: ["habits"] });
-    queryClient.removeQueries({ queryKey: ["stats-dashboard"] });
-    queryClient.removeQueries({ queryKey: ["calendar-events"] });
-    queryClient.removeQueries({ queryKey: ["calendar-tasks"] });
-    notify.success("Demo data reset successfully");
-  };
-
   const handleClearData = async () => {
     if (!isGuestMode) {
       await clearCloudData();
       await queryClient.invalidateQueries();
       return;
     }
-    mockStore.clearData();
-    queryClient.removeQueries({ queryKey: ["tasks"] });
-    queryClient.removeQueries({ queryKey: ["projects"] });
-    queryClient.removeQueries({ queryKey: ["habits"] });
-    queryClient.removeQueries({ queryKey: ["stats-dashboard"] });
-    queryClient.removeQueries({ queryKey: ["calendar-events"] });
-    queryClient.removeQueries({ queryKey: ["calendar-tasks"] });
-    notify.success("All data cleared");
+    clearGuestData();
   };
 
   const themeOptions = [
@@ -380,6 +367,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
                     <NotificationSettings />
 
                     <PwaInstallRow />
+
+                    <PrivacySection />
                   </div>
                 </section>
 
@@ -458,7 +447,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
                           className="flex-1"
                           onClick={() => {
                             trigger("thud");
-                            handleResetDemo();
+                            resetDemoData();
                           }}
                         >
                           <RotateCcw className="h-4 w-4 mr-2" />

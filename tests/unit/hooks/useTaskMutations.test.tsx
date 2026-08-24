@@ -1,10 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useReorderTasks } from "@/lib/hooks/useTaskMutations";
+import {
+  useReorderTasks,
+  useCreateTask,
+  useToggleTask,
+  useDuplicateTask,
+} from "@/lib/hooks/useTaskMutations";
 import { computeReorderPairs } from "@/lib/utils/task-dnd";
 import type { Task } from "@/lib/types/task";
 import React from "react";
+import { trackTelemetry } from "@/lib/telemetry/client";
+import { mockStore } from "@/lib/mock/mock-store";
+import { useAuth } from "@/components/AuthProvider";
 
 // Mock dependencies
 vi.mock("@/lib/supabase/client", () => ({
@@ -22,15 +30,34 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 vi.mock("@/components/AuthProvider", () => ({
-  useAuth: () => ({ isGuestMode: false, user: { id: "test-user" } }),
+  useAuth: vi.fn(() => ({ isGuestMode: false, user: { id: "test-user" } })),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: vi.fn() }),
 }));
 
+vi.mock("@/lib/telemetry/client", () => ({
+  trackTelemetry: vi.fn(),
+}));
+
 vi.mock("@/lib/mutations/task", () => ({
   taskMutations: {
+    create: vi.fn().mockImplementation(async (input) => ({
+      id: "task-created-1",
+      content: input.content,
+      is_completed: false,
+      day_order: 0,
+    })),
+    toggle: vi.fn().mockImplementation(async ({ id, is_completed }) => ({
+      task: { id, content: "Task", is_completed },
+    })),
+    duplicate: vi.fn().mockImplementation(async (sourceTask) => ({
+      id: "task-dup-1",
+      content: sourceTask.content,
+      is_completed: false,
+      day_order: 1,
+    })),
     reorder: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -327,5 +354,166 @@ describe("computeReorderPairs", () => {
     ]);
     // The set {100, 200, 300} is preserved — no new values introduced.
     // After DB re-sort, r(100) < q(200) < p(300) → correct order maintained.
+  });
+});
+
+describe("task_action telemetry", () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    vi.clearAllMocks();
+    vi.mocked(useAuth).mockReturnValue({
+      isGuestMode: false,
+      user: { id: "test-user" },
+    } as unknown as ReturnType<typeof useAuth>);
+  });
+
+  it("fires task_action created telemetry when a task is created", async () => {
+    const { result } = renderHook(() => useCreateTask(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate({
+      content: "New telemetry task",
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(trackTelemetry).toHaveBeenCalledWith("task_action", {
+      action: "created",
+    });
+  });
+
+  it("fires task_action completed telemetry when a task is toggled to completed", async () => {
+    const { result } = renderHook(() => useToggleTask(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate({
+      id: "task-1",
+      is_completed: true,
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(trackTelemetry).toHaveBeenCalledWith("task_action", {
+      action: "completed",
+    });
+  });
+
+  it("does not fire task_action completed when a task is uncompleted", async () => {
+    const { result } = renderHook(() => useToggleTask(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate({
+      id: "task-1",
+      is_completed: false,
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(trackTelemetry).not.toHaveBeenCalled();
+  });
+
+  it("fires task_action created telemetry when a task is duplicated", async () => {
+    const { result } = renderHook(() => useDuplicateTask(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    result.current.mutate({
+      sourceTask: {
+        id: "task-orig",
+        content: "Original Task",
+        user_id: "user-1",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      } as Task,
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(trackTelemetry).toHaveBeenCalledWith("task_action", {
+      action: "created",
+    });
+  });
+
+  describe("guest demo-data telemetry exemption", () => {
+    beforeEach(() => {
+      vi.mocked(useAuth).mockReturnValue({
+        isGuestMode: true,
+        user: { id: "guest" },
+      } as unknown as ReturnType<typeof useAuth>);
+    });
+
+    it("does not fire task_action completed when toggling a seeded demo task", async () => {
+      localStorage.clear();
+      mockStore.reset();
+      const seedTaskId = mockStore.getTasks()[0].id;
+
+      const { result } = renderHook(() => useToggleTask(), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      result.current.mutate({ id: seedTaskId, is_completed: true });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(trackTelemetry).not.toHaveBeenCalled();
+    });
+
+    it("still fires task_action completed for a task the guest created themselves", async () => {
+      localStorage.clear();
+      mockStore.reset();
+      const ownTask = mockStore.addTask({ content: "My own task" });
+
+      const { result } = renderHook(() => useToggleTask(), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      result.current.mutate({ id: ownTask.id, is_completed: true });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(trackTelemetry).toHaveBeenCalledWith("task_action", {
+        action: "completed",
+      });
+    });
+
+    it("does not fire task_action created telemetry when duplicating a seeded demo task", async () => {
+      localStorage.clear();
+      mockStore.reset();
+      const seedTask = mockStore.getTasks()[0];
+
+      const { result } = renderHook(() => useDuplicateTask(), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      result.current.mutate({ sourceTask: seedTask as unknown as Task });
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+
+      expect(trackTelemetry).not.toHaveBeenCalled();
+    });
   });
 });

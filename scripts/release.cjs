@@ -41,7 +41,14 @@ async function main() {
 
   if (channel === "preview") {
     const midPrerelease = currentVersion.includes("-");
-    if (midPrerelease) {
+    if (override) {
+      releaseItArgs.push(
+        "--config",
+        ".release-it.json",
+        override,
+        "--preRelease=preview",
+      );
+    } else if (midPrerelease) {
       releaseItArgs.push(
         "--config",
         ".release-it.json",

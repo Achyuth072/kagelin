@@ -30,6 +30,16 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
+  // redirect() builds a fresh response, so cookies Supabase wrote onto
+  // supabaseResponse must be copied across or the browser loops on a stale one.
+  const redirectToLogin = () => {
+    const redirect = NextResponse.redirect(new URL("/login", request.url));
+    for (const cookie of supabaseResponse.cookies.getAll()) {
+      redirect.cookies.set(cookie);
+    }
+    return redirect;
+  };
+
   const {
     data: { user },
     error,
@@ -57,11 +67,11 @@ export async function updateSession(request: NextRequest) {
     }
 
     await supabase.auth.signOut();
-    return NextResponse.redirect(new URL("/login", request.url));
+    return redirectToLogin();
   }
 
   if (!user && !isPublicRoute && !isGuest) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return redirectToLogin();
   }
 
   return supabaseResponse;

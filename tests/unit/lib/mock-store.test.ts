@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as Sentry from "@sentry/nextjs";
-import { mockStore, STORAGE_KEY } from "@/lib/mock/mock-store";
+import { mockStore, STORAGE_KEY, stripDemoData } from "@/lib/mock/mock-store";
 import type { HabitEntry } from "@/lib/types/habit";
 
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
@@ -114,6 +114,200 @@ describe("MockStore (Guest Mode Data)", () => {
     expect(seriesTasks.some((t) => t.is_completed)).toBe(true);
     expect(seriesTasks.some((t) => !t.is_completed)).toBe(true);
     expect(seriesTasks.every((t) => t.recurrence !== null)).toBe(true);
+  });
+
+  it("recognizes seeded habit and task ids as seed ids, and survives a reload", () => {
+    mockStore.reset();
+
+    const seedHabitId = mockStore.getHabits()[0].id;
+    const seedTaskId = mockStore.getTasks()[0].id;
+    expect(mockStore.isSeedId(seedHabitId)).toBe(true);
+    expect(mockStore.isSeedId(seedTaskId)).toBe(true);
+    expect(mockStore.isSeedId("user-created-id")).toBe(false);
+
+    // Simulate a page reload: a fresh MockStore instance re-reads the same
+    // localStorage blob instead of regenerating (getInitialData only runs
+    // once per guest), so the seed-id set must round-trip through storage.
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    expect(stored.seed_ids).toEqual(
+      expect.arrayContaining([seedHabitId, seedTaskId]),
+    );
+  });
+
+  it("marks seeded projects and events as demo items too", () => {
+    mockStore.reset();
+
+    for (const project of mockStore.getProjects()) {
+      expect(mockStore.isSeedId(project.id)).toBe(true);
+    }
+    const events = mockStore.getEvents();
+    expect(events.length).toBeGreaterThan(0);
+    for (const event of events) {
+      expect(mockStore.isSeedId(event.id)).toBe(true);
+    }
+  });
+
+  it("has no seed ids after clearData or restoreBackup — those aren't demo content", () => {
+    mockStore.reset();
+    mockStore.clearData();
+    expect(mockStore.isSeedId("anything")).toBe(false);
+  });
+
+  it("reports Demo mode while a seeded item remains, and leaves it once cleared", () => {
+    mockStore.reset();
+    expect(mockStore.isInDemoMode()).toBe(true);
+
+    mockStore.clearData();
+    expect(mockStore.isInDemoMode()).toBe(false);
+  });
+
+  it("exits Demo mode once every seeded item has been deleted individually", () => {
+    mockStore.reset();
+    expect(mockStore.isInDemoMode()).toBe(true);
+
+    for (const task of mockStore.getTasks()) mockStore.deleteTask(task.id);
+    for (const habit of mockStore.getHabits()) mockStore.deleteHabit(habit.id);
+    for (const project of mockStore.getProjects())
+      mockStore.deleteProject(project.id);
+    for (const event of mockStore.getEvents()) mockStore.deleteEvent(event.id);
+
+    expect(mockStore.isInDemoMode()).toBe(false);
+  });
+
+  it("propagates the seed exemption to a new occurrence spawned from a seeded recurring series", () => {
+    mockStore.reset();
+    const seedSeriesId = mockStore
+      .getTasks()
+      .find((t) => t.recurring_series_id !== null)?.recurring_series_id;
+    if (!seedSeriesId) throw new Error("expected a seeded recurring series");
+
+    const nextOccurrence = mockStore.addTask({
+      content: "Weekly Review",
+      recurring_series_id: seedSeriesId,
+      recurrence: { freq: "WEEKLY", interval: 1 },
+      is_completed: false,
+    });
+
+    expect(mockStore.isSeedId(nextOccurrence.id)).toBe(true);
+  });
+
+  it("does not exempt a new occurrence of a series the guest created themselves", () => {
+    mockStore.reset();
+    const ownSeriesId = "user-series-1";
+    const firstOwn = mockStore.addTask({
+      content: "My recurring task",
+      recurring_series_id: ownSeriesId,
+      is_completed: false,
+    });
+    expect(mockStore.isSeedId(firstOwn.id)).toBe(false);
+
+    const nextOwn = mockStore.addTask({
+      content: "My recurring task",
+      recurring_series_id: ownSeriesId,
+      is_completed: false,
+    });
+    expect(mockStore.isSeedId(nextOwn.id)).toBe(false);
+  });
+});
+
+// See docs/adr/0014-demo-data-stripped-on-signup-migration.md.
+describe("stripDemoData", () => {
+  const readGuestData = () =>
+    JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}") as Parameters<
+      typeof stripDemoData
+    >[0];
+
+  beforeEach(() => {
+    localStorage.clear();
+    mockStore.clearData();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  it("removes demo tasks and habits while keeping the guest's own", () => {
+    mockStore.reset();
+    const own = mockStore.addTask({
+      content: "My own task",
+      is_completed: false,
+    });
+
+    const stripped = stripDemoData(readGuestData());
+
+    expect(stripped.tasks.map((t) => t.id)).toEqual([own.id]);
+    expect(stripped.habits).toEqual([]);
+    expect(stripped.events).toEqual([]);
+    expect(stripped.seed_ids).toEqual([]);
+  });
+
+  it("cascades to habit entries and focus logs, so no fabricated history survives, but the guest's own survives with it", () => {
+    mockStore.reset();
+    const ownTask = mockStore.addTask({
+      content: "My own task",
+      is_completed: false,
+    });
+    const ownTaskLog = mockStore.addFocusLog({
+      user_id: "guest",
+      task_id: ownTask.id,
+      start_time: new Date().toISOString(),
+      end_time: new Date().toISOString(),
+      duration_seconds: 600,
+    });
+    const untetheredLog = mockStore.addFocusLog({
+      user_id: "guest",
+      task_id: null,
+      start_time: new Date().toISOString(),
+      end_time: new Date().toISOString(),
+      duration_seconds: 300,
+    });
+    const ownHabit = mockStore.addHabit({
+      name: "My own habit",
+      description: null,
+      color: "#000000",
+      icon: null,
+      start_date: null,
+      archived_at: null,
+    });
+    const ownEntry = mockStore.setHabitEntry(ownHabit.id, "2026-01-01", 1);
+    if (!ownEntry) throw new Error("expected setHabitEntry to create an entry");
+
+    const raw = readGuestData();
+    expect(raw.habit_entries.length).toBeGreaterThan(1); // demo entries + our own
+    expect(raw.focus_logs.some((l) => l.task_id !== null)).toBe(true);
+
+    const stripped = stripDemoData(raw);
+
+    expect(stripped.habit_entries.map((e) => e.id)).toEqual([ownEntry.id]);
+    expect(stripped.focus_logs.map((l) => l.id).sort()).toEqual(
+      [ownTaskLog.id, untetheredLog.id].sort(),
+    );
+  });
+
+  it("keeps a demo project that still holds the guest's own task, and drops the rest", () => {
+    mockStore.reset();
+    const demoProjectId = mockStore.getProjects()[0].id;
+    mockStore.addTask({
+      content: "My own task",
+      project_id: demoProjectId,
+      is_completed: false,
+    });
+
+    const stripped = stripDemoData(readGuestData());
+
+    expect(stripped.projects.map((p) => p.id)).toEqual([demoProjectId]);
+  });
+
+  it("leaves a blob with no demo items untouched", () => {
+    mockStore.clearData();
+    const own = mockStore.addTask({
+      content: "My own task",
+      is_completed: false,
+    });
+
+    const stripped = stripDemoData(readGuestData());
+
+    expect(stripped.tasks.map((t) => t.id)).toEqual([own.id]);
   });
 });
 

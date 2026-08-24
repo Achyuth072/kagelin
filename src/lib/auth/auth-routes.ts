@@ -8,6 +8,11 @@ export const AUTH_STANDALONE_ROUTES: readonly string[] = [
   EMAIL_CONFIRMED_PATH,
 ];
 
+// Operator-only pages, self-contained and carrying their own nav.
+export function isAdminRoute(pathname: string): boolean {
+  return pathname.startsWith("/admin");
+}
+
 // Not in AUTH_STANDALONE_ROUTES: these still need the app shell, only the back-anchor bounce is skipped.
 export function isOAuthConnectRedirect(
   pathname: string,

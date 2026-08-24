@@ -51,6 +51,12 @@ vi.mock("@/lib/hooks/useFocusSounds", () => ({
   useFocusSounds: vi.fn(() => ({ play: vi.fn() })),
 }));
 
+vi.mock("@/lib/telemetry/client", () => ({
+  trackTelemetry: vi.fn(),
+}));
+
+import { trackTelemetry } from "@/lib/telemetry/client";
+
 const { notifyMock, showNotificationMock } = vi.hoisted(() => ({
   notifyMock: vi.fn(),
   showNotificationMock: vi.fn(),
@@ -321,5 +327,50 @@ describe("useFocusTimer - Reconciliation", () => {
         data: { url: "/focus" },
       }),
     );
+  });
+
+  describe("focus_session telemetry", () => {
+    it("fires focus_session completed telemetry on timer completion claim", async () => {
+      renderHook(() => useFocusTimer());
+
+      await act(async () => {
+        window.dispatchEvent(
+          new CustomEvent("timer-complete", {
+            detail: {
+              prevState: { mode: "focus", endsAt: null },
+              nextState: { isRunning: false, mode: "shortBreak" },
+            },
+          }),
+        );
+      });
+
+      expect(trackTelemetry).toHaveBeenCalledWith("focus_session", {
+        status: "completed",
+        duration_minutes: 25,
+      });
+    });
+
+    it("fires focus_session abandoned telemetry on timer cancel", async () => {
+      const { result } = renderHook(() => useFocusTimer());
+
+      // Start focus timer then advance state slightly
+      act(() => {
+        useTimerStore.setState({
+          state: runningState({
+            mode: "focus",
+            remainingSeconds: 20 * 60, // 5 minutes elapsed
+          }),
+        });
+      });
+
+      act(() => {
+        result.current.cancel();
+      });
+
+      expect(trackTelemetry).toHaveBeenCalledWith("focus_session", {
+        status: "abandoned",
+        duration_minutes: 5,
+      });
+    });
   });
 });

@@ -15,6 +15,18 @@ import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimerSync } from "@/lib/hooks/useTimerSync";
 import { getDeviceId } from "@/lib/store/deviceId";
 import { TimerState } from "@/lib/types/timer";
+import { trackTelemetry } from "@/lib/telemetry/client";
+import {
+  FOCUS_DURATION_MINUTES_MIN,
+  FOCUS_DURATION_MINUTES_MAX,
+} from "@/lib/schemas/telemetry";
+
+function clampFocusDurationMinutes(minutes: number): number {
+  return Math.max(
+    FOCUS_DURATION_MINUTES_MIN,
+    Math.min(FOCUS_DURATION_MINUTES_MAX, Math.round(minutes) || 1),
+  );
+}
 
 type TimerCompleteEvent = CustomEvent<{
   prevState: TimerState;
@@ -115,6 +127,10 @@ export function useFocusTimer() {
       }
 
       if (prevState.mode === "focus") {
+        trackTelemetry("focus_session", {
+          status: "completed",
+          duration_minutes: clampFocusDurationMinutes(settings.focusDuration),
+        });
         play("sessionComplete");
       } else {
         play("breakEnd");
@@ -241,6 +257,24 @@ export function useFocusTimer() {
   }, [storeStop, syncToServer]);
 
   const cancel = useCallback(() => {
+    const currentState = useTimerStore.getState().state;
+    const currentSettings = useTimerStore.getState().settings;
+    if (
+      currentState.mode === "focus" &&
+      (currentState.isRunning ||
+        currentState.remainingSeconds < currentSettings.focusDuration * 60)
+    ) {
+      const totalSeconds = currentSettings.focusDuration * 60;
+      const elapsedSeconds = Math.max(
+        0,
+        totalSeconds - currentState.remainingSeconds,
+      );
+      const durationMinutes = clampFocusDurationMinutes(elapsedSeconds / 60);
+      trackTelemetry("focus_session", {
+        status: "abandoned",
+        duration_minutes: durationMinutes,
+      });
+    }
     storeCancel();
     syncToServer();
   }, [storeCancel, syncToServer]);

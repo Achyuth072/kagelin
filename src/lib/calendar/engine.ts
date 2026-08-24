@@ -1,30 +1,16 @@
-/**
- * Calendar Engine - Core Layout Logic
- * Pure functions for event positioning and overlap detection
- * Based on docs/CALENDAR.md architecture
- */
+// Pure event-positioning/overlap layout; see docs/CALENDAR.md for the architecture.
 
 import { startOfDay, endOfDay, max, min, addDays, isSameDay } from "date-fns";
 import type { CalendarEvent, PositionedEvent, DayColumn } from "./types";
 
-/**
- * Convert minutes since start of day to percentage (0-100)
- */
 function minutesSinceStartOfDay(date: Date): number {
   return date.getHours() * 60 + date.getMinutes();
 }
 
-/**
- * Convert time to vertical position percentage
- * 24 hours = 100%
- */
 function timeToPercent(date: Date): number {
   return (minutesSinceStartOfDay(date) / 1440) * 100;
 }
 
-/**
- * Clamp event to a specific day's boundaries
- */
 function clampToDay(event: CalendarEvent, day: Date): CalendarEvent {
   const dayStart = startOfDay(day);
   const dayEnd = endOfDay(day);
@@ -37,15 +23,13 @@ function clampToDay(event: CalendarEvent, day: Date): CalendarEvent {
 }
 
 /**
- * Position events for a single day
- * Renders events as thin row strips that strictly fit within their time slot
- * Dynamic compression reduces height if many events overlap
+ * Renders events as thin row strips that strictly fit within their time slot;
+ * height compresses dynamically as more events overlap in the same hour.
  */
 function layoutDayEvents(
   events: CalendarEvent[],
   day: Date,
 ): PositionedEvent[] {
-  // Filter events for this day and clamp to day boundaries
   const dayEvents = events
     .filter((e) => isSameDay(e.start, day) || isSameDay(e.end, day))
     .map((e) => clampToDay(e, day))
@@ -59,7 +43,6 @@ function layoutDayEvents(
 
   const positioned: PositionedEvent[] = [];
 
-  // Group events by hour to handle slot fitting
   const hourGroups: Record<number, CalendarEvent[]> = {};
 
   dayEvents.forEach((event) => {
@@ -68,21 +51,18 @@ function layoutDayEvents(
     hourGroups[hour].push(event);
   });
 
-  // Process each hour group
   Object.entries(hourGroups).forEach(([_hourStr, groupEvents]) => {
     const count = groupEvents.length;
-    // Calculate height: fit in slot, but clamp between min and max
     const height = Math.min(
       MAX_ROW_HEIGHT_PERCENT,
       Math.max(MIN_ROW_HEIGHT_PERCENT, SLOT_HEIGHT_PERCENT / count),
     );
 
-    // Add a tiny gap between items unless they are very compressed
+    // No gap once rows are already this compressed — it would eat into row height.
     const margin = height < 1.4 ? 0 : 0.1;
 
     groupEvents.forEach((event, index) => {
       const startPercent = timeToPercent(event.start);
-      // Position relative to the start of the group
       const offset = index * (height + margin);
 
       positioned.push({
@@ -100,16 +80,11 @@ function layoutDayEvents(
   return positioned;
 }
 
-/**
- * Generate a range of dates
- */
 export function getDayRange(start: Date, days: number): Date[] {
   return Array.from({ length: days }).map((_, i) => addDays(start, i));
 }
 
-/**
- * Layout events for a range of days (Week, 3-Day, 4-Day views)
- */
+/** Layout for the Week / 3-Day / 4-Day views, one column per day. */
 export function layoutDayRange(
   events: CalendarEvent[],
   days: Date[],

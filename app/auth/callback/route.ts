@@ -82,13 +82,25 @@ export async function GET(request: Request) {
       },
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
       return redirectWithError(origin, next, error.message, error.code);
     }
 
-    const response = NextResponse.redirect(`${origin}${next}`);
+    const isNewUser = Boolean(
+      data?.session?.user?.created_at &&
+      Date.now() - new Date(data.session.user.created_at).getTime() < 120_000,
+    );
+
+    let targetUrl = `${origin}${next}`;
+    if (isNewUser) {
+      const url = new URL(targetUrl);
+      url.searchParams.set("signup", "1");
+      targetUrl = url.toString();
+    }
+
+    const response = NextResponse.redirect(targetUrl);
     cookiesToSet.forEach(({ name, value, options }) => {
       response.cookies.set(name, value, options);
     });

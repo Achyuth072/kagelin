@@ -1,17 +1,9 @@
-/**
- * External Calendar Types
- * Matches supabase external_calendars table schema
- * Supports: CalDAV (all users), Google/Outlook OAuth (registered users)
- */
+// Matches the supabase external_calendars table schema.
 
 export type SyncStatus = "pending" | "syncing" | "success" | "error";
 export type SyncDirection = "bidirectional" | "pull" | "push";
 
-/**
- * All supported calendar providers
- * - CalDAV-based: 'caldav', 'icloud', 'fastmail', 'nextcloud'
- * - Native OAuth: 'google', 'outlook' (registered users only — needs auth.uid())
- */
+/** CalDAV-based providers work for every tier; google/outlook need auth.uid(). */
 export type CalendarProvider =
   "caldav" | "google" | "outlook" | "icloud" | "fastmail" | "nextcloud";
 
@@ -30,37 +22,29 @@ export interface ExternalCalendar {
   id: string;
   user_id: string;
 
-  // Provider Info
   provider: CalendarProvider;
   name: string;
   color: string;
 
-  // Connection Details (varies by provider)
   server_url: string | null; // CalDAV only
   calendar_url: string | null;
   principal_url: string | null; // CalDAV only
 
-  // Auth
   username: string | null; // CalDAV only
 
-  // OAuth Provider Specifics (for Google/Outlook)
   oauth_provider_token_id: string | null;
   remote_calendar_id: string | null; // Google Calendar ID or Outlook folder ID
 
-  // Sync State
   sync_token: string | null; // CTag (CalDAV), nextSyncToken (Google), deltaLink (MS Graph)
   last_sync_at: string | null;
   sync_status: SyncStatus;
   sync_error: string | null;
 
-  // Settings
   sync_enabled: boolean;
   sync_direction: SyncDirection;
 
-  // Feature Gating
   is_premium_provider: boolean;
 
-  // Timestamps
   created_at: string;
   updated_at: string;
 }

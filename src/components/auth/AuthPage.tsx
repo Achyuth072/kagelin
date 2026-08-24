@@ -3,13 +3,15 @@
 import { Suspense, useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { MagicLinkAuth } from "@/components/auth/MagicLinkAuth";
 import { PasswordAuth } from "@/components/auth/PasswordAuth";
 import { ResetPasswordAuth } from "@/components/auth/ResetPasswordAuth";
 import { OAuthProviderRow } from "@/components/auth/OAuthProviderRow";
 import { AuthShell } from "@/components/auth/AuthShell";
-import { PRIVACY_URL, TERMS_URL } from "@/lib/links";
+import { PrivacyPolicyLink } from "@/components/ui/privacy-policy-link";
+import { TERMS_URL } from "@/lib/links";
 import {
   SIGNUP_DISABLED_MESSAGE,
   isSignupDisabledError,
@@ -44,12 +46,37 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
   );
 
   useEffect(() => {
-    if (!loading && user && !isGuestMode) {
-      router.push("/");
-    }
+    if (loading || !user || isGuestMode) return;
+
+    let cancelled = false;
+    (async () => {
+      // Only admins can ever land on /admin/metrics, and only they have a
+      // reason to set this — a plain fetch here (not useProfile) keeps this
+      // one-time redirect decision independent of the query cache.
+      const supabase = createClient();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("is_admin, settings")
+        .eq("id", user.id)
+        .single();
+
+      if (cancelled) return;
+
+      const wantsMetrics =
+        profile?.is_admin &&
+        (profile.settings as { adminLandingPage?: string } | null)
+          ?.adminLandingPage === "metrics";
+      router.push(wantsMetrics ? "/admin/metrics" : "/");
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user, loading, isGuestMode, router]);
 
-  if (loading) {
+  // user && !isGuestMode means the redirect effect above is either about to
+  // fire or already awaiting the profile lookup — never flash the form.
+  if (loading || (user && !isGuestMode)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
@@ -78,16 +105,8 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
             >
               Terms of Service
             </a>{" "}
-            and{" "}
-            <a
-              href={PRIVACY_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-2 hover:text-foreground"
-            >
-              Privacy Policy
-            </a>
-            . Guest data is stored locally and will be lost if cleared.
+            and <PrivacyPolicyLink />. Guest data is stored locally and will be
+            lost if cleared.
           </p>
         </div>
       }

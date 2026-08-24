@@ -3,7 +3,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
-import { Profile, UserSettings, DEFAULT_USER_SETTINGS } from "../types/profile";
+import {
+  Profile,
+  UserSettings,
+  DEFAULT_USER_SETTINGS,
+  type EditableProfileFields,
+} from "../types/profile";
 
 export function useProfile(options?: { enabled?: boolean }) {
   const { user, isGuestMode } = useAuth();
@@ -45,7 +50,7 @@ export function useProfile(options?: { enabled?: boolean }) {
   });
 
   const updateProfile = useMutation({
-    mutationFn: async (updates: Partial<Profile>) => {
+    mutationFn: async (updates: Partial<EditableProfileFields>) => {
       if (!user || isGuestMode) return;
 
       const supabase = createClient();

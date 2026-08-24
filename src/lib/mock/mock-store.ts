@@ -14,7 +14,7 @@ import type { BackupData } from "@/lib/backup/types";
 
 export const STORAGE_KEY = "kanso_guest_data_v11";
 
-interface GuestData {
+export interface GuestData {
   tasks: Task[];
   projects: Project[];
   habits: Habit[];
@@ -22,6 +22,8 @@ interface GuestData {
   focus_logs: FocusLog[];
   events: CalendarEvent[];
   lastUpdated: string;
+  // Optional so guest sessions persisted before this field existed still deserialize.
+  seed_ids?: string[];
 }
 
 type BackupPayload = Omit<BackupData, "metadata">;
@@ -47,7 +49,6 @@ class MockStore {
       .toISOString()
       .split("T")[0];
 
-    // Base Projects
     const pWork = "demo-project-work";
     const pPersonal = "demo-project-personal";
     const pSide = "demo-project-side";
@@ -94,7 +95,6 @@ class MockStore {
     const entries: HabitEntry[] = [];
     const events: CalendarEvent[] = [];
 
-    // Generators
     const generateId = () => Math.random().toString(36).substr(2, 9);
     const pick = <T>(options: readonly T[]) =>
       options[Math.floor(Math.random() * options.length)];
@@ -181,7 +181,6 @@ class MockStore {
       } = options;
       const date = dayAt(dayOffset);
 
-      // Randomize start time
       const randomHour = isEvening
         ? 18 + Math.random() * 4 // 18:00 - 22:00
         : 8 + Math.random() * 6; // 08:00 - 14:00
@@ -216,7 +215,6 @@ class MockStore {
         google_etag: null,
       });
 
-      // Add focus log if completed (simulate work done)
       if (isCompleted) {
         const durationSeconds = 900 + Math.floor(Math.random() * 7200); // 15m to 2h
         logs.push({
@@ -245,7 +243,6 @@ class MockStore {
       if (monthOffset > 4) probability = 0.6;
       if (monthOffset > 8) probability = 0.45;
 
-      // Special case: Very High density in the last 30 days
       if (Math.abs(i) <= 30) probability = 0.92;
 
       if (Math.random() > probability) continue;
@@ -289,9 +286,7 @@ class MockStore {
       }
     }
 
-    // Generate Today & Future 30 Days
     for (let i = 0; i <= 30; i++) {
-      // Today specific
       if (i === 0) {
         const parentId = createTask(
           "Ship search filters to staging",
@@ -407,7 +402,6 @@ class MockStore {
       });
     }
 
-    // Generate Habits
     const hWater = "habit-water";
     const hExercise = "habit-exercise";
     const hRead = "habit-read";
@@ -553,7 +547,6 @@ class MockStore {
       { habitId: hLogOff, weekday: 0.85, weekend: 0 },
     ];
 
-    // Generate Habit Entries for the last 365 days
     for (let i = -365; i <= 0; i++) {
       const date = dayAt(i);
       const dateStr = date.toISOString().split("T")[0];
@@ -572,7 +565,6 @@ class MockStore {
       }
     }
 
-    // Generate Mock Events (Past and Future)
     const mockLocations = ["Coffee Shop", "Office", "Zoom", "Gym", "Home"];
     const workdayEvents = [
       "Design review",
@@ -595,7 +587,6 @@ class MockStore {
       const date = dayAt(i);
       const weekend = isWeekend(date);
 
-      // Add random event
       if (Math.random() > 0.4) {
         const randomHour = weekend
           ? 11 + Math.floor(Math.random() * 8) // 11am to 6pm
@@ -639,6 +630,12 @@ class MockStore {
       focus_logs: logs,
       events,
       lastUpdated: nowIso,
+      seed_ids: [
+        ...habits.map((h) => h.id),
+        ...tasks.map((t) => t.id),
+        ...projects.map((p) => p.id),
+        ...events.map((e) => e.id),
+      ],
     };
   }
 
@@ -672,7 +669,6 @@ class MockStore {
     }
   }
 
-  // Task Operations
   getTasks(): Task[] {
     return this.data.tasks;
   }
@@ -718,6 +714,18 @@ class MockStore {
       updated_at: now,
     };
 
+    // A fresh-id Occurrence of a seeded Series (spawned by taskMutations.toggle) is still demo content.
+    if (
+      newTask.recurring_series_id &&
+      this.data.tasks.some(
+        (t) =>
+          t.recurring_series_id === newTask.recurring_series_id &&
+          this.isSeedId(t.id),
+      )
+    ) {
+      this.data.seed_ids = [...(this.data.seed_ids ?? []), newTask.id];
+    }
+
     this.data.tasks = [...this.data.tasks, newTask];
     this.saveToStorage();
     return newTask;
@@ -744,11 +752,11 @@ class MockStore {
     if (index === -1) return false;
 
     this.data.tasks = this.data.tasks.filter((t) => t.id !== id);
+    this.unmarkSeedId(id);
     this.saveToStorage();
     return true;
   }
 
-  // Project Operations
   getProjects(): Project[] {
     return this.data.projects;
   }
@@ -797,6 +805,7 @@ class MockStore {
     if (index === -1) return false;
 
     this.data.projects = this.data.projects.filter((p) => p.id !== id);
+    this.unmarkSeedId(id);
     this.saveToStorage();
     return true;
   }
@@ -825,7 +834,6 @@ class MockStore {
     }
   }
 
-  // Focus Logs
   getFocusLogs(): FocusLog[] {
     return this.data.focus_logs || [];
   }
@@ -844,7 +852,6 @@ class MockStore {
     return newLog;
   }
 
-  // Habit Operations
   getHabits(): Habit[] {
     return this.data.habits || [];
   }
@@ -901,10 +908,10 @@ class MockStore {
     if (index === -1) return false;
 
     this.data.habits = this.data.habits.filter((h) => h.id !== id);
-    // Also delete entries
     this.data.habit_entries = this.data.habit_entries.filter(
       (e) => e.habit_id !== id,
     );
+    this.unmarkSeedId(id);
 
     this.saveToStorage();
     return true;
@@ -959,7 +966,6 @@ class MockStore {
     return newEntry;
   }
 
-  // Event Operations
   getEvents(): CalendarEvent[] {
     return this.data.events || [];
   }
@@ -1006,6 +1012,7 @@ class MockStore {
     if (index === -1) return false;
 
     this.data.events = this.data.events.filter((e) => e.id !== id);
+    this.unmarkSeedId(id);
     this.saveToStorage();
     return true;
   }
@@ -1065,7 +1072,23 @@ class MockStore {
     this.saveToStorage();
   }
 
-  // Utility
+  // Lets telemetry exempt interactions with demo content.
+  isSeedId(id: string): boolean {
+    return (this.data.seed_ids ?? []).includes(id);
+  }
+
+  // True while any Demo item remains. See CONTEXT.md → Guest showcase content
+  // → Demo mode.
+  isInDemoMode(): boolean {
+    return (this.data.seed_ids ?? []).length > 0;
+  }
+
+  // Deleting a seeded item should stop counting it toward Demo mode.
+  private unmarkSeedId(id: string): void {
+    if (!this.data.seed_ids?.includes(id)) return;
+    this.data.seed_ids = this.data.seed_ids.filter((seedId) => seedId !== id);
+  }
+
   reset(): void {
     this.data = this.getInitialData();
     this.saveToStorage();
@@ -1091,5 +1114,34 @@ class MockStore {
   }
 }
 
-// Singleton instance
 export const mockStore = new MockStore();
+
+// Pure so migration can strip a guest blob before it reaches the singleton. See ADR 0014.
+export function stripDemoData(data: GuestData): GuestData {
+  const demoIds = new Set(data.seed_ids ?? []);
+  if (demoIds.size === 0) return data;
+
+  const tasks = (data.tasks ?? []).filter((t) => !demoIds.has(t.id));
+  const habits = (data.habits ?? []).filter((h) => !demoIds.has(h.id));
+  const keptTaskIds = new Set(tasks.map((t) => t.id));
+  const keptHabitIds = new Set(habits.map((h) => h.id));
+
+  return {
+    ...data,
+    tasks,
+    habits,
+    // A demo project still holding the Guest's own task is kept — dropping it would orphan real work.
+    projects: (data.projects ?? []).filter(
+      (p) => !demoIds.has(p.id) || tasks.some((t) => t.project_id === p.id),
+    ),
+    events: (data.events ?? []).filter((e) => !demoIds.has(e.id)),
+    // Follow the parent, not the id list — else a log could outlive its task and land in real stats.
+    habit_entries: (data.habit_entries ?? []).filter((e) =>
+      keptHabitIds.has(e.habit_id),
+    ),
+    focus_logs: (data.focus_logs ?? []).filter(
+      (l) => l.task_id === null || keptTaskIds.has(l.task_id),
+    ),
+    seed_ids: [],
+  };
+}

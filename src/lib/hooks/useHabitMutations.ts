@@ -4,6 +4,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { handleMutationError } from "@/lib/utils/mutation-error";
 import type { HabitEntry, HabitWithEntries } from "@/lib/types/habit";
+import { getCurrentStreak } from "@/lib/utils/habit-streak";
+import { trackTelemetry } from "@/lib/telemetry/client";
+import { mockStore } from "@/lib/mock/mock-store";
 
 import { habitMutations } from "@/lib/mutations/habit";
 
@@ -169,6 +172,30 @@ export function useMarkHabitComplete() {
       );
 
       return { previousHabits };
+    },
+    onSuccess: (_data, variables) => {
+      // Guests get a year of pre-seeded demo habits; interacting with them
+      // shouldn't inflate the "Habit Consistency" telemetry KPI.
+      if (isGuestMode && mockStore.isSeedId(variables.habitId)) return;
+
+      if ((variables.value ?? 1) >= 1) {
+        const habits = queryClient.getQueryData<HabitWithEntries[]>([
+          "habits",
+          { includeArchived: false, isGuestMode },
+        ]);
+        const habit = habits?.find((h) => h.id === variables.habitId);
+        let streakMilestone: "7" | "30" | "100" | undefined;
+        if (habit) {
+          const streak = getCurrentStreak(habit, habit.entries);
+          if (streak === 7) streakMilestone = "7";
+          else if (streak === 30) streakMilestone = "30";
+          else if (streak === 100) streakMilestone = "100";
+        }
+        trackTelemetry(
+          "habit_logged",
+          streakMilestone ? { streak_milestone: streakMilestone } : {},
+        );
+      }
     },
     onError: (err, _vars, context) => {
       if (context?.previousHabits) {

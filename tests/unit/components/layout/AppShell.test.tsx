@@ -28,6 +28,13 @@ vi.mock("@/components/AuthProvider", () => ({
   useAuth: vi.fn(() => ({ user: { id: "user-1" }, loading: false })),
 }));
 
+vi.mock("@/lib/telemetry/client", () => ({
+  trackSignupCompleted: vi.fn(),
+  trackAppOpened: vi.fn(),
+}));
+
+import { trackAppOpened } from "@/lib/telemetry/client";
+
 vi.mock("@/components/CompletedTasksProvider", () => {
   const MockProvider = ({ children }: any) => (
     <div data-testid="completed-tasks-provider">{children}</div>
@@ -162,6 +169,12 @@ vi.mock("@/components/FloatingTimer", () => ({ FloatingTimer: () => null }));
 vi.mock("@/components/OfflineIndicator", () => ({
   OfflineIndicator: () => null,
 }));
+vi.mock("@/components/DemoBar", () => ({
+  DemoBar: () => <div data-testid="demo-bar" />,
+}));
+vi.mock("@/lib/hooks/useDemoMode", () => ({
+  useDemoMode: vi.fn(() => false),
+}));
 
 vi.mock("@/components/ui/sidebar", () => ({
   SidebarProvider: ({ children }: { children: React.ReactNode }) => (
@@ -187,6 +200,7 @@ vi.mock("next/dynamic", () => ({
 
 import AppShell from "@/components/layout/AppShell";
 import { usePathname } from "next/navigation";
+import { useDemoMode } from "@/lib/hooks/useDemoMode";
 
 describe("AppShell", () => {
   beforeEach(() => {
@@ -257,5 +271,32 @@ describe("AppShell", () => {
 
     expect(screen.getByTestId("content")).toBeInTheDocument();
     expect(screen.queryByTestId("sidebar-inset")).not.toBeInTheDocument();
+  });
+
+  it("reserves the same banner padding for Demo mode as it does for offline", async () => {
+    vi.mocked(usePathname).mockReturnValue("/");
+    vi.mocked(useDemoMode).mockReturnValue(true);
+
+    render(
+      <AppShell>
+        <div>Content</div>
+      </AppShell>,
+    );
+
+    expect(screen.getByTestId("scroll-container")).toHaveClass(
+      "pt-[calc(var(--mobile-header-height)+var(--offline-banner-height))]",
+    );
+  });
+
+  it("fires app_opened telemetry on mount", async () => {
+    vi.mocked(usePathname).mockReturnValue("/");
+
+    render(
+      <AppShell>
+        <div>Content</div>
+      </AppShell>,
+    );
+
+    expect(trackAppOpened).toHaveBeenCalled();
   });
 });

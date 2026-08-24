@@ -4,6 +4,7 @@ import { Toaster as SonnerToaster } from "sonner";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
+import { NOTIFICATION_LINK_BUTTON_CLASS } from "@/components/ui/notification-link-button";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -19,14 +20,30 @@ export function Toaster() {
       expand={true}
       duration={isChangelogOpen ? Infinity : 4000}
       style={{ zIndex: 70 }}
-      mobileOffset={{ left: 16, right: 16, bottom: 16 }}
+      // Container-level offset (not a per-toast margin) so it shifts the whole
+      // stack as one unit — Sonner measures each toast's own height to place
+      // the next one above it, and a per-toast margin isn't part of that
+      // measurement, which caused stacked toasts to overlap.
+      // --offline-pill-offset is set on the root by AppShell; it lifts desktop toasts clear of the centred offline pill.
+      // --telemetry-prompt-offset is set on the root by TelemetryConsentPrompt; it lifts toasts clear of that banner.
+      offset={{
+        bottom:
+          "calc(1.25rem + var(--offline-pill-offset,0px) + var(--telemetry-prompt-offset,0px))",
+      }}
+      mobileOffset={{
+        left: 16,
+        right: 16,
+        bottom:
+          "calc(72px + env(safe-area-inset-bottom,0px) + var(--telemetry-prompt-offset,0px))",
+      }}
       swipeDirections={["left", "right", "bottom"]}
       toastOptions={{
         unstyled: true,
         style: {
           // max-content (not fit-content): fit-content shrinks to min-content (longest word) inside Sonner's absolute-positioned <li>, causing mid-word wrap on short messages. max-content sizes to the natural one-line width; existing maxWidth caps long messages.
+          // The rem side of this min() only binds once the viewport is wide enough to clear it (mobile stays governed by the vw side, unchanged) — so raising it only gives long toasts (e.g. the backup reminder) more room on desktop, without affecting short ones or mobile.
           width: "max-content",
-          maxWidth: "min(24rem, calc(100vw - 2rem))",
+          maxWidth: "min(34rem, calc(100vw - 2rem))",
         },
         classNames: {
           toast: cn(
@@ -35,9 +52,7 @@ export function Toaster() {
             "bg-card/98 backdrop-blur-md border border-border/80 text-foreground",
             "rounded-md shadow-sm inline-flex items-center gap-3",
             "py-2.5 px-4 sm:py-3 sm:px-5",
-            "w-fit max-w-sm",
-            // --offline-pill-offset is set on SidebarInset; it lifts desktop toasts clear of the centred offline pill
-            "mb-[calc(72px+env(safe-area-inset-bottom,0px))] md:mb-[calc(1.25rem+var(--offline-pill-offset,0px))]",
+            "w-fit",
             "transition-all duration-300 ease-seijaku",
             "[&_[data-icon]]:text-foreground/60",
           ),
@@ -49,14 +64,12 @@ export function Toaster() {
             "text-[12px] sm:text-sm text-muted-foreground leading-normal",
           error: cn("[&_[data-icon]]:text-destructive"),
           actionButton: cn(
-            "bg-primary text-primary-foreground h-8 px-3 rounded-sm",
-            "font-semibold text-[12px] sm:text-sm tracking-tight",
-            "hover:opacity-90 active:scale-[0.98] transition-all shrink-0 shadow-sm",
-            "ml-auto sm:ml-0 whitespace-nowrap",
+            NOTIFICATION_LINK_BUTTON_CLASS,
+            "text-brand ml-auto sm:ml-0",
           ),
           cancelButton: cn(
-            "bg-transparent border border-border text-muted-foreground h-8 px-3 rounded-sm",
-            "text-[12px] sm:text-sm hover:bg-accent shrink-0 ml-auto sm:ml-0 whitespace-nowrap",
+            NOTIFICATION_LINK_BUTTON_CLASS,
+            "text-muted-foreground ml-auto sm:ml-0",
           ),
         },
       }}

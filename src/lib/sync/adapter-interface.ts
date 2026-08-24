@@ -1,8 +1,5 @@
-/**
- * Unified Sync Adapter Interface
- * Per RESEARCH.md Section 3.2: All adapters (CalDAV, Google, Microsoft) implement this interface
- * Enables provider-agnostic sync orchestration
- */
+// Per RESEARCH.md Section 3.2: all adapters (CalDAV, Google, Microsoft) implement
+// this interface, enabling provider-agnostic sync orchestration.
 
 import type {
   CalendarEvent,
@@ -14,9 +11,6 @@ import type {
   DiscoveredCalendar,
 } from "@/lib/types/external-calendar";
 
-/**
- * Configuration for initializing a sync adapter
- */
 export interface SyncAdapterConfig {
   externalCalendar: ExternalCalendar;
   /** CalDAV password (user-provided on each sync) */
@@ -25,9 +19,6 @@ export interface SyncAdapterConfig {
   accessToken?: string;
 }
 
-/**
- * Result of a sync operation
- */
 export interface SyncResult {
   created: number;
   updated: number;
@@ -37,9 +28,7 @@ export interface SyncResult {
   newSyncToken: string | null;
 }
 
-/**
- * Remote event representation (normalized across providers)
- */
+/** Remote event representation, normalized across providers. */
 export interface RemoteEvent {
   /** Provider-specific ID (URL for CalDAV, eventId for Google, id for MS) */
   remoteId: string;
@@ -53,9 +42,6 @@ export interface RemoteEvent {
   kansoId?: string;
 }
 
-/**
- * Sync delta from incremental sync
- */
 export interface SyncDelta {
   created: RemoteEvent[];
   updated: RemoteEvent[];
@@ -63,31 +49,15 @@ export interface SyncDelta {
   newSyncToken: string;
 }
 
-/**
- * Unified Sync Adapter Interface
- * All calendar sync adapters (CalDAV, Google, Microsoft) implement this
- */
 export interface SyncAdapter {
   /** The provider this adapter handles */
   readonly provider: CalendarProvider;
 
-  /**
-   * Initialize the adapter with credentials/tokens
-   * @throws Error if authentication fails
-   */
   initialize(config: SyncAdapterConfig): Promise<void>;
 
-  /**
-   * Discover available calendars on the remote server
-   * @returns List of calendars the user can sync
-   */
   discoverCalendars(): Promise<DiscoveredCalendar[]>;
 
-  /**
-   * Perform full initial sync (no sync token).
-   * @param pastDays - Days of history to fetch (default: 90)
-   * @param futureDays - Days of future events to fetch (default: 365)
-   */
+  /** No sync token yet; default window is 90 days past / 365 days future. */
   fullSync(
     pastDays?: number,
     futureDays?: number,
@@ -96,50 +66,25 @@ export interface SyncAdapter {
     syncToken: string;
   }>;
 
-  /**
-   * Perform incremental sync using stored sync token
-   * @param syncToken - Previous sync token (CTag, nextSyncToken, deltaLink)
-   */
+  /** @param syncToken CTag (CalDAV), nextSyncToken (Google), or deltaLink (MS). */
   incrementalSync(syncToken: string): Promise<SyncDelta>;
 
-  /**
-   * Push a local event to the remote calendar
-   * @returns Updated remote ID and etag
-   */
   pushEvent(event: CalendarEvent): Promise<{ remoteId: string; etag: string }>;
 
-  /**
-   * Update an existing remote event
-   * @param remoteId - The remote event's ID
-   * @param event - Updated event data
-   */
   updateRemoteEvent(
     remoteId: string,
     event: CalendarEvent,
   ): Promise<{ etag: string }>;
 
-  /**
-   * Delete an event from the remote calendar
-   * @param remoteId - The remote event's ID
-   */
   deleteRemoteEvent(remoteId: string): Promise<void>;
 
-  /**
-   * Convert remote event data to Kagelin CalendarEvent input
-   * Provider-specific parsing (ICS for CalDAV, JSON for Google/MS)
-   */
+  /** Provider-specific parsing: ICS for CalDAV, JSON for Google/MS. */
   parseRemoteEvent(remote: RemoteEvent): CreateCalendarEventInput | null;
 }
 
-/**
- * Registry of available sync adapters
- */
 const ADAPTER_REGISTRY: Partial<Record<CalendarProvider, () => SyncAdapter>> =
   {};
 
-/**
- * Register a sync adapter for a provider
- */
 export function registerAdapter(
   provider: CalendarProvider,
   factory: () => SyncAdapter,
@@ -147,10 +92,6 @@ export function registerAdapter(
   ADAPTER_REGISTRY[provider] = factory;
 }
 
-/**
- * Get the appropriate sync adapter for a provider
- * @throws Error if no adapter registered for provider
- */
 export function getAdapter(provider: CalendarProvider): SyncAdapter {
   const factory = ADAPTER_REGISTRY[provider];
   if (!factory) {

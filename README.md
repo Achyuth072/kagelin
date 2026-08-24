@@ -88,6 +88,7 @@ Most productivity apps want your email before you've written a single task, and 
 - **WebDAV sync**: sync with personal servers (Nextcloud, Synology) for self-hosted setups.
 - **Backups & Portability**: encrypted `.zip` export/import, guest backup reminders, and instant cloud data wipe.
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
+- **Telemetry**: off by default for everyone, Guest Mode included. If you opt in, we collect anonymous product-usage counts (no task titles, habit names, or other content) tied to a random device ID, never your account.
 
 ### Stats & Insights
 

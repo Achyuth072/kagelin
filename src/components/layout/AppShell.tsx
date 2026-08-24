@@ -15,7 +15,7 @@ import {
 } from "@/components/ProjectActionsProvider";
 import { useRealtimeSync } from "@/lib/hooks/useRealtimeSync";
 import { useBackAnchor } from "@/lib/hooks/useBackAnchor";
-import { AUTH_STANDALONE_ROUTES } from "@/lib/auth/auth-routes";
+import { AUTH_STANDALONE_ROUTES, isAdminRoute } from "@/lib/auth/auth-routes";
 import { PiPProvider } from "@/components/providers/PiPProvider";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar as SidebarComponent } from "@/components/layout/AppSidebar";
@@ -51,7 +51,8 @@ import { GlobalFabs } from "@/components/layout/GlobalFabs";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Toaster } from "@/components/ui/toaster";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
-import { useIsOnline } from "@/lib/hooks/useIsOnline";
+import { useActiveBanner } from "@/components/bannerSlot";
+import { trackSignupCompleted, trackAppOpened } from "@/lib/telemetry/client";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
@@ -65,6 +66,10 @@ const CommandMenu = dynamic(
 const OfflineIndicator = dynamic(
   () =>
     import("@/components/OfflineIndicator").then((mod) => mod.OfflineIndicator),
+  { ssr: false },
+);
+const DemoBar = dynamic(
+  () => import("@/components/DemoBar").then((mod) => mod.DemoBar),
   { ssr: false },
 );
 const ShortcutsHelp = dynamic(
@@ -107,6 +112,13 @@ const ArchivedProjectsDialog = dynamic(
   () =>
     import("@/components/projects/ArchivedProjectsDialog").then(
       (mod) => mod.ArchivedProjectsDialog,
+    ),
+  { ssr: false },
+);
+const TelemetryConsentPrompt = dynamic(
+  () =>
+    import("@/components/telemetry/TelemetryConsentPrompt").then(
+      (mod) => mod.TelemetryConsentPrompt,
     ),
   { ssr: false },
 );
@@ -243,6 +255,7 @@ function GlobalOverlays({
       <FloatingTimer />
       <ChangelogPopupWatcher />
       <ChangelogManualTrigger />
+      <TelemetryConsentPrompt />
     </>
   );
 }
@@ -269,7 +282,7 @@ function AppShellContent({ children }: AppShellProps) {
   const pathname = usePathname();
   const isFocus = pathname === "/focus";
   const hideMobileNav = pathname === "/focus" || pathname === "/settings";
-  const isOnline = useIsOnline();
+  const hasTopBanner = useActiveBanner() !== null;
 
   const setShortcutsHelpOpen = useUiStore(
     (state) => state.setShortcutsHelpOpen,
@@ -283,9 +296,33 @@ function AppShellContent({ children }: AppShellProps) {
     setIsDesktop(isDesktop);
   }, [isDesktop, setIsDesktop]);
 
+  // --offline-banner-height (2.25rem) + the original md:mb-5 gap (1.25rem) — lifts desktop toasts clear of the pill.
+  // Set on the root (not just SidebarInset) so TelemetryConsentPrompt — a
+  // sibling of SidebarInset, not a descendant — can also read this offset.
+  // useLayoutEffect (not useEffect) so it lands before paint, avoiding a
+  // one-frame flash if hasTopBanner is already true on first mount.
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty(
+      "--offline-pill-offset",
+      hasTopBanner ? "3.5rem" : "0px",
+    );
+  }, [hasTopBanner]);
+
   useRealtimeSync();
 
   useWeeklyBackup();
+
+  useEffect(() => {
+    trackAppOpened();
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("signup") === "1") {
+      trackSignupCompleted();
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete("signup");
+      window.history.replaceState({}, "", cleanUrl.toString());
+    }
+  }, []);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -313,8 +350,6 @@ function AppShellContent({ children }: AppShellProps) {
               "--offline-banner-top": hideMobileNav
                 ? "env(safe-area-inset-top, 0px)"
                 : "var(--mobile-header-height)",
-              // --offline-banner-height (2.25rem) + the original md:mb-5 gap (1.25rem) — lifts desktop toasts clear of the pill
-              "--offline-pill-offset": isOnline ? "0px" : "3.5rem",
             } as React.CSSProperties
           }
         >
@@ -329,11 +364,15 @@ function AppShellContent({ children }: AppShellProps) {
                 pathname === "/habits"
                 ? "overflow-hidden"
                 : "overflow-y-auto overflow-x-hidden scrollbar-hide",
-              !hideMobileNav && isOnline && "pt-[var(--mobile-header-height)]",
               !hideMobileNav &&
-                !isOnline &&
+                !hasTopBanner &&
+                "pt-[var(--mobile-header-height)]",
+              !hideMobileNav &&
+                hasTopBanner &&
                 "pt-[calc(var(--mobile-header-height)+var(--offline-banner-height))]",
-              hideMobileNav && !isOnline && "pt-[var(--offline-banner-height)]",
+              hideMobileNav &&
+                hasTopBanner &&
+                "pt-[var(--offline-banner-height)]",
             )}
           >
             {children}
@@ -351,6 +390,7 @@ function AppShellContent({ children }: AppShellProps) {
             )}
           </div>
           <OfflineIndicator />
+          <DemoBar />
           <Toaster />
         </SidebarInset>
 
@@ -372,7 +412,10 @@ export default function AppShell({ children }: AppShellProps) {
   const { user, loading } = useAuth();
   const { isMigrating } = useMigrationStrategy();
   const pathname = usePathname();
-  const isAuthStandaloneRoute = AUTH_STANDALONE_ROUTES.includes(pathname);
+  // Admin routes are self-contained pages with their own nav — they never
+  // need the app sidebar/header shell.
+  const isBareRoute =
+    AUTH_STANDALONE_ROUTES.includes(pathname) || isAdminRoute(pathname);
 
   useBackAnchor(); // must stay mounted across navigation — see useBackAnchor.ts
 
@@ -385,7 +428,7 @@ export default function AppShell({ children }: AppShellProps) {
       <TaskActionsProvider>
         <HabitActionsProvider>
           <PiPProvider>
-            {loading || !user || isAuthStandaloneRoute ? (
+            {loading || !user || isBareRoute ? (
               <>{children}</>
             ) : (
               <AppShellContent>{children}</AppShellContent>

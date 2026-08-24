@@ -1,6 +1,6 @@
 {
   "name": "kagelin",
-  "version": "1.31.3",
+  "version": "1.40.0-preview.0",
   "license": "AGPL-3.0-only",
   "private": false,
   "scripts": {
@@ -93,6 +93,7 @@
     "react-virtuoso": "^4.18.10",
     "recharts": "^3.9.2",
     "remark-gfm": "^4.0.1",
+    "server-only": "^0.0.1",
     "serwist": "^9.4.2",
     "sonner": "^2.0.7",
     "sql.js": "^1.14.1",

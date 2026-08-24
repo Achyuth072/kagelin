@@ -13,6 +13,7 @@ import {
   Info,
   Sparkles,
   GitBranch,
+  Bug,
   Scale,
   Shield,
   FileText,
@@ -120,6 +121,12 @@ export function AboutSheet({
             label="Source code"
             detail="github.com/Achyuth072/kagelin"
             href={REPO_URL}
+          />
+          <AboutRow
+            icon={Bug}
+            label="Report an Issue"
+            detail="File a bug or feature request"
+            href={`${REPO_URL}/issues`}
           />
           <AboutRow
             icon={Scale}

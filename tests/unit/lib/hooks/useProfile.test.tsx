@@ -155,4 +155,22 @@ describe("useProfile", () => {
       timezone: "Europe/Berlin",
     });
   });
+
+  // Given: The column-level GRANT on public.profiles allows only
+  //        display_name, settings and timezone
+  // When:  updateProfile is handed a privileged column
+  // Then:  It should not compile (Postgres would reject it with 42501)
+  it("TC-PR-06: rejects privileged profile columns at compile time", () => {
+    type UpdateProfileVariables = Parameters<
+      ReturnType<typeof useProfile>["updateProfile"]["mutate"]
+    >[0];
+
+    const allowed: UpdateProfileVariables = { timezone: "Europe/Berlin" };
+    // @ts-expect-error — is_admin sits outside the GRANT; only SQL can set it.
+    const adminEscalation: UpdateProfileVariables = { is_admin: true };
+    // @ts-expect-error — is_premium sits outside the GRANT too.
+    const premiumEscalation: UpdateProfileVariables = { is_premium: true };
+
+    expect([allowed, adminEscalation, premiumEscalation]).toHaveLength(3);
+  });
 });
