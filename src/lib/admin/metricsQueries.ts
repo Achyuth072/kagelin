@@ -1,3 +1,4 @@
+import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchAllRows } from "@/lib/supabase/paginate";
 import type { SupabaseClient } from "@supabase/supabase-js";
