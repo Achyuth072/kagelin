@@ -42,10 +42,14 @@ describe("useBackAnchor", () => {
   it("handles ?redirect query param on root path by replacing with clean root and pushing target", () => {
     vi.mocked(usePathname).mockReturnValue("/");
     setLocation("http://localhost:3000/?redirect=%2Ffocus");
+    // router.replace("/") would be superseded by the push() below and never
+    // land — see useBackAnchor.ts — so this path bypasses the router and
+    // rewrites the URL directly.
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState");
 
     renderHook(() => useBackAnchor());
 
-    expect(replaceMock).toHaveBeenCalledWith("/");
+    expect(replaceStateSpy).toHaveBeenCalledWith({}, "", "/");
     expect(pushMock).toHaveBeenCalledWith("/focus");
     expect(window.__backAnchorSettled).toBe(true);
   });
