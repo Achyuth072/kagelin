@@ -1,5 +1,32 @@
 [
   {
+    "version": "1.40.0-preview.0",
+    "date": "2026-08-24",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Admin metrics page nav, login redirect setting, and lifetime telemetry totals",
+        "Add a demo bar prompting guests in Demo mode to start fresh",
+        "Strip demo data on signup migration",
+        "Exempt guest demo-data interactions from telemetry tracking",
+        "Add GitHub Issues link to About sheet",
+        "Add opt-in in-house telemetry (#163)"
+      ],
+      "Improved": [
+        "Narrow updateProfile to the columns the profiles GRANT allows",
+        "Simplify demo bar banner logic and guest store actions"
+      ],
+      "Fixed": [
+        "Support explicit version override for npm run preview",
+        "Correct admin metrics KPI inflation, demo-mode stuck banner, and duplicate-task telemetry",
+        "Stop back-anchor bounce on 404/admin routes and Firefox admin-metrics reload loop",
+        "Align DemoBar, toasts, and telemetry banner with the design system",
+        "Use current guest-data storage key in signup migration",
+        "Restore Android 48dp touch target on mobile bottom nav (Release v1.31.3) (#162)"
+      ]
+    }
+  },
+  {
     "version": "1.31.3",
     "date": "2026-08-20",
     "channel": "stable",
@@ -792,62 +819,6 @@
       ],
       "Fixed": [
         "Stretch time-of-day heatmap to card width"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.5",
-    "date": "2026-06-30",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Create Task Insights panel"
-      ],
-      "Fixed": [
-        "Unify Edit/Insights dialog width"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.4",
-    "date": "2026-06-30",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Implement Habit Insights 5-card panel (Overview, Score, History, Best Streaks, Frequency)",
-        "Refine insights panel layout",
-        "Add Kagelin branding icons and fix maskable PWA cropping (#76)",
-        "Replace app icon with Kagelin branding (#75)",
-        "Implement habit Insights tab with 5-card layout"
-      ],
-      "Improved": [
-        "Memoize Insights score series and frequency month lookup"
-      ],
-      "Fixed": [
-        "Align Insights section labels with MetricCard styling",
-        "Bump Frequency grid labels to the Micro type floor",
-        "Use seijaku easing for Best Streaks bar transition",
-        "Hide day-counting metrics for measurable habits in Insights",
-        "Correct measurable target predicate and completion counts",
-        "Ensure start date derives from the earliest entry regardless of order",
-        "Resolve guest-mode hydration mismatch on app shell",
-        "Keep checkbox pinned right on mobile HabitCard",
-        "Equal-height metric cards with wrapping titles",
-        "Unify Edit/Insights dialog width",
-        "Disable chart entry animations to prevent replay on remount",
-        "Cache useHabit query to avoid refetch on reopen",
-        "Shrink masakable icon",
-        "Shrink maskable icon content to clear safe-zone circle (#77)"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.3",
-    "date": "2026-06-17",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add Edit/Insights toggle shell for per-item Insights (#74)"
       ]
     }
   }
