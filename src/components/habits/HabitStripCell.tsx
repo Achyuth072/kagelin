@@ -37,7 +37,7 @@ export function HabitStripCell({
 
   return (
     <div className="flex min-w-0 flex-col items-center gap-1 lg:flex-none lg:gap-1.5">
-      <span className="text-[10px] font-bold uppercase tracking-wider leading-none text-foreground/50">
+      <span className="text-[10px] font-bold uppercase tracking-wider leading-none text-muted-foreground">
         {weekdayLabel}
       </span>
       {isBeforeStart ? (

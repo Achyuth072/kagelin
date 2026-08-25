@@ -63,7 +63,7 @@ const CompletedTaskItem = React.memo(({ task }: { task: Task }) => {
 
   return (
     <div className="flex items-start gap-3 py-2 md:py-2 px-4 border-b border-border/40 hover:bg-secondary/30 transition-colors group min-h-[44px]">
-      <button onClick={handleUncomplete}>
+      <button onClick={handleUncomplete} aria-label="Mark task incomplete">
         <CheckCircle2
           className="h-5 w-5 text-foreground/50 hover:text-foreground transition-colors"
           strokeWidth={2.5}
@@ -71,7 +71,7 @@ const CompletedTaskItem = React.memo(({ task }: { task: Task }) => {
       </button>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium leading-tight line-through text-foreground/50">
+        <p className="text-sm font-medium leading-tight line-through text-muted-foreground">
           {task.content}
         </p>
         {completedDate && (
@@ -292,10 +292,11 @@ export function CompletedTasksSheet({
           {completedTasks.length > 0 && (
             <div className="px-6 py-3 border-b border-border/40 bg-secondary/5 shrink-0">
               <div className="relative group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 group-focus-within:text-brand transition-colors" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-brand transition-colors" />
                 <Input
-                  className="pl-9 bg-secondary/20 border-border/40 focus:border-border/60 focus:bg-secondary/30 h-9 text-sm transition-all placeholder:text-muted-foreground/40"
+                  className="pl-9 bg-secondary/20 border-border/40 focus:border-border/60 focus:bg-secondary/30 h-9 text-sm transition-all placeholder:text-muted-foreground"
                   placeholder="Search completed tasks..."
+                  aria-label="Search completed tasks"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -362,10 +363,11 @@ export function CompletedTasksSheet({
           {completedTasks.length > 0 && (
             <div className="px-6 py-4 border-b border-border/40 bg-secondary/5 shrink-0">
               <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground/40" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
                   className="pl-11 bg-secondary/20 h-12 text-base shadow-none border-border/30 focus:border-border/60 focus:bg-secondary/30 rounded-xl transition-all"
                   placeholder="Search completed tasks..."
+                  aria-label="Search completed tasks"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />

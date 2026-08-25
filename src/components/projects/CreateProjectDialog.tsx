@@ -97,7 +97,7 @@ export function CreateProjectDialog({
               autoFocus={isFinePointer}
               className={cn(
                 "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none",
-                "placeholder:text-muted-foreground/50 text-foreground",
+                "placeholder:text-muted-foreground text-foreground",
                 errors.name && "placeholder:text-destructive/60",
               )}
               onKeyDown={(e) => {

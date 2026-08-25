@@ -114,11 +114,14 @@ export default function SubtaskList({
     <div className="flex flex-col gap-1 w-full">
       {hasItems && (
         <button
+          type="button"
           onClick={() => {
             trigger("toggle");
             setIsExpanded(!isExpanded);
           }}
-          className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground/50 hover:text-foreground transition-seijaku py-1 uppercase tracking-widest text-left w-fit group/sub-toggle"
+          aria-expanded={isExpanded}
+          aria-label={isExpanded ? "Collapse subtasks" : "Expand subtasks"}
+          className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground hover:text-foreground transition-seijaku py-1 uppercase tracking-widest text-left w-fit group/sub-toggle"
         >
           <ChevronRight
             className={cn(
@@ -173,6 +176,7 @@ export default function SubtaskList({
                         }
                       }}
                       disabled={isDraftMode}
+                      aria-label={`Mark "${content}" complete`}
                       className={cn(
                         "mt-0.5 h-3.5 w-3.5 !rounded-sm",
                         priorityCheckboxClasses[4],
@@ -185,6 +189,7 @@ export default function SubtaskList({
                         onChange={(e) => setEditingContent(e.target.value)}
                         onBlur={() => handleSaveEdit(id)}
                         onKeyDown={(e) => handleKeyDown(e, id)}
+                        aria-label="Edit step"
                         className="flex-1 h-7 py-0 px-0 text-[14px] bg-transparent border-none shadow-none focus-visible:ring-0"
                       />
                     ) : (
@@ -205,7 +210,7 @@ export default function SubtaskList({
                       variant="ghost"
                       size="icon"
                       aria-label="Delete subtask"
-                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/40 hover:text-destructive hover:bg-destructive-surface-hover rounded-lg"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive-surface-hover rounded-lg"
                       onClick={() => {
                         trigger("tick");
                         handleDeleteSubtask(
@@ -222,7 +227,7 @@ export default function SubtaskList({
               <div className="flex items-center gap-3 px-3 pt-1 group">
                 <div className="flex items-center justify-center w-3.5 h-3.5 shrink-0">
                   <Plus
-                    className="h-3 w-3 text-muted-foreground/40 group-focus-within:text-brand transition-colors"
+                    className="h-3 w-3 text-muted-foreground group-focus-within:text-brand transition-colors"
                     strokeWidth={2.5}
                   />
                 </div>
@@ -231,7 +236,8 @@ export default function SubtaskList({
                   onChange={(e) => setNewSubtaskContent(e.target.value)}
                   onKeyDown={(e) => handleKeyDown(e)}
                   placeholder="Add a step..."
-                  className="flex-1 h-8 text-[14px] bg-transparent border-none shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/25 transition-colors p-0"
+                  aria-label="Add a step"
+                  className="flex-1 h-8 text-[14px] bg-transparent border-none shadow-none focus-visible:ring-0 placeholder:text-muted-foreground transition-colors p-0"
                 />
               </div>
             </div>

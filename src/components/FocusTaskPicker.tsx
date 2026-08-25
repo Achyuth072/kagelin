@@ -218,7 +218,7 @@ export function FocusTaskPicker() {
           </span>
           {task.recurrence && (
             <Repeat
-              className="h-3 w-3 shrink-0 text-muted-foreground/50"
+              className="h-3 w-3 shrink-0 text-muted-foreground"
               strokeWidth={2.25}
             />
           )}
@@ -240,7 +240,7 @@ export function FocusTaskPicker() {
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               {label}
             </span>
-            <span className="text-[11px] text-muted-foreground/50">
+            <span className="text-[11px] text-muted-foreground">
               {tasks.length}
             </span>
           </div>

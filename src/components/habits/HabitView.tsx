@@ -98,13 +98,14 @@ export function HabitView(props: HabitViewProps) {
         <input
           id={nameId}
           placeholder="Habit name"
+          aria-label="Habit name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={onKeyDown}
           autoFocus={isFinePointer}
           className={cn(
             "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none",
-            "placeholder:text-muted-foreground/50 text-foreground",
+            "placeholder:text-muted-foreground text-foreground",
             errors?.name && "placeholder:text-destructive/60",
           )}
           aria-invalid={!!errors?.name}
@@ -161,10 +162,11 @@ export function HabitView(props: HabitViewProps) {
             <textarea
               id={descriptionId}
               placeholder="Add details (optional)"
+              aria-label="Habit details"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              className="flex-1 bg-transparent border-0 outline-none resize-none text-[15px] text-foreground placeholder:text-muted-foreground/60 leading-relaxed p-0 min-h-[48px]"
+              className="flex-1 bg-transparent border-0 outline-none resize-none text-[15px] text-foreground placeholder:text-muted-foreground/70 leading-relaxed p-0 min-h-[48px]"
             />
           </div>
         </div>

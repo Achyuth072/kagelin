@@ -531,8 +531,8 @@ const KanbanColumn = memo(function KanbanColumn({
             />
           ))}
           {group.tasks.length === 0 && (
-            <div className="h-24 flex items-center justify-center border-2 border-dashed border-border/30 rounded-2xl opacity-40">
-              <span className="text-[11px] font-bold text-muted-foreground/30 uppercase tracking-widest">
+            <div className="h-24 flex items-center justify-center border-2 border-dashed border-border/40 rounded-2xl">
+              <span className="text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest">
                 Ma (Void)
               </span>
             </div>

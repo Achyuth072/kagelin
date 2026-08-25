@@ -114,6 +114,7 @@ function TasksPageHeaderBase({
             <Button
               variant="ghost"
               size="sm"
+              aria-label="Filter and sort options"
               className={cn(
                 "p-0 hover:bg-foreground/5 shrink-0 transition-colors h-8 w-8 rounded-md",
                 !isFilterActive && "hover:bg-transparent",
@@ -185,6 +186,7 @@ function TasksPageHeaderBase({
                   {SORT_LABELS[currentSort]}
                 </span>
                 <button
+                  type="button"
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -192,6 +194,7 @@ function TasksPageHeaderBase({
                     trigger("toggle");
                     handleSortChange("date");
                   }}
+                  aria-label="Clear sort"
                   className="hover:bg-foreground/10 rounded-sm p-0.5 transition-colors shrink-0 ml-0.5"
                 >
                   <Plus
@@ -212,6 +215,7 @@ function TasksPageHeaderBase({
                   {GROUP_LABELS[currentGroup]}
                 </span>
                 <button
+                  type="button"
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -219,6 +223,7 @@ function TasksPageHeaderBase({
                     trigger("toggle");
                     handleGroupChange("none");
                   }}
+                  aria-label="Clear grouping"
                   className="hover:bg-foreground/10 rounded-sm p-0.5 transition-colors shrink-0 ml-0.5"
                 >
                   <Plus

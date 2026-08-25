@@ -178,7 +178,7 @@ export function ShortcutsHelp({
                             {i > 0 && (
                               <span
                                 aria-hidden="true"
-                                className="text-[11px] font-normal tracking-[0.02em] text-muted-foreground/50"
+                                className="text-[11px] font-normal tracking-[0.02em] text-muted-foreground"
                               >
                                 {keyConnector[shortcut.keyRelation ?? "chord"]}
                               </span>

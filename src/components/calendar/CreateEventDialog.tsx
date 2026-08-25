@@ -341,8 +341,7 @@ export function CreateEventDialog({
               disabled={isRecurring}
               className={cn(
                 "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none",
-                "placeholder:text-muted-foreground/50 text-foreground",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
+                "placeholder:text-muted-foreground text-foreground",
                 errors.title && "placeholder:text-destructive/60",
               )}
             />
@@ -627,14 +626,13 @@ export function CreateEventDialog({
                   {...register("description")}
                   id="event-description"
                   placeholder="Add notes"
-                  rows={2}
+                  aria-label="Event notes"
                   disabled={isRecurring}
                   style={{ fontSize: "0.875rem" }}
                   className={cn(
                     "flex-1 bg-transparent border-0 outline-none resize-none",
-                    "text-sm text-foreground placeholder:text-muted-foreground/50",
+                    "text-sm text-foreground placeholder:text-muted-foreground",
                     "leading-normal p-0 min-h-[48px]",
-                    "disabled:opacity-50 disabled:cursor-not-allowed",
                   )}
                 />
               </div>

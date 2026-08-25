@@ -29,7 +29,7 @@ export function TimeGutter({
       {hours.map((hour) => (
         <div
           key={hour}
-          className="text-[9px] md:text-xs text-muted-foreground/50 text-right pr-2 md:pr-3 pt-2 font-medium bg-background"
+          className="text-[10px] md:text-xs text-muted-foreground text-right pr-2 md:pr-3 pt-2 font-medium bg-background"
           style={{ height: `${HOUR_HEIGHT}px` }}
         >
           {HOUR_LABELS[hour]}

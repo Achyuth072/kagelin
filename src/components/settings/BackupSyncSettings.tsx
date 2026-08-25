@@ -234,7 +234,7 @@ function CloudSyncCard({
             </Button>
           </div>
 
-          <p className="text-[10px] text-muted-foreground/50 text-center leading-relaxed">
+          <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
             Your credentials are used only for this session — they aren&apos;t
             stored, and re-entering them is required after a reload.
           </p>

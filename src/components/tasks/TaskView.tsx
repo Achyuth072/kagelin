@@ -145,6 +145,7 @@ export function TaskView(props: TaskViewProps) {
         <textarea
           id={contentId}
           placeholder="What needs to be done?"
+          aria-label="Task content"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={onKeyDown}
