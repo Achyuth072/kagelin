@@ -1,5 +1,26 @@
 [
   {
+    "version": "1.40.0",
+    "date": "2026-08-24",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Demo mode banner prompting guests to clear sample data and start fresh",
+        "Opt-in telemetry controls in settings",
+        "GitHub Issues link in the About section"
+      ],
+      "Improved": [
+        "Automatically clean up sample demo data when creating an account",
+        "Refined styling for toasts, banners, and prompts across the app"
+      ],
+      "Fixed": [
+        "Demo banner occasionally getting stuck on screen",
+        "Guest data migration issues when signing up",
+        "Mobile bottom navigation touch target sizing"
+      ]
+    }
+  },
+  {
     "version": "1.40.0-preview.0",
     "date": "2026-08-24",
     "channel": "preview",
@@ -800,25 +821,6 @@
         "Add global Goals tab and stats card",
         "Add frequency-progress rings",
         "Add global Goals state to uiStore"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.6",
-    "date": "2026-07-01",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Range-aware trend chart and wire up the page",
-        "Add per-habit score comparison",
-        "Add focus time-of-day heatmap",
-        "Add project and priority breakdown cards",
-        "Add period selector and shared bar list",
-        "Scope useStats to a selectable period with breakdowns",
-        "Add StatsPeriod type and persist it in uiStore"
-      ],
-      "Fixed": [
-        "Stretch time-of-day heatmap to card width"
       ]
     }
   }
