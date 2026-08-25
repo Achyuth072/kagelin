@@ -22,6 +22,7 @@ const UNDO_TOAST_DURATION_MS = 5000;
 function invalidateTaskCaches(queryClient: QueryClient): void {
   void Promise.all([
     queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+    queryClient.invalidateQueries({ queryKey: ["subtasks"] }),
     queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
     queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] }),
     queryClient.invalidateQueries({ queryKey: ["focus-tasks"] }),
@@ -115,6 +116,7 @@ export function useToggleTask() {
     mutationFn: taskMutations.toggle,
     onMutate: async ({ id, is_completed }) => {
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      await queryClient.cancelQueries({ queryKey: ["subtasks"] });
 
       const queryKey = [
         "tasks",
@@ -122,7 +124,7 @@ export function useToggleTask() {
       ];
       const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
 
-      queryClient.setQueryData<Task[]>(queryKey, (old) =>
+      const patch = (old: Task[] | undefined) =>
         old?.map((task) =>
           task.id === id
             ? {
@@ -131,10 +133,18 @@ export function useToggleTask() {
                 completed_at: is_completed ? new Date().toISOString() : null,
               }
             : task,
-        ),
-      );
+        );
 
-      return { previousTasks };
+      queryClient.setQueryData<Task[]>(queryKey, patch);
+
+      // SubtaskList reads from the ["subtasks", parentId] cache, not ["tasks"] —
+      // patch it too so a subtask checkbox reflects immediately.
+      const previousSubtaskQueries = queryClient.getQueriesData<Task[]>({
+        queryKey: ["subtasks"],
+      });
+      queryClient.setQueriesData<Task[]>({ queryKey: ["subtasks"] }, patch);
+
+      return { previousTasks, previousSubtaskQueries };
     },
     onSuccess: (_data, variables) => {
       // Guests get a year of pre-seeded demo tasks; interacting with them
@@ -155,6 +165,9 @@ export function useToggleTask() {
           context.previousTasks,
         );
       }
+      context?.previousSubtaskQueries?.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
       handleMutationError(err);
     },
     onSettled: () => {
@@ -171,10 +184,13 @@ export function useUpdateTask() {
     mutationFn: taskMutations.update,
     onMutate: async (updates) => {
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      await queryClient.cancelQueries({ queryKey: ["subtasks"] });
 
-      const allTaskQueries = queryClient.getQueriesData<Task[]>({
-        queryKey: ["tasks"],
-      });
+      const allTaskQueries = [
+        ...queryClient.getQueriesData<Task[]>({ queryKey: ["tasks"] }),
+        // SubtaskList reads from ["subtasks", parentId], not ["tasks"].
+        ...queryClient.getQueriesData<Task[]>({ queryKey: ["subtasks"] }),
+      ];
 
       for (const [queryKey] of allTaskQueries) {
         queryClient.setQueryData<Task[]>(queryKey, (old) =>
@@ -210,10 +226,13 @@ export function useDeleteTask() {
     mutationFn: taskMutations.delete,
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      await queryClient.cancelQueries({ queryKey: ["subtasks"] });
 
-      const allTaskQueries = queryClient.getQueriesData<Task[]>({
-        queryKey: ["tasks"],
-      });
+      const allTaskQueries = [
+        ...queryClient.getQueriesData<Task[]>({ queryKey: ["tasks"] }),
+        // A deleted subtask must also disappear from its parent's ["subtasks", parentId] list.
+        ...queryClient.getQueriesData<Task[]>({ queryKey: ["subtasks"] }),
+      ];
       let deletedTask: Task | undefined;
 
       for (const [, data] of allTaskQueries) {
