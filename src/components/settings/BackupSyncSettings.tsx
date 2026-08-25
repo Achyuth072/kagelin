@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import {
   Download,
   Upload,
@@ -54,6 +55,12 @@ import type { BackupData } from "@/lib/backup/types";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/components/AuthProvider";
 import { useAccountData } from "@/lib/hooks/useAccountData";
+import { createClient } from "@/lib/supabase/client";
+import {
+  collectCloudBackup,
+  replaceCloudBackup,
+} from "@/lib/backup/cloud-data";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { ImportDialog } from "./ImportDialog";
 import { SETTINGS_CARD_CLASS } from "@/components/settings/settingsCardClass";
 
@@ -88,10 +95,10 @@ function CloudSyncCard({
         <CardHeader className="pb-3 px-4 pt-5">
           <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
             <Cloud className="h-4 w-4 text-brand" strokeWidth={2.25} />
-            WebDAV Sync
+            WebDAV Backup
           </CardTitle>
           <CardDescription className="text-xs text-muted-foreground/80 lowercase">
-            Sync across devices using your own cloud server.
+            Keep a copy on a WebDAV server you control.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 px-4 pb-5 pt-0">
@@ -210,7 +217,7 @@ function CloudSyncCard({
               ) : (
                 <Upload className="h-4 w-4" strokeWidth={2.25} />
               )}
-              Push
+              Back Up
             </Button>
             <Button
               variant="outline"
@@ -223,7 +230,7 @@ function CloudSyncCard({
               ) : (
                 <Download className="h-4 w-4" strokeWidth={2.25} />
               )}
-              Pull
+              Restore
             </Button>
           </div>
 
@@ -306,10 +313,32 @@ function BackupRemindersCard() {
   );
 }
 
+function buildGuestBackupData(): BackupData {
+  return {
+    metadata: {
+      version: 1,
+      appVersion: process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0",
+      exportedAt: new Date().toISOString(),
+    },
+    tasks: mockStore.getTasks(),
+    projects: mockStore.getProjects(),
+    habits: mockStore.getHabits(),
+    habit_entries: mockStore.getHabitEntries(),
+    focus_logs: mockStore.getFocusLogs(),
+    events: mockStore.getEvents(),
+    location_history: useLocationHistoryStore.getState().locations,
+  };
+}
+
+function formatBackupDate(exportedAt: string): string {
+  return format(new Date(exportedAt), "MMM d, yyyy 'at' h:mm a");
+}
+
 export function BackupSyncSettings() {
   const { trigger } = useHaptic();
-  const { isGuestMode } = useAuth();
+  const { isGuestMode, user } = useAuth();
   const { exportData, importData } = useAccountData();
+  const supabase = createClient();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -317,8 +346,7 @@ export function BackupSyncSettings() {
   const [isImporting, setIsImporting] = useState(false);
   const [showExternalImport, setShowExternalImport] = useState(false);
 
-  // In-memory only — never persisted, unlike the old CalDAV flow's plaintext
-  // localStorage credentials.
+  // Kept in memory only to avoid persisting credentials locally.
   const [webdavCredentials, setWebdavCredentials] = useState<WebDAVCredentials>(
     { serverUrl: "", username: "", password: "" },
   );
@@ -327,11 +355,10 @@ export function BackupSyncSettings() {
     "idle" | "success" | "error"
   >("idle");
   const [isSyncing, setIsSyncing] = useState(false);
+  // Pre-fetched so the confirmation dialog can display the backup export timestamp.
+  const [pendingRestore, setPendingRestore] = useState<BackupData | null>(null);
 
-  // Registered-user feature; guests get credential-free ZIP export/import only.
-  const showCloudSync = !isGuestMode;
-
-  const invalidateGuestDataQueries = async () => {
+  const invalidateDataQueries = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["tasks"] }),
       queryClient.invalidateQueries({ queryKey: ["task"] }),
@@ -358,22 +385,7 @@ export function BackupSyncSettings() {
 
     setIsExporting(true);
     try {
-      const backupData: BackupData = {
-        metadata: {
-          version: 1,
-          appVersion: process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0",
-          exportedAt: new Date().toISOString(),
-        },
-        tasks: mockStore.getTasks(),
-        projects: mockStore.getProjects(),
-        habits: mockStore.getHabits(),
-        habit_entries: mockStore.getHabitEntries(),
-        focus_logs: mockStore.getFocusLogs(),
-        events: mockStore.getEvents(),
-        location_history: useLocationHistoryStore.getState().locations,
-      };
-
-      const blob = await createBackupZip(backupData);
+      const blob = await createBackupZip(buildGuestBackupData());
       downloadBackup(blob);
 
       localStorage.setItem("kanso_last_backup_date", new Date().toISOString());
@@ -419,7 +431,7 @@ export function BackupSyncSettings() {
         locations: backupData.location_history ?? [],
       });
 
-      await invalidateGuestDataQueries();
+      await invalidateDataQueries();
 
       notify.success(
         `Restored ${backupData.tasks.length} tasks, ${backupData.projects.length} projects`,
@@ -448,7 +460,6 @@ export function BackupSyncSettings() {
   };
 
   const handleTestConnection = async () => {
-    if (isGuestMode) return;
     if (
       !webdavCredentials.serverUrl ||
       !webdavCredentials.username ||
@@ -484,7 +495,6 @@ export function BackupSyncSettings() {
   };
 
   const handleSyncUpload = async () => {
-    if (isGuestMode) return;
     if (!webdavCredentials.serverUrl) {
       notify.error("Configure WebDAV settings first");
       return;
@@ -494,39 +504,26 @@ export function BackupSyncSettings() {
     trigger("toggle");
 
     try {
-      const backupData: BackupData = {
-        metadata: {
-          version: 1,
-          appVersion: process.env.NEXT_PUBLIC_APP_VERSION || "1.0.0",
-          exportedAt: new Date().toISOString(),
-        },
-        tasks: mockStore.getTasks(),
-        projects: mockStore.getProjects(),
-        habits: mockStore.getHabits(),
-        habit_entries: mockStore.getHabitEntries(),
-        focus_logs: mockStore.getFocusLogs(),
-        events: mockStore.getEvents(),
-        location_history: useLocationHistoryStore.getState().locations,
-      };
+      const backupData: BackupData = isGuestMode
+        ? buildGuestBackupData()
+        : await collectCloudBackup(supabase);
 
-      const result = await uploadWebDavBackup(
-        webdavCredentials,
-        JSON.stringify(backupData, null, 2),
-      );
+      const blob = await createBackupZip(backupData);
+      const result = await uploadWebDavBackup(webdavCredentials, blob);
 
       if (result.success) {
         localStorage.setItem(
           "kanso_last_backup_date",
           new Date().toISOString(),
         );
-        notify.success("Data synced to server");
+        notify.success("Backed up to server");
         trigger("success");
       } else {
-        notify.error(result.error || "Sync failed");
+        notify.error(result.error || "Back up failed");
         trigger("thud");
       }
     } catch {
-      notify.error("Sync failed");
+      notify.error("Back up failed");
       trigger("thud");
     } finally {
       setIsSyncing(false);
@@ -534,34 +531,55 @@ export function BackupSyncSettings() {
   };
 
   const handleSyncDownload = async () => {
-    if (isGuestMode) return;
     if (!webdavCredentials.serverUrl) {
       notify.error("Configure WebDAV settings first");
       return;
     }
 
-    setIsSyncing(true);
     trigger("toggle");
+    setIsSyncing(true);
 
     try {
       const result = await downloadWebDavBackup(webdavCredentials);
 
       if (result.success && result.data) {
-        mockStore.restoreBackup(result.data);
-        useLocationHistoryStore.setState({
-          locations: result.data.location_history ?? [],
-        });
-
-        await invalidateGuestDataQueries();
-
-        notify.success("Data restored from server");
-        trigger("success");
+        setPendingRestore(result.data);
       } else {
         notify.error(result.error || "Download failed");
         trigger("thud");
       }
     } catch {
       notify.error("Download failed");
+      trigger("thud");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const runSyncDownload = async () => {
+    const data = pendingRestore;
+    if (!data) return;
+    setPendingRestore(null);
+
+    setIsSyncing(true);
+
+    try {
+      if (isGuestMode) {
+        mockStore.restoreBackup(data);
+      } else {
+        if (!user) return;
+        await replaceCloudBackup(supabase, user.id, data);
+      }
+      useLocationHistoryStore.setState({
+        locations: data.location_history ?? [],
+      });
+
+      await invalidateDataQueries();
+
+      notify.success("Data restored from server");
+      trigger("success");
+    } catch {
+      notify.error("Restore failed");
       trigger("thud");
     } finally {
       setIsSyncing(false);
@@ -580,12 +598,7 @@ export function BackupSyncSettings() {
       />
 
       <Tabs defaultValue="local" className="space-y-4">
-        <TabsList
-          className={cn(
-            "grid bg-secondary/10 p-1 rounded-lg h-11 border border-border/40 shadow-none",
-            showCloudSync ? "grid-cols-2" : "grid-cols-1",
-          )}
-        >
+        <TabsList className="grid grid-cols-2 bg-secondary/10 p-1 rounded-lg h-11 border border-border/40 shadow-none">
           <TabsTrigger
             value="local"
             onClick={() => trigger("toggle")}
@@ -594,16 +607,14 @@ export function BackupSyncSettings() {
             <HardDrive className="h-3.5 w-3.5" />
             Local Storage
           </TabsTrigger>
-          {showCloudSync && (
-            <TabsTrigger
-              value="cloud"
-              onClick={() => trigger("toggle")}
-              className="rounded-md gap-2 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-9 border border-transparent data-[state=active]:border-brand/20"
-            >
-              <Cloud className="h-3.5 w-3.5" />
-              Cloud Sync
-            </TabsTrigger>
-          )}
+          <TabsTrigger
+            value="cloud"
+            onClick={() => trigger("toggle")}
+            className="rounded-md gap-2 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-9 border border-transparent data-[state=active]:border-brand/20"
+          >
+            <Cloud className="h-3.5 w-3.5" />
+            WebDAV
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="local" className="mt-0 outline-none">
@@ -679,24 +690,35 @@ export function BackupSyncSettings() {
           </div>
         </TabsContent>
 
-        {showCloudSync && (
-          <CloudSyncCard
-            credentials={webdavCredentials}
-            onCredentialsChange={setWebdavCredentials}
-            isTestingConnection={isTestingConnection}
-            connectionStatus={connectionStatus}
-            isSyncing={isSyncing}
-            onTestConnection={handleTestConnection}
-            onResetCredentials={resetCredentials}
-            onSyncUpload={handleSyncUpload}
-            onSyncDownload={handleSyncDownload}
-          />
-        )}
+        <CloudSyncCard
+          credentials={webdavCredentials}
+          onCredentialsChange={setWebdavCredentials}
+          isTestingConnection={isTestingConnection}
+          connectionStatus={connectionStatus}
+          isSyncing={isSyncing}
+          onTestConnection={handleTestConnection}
+          onResetCredentials={resetCredentials}
+          onSyncUpload={handleSyncUpload}
+          onSyncDownload={handleSyncDownload}
+        />
       </Tabs>
 
       <ImportDialog
         open={showExternalImport}
         onOpenChange={setShowExternalImport}
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={pendingRestore !== null}
+        onClose={() => setPendingRestore(null)}
+        onConfirm={runSyncDownload}
+        title="Replace your data?"
+        description={
+          pendingRestore
+            ? `This backup was taken ${formatBackupDate(pendingRestore.metadata.exportedAt)}. Restoring overwrites everything in your account with it — anything not in that backup is lost. This cannot be undone.`
+            : "Restoring overwrites everything in your account with the backup on the server. Anything not in that backup is lost. This cannot be undone."
+        }
+        confirmLabel="Replace"
       />
     </div>
   );

@@ -1,8 +1,8 @@
-// tsdav is used in caldav-adapter; webdav-sync uses the /api/webdav proxy instead
 import type { BackupData } from "./types";
+import { parseBackupZip } from "./export-import";
 
 export interface WebDAVCredentials {
-  serverUrl: string; // Base WebDAV URL (e.g., https://dav.example.com/remote.php/dav/files/user)
+  serverUrl: string;
   username: string;
   password: string;
 }
@@ -13,15 +13,9 @@ export interface WebDAVResult {
   isCorsError?: boolean;
 }
 
-const BACKUP_FILENAME = "kanso-backup.json";
+// Matches manual export filename so WebDAV backups round-trip through import.
+const BACKUP_FILENAME = "kanso-backup.zip";
 
-/**
- * Builds a proxied URL so all WebDAV requests are sent to the Next.js API
- * route, which forwards them server-side. This avoids CORS entirely — the
- * user's WebDAV server never needs to be configured for our domain.
- *
- * The actual server URL is forwarded as the X-WebDAV-URL header.
- */
 function buildProxyUrl(serverUrl: string, path: string = ""): string {
   const cleanPath = path.replace(/^\//, "");
   return cleanPath ? `/api/webdav/${cleanPath}` : `/api/webdav/`;
@@ -36,26 +30,16 @@ function buildProxyHeaders(
   };
 }
 
-/**
- * Test WebDAV connection with provided credentials.
- * Routes through the /api/webdav proxy — credentials only travel between
- * the browser and the Next.js server (same origin), never directly to
- * third-party servers via the browser. Credentials are NOT stored server-side.
- *
- * Uses OPTIONS (universally supported by WebDAV servers) rather than PROPFIND
- * because Next.js App Router only supports standard HTTP method exports.
- */
 export async function testWebDavConnection(
   credentials: WebDAVCredentials,
 ): Promise<WebDAVResult> {
   try {
+    // Uses OPTIONS rather than PROPFIND because App Router only exports standard HTTP methods.
     const response = await fetch(buildProxyUrl(credentials.serverUrl), {
       method: "OPTIONS",
       headers: buildProxyHeaders(credentials),
     });
 
-    // Any non-error response from the server means it is reachable and
-    // credentials were accepted (WebDAV servers reject bad creds on OPTIONS too).
     if (response.ok || response.status === 204 || response.status === 200) {
       return { success: true };
     }
@@ -68,12 +52,9 @@ export async function testWebDavConnection(
   }
 }
 
-/**
- * Upload backup JSON to WebDAV server via the server-side proxy.
- */
 export async function uploadWebDavBackup(
   credentials: WebDAVCredentials,
-  jsonData: string,
+  backupZip: Blob,
   filename: string = BACKUP_FILENAME,
 ): Promise<WebDAVResult> {
   try {
@@ -83,9 +64,9 @@ export async function uploadWebDavBackup(
         method: "PUT",
         headers: {
           ...buildProxyHeaders(credentials),
-          "Content-Type": "application/json",
+          "Content-Type": "application/zip",
         },
-        body: jsonData,
+        body: backupZip,
       },
     );
 
@@ -101,9 +82,6 @@ export async function uploadWebDavBackup(
   }
 }
 
-/**
- * Download backup JSON from WebDAV server via the server-side proxy.
- */
 export async function downloadWebDavBackup(
   credentials: WebDAVCredentials,
   filename: string = BACKUP_FILENAME,
@@ -118,10 +96,7 @@ export async function downloadWebDavBackup(
       buildProxyUrl(credentials.serverUrl, filename),
       {
         method: "GET",
-        headers: {
-          ...buildProxyHeaders(credentials),
-          Accept: "application/json",
-        },
+        headers: buildProxyHeaders(credentials),
       },
     );
 
@@ -135,12 +110,7 @@ export async function downloadWebDavBackup(
       return { success: false, error: `Server returned ${response.status}` };
     }
 
-    const data = (await response.json()) as BackupData;
-
-    // Basic validation
-    if (!data.metadata?.version) {
-      return { success: false, error: "Invalid backup format" };
-    }
+    const data = await parseBackupZip(await response.blob());
 
     return { success: true, data };
   } catch (error: unknown) {
@@ -149,14 +119,9 @@ export async function downloadWebDavBackup(
   }
 }
 
-/**
- * Handle WebDAV errors with CORS detection
- * Per RESEARCH.md pitfall: Most self-hosted servers don't send CORS headers by default
- */
 function handleWebDAVError(error: unknown): WebDAVResult {
   const message = error instanceof Error ? error.message : String(error);
 
-  // Detect CORS errors (browser-specific messages)
   const isCorsError =
     message.includes("CORS") ||
     message.includes("NetworkError") ||
@@ -173,7 +138,6 @@ function handleWebDAVError(error: unknown): WebDAVResult {
     };
   }
 
-  // Auth errors
   if (message.includes("401") || message.includes("Unauthorized")) {
     return {
       success: false,
