@@ -82,7 +82,6 @@ vi.mock("@/components/HabitActionsProvider", () => ({
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: vi.fn(() => ({ trigger: vi.fn() })),
 }));
-vi.mock("@/lib/hooks/useRealtimeSync", () => ({ useRealtimeSync: vi.fn() }));
 vi.mock("@/lib/hooks/useWeeklyBackup", () => ({
   useWeeklyBackup: vi.fn(() => ({
     lastBackupDate: null,

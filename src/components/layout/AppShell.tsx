@@ -13,7 +13,6 @@ import {
   ProjectActionsProvider,
   useProjectActions,
 } from "@/components/ProjectActionsProvider";
-import { useRealtimeSync } from "@/lib/hooks/useRealtimeSync";
 import { useBackAnchor } from "@/lib/hooks/useBackAnchor";
 import { AUTH_STANDALONE_ROUTES, isAdminRoute } from "@/lib/auth/auth-routes";
 import { PiPProvider } from "@/components/providers/PiPProvider";
@@ -296,19 +295,13 @@ function AppShellContent({ children }: AppShellProps) {
     setIsDesktop(isDesktop);
   }, [isDesktop, setIsDesktop]);
 
-  // --offline-banner-height (2.25rem) + the original md:mb-5 gap (1.25rem) — lifts desktop toasts clear of the pill.
-  // Set on the root (not just SidebarInset) so TelemetryConsentPrompt — a
-  // sibling of SidebarInset, not a descendant — can also read this offset.
-  // useLayoutEffect (not useEffect) so it lands before paint, avoiding a
-  // one-frame flash if hasTopBanner is already true on first mount.
+  // Set on root before paint so sibling overlays inherit the offset without a flash.
   useLayoutEffect(() => {
     document.documentElement.style.setProperty(
       "--offline-pill-offset",
       hasTopBanner ? "3.5rem" : "0px",
     );
   }, [hasTopBanner]);
-
-  useRealtimeSync();
 
   useWeeklyBackup();
 
