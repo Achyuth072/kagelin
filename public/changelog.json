@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.41.0-preview.2",
+    "date": "2026-08-26",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add no-unbounded-supabase-select lint rule to ban unpaginated reads"
+      ],
+      "Improved": [
+        "Add user_id indexes for focus_logs and tasks tables"
+      ],
+      "Fixed": [
+        "Paginate stats, tasks, and calendar sync queries to prevent silent truncation"
+      ]
+    }
+  },
+  {
     "version": "1.41.0-preview.1",
     "date": "2026-08-26",
     "channel": "preview",
@@ -808,18 +824,6 @@
       "Fixed": [
         "Give Trend chart axis labels breathing room on mobile",
         "Thin Trend chart x-axis ticks on mobile to stop overlap"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.9",
-    "date": "2026-07-01",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Render Projections card on the stats page",
-        "Add Projections card component",
-        "Add pace projection and streak-at-risk utils"
       ]
     }
   }
