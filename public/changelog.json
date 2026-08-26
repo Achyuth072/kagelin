@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.41.0-preview.1",
+    "date": "2026-08-26",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Consolidate subtask expand/collapse into a single, faster toggle",
+        "Patch and invalidate subtasks query cache in task mutations",
+        "Enhance accessibility labels, input semantics, and low-contrast text"
+      ]
+    }
+  },
+  {
     "version": "1.41.0-preview.0",
     "date": "2026-08-25",
     "channel": "preview",
@@ -808,18 +820,6 @@
         "Render Projections card on the stats page",
         "Add Projections card component",
         "Add pace projection and streak-at-risk utils"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.8",
-    "date": "2026-07-01",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add export entry points on stats and insights",
-        "Add analytics export utils (CSV and JSON)",
-        "Bucket habit reps per day for export"
       ]
     }
   }
