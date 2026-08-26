@@ -7,6 +7,10 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: vi.fn() }),
 }));
 
+vi.mock("@/lib/hooks/useSubtasks", () => ({
+  useSubtasks: vi.fn(() => ({ data: [], isLoading: false })),
+}));
+
 vi.mock("@/lib/hooks/useMediaQuery", () => ({
   useMediaQuery: vi.fn().mockReturnValue(false),
 }));

@@ -9,11 +9,15 @@ import type { Task } from "@/lib/types/task";
 /**
  * Fetches all subtasks for a given parent task.
  */
-export function useSubtasks(parentId: string | null | undefined) {
+export function useSubtasks<TData = Task[]>(
+  parentId: string | null | undefined,
+  options?: { select?: (data: Task[]) => TData },
+) {
   const { isGuestMode } = useAuth();
 
   return useQuery({
     queryKey: ["subtasks", parentId, isGuestMode],
+    select: options?.select,
     queryFn: async (): Promise<Task[]> => {
       if (!parentId) return [];
 

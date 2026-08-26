@@ -4,6 +4,8 @@ import { type Dispatch, type SetStateAction } from "react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
+import { useSubtasks } from "@/lib/hooks/useSubtasks";
+import { CollapsibleReveal } from "./shared/CollapsibleReveal";
 import {
   Select,
   SelectContent,
@@ -122,6 +124,13 @@ export function TaskView(props: TaskViewProps) {
   const { trigger } = useHaptic();
   const isFinePointer = useMediaQuery("(pointer: fine)");
   const scrollRef = useHorizontalScroll();
+
+  const { data: editSubtaskCount } = useSubtasks(
+    mode === "edit" ? props.initialTask.id : undefined,
+    { select: (data) => data.length },
+  );
+  const subtaskCount =
+    mode === "create" ? draftSubtasks.length : (editSubtaskCount ?? 0);
 
   const contentId = mode === "create" ? "task-content" : "task-content-edit";
   const contentErrorId =
@@ -278,10 +287,14 @@ export function TaskView(props: TaskViewProps) {
                 strokeWidth={2.25}
               />
             </IconCell>
-            <span className="text-sm flex-1 text-foreground">Subtasks</span>
+            <span className="text-sm flex-1 text-foreground">
+              Subtasks
+              {subtaskCount > 0 &&
+                ` · ${subtaskCount} ${subtaskCount === 1 ? "step" : "steps"}`}
+            </span>
           </button>
 
-          {showSubtasks && (
+          <CollapsibleReveal open={showSubtasks}>
             <div className="pl-11 pr-3 pb-2">
               <SubtaskList
                 taskId={mode === "edit" ? props.initialTask.id : undefined}
@@ -294,7 +307,7 @@ export function TaskView(props: TaskViewProps) {
                 onDraftSubtasksChange={setDraftSubtasks}
               />
             </div>
-          )}
+          </CollapsibleReveal>
         </div>
 
         <div className="h-1" />
