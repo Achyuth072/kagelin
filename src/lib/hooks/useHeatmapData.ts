@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 import { subDays, eachDayOfInterval, format } from "date-fns";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 
 export type MetricType = "combined" | "focus" | "tasks";
 
@@ -31,62 +32,66 @@ export function useHeatmapData(): UseHeatmapDataReturn {
 
   const { data: rawData, isLoading } = useQuery({
     queryKey: ["heatmap-data", isGuestMode],
-    staleTime: 300000, // 5 minutes (mock data is static)
+    staleTime: 300000,
     queryFn: async () => {
-      const thirtyDaysAgo = subDays(new Date(), 365).toISOString();
+      const yearAgoIso = subDays(new Date(), 365).toISOString();
 
       if (isGuestMode) {
         return {
           focusLogs: mockStore
             .getFocusLogs()
-            .filter((log) => log.start_time >= thirtyDaysAgo),
+            .filter((log) => log.start_time >= yearAgoIso),
           tasks: mockStore
             .getTasks()
             .filter(
               (task) =>
                 task.is_completed &&
                 task.completed_at &&
-                task.completed_at >= thirtyDaysAgo,
+                task.completed_at >= yearAgoIso,
             ),
         };
       }
 
       const supabase = createClient();
-      const [focusRes, tasksRes] = await Promise.all([
-        supabase
-          .from("focus_logs")
-          .select("start_time, duration_seconds")
-          .gte("start_time", thirtyDaysAgo),
-        supabase
-          .from("tasks")
-          .select("completed_at")
-          .eq("is_completed", true)
-          .gte("completed_at", thirtyDaysAgo),
+      const [focusLogs, tasks] = await Promise.all([
+        // Page full year to prevent silent 1000-row cap, tiebreaking on id for deterministic paging.
+        fetchAllRows<{ start_time: string; duration_seconds: number | null }>(
+          (from, to) =>
+            supabase
+              .from("focus_logs")
+              .select("start_time, duration_seconds")
+              .gte("start_time", yearAgoIso)
+              .order("start_time", { ascending: true })
+              .order("id", { ascending: true })
+              .range(from, to),
+        ),
+        fetchAllRows<{ completed_at: string | null }>((from, to) =>
+          supabase
+            .from("tasks")
+            .select("completed_at")
+            .eq("is_completed", true)
+            .gte("completed_at", yearAgoIso)
+            .order("completed_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        ),
       ]);
 
-      return {
-        focusLogs: focusRes.data || [],
-        tasks: tasksRes.data || [],
-      };
+      return { focusLogs, tasks };
     },
   });
 
-  // Process data into 365 days interval
   const processedData = useMemo(() => {
-    if (!rawData && !isLoading) return [];
     if (!rawData) return [];
 
     const endDate = new Date();
     const startDate = subDays(endDate, 364);
     const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-    // Pre-aggregate data into a dictionary for O(1) daily lookup
     const dailyStats: Record<string, { focusSeconds: number; tasks: number }> =
       {};
 
-    // Process Focus Logs (O(N))
     rawData.focusLogs.forEach((log) => {
-      // Extract YYYY-MM-DD from start_time string (assumes ISO format)
       const dateStr = log.start_time.split("T")[0];
       if (!dailyStats[dateStr]) {
         dailyStats[dateStr] = { focusSeconds: 0, tasks: 0 };
@@ -94,7 +99,6 @@ export function useHeatmapData(): UseHeatmapDataReturn {
       dailyStats[dateStr].focusSeconds += log.duration_seconds || 0;
     });
 
-    // Process Tasks (O(M))
     rawData.tasks.forEach((task) => {
       if (!task.completed_at) return;
       const dateStr = task.completed_at.split("T")[0];
@@ -104,15 +108,12 @@ export function useHeatmapData(): UseHeatmapDataReturn {
       dailyStats[dateStr].tasks += 1;
     });
 
-    // Generate processed days (O(365))
     return days.map((day) => {
       const dateStr = format(day, "yyyy-MM-dd");
       const stats = dailyStats[dateStr] || { focusSeconds: 0, tasks: 0 };
 
       const focusHours = parseFloat((stats.focusSeconds / 3600).toFixed(2));
       const dayTasks = stats.tasks;
-
-      // Combined score logic
       const combined = parseFloat((focusHours + dayTasks * 0.5).toFixed(2));
 
       return {
@@ -122,9 +123,8 @@ export function useHeatmapData(): UseHeatmapDataReturn {
         tasks: dayTasks,
       };
     });
-  }, [rawData, isLoading]);
+  }, [rawData]);
 
-  // Calculate max values and active days from the memoized data
   const { maxValue, activeDays } = useMemo(() => {
     const initialMax: Record<MetricType, number> = {
       combined: 1,

@@ -151,7 +151,6 @@ export function calculateStats(
     new Array(24).fill(0),
   );
 
-  // 1. Process Focus Logs
   let currentFocusSec = 0;
   let currentSessions = 0;
   let prevFocusSec = 0;
@@ -180,7 +179,6 @@ export function calculateStats(
     }
   }
 
-  // 2. Process Tasks
   let currentCompleted = 0;
   let prevCompleted = 0;
   let incompleteCount = 0;
@@ -224,27 +222,20 @@ export function calculateStats(
   const currentTotal = currentCompleted + incompleteCount;
   const prevTotal = prevCompleted + incompleteCount;
 
-  // 3. Process Habit Entries
   let currentHabitReps = 0;
   let prevHabitReps = 0;
   for (let i = 0; i < habitEntries.length; i++) {
     const entry = habitEntries[i];
-    // Parse the bare yyyy-MM-dd as local midnight (not UTC, which Date.parse
-    // would do) so window classification stays consistent with the local-time
-    // bucketing used for focus logs and tasks above.
+    // Parse bare yyyy-MM-dd as local midnight so window matches focus/task local bucketing.
     const entryMs = parseISO(entry.date).getTime();
     if (entryMs >= currentStartMs) {
       currentHabitReps++;
-      // Bucket into the day for the range-aware export rollup. entry.date is
-      // already a local yyyy-MM-dd key (see habit-streak.ts / useHeatmapData),
-      // so no reformatting is needed.
       getBucket(entry.date).habitReps += 1;
     } else if (hasPrevWindow && entryMs >= prevStartMs!) {
       prevHabitReps++;
     }
   }
 
-  // 4. Calculate Streak (walks back from today over every fetched activity date)
   let currentStreak = 0;
   if (activityDates.size > 0) {
     const checkDate = new Date(now);
@@ -257,7 +248,7 @@ export function calculateStats(
     while (activityDates.has(getDateKey(checkDate))) {
       currentStreak++;
       checkDate.setDate(checkDate.getDate() - 1);
-      if (currentStreak > 365) break; // Safety break
+      if (currentStreak > 365) break;
     }
   }
 
@@ -270,7 +261,6 @@ export function calculateStats(
     };
   };
 
-  // 5. Build the range-aware daily trend, spanning the current period only.
   const trendStart =
     currentStart ??
     (minActivityMs !== null
@@ -331,7 +321,7 @@ export function useStats(period: StatsPeriod = "30d") {
 
   return useQuery({
     queryKey: ["stats-dashboard", isGuestMode, period],
-    staleTime: 60000, // Cache for 1 minute
+    staleTime: 60000,
     placeholderData: (previousData) => previousData,
     queryFn: async (): Promise<StatsData> => {
       let rawLogs, rawTasks, rawHabits;
@@ -353,25 +343,29 @@ export function useStats(period: StatsPeriod = "30d") {
       } else {
         const supabase = createClient();
 
-        let logsQuery = supabase
-          .from("focus_logs")
-          .select("start_time, duration_seconds");
-        if (lowerBound) {
-          logsQuery = logsQuery.gte("start_time", lowerBound.toISOString());
-        }
-
-        // Parallel fetch for better performance
-        const [logsRes, tasksRes, habits] = await Promise.all([
-          logsQuery,
+        const [logs, tasks, habits] = await Promise.all([
+          fetchAllRows<StatsLog>((from, to) => {
+            let q = supabase
+              .from("focus_logs")
+              .select("start_time, duration_seconds")
+              .order("start_time", { ascending: true })
+              .order("id", { ascending: true });
+            if (lowerBound) {
+              q = q.gte("start_time", lowerBound.toISOString());
+            }
+            return q.range(from, to);
+          }),
           supabase.auth.getSession().then(({ data: { session } }) => {
             const userId = session?.user?.id;
             if (!userId) throw new Error("Not authenticated");
-            return supabase
-              .from("tasks")
-              .select(
-                "is_completed, completed_at, project_id, priority, user_id",
-              )
-              .eq("user_id", userId);
+            return fetchAllRows<StatsTask>((from, to) =>
+              supabase
+                .from("tasks")
+                .select("is_completed, completed_at, project_id, priority")
+                .eq("user_id", userId)
+                .order("id", { ascending: true })
+                .range(from, to),
+            );
           }),
           fetchAllRows<{ date: string }>((from, to) => {
             // date alone isn't unique across habits (schema only guarantees
@@ -388,11 +382,8 @@ export function useStats(period: StatsPeriod = "30d") {
           }),
         ]);
 
-        if (logsRes.error) throw logsRes.error;
-        if (tasksRes.error) throw tasksRes.error;
-
-        rawLogs = logsRes.data || [];
-        rawTasks = tasksRes.data || [];
+        rawLogs = logs;
+        rawTasks = tasks;
         rawHabits = habits;
       }
 

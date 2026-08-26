@@ -18,6 +18,7 @@ export async function POST(request: Request) {
 
     const { endpoint, title, body, data } = await request.json();
 
+    // eslint-disable-next-line local/no-unbounded-supabase-select -- one row per device for this user
     let subscriptionsQuery = supabase
       .from("push_subscriptions")
       .select("id, subscription")

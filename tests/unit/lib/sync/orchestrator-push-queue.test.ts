@@ -29,8 +29,16 @@ vi.mock("@/lib/supabase/client", () => ({
     from: () => ({
       select: () => ({
         eq: () => ({
-          not: () =>
-            Promise.resolve({ data: pendingEventsRef.value, error: null }),
+          not: () => ({
+            // Pages via fetchAllRows, so it terminates on .order(...).range(...).
+            order: () => ({
+              range: (from: number, to: number) =>
+                Promise.resolve({
+                  data: pendingEventsRef.value.slice(from, to + 1),
+                  error: null,
+                }),
+            }),
+          }),
         }),
       }),
       update: (data: Record<string, unknown>) => ({

@@ -25,6 +25,16 @@ function fetchAllHabitEntries(
   );
 }
 
+function groupEntriesByHabit(entries: HabitEntry[]): Map<string, HabitEntry[]> {
+  const map = new Map<string, HabitEntry[]>();
+  for (const entry of entries) {
+    const list = map.get(entry.habit_id);
+    if (list) list.push(entry);
+    else map.set(entry.habit_id, [entry]);
+  }
+  return map;
+}
+
 interface UseHabitsOptions {
   includeArchived?: boolean;
 }
@@ -35,37 +45,26 @@ export function useHabits(options: UseHabitsOptions = {}) {
 
   return useQuery({
     queryKey: ["habits", { includeArchived, isGuestMode }],
-    staleTime: 60000, // 1 minute
+    staleTime: 60000,
     queryFn: async (): Promise<HabitWithEntries[]> => {
-      // Guest Mode: Return mock data
       if (isGuestMode) {
         const habits = [...mockStore.getHabits()].sort(
           (a, b) => a.sort_order - b.sort_order,
         );
         const entries = mockStore.getHabitEntries();
-
-        // Filter archived if requested
         const filteredHabits = includeArchived
           ? habits
           : habits.filter((h) => !h.archived_at);
+        const entriesByHabit = groupEntriesByHabit(entries);
 
-        // Group entries by habit_id
-        const entriesByHabit = new Map<string, HabitEntry[]>();
-        entries.forEach((entry) => {
-          const existing = entriesByHabit.get(entry.habit_id) || [];
-          existing.push(entry);
-          entriesByHabit.set(entry.habit_id, existing);
-        });
-
-        // Combine habits with their entries
         return filteredHabits.map((habit) => ({
           ...habit,
           entries: entriesByHabit.get(habit.id) || [],
         }));
       }
 
-      // Fetch habits
       const supabase = createClient();
+      // eslint-disable-next-line local/no-unbounded-supabase-select -- habit definitions, not entries
       let habitsQuery = supabase
         .from("habits")
         .select("*")
@@ -76,28 +75,13 @@ export function useHabits(options: UseHabitsOptions = {}) {
       }
 
       const { data: habits, error: habitsError } = await habitsQuery;
+      if (habitsError) throw new Error(habitsError.message);
+      if (!habits || habits.length === 0) return [];
 
-      if (habitsError) {
-        throw new Error(habitsError.message);
-      }
-
-      if (!habits || habits.length === 0) {
-        return [];
-      }
-
-      // Fetch habit entries for all habits
       const habitIds = habits.map((h) => h.id);
       const entries = await fetchAllHabitEntries(supabase, habitIds);
+      const entriesByHabit = groupEntriesByHabit(entries);
 
-      // Group entries by habit_id
-      const entriesByHabit = new Map<string, HabitEntry[]>();
-      (entries || []).forEach((entry) => {
-        const existing = entriesByHabit.get(entry.habit_id) || [];
-        existing.push(entry as HabitEntry);
-        entriesByHabit.set(entry.habit_id, existing);
-      });
-
-      // Combine habits with their entries
       return habits.map((habit) => ({
         ...(habit as Habit),
         entries: entriesByHabit.get(habit.id) || [],
@@ -112,7 +96,7 @@ export function useHabit(habitId: string | null) {
 
   return useQuery({
     queryKey: ["habit", habitId, isGuestMode],
-    staleTime: 60000, // 1 minute — avoid refetching on every sheet open
+    staleTime: 60000,
     queryFn: async (): Promise<HabitWithEntries | null> => {
       if (!habitId) return null;
 

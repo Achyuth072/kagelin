@@ -284,6 +284,7 @@ export const taskMutations = {
       }
 
       // Prevent duplicate future instances if already created
+      // eslint-disable-next-line local/no-unbounded-supabase-select -- five equality filters incl. an exact due_date
       const existingTasks = await supabase
         .from("tasks")
         .select("id")
@@ -398,6 +399,7 @@ export const taskMutations = {
 
     const supabase = createClient();
 
+    // eslint-disable-next-line local/no-unbounded-supabase-select -- subtasks of one parent
     const { data: subtasks, error: subtasksError } = await supabase
       .from("tasks")
       .select("*")
@@ -552,6 +554,7 @@ export const taskMutations = {
       originalParentId: string,
       newParentId: string,
     ) => {
+      // eslint-disable-next-line local/no-unbounded-supabase-select -- subtasks of one parent
       const { data: subtasks, error: subtasksError } = await supabase
         .from("tasks")
         .select("*")

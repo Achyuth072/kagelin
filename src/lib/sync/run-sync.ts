@@ -77,6 +77,7 @@ async function mintTokens(providers: string[]): Promise<Map<string, string>> {
  */
 export async function runCalendarSync(): Promise<RunSyncSummary> {
   const supabase = createClient();
+  // eslint-disable-next-line local/no-unbounded-supabase-select -- handful of calendars per user
   const { data: calendars } = await supabase
     .from("external_calendars")
     .select("id, provider")
@@ -93,13 +94,13 @@ export async function runCalendarSync(): Promise<RunSyncSummary> {
   if (!calendars?.length) return summary;
 
   const list = calendars as { id: string; provider: string }[];
-  const tokenCache = await mintTokens(list.map((c) => c.provider));
+  const tokens = await mintTokens(list.map((c) => c.provider));
 
   const results = await Promise.allSettled(
     list.map(async (cal) => {
       const config: Partial<SyncAdapterConfig> = {};
       if (OAUTH_PROVIDERS.includes(cal.provider)) {
-        const token = tokenCache.get(cal.provider);
+        const token = tokens.get(cal.provider);
         if (!token) throw new Error(`${cal.provider} needs reconnecting`);
         config.accessToken = token;
       }
@@ -131,6 +132,7 @@ export async function runCalendarSync(): Promise<RunSyncSummary> {
  */
 export async function runCalendarPush(): Promise<RunSyncSummary> {
   const supabase = createClient();
+  // eslint-disable-next-line local/no-unbounded-supabase-select -- handful of calendars per user
   const { data: calendars } = await supabase
     .from("external_calendars")
     .select("*")
@@ -148,13 +150,13 @@ export async function runCalendarPush(): Promise<RunSyncSummary> {
   if (!calendars?.length) return summary;
 
   const list = calendars as ExternalCalendar[];
-  const tokenCache = await mintTokens(list.map((c) => c.provider));
+  const tokens = await mintTokens(list.map((c) => c.provider));
 
   const results = await Promise.allSettled(
     list
       .filter((cal) => OAUTH_PROVIDERS.includes(cal.provider))
       .map(async (cal) => {
-        const token = tokenCache.get(cal.provider);
+        const token = tokens.get(cal.provider);
         if (!token) throw new Error(`${cal.provider} needs reconnecting`);
         const adapter = getAdapter(cal.provider);
         await adapter.initialize({ externalCalendar: cal, accessToken: token });

@@ -25,14 +25,11 @@ export function useSubtasks<TData = Task[]>(
         return mockStore
           .getTasks()
           .filter((t) => t.parent_id === parentId)
-          .sort((a, b) => {
-            const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-            const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-            return timeA - timeB;
-          });
+          .sort((a, b) => a.created_at.localeCompare(b.created_at));
       }
 
       const supabase = createClient();
+      // eslint-disable-next-line local/no-unbounded-supabase-select -- subtasks of one parent
       const { data, error } = await supabase
         .from("tasks")
         .select("*")

@@ -68,8 +68,8 @@ serve(async (req: Request) => {
       polls: 0,
     };
     const startTime = Date.now();
-    const MAX_RUNTIME = 50000; // Run for up to 50 seconds
-    const POLL_INTERVAL = 1500; // Poll every 1.5 seconds
+    const MAX_RUNTIME = 50000;
+    const POLL_INTERVAL = 1500;
 
     const queue = supabaseAdmin.from("notification_queue");
 
@@ -115,6 +115,7 @@ serve(async (req: Request) => {
       // One lookup for the whole batch instead of one per row.
       const subsByUser = new Map<string, Subscription[]>();
       if (batch.length > 0) {
+        // eslint-disable-next-line local/no-unbounded-supabase-select -- at most 50 claimed users x their devices
         const { data: subs } = await supabaseAdmin
           .from("push_subscriptions")
           .select("id, user_id, subscription")
@@ -212,7 +213,6 @@ serve(async (req: Request) => {
         }
       }
 
-      // If we still have time, wait for the next poll
       const timeElapsed = Date.now() - startTime;
       if (timeElapsed + POLL_INTERVAL < MAX_RUNTIME) {
         await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL));
