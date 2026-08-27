@@ -30,6 +30,10 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Kagelin",
   },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export const viewport: Viewport = {
