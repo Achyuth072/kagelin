@@ -270,7 +270,10 @@ export function SegmentedTimePicker({
             />
           </div>
 
-          <span className="text-2xl md:text-3xl text-foreground/20 font-thin self-center translate-y-[-1px]">
+          <span
+            aria-hidden="true"
+            className="text-2xl md:text-3xl text-foreground/40 font-thin self-center translate-y-[-1px]"
+          >
             :
           </span>
 

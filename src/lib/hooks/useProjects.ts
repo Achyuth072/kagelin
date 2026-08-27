@@ -12,20 +12,19 @@ export function useProjects() {
   return useQuery({
     queryKey: ["projects", isGuestMode],
     queryFn: async (): Promise<Project[]> => {
-      // Guest Mode: Use mock store
       if (isGuestMode) {
         return mockStore
           .getProjects()
           .sort((a, b) => a.name.localeCompare(b.name));
       }
 
-      // Normal Supabase flow
       const supabase = createClient();
+      // eslint-disable-next-line local/no-unbounded-supabase-select -- project definitions, not tasks
       const { data, error } = await supabase
         .from("projects")
         .select("*")
         .eq("is_archived", false)
-        .order("is_inbox", { ascending: false }) // Inbox first
+        .order("is_inbox", { ascending: false })
         .order("name", { ascending: true });
 
       if (error) {
@@ -45,12 +44,10 @@ export function useProject(projectId: string | null) {
     queryFn: async (): Promise<Project | null> => {
       if (!projectId) return null;
 
-      // Guest Mode: Use mock store
       if (isGuestMode) {
         return mockStore.getProject(projectId);
       }
 
-      // Normal Supabase flow
       const supabase = createClient();
       const { data, error } = await supabase
         .from("projects")
@@ -74,7 +71,6 @@ export function useArchivedProjects() {
   return useQuery({
     queryKey: ["projects", "archived", isGuestMode],
     queryFn: async (): Promise<Project[]> => {
-      // Guest Mode: Use mock store
       if (isGuestMode) {
         return mockStore
           .getProjects()
@@ -82,8 +78,8 @@ export function useArchivedProjects() {
           .sort((a, b) => a.name.localeCompare(b.name));
       }
 
-      // Normal Supabase flow
       const supabase = createClient();
+      // eslint-disable-next-line local/no-unbounded-supabase-select -- project definitions, not tasks
       const { data, error } = await supabase
         .from("projects")
         .select("*")

@@ -50,7 +50,7 @@ _Currently in preview — expect rough edges._
 Most productivity apps want your email before you've written a single task, and keep your data on their servers either way. Kagelin doesn't.
 
 - **Nothing to sign up for.** Tasks, habits, focus, and calendar — all offline in guest mode. Account only if you want cloud sync.
-- **Your data, your server.** Point it at Nextcloud, Synology, or any WebDAV server. No middleman.
+- **Your data, your server.** Guest mode keeps everything on your device, and backs up to your own Nextcloud, Synology, or any WebDAV server. No middleman.
 - **Take everything with you.** Encrypted ZIP export, full data deletion, and standard `.ics` files. Leaving is always an option.
 
 ## Features
@@ -68,7 +68,7 @@ Most productivity apps want your email before you've written a single task, and 
 
 ### Focus & Habits
 
-- **Focus Timer**: PiP-enabled Pomodoro engine with real-time sync across devices.
+- **Focus Timer**: PiP-enabled Pomodoro engine that hands off between your devices, so pausing on one pauses on all of them.
 - **Push notifications**: server-derived Web Push notifications for timer completions and task reminders (supporting desktop, Android, and iOS standalone PWA).
 - **Habit tracking**: standardized tracking with longevity streaks and uhabits `.db` import.
 - **Compact habit view**: tappable rolling-7 day strip with drag-and-drop reordering.
@@ -85,7 +85,7 @@ Most productivity apps want your email before you've written a single task, and 
 
 - **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed.
 - **Accounts & Auth**: Google, GitHub, or breach-checked email/password sign-in with multi-provider identity linking and password reset.
-- **WebDAV sync**: sync with personal servers (Nextcloud, Synology) for self-hosted setups.
+- **WebDAV backup**: keep a copy of everything on a server you own (Nextcloud, Synology). Available at every tier, account or not. It is a backup, not a sync: each upload replaces the last.
 - **Backups & Portability**: encrypted `.zip` export/import, guest backup reminders, and instant cloud data wipe.
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
 - **Telemetry**: off by default for everyone, Guest Mode included. If you opt in, we collect anonymous product-usage counts (no task titles, habit names, or other content) tied to a random device ID, never your account.
@@ -125,7 +125,7 @@ Most productivity apps want your email before you've written a single task, and 
 - **Tailwind CSS v4** + **Shadcn UI** (Radix)
 - **Framer Motion** + **@dnd-kit** (flat-DOM drag-and-drop)
 - **Serwist** (typed service worker, offline-first PWA)
-- **tsdav** (WebDAV sync) + **ical.js** (ICS import/export)
+- **tsdav** (CalDAV, currently deferred) + **ical.js** (ICS import/export)
 
 </details>
 

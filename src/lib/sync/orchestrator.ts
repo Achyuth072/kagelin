@@ -5,6 +5,7 @@
 
 import "./register-adapters";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
 import type {
   ExternalCalendar,
@@ -37,7 +38,6 @@ export async function syncExternalCalendar(
   };
 
   try {
-    // 1. Fetch calendar metadata from DB
     const { data: calendar, error: calError } = await supabase
       .from("external_calendars")
       .select("*")
@@ -50,16 +50,13 @@ export async function syncExternalCalendar(
 
     const adapter = getAdapter(calendar.provider);
 
-    // 2. Initialize adapter
     await adapter.initialize({
       externalCalendar: calendar,
       ...config,
     });
 
-    // 3. Mark as syncing in DB
     await updateCalendarStatus(calendarId, { sync_status: "syncing" });
 
-    // 4. Determine sync type (incremental vs full)
     let remoteEvents: RemoteEvent[] = [];
     let deletedRemoteIds: string[] = [];
     let newSyncToken = "";
@@ -72,7 +69,6 @@ export async function syncExternalCalendar(
         newSyncToken = delta.newSyncToken;
       } catch (e: unknown) {
         if (e instanceof Error && e.message === "SYNC_TOKEN_EXPIRED") {
-          // Fallback to full sync
           const full = await adapter.fullSync();
           remoteEvents = full.events;
           newSyncToken = full.syncToken;
@@ -86,15 +82,17 @@ export async function syncExternalCalendar(
       newSyncToken = full.syncToken;
     }
 
-    // 5. Fetch local events for this calendar
-    const { data: localEvents, error: localError } = await supabase
-      .from("calendar_events")
-      .select("*")
-      .eq("remote_calendar_id", calendarId);
+    // Must fetch the complete set: computePullMutations keys locals by remote_id,
+    // so any omitted row would be mistaken for new and duplicated in toCreate.
+    const localEvents = await fetchAllRows<CalendarEvent>((from, to) =>
+      supabase
+        .from("calendar_events")
+        .select("*")
+        .eq("remote_calendar_id", calendarId)
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
 
-    if (localError) throw localError;
-
-    // 6. Compute and apply pull mutations (LWW + kansoId adoption)
     const incoming = remoteEvents
       .map((remote) => {
         const parsed = adapter.parseRemoteEvent(remote);
@@ -110,7 +108,7 @@ export async function syncExternalCalendar(
       .filter((e): e is NonNullable<typeof e> => e !== null);
 
     const mutations = computePullMutations(
-      (localEvents as CalendarEvent[]) ?? [],
+      localEvents,
       incoming,
       deletedRemoteIds,
     );
@@ -121,14 +119,12 @@ export async function syncExternalCalendar(
     result.archived += pullResult.archived;
     result.errors.push(...pullResult.errors);
 
-    // 7. Push local changes (sync_state IS NOT NULL) for bidirectional calendars
     if (calendar.sync_direction === "bidirectional") {
       const pushResult = await pushPendingEvents(calendar, adapter);
       result.pushed += pushResult.pushed;
       result.errors.push(...pushResult.errors);
     }
 
-    // 8. Finalize status and sync token
     result.newSyncToken = newSyncToken;
     await updateCalendarStatus(calendarId, {
       sync_status: result.errors.length > 0 ? "error" : "success",
@@ -166,15 +162,17 @@ export async function pushPendingEvents(
   const supabase = createClient();
   const result = { pushed: 0, errors: [] as string[] };
 
-  const { data: pending, error } = await supabase
-    .from("calendar_events")
-    .select("*")
-    .eq("remote_calendar_id", calendar.id)
-    .not("sync_state", "is", null);
+  const pending = await fetchAllRows<CalendarEvent>((from, to) =>
+    supabase
+      .from("calendar_events")
+      .select("*")
+      .eq("remote_calendar_id", calendar.id)
+      .not("sync_state", "is", null)
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 
-  if (error || !pending) return result;
-
-  for (const event of pending as CalendarEvent[]) {
+  for (const event of pending) {
     try {
       if (event.sync_state === "pending_delete") {
         await adapter.deleteRemoteEvent(event.remote_id!);
@@ -191,7 +189,6 @@ export async function pushPendingEvents(
         remoteId = pushed.remoteId;
         etag = pushed.etag;
       } else {
-        // pending_update
         const updated = await adapter.updateRemoteEvent(
           event.remote_id!,
           event,
@@ -258,18 +255,24 @@ export async function applyPullMutations(
       { id: string; is_archived: boolean }
     >();
     if (remoteIds.length > 0) {
-      const { data: existing } = await supabase
-        .from("calendar_events")
-        .select("id, remote_id, is_archived")
-        .eq("user_id", calendar.user_id)
-        .in("remote_id", remoteIds);
+      const existing = await fetchAllRows<{
+        id: string;
+        remote_id: string;
+        is_archived: boolean;
+      }>((from, to) =>
+        supabase
+          .from("calendar_events")
+          .select("id, remote_id, is_archived")
+          .eq("user_id", calendar.user_id)
+          .in("remote_id", remoteIds)
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
       existingByRemoteId = new Map(
-        (existing ?? []).map(
-          (e: { id: string; remote_id: string; is_archived: boolean }) => [
-            e.remote_id,
-            { id: e.id, is_archived: e.is_archived },
-          ],
-        ),
+        existing.map((e) => [
+          e.remote_id,
+          { id: e.id, is_archived: e.is_archived },
+        ]),
       );
     }
 
@@ -320,7 +323,6 @@ export async function applyPullMutations(
     );
   }
 
-  // Updates are per-row (different payloads) — run in parallel
   await Promise.all(
     mutations.toUpdate.map(async (item) => {
       const { error } = await supabase
@@ -337,7 +339,6 @@ export async function applyPullMutations(
     }),
   );
 
-  // Batch archive
   if (mutations.toArchive.length > 0) {
     const { error } = await supabase
       .from("calendar_events")
@@ -348,7 +349,6 @@ export async function applyPullMutations(
     else result.archived += mutations.toArchive.length;
   }
 
-  // Batch hard-delete
   if (mutations.toHardDelete.length > 0) {
     const { error } = await supabase
       .from("calendar_events")
@@ -358,7 +358,6 @@ export async function applyPullMutations(
       result.errors.push(`Failed to batch-delete events: ${error.message}`);
   }
 
-  // Adopt — parallel (different remote_id/etag per row)
   await Promise.all(
     mutations.toAdopt.map(async (item) => {
       const { error } = await supabase

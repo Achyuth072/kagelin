@@ -31,6 +31,7 @@ interface DeleteConfirmationDialogProps {
   onConfirm: () => void;
   title?: string;
   description?: string;
+  confirmLabel?: string;
 }
 
 export function DeleteConfirmationDialog({
@@ -39,6 +40,7 @@ export function DeleteConfirmationDialog({
   onConfirm,
   title = "Delete Task",
   description = "Are you sure you want to delete this task? This action cannot be undone.",
+  confirmLabel = "Delete",
 }: DeleteConfirmationDialogProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { trigger } = useHaptic();
@@ -74,7 +76,7 @@ export function DeleteConfirmationDialog({
               onClick={handleConfirm}
               className="px-6"
             >
-              Delete
+              {confirmLabel}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -95,7 +97,7 @@ export function DeleteConfirmationDialog({
             variant="destructive"
             className="w-full"
           >
-            Delete
+            {confirmLabel}
           </Button>
           <DrawerClose asChild>
             <Button variant="outline" className="w-full" onClick={handleCancel}>

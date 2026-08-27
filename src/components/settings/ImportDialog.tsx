@@ -89,6 +89,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                 size="sm"
                 className="h-8 opacity-0 group-hover:opacity-100 transition-opacity"
                 disabled={isAnyImporting}
+                aria-label="Select Loop Habit Tracker database file"
               >
                 {isImportingUhabits ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -101,6 +102,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                 type="file"
                 accept=".db"
                 className="hidden"
+                aria-label="Upload Loop Habit Tracker database file"
                 onChange={handleImportUhabits}
               />
             </div>
@@ -129,6 +131,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                 size="sm"
                 className="h-8 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500 hover:text-blue-600"
                 disabled={isAnyImporting}
+                aria-label="Select iCalendar ICS file"
               >
                 {isImportingIcs ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -141,6 +144,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                 type="file"
                 accept=".ics,text/calendar"
                 className="hidden"
+                aria-label="Upload iCalendar ICS file"
                 onChange={handleImportIcs}
               />
             </div>

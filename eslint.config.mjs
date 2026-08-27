@@ -3,6 +3,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import { recommended as tailwindRecommended } from "@poupe/eslint-plugin-tailwindcss";
 import reactCompiler from "eslint-plugin-react-compiler";
+import noUnboundedSupabaseSelect from "./eslint-rules/no-unbounded-supabase-select.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -59,6 +60,7 @@ const eslintConfig = defineConfig([
           ],
         },
       ],
+      "local/no-unbounded-supabase-select": "error",
       "no-restricted-syntax": [
         "warn",
         {
@@ -71,6 +73,11 @@ const eslintConfig = defineConfig([
     },
     plugins: {
       "react-compiler": reactCompiler,
+      local: {
+        rules: {
+          "no-unbounded-supabase-select": noUnboundedSupabaseSelect,
+        },
+      },
     },
   },
   // notify.ts and toaster.tsx are the only files allowed to import sonner

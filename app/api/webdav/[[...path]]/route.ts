@@ -2,29 +2,6 @@ import { type NextRequest, NextResponse } from "next/server";
 import { SsrfBlockedError, ssrfSafeFetch } from "@/lib/webdav/ssrf-guard";
 import { enforceRateLimit, getClientIp } from "@/lib/rate-limit";
 
-/**
- * WebDAV Proxy Route
- *
- * Forwards all WebDAV method requests to the configured WebDAV server
- * from the server side, bypassing browser CORS restrictions.
- *
- * This is the correct architectural pattern: user-supplied WebDAV servers
- * (Nextcloud, Synology, etc.) will never set CORS headers for our domain.
- * Server-side proxying is the only robust solution.
- *
- * Usage: client sends requests to /api/webdav/<path>
- *  with headers:
- *    X-WebDAV-URL: <full base url of their webdav server>
- *    Authorization: Basic <base64 credentials>
- *
- * Deliberately unauthenticated (guest backup depends on it), so it is its
- * own last line of defense against SSRF: every upstream fetch goes through
- * `ssrfSafeFetch` (see `ssrf-guard.ts`), which resolves the target once,
- * checks it against private/link-local/metadata ranges, pins the connection
- * to that exact IP, and never auto-follows redirects — closing the
- * DNS-rebinding TOCTOU a plain allow/deny-by-hostname check has.
- */
-
 const ALLOWED_METHODS = [
   "GET",
   "PUT",
@@ -64,11 +41,7 @@ export async function OPTIONS(
   return proxyWebDAV(request, await params, "OPTIONS");
 }
 
-/**
- * Handle WebDAV-specific methods (PROPFIND, MKCOL, etc.)
- * Next.js only allows standard HTTP methods as named exports. For everything else,
- * we catch them in the POST handler and check the actual method from the request.
- */
+// App Router only exports standard HTTP methods; non-standard WebDAV methods arrive via POST.
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ path?: string[] }> },
@@ -82,15 +55,11 @@ async function proxyWebDAV(
   params: { path?: string[] },
   method: string,
 ): Promise<NextResponse> {
-  // Guard: only allow known WebDAV-safe methods
   if (!ALLOWED_METHODS.includes(method)) {
     return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
   }
 
-  // Same-origin guard: this route is unauthenticated by design, so it must
-  // not act as an open proxy for other sites' scripts. Browsers set these
-  // headers on fetches whenever possible; if either is present it must say
-  // the request came from our own origin.
+  // Restrict to same-origin requests to prevent open proxy abuse.
   const origin = request.headers.get("origin");
   if (origin && origin !== request.nextUrl.origin) {
     return NextResponse.json(
@@ -106,11 +75,9 @@ async function proxyWebDAV(
     );
   }
 
-  // H-5 / N-3: unauthenticated route, so rate limit by IP.
   const limited = await enforceRateLimit("webdav", getClientIp(request));
   if (limited) return limited;
 
-  // The client passes the WebDAV server base URL via a custom header
   const webdavBaseUrl = request.headers.get("X-WebDAV-URL");
   if (!webdavBaseUrl) {
     return NextResponse.json(
@@ -119,11 +86,9 @@ async function proxyWebDAV(
     );
   }
 
-  // Reconstruct the target URL
   const path = params.path?.join("/") ?? "";
   const targetUrl = `${webdavBaseUrl.replace(/\/$/, "")}/${path}`;
 
-  // Forward all headers except host-specific ones
   const forwardHeaders = new Headers();
   for (const [key, value] of request.headers.entries()) {
     const lower = key.toLowerCase();
@@ -137,7 +102,6 @@ async function proxyWebDAV(
     forwardHeaders.set(key, value);
   }
 
-  // Forward the body (required for PUT, PROPFIND etc.)
   const body =
     method !== "GET" && method !== "HEAD" && method !== "OPTIONS"
       ? await request.arrayBuffer()
@@ -153,14 +117,16 @@ async function proxyWebDAV(
     const responseBody = await response.arrayBuffer();
     const responseHeaders = new Headers();
 
-    // Forward response headers back to client
     for (const [key, value] of response.headers.entries()) {
       const lower = key.toLowerCase();
       if (lower === "transfer-encoding") continue; // not valid in HTTP/2
       responseHeaders.set(key, value);
     }
 
-    return new NextResponse(responseBody, {
+    // Response constructor throws if 204/205/304 receive a non-null body.
+    const isNullBodyStatus = [204, 205, 304].includes(response.status);
+
+    return new NextResponse(isNullBodyStatus ? null : responseBody, {
       status: response.status,
       statusText: response.statusText,
       headers: responseHeaders,

@@ -22,6 +22,7 @@ import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimerActions } from "@/components/TimerProvider";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { notify } from "@/lib/notify";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
@@ -81,7 +82,6 @@ export function FocusTaskPicker() {
           const doDate = t.do_date ? new Date(t.do_date) : null;
           const dueDate = t.due_date ? new Date(t.due_date) : null;
           if (t.is_completed) {
-            // only show completed tasks due today (dimmed)
             return (
               (doDate && doDate >= startOfToday && doDate <= endOfToday) ||
               (dueDate && dueDate >= startOfToday && dueDate <= endOfToday)
@@ -93,15 +93,20 @@ export function FocusTaskPicker() {
           );
         });
       }
-      const { data } = await supabase
-        .from("tasks")
-        .select("*")
-        .is("parent_id", null)
-        .or(
-          `and(is_completed.eq.false,or(do_date.lte.${endISO},due_date.lte.${endISO})),and(is_completed.eq.true,or(and(do_date.gte.${startISO},do_date.lte.${endISO}),and(due_date.gte.${startISO},due_date.lte.${endISO})))`,
-        )
-        .order("day_order", { ascending: true });
-      return (data || []) as Task[];
+
+      // Overdue backlog has no lower bound; page to prevent silent 1000-row cap.
+      return fetchAllRows<Task>((from, to) =>
+        supabase
+          .from("tasks")
+          .select("*")
+          .is("parent_id", null)
+          .or(
+            `and(is_completed.eq.false,or(do_date.lte.${endISO},due_date.lte.${endISO})),and(is_completed.eq.true,or(and(do_date.gte.${startISO},do_date.lte.${endISO}),and(due_date.gte.${startISO},due_date.lte.${endISO})))`,
+          )
+          .order("day_order", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
     },
     enabled: open,
   });
@@ -218,7 +223,7 @@ export function FocusTaskPicker() {
           </span>
           {task.recurrence && (
             <Repeat
-              className="h-3 w-3 shrink-0 text-muted-foreground/50"
+              className="h-3 w-3 shrink-0 text-muted-foreground"
               strokeWidth={2.25}
             />
           )}
@@ -240,7 +245,7 @@ export function FocusTaskPicker() {
             <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               {label}
             </span>
-            <span className="text-[11px] text-muted-foreground/50">
+            <span className="text-[11px] text-muted-foreground">
               {tasks.length}
             </span>
           </div>

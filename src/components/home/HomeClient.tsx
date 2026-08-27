@@ -83,17 +83,19 @@ export function HomeClient() {
           <p className="text-sm text-muted-foreground flex items-center gap-2">
             {format(today, "EEEE, MMMM d")}
             {filter && (
-              <span className="flex items-center gap-1.5 before:content-['•'] before:text-muted-foreground/40">
+              <span className="flex items-center gap-1.5 before:content-['•'] before:text-muted-foreground">
                 <span className="capitalize text-primary font-medium">
                   {filter === "p1" ? "High Priority" : filter}
                 </span>
                 <button
+                  type="button"
                   onClick={() => {
                     trigger("toggle");
                     router.push("/");
                   }}
                   className="bg-secondary/40 hover:bg-secondary/60 border border-border/50 p-0.5 rounded-full transition-colors"
                   title="Clear filter"
+                  aria-label="Clear filter"
                 >
                   <PlusIcon className="h-3.5 w-3.5 rotate-45" />
                 </button>

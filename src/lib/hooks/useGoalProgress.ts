@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { startOfWeek, format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 
@@ -91,31 +92,33 @@ export function useGoalProgress() {
       }
 
       const supabase = createClient();
-      const [logsRes, tasksRes] = await Promise.all([
-        supabase
-          .from("focus_logs")
-          .select("start_time, duration_seconds")
-          .gte("start_time", weekStartIso),
+      const [logs, tasks] = await Promise.all([
+        fetchAllRows<GoalLog>((from, to) =>
+          supabase
+            .from("focus_logs")
+            .select("start_time, duration_seconds")
+            .gte("start_time", weekStartIso)
+            .order("start_time", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        ),
         supabase.auth.getSession().then(({ data: { session } }) => {
           const userId = session?.user?.id;
           if (!userId) throw new Error("Not authenticated");
-          return supabase
-            .from("tasks")
-            .select("completed_at")
-            .eq("user_id", userId)
-            .eq("is_completed", true)
-            .gte("completed_at", weekStartIso);
+          return fetchAllRows<GoalTask>((from, to) =>
+            supabase
+              .from("tasks")
+              .select("completed_at")
+              .eq("user_id", userId)
+              .eq("is_completed", true)
+              .gte("completed_at", weekStartIso)
+              .order("id", { ascending: true })
+              .range(from, to),
+          );
         }),
       ]);
 
-      if (logsRes.error) throw logsRes.error;
-      if (tasksRes.error) throw tasksRes.error;
-
-      return calculateGoalProgress(
-        logsRes.data || [],
-        tasksRes.data || [],
-        now,
-      );
+      return calculateGoalProgress(logs, tasks, now);
     },
   });
 }

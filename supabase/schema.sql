@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS tasks_user_id_idx ON public.tasks (user_id);
+
 -- =============================================================================
 -- 4. LABELS TABLE (Tags)
 -- =============================================================================
@@ -93,6 +95,10 @@ CREATE TABLE IF NOT EXISTS focus_logs (
   duration_seconds INT,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
+
+-- Leftmost prefix also covers user_id-only lookups.
+CREATE INDEX IF NOT EXISTS focus_logs_user_id_start_time_idx
+  ON public.focus_logs (user_id, start_time);
 
 -- =============================================================================
 -- 7. PUSH_SUBSCRIPTIONS TABLE (Web Push)

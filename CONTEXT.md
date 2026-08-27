@@ -10,32 +10,81 @@ must be resolved before proceeding.
 ## Sync (disambiguated)
 
 "Sync" is overloaded and must always be qualified with one of the following.
-These are three distinct features with very different server-compute costs.
+Three are distinct sync features with very different server-compute costs; the
+fourth entry is here because it is routinely mistaken for one.
 
 ### On-demand calendar sync
 
 A calendar pull/push initiated **on the user's own device** (opening the
 calendar, "Sync now", a debounced post-edit push, window refocus). The browser
-talks **directly** to the provider (Google / Microsoft / CalDAV) using the
-user's own access token and API quota. Kagelin's only server cost is an
-occasional access-token refresh. Cheap. Available to **registered users** (free
-tier included).
+talks **directly** to the provider using the user's own access token and API
+quota. Kagelin's only server cost is an occasional access-token refresh. Cheap.
+Available to **registered users** (free tier included).
+
+Google and Microsoft are the providers. **CalDAV is deferred at every tier** —
+it was withdrawn pre-beta and no tier has it. Naming CalDAV as something a user
+can connect today describes an intention, not the product.
 
 _Not to be confused with_ realtime cross-device mirroring or background
 auto-sync.
 
 ### Realtime cross-device mirroring
 
-Live propagation of state between a user's devices over Supabase Realtime
-websocket channels (e.g. the focus timer in Phase 54, live remote-calendar
-change push). Costs ongoing server compute that scales with connected devices.
-A **paid / premium** capability.
+Live propagation of a user's **content** — tasks, habits, events — between
+their devices over Supabase Realtime. Costs ongoing server compute that scales
+with connected devices. A **paid / premium** capability, and not yet built.
+
+The focus timer is **not** an instance of this, despite using the same
+transport. See **Timer handoff**.
+
+### Timer handoff
+
+The running focus timer following the user between their devices, so pausing on
+a laptop pauses on the phone. Available to **every registered user**, free tier
+included, and deliberately carved out of realtime cross-device mirroring rather
+than being a free-tier leak of it.
+
+The distinction is one of kind, not of generosity. Mirroring propagates content
+the user authored, and it is a convenience — a task that shows up a minute later
+on another device is merely slow. A timer is a **single piece of state that can
+only be in one place**: one row per user, bounded, with no history. A timer that
+stops here and keeps running there isn't unsynced, it is **wrong**, and a
+Kagelin that reports two different remaining times is broken at any tier.
+
+_Avoid_: "timer sync", which collapses it back into the thing it is not.
 
 ### Background / scheduled auto-sync
 
 Server-side synchronisation that runs **even when the user is not in the app**
 (e.g. a cron keeping calendars fresh). Costs ongoing server compute that scales
 with users. A **paid / premium** capability, deferred.
+
+### WebDAV backup (deliberately _not_ "WebDAV sync")
+
+Manual **Back Up** / **Restore** of the user's whole dataset as a **Backup** on
+a WebDAV server they own (Nextcloud, Synology, …). Available at **every tier**:
+a Guest's Backup is built from their local data, a Registered user's from their
+cloud tables, and the resulting file is the same artifact either way.
+
+**Not** sync, and the UI must never call it sync. It has no conflict model at
+all: the file lives at one fixed path, every Back Up overwrites it wholesale,
+and nothing compares timestamps in either direction. Two devices backing up in
+turn silently discard the earlier one. Calling it "sync" would promise a
+convergence the mechanism cannot deliver — see
+`docs/adr/0015-webdav-is-backup-not-sync.md`.
+
+- **Back Up** — overwrite the file on the server with the user's current data.
+  Reads only; never modifies the user's data.
+- **Restore** — make the user's data match the file, **and nothing outside the
+  file survives**. Destructive, so it is always confirmed, and the confirmation
+  names the date the Backup was taken.
+
+What it deliberately excludes: connected calendar accounts, focus-timer state,
+and import provenance. Calendar connections in particular carry OAuth material,
+which must never be written to a third-party server.
+
+_Not to be confused with_ realtime cross-device mirroring: nothing propagates
+until a person presses a button.
 
 ---
 
@@ -91,16 +140,25 @@ See `docs/adr/0012-identity-linking.md`.
 
 ### Guest
 
-An unregistered user. Data is local-only (with optional client-side WebDAV
-backup). Has no server identity (`auth.uid()`). Can use **CalDAV** (credentials
-held client-side) but **not** Google/Outlook OAuth, which structurally requires
-a server-anchored identity.
+An unregistered user. Data is local-only, with **Backup** export/import and
+**WebDAV backup** for portability. Has no server identity (`auth.uid()`).
+
+Guest is Kagelin's **local-only tier**, not a trial state to graduate out of. A
+person who wants their data never to reach Kagelin's servers is already served:
+stay a Guest, and back up to a server you own. There is deliberately no
+"registered but local-only" mode — an account whose content stays on the device
+would be a Guest that also cannot receive reminders, since reminders are
+scheduled from the data server-side.
+
+Cannot use Google/Outlook calendar, which structurally requires a
+server-anchored identity. **CalDAV is deferred at every tier**, so it is not a
+Guest capability either.
 
 ### Registered (free)
 
 A user with a Kagelin account (`auth.uid()`). Data persists to the cloud. Gets
-**on-demand calendar sync** for all providers. Does **not** get realtime
-cross-device mirroring, background auto-sync, or push.
+**on-demand calendar sync**, **WebDAV backup**, and **timer handoff**. Does
+**not** get realtime cross-device mirroring, background auto-sync, or push.
 
 ### Premium (paid)
 
@@ -364,7 +422,11 @@ _Avoid_: "stats" for a per-item view.
 Two distinct things that both say "export":
 
 - **Backup** — full portability: the complete dataset as a ZIP (JSON + ICS),
-  round-trips with Import.
+  round-trips with Import. **One artifact, however it travels.** The file a
+  **WebDAV backup** leaves on the user's own server is the same ZIP the Export
+  button produces — pull it off that server, hand it to Import, and it restores.
+  A second, WebDAV-only format would make the escape hatch a dead end, since the
+  file would only be readable by the button that wrote it.
 - **Stats export** — a read-only analytics extract (CSV daily rollup / JSON stats
   payload), scoped to the current period or one item's Insights. Not a backup;
   does not round-trip.

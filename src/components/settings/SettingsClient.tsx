@@ -559,7 +559,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
                   </span>
                   <PreviewBadge version={version} />
                 </div>
-                <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground/40 group-hover:text-muted-foreground/70 transition-colors tracking-[0.04em] uppercase font-medium">
+                <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground group-hover:text-foreground transition-colors tracking-[0.04em] uppercase font-medium">
                   <Info className="h-2.5 w-2.5" />
                   About
                 </span>

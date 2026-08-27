@@ -2,23 +2,6 @@ import dns from "node:dns/promises";
 import { Agent, fetch as undiciFetch } from "undici";
 import ipaddr from "ipaddr.js";
 
-/**
- * SSRF guard for the WebDAV proxy (`/api/webdav/[[...path]]`).
- *
- * The proxy is intentionally unauthenticated (guest backup depends on it) and
- * forwards to a user-supplied server URL, so it must defend itself against
- * being used to reach internal/cloud-metadata addresses. A naive
- * "resolve host, reject private IPs, then fetch the hostname" check is
- * DNS-rebinding-bypassable: an attacker's DNS server can answer the
- * validation lookup with a public IP and a later lookup (made by the actual
- * HTTP client) with 169.254.169.254.
- *
- * `ssrfSafeFetch` is the entry point — it assembles the whole defence
- * (validate, resolve once, pin the connection to the vetted IP, never follow
- * redirects) so callers can't hold the invariant wrong. `resolveSafeTarget`
- * and `pinnedLookup` are the primitives it is built from.
- */
-
 export class SsrfBlockedError extends Error {
   constructor(message: string) {
     super(message);
@@ -42,17 +25,11 @@ function isPubliclyRoutable(ip: string): boolean {
 }
 
 export interface SafeTarget {
-  /** The parsed, validated URL — the exact artifact `ssrfSafeFetch` fetches (hostname preserved for TLS SNI + Host header). */
   url: URL;
-  /** The exact IP the connection must be pinned to. */
   pinnedIp: string;
   family: 4 | 6;
 }
 
-/**
- * Validates a user-supplied WebDAV URL and resolves it to a single,
- * pre-vetted IP. Throws `SsrfBlockedError` for anything unsafe.
- */
 export async function resolveSafeTarget(rawUrl: string): Promise<SafeTarget> {
   let url: URL;
   try {
@@ -65,8 +42,7 @@ export async function resolveSafeTarget(rawUrl: string): Promise<SafeTarget> {
     throw new SsrfBlockedError(`Scheme not allowed: ${url.protocol}`);
   }
 
-  // Strip IPv6 literal brackets (`[::1]` -> `::1`) so dns.lookup/ipaddr agree
-  // on the same string; hostnames never contain brackets.
+  // Strip IPv6 literal brackets so dns.lookup and ipaddr agree on format.
   const hostname = url.hostname.replace(/^\[(.*)\]$/, "$1");
 
   let resolved: { address: string; family: number };
@@ -89,29 +65,27 @@ export async function resolveSafeTarget(rawUrl: string): Promise<SafeTarget> {
   };
 }
 
-/**
- * Builds a `connect.lookup` function for an undici `Agent` that ignores
- * whatever DNS says at connect time and always returns the address that was
- * already validated by `resolveSafeTarget` — this is what actually closes
- * the rebinding TOCTOU, not just the upfront check.
- */
+// Custom lookup that returns the pinned IP to prevent DNS rebinding.
+// Supports options.all array callback required by Node's autoSelectFamily.
 export function pinnedLookup(pinnedIp: string, family: 4 | 6) {
   return (
     _hostname: string,
-    _options: unknown,
-    callback: (err: Error | null, address: string, family: number) => void,
+    options: { all?: boolean } | undefined,
+    callback: (
+      err: Error | null,
+      address: string | { address: string; family: number }[],
+      family?: number,
+    ) => void,
   ): void => {
-    callback(null, pinnedIp, family);
+    if (options?.all) {
+      callback(null, [{ address: pinnedIp, family }]);
+    } else {
+      callback(null, pinnedIp, family);
+    }
   };
 }
 
-/**
- * Pinned agents are pooled so back-to-back requests to the same server (test
- * connection → upload → download) reuse connections instead of paying a
- * fresh TCP+TLS handshake each time. Keyed by hostname + pinned IP: if DNS
- * later resolves the host to a different (freshly re-validated) address,
- * that's a new key and a new agent — the pin can never go stale.
- */
+// Pool agents by hostname + pinned IP to reuse TCP/TLS connections without pinning stale IPs.
 const MAX_POOLED_AGENTS = 8;
 const agentPool = new Map<string, Agent>();
 
@@ -135,14 +109,6 @@ function getPinnedAgent(target: SafeTarget): Agent {
   return agent;
 }
 
-/**
- * Fetches a user-supplied URL with the full SSRF defence applied: the URL is
- * validated and resolved via `resolveSafeTarget`, the connection is pinned
- * to the vetted IP, and redirects are never auto-followed (a redirect could
- * point at a private/metadata address, and following it would re-resolve
- * DNS and lose the pin — 3xx responses pass straight through to the
- * caller). Throws `SsrfBlockedError` for unsafe targets.
- */
 export async function ssrfSafeFetch(
   rawUrl: string,
   init: { method: string; headers: Headers; body?: ArrayBuffer },
@@ -153,6 +119,7 @@ export async function ssrfSafeFetch(
     headers: init.headers,
     body: init.body ?? null,
     dispatcher: getPinnedAgent(target),
+    // Redirects are manual so following a 3xx cannot bypass the pinned IP.
     redirect: "manual",
     duplex: "half",
   });

@@ -73,6 +73,7 @@ export function useUhabitsImport() {
       let nextSortOrder = 0;
       if (!isGuest) {
         const supabase = createClient();
+        // eslint-disable-next-line local/no-unbounded-supabase-select -- habit definitions, not entries
         const { data: existing } = await supabase
           .from("habits")
           .select("name, sort_order");
@@ -108,10 +109,6 @@ export function useUhabitsImport() {
         id: loadingToastId,
       });
 
-      const skippedTempIds = new Set(
-        habits.filter((h) => !habitsToImport.includes(h)).map((h) => h.id),
-      );
-
       // tempId (from parseUhabitsFile) -> actualId (DB / mock store)
       const habitIdMap = new Map<string, string>();
 
@@ -131,17 +128,14 @@ export function useUhabitsImport() {
         );
 
         const remapped = entries
-          .filter((e) => !skippedTempIds.has(e.habit_id))
+          .filter((e) => habitIdMap.has(e.habit_id))
           .map((e) => ({
             id: crypto.randomUUID(),
-            habit_id: habitIdMap.get(e.habit_id) ?? null,
+            habit_id: habitIdMap.get(e.habit_id)!,
             date: e.date,
             value: e.value,
             created_at: e.created_at,
-          }))
-          .filter(
-            (e): e is typeof e & { habit_id: string } => e.habit_id !== null,
-          );
+          }));
 
         if (isGuest) {
           mockStore.addHabitEntries(remapped);

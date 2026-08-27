@@ -9,8 +9,6 @@ import {
   type GuestData,
 } from "@/lib/mock/mock-store";
 import type { Task } from "@/lib/types/task";
-import type { HabitEntry } from "@/lib/types/habit";
-import type { FocusLog } from "@/lib/types/focus";
 
 export function useMigrationStrategy() {
   const { user, isGuestMode } = useAuth();
@@ -46,6 +44,7 @@ export function useMigrationStrategy() {
       // Prevents fabricated history from becoming the user's real streaks/scores. See ADR 0014.
       const guestData = stripDemoData(JSON.parse(guestDataStr) as GuestData);
 
+      // eslint-disable-next-line local/no-unbounded-supabase-select -- project definitions, not tasks
       const { data: userProjects } = await supabase
         .from("projects")
         .select("id, name, is_inbox")
@@ -85,7 +84,6 @@ export function useMigrationStrategy() {
 
       if (guestData.projects && guestData.projects.length > 0) {
         for (const project of guestData.projects) {
-          // Find existing project by name + is_inbox to avoid duplicates
           const existing = userProjects?.find(
             (p) => p.name === project.name || (p.is_inbox && project.is_inbox),
           );
@@ -116,6 +114,7 @@ export function useMigrationStrategy() {
       }
 
       if (guestData.habits && guestData.habits.length > 0) {
+        // eslint-disable-next-line local/no-unbounded-supabase-select -- habit definitions, not entries
         const { data: existingHabits } = await supabase
           .from("habits")
           .select("id, name")
@@ -150,7 +149,7 @@ export function useMigrationStrategy() {
       }
 
       if (guestData.tasks && guestData.tasks.length > 0) {
-        const tasksToInsert = guestData.tasks.map((t: Task) => ({
+        const tasksToInsert = guestData.tasks.map((t) => ({
           user_id: user.id,
           project_id: t.project_id ? projectMap.get(t.project_id) : null,
           content: t.content,
@@ -176,8 +175,7 @@ export function useMigrationStrategy() {
 
         if (error) throw error;
 
-        // Insert doesn't return the original guest ID, so match back by
-        // content+created_at instead.
+        // Match back by content+created_at because insert doesn't preserve client guest ID.
         newTasks.forEach(
           (nt: { id: string; content: string; created_at: string }) => {
             const original = guestData.tasks.find(
@@ -190,11 +188,8 @@ export function useMigrationStrategy() {
           },
         );
 
-        // parent_id is set here, in a second pass, since it needs the new
-        // task IDs that only exist after the insert above.
-        const subtasks = guestData.tasks.filter(
-          (t: Task) => t.parent_id !== null,
-        );
+        // Subtasks require parent_id which is only known after parents are inserted.
+        const subtasks = guestData.tasks.filter((t) => t.parent_id !== null);
         for (const st of subtasks) {
           if (!st.parent_id) continue;
           const newTaskId = taskMap.get(st.id);
@@ -210,7 +205,7 @@ export function useMigrationStrategy() {
 
       if (guestData.habit_entries && guestData.habit_entries.length > 0) {
         const entriesToInsert = guestData.habit_entries
-          .map((e: HabitEntry) => {
+          .map((e) => {
             const newHabitId = habitMap.get(e.habit_id);
             if (!newHabitId) return null;
             return {
@@ -231,7 +226,7 @@ export function useMigrationStrategy() {
       }
 
       if (guestData.focus_logs && guestData.focus_logs.length > 0) {
-        const logsToInsert = guestData.focus_logs.map((l: FocusLog) => ({
+        const logsToInsert = guestData.focus_logs.map((l) => ({
           user_id: user.id,
           task_id: l.task_id ? taskMap.get(l.task_id) : null,
           start_time: l.start_time,

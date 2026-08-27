@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
+import { CollapsibleReveal } from "./shared/CollapsibleReveal";
 import { useDeleteTask, useToggleTask } from "@/lib/hooks/useTaskMutations";
 import { useTimerStore } from "@/lib/store/timerStore";
 import {
@@ -224,29 +224,17 @@ function TaskItemBase({
       )}
 
       {/* Skipped while dragging — the motion layer costs per frame, per row. */}
-      <AnimatePresence initial={false}>
-        {isExpanded && !isDndActive && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{
-              type: "spring",
-              stiffness: 500,
-              damping: 35,
-              mass: 0.5,
-            }}
-            className={cn(
-              "mr-1 border-l-2 border-brand/30 pl-4 transition-colors overflow-hidden",
-              isDesktop ? "ml-10" : "ml-11",
-            )}
-          >
-            <div className="pt-1">
-              <SubtaskList taskId={task.id} projectId={task.project_id} />
-            </div>
-          </motion.div>
+      <CollapsibleReveal
+        open={isExpanded && !isDndActive}
+        className={cn(
+          "mr-1 border-l-2 border-brand/30 pl-4 transition-colors",
+          isDesktop ? "ml-10" : "ml-11",
         )}
-      </AnimatePresence>
+      >
+        <div className="pt-1">
+          <SubtaskList taskId={task.id} projectId={task.project_id} />
+        </div>
+      </CollapsibleReveal>
 
       <DeleteConfirmationDialog
         isOpen={showDeleteDialog}

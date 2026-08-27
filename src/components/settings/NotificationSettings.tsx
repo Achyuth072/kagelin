@@ -346,6 +346,7 @@ export function NotificationSettings() {
                   <input
                     type="text"
                     placeholder="Search timezone..."
+                    aria-label="Search timezone"
                     value={timezoneSearch}
                     onChange={(e) => setTimezoneSearch(e.target.value)}
                     onKeyDown={(e) => {

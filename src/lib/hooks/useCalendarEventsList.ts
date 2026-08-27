@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
@@ -31,13 +32,15 @@ export function useDedicatedCalendarEventsQuery(enabled = true) {
       if (isGuestMode) return mockStore.getEvents();
 
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from("calendar_events")
-        .select("*")
-        .eq("is_archived", false);
-
-      if (error) throw error;
-      return data as CalendarEvent[];
+      return fetchAllRows<CalendarEvent>((from, to) =>
+        supabase
+          .from("calendar_events")
+          .select("*")
+          .eq("is_archived", false)
+          .order("start_time", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
     },
     enabled,
   });

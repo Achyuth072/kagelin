@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 import type { Task } from "@/lib/types/task";
@@ -20,11 +21,9 @@ export function useTasks(options: UseTasksOptions = {}) {
     queryKey: ["tasks", { projectId, showCompleted, filter, isGuestMode }],
     staleTime: 60000,
     queryFn: async (): Promise<Task[]> => {
-      // Guest Mode: Use mock store
       if (isGuestMode) {
         let tasks = mockStore.getTasks();
 
-        // Apply filters
         if (filter === "today") {
           const today = new Date();
           today.setHours(23, 59, 59, 999);
@@ -35,7 +34,6 @@ export function useTasks(options: UseTasksOptions = {}) {
           tasks = tasks.filter((t) => t.priority === 1);
         }
 
-        // Filter by project
         if (projectId === "inbox") {
           tasks = tasks.filter((t) => !t.project_id);
         } else if (projectId === "all") {
@@ -52,7 +50,6 @@ export function useTasks(options: UseTasksOptions = {}) {
           tasks = tasks.filter((t) => t.project_id === projectId);
         }
 
-        // Filter completed (but keep today's completed for continuity)
         if (!showCompleted) {
           tasks = tasks.filter((t) => {
             if (!t.is_completed) return true;
@@ -67,9 +64,7 @@ export function useTasks(options: UseTasksOptions = {}) {
           });
         }
 
-        // Exclude subtasks and sort. Tie-break matches the Supabase query
-        // below (newest first) so guest and real fetch paths agree on order
-        // whenever day_order is tied.
+        // Tie-break matches the Supabase query below (newest first) for consistent ordering.
         tasks = tasks
           .filter((t) => !t.parent_id)
           .sort((a, b) => {
@@ -81,58 +76,51 @@ export function useTasks(options: UseTasksOptions = {}) {
         return tasks;
       }
 
-      // Normal Supabase flow
       const supabase = createClient();
-      let query = supabase
-        .from("tasks")
-        .select(
-          `
+
+      // Hoisted above paged fetch so every page filters against the exact same timestamp.
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      let tasks = await fetchAllRows<
+        Task & { projects: { is_archived: boolean } | null }
+      >((from, to) => {
+        let query = supabase
+          .from("tasks")
+          .select(
+            `
           *,
           projects!left(is_archived)
         `,
-        )
-        .is("parent_id", null) // Exclude subtasks from main list
-        .order("day_order", { ascending: true })
-        .order("created_at", { ascending: false });
+          )
+          .is("parent_id", null)
+          .order("day_order", { ascending: true })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: true });
 
-      // Apply Quick Filters
-      if (filter === "today") {
-        const today = new Date();
-        today.setHours(23, 59, 59, 999);
-        query = query.lte("due_date", today.toISOString());
-      } else if (filter === "p1") {
-        query = query.eq("priority", 1);
-      }
+        if (filter === "today") {
+          query = query.lte("due_date", todayEnd.toISOString());
+        } else if (filter === "p1") {
+          query = query.eq("priority", 1);
+        }
 
-      // Filter by project
-      if (projectId === "inbox") {
-        // Inbox: Only tasks without a project
-        query = query.is("project_id", null);
-      } else if (projectId && projectId !== "all") {
-        // Specific project: Only tasks in that project
-        query = query.eq("project_id", projectId);
-      }
-      // "all" doesn't filter at the database level so we can catch unassigned tasks too
+        if (projectId === "inbox") {
+          query = query.is("project_id", null);
+        } else if (projectId && projectId !== "all") {
+          query = query.eq("project_id", projectId);
+        }
 
-      if (!showCompleted) {
-        const todayStart = new Date();
-        todayStart.setHours(0, 0, 0, 0);
-        query = query.or(
-          `is_completed.eq.false,completed_at.gte.${todayStart.toISOString()}`,
-        );
-      }
+        if (!showCompleted) {
+          query = query.or(
+            `is_completed.eq.false,completed_at.gte.${todayStart.toISOString()}`,
+          );
+        }
 
-      const { data, error } = await query;
+        return query.range(from, to);
+      });
 
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      let tasks = data as (Task & {
-        projects: { is_archived: boolean } | null;
-      })[];
-
-      // Filter out tasks from archived projects for "All Tasks" view
       if (projectId === "all" || !projectId) {
         tasks = tasks.filter((t) => !t.projects?.is_archived);
       }
@@ -151,12 +139,10 @@ export function useTask(taskId: string | null) {
     queryFn: async (): Promise<Task | null> => {
       if (!taskId) return null;
 
-      // Guest Mode: Use mock store
       if (isGuestMode) {
         return mockStore.getTask(taskId);
       }
 
-      // Normal Supabase flow
       const supabase = createClient();
       const { data, error } = await supabase
         .from("tasks")
@@ -184,7 +170,7 @@ export function useTaskSeries(seriesId: string | null) {
 
   return useQuery({
     queryKey: ["task-series", seriesId, isGuestMode],
-    staleTime: 60000, // 1 minute — avoid refetching on every sheet open
+    staleTime: 60000,
     queryFn: async (): Promise<Task[]> => {
       if (!seriesId) return [];
 
@@ -195,16 +181,14 @@ export function useTaskSeries(seriesId: string | null) {
       }
 
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("recurring_series_id", seriesId);
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return data as Task[];
+      return fetchAllRows<Task>((from, to) =>
+        supabase
+          .from("tasks")
+          .select("*")
+          .eq("recurring_series_id", seriesId)
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
     },
     enabled: !!seriesId,
   });

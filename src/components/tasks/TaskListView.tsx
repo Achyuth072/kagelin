@@ -231,8 +231,8 @@ function TaskListViewBase({
                   );
                 })}
                 {evening.length === 0 && (
-                  <div className="h-12 flex items-center justify-center border-2 border-dashed border-primary/10 rounded-2xl mx-1">
-                    <span className="text-[10px] font-bold text-muted-foreground/30 uppercase tracking-widest">
+                  <div className="h-12 flex items-center justify-center border-2 border-dashed border-primary/20 rounded-2xl mx-1">
+                    <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">
                       Drop here for evening
                     </span>
                   </div>

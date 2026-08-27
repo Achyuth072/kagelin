@@ -31,11 +31,16 @@ vi.mock("@/lib/supabase/client", () => ({
       // Dedup: SELECT id, remote_id, is_archived … .eq(user_id).in(remote_id, [...])
       select: (_cols: string) => ({
         eq: (_col: string, _val: string) => ({
-          in: (_col2: string, _ids: string[]) =>
-            Promise.resolve({
-              data: mockExistingRows,
-              error: null,
+          // Pages via fetchAllRows, so it terminates on .order(...).range(...).
+          in: (_col2: string, _ids: string[]) => ({
+            order: () => ({
+              range: (from: number, to: number) =>
+                Promise.resolve({
+                  data: mockExistingRows.slice(from, to + 1),
+                  error: null,
+                }),
             }),
+          }),
         }),
       }),
       insert: (data: unknown) => {

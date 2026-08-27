@@ -24,3 +24,24 @@ auto-sync is the paid tier). Also avoids rewriting the existing adapters.
   Compensate with CSP (Phase 61).
 - Google/Outlook require login (OAuth needs server-anchored refresh token identity).
   Guests keep CalDAV with client credentials. Technical boundary, not paywall.
+
+## Amended — CalDAV deferred at every tier
+
+The CalDAV half of the last consequence no longer holds. The connect flow was
+withdrawn pre-beta because it wrote server URL, username and password to
+`localStorage` in plaintext, and it has not been rebuilt. No tier has CalDAV
+today, so Guests do not have a calendar story at all — the "technical boundary,
+not paywall" reasoning above still stands as intent, but describes something
+that does not currently exist.
+
+Rebuilding it is blocked on a genuine open question rather than effort: where a
+credential lives when there is no account to anchor it to. In-memory-only works
+for **WebDAV backup**, which is a deliberate button press, but not for calendar
+sync, which fires on app open, window refocus and a post-edit debounce — a
+Guest would be retyping a password several times a day, or the sync would simply
+never run. Solving it means either a passphrase-derived key in the browser or
+server-held credentials, and the second forecloses the Guest case that motivated
+this decision. Deferred pending its own design pass.
+
+The rest of this ADR — client-side adapters, token-in-memory, refresh token
+server-side — is unaffected and still current for Google/Outlook.

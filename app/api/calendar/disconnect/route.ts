@@ -17,14 +17,13 @@ export async function DELETE(request: Request) {
   // all explicitly scoped to the verified user.id below.
   const admin = createAdminClient();
 
-  // Delete the encrypted token
   await admin
     .from("calendar_oauth_tokens")
     .delete()
     .eq("user_id", user.id)
     .eq("provider", provider);
 
-  // Archive locally-stored events that came from this provider's calendars
+  // eslint-disable-next-line local/no-unbounded-supabase-select -- handful of calendars per user
   const { data: providerCalendars } = await admin
     .from("external_calendars")
     .select("id")
@@ -32,7 +31,7 @@ export async function DELETE(request: Request) {
     .eq("provider", provider);
 
   if (providerCalendars?.length) {
-    const calendarIds = providerCalendars.map((c: { id: string }) => c.id);
+    const calendarIds = providerCalendars.map((c) => c.id);
     await admin
       .from("calendar_events")
       .update({ is_archived: true })

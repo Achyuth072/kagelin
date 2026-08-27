@@ -25,9 +25,20 @@ function makeRequest(body: unknown) {
 function makeThenableChain<T>(result: T) {
   const b: Record<string, unknown> = {};
   const self = () => b;
-  for (const m of ["select", "eq", "not", "insert", "update", "delete", "in"]) {
+  for (const m of [
+    "select",
+    "eq",
+    "not",
+    "insert",
+    "update",
+    "delete",
+    "in",
+    "order",
+  ]) {
     b[m] = vi.fn(self);
   }
+  // Paged reads terminate on .range() rather than awaiting the builder.
+  b["range"] = vi.fn(() => Promise.resolve(result));
   b["then"] = (
     onFulfilled?: ((v: T) => unknown) | null,
     onRejected?: ((r: unknown) => unknown) | null,
@@ -44,10 +55,8 @@ describe("POST /api/calendar/calendars – orphan adoption on reconnect", () => 
   });
 
   it("adopts archived orphaned events to the new calendar and unarchives them", async () => {
-    // Chain 1: existing check → no duplicates
     const existingCheck = makeThenableChain({ data: [], error: null });
 
-    // Chain 2: insert new row → returns new calendar id
     const afterInsert = {
       select: vi.fn().mockResolvedValue({
         data: [{ id: "new-cal-1" }],
@@ -56,13 +65,11 @@ describe("POST /api/calendar/calendars – orphan adoption on reconnect", () => 
     };
     const insertChain = { insert: vi.fn(() => afterInsert) };
 
-    // Chain 3: all active external_calendar IDs → ["new-cal-1"]
     const activeIds = makeThenableChain({
       data: [{ id: "new-cal-1" }],
       error: null,
     });
 
-    // Chain 4: archived synced events → two orphans (reference old deleted UUIDs)
     const archivedEvents = makeThenableChain({
       data: [
         { id: "evt-1", remote_calendar_id: "old-cal-dead-1" },
@@ -71,7 +78,6 @@ describe("POST /api/calendar/calendars – orphan adoption on reconnect", () => 
       error: null,
     });
 
-    // Chain 5: update (adoption) — capture what gets written
     const capturedUpdateData: unknown[] = [];
     const capturedUpdateIds: string[][] = [];
     const updateChain = {
@@ -87,11 +93,11 @@ describe("POST /api/calendar/calendars – orphan adoption on reconnect", () => 
     };
 
     mockAdminFrom
-      .mockReturnValueOnce(existingCheck) // existing-calendar dedup check
-      .mockReturnValueOnce(insertChain) // insert new external_calendars row
-      .mockReturnValueOnce(activeIds) // all active calendar IDs
-      .mockReturnValueOnce(archivedEvents) // archived synced events query
-      .mockReturnValueOnce(updateChain); // adoption update
+      .mockReturnValueOnce(existingCheck)
+      .mockReturnValueOnce(insertChain)
+      .mockReturnValueOnce(activeIds)
+      .mockReturnValueOnce(archivedEvents)
+      .mockReturnValueOnce(updateChain);
 
     const response = await POST(
       makeRequest({
@@ -157,6 +163,45 @@ describe("POST /api/calendar/calendars – orphan adoption on reconnect", () => 
     expect(mockAdminFrom).toHaveBeenCalledTimes(4);
   });
 
+  it("still reports the calendars it created when the orphan scan fails", async () => {
+    const existingCheck = makeThenableChain({ data: [], error: null });
+
+    const afterInsert = {
+      select: vi.fn().mockResolvedValue({
+        data: [{ id: "new-cal-3" }],
+        error: null,
+      }),
+    };
+    const insertChain = { insert: vi.fn(() => afterInsert) };
+
+    const activeIds = makeThenableChain({
+      data: [{ id: "new-cal-3" }],
+      error: null,
+    });
+
+    // The paged orphan scan rejects. Adoption is best-effort and the INSERT has
+    // already committed — a 500 here would strand the caller, since the retry
+    // short-circuits on existingIds and never reaches adoption again.
+    const failingScan = makeThenableChain({ data: null, error: null });
+    failingScan.range = vi.fn(() => Promise.reject(new Error("read timeout")));
+
+    mockAdminFrom
+      .mockReturnValueOnce(existingCheck)
+      .mockReturnValueOnce(insertChain)
+      .mockReturnValueOnce(activeIds)
+      .mockReturnValueOnce(failingScan);
+
+    const response = await POST(
+      makeRequest({
+        provider: "google",
+        calendars: [{ remote_calendar_id: "primary", name: "Cal" }],
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ created: 1 });
+  });
+
   it("returns 400 when provider or calendars are missing", async () => {
     const response = await POST(
       makeRequest({ provider: "google", calendars: [] }),
@@ -182,7 +227,6 @@ describe("POST /api/calendar/calendars – orphan adoption on reconnect", () => 
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.created).toBe(0);
-    // Only one admin.from call (the existing-check); no insert, no adoption
     expect(mockAdminFrom).toHaveBeenCalledTimes(1);
   });
 });

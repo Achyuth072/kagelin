@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api/require-user";
+import { fetchAllRows } from "@/lib/supabase/paginate";
 
 interface PickedCalendar {
   remote_calendar_id: string;
@@ -8,12 +9,12 @@ interface PickedCalendar {
   color?: string;
 }
 
-// List the user's configured external_calendars (id + remote id + provider)
 export async function GET() {
   const { user, error: authError } = await requireUser();
   if (authError) return authError;
 
   const admin = createAdminClient();
+  // eslint-disable-next-line local/no-unbounded-supabase-select -- handful of calendars per user
   const { data, error } = await admin
     .from("external_calendars")
     .select("id, provider, name, remote_calendar_id, sync_enabled")
@@ -27,7 +28,6 @@ export async function GET() {
   return NextResponse.json({ calendars: data ?? [] });
 }
 
-// Create external_calendars rows for the selected provider calendars
 export async function POST(request: Request) {
   const body = await request.json();
   const provider = body.provider as string;
@@ -45,16 +45,14 @@ export async function POST(request: Request) {
 
   const admin = createAdminClient();
 
-  // Skip calendars already configured (same user + provider + remote id)
+  // eslint-disable-next-line local/no-unbounded-supabase-select -- handful of calendars per user
   const { data: existing } = await admin
     .from("external_calendars")
     .select("remote_calendar_id")
     .eq("user_id", user.id)
     .eq("provider", provider);
   const existingIds = new Set(
-    (existing ?? []).map(
-      (r: { remote_calendar_id: string | null }) => r.remote_calendar_id,
-    ),
+    (existing ?? []).map((r) => r.remote_calendar_id),
   );
 
   const rows = picks
@@ -83,34 +81,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const newCalendarIds = (data ?? []).map((r: { id: string }) => r.id);
+  const newCalendarIds = (data ?? []).map((r) => r.id);
 
-  // Adopt orphaned archived events from this provider's previous connection so
-  // they reappear immediately without waiting for a sync cycle. Orphans are
-  // archived synced events whose remote_calendar_id references a now-deleted
-  // external_calendars row. The sync revive path remains a safety net.
+  // Reconnect: unarchive orphaned events from previously deleted calendar connections.
   if (newCalendarIds.length > 0) {
-    const [{ data: allCalendars }, { data: archivedSynced }] =
-      await Promise.all([
-        admin.from("external_calendars").select("id").eq("user_id", user.id),
+    const [{ data: allCalendars }, archivedSynced] = await Promise.all([
+      // eslint-disable-next-line local/no-unbounded-supabase-select -- handful of calendars per user
+      admin.from("external_calendars").select("id").eq("user_id", user.id),
+      // Best-effort adoption: failure should not fail calendar creation.
+      fetchAllRows<{ id: string; remote_calendar_id: string }>((from, to) =>
         admin
           .from("calendar_events")
           .select("id, remote_calendar_id")
           .eq("user_id", user.id)
           .eq("is_archived", true)
           .not("remote_id", "is", null)
-          .not("remote_calendar_id", "is", null),
-      ]);
-    const activeIds = new Set(
-      (allCalendars ?? []).map((c: { id: string }) => c.id),
-    );
+          .not("remote_calendar_id", "is", null)
+          .order("id", { ascending: true })
+          .range(from, to),
+      ).catch((scanError) => {
+        console.error(
+          "[calendar-calendars:POST] orphan scan failed; sync will revive:",
+          scanError,
+        );
+        return [];
+      }),
+    ]);
+    const activeIds = new Set((allCalendars ?? []).map((c) => c.id));
 
-    const orphanIds = (archivedSynced ?? [])
-      .filter(
-        (e: { id: string; remote_calendar_id: string }) =>
-          !activeIds.has(e.remote_calendar_id),
-      )
-      .map((e: { id: string }) => e.id);
+    const orphanIds = archivedSynced
+      .filter((e) => !activeIds.has(e.remote_calendar_id))
+      .map((e) => e.id);
 
     if (orphanIds.length > 0) {
       await admin

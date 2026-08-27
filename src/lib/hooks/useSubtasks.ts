@@ -9,11 +9,15 @@ import type { Task } from "@/lib/types/task";
 /**
  * Fetches all subtasks for a given parent task.
  */
-export function useSubtasks(parentId: string | null | undefined) {
+export function useSubtasks<TData = Task[]>(
+  parentId: string | null | undefined,
+  options?: { select?: (data: Task[]) => TData },
+) {
   const { isGuestMode } = useAuth();
 
   return useQuery({
     queryKey: ["subtasks", parentId, isGuestMode],
+    select: options?.select,
     queryFn: async (): Promise<Task[]> => {
       if (!parentId) return [];
 
@@ -21,14 +25,11 @@ export function useSubtasks(parentId: string | null | undefined) {
         return mockStore
           .getTasks()
           .filter((t) => t.parent_id === parentId)
-          .sort((a, b) => {
-            const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-            const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-            return timeA - timeB;
-          });
+          .sort((a, b) => a.created_at.localeCompare(b.created_at));
       }
 
       const supabase = createClient();
+      // eslint-disable-next-line local/no-unbounded-supabase-select -- subtasks of one parent
       const { data, error } = await supabase
         .from("tasks")
         .select("*")

@@ -87,21 +87,20 @@ describe("BackupSyncSettings", () => {
     });
   });
 
-  it("hides the Cloud Sync tab for guests, keeping only local ZIP export/import", () => {
+  it("shows the WebDAV tab for guests too", () => {
     useAuthMock.mockReturnValue({ isGuestMode: true });
     render(<BackupSyncSettings />);
 
     expect(screen.getByText("Local Storage")).toBeInTheDocument();
-    expect(screen.queryByText("Cloud Sync")).not.toBeInTheDocument();
-    expect(screen.queryByText("WebDAV Sync")).not.toBeInTheDocument();
+    expect(screen.getByText("WebDAV")).toBeInTheDocument();
   });
 
-  it("shows the Cloud Sync tab for registered users", () => {
+  it("shows the WebDAV tab for registered users", () => {
     useAuthMock.mockReturnValue({ isGuestMode: false });
     render(<BackupSyncSettings />);
 
     expect(screen.getByText("Local Storage")).toBeInTheDocument();
-    expect(screen.getByText("Cloud Sync")).toBeInTheDocument();
+    expect(screen.getByText("WebDAV")).toBeInTheDocument();
   });
 
   it("never writes WebDAV credentials to localStorage", () => {

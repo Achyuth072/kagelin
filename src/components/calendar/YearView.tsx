@@ -63,7 +63,7 @@ const YearMonth = memo(
               "flex justify-center pt-2 relative items-center text-sm font-bold tracking-tight text-foreground mb-1",
             weekdays: "flex gap-1 mb-1",
             weekday:
-              "text-muted-foreground/40 w-8 font-bold text-[0.65rem] uppercase tracking-tighter",
+              "text-muted-foreground w-8 font-bold text-[0.65rem] uppercase tracking-tighter",
             week: "flex w-full gap-1",
             day: "relative p-0 text-center text-xs focus-within:relative focus-within:z-20",
             outside: "invisible",
