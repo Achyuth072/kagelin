@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.41.0",
+    "date": "2026-08-27",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Fix stats, tasks, and calendar sync silently truncating past 1000 rows",
+        "Fix WebDAV backup failures on Node's Happy Eyeballs and null-body responses",
+        "Speed up subtask expand/collapse into a single, faster toggle",
+        "Improve accessibility labels, input semantics, and low-contrast text"
+      ]
+    }
+  },
+  {
     "version": "1.41.0-preview.2",
     "date": "2026-08-26",
     "channel": "preview",
@@ -813,17 +826,6 @@
         "Keep frequency editor on one line in mobile drawers",
         "Unsquish grid card name and slim the card on mobile",
         "Restyle Edit/Insights tab toggle and fix header padding"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.10",
-    "date": "2026-07-01",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Give Trend chart axis labels breathing room on mobile",
-        "Thin Trend chart x-axis ticks on mobile to stop overlap"
       ]
     }
   }
