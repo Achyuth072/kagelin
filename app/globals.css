@@ -87,10 +87,29 @@
   }
 }
 
-/* Layout tokens - shared by Header, AppShell, OfflineIndicator and DemoBar */
+/* Layout tokens */
 :root {
   --mobile-header-height: calc(4rem + env(safe-area-inset-top, 0px));
   --offline-banner-height: 2.25rem;
+  --mobile-nav-content-height: 3.25rem; /* 6px pad + 20px icon + 4px gap + 16px label + 6px pad; row stays above Android's 48px min touch target */
+  --mobile-nav-item-pad: 0.375rem;
+  /* Safe area inset subsumes the item's 6px bottom padding so they don't stack. */
+  --mobile-safe-bottom: max(env(safe-area-inset-bottom, 0px) - 6px, 0px);
+  --mobile-nav-height: calc(
+    var(--mobile-nav-content-height) + 1px + var(--mobile-safe-bottom)
+  );
+}
+
+/* iOS reserves a fixed ~34px for the home indicator regardless of device; cap
+   the extra padding at the item's own bottom pad instead of scaling with the
+   full inset, so labels sit close to the indicator like native tab bars do. */
+@supports (-webkit-touch-callout: none) {
+  :root {
+    --mobile-safe-bottom: min(
+      env(safe-area-inset-bottom, 0px),
+      var(--mobile-nav-item-pad)
+    );
+  }
 }
 
 /* Light mode variables - Zen-Modernist (Matte & Ink) */
@@ -169,6 +188,9 @@
 @layer base {
   * {
     @apply border-border;
+  }
+  html {
+    @apply bg-background;
   }
   body {
     @apply bg-background text-foreground;
@@ -304,6 +326,10 @@ input[type="password"]:has(+ button)::-ms-clear {
 
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .nav-safe-bottom {
+    padding-bottom: var(--mobile-safe-bottom);
   }
 
   .safe-left {

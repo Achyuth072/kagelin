@@ -27,7 +27,6 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
     title: "Kagelin",
   },
   robots: {
@@ -38,8 +37,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FCFCFA" },
-    { media: "(prefers-color-scheme: dark)", color: "#1A1A1A" },
+    { media: "(prefers-color-scheme: light)", color: "#F5F5F2" },
+    { media: "(prefers-color-scheme: dark)", color: "#212121" },
   ],
   width: "device-width",
   initialScale: 1,

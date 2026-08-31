@@ -84,6 +84,43 @@ describe("offline layout wiring", () => {
       "--mobile-header-height: calc(4rem + env(safe-area-inset-top, 0px));",
     );
     expect(css).toContain("--offline-banner-height: 2.25rem;");
+    expect(css).toContain("--mobile-nav-content-height: 3.25rem;");
+    expect(css).toContain("--mobile-nav-item-pad: 0.375rem;");
+    expect(css).toContain(
+      "--mobile-safe-bottom: max(env(safe-area-inset-bottom, 0px) - 6px, 0px);",
+    );
+    // Lightning CSS silently drops a math function that subtracts one var()
+    // from another, and every declaration after it in the rule.
+    expect(css).not.toMatch(/(min|max|clamp)\([^)]*var\([^)]*\)\s*-\s*var\(/);
+  });
+
+  it("derives every bottom-anchored offset from --mobile-nav-height", () => {
+    const consumers = [
+      "src/components/tasks/AddTaskFab.tsx",
+      "src/components/habits/AddHabitFab.tsx",
+      "src/components/calendar/AddEventFab.tsx",
+      "src/components/ui/toaster.tsx",
+      "src/components/telemetry/TelemetryConsentPrompt.tsx",
+    ];
+
+    for (const path of consumers) {
+      const code = source(path);
+      expect(code, path).toContain("var(--mobile-nav-height)");
+      expect(code, path).not.toMatch(/bottom[^\n]*\b(66|72)px/);
+    }
+  });
+
+  it("derives the scroll container's bottom spacers from --mobile-nav-height", () => {
+    const shell = source("src/components/layout/AppShell.tsx");
+
+    const spacers = shell.match(
+      /className="h-\[[^"]*\] w-full flex-none md:hidden"/g,
+    );
+    expect(spacers).toHaveLength(2);
+    for (const spacer of spacers ?? []) {
+      expect(spacer).toContain("var(--mobile-nav-height)");
+    }
+    expect(shell).not.toMatch(/className="h-\d+ w-full flex-none md:hidden"/);
   });
 
   it("mounts the indicator inside SidebarInset rather than GlobalOverlays", () => {
@@ -111,10 +148,7 @@ describe("offline layout wiring", () => {
   it("lifts desktop toasts clear of the offline pill via the Toaster's own offset prop, not a per-toast margin", () => {
     const toaster = source("src/components/ui/toaster.tsx");
 
-    // A per-toast margin isn't visible to Sonner's own inter-toast stacking
-    // math (it measures each toast's border-box height only), so two toasts
-    // stacked at once would overlap. The container-level `offset` prop shifts
-    // the whole stack instead, sidestepping that.
+    // Sonner stacking math ignores per-toast margins; shifting requires the container offset prop.
     expect(toaster).toContain(
       "calc(1.25rem + var(--offline-pill-offset,0px) + var(--telemetry-prompt-offset,0px))",
     );
