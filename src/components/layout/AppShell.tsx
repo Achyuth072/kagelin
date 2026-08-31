@@ -371,13 +371,13 @@ function AppShellContent({ children }: AppShellProps) {
             {children}
             {!hideMobileNav && pathname === "/" && (
               <div
-                className="h-32 w-full flex-none md:hidden"
+                className="h-[calc(var(--mobile-nav-height)+3.5rem)] w-full flex-none md:hidden"
                 aria-hidden="true"
               />
             )}
             {!hideMobileNav && pathname !== "/" && pathname !== "/calendar" && (
               <div
-                className="h-20 w-full flex-none md:hidden"
+                className="h-[calc(var(--mobile-nav-height)+0.5rem)] w-full flex-none md:hidden"
                 aria-hidden="true"
               />
             )}

@@ -69,7 +69,7 @@ export function TelemetryConsentPrompt() {
           }
           className={cn(
             // --offline-pill-offset is set on the root by AppShell; it lifts this banner clear of the DemoBar/OfflineIndicator pill, which shares this same bottom-6 anchor on desktop.
-            "fixed inset-x-0 bottom-[calc(66px+env(safe-area-inset-bottom,0px)+12px)] md:bottom-[calc(1.5rem+var(--offline-pill-offset,0px))] z-50",
+            "fixed inset-x-0 bottom-[calc(var(--mobile-nav-height)+0.75rem)] md:bottom-[calc(1.5rem+var(--offline-pill-offset,0px))] z-50",
             "flex justify-center px-4 pointer-events-none",
           )}
         >
