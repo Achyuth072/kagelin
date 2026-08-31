@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.41.1",
+    "date": "2026-08-31",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Resolve iOS PWA safe-area gaps and shrink mobile nav to a leaner size"
+      ]
+    }
+  },
+  {
     "version": "1.41.1-preview.0",
     "date": "2026-08-31",
     "channel": "preview",
@@ -811,16 +821,6 @@
     "sections": {
       "Improved": [
         "Replace HabitEditView and HabitCreateView with a unified HabitView component"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.12",
-    "date": "2026-07-02",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Replace the empty goals card with a slim prompt"
       ]
     }
   }
