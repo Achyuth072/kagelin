@@ -36,6 +36,7 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
   useUpdateTask: vi.fn(),
   useDeleteTask: vi.fn(),
   useToggleTask: vi.fn(),
+  useReorderTasks: vi.fn(() => ({ mutate: vi.fn() })),
 }));
 
 vi.mock("@/lib/hooks/useTasks", () => ({

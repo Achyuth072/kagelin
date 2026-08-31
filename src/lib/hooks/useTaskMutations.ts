@@ -335,9 +335,13 @@ export function useReorderTasks() {
     mutationFn: taskMutations.reorder,
     onMutate: async (pairs: { id: string; day_order: number }[]) => {
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      await queryClient.cancelQueries({ queryKey: ["subtasks"] });
 
       const allTaskQueries = queryClient.getQueriesData<Task[]>({
         queryKey: ["tasks"],
+      });
+      const allSubtaskQueries = queryClient.getQueriesData<Task[]>({
+        queryKey: ["subtasks"],
       });
 
       const pairById = new Map(pairs.map((p) => [p.id, p.day_order]));
@@ -356,7 +360,28 @@ export function useReorderTasks() {
         });
       }
 
-      return { previousTaskQueries: allTaskQueries };
+      for (const [queryKey] of allSubtaskQueries) {
+        queryClient.setQueryData<Task[]>(queryKey, (old) => {
+          if (!old) return old;
+          return old
+            .map((task) => {
+              const newOrder = pairById.get(task.id);
+              return newOrder === undefined || task.day_order === newOrder
+                ? task
+                : { ...task, day_order: newOrder };
+            })
+            .sort(
+              (a, b) =>
+                (a.day_order ?? 0) - (b.day_order ?? 0) ||
+                a.created_at.localeCompare(b.created_at),
+            );
+        });
+      }
+
+      return {
+        previousTaskQueries: allTaskQueries,
+        previousSubtaskQueries: allSubtaskQueries,
+      };
     },
     onError: (err, _vars, context) => {
       if (context?.previousTaskQueries) {
@@ -364,10 +389,16 @@ export function useReorderTasks() {
           queryClient.setQueryData(queryKey, data);
         });
       }
+      if (context?.previousSubtaskQueries) {
+        context.previousSubtaskQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       handleMutationError(err);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["subtasks"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
     },

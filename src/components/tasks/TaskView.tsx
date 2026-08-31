@@ -347,6 +347,7 @@ export function TaskView(props: TaskViewProps) {
                   setShowSubtasks(false);
                   titleTextareaRef.current?.focus();
                 }}
+                allowReorder
               />
             </div>
           </CollapsibleReveal>

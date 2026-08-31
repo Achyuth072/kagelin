@@ -370,3 +370,39 @@ describe("SubtaskList - keyboard navigation contract", () => {
     expect(screen.getByText("Updated step text")).toBeInTheDocument();
   });
 });
+
+describe("SubtaskList - drag to reorder affordance", () => {
+  it("renders drag handles on step rows when allowReorder is true", () => {
+    const queryClient = new QueryClient();
+
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <SubtaskList
+          projectId={null}
+          draftSubtasks={["Step 1", "Step 2"]}
+          allowReorder={true}
+        />
+      </QueryClientProvider>,
+    );
+
+    const dragHandles = container.querySelectorAll(".cursor-grab");
+    expect(dragHandles).toHaveLength(2);
+  });
+
+  it("does not render drag handles when allowReorder is false or omitted", () => {
+    const queryClient = new QueryClient();
+
+    const { container } = render(
+      <QueryClientProvider client={queryClient}>
+        <SubtaskList
+          projectId={null}
+          draftSubtasks={["Step 1", "Step 2"]}
+          allowReorder={false}
+        />
+      </QueryClientProvider>,
+    );
+
+    const dragHandles = container.querySelectorAll(".cursor-grab");
+    expect(dragHandles).toHaveLength(0);
+  });
+});
