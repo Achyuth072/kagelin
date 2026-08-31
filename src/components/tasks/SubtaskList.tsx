@@ -19,6 +19,8 @@ interface SubtaskListProps {
   projectId: string | null;
   draftSubtasks?: string[];
   onDraftSubtasksChange?: (subtasks: string[]) => void;
+  pendingContent?: string;
+  onPendingContentChange?: (content: string) => void;
 }
 
 export default function SubtaskList({
@@ -26,10 +28,25 @@ export default function SubtaskList({
   projectId,
   draftSubtasks = [],
   onDraftSubtasksChange,
+  pendingContent: controlledPendingContent,
+  onPendingContentChange: setControlledPendingContent,
 }: SubtaskListProps) {
+  const [internalNewSubtaskContent, setInternalNewSubtaskContent] =
+    useState("");
+  const isControlled = controlledPendingContent !== undefined;
+  const newSubtaskContent = isControlled
+    ? controlledPendingContent
+    : internalNewSubtaskContent;
+  const setNewSubtaskContent = (val: string) => {
+    if (isControlled) {
+      setControlledPendingContent?.(val);
+    } else {
+      setInternalNewSubtaskContent(val);
+    }
+  };
+
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState("");
-  const [newSubtaskContent, setNewSubtaskContent] = useState("");
 
   const { data: subtasks } = useSubtasks(taskId || null);
   const createMutation = useCreateTask();
@@ -94,6 +111,9 @@ export default function SubtaskList({
 
   const handleKeyDown = (e: React.KeyboardEvent, id?: string) => {
     if (e.key === "Enter") {
+      if (e.metaKey || e.ctrlKey) {
+        return;
+      }
       e.preventDefault();
       if (id) {
         handleSaveEdit(id);

@@ -14,6 +14,8 @@ interface TaskNotesRowProps {
   isPreviewMode: boolean;
   setIsPreviewMode: Dispatch<SetStateAction<boolean>>;
   defaultPreviewOnOpen: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 // Render block-level markdown as inline-flowing spans so the preview can be
@@ -47,9 +49,16 @@ export function TaskNotesRow({
   isPreviewMode,
   setIsPreviewMode,
   defaultPreviewOnOpen,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
 }: TaskNotesRowProps) {
   const { trigger } = useHaptic();
-  const [notesEditorOpen, setNotesEditorOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const notesEditorOpen = isControlled ? controlledOpen : internalOpen;
+  const setNotesEditorOpen = isControlled
+    ? setControlledOpen!
+    : setInternalOpen;
 
   const hasDescription = !!description.trim();
 

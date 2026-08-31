@@ -92,6 +92,7 @@ export default function TaskSheet({
   const [doDatePickerOpen, setDoDatePickerOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [draftSubtasks, setDraftSubtasks] = useState<string[]>([]);
+  const [pendingStep, setPendingStep] = useState("");
   const [showSubtasks, setShowSubtasks] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [tab, setTab] = useState<SheetTab>("edit");
@@ -139,6 +140,7 @@ export default function TaskSheet({
     setPrevTask(initialTask);
     if (open) {
       setDraftSubtasks([]);
+      setPendingStep("");
       setIsPreviewMode(!!initialTask?.description);
       setTab(initialTab === "insights" && hasSeries ? "insights" : "edit");
     }
@@ -156,6 +158,7 @@ export default function TaskSheet({
           is_evening: initialTask.is_evening || false,
           priority: initialTask.priority,
           project_id: initialTask.project_id ?? undefined,
+          recurrence: initialTask.recurrence ?? null,
         });
         void triggerValidation();
       } else {
@@ -167,6 +170,7 @@ export default function TaskSheet({
           is_evening: false,
           priority: 4,
           project_id: undefined,
+          recurrence: null,
         });
       }
     }
@@ -184,6 +188,8 @@ export default function TaskSheet({
     (data: CreateTaskInput) => {
       triggerHaptic("thud");
 
+      const stepToFlush = pendingStep.trim();
+
       if (initialTask) {
         updateMutation.mutate({
           ...data,
@@ -197,6 +203,20 @@ export default function TaskSheet({
               ? data.do_date.toISOString()
               : data.do_date || null,
         });
+
+        if (stepToFlush) {
+          const targetProjectId =
+            (data.project_id ?? initialTask.project_id) ||
+            inboxProject?.id ||
+            undefined;
+          createMutation.mutate({
+            content: stepToFlush,
+            project_id: targetProjectId,
+            parent_id: initialTask.id,
+            priority: 4,
+          });
+          setPendingStep("");
+        }
       } else {
         const clientId = crypto.randomUUID();
         const createInput = {
@@ -220,8 +240,12 @@ export default function TaskSheet({
 
         createMutation.mutate(createInput);
 
-        if (draftSubtasks.length > 0) {
-          draftSubtasks.forEach((sContent) => {
+        const allSubtasks = stepToFlush
+          ? [...draftSubtasks, stepToFlush]
+          : draftSubtasks;
+
+        if (allSubtasks.length > 0) {
+          allSubtasks.forEach((sContent) => {
             createMutation.mutate({
               content: sContent,
               project_id: createInput.project_id || undefined,
@@ -231,12 +255,15 @@ export default function TaskSheet({
           });
         }
         setDraftSubtasks([]);
+        setPendingStep("");
       }
       onClose();
     },
     [
       initialTask,
+      pendingStep,
       updateMutation,
+      inboxProject?.id,
       triggerHaptic,
       createMutation,
       recurrence,
@@ -274,6 +301,7 @@ export default function TaskSheet({
   return (
     <ResponsiveDialog open={open} onOpenChange={onClose}>
       <ResponsiveDialogContent
+        onKeyDown={handleKeyDown}
         className={cn(
           "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none sm:grid-cols-[minmax(0,1fr)] sm:max-w-lg",
         )}
@@ -346,6 +374,8 @@ export default function TaskSheet({
                 setShowSubtasks={setShowSubtasks}
                 draftSubtasks={draftSubtasks}
                 setDraftSubtasks={setDraftSubtasks}
+                pendingStep={pendingStep}
+                setPendingStep={setPendingStep}
                 inboxProjectId={inboxProject?.id || null}
                 projects={projects}
                 isMobile={isMobile}
@@ -400,6 +430,8 @@ export default function TaskSheet({
                 setShowSubtasks={setShowSubtasks}
                 draftSubtasks={draftSubtasks}
                 setDraftSubtasks={setDraftSubtasks}
+                pendingStep={pendingStep}
+                setPendingStep={setPendingStep}
                 inboxProjectId={inboxProject?.id || null}
                 projects={projects}
                 isMobile={isMobile}

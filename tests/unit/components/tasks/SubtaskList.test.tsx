@@ -91,3 +91,50 @@ describe("SubtaskList - mobile delete affordance", () => {
     expect(deleteButton).toHaveClass("md:text-muted-foreground");
   });
 });
+
+describe("SubtaskList - step input shortcut bubbling", () => {
+  it("does not intercept Ctrl+Enter or Cmd+Enter so it bubbles to parent task save", () => {
+    renderDraftSubtaskList();
+
+    const input = screen.getByPlaceholderText("Add a step...");
+    fireEvent.change(input, { target: { value: "Uncommitted step" } });
+
+    const notPreventedMeta = fireEvent.keyDown(input, {
+      key: "Enter",
+      metaKey: true,
+    });
+    expect(notPreventedMeta).toBe(true);
+
+    const notPreventedCtrl = fireEvent.keyDown(input, {
+      key: "Enter",
+      ctrlKey: true,
+    });
+    expect(notPreventedCtrl).toBe(true);
+
+    // It should not have been committed into the list as a standalone subtask yet
+    expect(screen.queryByText("Uncommitted step")).toBeNull();
+    expect(input).toHaveValue("Uncommitted step");
+  });
+
+  it("supports controlled pendingContent and onPendingContentChange", () => {
+    const onPendingContentChange = vi.fn();
+    const queryClient = new QueryClient();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SubtaskList
+          projectId={null}
+          draftSubtasks={[]}
+          pendingContent="Controlled step text"
+          onPendingContentChange={onPendingContentChange}
+        />
+      </QueryClientProvider>,
+    );
+
+    const input = screen.getByPlaceholderText("Add a step...");
+    expect(input).toHaveValue("Controlled step text");
+
+    fireEvent.change(input, { target: { value: "New step text" } });
+    expect(onPendingContentChange).toHaveBeenCalledWith("New step text");
+  });
+});

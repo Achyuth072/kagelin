@@ -1,6 +1,6 @@
 "use client";
 
-import { type Dispatch, type SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
@@ -62,6 +62,8 @@ interface TaskViewBaseProps {
   setShowSubtasks: (value: boolean) => void;
   draftSubtasks: string[];
   setDraftSubtasks: (value: string[]) => void;
+  pendingStep?: string;
+  setPendingStep?: (value: string) => void;
   inboxProjectId: string | null;
   projects: Project[] | undefined;
   isMobile: boolean;
@@ -109,6 +111,8 @@ export function TaskView(props: TaskViewProps) {
     setShowSubtasks,
     draftSubtasks,
     setDraftSubtasks,
+    pendingStep,
+    setPendingStep,
     inboxProjectId,
     projects,
     isMobile,
@@ -124,6 +128,34 @@ export function TaskView(props: TaskViewProps) {
   const { trigger } = useHaptic();
   const isFinePointer = useMediaQuery("(pointer: fine)");
   const scrollRef = useHorizontalScroll();
+  const [notesEditorOpen, setNotesEditorOpen] = useState(false);
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter") {
+      // Newlines in title textarea are blocked across all modes
+      e.preventDefault();
+
+      if (e.metaKey || e.ctrlKey) {
+        onSubmit();
+        return;
+      }
+
+      if (!e.shiftKey && !e.altKey) {
+        if (mode === "create") {
+          onSubmit();
+        } else if (mode === "edit") {
+          if (!notesEditorOpen) {
+            trigger("toggle");
+            setIsPreviewMode(true);
+            setNotesEditorOpen(true);
+          }
+        }
+      }
+      return;
+    }
+
+    onKeyDown(e);
+  };
 
   const { data: editSubtaskCount } = useSubtasks(
     mode === "edit" ? props.initialTask.id : undefined,
@@ -156,8 +188,8 @@ export function TaskView(props: TaskViewProps) {
           placeholder="What needs to be done?"
           aria-label="Task content"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={onKeyDown}
+          onChange={(e) => setContent(e.target.value.replace(/[\r\n]+/g, " "))}
+          onKeyDown={handleTitleKeyDown}
           autoFocus={isFinePointer}
           rows={1}
           className={cn(
@@ -260,6 +292,8 @@ export function TaskView(props: TaskViewProps) {
           isPreviewMode={isPreviewMode}
           setIsPreviewMode={setIsPreviewMode}
           defaultPreviewOnOpen={mode === "edit"}
+          open={notesEditorOpen}
+          onOpenChange={setNotesEditorOpen}
         />
 
         <div className="h-1" />
@@ -305,6 +339,8 @@ export function TaskView(props: TaskViewProps) {
                 }
                 draftSubtasks={draftSubtasks}
                 onDraftSubtasksChange={setDraftSubtasks}
+                pendingContent={pendingStep}
+                onPendingContentChange={setPendingStep}
               />
             </div>
           </CollapsibleReveal>

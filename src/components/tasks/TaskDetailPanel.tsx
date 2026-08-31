@@ -6,7 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateTaskSchema, type CreateTaskInput } from "@/lib/schemas/task";
 import type { Task } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
-import { useUpdateTask, useDeleteTask } from "@/lib/hooks/useTaskMutations";
+import {
+  useUpdateTask,
+  useDeleteTask,
+  useCreateTask,
+} from "@/lib/hooks/useTaskMutations";
 import { useInboxProject } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -63,6 +67,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   const [doDatePickerOpen, setDoDatePickerOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [draftSubtasks, setDraftSubtasks] = useState<string[]>([]);
+  const [pendingStep, setPendingStep] = useState("");
   const [showSubtasks, setShowSubtasks] = useState(false);
 
   // Form values via useWatch
@@ -84,6 +89,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
 
   // Hooks
   const updateMutation = useUpdateTask();
+  const createMutation = useCreateTask();
   const deleteMutation = useDeleteTask();
   const { data: inboxProject } = useInboxProject();
   const { data: projects } = useProjects();
@@ -95,6 +101,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
     setPrevTask(task);
     if (task) {
       setDraftSubtasks([]);
+      setPendingStep("");
       setIsPreviewMode(!!task.description);
     }
   }
@@ -110,6 +117,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
         is_evening: task.is_evening || false,
         priority: task.priority,
         project_id: task.project_id ?? undefined,
+        recurrence: task.recurrence ?? null,
       });
       void triggerValidation();
     }
@@ -135,9 +143,30 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
             : data.do_date || null,
       });
 
+      const stepToFlush = pendingStep.trim();
+      if (stepToFlush) {
+        const targetProjectId =
+          (data.project_id ?? task.project_id) || inboxProject?.id || undefined;
+        createMutation.mutate({
+          content: stepToFlush,
+          project_id: targetProjectId,
+          parent_id: task.id,
+          priority: 4,
+        });
+        setPendingStep("");
+      }
+
       onClose?.();
     },
-    [task, updateMutation, onClose, trigger],
+    [
+      task,
+      pendingStep,
+      updateMutation,
+      inboxProject?.id,
+      createMutation,
+      onClose,
+      trigger,
+    ],
   );
 
   const handleDelete = useCallback(() => {
@@ -179,7 +208,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
 
   return (
     <>
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full" onKeyDown={handleKeyDown}>
         {onClose && (
           <div className="shrink-0 flex justify-end px-4 pt-3">
             <button
@@ -249,6 +278,8 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
             setShowSubtasks={setShowSubtasks}
             draftSubtasks={draftSubtasks}
             setDraftSubtasks={setDraftSubtasks}
+            pendingStep={pendingStep}
+            setPendingStep={setPendingStep}
             inboxProjectId={inboxProject?.id || null}
             projects={projects}
             isMobile={isMobile}
