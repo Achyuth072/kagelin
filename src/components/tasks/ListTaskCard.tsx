@@ -2,6 +2,7 @@ import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Calendar, Moon, Flag, Play, Trash2 } from "lucide-react";
+import { StepProgressBadge } from "./StepProgressBadge";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
 
@@ -54,6 +55,10 @@ export function ListTaskCard({
   shouldAnimate = false,
   isKeyboardSelected = false,
 }: ListTaskCardProps) {
+  const subtasks = task.subtasks ?? [];
+  const totalSteps = subtasks.length;
+  const completedSteps = subtasks.filter((s) => s.is_completed).length;
+
   return (
     <div
       id={taskDomId(task.id)}
@@ -149,7 +154,11 @@ export function ListTaskCard({
         </div>
 
         {/* Metadata Row: Always below title now for unity */}
-        {(task.due_date || task.priority < 4 || project) && (
+        {(task.due_date ||
+          task.priority < 4 ||
+          task.is_evening ||
+          totalSteps > 0 ||
+          project) && (
           <div className="flex items-center gap-3 mt-0.5 ml-[2px] mb-1">
             {task.due_date && (
               <span
@@ -180,6 +189,11 @@ export function ListTaskCard({
                 Evening
               </span>
             )}
+            <StepProgressBadge
+              completed={completedSteps}
+              total={totalSteps}
+              className="type-ui gap-1.5"
+            />
 
             {/* Expand Toggle Desktop */}
             {isDesktop && (

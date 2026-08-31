@@ -20,6 +20,7 @@ export interface Task {
   google_etag: string | null;
   created_at: string;
   updated_at: string;
+  subtasks?: { id: string; is_completed: boolean }[];
 }
 
 export interface Project {

@@ -125,15 +125,24 @@ export function useToggleTask() {
       const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
 
       const patch = (old: Task[] | undefined) =>
-        old?.map((task) =>
-          task.id === id
-            ? {
-                ...task,
-                is_completed,
-                completed_at: is_completed ? new Date().toISOString() : null,
-              }
-            : task,
-        );
+        old?.map((task) => {
+          if (task.id === id) {
+            return {
+              ...task,
+              is_completed,
+              completed_at: is_completed ? new Date().toISOString() : null,
+            };
+          }
+          if (task.subtasks?.some((st) => st.id === id)) {
+            return {
+              ...task,
+              subtasks: task.subtasks.map((st) =>
+                st.id === id ? { ...st, is_completed } : st,
+              ),
+            };
+          }
+          return task;
+        });
 
       queryClient.setQueryData<Task[]>(queryKey, patch);
 

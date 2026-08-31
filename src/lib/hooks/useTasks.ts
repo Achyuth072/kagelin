@@ -64,6 +64,19 @@ export function useTasks(options: UseTasksOptions = {}) {
           });
         }
 
+        const allTasks = mockStore.getTasks();
+        const subtasksByParent = new Map<
+          string,
+          { id: string; is_completed: boolean }[]
+        >();
+        for (const t of allTasks) {
+          if (t.parent_id) {
+            const list = subtasksByParent.get(t.parent_id) || [];
+            list.push({ id: t.id, is_completed: t.is_completed });
+            subtasksByParent.set(t.parent_id, list);
+          }
+        }
+
         // Tie-break matches the Supabase query below (newest first) for consistent ordering.
         tasks = tasks
           .filter((t) => !t.parent_id)
@@ -71,7 +84,11 @@ export function useTasks(options: UseTasksOptions = {}) {
             const diff = a.day_order - b.day_order;
             if (diff !== 0) return diff;
             return b.created_at.localeCompare(a.created_at);
-          });
+          })
+          .map((t) => ({
+            ...t,
+            subtasks: subtasksByParent.get(t.id) || [],
+          }));
 
         return tasks;
       }
@@ -85,14 +102,18 @@ export function useTasks(options: UseTasksOptions = {}) {
       todayStart.setHours(0, 0, 0, 0);
 
       let tasks = await fetchAllRows<
-        Task & { projects: { is_archived: boolean } | null }
+        Task & {
+          projects: { is_archived: boolean } | null;
+          subtasks?: { id: string; is_completed: boolean }[];
+        }
       >((from, to) => {
         let query = supabase
           .from("tasks")
           .select(
             `
           *,
-          projects!left(is_archived)
+          projects!left(is_archived),
+          subtasks:tasks!parent_id(id, is_completed)
         `,
           )
           .is("parent_id", null)
@@ -140,13 +161,23 @@ export function useTask(taskId: string | null) {
       if (!taskId) return null;
 
       if (isGuestMode) {
-        return mockStore.getTask(taskId);
+        const task = mockStore.getTask(taskId);
+        if (!task) return null;
+        const subtasks = mockStore
+          .getSubtasks(taskId)
+          .map((st) => ({ id: st.id, is_completed: st.is_completed }));
+        return { ...task, subtasks };
       }
 
       const supabase = createClient();
       const { data, error } = await supabase
         .from("tasks")
-        .select("*")
+        .select(
+          `
+          *,
+          subtasks:tasks!parent_id(id, is_completed)
+        `,
+        )
         .eq("id", taskId)
         .single();
 
