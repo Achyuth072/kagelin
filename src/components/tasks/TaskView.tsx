@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { useState, useRef, type Dispatch, type SetStateAction } from "react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
@@ -129,6 +129,7 @@ export function TaskView(props: TaskViewProps) {
   const isFinePointer = useMediaQuery("(pointer: fine)");
   const scrollRef = useHorizontalScroll();
   const [notesEditorOpen, setNotesEditorOpen] = useState(false);
+  const titleTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter") {
@@ -184,6 +185,7 @@ export function TaskView(props: TaskViewProps) {
       {/* Title — native textarea, bottom border only, no box */}
       <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
         <textarea
+          ref={titleTextareaRef}
           id={contentId}
           placeholder="What needs to be done?"
           aria-label="Task content"
@@ -341,6 +343,10 @@ export function TaskView(props: TaskViewProps) {
                 onDraftSubtasksChange={setDraftSubtasks}
                 pendingContent={pendingStep}
                 onPendingContentChange={setPendingStep}
+                onCollapse={() => {
+                  setShowSubtasks(false);
+                  titleTextareaRef.current?.focus();
+                }}
               />
             </div>
           </CollapsibleReveal>

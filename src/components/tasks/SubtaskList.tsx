@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ interface SubtaskListProps {
   onDraftSubtasksChange?: (subtasks: string[]) => void;
   pendingContent?: string;
   onPendingContentChange?: (content: string) => void;
+  onCollapse?: () => void;
 }
 
 export default function SubtaskList({
@@ -30,9 +31,12 @@ export default function SubtaskList({
   onDraftSubtasksChange,
   pendingContent: controlledPendingContent,
   onPendingContentChange: setControlledPendingContent,
+  onCollapse,
 }: SubtaskListProps) {
   const [internalNewSubtaskContent, setInternalNewSubtaskContent] =
     useState("");
+  const newStepInputRef = useRef<HTMLInputElement>(null);
+
   const isControlled = controlledPendingContent !== undefined;
   const newSubtaskContent = isControlled
     ? controlledPendingContent
@@ -56,21 +60,46 @@ export default function SubtaskList({
   const { trigger } = useHaptic();
 
   const isDraftMode = !taskId;
+  const items = isDraftMode ? draftSubtasks : subtasks || [];
 
   const handleStartEdit = (id: string, content: string) => {
-    if (isDraftMode) return;
     setEditingId(id);
     setEditingContent(content);
   };
 
+  const handleDeleteSubtask = (idOrIndex: string | number) => {
+    if (isDraftMode) {
+      const index =
+        typeof idOrIndex === "number"
+          ? idOrIndex
+          : parseInt(idOrIndex.replace("draft-", ""), 10);
+      if (!isNaN(index)) {
+        onDraftSubtasksChange?.(draftSubtasks.filter((_, i) => i !== index));
+      }
+    } else {
+      deleteMutation.mutate(idOrIndex as string);
+    }
+  };
+
   const handleSaveEdit = (id: string) => {
-    if (!editingContent.trim()) {
+    if (editingId !== id) return;
+    const trimmed = editingContent.trim();
+    if (!trimmed) {
       handleDeleteSubtask(id);
     } else {
-      updateMutation.mutate({
-        id,
-        content: editingContent.trim(),
-      });
+      if (isDraftMode) {
+        const index = parseInt(id.replace("draft-", ""), 10);
+        if (!isNaN(index)) {
+          onDraftSubtasksChange?.(
+            draftSubtasks.map((item, i) => (i === index ? trimmed : item)),
+          );
+        }
+      } else {
+        updateMutation.mutate({
+          id,
+          content: trimmed,
+        });
+      }
     }
     setEditingId(null);
   };
@@ -80,52 +109,98 @@ export default function SubtaskList({
     const content = newSubtaskContent.trim();
     if (!content) return;
 
+    setNewSubtaskContent("");
+
     if (isDraftMode) {
       onDraftSubtasksChange?.([...draftSubtasks, content]);
-      setNewSubtaskContent("");
     } else {
-      createMutation.mutate(
-        {
-          content,
-          project_id: projectId || undefined,
-          parent_id: taskId,
-          priority: 4,
-        },
-        {
-          onSuccess: () => {
-            setNewSubtaskContent("");
-          },
-        },
-      );
+      createMutation.mutate({
+        content,
+        project_id: projectId || undefined,
+        parent_id: taskId,
+        priority: 4,
+      });
     }
+    newStepInputRef.current?.focus();
   };
 
-  const handleDeleteSubtask = (idOrIndex: string | number) => {
-    if (isDraftMode) {
-      const index = idOrIndex as number;
-      onDraftSubtasksChange?.(draftSubtasks.filter((_, i) => i !== index));
-    } else {
-      deleteMutation.mutate(idOrIndex as string);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent, id?: string) => {
+  const handleNewStepKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       if (e.metaKey || e.ctrlKey) {
         return;
       }
       e.preventDefault();
-      if (id) {
-        handleSaveEdit(id);
-      } else {
+      if (newSubtaskContent.trim()) {
         handleAddSubtask();
+      } else {
+        onCollapse?.();
       }
-    } else if (e.key === "Escape" && id) {
-      setEditingId(null);
+    } else if (e.key === "Backspace") {
+      if (!newSubtaskContent && items.length > 0) {
+        e.preventDefault();
+        const lastIndex = items.length - 1;
+        const lastItem = items[lastIndex];
+        const lastId =
+          typeof lastItem === "string" ? `draft-${lastIndex}` : lastItem.id;
+        handleDeleteSubtask(lastId);
+
+        if (lastIndex > 0) {
+          const prevIndex = lastIndex - 1;
+          const prevItem = items[prevIndex];
+          const prevId =
+            typeof prevItem === "string" ? `draft-${prevIndex}` : prevItem.id;
+          const prevContent =
+            typeof prevItem === "string" ? prevItem : prevItem.content;
+          setEditingId(prevId);
+          setEditingContent(prevContent);
+        } else {
+          newStepInputRef.current?.focus();
+        }
+      }
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      setNewSubtaskContent("");
+      newStepInputRef.current?.blur();
     }
   };
 
-  const items = isDraftMode ? draftSubtasks : subtasks || [];
+  const handleEditKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    id: string,
+    index: number,
+  ) => {
+    if (e.key === "Enter") {
+      if (e.metaKey || e.ctrlKey) {
+        return;
+      }
+      e.preventDefault();
+      handleSaveEdit(id);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      setEditingId(null);
+    } else if (e.key === "Backspace") {
+      if (editingContent === "") {
+        e.preventDefault();
+        handleDeleteSubtask(id);
+        setEditingId(null);
+
+        if (index > 0) {
+          const prevIndex = index - 1;
+          const prevItem = items[prevIndex];
+          const prevId =
+            typeof prevItem === "string" ? `draft-${prevIndex}` : prevItem.id;
+          const prevContent =
+            typeof prevItem === "string" ? prevItem : prevItem.content;
+          setEditingId(prevId);
+          setEditingContent(prevContent);
+        } else {
+          newStepInputRef.current?.focus();
+        }
+      }
+    }
+  };
 
   return (
     <div className="space-y-1 py-1 w-full">
@@ -164,14 +239,20 @@ export default function SubtaskList({
                 autoFocus
                 value={editingContent}
                 onChange={(e) => setEditingContent(e.target.value)}
+                onFocus={(e) =>
+                  e.currentTarget.setSelectionRange(
+                    e.currentTarget.value.length,
+                    e.currentTarget.value.length,
+                  )
+                }
                 onBlur={() => handleSaveEdit(id)}
-                onKeyDown={(e) => handleKeyDown(e, id)}
+                onKeyDown={(e) => handleEditKeyDown(e, id, index)}
                 aria-label="Edit step"
                 className="flex-1 h-7 py-0 px-0 text-[14px] bg-transparent border-none shadow-none focus-visible:ring-0"
               />
             ) : (
               <span
-                onClick={() => !isDraftMode && handleStartEdit(id, content)}
+                onClick={() => handleStartEdit(id, content)}
                 className={cn(
                   "flex-1 text-[14px] leading-snug transition-all break-all cursor-text",
                   isCompleted &&
@@ -210,9 +291,10 @@ export default function SubtaskList({
           <Plus className="h-3 w-3" strokeWidth={2.5} />
         </button>
         <Input
+          ref={newStepInputRef}
           value={newSubtaskContent}
           onChange={(e) => setNewSubtaskContent(e.target.value)}
-          onKeyDown={(e) => handleKeyDown(e)}
+          onKeyDown={handleNewStepKeyDown}
           placeholder="Add a step..."
           aria-label="Add a step"
           className="flex-1 h-8 text-[14px] bg-transparent border-none shadow-none focus-visible:ring-0 placeholder:text-muted-foreground transition-colors p-0"

@@ -31,15 +31,21 @@ vi.mock("@/components/tasks/SubtaskList", () => ({
   default: ({
     taskId,
     projectId,
+    onCollapse,
   }: {
     taskId?: string;
     projectId?: string | null;
+    onCollapse?: () => void;
   }) => (
     <div
       data-testid="subtask-list"
       data-task-id={taskId ?? ""}
       data-project-id={projectId ?? ""}
-    />
+    >
+      <button data-testid="subtask-collapse-btn" onClick={onCollapse}>
+        Collapse
+      </button>
+    </div>
   ),
 }));
 
@@ -280,5 +286,24 @@ describe("TaskView - edit mode", () => {
 
     fireEvent.keyDown(titleInput, { key: "Enter", ctrlKey: true });
     expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it("collapses subtasks and focuses title textarea when onCollapse is triggered", () => {
+    const setShowSubtasks = vi.fn();
+    render(
+      <TaskView
+        {...editProps}
+        mode="edit"
+        showSubtasks={true}
+        setShowSubtasks={setShowSubtasks}
+      />,
+    );
+
+    const titleInput = screen.getByPlaceholderText("What needs to be done?");
+    const collapseBtn = screen.getByTestId("subtask-collapse-btn");
+
+    fireEvent.click(collapseBtn);
+    expect(setShowSubtasks).toHaveBeenCalledWith(false);
+    expect(document.activeElement).toBe(titleInput);
   });
 });
