@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Play, Pause, Square, SkipForward, X } from "lucide-react";
 import { FocusSettingsDialog } from "@/components/FocusSettingsDialog";
 import { FocusTaskPicker } from "@/components/FocusTaskPicker";
+import { FocusSubtaskList } from "@/components/FocusSubtaskList";
 import { FocusSyncIndicator } from "@/components/FocusSyncIndicator";
 import { CancelSessionButton } from "@/components/CancelSessionButton";
 import { FullscreenToggle } from "@/components/FullscreenToggle";
@@ -136,6 +137,7 @@ export default function FocusPage() {
             </div>
 
             <FocusTaskPicker />
+            <FocusSubtaskList />
 
             <div className="text-7xl sm:text-8xl md:text-[10rem] font-extralight font-mono tracking-tighter text-foreground tabular-nums mt-6 leading-none">
               {formatTime(state.remainingSeconds)}
