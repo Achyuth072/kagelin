@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.41.1-preview.0",
+    "date": "2026-08-31",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Resolve iOS PWA safe-area gaps and shrink mobile nav to a leaner size",
+        "Noindex the app so search engines stop indexing authenticated routes"
+      ]
+    }
+  },
+  {
     "version": "1.41.0",
     "date": "2026-08-27",
     "channel": "stable",
@@ -810,22 +821,6 @@
     "sections": {
       "Fixed": [
         "Replace the empty goals card with a slim prompt"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.11",
-    "date": "2026-07-02",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add frequency target control to create/edit sheet",
-        "Gate frequency ring to non-trivial targets"
-      ],
-      "Fixed": [
-        "Keep frequency editor on one line in mobile drawers",
-        "Unsquish grid card name and slim the card on mobile",
-        "Restyle Edit/Insights tab toggle and fix header padding"
       ]
     }
   }
