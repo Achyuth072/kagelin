@@ -65,7 +65,7 @@ Kagelin (codename Kanso) is a Next.js 16 App Router monolith backed by Supabase 
 
 ### Issue tracker
 
-Issues live in GitHub Issues (Achyuth072/Kanso), via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues and specs live as markdown files under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

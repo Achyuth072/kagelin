@@ -10,6 +10,4 @@ The skills speak in terms of five canonical triage roles. This file maps those r
 | `ready-for-human`          | `ready-for-human`    | Requires human implementation            |
 | `wontfix`                  | `wontfix`            | Will not be actioned                     |
 
-When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string from this table.
-
-`wontfix` and `ready-for-agent` already exist as labels in this repo. The other three (`needs-triage`, `needs-info`, `ready-for-human`) will be created on demand via `gh issue edit --add-label` when first used.
+When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the corresponding label string as the value of the `Status:` line in the issue file (see `docs/agents/issue-tracker.md`).

@@ -20,12 +20,7 @@ export function Toaster() {
       expand={true}
       duration={isChangelogOpen ? Infinity : 4000}
       style={{ zIndex: 70 }}
-      // Container-level offset (not a per-toast margin) so it shifts the whole
-      // stack as one unit — Sonner measures each toast's own height to place
-      // the next one above it, and a per-toast margin isn't part of that
-      // measurement, which caused stacked toasts to overlap.
-      // --offline-pill-offset is set on the root by AppShell; it lifts desktop toasts clear of the centred offline pill.
-      // --telemetry-prompt-offset is set on the root by TelemetryConsentPrompt; it lifts toasts clear of that banner.
+      // Use container offset instead of per-toast margin so Sonner's stack height calculations don't overlap.
       offset={{
         bottom:
           "calc(1.25rem + var(--offline-pill-offset,0px) + var(--telemetry-prompt-offset,0px))",
@@ -34,14 +29,13 @@ export function Toaster() {
         left: 16,
         right: 16,
         bottom:
-          "calc(72px + env(safe-area-inset-bottom,0px) + var(--telemetry-prompt-offset,0px))",
+          "calc(var(--mobile-nav-height) + 0.75rem + var(--telemetry-prompt-offset,0px))",
       }}
       swipeDirections={["left", "right", "bottom"]}
       toastOptions={{
         unstyled: true,
         style: {
-          // max-content (not fit-content): fit-content shrinks to min-content (longest word) inside Sonner's absolute-positioned <li>, causing mid-word wrap on short messages. max-content sizes to the natural one-line width; existing maxWidth caps long messages.
-          // The rem side of this min() only binds once the viewport is wide enough to clear it (mobile stays governed by the vw side, unchanged) — so raising it only gives long toasts (e.g. the backup reminder) more room on desktop, without affecting short ones or mobile.
+          // max-content prevents fit-content from collapsing to min-content inside Sonner's absolute-positioned <li>.
           width: "max-content",
           maxWidth: "min(34rem, calc(100vw - 2rem))",
         },
