@@ -401,6 +401,38 @@ _Avoid_: instance, spawn, **chain** (also banned for Streak).
 
 ---
 
+## Tasks
+
+### Step
+
+A single named item in a task's **checklist**. Steps are the user-facing concept;
+the underlying record is a `tasks` row with `parent_id` set to the containing
+task's id.
+
+A Step carries only a name and a completion state — it has no due date, start
+date, priority, project, or notes of its own. The UI deliberately does not expose
+the full task schema on a Step. The **code** calls these records "subtasks"
+(`SubtaskList`, `useSubtasks`, `draftSubtasks`, `parent_id`); the **UI** calls
+them "steps" ("Add a step…", "3 steps"). Neither spelling is wrong in its own
+layer, but the two must not be mixed: a spec or PR that calls a step a "subtask"
+in user-facing copy is using the wrong term.
+
+Steps are **flat**: a Step cannot itself have Steps. The database supports
+arbitrary nesting via `parent_id`, but the UI enforces a single level.
+
+_Avoid_: "subtask" in UI copy or user-facing strings; _avoid_: "checklist item"
+(inconsistent with the label already in the product).
+
+### Step promotion _(deferred)_
+
+The future action of converting a Step into a full top-level Task, so it gains
+its own due date, priority, notes, and project. No schema change is required —
+the record is already a `tasks` row; promotion removes the `parent_id` and
+surfaces it as a peer task. Not yet built; noted here to prevent the concept from
+being invented under a conflicting name.
+
+---
+
 ## Analytics
 
 ### Stats
