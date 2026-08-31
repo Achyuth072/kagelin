@@ -16,9 +16,8 @@ export function FocusSubtaskList() {
   const [prevTaskId, setPrevTaskId] = useState(activeTaskId);
   const [isExpanded, setIsExpanded] = useState(false);
 
+  const prevTaskIdRef = useRef<string | null>(null);
   const prevCompletedRef = useRef<number | null>(null);
-  const prevTaskIdRef = useRef<string | null | undefined>(activeTaskId);
-  const isInitialLoadRef = useRef(true);
 
   const total = subtasks?.length ?? 0;
   const completed = subtasks?.filter((s) => s.is_completed).length ?? 0;
@@ -33,13 +32,6 @@ export function FocusSubtaskList() {
 
     if (prevTaskIdRef.current !== activeTaskId) {
       prevTaskIdRef.current = activeTaskId;
-      prevCompletedRef.current = completed;
-      isInitialLoadRef.current = true;
-      return;
-    }
-
-    if (isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
       prevCompletedRef.current = completed;
       return;
     }

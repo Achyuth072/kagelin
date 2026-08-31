@@ -72,7 +72,6 @@ interface SubtaskRowProps {
   isDesktop: boolean;
   onStartEdit: (id: string, content: string) => void;
   onSaveEdit: (id: string) => void;
-  onCancelEdit: () => void;
   onDelete: (idOrIndex: string | number) => void;
   onToggle: (id: string, checked: boolean) => void;
   onEditingContentChange: (val: string) => void;
@@ -339,12 +338,28 @@ export default function SubtaskList({
     setEditingContent(content);
   };
 
+  const parseDraftIndex = (idOrIndex: string | number): number => {
+    return typeof idOrIndex === "number"
+      ? idOrIndex
+      : parseInt(idOrIndex.replace("draft-", ""), 10);
+  };
+
+  const focusPreviousStepOrInput = (prevIndex: number) => {
+    if (prevIndex >= 0 && prevIndex < items.length) {
+      const prevItem = items[prevIndex];
+      const prevId = getItemId(prevItem, prevIndex);
+      const prevContent =
+        typeof prevItem === "string" ? prevItem : prevItem.content;
+      setEditingId(prevId);
+      setEditingContent(prevContent);
+    } else {
+      newStepInputRef.current?.focus();
+    }
+  };
+
   const handleDeleteSubtask = (idOrIndex: string | number) => {
     if (isDraftMode) {
-      const index =
-        typeof idOrIndex === "number"
-          ? idOrIndex
-          : parseInt(idOrIndex.replace("draft-", ""), 10);
+      const index = parseDraftIndex(idOrIndex);
       if (!isNaN(index)) {
         onDraftSubtasksChange?.(draftSubtasks.filter((_, i) => i !== index));
       }
@@ -368,20 +383,18 @@ export default function SubtaskList({
     const trimmed = editingContent.trim();
     if (!trimmed) {
       handleDeleteSubtask(id);
-    } else {
-      if (isDraftMode) {
-        const index = parseInt(id.replace("draft-", ""), 10);
-        if (!isNaN(index)) {
-          onDraftSubtasksChange?.(
-            draftSubtasks.map((item, i) => (i === index ? trimmed : item)),
-          );
-        }
-      } else {
-        updateMutation.mutate({
-          id,
-          content: trimmed,
-        });
+    } else if (isDraftMode) {
+      const index = parseDraftIndex(id);
+      if (!isNaN(index)) {
+        onDraftSubtasksChange?.(
+          draftSubtasks.map((item, i) => (i === index ? trimmed : item)),
+        );
       }
+    } else {
+      updateMutation.mutate({
+        id,
+        content: trimmed,
+      });
     }
     setEditingId(null);
   };
@@ -421,23 +434,8 @@ export default function SubtaskList({
       if (!newSubtaskContent && items.length > 0) {
         e.preventDefault();
         const lastIndex = items.length - 1;
-        const lastItem = items[lastIndex];
-        const lastId =
-          typeof lastItem === "string" ? `draft-${lastIndex}` : lastItem.id;
-        handleDeleteSubtask(lastId);
-
-        if (lastIndex > 0) {
-          const prevIndex = lastIndex - 1;
-          const prevItem = items[prevIndex];
-          const prevId =
-            typeof prevItem === "string" ? `draft-${prevIndex}` : prevItem.id;
-          const prevContent =
-            typeof prevItem === "string" ? prevItem : prevItem.content;
-          setEditingId(prevId);
-          setEditingContent(prevContent);
-        } else {
-          newStepInputRef.current?.focus();
-        }
+        handleDeleteSubtask(getItemId(items[lastIndex], lastIndex));
+        focusPreviousStepOrInput(lastIndex - 1);
       }
     } else if (e.key === "Escape") {
       e.preventDefault();
@@ -467,19 +465,7 @@ export default function SubtaskList({
         e.preventDefault();
         handleDeleteSubtask(id);
         setEditingId(null);
-
-        if (index > 0) {
-          const prevIndex = index - 1;
-          const prevItem = items[prevIndex];
-          const prevId =
-            typeof prevItem === "string" ? `draft-${prevIndex}` : prevItem.id;
-          const prevContent =
-            typeof prevItem === "string" ? prevItem : prevItem.content;
-          setEditingId(prevId);
-          setEditingContent(prevContent);
-        } else {
-          newStepInputRef.current?.focus();
-        }
+        focusPreviousStepOrInput(index - 1);
       }
     }
   };
@@ -502,7 +488,6 @@ export default function SubtaskList({
       isDesktop,
       onStartEdit: handleStartEdit,
       onSaveEdit: handleSaveEdit,
-      onCancelEdit: () => setEditingId(null),
       onDelete: handleDeleteSubtask,
       onToggle: handleToggleSubtask,
       onEditingContentChange: setEditingContent,
