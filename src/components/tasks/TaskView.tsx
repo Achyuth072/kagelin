@@ -133,8 +133,10 @@ export function TaskView(props: TaskViewProps) {
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter") {
-      // Newlines in title textarea are blocked across all modes
       e.preventDefault();
+      // The sheet/panel container submits on Ctrl+Enter too; without this the
+      // bubbled event would fire onSubmit twice.
+      e.stopPropagation();
 
       if (e.metaKey || e.ctrlKey) {
         onSubmit();
@@ -144,12 +146,11 @@ export function TaskView(props: TaskViewProps) {
       if (!e.shiftKey && !e.altKey) {
         if (mode === "create") {
           onSubmit();
-        } else if (mode === "edit") {
-          if (!notesEditorOpen) {
-            trigger("toggle");
-            setIsPreviewMode(true);
-            setNotesEditorOpen(true);
-          }
+        } else if (mode === "edit" && !notesEditorOpen) {
+          trigger("toggle");
+          // Unlike the click path, this shortcut exists to start typing.
+          setIsPreviewMode(false);
+          setNotesEditorOpen(true);
         }
       }
       return;
@@ -182,7 +183,6 @@ export function TaskView(props: TaskViewProps) {
           : cn("transition-all", layout === "sheet" ? "h-auto" : "h-full"),
       )}
     >
-      {/* Title — native textarea, bottom border only, no box */}
       <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
         <textarea
           ref={titleTextareaRef}
@@ -209,14 +209,12 @@ export function TaskView(props: TaskViewProps) {
         )}
       </div>
 
-      {/* Body */}
       <div
         className={cn(
           "flex-1 min-h-0 w-full py-2",
           mode === "edit" && "overflow-y-auto",
         )}
       >
-        {/* Meta row — icon-led horizontal scroll strip */}
         <div className="flex items-center gap-3 px-3 py-2.5 mx-2">
           <div className="w-5 shrink-0 flex items-center justify-center">
             <SlidersHorizontal
@@ -287,7 +285,6 @@ export function TaskView(props: TaskViewProps) {
 
         <div className="h-1" />
 
-        {/* Notes */}
         <TaskNotesRow
           description={description}
           setDescription={setDescription}
@@ -300,7 +297,6 @@ export function TaskView(props: TaskViewProps) {
 
         <div className="h-1" />
 
-        {/* Subtasks row */}
         <div className="mx-2">
           <button
             type="button"
@@ -356,7 +352,6 @@ export function TaskView(props: TaskViewProps) {
         <div className="h-1" />
       </div>
 
-      {/* Footer */}
       <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
         <Select
           value={selectedProjectId || "inbox"}

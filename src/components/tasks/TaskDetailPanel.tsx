@@ -38,7 +38,6 @@ interface TaskDetailPanelProps {
 export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   const { trigger } = useHaptic();
 
-  // React Hook Form
   type TaskFormValues = CreateTaskInput & {
     recurrence?: RecurrenceRule | null;
   };
@@ -61,7 +60,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
     },
   });
 
-  // Individual UI-only states
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [doDatePickerOpen, setDoDatePickerOpen] = useState(false);
@@ -70,7 +68,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   const [pendingStep, setPendingStep] = useState("");
   const [showSubtasks, setShowSubtasks] = useState(false);
 
-  // Form values via useWatch
   const content = useWatch({ control, name: "content" });
   const watchedDueDate = useWatch({ control, name: "due_date" });
   const dueDate = watchedDueDate
@@ -87,7 +84,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   const selectedProjectId = useWatch({ control, name: "project_id" }) ?? null;
   const description = useWatch({ control, name: "description" }) || "";
 
-  // Hooks
   const updateMutation = useUpdateTask();
   const createMutation = useCreateTask();
   const deleteMutation = useDeleteTask();
@@ -95,7 +91,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   const { data: projects } = useProjects();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  // Reset UI-only states during render when task changes
   const [prevTask, setPrevTask] = useState(task);
   if (task !== prevTask) {
     setPrevTask(task);
@@ -106,7 +101,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
     }
   }
 
-  // Reset form when task changes
   useEffect(() => {
     if (task) {
       reset({
@@ -117,18 +111,16 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
         is_evening: task.is_evening || false,
         priority: task.priority,
         project_id: task.project_id ?? undefined,
-        recurrence: task.recurrence ?? null,
       });
       void triggerValidation();
     }
   }, [task, reset, triggerValidation]);
 
-  // Handlers
   const onFormSubmit = useCallback(
     (data: CreateTaskInput) => {
       if (!task) return;
 
-      trigger("success"); // Success signature haptic
+      trigger("success");
 
       updateMutation.mutate({
         ...data,
@@ -176,7 +168,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
 
   const handleConfirmDelete = useCallback(() => {
     if (!task) return;
-    trigger("thud"); // Thud haptic for delete
+    trigger("thud");
     setShowDeleteDialog(false);
     onClose?.();
     deleteMutation.mutate(task.id);
@@ -193,7 +185,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
     [handleSubmit, onFormSubmit, onClose],
   );
 
-  // Derived State
   const isPending = updateMutation.isPending;
 
   if (!task) {

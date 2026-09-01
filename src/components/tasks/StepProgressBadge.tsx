@@ -1,19 +1,20 @@
 import { CheckCircle2, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { SubtaskSummary } from "@/lib/types/task";
 
 interface StepProgressBadgeProps {
-  completed: number;
-  total: number;
+  subtasks: SubtaskSummary[] | undefined;
   className?: string;
 }
 
 export function StepProgressBadge({
-  completed,
-  total,
+  subtasks,
   className,
 }: StepProgressBadgeProps) {
-  if (total <= 0) return null;
+  if (!subtasks || subtasks.length === 0) return null;
 
+  const total = subtasks.length;
+  const completed = subtasks.filter((s) => s.is_completed).length;
   const allCompleted = completed === total;
 
   return (

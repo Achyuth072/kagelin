@@ -55,10 +55,6 @@ export function ListTaskCard({
   shouldAnimate = false,
   isKeyboardSelected = false,
 }: ListTaskCardProps) {
-  const subtasks = task.subtasks ?? [];
-  const totalSteps = subtasks.length;
-  const completedSteps = subtasks.filter((s) => s.is_completed).length;
-
   return (
     <div
       id={taskDomId(task.id)}
@@ -74,7 +70,6 @@ export function ListTaskCard({
       {...(!isDesktop ? dragAttributes : {})}
       {...(!isDesktop ? dragListeners : {})}
     >
-      {/* Shodo Accent Stripe (Vertical Bar) */}
       {project && (
         <div
           className="absolute left-0 top-0 bottom-0 w-1 md:w-1.5"
@@ -82,7 +77,6 @@ export function ListTaskCard({
         />
       )}
 
-      {/* Drag Handle: Desktop only */}
       {isDesktop && (
         <DragHandle
           ref={dragActivatorRef}
@@ -95,7 +89,6 @@ export function ListTaskCard({
         />
       )}
 
-      {/* Checkbox */}
       <div
         className={cn("shrink-0", isDesktop ? "pt-0" : "pt-0.5 p-3 -ml-3")}
         onClick={(e) => e.stopPropagation()}
@@ -110,9 +103,7 @@ export function ListTaskCard({
         />
       </div>
 
-      {/* Content Area */}
       <div className="flex-1 min-w-0 flex flex-col gap-0.5 ml-1">
-        {/* Title row */}
         <div className="flex items-center gap-2 min-w-0">
           <p className="type-body font-medium leading-tight truncate flex-1 min-w-0">
             <span
@@ -123,7 +114,6 @@ export function ListTaskCard({
             </span>
           </p>
 
-          {/* Mobile Expand Toggle */}
           {!isDesktop && (
             <div className="ml-auto flex items-center shrink-0">
               <Button
@@ -153,11 +143,9 @@ export function ListTaskCard({
           )}
         </div>
 
-        {/* Metadata Row: Always below title now for unity */}
         {(task.due_date ||
           task.priority < 4 ||
-          task.is_evening ||
-          totalSteps > 0 ||
+          task.subtasks?.length ||
           project) && (
           <div className="flex items-center gap-3 mt-0.5 ml-[2px] mb-1">
             {task.due_date && (
@@ -190,12 +178,10 @@ export function ListTaskCard({
               </span>
             )}
             <StepProgressBadge
-              completed={completedSteps}
-              total={totalSteps}
+              subtasks={task.subtasks}
               className="type-ui gap-1.5"
             />
 
-            {/* Expand Toggle Desktop */}
             {isDesktop && (
               <Button
                 variant="ghost"
@@ -220,7 +206,6 @@ export function ListTaskCard({
         )}
       </div>
 
-      {/* Desktop End-cap Actions */}
       {isDesktop && (
         <div className="flex items-center h-7 gap-1 shrink-0">
           <Button

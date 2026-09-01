@@ -201,7 +201,6 @@ describe("FocusSubtaskList", () => {
       screen.getByRole("button", { name: /1\/3 steps/i }),
     ).toBeInTheDocument();
 
-    // Step 2 is checked off
     steps = [
       createMockStep("s1", true),
       createMockStep("s2", true),
@@ -212,70 +211,5 @@ describe("FocusSubtaskList", () => {
     expect(
       screen.getByRole("button", { name: /2\/3 steps/i }),
     ).toBeInTheDocument();
-  });
-
-  it("triggers 'success' haptic pulse when the final step is checked off", () => {
-    mockActiveTaskId = "task-1";
-    let steps = [createMockStep("s1", true), createMockStep("s2", false)];
-    mockUseSubtasks.mockImplementation(() => ({
-      data: steps,
-      isLoading: false,
-    }));
-
-    const { rerender } = render(<FocusSubtaskList />);
-    expect(mockTrigger).not.toHaveBeenCalledWith("success");
-
-    // Final step completed
-    steps = [createMockStep("s1", true), createMockStep("s2", true)];
-    rerender(<FocusSubtaskList />);
-
-    expect(mockTrigger).toHaveBeenCalledWith("success");
-  });
-
-  it("does not trigger 'success' haptic pulse on initial render when all steps are already completed", () => {
-    mockActiveTaskId = "task-1";
-    const steps = [createMockStep("s1", true), createMockStep("s2", true)];
-    mockUseSubtasks.mockReturnValue({ data: steps, isLoading: false });
-
-    render(<FocusSubtaskList />);
-    expect(mockTrigger).not.toHaveBeenCalledWith("success");
-  });
-
-  it("does not trigger 'success' haptic pulse when active task switches to another task with all steps completed", () => {
-    mockActiveTaskId = "task-1";
-    let steps = [createMockStep("s1", true), createMockStep("s2", false)];
-    mockUseSubtasks.mockImplementation(() => ({
-      data: steps,
-      isLoading: false,
-    }));
-
-    const { rerender } = render(<FocusSubtaskList />);
-
-    // Switch task
-    mockActiveTaskId = "task-2";
-    steps = [
-      createMockTask({ id: "s3", parent_id: "task-2", is_completed: true }),
-    ];
-    rerender(<FocusSubtaskList />);
-
-    expect(mockTrigger).not.toHaveBeenCalledWith("success");
-  });
-
-  it("does not trigger 'success' haptic pulse when subtasks load from undefined to all completed", () => {
-    mockActiveTaskId = "task-1";
-    let subtasksData: Task[] | undefined = undefined;
-    mockUseSubtasks.mockImplementation(() => ({
-      data: subtasksData,
-      isLoading: subtasksData === undefined,
-    }));
-
-    const { rerender } = render(<FocusSubtaskList />);
-    expect(mockTrigger).not.toHaveBeenCalledWith("success");
-
-    // Data finishes loading with all steps completed
-    subtasksData = [createMockStep("s1", true), createMockStep("s2", true)];
-    rerender(<FocusSubtaskList />);
-
-    expect(mockTrigger).not.toHaveBeenCalledWith("success");
   });
 });

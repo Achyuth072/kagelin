@@ -1,5 +1,11 @@
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 
+/** Just enough of a child task to render step progress on a parent's card. */
+export interface SubtaskSummary {
+  id: string;
+  is_completed: boolean;
+}
+
 export interface Task {
   id: string;
   user_id: string;
@@ -20,7 +26,7 @@ export interface Task {
   google_etag: string | null;
   created_at: string;
   updated_at: string;
-  subtasks?: { id: string; is_completed: boolean }[];
+  subtasks?: SubtaskSummary[];
 }
 
 export interface Project {

@@ -68,11 +68,10 @@ interface SubtaskRowProps {
   isDraftMode: boolean;
   isEditing: boolean;
   editingContent: string;
-  allowReorder?: boolean;
   isDesktop: boolean;
   onStartEdit: (id: string, content: string) => void;
   onSaveEdit: (id: string) => void;
-  onDelete: (idOrIndex: string | number) => void;
+  onDelete: (id: string) => void;
   onToggle: (id: string, checked: boolean) => void;
   onEditingContentChange: (val: string) => void;
   onEditKeyDown: (
@@ -338,11 +337,8 @@ export default function SubtaskList({
     setEditingContent(content);
   };
 
-  const parseDraftIndex = (idOrIndex: string | number): number => {
-    return typeof idOrIndex === "number"
-      ? idOrIndex
-      : parseInt(idOrIndex.replace("draft-", ""), 10);
-  };
+  const parseDraftIndex = (id: string): number =>
+    parseInt(id.replace("draft-", ""), 10);
 
   const focusPreviousStepOrInput = (prevIndex: number) => {
     if (prevIndex >= 0 && prevIndex < items.length) {
@@ -357,25 +353,31 @@ export default function SubtaskList({
     }
   };
 
-  const handleDeleteSubtask = (idOrIndex: string | number) => {
+  const handleDeleteSubtask = (id: string) => {
     if (isDraftMode) {
-      const index = parseDraftIndex(idOrIndex);
+      const index = parseDraftIndex(id);
       if (!isNaN(index)) {
         onDraftSubtasksChange?.(draftSubtasks.filter((_, i) => i !== index));
       }
     } else {
-      deleteMutation.mutate(idOrIndex as string);
+      deleteMutation.mutate(id);
     }
   };
 
   const handleToggleSubtask = (id: string, checked: boolean) => {
-    if (!isDraftMode) {
-      triggerHaptic("toggle");
-      toggleMutation.mutate({
-        id,
-        is_completed: checked,
-      });
-    }
+    if (isDraftMode) return;
+
+    const completesEveryStep =
+      checked &&
+      items.every((item) =>
+        typeof item === "string" ? true : item.id === id || item.is_completed,
+      );
+
+    triggerHaptic(completesEveryStep ? "success" : "toggle");
+    toggleMutation.mutate({
+      id,
+      is_completed: checked,
+    });
   };
 
   const handleSaveEdit = (id: string) => {
@@ -484,7 +486,6 @@ export default function SubtaskList({
       isDraftMode,
       isEditing,
       editingContent,
-      allowReorder,
       isDesktop,
       onStartEdit: handleStartEdit,
       onSaveEdit: handleSaveEdit,

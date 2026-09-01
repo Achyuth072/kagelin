@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchAllRows } from "@/lib/supabase/paginate";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
-import type { Task } from "@/lib/types/task";
+import type { Task, SubtaskSummary } from "@/lib/types/task";
 
 interface UseTasksOptions {
   projectId?: string | null;
@@ -65,10 +65,7 @@ export function useTasks(options: UseTasksOptions = {}) {
         }
 
         const allTasks = mockStore.getTasks();
-        const subtasksByParent = new Map<
-          string,
-          { id: string; is_completed: boolean }[]
-        >();
+        const subtasksByParent = new Map<string, SubtaskSummary[]>();
         for (const t of allTasks) {
           if (t.parent_id) {
             const list = subtasksByParent.get(t.parent_id) || [];
@@ -102,18 +99,14 @@ export function useTasks(options: UseTasksOptions = {}) {
       todayStart.setHours(0, 0, 0, 0);
 
       let tasks = await fetchAllRows<
-        Task & {
-          projects: { is_archived: boolean } | null;
-          subtasks?: { id: string; is_completed: boolean }[];
-        }
+        Task & { projects: { is_archived: boolean } | null }
       >((from, to) => {
         let query = supabase
           .from("tasks")
           .select(
             `
           *,
-          projects!left(is_archived),
-          subtasks:tasks!parent_id(id, is_completed)
+          projects!left(is_archived)
         `,
           )
           .is("parent_id", null)
@@ -146,7 +139,30 @@ export function useTasks(options: UseTasksOptions = {}) {
         tasks = tasks.filter((t) => !t.projects?.is_archived);
       }
 
-      return tasks;
+      // Fetched separately rather than as a `tasks!parent_id` embed: PostgREST
+      // resolves recursive embeds toward the parent, which would silently yield
+      // null here (every row above has parent_id IS NULL) instead of the steps.
+      const steps = await fetchAllRows<SubtaskSummary & { parent_id: string }>(
+        (from, to) =>
+          supabase
+            .from("tasks")
+            .select("id, parent_id, is_completed")
+            .not("parent_id", "is", null)
+            .order("id", { ascending: true })
+            .range(from, to),
+      );
+
+      const stepsByParent = new Map<string, SubtaskSummary[]>();
+      for (const step of steps) {
+        const list = stepsByParent.get(step.parent_id) || [];
+        list.push({ id: step.id, is_completed: step.is_completed });
+        stepsByParent.set(step.parent_id, list);
+      }
+
+      return tasks.map((t) => ({
+        ...t,
+        subtasks: stepsByParent.get(t.id) || [],
+      }));
     },
     placeholderData: (previousData) => previousData,
   });
@@ -161,23 +177,13 @@ export function useTask(taskId: string | null) {
       if (!taskId) return null;
 
       if (isGuestMode) {
-        const task = mockStore.getTask(taskId);
-        if (!task) return null;
-        const subtasks = mockStore
-          .getSubtasks(taskId)
-          .map((st) => ({ id: st.id, is_completed: st.is_completed }));
-        return { ...task, subtasks };
+        return mockStore.getTask(taskId);
       }
 
       const supabase = createClient();
       const { data, error } = await supabase
         .from("tasks")
-        .select(
-          `
-          *,
-          subtasks:tasks!parent_id(id, is_completed)
-        `,
-        )
+        .select("*")
         .eq("id", taskId)
         .single();
 

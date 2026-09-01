@@ -104,7 +104,6 @@ describe("Step Progress Badge", () => {
       );
 
       const badge = screen.getByTestId("step-progress-badge");
-      // console.log
       expect(badge.querySelector("svg")?.getAttribute("class")).toContain(
         "lucide",
       );

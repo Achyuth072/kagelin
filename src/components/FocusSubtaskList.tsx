@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useActiveTask } from "@/lib/hooks/useActiveTask";
 import { useSubtasks } from "@/lib/hooks/useSubtasks";
@@ -16,9 +16,6 @@ export function FocusSubtaskList() {
   const [prevTaskId, setPrevTaskId] = useState(activeTaskId);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const prevTaskIdRef = useRef<string | null>(null);
-  const prevCompletedRef = useRef<number | null>(null);
-
   const total = subtasks?.length ?? 0;
   const completed = subtasks?.filter((s) => s.is_completed).length ?? 0;
 
@@ -26,26 +23,6 @@ export function FocusSubtaskList() {
     setPrevTaskId(activeTaskId);
     setIsExpanded(false);
   }
-
-  useEffect(() => {
-    if (subtasks === undefined) return;
-
-    if (prevTaskIdRef.current !== activeTaskId) {
-      prevTaskIdRef.current = activeTaskId;
-      prevCompletedRef.current = completed;
-      return;
-    }
-
-    if (
-      prevCompletedRef.current !== null &&
-      prevCompletedRef.current < total &&
-      completed === total &&
-      total > 0
-    ) {
-      trigger("success");
-    }
-    prevCompletedRef.current = completed;
-  }, [activeTaskId, completed, subtasks, total, trigger]);
 
   if (!activeTaskId || total === 0) {
     return null;

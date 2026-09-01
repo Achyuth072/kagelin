@@ -167,6 +167,26 @@ describe("TaskView - create mode", () => {
     expect(onSubmit).toHaveBeenCalledTimes(2);
   });
 
+  it("does not let a title Enter reach the surrounding sheet, which submits on Cmd+Enter too", () => {
+    const onSubmit = vi.fn();
+    const containerKeyDown = vi.fn();
+
+    render(
+      <div onKeyDown={containerKeyDown}>
+        <TaskView {...baseProps} mode="create" onSubmit={onSubmit} />
+      </div>,
+    );
+
+    const titleInput = screen.getByPlaceholderText("What needs to be done?");
+
+    fireEvent.keyDown(titleInput, { key: "Enter", metaKey: true });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(containerKeyDown).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(titleInput, { key: "Enter" });
+    expect(containerKeyDown).not.toHaveBeenCalled();
+  });
+
   it("replaces newlines with spaces when text with newlines is entered or pasted", () => {
     const setContent = vi.fn();
     render(<TaskView {...baseProps} mode="create" setContent={setContent} />);
@@ -252,7 +272,7 @@ describe("TaskView - edit mode", () => {
     expect(editor).not.toBeInTheDocument();
   });
 
-  it("pressing bare Enter in the title opens the Notes editor", () => {
+  it("pressing bare Enter in the title opens the Notes editor ready to type in", () => {
     render(<TaskView {...editProps} mode="edit" />);
 
     expect(screen.queryByTestId("notes-editor")).toBeNull();
@@ -261,7 +281,7 @@ describe("TaskView - edit mode", () => {
     fireEvent.keyDown(titleInput, { key: "Enter" });
 
     expect(screen.getByTestId("notes-editor")).toBeInTheDocument();
-    expect(editProps.setIsPreviewMode).toHaveBeenCalledWith(true);
+    expect(editProps.setIsPreviewMode).toHaveBeenCalledWith(false);
   });
 
   it("pressing bare Enter in the title when Notes is already open is a no-op", () => {
@@ -271,7 +291,6 @@ describe("TaskView - edit mode", () => {
     fireEvent.keyDown(titleInput, { key: "Enter" });
     expect(screen.getByTestId("notes-editor")).toBeInTheDocument();
 
-    // Second Enter press while open should no-op cleanly
     fireEvent.keyDown(titleInput, { key: "Enter" });
     expect(screen.getByTestId("notes-editor")).toBeInTheDocument();
   });

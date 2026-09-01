@@ -35,10 +35,6 @@ export function BoardTaskCard({
   shouldAnimate,
   isKeyboardSelected,
 }: BoardTaskCardProps) {
-  const subtasks = task.subtasks ?? [];
-  const totalSteps = subtasks.length;
-  const completedSteps = subtasks.filter((s) => s.is_completed).length;
-
   return (
     <div
       id={taskDomId(task.id)}
@@ -118,7 +114,7 @@ export function BoardTaskCard({
               Evening
             </span>
           )}
-          <StepProgressBadge completed={completedSteps} total={totalSteps} />
+          <StepProgressBadge subtasks={task.subtasks} />
         </div>
       </div>
     </div>

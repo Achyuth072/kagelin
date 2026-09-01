@@ -4,8 +4,26 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
 import SubtaskList from "@/components/tasks/SubtaskList";
 
+const { mockTrigger, mockUseSubtasks, mockToggleMutate } = vi.hoisted(() => ({
+  mockTrigger: vi.fn(),
+  mockUseSubtasks: vi.fn((): { data: unknown[] } => ({ data: [] })),
+  mockToggleMutate: vi.fn(),
+}));
+
 vi.mock("@/lib/hooks/useHaptic", () => ({
-  useHaptic: () => ({ trigger: vi.fn() }),
+  useHaptic: () => ({ trigger: mockTrigger }),
+}));
+
+vi.mock("@/lib/hooks/useSubtasks", () => ({
+  useSubtasks: () => mockUseSubtasks(),
+}));
+
+vi.mock("@/lib/hooks/useTaskMutations", () => ({
+  useCreateTask: () => ({ mutate: vi.fn() }),
+  useToggleTask: () => ({ mutate: mockToggleMutate }),
+  useDeleteTask: () => ({ mutate: vi.fn() }),
+  useUpdateTask: () => ({ mutate: vi.fn() }),
+  useReorderTasks: () => ({ mutate: vi.fn() }),
 }));
 
 vi.mock("@/components/AuthProvider", () => ({
@@ -111,7 +129,6 @@ describe("SubtaskList - step input shortcut bubbling", () => {
     });
     expect(notPreventedCtrl).toBe(true);
 
-    // It should not have been committed into the list as a standalone subtask yet
     expect(screen.queryByText("Uncommitted step")).toBeNull();
     expect(input).toHaveValue("Uncommitted step");
   });
@@ -199,10 +216,8 @@ describe("SubtaskList - keyboard navigation contract", () => {
     const input = screen.getByPlaceholderText("Add a step...");
     expect(input).toHaveValue("");
 
-    // Press Backspace in the empty new step input
     fireEvent.keyDown(input, { key: "Backspace" });
 
-    // Second step should be deleted, and First step should now be in edit mode
     expect(screen.queryByText("Second step")).toBeNull();
     const editInput = screen.getByLabelText("Edit step");
     expect(editInput).toBeInTheDocument();
@@ -261,16 +276,13 @@ describe("SubtaskList - keyboard navigation contract", () => {
       </QueryClientProvider>,
     );
 
-    // Click Step 2 to enter edit mode
     fireEvent.click(screen.getByText("Step 2"));
     const editInput = screen.getByLabelText("Edit step");
     expect(editInput).toHaveValue("Step 2");
 
-    // Clear content and press Backspace
     fireEvent.change(editInput, { target: { value: "" } });
     fireEvent.keyDown(editInput, { key: "Backspace" });
 
-    // Step 2 should be deleted and Step 1 should now be being edited
     expect(screen.queryByText("Step 2")).toBeNull();
     const prevEditInput = screen.getByLabelText("Edit step");
     expect(prevEditInput).toBeInTheDocument();
@@ -326,7 +338,6 @@ describe("SubtaskList - keyboard navigation contract", () => {
       </QueryClientProvider>,
     );
 
-    // Click to start editing
     fireEvent.click(screen.getByText("Original step text"));
     const editInput = screen.getByLabelText("Edit step");
     fireEvent.change(editInput, { target: { value: "Modified text" } });
@@ -359,7 +370,6 @@ describe("SubtaskList - keyboard navigation contract", () => {
       </QueryClientProvider>,
     );
 
-    // Click to start editing
     fireEvent.click(screen.getByText("Original step text"));
     const editInput = screen.getByLabelText("Edit step");
     fireEvent.change(editInput, { target: { value: "Updated step text" } });
@@ -404,5 +414,64 @@ describe("SubtaskList - drag to reorder affordance", () => {
 
     const dragHandles = container.querySelectorAll(".cursor-grab");
     expect(dragHandles).toHaveLength(0);
+  });
+});
+
+describe("SubtaskList - completion haptics", () => {
+  function renderPersistedSteps(
+    steps: { id: string; is_completed: boolean }[],
+  ) {
+    mockUseSubtasks.mockReturnValue({
+      data: steps.map((s) => ({
+        id: s.id,
+        content: `Step ${s.id}`,
+        is_completed: s.is_completed,
+        day_order: 0,
+        created_at: "2026-01-01T00:00:00.000Z",
+      })),
+    });
+
+    return render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SubtaskList taskId="task-1" projectId={null} />
+      </QueryClientProvider>,
+    );
+  }
+
+  it("pulses 'success' when ticking the step that completes the list", () => {
+    mockTrigger.mockClear();
+    renderPersistedSteps([
+      { id: "s1", is_completed: true },
+      { id: "s2", is_completed: false },
+    ]);
+
+    fireEvent.click(screen.getAllByRole("checkbox")[1]);
+
+    expect(mockTrigger).toHaveBeenCalledWith("success");
+  });
+
+  it("pulses only 'toggle' when steps remain unfinished", () => {
+    mockTrigger.mockClear();
+    renderPersistedSteps([
+      { id: "s1", is_completed: false },
+      { id: "s2", is_completed: false },
+    ]);
+
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+
+    expect(mockTrigger).toHaveBeenCalledWith("toggle");
+    expect(mockTrigger).not.toHaveBeenCalledWith("success");
+  });
+
+  it("does not pulse 'success' when unticking a step from a completed list", () => {
+    mockTrigger.mockClear();
+    renderPersistedSteps([
+      { id: "s1", is_completed: true },
+      { id: "s2", is_completed: true },
+    ]);
+
+    fireEvent.click(screen.getAllByRole("checkbox")[0]);
+
+    expect(mockTrigger).not.toHaveBeenCalledWith("success");
   });
 });

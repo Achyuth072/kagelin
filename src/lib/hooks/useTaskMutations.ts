@@ -76,7 +76,21 @@ export function useCreateTask() {
 
       queryClient.setQueryData<Task[]>(
         ["tasks", { projectId: undefined, showCompleted: false, isGuestMode }],
-        (old) => [optimisticTask, ...(old || [])],
+        (old) =>
+          newTask.parent_id
+            ? // A step belongs on its parent's progress badge, not in the list.
+              old?.map((task) =>
+                task.id === newTask.parent_id
+                  ? {
+                      ...task,
+                      subtasks: [
+                        ...(task.subtasks || []),
+                        { id: clientId, is_completed: false },
+                      ],
+                    }
+                  : task,
+              )
+            : [optimisticTask, ...(old || [])],
       );
 
       return { previousTasks };
@@ -256,7 +270,16 @@ export function useDeleteTask() {
 
       for (const [queryKey] of allTaskQueries) {
         queryClient.setQueryData<Task[]>(queryKey, (old) =>
-          old?.filter((task) => task.id !== id),
+          old
+            ?.filter((task) => task.id !== id)
+            .map((task) =>
+              task.subtasks?.some((st) => st.id === id)
+                ? {
+                    ...task,
+                    subtasks: task.subtasks.filter((st) => st.id !== id),
+                  }
+                : task,
+            ),
         );
       }
 

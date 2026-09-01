@@ -64,7 +64,6 @@ export default function TaskSheet({
 
   const effectiveTask = open ? initialTask : preservedTask;
 
-  // React Hook Form
   type TaskFormValues = CreateTaskInput & {
     recurrence?: RecurrenceRule | null;
   };
@@ -87,7 +86,6 @@ export default function TaskSheet({
     },
   });
 
-  // Individual UI-only states (not part of task data structure itself)
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [doDatePickerOpen, setDoDatePickerOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -97,7 +95,6 @@ export default function TaskSheet({
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [tab, setTab] = useState<SheetTab>("edit");
 
-  // Form values via useWatch
   const content = useWatch({ control, name: "content" });
   const watchedDueDate = useWatch({ control, name: "due_date" });
   const dueDate = useMemo(
@@ -120,7 +117,6 @@ export default function TaskSheet({
   const selectedProjectId = useWatch({ control, name: "project_id" }) ?? null;
   const description = useWatch({ control, name: "description" }) || "";
 
-  // Hooks
   const createMutation = useCreateTask();
   const updateMutation = useUpdateTask();
   const deleteMutation = useDeleteTask();
@@ -129,7 +125,6 @@ export default function TaskSheet({
   const isMobile = useMediaQuery("(max-width: 768px)");
   const { trigger: triggerHaptic } = useHaptic();
 
-  // Reset UI-only states during render when dialog opens or task changes
   const [prevOpen, setPrevOpen] = useState(open);
   const [prevTask, setPrevTask] = useState(initialTask);
 
@@ -146,7 +141,6 @@ export default function TaskSheet({
     }
   }
 
-  // Reset form when dialog opens (form reset remains in effect as it's a complex side effect)
   useEffect(() => {
     if (open) {
       if (initialTask) {
@@ -158,7 +152,6 @@ export default function TaskSheet({
           is_evening: initialTask.is_evening || false,
           priority: initialTask.priority,
           project_id: initialTask.project_id ?? undefined,
-          recurrence: initialTask.recurrence ?? null,
         });
         void triggerValidation();
       } else {
@@ -170,7 +163,6 @@ export default function TaskSheet({
           is_evening: false,
           priority: 4,
           project_id: undefined,
-          recurrence: null,
         });
       }
     }
@@ -183,7 +175,6 @@ export default function TaskSheet({
     triggerValidation,
   ]);
 
-  // Handlers
   const onFormSubmit = useCallback(
     (data: CreateTaskInput) => {
       triggerHaptic("thud");
@@ -294,7 +285,6 @@ export default function TaskSheet({
     [handleSubmit, onFormSubmit],
   );
 
-  // Derived State
   const isPending = createMutation.isPending || updateMutation.isPending;
   const isCreationMode = !effectiveTask;
 
