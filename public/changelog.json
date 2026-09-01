@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.42.0-preview.1",
+    "date": "2026-09-01",
+    "channel": "preview",
+    "sections": {
+    }
+  },
+  {
     "version": "1.42.0-preview.0",
     "date": "2026-09-01",
     "channel": "preview",
@@ -806,36 +813,6 @@
         "Various mobile layout issues in the frequency editor, grid cards, and Insights sections",
         "Custom task order no longer resets when reordering via drag or the sort menu",
         "Focus trend chart overflowing its container on some layouts"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.14",
-    "date": "2026-07-02",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Memoize TaskListView",
-        "Skip subtask AnimatePresence while a drag is active"
-      ],
-      "Fixed": [
-        "Stop forwarding dead drag props into board TaskItem, which was breaking its memo and re-rendering every card on each drag-over",
-        "Suppress a11y announcement spam and use WhileDragging measuring in HabitCompactList",
-        "Suppress dnd-kit's per-drag-over a11y announcement spam in TaskBoard",
-        "Suppress dnd-kit's per-drag-over a11y announcement spam and hoist canScroll in TaskList",
-        "ClosestCorners collision, WhileDragging measuring, activeTask snapshot, drag-over bail-outs",
-        "Use move-based reorder for cross-section drops, slot-swap for same-section",
-        "Accept date-only strings in task schema date fields"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.13",
-    "date": "2026-07-02",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Replace HabitEditView and HabitCreateView with a unified HabitView component"
       ]
     }
   }
