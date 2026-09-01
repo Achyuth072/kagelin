@@ -1,6 +1,6 @@
 [
   {
-    "version": "1.41.1-preview.1",
+    "version": "1.42.0-preview.0",
     "date": "2026-09-01",
     "channel": "preview",
     "sections": {
@@ -11,6 +11,16 @@
       ],
       "Fixed": [
         "Fixed title double-submit, step badge cache staleness, and step haptic double-firing"
+      ]
+    }
+  },
+  {
+    "version": "1.41.1",
+    "date": "2026-08-31",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Resolve iOS PWA safe-area gaps and shrink mobile nav to a leaner size"
       ]
     }
   },
