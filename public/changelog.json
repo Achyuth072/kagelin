@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.41.1-preview.1",
+    "date": "2026-09-01",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add and edit task steps (subtasks) in the edit sheet, with keyboard shortcuts and drag-to-reorder (#172)",
+        "Step progress badge on list and board task cards (#172)",
+        "Focus mode subtask checklist with live completion tracking (#172)"
+      ],
+      "Fixed": [
+        "Fixed title double-submit, step badge cache staleness, and step haptic double-firing"
+      ]
+    }
+  },
+  {
     "version": "1.41.1-preview.0",
     "date": "2026-08-31",
     "channel": "preview",
@@ -811,16 +826,6 @@
     "sections": {
       "Improved": [
         "Replace HabitEditView and HabitCreateView with a unified HabitView component"
-      ]
-    }
-  },
-  {
-    "version": "1.24.0-preview.12",
-    "date": "2026-07-02",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Replace the empty goals card with a slim prompt"
       ]
     }
   }
