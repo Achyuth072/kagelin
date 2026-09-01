@@ -3,6 +3,7 @@
 import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar, Flag, Moon, Play } from "lucide-react";
+import { StepProgressBadge } from "./StepProgressBadge";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
 import {
@@ -113,6 +114,7 @@ export function BoardTaskCard({
               Evening
             </span>
           )}
+          <StepProgressBadge subtasks={task.subtasks} />
         </div>
       </div>
     </div>

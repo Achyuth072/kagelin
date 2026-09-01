@@ -31,15 +31,21 @@ vi.mock("@/components/tasks/SubtaskList", () => ({
   default: ({
     taskId,
     projectId,
+    onCollapse,
   }: {
     taskId?: string;
     projectId?: string | null;
+    onCollapse?: () => void;
   }) => (
     <div
       data-testid="subtask-list"
       data-task-id={taskId ?? ""}
       data-project-id={projectId ?? ""}
-    />
+    >
+      <button data-testid="subtask-collapse-btn" onClick={onCollapse}>
+        Collapse
+      </button>
+    </div>
   ),
 }));
 
@@ -138,6 +144,74 @@ describe("TaskView - create mode", () => {
 
     expect(baseProps.setIsPreviewMode).toHaveBeenCalledWith(false);
   });
+
+  it("pressing bare Enter in the title textarea submits the task immediately", () => {
+    const onSubmit = vi.fn();
+    render(<TaskView {...baseProps} mode="create" onSubmit={onSubmit} />);
+
+    const titleInput = screen.getByPlaceholderText("What needs to be done?");
+    fireEvent.keyDown(titleInput, { key: "Enter" });
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("pressing Ctrl+Enter or Cmd+Enter in the title textarea submits the task", () => {
+    const onSubmit = vi.fn();
+    render(<TaskView {...baseProps} mode="create" onSubmit={onSubmit} />);
+
+    const titleInput = screen.getByPlaceholderText("What needs to be done?");
+    fireEvent.keyDown(titleInput, { key: "Enter", metaKey: true });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(titleInput, { key: "Enter", ctrlKey: true });
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not let a title Enter reach the surrounding sheet, which submits on Cmd+Enter too", () => {
+    const onSubmit = vi.fn();
+    const containerKeyDown = vi.fn();
+
+    render(
+      <div onKeyDown={containerKeyDown}>
+        <TaskView {...baseProps} mode="create" onSubmit={onSubmit} />
+      </div>,
+    );
+
+    const titleInput = screen.getByPlaceholderText("What needs to be done?");
+
+    fireEvent.keyDown(titleInput, { key: "Enter", metaKey: true });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(containerKeyDown).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(titleInput, { key: "Enter" });
+    expect(containerKeyDown).not.toHaveBeenCalled();
+  });
+
+  it("replaces newlines with spaces when text with newlines is entered or pasted", () => {
+    const setContent = vi.fn();
+    render(<TaskView {...baseProps} mode="create" setContent={setContent} />);
+
+    const titleInput = screen.getByPlaceholderText("What needs to be done?");
+    fireEvent.change(titleInput, {
+      target: { value: "Line 1\nLine 2\r\nLine 3" },
+    });
+
+    expect(setContent).toHaveBeenCalledWith("Line 1 Line 2 Line 3");
+  });
+
+  it("prevents default on Shift+Enter in title and does not submit", () => {
+    const onSubmit = vi.fn();
+    render(<TaskView {...baseProps} mode="create" onSubmit={onSubmit} />);
+
+    const titleInput = screen.getByPlaceholderText("What needs to be done?");
+    const notPrevented = fireEvent.keyDown(titleInput, {
+      key: "Enter",
+      shiftKey: true,
+    });
+
+    expect(notPrevented).toBe(false);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 });
 
 describe("TaskView - edit mode", () => {
@@ -196,5 +270,59 @@ describe("TaskView - edit mode", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /close/i }));
     expect(editor).not.toBeInTheDocument();
+  });
+
+  it("pressing bare Enter in the title opens the Notes editor ready to type in", () => {
+    render(<TaskView {...editProps} mode="edit" />);
+
+    expect(screen.queryByTestId("notes-editor")).toBeNull();
+
+    const titleInput = screen.getByPlaceholderText("What needs to be done?");
+    fireEvent.keyDown(titleInput, { key: "Enter" });
+
+    expect(screen.getByTestId("notes-editor")).toBeInTheDocument();
+    expect(editProps.setIsPreviewMode).toHaveBeenCalledWith(false);
+  });
+
+  it("pressing bare Enter in the title when Notes is already open is a no-op", () => {
+    render(<TaskView {...editProps} mode="edit" />);
+
+    const titleInput = screen.getByPlaceholderText("What needs to be done?");
+    fireEvent.keyDown(titleInput, { key: "Enter" });
+    expect(screen.getByTestId("notes-editor")).toBeInTheDocument();
+
+    fireEvent.keyDown(titleInput, { key: "Enter" });
+    expect(screen.getByTestId("notes-editor")).toBeInTheDocument();
+  });
+
+  it("pressing Cmd+Enter or Ctrl+Enter in edit mode title submits the form", () => {
+    const onSubmit = vi.fn();
+    render(<TaskView {...editProps} mode="edit" onSubmit={onSubmit} />);
+
+    const titleInput = screen.getByPlaceholderText("What needs to be done?");
+    fireEvent.keyDown(titleInput, { key: "Enter", metaKey: true });
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(titleInput, { key: "Enter", ctrlKey: true });
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it("collapses subtasks and focuses title textarea when onCollapse is triggered", () => {
+    const setShowSubtasks = vi.fn();
+    render(
+      <TaskView
+        {...editProps}
+        mode="edit"
+        showSubtasks={true}
+        setShowSubtasks={setShowSubtasks}
+      />,
+    );
+
+    const titleInput = screen.getByPlaceholderText("What needs to be done?");
+    const collapseBtn = screen.getByTestId("subtask-collapse-btn");
+
+    fireEvent.click(collapseBtn);
+    expect(setShowSubtasks).toHaveBeenCalledWith(false);
+    expect(document.activeElement).toBe(titleInput);
   });
 });

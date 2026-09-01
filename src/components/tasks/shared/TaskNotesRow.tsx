@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type Dispatch, type SetStateAction } from "react";
+import { type Dispatch, type SetStateAction } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AlignLeft } from "lucide-react";
@@ -14,6 +14,8 @@ interface TaskNotesRowProps {
   isPreviewMode: boolean;
   setIsPreviewMode: Dispatch<SetStateAction<boolean>>;
   defaultPreviewOnOpen: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 // Render block-level markdown as inline-flowing spans so the preview can be
@@ -47,9 +49,10 @@ export function TaskNotesRow({
   isPreviewMode,
   setIsPreviewMode,
   defaultPreviewOnOpen,
+  open: notesEditorOpen,
+  onOpenChange: setNotesEditorOpen,
 }: TaskNotesRowProps) {
   const { trigger } = useHaptic();
-  const [notesEditorOpen, setNotesEditorOpen] = useState(false);
 
   const hasDescription = !!description.trim();
 

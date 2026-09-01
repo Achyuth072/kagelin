@@ -16,7 +16,6 @@ import {
 } from "@/lib/hooks/useTaskMutations";
 import { useInboxProject } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
-import { useAuth } from "@/components/AuthProvider";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const renderWithQuery = (ui: React.ReactElement) => {
@@ -37,6 +36,7 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
   useUpdateTask: vi.fn(),
   useDeleteTask: vi.fn(),
   useToggleTask: vi.fn(),
+  useReorderTasks: vi.fn(() => ({ mutate: vi.fn() })),
 }));
 
 vi.mock("@/lib/hooks/useTasks", () => ({
@@ -179,5 +179,183 @@ describe("TaskSheet", () => {
       // Verify signature haptic for task update
       expect(mockHapticTrigger).toHaveBeenCalledWith("thud");
     });
+  });
+
+  it("auto-flushes uncommitted step input when creating a task", async () => {
+    await act(async () => {
+      renderWithQuery(<TaskSheet open={true} onClose={() => {}} />);
+    });
+
+    const titleInput = await screen.findByPlaceholderText(
+      "What needs to be done?",
+    );
+    await act(async () => {
+      fireEvent.change(titleInput, { target: { value: "New Parent Task" } });
+    });
+
+    // Open subtasks section
+    const subtasksToggle = screen.getByRole("button", { name: /subtasks/i });
+    await act(async () => {
+      fireEvent.click(subtasksToggle);
+    });
+
+    // Type in step input without pressing Enter
+    const stepInput = await screen.findByPlaceholderText("Add a step...");
+    await act(async () => {
+      fireEvent.change(stepInput, { target: { value: "Uncommitted Step" } });
+    });
+
+    // Submit the task creation
+    const sendButton = screen.getByRole("button", { name: /create task/i });
+    await waitFor(() => {
+      expect(sendButton).not.toBeDisabled();
+    });
+
+    await act(async () => {
+      fireEvent.click(sendButton);
+    });
+
+    await waitFor(() => {
+      // Should create parent task
+      expect(mockCreateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: "New Parent Task",
+        }),
+      );
+      // Should also auto-flush and create the uncommitted step
+      expect(mockCreateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: "Uncommitted Step",
+        }),
+      );
+    });
+  });
+
+  it("submits the task when bare Enter is pressed in the title during creation mode", async () => {
+    await act(async () => {
+      renderWithQuery(<TaskSheet open={true} onClose={() => {}} />);
+    });
+
+    const titleInput = await screen.findByPlaceholderText(
+      "What needs to be done?",
+    );
+    await act(async () => {
+      fireEvent.change(titleInput, { target: { value: "Enter Created Task" } });
+    });
+
+    await act(async () => {
+      fireEvent.keyDown(titleInput, { key: "Enter" });
+    });
+
+    await waitFor(() => {
+      expect(mockCreateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: "Enter Created Task",
+        }),
+      );
+    });
+  });
+
+  it("auto-flushes uncommitted step input when saving edits on an existing task", async () => {
+    const mockTask = {
+      id: "1",
+      content: "Existing Task",
+      priority: 4,
+      is_completed: false,
+    } as unknown as Task;
+
+    await act(async () => {
+      renderWithQuery(
+        <TaskSheet open={true} onClose={() => {}} initialTask={mockTask} />,
+      );
+    });
+
+    // Open subtasks section
+    const subtasksToggle = screen.getByRole("button", { name: /subtasks/i });
+    await act(async () => {
+      fireEvent.click(subtasksToggle);
+    });
+
+    // Type in step input without pressing Enter on step
+    const stepInput = await screen.findByPlaceholderText("Add a step...");
+    await act(async () => {
+      fireEvent.change(stepInput, { target: { value: "Pending Edit Step" } });
+    });
+
+    const saveButton = screen.getByRole("button", { name: /save/i });
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled();
+    });
+
+    await act(async () => {
+      fireEvent.click(saveButton);
+    });
+
+    await waitFor(() => {
+      expect(mockUpdateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "1",
+        }),
+      );
+      expect(mockCreateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: "Pending Edit Step",
+          parent_id: "1",
+        }),
+      );
+    });
+  });
+
+  it("discards uncommitted step text cleanly when closed without saving", async () => {
+    const onClose = vi.fn();
+    const { rerender } = renderWithQuery(
+      <TaskSheet open={true} onClose={onClose} />,
+    );
+
+    const titleInput = await screen.findByPlaceholderText(
+      "What needs to be done?",
+    );
+    await act(async () => {
+      fireEvent.change(titleInput, { target: { value: "Discard Me" } });
+    });
+
+    const subtasksToggle = screen.getByRole("button", { name: /subtasks/i });
+    await act(async () => {
+      fireEvent.click(subtasksToggle);
+    });
+
+    const stepInput = await screen.findByPlaceholderText("Add a step...");
+    await act(async () => {
+      fireEvent.change(stepInput, { target: { value: "Discarded Step" } });
+    });
+
+    // Close without saving
+    await act(async () => {
+      rerender(
+        <QueryClientProvider client={new QueryClient()}>
+          <TaskSheet open={false} onClose={onClose} />
+        </QueryClientProvider>,
+      );
+    });
+
+    expect(mockCreateMutate).not.toHaveBeenCalled();
+
+    // Re-open and check that pending step is cleared
+    await act(async () => {
+      rerender(
+        <QueryClientProvider client={new QueryClient()}>
+          <TaskSheet open={true} onClose={onClose} />
+        </QueryClientProvider>,
+      );
+    });
+
+    const newSubtasksToggle = screen.getByRole("button", { name: /subtasks/i });
+    await act(async () => {
+      fireEvent.click(newSubtasksToggle);
+    });
+
+    const reloadedStepInput =
+      await screen.findByPlaceholderText("Add a step...");
+    expect(reloadedStepInput).toHaveValue("");
   });
 });

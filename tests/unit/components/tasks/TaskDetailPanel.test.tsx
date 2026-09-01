@@ -8,12 +8,31 @@ import {
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import type { Task } from "@/lib/types/task";
-import { useUpdateTask, useDeleteTask } from "@/lib/hooks/useTaskMutations";
+import {
+  useUpdateTask,
+  useDeleteTask,
+  useCreateTask,
+} from "@/lib/hooks/useTaskMutations";
 import { useInboxProject } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
 
+interface MockTaskEditViewProps {
+  onKeyDown?: React.KeyboardEventHandler;
+  content?: string;
+  setContent?: (v: string) => void;
+  errors?: { content?: { message?: string } };
+  description?: string;
+  setDescription?: (v: string) => void;
+  pendingStep?: string;
+  setPendingStep?: (v: string) => void;
+  onSubmit?: () => void;
+  isPending?: boolean;
+  hasContent?: boolean;
+  onDelete?: () => void;
+}
+
 const { MockTaskEditView } = vi.hoisted(() => ({
-  MockTaskEditView: (props: any) => (
+  MockTaskEditView: (props: MockTaskEditViewProps) => (
     <div data-testid="task-edit-view" onKeyDown={props.onKeyDown}>
       <input
         value={props.content || ""}
@@ -26,6 +45,11 @@ const { MockTaskEditView } = vi.hoisted(() => ({
       <textarea
         value={props.description || ""}
         onChange={(e) => props.setDescription?.(e.target.value)}
+      />
+      <input
+        data-testid="step-input"
+        value={props.pendingStep || ""}
+        onChange={(e) => props.setPendingStep?.(e.target.value)}
       />
       <button
         type="submit"
@@ -50,6 +74,7 @@ vi.mock("./TaskEditView", () => ({
 vi.mock("@/lib/hooks/useTaskMutations", () => ({
   useUpdateTask: vi.fn(),
   useDeleteTask: vi.fn(),
+  useCreateTask: vi.fn(),
 }));
 
 vi.mock("@/lib/hooks/useTasks", () => ({
@@ -92,6 +117,7 @@ vi.mock("@/components/ui/DeleteConfirmationDialog", () => ({
 
 describe("TaskDetailPanel", () => {
   const mockUpdateMutate = vi.fn();
+  const mockCreateMutate = vi.fn();
   const mockDeleteMutate = vi.fn();
 
   const mockTask: Task = {
@@ -108,6 +134,10 @@ describe("TaskDetailPanel", () => {
     vi.clearAllMocks();
     (useUpdateTask as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: mockUpdateMutate,
+      isPending: false,
+    });
+    (useCreateTask as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      mutate: mockCreateMutate,
       isPending: false,
     });
     (useDeleteTask as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
@@ -292,5 +322,38 @@ describe("TaskDetailPanel", () => {
 
     // Then: onClose should be called
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("TD-S-03: Auto-flushes uncommitted step input when saving", async () => {
+    // Given: Rendering task detail
+    await act(async () => {
+      render(<TaskDetailPanel task={mockTask} />);
+    });
+
+    // When: Typing in uncommitted step input and saving
+    const stepInput = screen.getByTestId("step-input");
+    await act(async () => {
+      fireEvent.change(stepInput, { target: { value: "Flushed Panel Step" } });
+    });
+
+    const saveButton = screen.getByRole("button", { name: /save/i });
+    await act(async () => {
+      fireEvent.click(saveButton);
+    });
+
+    // Then: Both updateTask and createTask for the step should be called
+    await waitFor(() => {
+      expect(mockUpdateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "task-1",
+        }),
+      );
+      expect(mockCreateMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: "Flushed Panel Step",
+          parent_id: "task-1",
+        }),
+      );
+    });
   });
 });

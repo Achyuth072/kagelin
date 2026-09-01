@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fetchAllRows } from "@/lib/supabase/paginate";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
-import type { Task } from "@/lib/types/task";
+import type { Task, SubtaskSummary } from "@/lib/types/task";
 
 interface UseTasksOptions {
   projectId?: string | null;
@@ -64,6 +64,16 @@ export function useTasks(options: UseTasksOptions = {}) {
           });
         }
 
+        const allTasks = mockStore.getTasks();
+        const subtasksByParent = new Map<string, SubtaskSummary[]>();
+        for (const t of allTasks) {
+          if (t.parent_id) {
+            const list = subtasksByParent.get(t.parent_id) || [];
+            list.push({ id: t.id, is_completed: t.is_completed });
+            subtasksByParent.set(t.parent_id, list);
+          }
+        }
+
         // Tie-break matches the Supabase query below (newest first) for consistent ordering.
         tasks = tasks
           .filter((t) => !t.parent_id)
@@ -71,7 +81,11 @@ export function useTasks(options: UseTasksOptions = {}) {
             const diff = a.day_order - b.day_order;
             if (diff !== 0) return diff;
             return b.created_at.localeCompare(a.created_at);
-          });
+          })
+          .map((t) => ({
+            ...t,
+            subtasks: subtasksByParent.get(t.id) || [],
+          }));
 
         return tasks;
       }
@@ -125,7 +139,30 @@ export function useTasks(options: UseTasksOptions = {}) {
         tasks = tasks.filter((t) => !t.projects?.is_archived);
       }
 
-      return tasks;
+      // Fetched separately rather than as a `tasks!parent_id` embed: PostgREST
+      // resolves recursive embeds toward the parent, which would silently yield
+      // null here (every row above has parent_id IS NULL) instead of the steps.
+      const steps = await fetchAllRows<SubtaskSummary & { parent_id: string }>(
+        (from, to) =>
+          supabase
+            .from("tasks")
+            .select("id, parent_id, is_completed")
+            .not("parent_id", "is", null)
+            .order("id", { ascending: true })
+            .range(from, to),
+      );
+
+      const stepsByParent = new Map<string, SubtaskSummary[]>();
+      for (const step of steps) {
+        const list = stepsByParent.get(step.parent_id) || [];
+        list.push({ id: step.id, is_completed: step.is_completed });
+        stepsByParent.set(step.parent_id, list);
+      }
+
+      return tasks.map((t) => ({
+        ...t,
+        subtasks: stepsByParent.get(t.id) || [],
+      }));
     },
     placeholderData: (previousData) => previousData,
   });

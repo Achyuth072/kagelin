@@ -66,6 +66,7 @@ const TaskItemContent = memo(
       prev.task.content === next.task.content &&
       prev.task.is_completed === next.task.is_completed &&
       prev.task.priority === next.task.priority &&
+      prev.task.subtasks === next.task.subtasks &&
       prev.isKeyboardSelected === next.isKeyboardSelected &&
       prev.viewMode === next.viewMode &&
       prev.isDragging === next.isDragging &&

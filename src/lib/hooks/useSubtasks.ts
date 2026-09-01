@@ -25,7 +25,11 @@ export function useSubtasks<TData = Task[]>(
         return mockStore
           .getTasks()
           .filter((t) => t.parent_id === parentId)
-          .sort((a, b) => a.created_at.localeCompare(b.created_at));
+          .sort(
+            (a, b) =>
+              (a.day_order ?? 0) - (b.day_order ?? 0) ||
+              a.created_at.localeCompare(b.created_at),
+          );
       }
 
       const supabase = createClient();
@@ -34,6 +38,7 @@ export function useSubtasks<TData = Task[]>(
         .from("tasks")
         .select("*")
         .eq("parent_id", parentId)
+        .order("day_order", { ascending: true })
         .order("created_at", { ascending: true });
 
       if (error) {
