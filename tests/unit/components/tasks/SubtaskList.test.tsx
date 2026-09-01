@@ -80,7 +80,7 @@ describe("SubtaskList - mobile delete affordance", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     const deleteButton = screen.getByRole("button", {
-      name: "Delete subtask",
+      name: "Delete step",
     });
     expect(deleteButton).toHaveClass("opacity-100");
     expect(deleteButton).toHaveClass("md:opacity-0");

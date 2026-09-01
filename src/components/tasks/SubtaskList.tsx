@@ -142,7 +142,7 @@ function SubtaskItemContent({
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Delete subtask"
+        aria-label="Delete step"
         className="h-7 w-7 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-destructive md:text-muted-foreground md:hover:text-destructive hover:bg-destructive-surface-hover rounded-lg"
         onClick={() => {
           trigger("tick");
