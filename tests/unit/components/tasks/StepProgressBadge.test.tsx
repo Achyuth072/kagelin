@@ -73,12 +73,12 @@ describe("Step Progress Badge", () => {
       const badge = screen.getByTestId("step-progress-badge");
       expect(badge).toBeTruthy();
       expect(badge.textContent).toContain("2/5");
-      expect(badge.className).not.toContain("text-green-600");
+      expect(badge.className).not.toContain("text-brand");
       expect(badge.querySelector(".lucide-list-checks")).toBeTruthy();
       expect(badge.querySelector(".lucide-check-circle-2")).toBeNull();
     });
 
-    it("renders completed progress badge (e.g. 5/5) with CheckCircle2 icon and green color when all steps are completed", () => {
+    it("renders completed progress badge (e.g. 5/5) with CheckCircle2 icon and brand color when all steps are completed", () => {
       const taskWithAllCompletedSteps: Task = {
         ...baseTask,
         subtasks: [
@@ -108,7 +108,7 @@ describe("Step Progress Badge", () => {
         "lucide",
       );
       expect(badge.textContent).toContain("5/5");
-      expect(badge.className).toContain("text-green-600");
+      expect(badge.className).toContain("text-brand");
       expect(badge.querySelector(".lucide-list-checks")).toBeNull();
     });
   });
@@ -149,11 +149,11 @@ describe("Step Progress Badge", () => {
       const badge = screen.getByTestId("step-progress-badge");
       expect(badge).toBeTruthy();
       expect(badge.textContent).toContain("1/3");
-      expect(badge.className).not.toContain("text-green-600");
+      expect(badge.className).not.toContain("text-brand");
       expect(badge.querySelector(".lucide-list-checks")).toBeTruthy();
     });
 
-    it("renders completed badge (e.g. 3/3) with CheckCircle2 icon and green color on board card", () => {
+    it("renders completed badge (e.g. 3/3) with CheckCircle2 icon and brand color on board card", () => {
       const taskWithAllCompletedSteps: Task = {
         ...baseTask,
         subtasks: [
@@ -175,7 +175,7 @@ describe("Step Progress Badge", () => {
       const badge = screen.getByTestId("step-progress-badge");
       expect(badge).toBeTruthy();
       expect(badge.textContent).toContain("3/3");
-      expect(badge.className).toContain("text-green-600");
+      expect(badge.className).toContain("text-brand");
       expect(badge.querySelector("svg")?.getAttribute("class")).toContain(
         "lucide",
       );

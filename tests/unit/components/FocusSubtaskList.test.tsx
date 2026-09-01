@@ -127,7 +127,7 @@ describe("FocusSubtaskList", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders collapsed toggle button with '▸ 2/5 steps' when active task has steps", () => {
+  it("renders collapsed toggle button with '2/5 steps' when active task has steps", () => {
     mockActiveTaskId = "task-1";
     const steps = [
       createMockStep("s1", true),
@@ -142,8 +142,7 @@ describe("FocusSubtaskList", () => {
 
     const toggleButton = screen.getByRole("button", { name: /2\/5 steps/i });
     expect(toggleButton).toBeInTheDocument();
-    expect(toggleButton.textContent).toContain("▸");
-    expect(toggleButton.textContent).toContain("2/5 steps");
+    expect(toggleButton).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByTestId("subtask-list")).not.toBeInTheDocument();
   });
 
@@ -158,8 +157,7 @@ describe("FocusSubtaskList", () => {
     fireEvent.click(toggleButton);
 
     expect(mockTrigger).toHaveBeenCalledWith("toggle");
-    expect(toggleButton.textContent).toContain("▾");
-    expect(toggleButton.textContent).toContain("0/2 steps");
+    expect(toggleButton).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByTestId("subtask-list")).toBeInTheDocument();
     expect(screen.getByTestId("subtask-list")).toHaveAttribute(
       "data-allow-reorder",
@@ -180,7 +178,7 @@ describe("FocusSubtaskList", () => {
 
     fireEvent.click(toggleButton);
     expect(screen.queryByTestId("subtask-list")).not.toBeInTheDocument();
-    expect(toggleButton.textContent).toContain("▸");
+    expect(toggleButton).toHaveAttribute("aria-expanded", "false");
   });
 
   it("updates toggle label dynamically as steps change", () => {

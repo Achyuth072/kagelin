@@ -49,6 +49,12 @@ const dndAnnouncements = {
   onDragOver: () => undefined,
 };
 
+// Extends touch target without bleeding into adjacent rows (~36px pitch).
+const touchTargetClasses = {
+  default: "after:absolute after:-inset-2.5 after:content-['']",
+  delete: "after:absolute after:-inset-1 after:content-['']",
+};
+
 interface SubtaskListProps {
   taskId?: string;
   projectId: string | null;
@@ -88,6 +94,7 @@ function SubtaskItemContent({
   isCompleted,
   isDraftMode,
   isEditing,
+  isDesktop,
   editingContent,
   onStartEdit,
   onSaveEdit,
@@ -106,7 +113,8 @@ function SubtaskItemContent({
         disabled={isDraftMode}
         aria-label={`Mark "${content}" complete`}
         className={cn(
-          "mt-0.5 h-3.5 w-3.5 !rounded-sm",
+          "relative mt-0.5 h-3.5 w-3.5 !rounded-sm",
+          !isDesktop && touchTargetClasses.default,
           priorityCheckboxClasses[4],
         )}
       />
@@ -142,7 +150,10 @@ function SubtaskItemContent({
         variant="ghost"
         size="icon"
         aria-label="Delete step"
-        className="h-7 w-7 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-destructive md:text-muted-foreground md:hover:text-destructive hover:bg-destructive-surface-hover rounded-lg"
+        className={cn(
+          "relative h-7 w-7 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity text-destructive md:text-muted-foreground md:hover:text-destructive hover:bg-destructive-surface-hover rounded-lg",
+          !isDesktop && touchTargetClasses.delete,
+        )}
         onClick={() => {
           trigger("tick");
           onDelete(id);
@@ -565,7 +576,10 @@ export default function SubtaskList({
           type="button"
           aria-label="Add step"
           disabled={!newSubtaskContent.trim()}
-          className="flex items-center justify-center w-3.5 h-3.5 shrink-0 text-muted-foreground group-focus-within:text-brand hover:text-brand disabled:hover:text-muted-foreground transition-colors"
+          className={cn(
+            "relative flex items-center justify-center w-3.5 h-3.5 shrink-0 text-muted-foreground group-focus-within:text-brand hover:text-brand disabled:hover:text-muted-foreground transition-colors",
+            !isDesktop && touchTargetClasses.default,
+          )}
           onClick={() => handleAddSubtask()}
         >
           <Plus className="h-3 w-3" strokeWidth={2.5} />

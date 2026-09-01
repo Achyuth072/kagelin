@@ -21,18 +21,13 @@ export function StepProgressBadge({
     <span
       className={cn(
         "flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider whitespace-nowrap",
-        allCompleted
-          ? "text-green-600 dark:text-green-500 font-bold"
-          : "text-muted-foreground/70",
+        allCompleted ? "text-brand font-bold" : "text-muted-foreground/70",
         className,
       )}
       data-testid="step-progress-badge"
     >
       {allCompleted ? (
-        <CheckCircle2
-          className="h-3 w-3 text-green-600 dark:text-green-500"
-          strokeWidth={2.5}
-        />
+        <CheckCircle2 className="h-3 w-3 text-brand" strokeWidth={2.5} />
       ) : (
         <ListChecks className="h-3 w-3" strokeWidth={2.5} />
       )}

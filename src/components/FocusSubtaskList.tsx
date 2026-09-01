@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useActiveTask } from "@/lib/hooks/useActiveTask";
 import { useSubtasks } from "@/lib/hooks/useSubtasks";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import SubtaskList from "@/components/tasks/SubtaskList";
 
 export function FocusSubtaskList() {
@@ -29,32 +36,44 @@ export function FocusSubtaskList() {
   }
 
   return (
-    <div className="flex flex-col items-center mt-2 w-full max-w-xs">
-      <button
-        type="button"
-        onClick={() => {
-          trigger("toggle");
-          setIsExpanded((prev) => !prev);
-        }}
-        aria-expanded={isExpanded}
-        className="inline-flex items-center gap-1 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
-      >
-        <span>{isExpanded ? "▾" : "▸"}</span>
-        <span>
-          {completed}/{total} steps
-        </span>
-      </button>
-
-      {isExpanded && (
-        <div className="w-full mt-2 bg-secondary/20 border border-border/40 rounded-xl p-2 text-left max-h-[30vh] overflow-y-auto">
-          <SubtaskList
-            taskId={activeTaskId}
-            projectId={resolvedActiveTask?.project_id ?? null}
-            allowReorder={false}
-            onCollapse={() => setIsExpanded(false)}
+    // Portaled to avoid reflowing the timer below.
+    <Popover
+      open={isExpanded}
+      onOpenChange={(open) => {
+        trigger("toggle");
+        setIsExpanded(open);
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="mt-2 inline-flex items-center gap-1 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none"
+        >
+          <ChevronRight
+            className={cn(
+              "h-3.5 w-3.5 transition-all duration-200",
+              isExpanded && "rotate-90 text-brand",
+            )}
+            strokeWidth={2.5}
           />
-        </div>
-      )}
-    </div>
+          <span>
+            {completed}/{total} steps
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="center"
+        sideOffset={8}
+        collisionPadding={16}
+        className="w-[320px] max-w-[calc(100vw-2rem)] p-2 bg-popover/95 backdrop-blur-md border-border/40 shadow-xl max-h-[50vh] overflow-y-auto text-left"
+      >
+        <SubtaskList
+          taskId={activeTaskId}
+          projectId={resolvedActiveTask?.project_id ?? null}
+          allowReorder={false}
+          onCollapse={() => setIsExpanded(false)}
+        />
+      </PopoverContent>
+    </Popover>
   );
 }
