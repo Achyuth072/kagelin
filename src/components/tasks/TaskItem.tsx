@@ -128,7 +128,7 @@ function TaskItemBase({
       ref={cardRef}
       className={cn(
         "group/item",
-        isDesktop && isExpanded && "pb-4",
+        isExpanded && "pb-4",
         isDragging && "will-change-transform",
         task.is_completed && "task-ink-completed-card",
       )}
@@ -227,11 +227,11 @@ function TaskItemBase({
       <CollapsibleReveal
         open={isExpanded && !isDndActive}
         className={cn(
-          "mr-1 border-l-2 border-brand/30 pl-4 transition-colors",
+          "mr-1 pl-4 border-t border-border/10",
           isDesktop ? "ml-10" : "ml-11",
         )}
       >
-        <div className="pt-1">
+        <div className="pt-2">
           <SubtaskList taskId={task.id} projectId={task.project_id} />
         </div>
       </CollapsibleReveal>

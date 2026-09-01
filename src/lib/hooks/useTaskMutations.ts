@@ -76,7 +76,21 @@ export function useCreateTask() {
 
       queryClient.setQueryData<Task[]>(
         ["tasks", { projectId: undefined, showCompleted: false, isGuestMode }],
-        (old) => [optimisticTask, ...(old || [])],
+        (old) =>
+          newTask.parent_id
+            ? // A step belongs on its parent's progress badge, not in the list.
+              old?.map((task) =>
+                task.id === newTask.parent_id
+                  ? {
+                      ...task,
+                      subtasks: [
+                        ...(task.subtasks || []),
+                        { id: clientId, is_completed: false },
+                      ],
+                    }
+                  : task,
+              )
+            : [optimisticTask, ...(old || [])],
       );
 
       return { previousTasks };
@@ -125,15 +139,24 @@ export function useToggleTask() {
       const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
 
       const patch = (old: Task[] | undefined) =>
-        old?.map((task) =>
-          task.id === id
-            ? {
-                ...task,
-                is_completed,
-                completed_at: is_completed ? new Date().toISOString() : null,
-              }
-            : task,
-        );
+        old?.map((task) => {
+          if (task.id === id) {
+            return {
+              ...task,
+              is_completed,
+              completed_at: is_completed ? new Date().toISOString() : null,
+            };
+          }
+          if (task.subtasks?.some((st) => st.id === id)) {
+            return {
+              ...task,
+              subtasks: task.subtasks.map((st) =>
+                st.id === id ? { ...st, is_completed } : st,
+              ),
+            };
+          }
+          return task;
+        });
 
       queryClient.setQueryData<Task[]>(queryKey, patch);
 
@@ -247,7 +270,16 @@ export function useDeleteTask() {
 
       for (const [queryKey] of allTaskQueries) {
         queryClient.setQueryData<Task[]>(queryKey, (old) =>
-          old?.filter((task) => task.id !== id),
+          old
+            ?.filter((task) => task.id !== id)
+            .map((task) =>
+              task.subtasks?.some((st) => st.id === id)
+                ? {
+                    ...task,
+                    subtasks: task.subtasks.filter((st) => st.id !== id),
+                  }
+                : task,
+            ),
         );
       }
 
@@ -335,9 +367,13 @@ export function useReorderTasks() {
     mutationFn: taskMutations.reorder,
     onMutate: async (pairs: { id: string; day_order: number }[]) => {
       await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      await queryClient.cancelQueries({ queryKey: ["subtasks"] });
 
       const allTaskQueries = queryClient.getQueriesData<Task[]>({
         queryKey: ["tasks"],
+      });
+      const allSubtaskQueries = queryClient.getQueriesData<Task[]>({
+        queryKey: ["subtasks"],
       });
 
       const pairById = new Map(pairs.map((p) => [p.id, p.day_order]));
@@ -356,7 +392,28 @@ export function useReorderTasks() {
         });
       }
 
-      return { previousTaskQueries: allTaskQueries };
+      for (const [queryKey] of allSubtaskQueries) {
+        queryClient.setQueryData<Task[]>(queryKey, (old) => {
+          if (!old) return old;
+          return old
+            .map((task) => {
+              const newOrder = pairById.get(task.id);
+              return newOrder === undefined || task.day_order === newOrder
+                ? task
+                : { ...task, day_order: newOrder };
+            })
+            .sort(
+              (a, b) =>
+                (a.day_order ?? 0) - (b.day_order ?? 0) ||
+                a.created_at.localeCompare(b.created_at),
+            );
+        });
+      }
+
+      return {
+        previousTaskQueries: allTaskQueries,
+        previousSubtaskQueries: allSubtaskQueries,
+      };
     },
     onError: (err, _vars, context) => {
       if (context?.previousTaskQueries) {
@@ -364,10 +421,16 @@ export function useReorderTasks() {
           queryClient.setQueryData(queryKey, data);
         });
       }
+      if (context?.previousSubtaskQueries) {
+        context.previousSubtaskQueries.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
       handleMutationError(err);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["subtasks"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
       queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
     },

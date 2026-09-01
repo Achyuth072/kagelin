@@ -83,4 +83,41 @@ describe("useTasks hook (Task Continuity Data)", () => {
     expect(taskIds).toContain("completed-today");
     expect(taskIds).not.toContain("completed-yesterday");
   });
+
+  it("should aggregate subtasks by parent_id in guest mode", async () => {
+    // Given: A parent task with subtasks
+    mockStore.addTask({
+      id: "parent-task",
+      content: "Parent Task",
+      is_completed: false,
+    });
+    mockStore.addTask({
+      id: "sub-1",
+      parent_id: "parent-task",
+      content: "Subtask 1",
+      is_completed: true,
+    });
+    mockStore.addTask({
+      id: "sub-2",
+      parent_id: "parent-task",
+      content: "Subtask 2",
+      is_completed: false,
+    });
+
+    // When: useTasks is called
+    const { result } = renderHook(() => useTasks(), { wrapper });
+
+    // Then: The parent task should contain the subtasks array with completion state
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const parent = result.current.data?.find((t) => t.id === "parent-task");
+    expect(parent).toBeDefined();
+    expect(parent?.subtasks).toHaveLength(2);
+    expect(parent?.subtasks).toEqual(
+      expect.arrayContaining([
+        { id: "sub-1", is_completed: true },
+        { id: "sub-2", is_completed: false },
+      ]),
+    );
+  });
 });

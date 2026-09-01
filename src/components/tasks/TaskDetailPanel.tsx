@@ -6,7 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateTaskSchema, type CreateTaskInput } from "@/lib/schemas/task";
 import type { Task } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
-import { useUpdateTask, useDeleteTask } from "@/lib/hooks/useTaskMutations";
+import {
+  useUpdateTask,
+  useDeleteTask,
+  useCreateTask,
+} from "@/lib/hooks/useTaskMutations";
 import { useInboxProject } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -34,7 +38,6 @@ interface TaskDetailPanelProps {
 export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   const { trigger } = useHaptic();
 
-  // React Hook Form
   type TaskFormValues = CreateTaskInput & {
     recurrence?: RecurrenceRule | null;
   };
@@ -57,15 +60,14 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
     },
   });
 
-  // Individual UI-only states
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [doDatePickerOpen, setDoDatePickerOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [draftSubtasks, setDraftSubtasks] = useState<string[]>([]);
+  const [pendingStep, setPendingStep] = useState("");
   const [showSubtasks, setShowSubtasks] = useState(false);
 
-  // Form values via useWatch
   const content = useWatch({ control, name: "content" });
   const watchedDueDate = useWatch({ control, name: "due_date" });
   const dueDate = watchedDueDate
@@ -82,24 +84,23 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   const selectedProjectId = useWatch({ control, name: "project_id" }) ?? null;
   const description = useWatch({ control, name: "description" }) || "";
 
-  // Hooks
   const updateMutation = useUpdateTask();
+  const createMutation = useCreateTask();
   const deleteMutation = useDeleteTask();
   const { data: inboxProject } = useInboxProject();
   const { data: projects } = useProjects();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  // Reset UI-only states during render when task changes
   const [prevTask, setPrevTask] = useState(task);
   if (task !== prevTask) {
     setPrevTask(task);
     if (task) {
       setDraftSubtasks([]);
+      setPendingStep("");
       setIsPreviewMode(!!task.description);
     }
   }
 
-  // Reset form when task changes
   useEffect(() => {
     if (task) {
       reset({
@@ -115,12 +116,11 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
     }
   }, [task, reset, triggerValidation]);
 
-  // Handlers
   const onFormSubmit = useCallback(
     (data: CreateTaskInput) => {
       if (!task) return;
 
-      trigger("success"); // Success signature haptic
+      trigger("success");
 
       updateMutation.mutate({
         ...data,
@@ -135,9 +135,30 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
             : data.do_date || null,
       });
 
+      const stepToFlush = pendingStep.trim();
+      if (stepToFlush) {
+        const targetProjectId =
+          (data.project_id ?? task.project_id) || inboxProject?.id || undefined;
+        createMutation.mutate({
+          content: stepToFlush,
+          project_id: targetProjectId,
+          parent_id: task.id,
+          priority: 4,
+        });
+        setPendingStep("");
+      }
+
       onClose?.();
     },
-    [task, updateMutation, onClose, trigger],
+    [
+      task,
+      pendingStep,
+      updateMutation,
+      inboxProject?.id,
+      createMutation,
+      onClose,
+      trigger,
+    ],
   );
 
   const handleDelete = useCallback(() => {
@@ -147,7 +168,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
 
   const handleConfirmDelete = useCallback(() => {
     if (!task) return;
-    trigger("thud"); // Thud haptic for delete
+    trigger("thud");
     setShowDeleteDialog(false);
     onClose?.();
     deleteMutation.mutate(task.id);
@@ -164,7 +185,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
     [handleSubmit, onFormSubmit, onClose],
   );
 
-  // Derived State
   const isPending = updateMutation.isPending;
 
   if (!task) {
@@ -179,7 +199,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
 
   return (
     <>
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full" onKeyDown={handleKeyDown}>
         {onClose && (
           <div className="shrink-0 flex justify-end px-4 pt-3">
             <button
@@ -249,6 +269,8 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
             setShowSubtasks={setShowSubtasks}
             draftSubtasks={draftSubtasks}
             setDraftSubtasks={setDraftSubtasks}
+            pendingStep={pendingStep}
+            setPendingStep={setPendingStep}
             inboxProjectId={inboxProject?.id || null}
             projects={projects}
             isMobile={isMobile}

@@ -64,7 +64,6 @@ export default function TaskSheet({
 
   const effectiveTask = open ? initialTask : preservedTask;
 
-  // React Hook Form
   type TaskFormValues = CreateTaskInput & {
     recurrence?: RecurrenceRule | null;
   };
@@ -87,16 +86,15 @@ export default function TaskSheet({
     },
   });
 
-  // Individual UI-only states (not part of task data structure itself)
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [doDatePickerOpen, setDoDatePickerOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [draftSubtasks, setDraftSubtasks] = useState<string[]>([]);
+  const [pendingStep, setPendingStep] = useState("");
   const [showSubtasks, setShowSubtasks] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [tab, setTab] = useState<SheetTab>("edit");
 
-  // Form values via useWatch
   const content = useWatch({ control, name: "content" });
   const watchedDueDate = useWatch({ control, name: "due_date" });
   const dueDate = useMemo(
@@ -119,7 +117,6 @@ export default function TaskSheet({
   const selectedProjectId = useWatch({ control, name: "project_id" }) ?? null;
   const description = useWatch({ control, name: "description" }) || "";
 
-  // Hooks
   const createMutation = useCreateTask();
   const updateMutation = useUpdateTask();
   const deleteMutation = useDeleteTask();
@@ -128,7 +125,6 @@ export default function TaskSheet({
   const isMobile = useMediaQuery("(max-width: 768px)");
   const { trigger: triggerHaptic } = useHaptic();
 
-  // Reset UI-only states during render when dialog opens or task changes
   const [prevOpen, setPrevOpen] = useState(open);
   const [prevTask, setPrevTask] = useState(initialTask);
 
@@ -139,12 +135,12 @@ export default function TaskSheet({
     setPrevTask(initialTask);
     if (open) {
       setDraftSubtasks([]);
+      setPendingStep("");
       setIsPreviewMode(!!initialTask?.description);
       setTab(initialTab === "insights" && hasSeries ? "insights" : "edit");
     }
   }
 
-  // Reset form when dialog opens (form reset remains in effect as it's a complex side effect)
   useEffect(() => {
     if (open) {
       if (initialTask) {
@@ -179,10 +175,11 @@ export default function TaskSheet({
     triggerValidation,
   ]);
 
-  // Handlers
   const onFormSubmit = useCallback(
     (data: CreateTaskInput) => {
       triggerHaptic("thud");
+
+      const stepToFlush = pendingStep.trim();
 
       if (initialTask) {
         updateMutation.mutate({
@@ -197,6 +194,20 @@ export default function TaskSheet({
               ? data.do_date.toISOString()
               : data.do_date || null,
         });
+
+        if (stepToFlush) {
+          const targetProjectId =
+            (data.project_id ?? initialTask.project_id) ||
+            inboxProject?.id ||
+            undefined;
+          createMutation.mutate({
+            content: stepToFlush,
+            project_id: targetProjectId,
+            parent_id: initialTask.id,
+            priority: 4,
+          });
+          setPendingStep("");
+        }
       } else {
         const clientId = crypto.randomUUID();
         const createInput = {
@@ -220,8 +231,12 @@ export default function TaskSheet({
 
         createMutation.mutate(createInput);
 
-        if (draftSubtasks.length > 0) {
-          draftSubtasks.forEach((sContent) => {
+        const allSubtasks = stepToFlush
+          ? [...draftSubtasks, stepToFlush]
+          : draftSubtasks;
+
+        if (allSubtasks.length > 0) {
+          allSubtasks.forEach((sContent) => {
             createMutation.mutate({
               content: sContent,
               project_id: createInput.project_id || undefined,
@@ -231,12 +246,15 @@ export default function TaskSheet({
           });
         }
         setDraftSubtasks([]);
+        setPendingStep("");
       }
       onClose();
     },
     [
       initialTask,
+      pendingStep,
       updateMutation,
+      inboxProject?.id,
       triggerHaptic,
       createMutation,
       recurrence,
@@ -267,13 +285,13 @@ export default function TaskSheet({
     [handleSubmit, onFormSubmit],
   );
 
-  // Derived State
   const isPending = createMutation.isPending || updateMutation.isPending;
   const isCreationMode = !effectiveTask;
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onClose}>
       <ResponsiveDialogContent
+        onKeyDown={handleKeyDown}
         className={cn(
           "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none sm:grid-cols-[minmax(0,1fr)] sm:max-w-lg",
         )}
@@ -346,6 +364,8 @@ export default function TaskSheet({
                 setShowSubtasks={setShowSubtasks}
                 draftSubtasks={draftSubtasks}
                 setDraftSubtasks={setDraftSubtasks}
+                pendingStep={pendingStep}
+                setPendingStep={setPendingStep}
                 inboxProjectId={inboxProject?.id || null}
                 projects={projects}
                 isMobile={isMobile}
@@ -400,6 +420,8 @@ export default function TaskSheet({
                 setShowSubtasks={setShowSubtasks}
                 draftSubtasks={draftSubtasks}
                 setDraftSubtasks={setDraftSubtasks}
+                pendingStep={pendingStep}
+                setPendingStep={setPendingStep}
                 inboxProjectId={inboxProject?.id || null}
                 projects={projects}
                 isMobile={isMobile}
