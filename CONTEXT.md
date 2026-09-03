@@ -330,13 +330,11 @@ import from:
 - **Skipped** — deliberately not counted (a rest day): does not break a Streak
   and is excluded from Score.
 
-Our store records only two of these — an Entry exists (with a `value`) or it
-doesn't. **Done** and **not done / unknown** map cleanly; **Skipped has no
-representation yet** and is collapsed to "not done" on import. Consequence:
-imported habits that used the source app's skip feature show a slightly lower
-Score and shorter Streaks than the original. Fidelity guarantees (and the Score
-verification tests) are therefore scoped to **skip-free** habits until native
-tracking introduces a real skipped state.
+Our store records these via an Entry with a `value`: **Done** (`value = 1`
+or measurable numeric quantity), **Not done / Unknown** (absent or `value = 0`),
+and **Skipped** (`value = -2`). A skipped entry preserves streak continuity
+as a rest day without penalizing habit score. Full fidelity import preserves
+all skip days from Loop Habit Tracker backups.
 
 ### "Done"-counting vs strength metrics (Measurable Habits)
 

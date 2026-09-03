@@ -8,6 +8,7 @@ export interface CreateHabitInput {
   color?: string;
   icon?: string;
   start_date?: string;
+  archived_at?: string | null;
   habitType?: "boolean" | "measurable";
   habit_type?: "boolean" | "measurable";
   frequencyCount?: number;
@@ -61,20 +62,27 @@ export const habitMutations = {
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
 
+    const habit_type = input.habit_type || input.habitType || "boolean";
+    const isMeasurable = habit_type === "measurable";
+
     const habitData = {
       name: input.name,
       description: input.description || null,
       color: input.color || "#4B6CB7",
       icon: input.icon || null,
-      archived_at: null,
+      archived_at: input.archived_at ?? null,
       start_date: input.start_date || new Date().toISOString().split("T")[0],
-      habit_type: input.habit_type || input.habitType || "boolean",
+      habit_type,
       frequency_count: input.frequency_count ?? input.frequencyCount ?? null,
       frequency_period:
         input.frequency_period || input.frequencyPeriod || "day",
-      target_type: input.target_type || input.targetType || "at_least",
-      target_value: input.target_value ?? input.targetValue ?? null,
-      unit: input.unit || null,
+      target_type: isMeasurable
+        ? input.target_type || input.targetType || "at_least"
+        : null,
+      target_value: isMeasurable
+        ? (input.target_value ?? input.targetValue ?? null)
+        : null,
+      unit: isMeasurable ? input.unit || null : null,
       question: input.question || null,
       reminder_time: input.reminder_time ?? null,
       reminder_days: input.reminder_days ?? 127,
