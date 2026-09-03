@@ -631,7 +631,10 @@ CREATE TABLE IF NOT EXISTS public.habits (
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   archived_at TIMESTAMPTZ,
   -- Links to its raw record in habit_imports for round-trip export (ADR 0006).
-  source_uuid TEXT
+  source_uuid TEXT,
+  question TEXT,
+  reminder_time TEXT,
+  reminder_days INT NOT NULL DEFAULT 127
 );
 
 -- Index for faster user-scoped lookups
@@ -667,7 +670,8 @@ CREATE TABLE IF NOT EXISTS public.habit_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   habit_id UUID NOT NULL REFERENCES public.habits(id) ON DELETE CASCADE,
   date DATE NOT NULL,
-  value INTEGER DEFAULT 1,
+  value REAL DEFAULT 1,
+  notes TEXT,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   UNIQUE(habit_id, date)
 );

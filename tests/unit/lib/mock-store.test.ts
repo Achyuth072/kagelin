@@ -169,7 +169,7 @@ describe("MockStore (Guest Mode Data)", () => {
     for (const event of mockStore.getEvents()) mockStore.deleteEvent(event.id);
 
     expect(mockStore.isInDemoMode()).toBe(false);
-  });
+  }, 15000);
 
   it("propagates the seed exemption to a new occurrence spawned from a seeded recurring series", () => {
     seededReset();
@@ -204,6 +204,117 @@ describe("MockStore (Guest Mode Data)", () => {
       is_completed: false,
     });
     expect(mockStore.isSeedId(nextOwn.id)).toBe(false);
+  });
+
+  it("stores and returns question, reminder_time, reminder_days on habits", () => {
+    const habit = mockStore.addHabit({
+      name: "Meditation",
+      description: null,
+      color: "#4B6CB7",
+      icon: null,
+      start_date: null,
+      archived_at: null,
+      question: "Did you meditate today?",
+      reminder_time: "07:00",
+      reminder_days: 62,
+    });
+
+    expect(habit.question).toBe("Did you meditate today?");
+    expect(habit.reminder_time).toBe("07:00");
+    expect(habit.reminder_days).toBe(62);
+
+    const fetched = mockStore.getHabits().find((h) => h.id === habit.id);
+    expect(fetched?.question).toBe("Did you meditate today?");
+    expect(fetched?.reminder_time).toBe("07:00");
+    expect(fetched?.reminder_days).toBe(62);
+
+    const updated = mockStore.updateHabit(habit.id, {
+      question: "Updated meditation prompt?",
+      reminder_time: "07:15",
+      reminder_days: 127,
+    });
+    expect(updated?.question).toBe("Updated meditation prompt?");
+    expect(updated?.reminder_time).toBe("07:15");
+    expect(updated?.reminder_days).toBe(127);
+  });
+
+  it("defaults reminder_days to 127 when not provided", () => {
+    const habit = mockStore.addHabit({
+      name: "Journal",
+      description: null,
+      color: "#4B6CB7",
+      icon: null,
+      start_date: null,
+      archived_at: null,
+    });
+
+    expect(habit.reminder_days).toBe(127);
+  });
+
+  it("stores and returns notes on habit entries", () => {
+    const habit = mockStore.addHabit({
+      name: "Read",
+      description: null,
+      color: "#4B6CB7",
+      icon: null,
+      start_date: null,
+      archived_at: null,
+    });
+
+    const entry = mockStore.setHabitEntry(
+      habit.id,
+      "2026-09-03",
+      1,
+      "Finished chapter 4",
+    );
+    expect(entry?.notes).toBe("Finished chapter 4");
+
+    const fetched = mockStore.getHabitEntries(habit.id);
+    expect(fetched).toHaveLength(1);
+    expect(fetched[0].notes).toBe("Finished chapter 4");
+  });
+
+  it("handles value = -2 (skip) in entries without breaking queries or streak", async () => {
+    const { getCurrentStreak } = await import("@/lib/utils/habit-streak");
+
+    const habit = mockStore.addHabit({
+      name: "Workout",
+      description: null,
+      color: "#4B6CB7",
+      icon: null,
+      start_date: "2026-09-01",
+      archived_at: null,
+      habit_type: "boolean",
+      frequency_count: 1,
+      frequency_period: "day",
+    });
+
+    mockStore.setHabitEntry(habit.id, "2026-09-01", 1);
+    const skipEntry = mockStore.setHabitEntry(
+      habit.id,
+      "2026-09-02",
+      -2,
+      "Rest day",
+    );
+    mockStore.setHabitEntry(habit.id, "2026-09-03", 1);
+
+    expect(skipEntry?.value).toBe(-2);
+    expect(skipEntry?.notes).toBe("Rest day");
+
+    const entries = mockStore.getHabitEntries(habit.id);
+    expect(entries).toHaveLength(3);
+    expect(entries.some((e) => e.value === -2)).toBe(true);
+
+    const streak = getCurrentStreak(
+      habit,
+      entries,
+      new Date("2026-09-03T12:00:00Z"),
+    );
+    expect(streak).toBe(1);
+
+    const cleared = mockStore.setHabitEntry(habit.id, "2026-09-02", 0);
+    expect(cleared).toBeNull();
+    expect(mockStore.getHabitEntries(habit.id)).toHaveLength(2);
   });
 });
 

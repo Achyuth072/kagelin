@@ -9,33 +9,50 @@ export interface CreateHabitInput {
   icon?: string;
   start_date?: string;
   habitType?: "boolean" | "measurable";
+  habit_type?: "boolean" | "measurable";
   frequencyCount?: number;
+  frequency_count?: number;
   frequencyPeriod?: "day" | "week" | "month";
+  frequency_period?: "day" | "week" | "month";
   targetType?: "at_least" | "at_most";
+  target_type?: "at_least" | "at_most";
   targetValue?: number;
+  target_value?: number;
   unit?: string;
+  question?: string | null;
+  reminder_time?: string | null;
+  reminder_days?: number;
   source_uuid?: string;
   sort_order?: number;
 }
 
-interface UpdateHabitInput {
+export interface UpdateHabitInput {
   id: string;
   name?: string;
   description?: string;
   color?: string;
   icon?: string;
   habitType?: "boolean" | "measurable";
+  habit_type?: "boolean" | "measurable";
   frequencyCount?: number;
+  frequency_count?: number;
   frequencyPeriod?: "day" | "week" | "month";
+  frequency_period?: "day" | "week" | "month";
   targetType?: "at_least" | "at_most";
+  target_type?: "at_least" | "at_most";
   targetValue?: number;
+  target_value?: number;
   unit?: string;
+  question?: string | null;
+  reminder_time?: string | null;
+  reminder_days?: number;
 }
 
-interface MarkHabitCompleteInput {
+export interface MarkHabitCompleteInput {
   habitId: string;
   date: string;
   value?: number;
+  notes?: string | null;
 }
 
 export const habitMutations = {
@@ -51,12 +68,16 @@ export const habitMutations = {
       icon: input.icon || null,
       archived_at: null,
       start_date: input.start_date || new Date().toISOString().split("T")[0],
-      habit_type: input.habitType || "boolean",
-      frequency_count: input.frequencyCount ?? null,
-      frequency_period: input.frequencyPeriod || "day",
-      target_type: input.targetType || "at_least",
-      target_value: input.targetValue ?? null,
+      habit_type: input.habit_type || input.habitType || "boolean",
+      frequency_count: input.frequency_count ?? input.frequencyCount ?? null,
+      frequency_period:
+        input.frequency_period || input.frequencyPeriod || "day",
+      target_type: input.target_type || input.targetType || "at_least",
+      target_value: input.target_value ?? input.targetValue ?? null,
       unit: input.unit || null,
+      question: input.question || null,
+      reminder_time: input.reminder_time ?? null,
+      reminder_days: input.reminder_days ?? 127,
       source_uuid: input.source_uuid ?? null,
     };
 
@@ -110,11 +131,19 @@ export const habitMutations = {
       color,
       icon,
       habitType,
+      habit_type,
       frequencyCount,
+      frequency_count,
       frequencyPeriod,
+      frequency_period,
       targetType,
+      target_type,
       targetValue,
+      target_value,
       unit,
+      question,
+      reminder_time,
+      reminder_days,
     } = input;
 
     const updates: Partial<Habit> = {};
@@ -122,13 +151,24 @@ export const habitMutations = {
     if (description !== undefined) updates.description = description;
     if (color !== undefined) updates.color = color;
     if (icon !== undefined) updates.icon = icon;
-    if (habitType !== undefined) updates.habit_type = habitType;
-    if (frequencyCount !== undefined) updates.frequency_count = frequencyCount;
-    if (frequencyPeriod !== undefined)
-      updates.frequency_period = frequencyPeriod;
-    if (targetType !== undefined) updates.target_type = targetType;
-    if (targetValue !== undefined) updates.target_value = targetValue;
+    const resolvedHabitType = habit_type ?? habitType;
+    if (resolvedHabitType !== undefined) updates.habit_type = resolvedHabitType;
+    const resolvedFreqCount = frequency_count ?? frequencyCount;
+    if (resolvedFreqCount !== undefined)
+      updates.frequency_count = resolvedFreqCount;
+    const resolvedFreqPeriod = frequency_period ?? frequencyPeriod;
+    if (resolvedFreqPeriod !== undefined)
+      updates.frequency_period = resolvedFreqPeriod;
+    const resolvedTargetType = target_type ?? targetType;
+    if (resolvedTargetType !== undefined)
+      updates.target_type = resolvedTargetType;
+    const resolvedTargetValue = target_value ?? targetValue;
+    if (resolvedTargetValue !== undefined)
+      updates.target_value = resolvedTargetValue;
     if (unit !== undefined) updates.unit = unit;
+    if (question !== undefined) updates.question = question;
+    if (reminder_time !== undefined) updates.reminder_time = reminder_time;
+    if (reminder_days !== undefined) updates.reminder_days = reminder_days;
 
     if (isGuest) {
       const result = mockStore.updateHabit(id, updates);
@@ -194,20 +234,40 @@ export const habitMutations = {
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
 
-    const { habitId, date, value = 1 } = input;
+    const { habitId, date, value = 1, notes } = input;
 
     if (isGuest) {
-      const entry = mockStore.setHabitEntry(habitId, date, value);
-      return entry || ({ habit_id: habitId, date, value: 0 } as HabitEntry);
+      const entry = mockStore.setHabitEntry(habitId, date, value, notes);
+      return (
+        entry || {
+          id: `guest-cleared-${habitId}-${date}`,
+          habit_id: habitId,
+          date,
+          value: 0,
+          notes: notes ?? null,
+          created_at: new Date().toISOString(),
+        }
+      );
     }
 
     const supabase = createClient();
+    const payload: {
+      habit_id: string;
+      date: string;
+      value: number;
+      notes?: string | null;
+    } = {
+      habit_id: habitId,
+      date,
+      value,
+    };
+    if (notes !== undefined) {
+      payload.notes = notes;
+    }
+
     const { data, error } = await supabase
       .from("habit_entries")
-      .upsert(
-        { habit_id: habitId, date, value },
-        { onConflict: "habit_id,date" },
-      )
+      .upsert(payload, { onConflict: "habit_id,date" })
       .select()
       .single();
 

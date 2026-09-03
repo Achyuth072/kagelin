@@ -21,6 +21,7 @@ export function dayValue(
   entryValue: number,
   habit: Pick<Habit, "habit_type" | "target_type" | "target_value">,
 ): number {
+  if (entryValue < 0) return 0;
   if (habit.habit_type === "measurable" && habit.target_value != null) {
     if (habit.target_type === "at_least") {
       if (habit.target_value <= 0) {
@@ -37,7 +38,6 @@ export function dayValue(
       return Math.max(0, Math.min(1, 2 - entryValue / habit.target_value));
     }
   }
-  // Boolean: 0 or 1
   return entryValue >= 1 ? 1 : 0;
 }
 

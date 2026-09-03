@@ -26,7 +26,7 @@ const NON_CONTENT: Record<string, string[]> = {
   labels: ["color"],
   push_subscriptions: ["endpoint", "subscription"],
   notification_queue: ["type", "status"],
-  habits: ["color", "icon", "source_uuid"],
+  habits: ["color", "icon", "source_uuid", "reminder_time"],
   habit_imports: ["source_app"],
   calendar_events: ["color", "recurrence_rule", "remote_id", "etag", "ics_uid"],
   external_calendars: [
@@ -129,6 +129,7 @@ describe("field map covers every content-bearing column", () => {
         "tasks.description",
         "habits.name",
         "habits.description",
+        "habits.question",
         "projects.name",
         "labels.name",
         "calendar_events.title",
@@ -140,6 +141,7 @@ describe("field map covers every content-bearing column", () => {
         "external_calendars.username",
         "habit_imports.raw",
         "habit_imports.file_name",
+        "habit_entries.notes",
       ]),
     );
   });

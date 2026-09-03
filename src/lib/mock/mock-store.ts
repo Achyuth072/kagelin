@@ -421,6 +421,9 @@ class MockStore {
         target_type: "at_least",
         target_value: 8,
         unit: "glasses",
+        question: null,
+        reminder_time: null,
+        reminder_days: 127,
       },
       {
         id: hExercise,
@@ -440,6 +443,9 @@ class MockStore {
         target_type: "at_least",
         target_value: null,
         unit: null,
+        question: null,
+        reminder_time: null,
+        reminder_days: 127,
       },
       {
         id: hRead,
@@ -459,6 +465,9 @@ class MockStore {
         target_type: "at_least",
         target_value: null,
         unit: null,
+        question: null,
+        reminder_time: null,
+        reminder_days: 127,
       },
       {
         id: hSketch,
@@ -478,6 +487,9 @@ class MockStore {
         target_type: "at_least",
         target_value: null,
         unit: null,
+        question: null,
+        reminder_time: null,
+        reminder_days: 127,
       },
       {
         id: hSideCode,
@@ -497,6 +509,9 @@ class MockStore {
         target_type: "at_least",
         target_value: null,
         unit: null,
+        question: null,
+        reminder_time: null,
+        reminder_days: 127,
       },
       {
         id: hLogOff,
@@ -516,6 +531,9 @@ class MockStore {
         target_type: "at_least",
         target_value: null,
         unit: null,
+        question: null,
+        reminder_time: null,
+        reminder_days: 127,
       },
     );
 
@@ -863,6 +881,9 @@ class MockStore {
     const now = new Date().toISOString();
     const newHabit: Habit = {
       ...habit,
+      question: habit.question ?? null,
+      reminder_time: habit.reminder_time ?? null,
+      reminder_days: habit.reminder_days ?? 127,
       id: `guest-habit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       user_id: "guest",
       created_at: now,
@@ -907,11 +928,12 @@ class MockStore {
     return true;
   }
 
-  // Idempotent upsert matching Supabase semantics so optimistic retries converge.
+  // Mirrors Supabase upsert semantics so optimistic retries converge.
   setHabitEntry(
     habitId: string,
     date: string,
     value: number,
+    notes?: string | null,
   ): HabitEntry | null {
     const existingIndex = this.data.habit_entries.findIndex(
       (e) => e.habit_id === habitId && e.date === date,
@@ -931,6 +953,7 @@ class MockStore {
       const updated: HabitEntry = {
         ...this.data.habit_entries[existingIndex],
         value,
+        ...(notes !== undefined ? { notes: notes ?? null } : {}),
       };
       this.data.habit_entries = this.data.habit_entries.map((e, i) =>
         i === existingIndex ? updated : e,
@@ -946,6 +969,7 @@ class MockStore {
       habit_id: habitId,
       date,
       value,
+      notes: notes ?? null,
       created_at: new Date().toISOString(),
     };
     this.data.habit_entries = [...this.data.habit_entries, newEntry];

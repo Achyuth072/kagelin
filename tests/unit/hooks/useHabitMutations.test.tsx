@@ -127,9 +127,12 @@ describe("useHabitMutations", () => {
           habit_type: "boolean",
           frequency_count: null,
           frequency_period: "day",
-          target_type: "at_least",
+          target_type: null,
           target_value: null,
           unit: null,
+          question: null,
+          reminder_time: null,
+          reminder_days: 127,
           source_uuid: null,
         });
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["habits"] });
