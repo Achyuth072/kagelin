@@ -33,6 +33,7 @@ import {
 import { GlobalHotkeys } from "@/components/layout/GlobalHotkeys";
 import { useMigrationStrategy } from "@/lib/hooks/useMigrationStrategy";
 import { LoaderOverlay } from "@/components/ui/loader-overlay";
+import { MigrationStuckBanner } from "@/components/onboarding/MigrationStuckBanner";
 import { EncryptionGate } from "@/components/encryption/EncryptionGate";
 
 import { cn } from "@/lib/utils";
@@ -286,7 +287,8 @@ function AppShellContent({ children }: AppShellProps) {
 
   // Must run inside EncryptionGate so converting guests set a passphrase
   // before local data is encrypted and uploaded.
-  const { isMigrating } = useMigrationStrategy();
+  const { isMigrating, migrationStuck, exportSnapshot } =
+    useMigrationStrategy();
 
   const setShortcutsHelpOpen = useUiStore(
     (state) => state.setShortcutsHelpOpen,
@@ -332,6 +334,9 @@ function AppShellContent({ children }: AppShellProps) {
   return (
     <CompletedTasksProvider>
       {isMigrating && <LoaderOverlay message="Migrating guest data..." />}
+      {migrationStuck && (
+        <MigrationStuckBanner onExport={() => void exportSnapshot()} />
+      )}
       <SidebarProvider defaultOpen={true}>
         <GlobalHotkeys
           setCommandOpen={setCommandOpen}

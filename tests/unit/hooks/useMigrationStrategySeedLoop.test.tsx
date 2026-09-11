@@ -13,6 +13,17 @@ vi.mock("@/lib/notify", () => ({
 }));
 vi.mock("@/lib/telemetry/client", () => ({ trackSignupCompleted: vi.fn() }));
 
+const idbStore = new Map<string, unknown>();
+vi.mock("idb-keyval", () => ({
+  get: vi.fn(async (key: string) => idbStore.get(key)),
+  set: vi.fn(async (key: string, value: unknown) => {
+    idbStore.set(key, value);
+  }),
+  del: vi.fn(async (key: string) => {
+    idbStore.delete(key);
+  }),
+}));
+
 async function simulatePageLoad() {
   vi.resetModules();
   await import("@/lib/mock/mock-store");
@@ -25,6 +36,7 @@ describe("migration does not loop on a freshly seeded guest blob", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    idbStore.clear();
     vi.stubGlobal("location", { reload });
 
     const builder = () => {
@@ -34,8 +46,10 @@ describe("migration does not loop on a freshly seeded guest blob", () => {
       b.select = vi.fn(() => b);
       b.insert = vi.fn(() => b);
       b.update = vi.fn(() => b);
+      b.upsert = vi.fn(() => b);
       b.eq = vi.fn(() => b);
       b.single = vi.fn(() => b);
+      b.maybeSingle = vi.fn(() => b);
       return b;
     };
     const client = builder();

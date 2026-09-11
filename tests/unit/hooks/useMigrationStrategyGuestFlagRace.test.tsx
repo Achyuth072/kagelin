@@ -31,6 +31,17 @@ vi.mock("@/lib/crypto/keyStore", () => ({
   },
 }));
 
+const idbStore = new Map<string, unknown>();
+vi.mock("idb-keyval", () => ({
+  get: vi.fn(async (key: string) => idbStore.get(key)),
+  set: vi.fn(async (key: string, value: unknown) => {
+    idbStore.set(key, value);
+  }),
+  del: vi.fn(async (key: string) => {
+    idbStore.delete(key);
+  }),
+}));
+
 type MockSupabaseBuilder = Promise<{
   data: unknown;
   error: unknown;
@@ -40,6 +51,7 @@ type MockSupabaseBuilder = Promise<{
   select: Mock;
   insert: Mock;
   update: Mock;
+  upsert: Mock;
   eq: Mock;
 };
 
@@ -69,6 +81,7 @@ function makeSupabaseClient(
     builder.select = vi.fn(() => builder);
     builder.insert = vi.fn(() => builder);
     builder.update = vi.fn(() => builder);
+    builder.upsert = vi.fn(() => builder);
     builder.eq = vi.fn(() => builder);
     return builder;
   };
@@ -89,6 +102,7 @@ describe("useMigrationStrategy: guest flag cleared before mount", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    idbStore.clear();
     document.cookie = "kanso_guest_mode=; path=/; max-age=0";
     vi.stubGlobal("location", { reload: vi.fn() });
   });

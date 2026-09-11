@@ -10,6 +10,7 @@ import { FIELD_MAP } from "@/lib/supabase/fieldMap";
 import { generateMasterKey } from "@/lib/crypto/masterKey";
 import { isCiphertext } from "@/lib/crypto/contentCipher";
 import { createFakeSupabaseClient } from "../support/fakeSupabaseClient";
+import { deriveMigrationId } from "@/lib/migration/deterministicId";
 
 vi.mock("@/components/AuthProvider", () => ({
   useAuth: vi.fn(),
@@ -39,15 +40,35 @@ vi.mock("@/lib/crypto/keyStore", () => ({
   },
 }));
 
+// Mock idb-keyval in memory so snapshots survive simulated reloads in jsdom.
+const idbStore = new Map<string, unknown>();
+vi.mock("idb-keyval", () => ({
+  get: vi.fn(async (key: string) => idbStore.get(key)),
+  set: vi.fn(async (key: string, value: unknown) => {
+    idbStore.set(key, value);
+  }),
+  del: vi.fn(async (key: string) => {
+    idbStore.delete(key);
+  }),
+}));
+
+vi.mock("@/lib/backup/export-import", () => ({
+  createBackupZip: vi.fn(async () => new Blob()),
+  downloadBackup: vi.fn(),
+}));
+
 import { trackSignupCompleted } from "@/lib/telemetry/client";
+import { downloadBackup } from "@/lib/backup/export-import";
 
 type MockSupabaseBuilder = Promise<{ data: unknown; error: unknown }> & {
   from: Mock;
   select: Mock;
   insert: Mock;
   update: Mock;
+  upsert: Mock;
   eq: Mock;
   single: Mock;
+  maybeSingle: Mock;
 };
 
 describe("useMigrationStrategy", () => {
@@ -57,6 +78,7 @@ describe("useMigrationStrategy", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    idbStore.clear();
     vi.stubGlobal("location", { reload: vi.fn() });
 
     const createMockBuilder = (data: unknown = [], error: unknown = null) => {
@@ -66,8 +88,10 @@ describe("useMigrationStrategy", () => {
       builder.select = vi.fn(() => builder);
       builder.insert = vi.fn(() => builder);
       builder.update = vi.fn(() => builder);
+      builder.upsert = vi.fn(() => builder);
       builder.eq = vi.fn(() => builder);
       builder.single = vi.fn(() => builder);
+      builder.maybeSingle = vi.fn(() => builder);
       return builder;
     };
 
@@ -93,8 +117,10 @@ describe("useMigrationStrategy", () => {
       builder.select = vi.fn(() => builder);
       builder.insert = vi.fn(() => builder);
       builder.update = vi.fn(() => builder);
+      builder.upsert = vi.fn(() => builder);
       builder.eq = vi.fn(() => builder);
       builder.single = vi.fn(() => builder);
+      builder.maybeSingle = vi.fn(() => builder);
       return builder;
     };
 
@@ -354,6 +380,8 @@ describe("useMigrationStrategy", () => {
           "kanso_guest_mode",
         );
         expect(trackSignupCompleted).toHaveBeenCalled();
+        // Await reload to prevent trailing microtasks from leaking into subsequent tests.
+        expect(window.location.reload).toHaveBeenCalled();
       },
       { timeout: 5000 },
     );
@@ -405,12 +433,12 @@ describe("useMigrationStrategy", () => {
 
     const eventsCall = mockSupabase.from.mock.results.find(
       (r) =>
-        (r.value as MockSupabaseBuilder).insert.mock.calls.length > 0 &&
-        (r.value as MockSupabaseBuilder).insert.mock.calls[0][0]?.[0]?.title !==
+        (r.value as MockSupabaseBuilder).upsert.mock.calls.length > 0 &&
+        (r.value as MockSupabaseBuilder).upsert.mock.calls[0][0]?.[0]?.title !==
           undefined,
     );
     const insertedEvents = eventsCall
-      ? (eventsCall.value as MockSupabaseBuilder).insert.mock.calls[0][0]
+      ? (eventsCall.value as MockSupabaseBuilder).upsert.mock.calls[0][0]
       : [];
 
     expect(insertedEvents).toHaveLength(1);
@@ -458,7 +486,7 @@ describe("useMigrationStrategy", () => {
     );
 
     const inserted = mockSupabase.from.mock.results.flatMap((r) =>
-      (r.value as MockSupabaseBuilder).insert.mock.calls.flat(),
+      (r.value as MockSupabaseBuilder).upsert.mock.calls.flat(),
     );
 
     expect(JSON.stringify(inserted)).not.toContain("Demo task");
@@ -538,6 +566,58 @@ describe("useMigrationStrategy", () => {
       expect(everythingStored).not.toContain("Take medication");
     });
 
+    it("MIG-ENC-06: reuses the account's existing Inbox project instead of creating a second one", async () => {
+      keyStoreState.key = await generateMasterKey();
+      // Accounts already have an Inbox created on signup by handle_new_user.
+      const raw = createFakeSupabaseClient({
+        projects: [
+          {
+            id: "real-inbox-1",
+            user_id: "real-user-id",
+            name: "Inbox",
+            is_inbox: true,
+          },
+        ],
+      });
+      vi.mocked(createClient).mockReturnValue(
+        wrapSupabaseClient(raw, FIELD_MAP) as unknown as ReturnType<
+          typeof createClient
+        >,
+      );
+
+      const guestData = {
+        tasks: [
+          {
+            id: "g-t1",
+            content: "Task in inbox",
+            project_id: "g-inbox",
+            created_at: "2023-01-01",
+          },
+        ],
+        projects: [
+          {
+            id: "g-inbox",
+            name: "Inbox",
+            is_inbox: true,
+            created_at: "2023-01-01",
+          },
+        ],
+        habits: [],
+        habit_entries: [],
+        focus_logs: [],
+      };
+      localStorage.setItem("kanso_guest_mode", "true");
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(guestData));
+      mockAuthAsRealUser();
+
+      renderHook(() => useMigrationStrategy());
+      await waitFor(() => expect(window.location.reload).toHaveBeenCalled());
+
+      expect(raw.rawRows("projects")).toHaveLength(1);
+      expect(raw.rawRows("projects")[0].id).toBe("real-inbox-1");
+      expect(raw.rawRows("tasks")[0].project_id).toBe("real-inbox-1");
+    });
+
     it("MIG-ENC-02: never deposits plaintext when no master key is available yet", async () => {
       keyStoreState.key = null;
       const raw = createFakeSupabaseClient();
@@ -562,7 +642,11 @@ describe("useMigrationStrategy", () => {
 
       renderHook(() => useMigrationStrategy());
 
-      await waitFor(() => expect(raw.rawRows("tasks")).toHaveLength(0));
+      // Wait for completion so catch-block microtasks do not leak into subsequent tests.
+      await waitFor(() =>
+        expect(localStorage.getItem("kanso_migration_failure_count")).toBe("1"),
+      );
+      expect(raw.rawRows("tasks")).toHaveLength(0);
       expect(window.location.reload).not.toHaveBeenCalled();
     });
 
@@ -573,7 +657,7 @@ describe("useMigrationStrategy", () => {
         {},
         {
           failWrite: ({ table, kind }) => {
-            if (table === "calendar_events" && kind === "insert") {
+            if (table === "calendar_events" && kind === "upsert") {
               eventsInsertAttempts += 1;
               if (eventsInsertAttempts === 1) {
                 return { message: "simulated transient failure" };
@@ -612,20 +696,135 @@ describe("useMigrationStrategy", () => {
 
       renderHook(() => useMigrationStrategy());
 
-      // First attempt: the task lands, then the events insert fails.
-      await waitFor(() => expect(raw.rawRows("tasks")).toHaveLength(1));
-      await waitFor(() => expect(eventsInsertAttempts).toBe(1));
+      // Wait for attempt to settle to prevent racing the subsequent hook render.
+      await waitFor(() =>
+        expect(localStorage.getItem("kanso_migration_failure_count")).toBe("1"),
+      );
+      expect(raw.rawRows("tasks")).toHaveLength(1);
+      expect(eventsInsertAttempts).toBe(1);
       expect(window.location.reload).not.toHaveBeenCalled();
-      // Guest data must survive so a retry has something to resume from.
       expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull();
 
-      // Simulate the "reload" the error toast promises: a fresh mount.
       renderHook(() => useMigrationStrategy());
 
       await waitFor(() => expect(window.location.reload).toHaveBeenCalled());
       expect(raw.rawRows("tasks")).toHaveLength(1);
       expect(raw.rawRows("calendar_events")).toHaveLength(1);
       expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+    });
+
+    it("MIG-ENC-04: marks migration stuck after a second consecutive failure and lets the guest export the frozen snapshot", async () => {
+      keyStoreState.key = await generateMasterKey();
+      const raw = createFakeSupabaseClient(
+        {},
+        {
+          failWrite: ({ table, kind }) =>
+            table === "tasks" && kind === "upsert"
+              ? { message: "simulated persistent failure" }
+              : null,
+        },
+      );
+      vi.mocked(createClient).mockReturnValue(
+        wrapSupabaseClient(raw, FIELD_MAP) as unknown as ReturnType<
+          typeof createClient
+        >,
+      );
+
+      const guestData = {
+        tasks: [
+          { id: "g-t1", content: "Stuck task", created_at: "2023-01-01" },
+        ],
+        projects: [],
+        habits: [],
+        habit_entries: [],
+        focus_logs: [],
+      };
+      localStorage.setItem("kanso_guest_mode", "true");
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(guestData));
+      mockAuthAsRealUser();
+
+      const first = renderHook(() => useMigrationStrategy());
+      await waitFor(() =>
+        expect(localStorage.getItem("kanso_migration_failure_count")).toBe("1"),
+      );
+      expect(first.result.current.migrationStuck).toBe(false);
+
+      const second = renderHook(() => useMigrationStrategy());
+      await waitFor(() =>
+        expect(localStorage.getItem("kanso_migration_failure_count")).toBe("2"),
+      );
+      await waitFor(() =>
+        expect(second.result.current.migrationStuck).toBe(true),
+      );
+
+      await second.result.current.exportSnapshot();
+      expect(downloadBackup).toHaveBeenCalled();
+    });
+
+    it("MIG-ENC-05: retries from the frozen snapshot even if the live guest blob changes underneath it", async () => {
+      keyStoreState.key = await generateMasterKey();
+      let taskAttempts = 0;
+      const raw = createFakeSupabaseClient(
+        {},
+        {
+          failWrite: ({ table, kind }) => {
+            if (table === "tasks" && kind === "upsert") {
+              taskAttempts += 1;
+              if (taskAttempts === 1) {
+                return { message: "simulated transient failure" };
+              }
+            }
+            return null;
+          },
+        },
+      );
+      vi.mocked(createClient).mockReturnValue(
+        wrapSupabaseClient(raw, FIELD_MAP) as unknown as ReturnType<
+          typeof createClient
+        >,
+      );
+
+      const guestData = {
+        tasks: [
+          { id: "g-t1", content: "Original task", created_at: "2023-01-01" },
+        ],
+        projects: [],
+        habits: [],
+        habit_entries: [],
+        focus_logs: [],
+      };
+      localStorage.setItem("kanso_guest_mode", "true");
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(guestData));
+      mockAuthAsRealUser();
+
+      renderHook(() => useMigrationStrategy());
+      // Wait for attempt to settle before re-rendering to prevent race conditions.
+      await waitFor(() =>
+        expect(localStorage.getItem("kanso_migration_failure_count")).toBe("1"),
+      );
+      expect(taskAttempts).toBe(1);
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          ...guestData,
+          tasks: [
+            {
+              id: "g-t2",
+              content: "Corrupted replacement task",
+              created_at: "2023-01-01",
+            },
+          ],
+        }),
+      );
+
+      renderHook(() => useMigrationStrategy());
+      await waitFor(() => expect(window.location.reload).toHaveBeenCalled());
+
+      const migratedTasks = raw.rawRows("tasks");
+      expect(migratedTasks).toHaveLength(1);
+      expect(isCiphertext(migratedTasks[0].content)).toBe(true);
+      expect(migratedTasks[0].id).toBe(await deriveMigrationId("task:g-t1"));
     });
   });
 });
