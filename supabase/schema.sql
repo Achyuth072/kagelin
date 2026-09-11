@@ -441,10 +441,11 @@ BEGIN
                   'Your task "{}" is due now.', NEW.content),
                 'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
               )),
-              NEW.id);
+              NEW.id)
+      ON CONFLICT (user_id, type, scheduled_at) WHERE status = 'pending' DO NOTHING;
     END IF;
 
-    IF (user_settings->'notifications'->>'do_date_alerts')::boolean IS NOT FALSE 
+    IF (user_settings->'notifications'->>'do_date_alerts')::boolean IS NOT FALSE
        AND NEW.do_date IS NOT NULL AND NEW.do_date > now() THEN
       INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
       VALUES (NEW.user_id, NEW.do_date, 'do_date',
@@ -455,7 +456,8 @@ BEGIN
                   'Scheduled: {}', NEW.content),
                 'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
               )),
-              NEW.id);
+              NEW.id)
+      ON CONFLICT (user_id, type, scheduled_at) WHERE status = 'pending' DO NOTHING;
     END IF;
   END IF;
 
