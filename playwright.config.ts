@@ -1,4 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
+import { readFileSync } from "fs";
+
+// Next.js loads .env.local only in its child process; load here for specs needing SUPABASE_SECRET_KEY.
+try {
+  for (const line of readFileSync(".env.local", "utf-8").split("\n")) {
+    const match = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
+    if (match && !(match[1] in process.env)) {
+      process.env[match[1]] = match[2];
+    }
+  }
+} catch {
+  // .env.local is optional.
+}
 
 export default defineConfig({
   testDir: "./tests/e2e",
