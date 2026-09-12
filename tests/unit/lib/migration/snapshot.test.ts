@@ -22,17 +22,29 @@ describe("migrationSnapshot", () => {
   });
 
   it("returns null when nothing was saved", async () => {
-    expect(await migrationSnapshot.load()).toBeNull();
+    expect(await migrationSnapshot.load("user-a")).toBeNull();
   });
 
   it("round-trips a saved snapshot", async () => {
-    await migrationSnapshot.save(data);
-    expect(await migrationSnapshot.load()).toEqual(data);
+    await migrationSnapshot.save("user-a", data);
+    expect(await migrationSnapshot.load("user-a")).toEqual(data);
   });
 
   it("returns null again after clear", async () => {
-    await migrationSnapshot.save(data);
+    await migrationSnapshot.save("user-a", data);
     await migrationSnapshot.clear();
-    expect(await migrationSnapshot.load()).toBeNull();
+    expect(await migrationSnapshot.load("user-a")).toBeNull();
+  });
+
+  it("refuses another account's snapshot, and discards it", async () => {
+    await migrationSnapshot.save("user-a", data);
+    expect(await migrationSnapshot.load("user-b")).toBeNull();
+    expect(await migrationSnapshot.load("user-a")).toBeNull();
+  });
+
+  it("discards an unowned snapshot written by a pre-binding release", async () => {
+    idbStore.set("kanso-guest-migration-snapshot", data);
+    expect(await migrationSnapshot.load("user-a")).toBeNull();
+    expect(idbStore.has("kanso-guest-migration-snapshot")).toBe(false);
   });
 });

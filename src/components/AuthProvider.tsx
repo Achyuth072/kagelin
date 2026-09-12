@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   useCallback,
 } from "react";
@@ -12,6 +13,7 @@ import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/client";
 import { EMAIL_CONFIRMED_PATH } from "@/lib/auth/auth-routes";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
+import { migrationIntent } from "@/lib/migration/intent";
 import type { OAuthProviderId } from "@/lib/auth/providers";
 import type {
   User,
@@ -103,10 +105,27 @@ export function AuthProvider({
   const [loading, setLoading] = useState(!isGuestMode);
   const supabase = createClient();
   const queryClient = useQueryClient();
+  const lastRealUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // Purge cached content on passive session termination so subsequent logins cannot inherit keys.
+    const purge = () => {
+      purgeDeviceContent(queryClient).catch((err) =>
+        Sentry.captureException(err),
+      );
+    };
+
     // A real session always wins — a stale guest flag must not shadow it.
     const applyRealSession = (s: Session) => {
+      if (
+        lastRealUserIdRef.current &&
+        lastRealUserIdRef.current !== s.user.id
+      ) {
+        purge();
+      }
+      lastRealUserIdRef.current = s.user.id;
+      // Record intent before clearing the flag so migration binds to this account.
+      if (hasGuestFlag()) migrationIntent.record(s.user.id);
       clearGuestFlag();
       setSession(s);
       setUser(s.user);
@@ -118,6 +137,9 @@ export function AuthProvider({
         setUser(makeGuestUser());
         setIsGuestMode(true);
       } else {
+        // Purge keys left behind if a session ended while the tab was closed.
+        purge();
+        lastRealUserIdRef.current = null;
         clearGuestFlag();
         setSession(null);
         setUser(null);
@@ -143,7 +165,7 @@ export function AuthProvider({
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+  }, [supabase.auth, queryClient]);
 
   const signInWithOAuth = useCallback(
     async (provider: OAuthProviderId) => {

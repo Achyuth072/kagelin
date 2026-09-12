@@ -56,7 +56,7 @@ export function useEncryptionGate(): {
       try {
         const [row, cachedKey] = await Promise.all([
           getEncryptionKeyRow(user.id),
-          keyStore.load(),
+          keyStore.load(user.id),
         ]);
         if (cancelled) return;
 

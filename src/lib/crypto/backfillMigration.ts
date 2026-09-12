@@ -67,32 +67,62 @@ export async function findPendingRows(userId: string): Promise<PendingRow[]> {
 // Evening and briefing notifications never carry user content (ADR 0016).
 const CONTENT_NOTIFICATION_TYPES = ["due_date", "do_date", "timer_end"];
 
-async function cancelLegacyPlaintextNotifications(
+const LEGACY_NOTIFICATION_BODIES: Record<string, string> = {
+  due_date: "You have a task due now.",
+  do_date: "You have a task scheduled now.",
+  timer_end: "Your timer is complete.",
+};
+
+// Pre-composed bodies that never contained plaintext task titles.
+const CONTENT_FREE_NOTIFICATION_BODIES = new Set([
+  ...Object.values(LEGACY_NOTIFICATION_BODIES),
+  "Your focus session is complete. Take a break!",
+  "Your break is over. Time to focus!",
+]);
+
+// Overwrite plaintext task titles in legacy notification bodies.
+async function redactLegacyPlaintextNotifications(
   userId: string,
 ): Promise<void> {
   const raw = createRawClient();
-  const rows = await fetchAllRows<{ id: string; payload: Record<string, any> }>(
-    (from, to) =>
-      (raw.from("notification_queue") as any)
-        .select("id,payload")
-        .eq("user_id", userId)
-        .in("status", ["pending", "processing"])
-        .in("type", CONTENT_NOTIFICATION_TYPES)
-        .order("id", { ascending: true })
-        .range(from, to),
+  const rows = await fetchAllRows<{
+    id: string;
+    type: string;
+    status: string;
+    payload: Record<string, any>;
+  }>((from, to) =>
+    (raw.from("notification_queue") as any)
+      .select("id,type,status,payload")
+      .eq("user_id", userId)
+      .in("type", CONTENT_NOTIFICATION_TYPES)
+      .order("id", { ascending: true })
+      .range(from, to),
   );
 
-  const staleIds = rows
-    .filter((row) => !row.payload?.encrypted)
-    .map((row) => row.id);
-  if (staleIds.length === 0) return;
+  const stale = rows.filter(
+    (row) =>
+      !row.payload?.encrypted &&
+      !CONTENT_FREE_NOTIFICATION_BODIES.has(row.payload?.body),
+  );
+  if (stale.length === 0) return;
 
-  // Avoid cancelling rows delivered or failed concurrently by the queue worker.
-  const { error } = await (raw.from("notification_queue") as any)
-    .update({ status: "cancelled" })
-    .in("id", staleIds)
-    .in("status", ["pending", "processing"]);
-  if (error) throw error;
+  for (const row of stale) {
+    const redacted = {
+      title: row.payload?.title ?? "Kagelin",
+      body: LEGACY_NOTIFICATION_BODIES[row.type],
+      data: row.payload?.data ?? {},
+    };
+    const patch: Record<string, unknown> = { payload: redacted };
+    // Prevent pending notifications from delivering generic copy.
+    if (row.status === "pending" || row.status === "processing") {
+      patch.status = "cancelled";
+    }
+
+    const { error } = await (raw.from("notification_queue") as any)
+      .update(patch)
+      .eq("id", row.id);
+    if (error) throw error;
+  }
 }
 
 // Diagnostic fields predating ADR 0016 redaction may contain plaintext.
@@ -117,12 +147,12 @@ export async function runBackfillMigration(
   userId: string,
   onProgress?: (progress: MigrationProgress) => void,
 ): Promise<void> {
-  const masterKey = await keyStore.load();
+  const masterKey = await keyStore.load(userId);
   if (!masterKey) {
     throw new Error("Cannot migrate: the content key is unavailable.");
   }
 
-  await cancelLegacyPlaintextNotifications(userId);
+  await redactLegacyPlaintextNotifications(userId);
   await scrubLegacyDiagnosticText(userId);
 
   const raw = createRawClient();

@@ -3,13 +3,33 @@ import type { GuestData } from "@/lib/mock/mock-store";
 
 const SNAPSHOT_KEY = "kanso-guest-migration-snapshot";
 
+interface StoredSnapshot {
+  userId: string;
+  data: GuestData;
+}
+
+function isStoredSnapshot(value: unknown): value is StoredSnapshot {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as StoredSnapshot).userId === "string" &&
+    typeof (value as StoredSnapshot).data === "object"
+  );
+}
+
+// Scoped to the creating account to prevent stranded snapshots from importing into other accounts.
 export const migrationSnapshot = {
-  async load(): Promise<GuestData | null> {
-    const value = await get<GuestData>(SNAPSHOT_KEY);
-    return value ?? null;
+  async load(userId: string): Promise<GuestData | null> {
+    const stored = await get<unknown>(SNAPSHOT_KEY);
+    if (stored === undefined) return null;
+    if (!isStoredSnapshot(stored) || stored.userId !== userId) {
+      await del(SNAPSHOT_KEY);
+      return null;
+    }
+    return stored.data;
   },
-  async save(data: GuestData): Promise<void> {
-    await set(SNAPSHOT_KEY, data);
+  async save(userId: string, data: GuestData): Promise<void> {
+    await set(SNAPSHOT_KEY, { userId, data } satisfies StoredSnapshot);
   },
   async clear(): Promise<void> {
     await del(SNAPSHOT_KEY);

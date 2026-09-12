@@ -38,6 +38,8 @@ export async function testWebDavConnection(
     const response = await fetch(buildProxyUrl(credentials.serverUrl), {
       method: "OPTIONS",
       headers: buildProxyHeaders(credentials),
+      // Avoid sending session cookies to third-party WebDAV targets.
+      credentials: "omit",
     });
 
     if (response.ok || response.status === 204 || response.status === 200) {
@@ -67,6 +69,7 @@ export async function uploadWebDavBackup(
           "Content-Type": "application/zip",
         },
         body: backupZip,
+        credentials: "omit",
       },
     );
 
@@ -97,6 +100,7 @@ export async function downloadWebDavBackup(
       {
         method: "GET",
         headers: buildProxyHeaders(credentials),
+        credentials: "omit",
       },
     );
 

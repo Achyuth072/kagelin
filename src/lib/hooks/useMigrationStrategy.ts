@@ -5,6 +5,7 @@ import { notify } from "@/lib/notify";
 import { trackSignupCompleted } from "@/lib/telemetry/client";
 import { deriveMigrationId } from "@/lib/migration/deterministicId";
 import { migrationSnapshot } from "@/lib/migration/snapshot";
+import { migrationIntent } from "@/lib/migration/intent";
 import { createBackupZip, downloadBackup } from "@/lib/backup/export-import";
 import type { BackupMetadata } from "@/lib/backup/types";
 import {
@@ -67,7 +68,11 @@ export function useMigrationStrategy() {
       return;
     }
 
-    // AuthProvider clears kanso_guest_mode on session detection before this hook runs.
+    // Only migrate if this account initiated the guest session transition.
+    if (!migrationIntent.isFor(user.id)) {
+      return;
+    }
+
     const guestDataStr = localStorage.getItem(GUEST_DATA_STORAGE_KEY);
 
     if (!guestDataStr) {
@@ -79,7 +84,7 @@ export function useMigrationStrategy() {
     try {
       setIsMigrating(true);
 
-      let guestData = await migrationSnapshot.load();
+      let guestData = await migrationSnapshot.load(user.id);
 
       if (guestData === null) {
         // Prevents fabricated history from becoming the user's real streaks/scores. See ADR 0014.
@@ -89,6 +94,7 @@ export function useMigrationStrategy() {
 
         // Avoid reload loop: mock-store re-seeds demo data on every load.
         if (!hasRealContent(liveGuestData)) {
+          migrationIntent.clear();
           localStorage.removeItem("kanso_guest_mode");
           localStorage.removeItem(FAILURE_COUNT_KEY);
           document.cookie = "kanso_guest_mode=; path=/; max-age=0";
@@ -123,6 +129,7 @@ export function useMigrationStrategy() {
           (existingHabitCount ?? 0) > 0;
 
         if (hasExistingContent) {
+          migrationIntent.clear();
           localStorage.removeItem("kanso_guest_mode");
           localStorage.removeItem(GUEST_DATA_STORAGE_KEY);
           localStorage.removeItem(FAILURE_COUNT_KEY);
@@ -132,7 +139,7 @@ export function useMigrationStrategy() {
         }
 
         // Snapshot before server writes so retries are isolated from live storage mutations.
-        await migrationSnapshot.save(liveGuestData);
+        await migrationSnapshot.save(user.id, liveGuestData);
         guestData = liveGuestData;
       }
 
@@ -320,6 +327,7 @@ export function useMigrationStrategy() {
       }
 
       await migrationSnapshot.clear();
+      migrationIntent.clear();
       localStorage.removeItem("kanso_guest_mode");
       localStorage.removeItem(GUEST_DATA_STORAGE_KEY);
       localStorage.removeItem(FAILURE_COUNT_KEY);
@@ -354,7 +362,8 @@ export function useMigrationStrategy() {
   }, [user, isGuestMode, supabase]);
 
   const exportSnapshot = useCallback(async () => {
-    const snapshot = await migrationSnapshot.load();
+    if (!user) return;
+    const snapshot = await migrationSnapshot.load(user.id);
     if (!snapshot) {
       notify.error("No backup available to export.");
       return;
@@ -379,7 +388,7 @@ export function useMigrationStrategy() {
       blob,
       `kanso-guest-backup-${new Date().toISOString().split("T")[0]}.zip`,
     );
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const hasGuestData = localStorage.getItem(GUEST_DATA_STORAGE_KEY) !== null;

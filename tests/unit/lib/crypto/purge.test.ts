@@ -21,7 +21,7 @@ describe("purgeDeviceContent", () => {
   });
 
   it("leaves no key and no persisted query cache behind after purging", async () => {
-    await keyStore.save(new Uint8Array([1, 2, 3, 4]));
+    await keyStore.save("user-a", new Uint8Array([1, 2, 3, 4]));
 
     const queryClient = new QueryClient();
     queryClient.setQueryData(["tasks"], [{ id: "1", content: "Buy milk" }]);

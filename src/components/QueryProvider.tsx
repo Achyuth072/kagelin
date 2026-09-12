@@ -9,10 +9,8 @@ import { taskMutations } from "@/lib/mutations/task";
 import { habitMutations } from "@/lib/mutations/habit";
 import { projectMutations } from "@/lib/mutations/project";
 import { focusMutations } from "@/lib/mutations/focus";
-import {
-  asyncStoragePersister,
-  purgePersistedQueryCache,
-} from "@/lib/query-cache-purge";
+import { asyncStoragePersister } from "@/lib/query-cache-purge";
+import { purgeDeviceContent } from "@/lib/crypto/purge";
 
 export default function QueryProvider({
   children,
@@ -102,10 +100,8 @@ export default function QueryProvider({
           if (user || isGuest) {
             queryClient.resumePausedMutations();
           } else {
-            // Safety: a restored cache with no valid session (expired,
-            // revoked elsewhere) is the same "must not hold readable
-            // content" case as an explicit sign-out — see purgePersistedQueryCache.
-            purgePersistedQueryCache(queryClient).catch((err) =>
+            // Purge cached data and keys if the restored cache lacks a valid session.
+            purgeDeviceContent(queryClient).catch((err) =>
               Sentry.captureException(err),
             );
           }

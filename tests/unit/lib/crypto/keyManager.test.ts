@@ -55,14 +55,23 @@ vi.mock("@/lib/supabase/client", () => ({
   createRawClient: () => rawClient,
 }));
 
-const keyStoreState: { key: Uint8Array | null } = { key: null };
+const keyStoreState: { userId: string | null; key: Uint8Array | null } = {
+  userId: null,
+  key: null,
+};
 vi.mock("@/lib/crypto/keyStore", () => ({
   keyStore: {
-    load: vi.fn(async () => keyStoreState.key),
-    save: vi.fn(async (k: Uint8Array) => {
+    load: vi.fn(async (userId?: string) =>
+      userId !== undefined && keyStoreState.userId !== userId
+        ? null
+        : keyStoreState.key,
+    ),
+    save: vi.fn(async (userId: string, k: Uint8Array) => {
+      keyStoreState.userId = userId;
       keyStoreState.key = k;
     }),
     clear: vi.fn(async () => {
+      keyStoreState.userId = null;
       keyStoreState.key = null;
     }),
   },

@@ -129,7 +129,7 @@ describe("WebDAV proxy route (C-3)", () => {
 
   it("forwards the request through ssrfSafeFetch and passes the response back", async () => {
     mockSsrfSafeFetch.mockResolvedValue(
-      new Response("body", { status: 207, headers: { "X-Test": "1" } }),
+      new Response("body", { status: 207, headers: { ETag: '"abc"' } }),
     );
 
     const request = makeRequest("OPTIONS");
@@ -138,10 +138,42 @@ describe("WebDAV proxy route (C-3)", () => {
     });
 
     expect(response.status).toBe(207);
-    expect(response.headers.get("X-Test")).toBe("1");
+    expect(response.headers.get("ETag")).toBe('"abc"');
     expect(mockSsrfSafeFetch).toHaveBeenCalledWith(
       "https://dav.example.com/foo",
       expect.objectContaining({ method: "OPTIONS" }),
     );
+  });
+
+  it("never relays the session cookie to the third-party WebDAV host", async () => {
+    mockSsrfSafeFetch.mockResolvedValue(new Response("ok", { status: 200 }));
+
+    const request = makeRequest("OPTIONS", {
+      Cookie: "sb-proj-auth-token=secret; kanso_guest_mode=true",
+      Authorization: "Basic dXNlcjpwYXNz",
+      Referer: "http://localhost/settings",
+    });
+    await OPTIONS(request, { params: Promise.resolve({ path: ["foo"] }) });
+
+    const headers = mockSsrfSafeFetch.mock.calls[0][1].headers as Headers;
+    expect(headers.get("cookie")).toBeNull();
+    expect(headers.get("referer")).toBeNull();
+    expect(headers.get("authorization")).toBe("Basic dXNlcjpwYXNz");
+  });
+
+  it("never lets the WebDAV host set a cookie on this origin", async () => {
+    mockSsrfSafeFetch.mockResolvedValue(
+      new Response("ok", {
+        status: 200,
+        headers: { "Set-Cookie": "sb-proj-auth-token=attacker; Path=/" },
+      }),
+    );
+
+    const request = makeRequest("OPTIONS");
+    const response = await OPTIONS(request, {
+      params: Promise.resolve({ path: ["foo"] }),
+    });
+
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 });

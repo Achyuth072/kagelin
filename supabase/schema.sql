@@ -1362,6 +1362,31 @@ SELECT cron.schedule(
   $$DELETE FROM cron.job_run_details WHERE end_time < now() - interval '7 days'$$
 );
 
+-- Prune terminal notifications to prevent indefinite payload retention (ADR 0016).
+CREATE OR REPLACE FUNCTION public.prune_terminal_notification_queue()
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  DELETE FROM public.notification_queue
+  WHERE status IN ('sent', 'failed', 'cancelled')
+    AND scheduled_at < now() - interval '7 days';
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.prune_terminal_notification_queue() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.prune_terminal_notification_queue() FROM anon, authenticated;
+
+SELECT cron.unschedule(jobname)
+FROM cron.job
+WHERE jobname = 'notification-queue-prune-terminal';
+
+SELECT cron.schedule(
+  'notification-queue-prune-terminal',
+  '45 0 * * *',
+  $$SELECT public.prune_terminal_notification_queue()$$
+);
+
 -- =============================================================================
 -- 21. ENCRYPTION_KEYS TABLE (Content Encryption Master Key)
 -- =============================================================================

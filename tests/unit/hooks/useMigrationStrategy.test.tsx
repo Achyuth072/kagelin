@@ -59,6 +59,7 @@ vi.mock("@/lib/backup/export-import", () => ({
 
 import { trackSignupCompleted } from "@/lib/telemetry/client";
 import { downloadBackup } from "@/lib/backup/export-import";
+import { migrationIntent } from "@/lib/migration/intent";
 
 type MockSupabaseBuilder = Promise<{ data: unknown; error: unknown }> & {
   from: Mock;
@@ -80,6 +81,8 @@ describe("useMigrationStrategy", () => {
     localStorage.clear();
     idbStore.clear();
     vi.stubGlobal("location", { reload: vi.fn() });
+    // Simulate guest migration intent recorded on sign-in.
+    migrationIntent.record(mockUser.id);
 
     const createMockBuilder = (data: unknown = [], error: unknown = null) => {
       const promise = Promise.resolve({ data, error });

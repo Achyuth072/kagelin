@@ -21,8 +21,11 @@ import { recordActivity } from "@/lib/crypto/autoLock";
 
 export class UnlockError extends Error {}
 
-async function cacheMasterKey(masterKey: Uint8Array): Promise<void> {
-  await keyStore.save(masterKey);
+async function cacheMasterKey(
+  userId: string,
+  masterKey: Uint8Array,
+): Promise<void> {
+  await keyStore.save(userId, masterKey);
   recordActivity();
 }
 
@@ -112,7 +115,7 @@ export async function setupEncryption(
   });
   if (error) throw error;
 
-  await cacheMasterKey(masterKey);
+  await cacheMasterKey(userId, masterKey);
 
   return { recoveryCode: recoveryCode.formatted };
 }
@@ -140,7 +143,7 @@ export async function unlockWithPassphrase(
     throw new UnlockError("That passphrase isn't right.");
   }
 
-  await cacheMasterKey(masterKey);
+  await cacheMasterKey(userId, masterKey);
   return masterKey;
 }
 
@@ -167,7 +170,7 @@ export async function unlockWithRecoveryCode(
     throw new UnlockError("That recovery code isn't right.");
   }
 
-  await cacheMasterKey(masterKey);
+  await cacheMasterKey(userId, masterKey);
   return masterKey;
 }
 
@@ -218,11 +221,11 @@ export async function changePassphrase(
   // Prevent old passphrase from unlocking offline.
   await encryptionKeyRowCache.save(userId, data as EncryptionKeyRow);
 
-  await cacheMasterKey(masterKey);
+  await cacheMasterKey(userId, masterKey);
 }
 
 export async function reissueRecoveryCode(userId: string): Promise<string> {
-  const masterKey = await keyStore.load();
+  const masterKey = await keyStore.load(userId);
   if (!masterKey) {
     throw new UnlockError("Unlock before generating a new recovery code.");
   }
