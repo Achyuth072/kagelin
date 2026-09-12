@@ -30,6 +30,7 @@ function hasRealContent(data: GuestData): boolean {
 }
 
 function getFailureCount(): number {
+  if (typeof window === "undefined") return 0;
   return Number(localStorage.getItem(FAILURE_COUNT_KEY) ?? "0");
 }
 
