@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.43.0-preview.6",
+    "date": "2026-09-12",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Guard getFailureCount against SSR, where localStorage doesn't exist"
+      ]
+    }
+  },
+  {
     "version": "1.43.0-preview.5",
     "date": "2026-09-11",
     "channel": "preview",
@@ -760,16 +770,6 @@
       "Fixed": [
         "Align local and push notification tags so they replace instead of stacking",
         "Stop duplicate timer notifications from a schedule race"
-      ]
-    }
-  },
-  {
-    "version": "1.27.0-preview.1",
-    "date": "2026-08-01",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Make scheduled push delivery reliable (timer/task isolation, claim, retry)"
       ]
     }
   }
