@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.43.0-preview.7",
+    "date": "2026-09-13",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Don't drop migration onComplete() on StrictMode's phantom cleanup",
+        "Scope content key and guest data per account, allowlist webdav headers, redact old payloads"
+      ]
+    }
+  },
+  {
     "version": "1.43.0-preview.6",
     "date": "2026-09-12",
     "channel": "preview",
@@ -759,17 +770,6 @@
         "Route notification clicks to their target URL instead of always /",
         "Drop y-transform from page transition to stop PiP button flash on /focus",
         "Make /login scrollable so content isn't cut off on short mobile viewports"
-      ]
-    }
-  },
-  {
-    "version": "1.27.0-preview.2",
-    "date": "2026-08-01",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Align local and push notification tags so they replace instead of stacking",
-        "Stop duplicate timer notifications from a schedule race"
       ]
     }
   }
