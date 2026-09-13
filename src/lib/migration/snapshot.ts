@@ -1,5 +1,6 @@
 import { get, set, del } from "idb-keyval";
 import type { GuestData } from "@/lib/mock/mock-store";
+import { hasUserId } from "@/lib/storage/userScoped";
 
 const SNAPSHOT_KEY = "kanso-guest-migration-snapshot";
 
@@ -9,12 +10,7 @@ interface StoredSnapshot {
 }
 
 function isStoredSnapshot(value: unknown): value is StoredSnapshot {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as StoredSnapshot).userId === "string" &&
-    typeof (value as StoredSnapshot).data === "object"
-  );
+  return hasUserId(value) && typeof (value as StoredSnapshot).data === "object";
 }
 
 // Scoped to the creating account to prevent stranded snapshots from importing into other accounts.

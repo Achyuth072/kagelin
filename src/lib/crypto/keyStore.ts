@@ -1,4 +1,5 @@
 import { get, set, del } from "idb-keyval";
+import { hasUserId } from "@/lib/storage/userScoped";
 
 const MASTER_KEY_STORAGE_KEY = "kagelin-master-key";
 
@@ -18,10 +19,7 @@ let cached: StoredMasterKey | null | undefined;
 
 function isStoredMasterKey(value: unknown): value is StoredMasterKey {
   return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as StoredMasterKey).userId === "string" &&
-    (value as StoredMasterKey).key instanceof Uint8Array
+    hasUserId(value) && (value as StoredMasterKey).key instanceof Uint8Array
   );
 }
 
