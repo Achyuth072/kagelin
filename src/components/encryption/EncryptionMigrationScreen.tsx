@@ -35,7 +35,8 @@ export function EncryptionMigrationScreen({
           if (!cancelled) setProgress(p);
         });
         await markMigrationComplete(userId);
-        if (!cancelled) onComplete();
+        // Notify parent even if cancelled so StrictMode remounts do not drop completion.
+        onComplete();
       } catch (err) {
         if (!cancelled) {
           setError(

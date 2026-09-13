@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EncryptionMigrationScreen } from "@/components/encryption/EncryptionMigrationScreen";
@@ -78,6 +79,20 @@ describe("EncryptionMigrationScreen", () => {
 
     vi.mocked(runBackfillMigration).mockResolvedValue(undefined);
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+  });
+
+  it("still calls onComplete under React StrictMode's dev-only double effect invocation", async () => {
+    vi.mocked(runBackfillMigration).mockResolvedValue(undefined);
+    vi.mocked(markMigrationComplete).mockResolvedValue(undefined);
+    const onComplete = vi.fn();
+
+    render(
+      <StrictMode>
+        <EncryptionMigrationScreen userId="user-1" onComplete={onComplete} />
+      </StrictMode>,
+    );
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
   });
