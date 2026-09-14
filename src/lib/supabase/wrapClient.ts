@@ -57,6 +57,19 @@ export function isContentKeyUnavailableError(error: unknown): boolean {
   );
 }
 
+function contentKeyUnavailableError(
+  action: "write to" | "read",
+  table: string,
+) {
+  return Object.assign(
+    new Error(
+      `Cannot ${action} "${table}": content encryption is set up for this ` +
+        "account but the master key is unavailable (locked, or not yet unlocked on this device).",
+    ),
+    { code: CONTENT_KEY_UNAVAILABLE_CODE },
+  );
+}
+
 export function needsEncryption(
   table: string,
   field: string,
@@ -115,13 +128,7 @@ export async function encryptPayload(
 
   const key = await getContentKey();
   if (!key) {
-    throw Object.assign(
-      new Error(
-        `Cannot write to "${table}": content encryption is set up for this ` +
-          "account but the master key is unavailable (locked, or not yet unlocked on this device).",
-      ),
-      { code: CONTENT_KEY_UNAVAILABLE_CODE },
-    );
+    throw contentKeyUnavailableError("write to", table);
   }
 
   if (Array.isArray(values)) {
@@ -147,13 +154,7 @@ async function decryptRow(
     if (encryptedFields.length) {
       const key = await loadKey();
       if (!key) {
-        throw Object.assign(
-          new Error(
-            `Cannot read "${table}": content encryption is set up for this ` +
-              "account but the master key is unavailable (locked, or not yet unlocked on this device).",
-          ),
-          { code: CONTENT_KEY_UNAVAILABLE_CODE },
-        );
+        throw contentKeyUnavailableError("read", table);
       }
       const decrypted = await Promise.all(
         encryptedFields.map(async (field) => {
