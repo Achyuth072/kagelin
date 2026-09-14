@@ -442,7 +442,7 @@ BEGIN
                 'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
               )),
               NEW.id)
-      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' DO NOTHING;
+      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type IN ('due_date', 'do_date') DO NOTHING;
     END IF;
 
     IF (user_settings->'notifications'->>'do_date_alerts')::boolean IS NOT FALSE
@@ -457,7 +457,7 @@ BEGIN
                 'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
               )),
               NEW.id)
-      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' DO NOTHING;
+      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type IN ('due_date', 'do_date') DO NOTHING;
     END IF;
   END IF;
 
@@ -1421,5 +1421,3 @@ CREATE POLICY "Users can update own encryption_keys" ON public.encryption_keys
 CREATE TRIGGER encryption_keys_updated_at
   BEFORE UPDATE ON public.encryption_keys
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
-
-

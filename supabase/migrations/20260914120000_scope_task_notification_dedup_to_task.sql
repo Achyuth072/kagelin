@@ -42,7 +42,7 @@ BEGIN
                 'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
               )),
               NEW.id)
-      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' DO NOTHING;
+      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type IN ('due_date', 'do_date') DO NOTHING;
     END IF;
 
     IF (user_settings->'notifications'->>'do_date_alerts')::boolean IS NOT FALSE
@@ -57,7 +57,7 @@ BEGIN
                 'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
               )),
               NEW.id)
-      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' DO NOTHING;
+      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type IN ('due_date', 'do_date') DO NOTHING;
     END IF;
   END IF;
 
