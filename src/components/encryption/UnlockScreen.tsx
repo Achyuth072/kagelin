@@ -7,6 +7,15 @@ import { AuthPasswordField } from "@/components/auth/AuthPasswordField";
 import { Button } from "@/components/ui/button";
 import { AUTH_LINK_CLASS } from "@/components/auth/authLinkClass";
 import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog";
+import { RecoveryCodeDisplay } from "@/components/encryption/RecoveryCodeDisplay";
+import {
+  reissueRecoveryCode,
   unlockWithPassphrase,
   unlockWithRecoveryCode,
 } from "@/lib/crypto/keyManager";
@@ -24,6 +33,7 @@ export function UnlockScreen({
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newRecoveryCode, setNewRecoveryCode] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,10 +44,13 @@ export function UnlockScreen({
     try {
       if (mode === "passphrase") {
         await unlockWithPassphrase(userId, value);
+        onUnlocked();
       } else {
         await unlockWithRecoveryCode(userId, value);
+        // Recovery codes are single-use.
+        const code = await reissueRecoveryCode(userId);
+        setNewRecoveryCode(code);
       }
-      onUnlocked();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't unlock.");
     } finally {
@@ -112,6 +125,27 @@ export function UnlockScreen({
             : "Use my passphrase instead"}
         </button>
       </form>
+
+      <ResponsiveDialog open={newRecoveryCode !== null} onOpenChange={() => {}}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>New recovery code</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              The recovery code you just used no longer works. Save this one —
+              it&apos;s shown only once.
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+          {newRecoveryCode && (
+            <div className="px-4 pb-4 sm:p-0">
+              <RecoveryCodeDisplay
+                recoveryCode={newRecoveryCode}
+                onContinue={onUnlocked}
+                continueLabel="Continue"
+              />
+            </div>
+          )}
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </AuthShell>
   );
 }
