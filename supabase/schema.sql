@@ -442,7 +442,7 @@ BEGIN
                 'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
               )),
               NEW.id)
-      ON CONFLICT (user_id, type, scheduled_at) WHERE status = 'pending' DO NOTHING;
+      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' DO NOTHING;
     END IF;
 
     IF (user_settings->'notifications'->>'do_date_alerts')::boolean IS NOT FALSE
@@ -457,7 +457,7 @@ BEGIN
                 'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
               )),
               NEW.id)
-      ON CONFLICT (user_id, type, scheduled_at) WHERE status = 'pending' DO NOTHING;
+      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' DO NOTHING;
     END IF;
   END IF;
 
@@ -929,10 +929,15 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.user_timer_state;
 -- race-free WHERE ends_at = <deadline> claim) are unchanged — see ADR 0002.
 -- =============================================================================
 
--- One row per (user, type, deadline) while pending.
+-- timer_end has one pending row per deadline; task reminders include
+-- reference_id so distinct tasks due at the same instant do not collide.
 CREATE UNIQUE INDEX IF NOT EXISTS notification_queue_pending_dedup_idx
   ON public.notification_queue (user_id, type, scheduled_at)
-  WHERE status = 'pending';
+  WHERE status = 'pending' AND type = 'timer_end';
+
+CREATE UNIQUE INDEX IF NOT EXISTS notification_queue_task_pending_dedup_idx
+  ON public.notification_queue (user_id, type, scheduled_at, reference_id)
+  WHERE status = 'pending' AND type IN ('due_date', 'do_date');
 
 CREATE OR REPLACE FUNCTION handle_timer_notification_sync()
 RETURNS TRIGGER
