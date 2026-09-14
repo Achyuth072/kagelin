@@ -40,4 +40,23 @@ describe("purgeDeviceContent", () => {
     expect(idbStore.has("REACT_QUERY_OFFLINE_CACHE")).toBe(false);
     expect(JSON.stringify([...idbStore.values()])).not.toContain("content");
   });
+
+  it("closes notifications already showing decrypted text", async () => {
+    const notifications = [{ close: vi.fn() }, { close: vi.fn() }];
+    const registration = {
+      getNotifications: vi.fn().mockResolvedValue(notifications),
+    };
+    vi.stubGlobal("navigator", {
+      serviceWorker: {
+        getRegistration: vi.fn().mockResolvedValue(registration),
+      },
+    });
+
+    await purgeDeviceContent(new QueryClient());
+
+    expect(notifications[0].close).toHaveBeenCalled();
+    expect(notifications[1].close).toHaveBeenCalled();
+
+    vi.unstubAllGlobals();
+  });
 });
