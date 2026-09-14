@@ -37,6 +37,13 @@ const recordActivityMock = vi.fn();
 vi.mock("@/lib/crypto/autoLock", () => ({
   getIdleMs: () => getIdleMsMock(),
   recordActivity: () => recordActivityMock(),
+  shouldAutoLockNow: (
+    autoLock: { enabled: boolean; minutes: number },
+    wouldUnlock: boolean,
+  ) =>
+    wouldUnlock &&
+    autoLock.enabled &&
+    getIdleMsMock() >= Math.max(1, autoLock.minutes) * 60_000,
 }));
 
 vi.mock("@/lib/hooks/useAutoLockTimer", () => ({

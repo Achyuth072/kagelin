@@ -6,7 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { getEncryptionKeyRow } from "@/lib/crypto/keyManager";
 import { keyStore } from "@/lib/crypto/keyStore";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
-import { getIdleMs, recordActivity } from "@/lib/crypto/autoLock";
+import { recordActivity, shouldAutoLockNow } from "@/lib/crypto/autoLock";
 import { useAutoLockTimer } from "@/lib/hooks/useAutoLockTimer";
 import { useUiStore } from "@/lib/store/uiStore";
 
@@ -19,13 +19,7 @@ export type EncryptionGateStatus =
   | "unlocked"
   | "unavailable";
 
-type AsyncStatus =
-  | "loading"
-  | "needs-setup"
-  | "needs-unlock"
-  | "needs-migration"
-  | "unlocked"
-  | "unavailable";
+type AsyncStatus = Exclude<EncryptionGateStatus, "not-applicable">;
 
 export function useEncryptionGate(): {
   status: EncryptionGateStatus;
@@ -38,6 +32,7 @@ export function useEncryptionGate(): {
   const [version, setVersion] = useState(0);
   const autoLockEnabled = useUiStore((s) => s.autoLockEnabled);
   const autoLockMinutes = useUiStore((s) => s.autoLockMinutes);
+  // Avoid re-running the status effect on settings changes.
   const autoLockEnabledRef = useRef(autoLockEnabled);
   const autoLockMinutesRef = useRef(autoLockMinutes);
   useEffect(() => {
@@ -62,10 +57,13 @@ export function useEncryptionGate(): {
 
         const wouldUnlock = !!row && !!cachedKey && row.migrated_at !== null;
         if (
-          wouldUnlock &&
-          autoLockEnabledRef.current &&
-          // Clamp to prevent corrupted/stale values (<= 0) from firing immediately.
-          getIdleMs() >= Math.max(1, autoLockMinutesRef.current) * 60_000
+          shouldAutoLockNow(
+            {
+              enabled: autoLockEnabledRef.current,
+              minutes: autoLockMinutesRef.current,
+            },
+            wouldUnlock,
+          )
         ) {
           await purgeDeviceContent(queryClient);
           if (!cancelled) setAsyncStatus("needs-unlock");

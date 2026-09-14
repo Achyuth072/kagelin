@@ -17,3 +17,15 @@ export function getIdleMs(): number {
     return 0;
   }
 }
+
+export function shouldAutoLockNow(
+  autoLock: { enabled: boolean; minutes: number },
+  wouldUnlock: boolean,
+): boolean {
+  return (
+    wouldUnlock &&
+    autoLock.enabled &&
+    // Prevent non-positive values from locking immediately.
+    getIdleMs() >= Math.max(1, autoLock.minutes) * 60_000
+  );
+}
