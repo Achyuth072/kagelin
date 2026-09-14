@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import * as Sentry from "@sentry/nextjs";
 import {
   MoreVertical,
   FileDown,
@@ -59,7 +60,6 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
         notify.success(formatSyncSummary(summary), { id: toastId });
         trigger("success");
       }
-      // Refetch so pulled/pushed changes appear without a manual reload
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
     } catch {
       notify.error("Sync failed", { id: toastId });
@@ -110,14 +110,15 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
         return;
       }
 
-      // Create each event sequentially
       let importedCount = 0;
       for (const eventInput of parsedEvents) {
         try {
           await createEvent.mutateAsync(eventInput);
           importedCount++;
         } catch (err) {
-          console.error("Failed to import single event:", err);
+          Sentry.captureException(err, {
+            tags: { context: "ics-import-single-event" },
+          });
         }
       }
 
@@ -135,7 +136,6 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
       trigger("thud");
     } finally {
       setIsImporting(false);
-      // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
