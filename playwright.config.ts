@@ -43,5 +43,14 @@ export default defineConfig({
         viewport: { width: 360, height: 780 },
       },
     },
+    {
+      // Real Firefox engine — catches worker-MIME-type bugs Chromium tolerates silently.
+      // Scoped to the SW regression spec only: the rest of the suite isn't
+      // written against Firefox's offline/navigation quirks (e.g.
+      // offline-fallback.spec.ts) and isn't in scope here.
+      name: "firefox",
+      testMatch: "sw-registers-firefox.spec.ts",
+      use: { ...devices["Desktop Firefox"] },
+    },
   ],
 });
