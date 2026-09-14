@@ -29,6 +29,36 @@ async function cacheMasterKey(
   recordActivity();
 }
 
+async function unwrapOrThrow(
+  wrapped: string,
+  derivedKey: Uint8Array,
+  wrongCredentialMessage: string,
+): Promise<Uint8Array> {
+  try {
+    return await unwrapMasterKey(wrapped, derivedKey);
+  } catch {
+    throw new UnlockError(wrongCredentialMessage);
+  }
+}
+
+async function updateEncryptionKeyRow(
+  userId: string,
+  patch: Record<string, unknown>,
+): Promise<EncryptionKeyRow> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("encryption_keys")
+    .update(patch)
+    .eq("user_id", userId)
+    .select()
+    .single();
+  if (error) throw error;
+
+  const row = data as EncryptionKeyRow;
+  await encryptionKeyRowCache.save(userId, row);
+  return row;
+}
+
 async function fetchEncryptionKeyRow(
   userId: string,
 ): Promise<EncryptionKeyRow | null> {
@@ -61,16 +91,9 @@ export async function getEncryptionKeyRow(
 }
 
 export async function markMigrationComplete(userId: string): Promise<void> {
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("encryption_keys")
-    .update({ migrated_at: new Date().toISOString() })
-    .eq("user_id", userId)
-    .select()
-    .single();
-  if (error) throw error;
-
-  await encryptionKeyRowCache.save(userId, data as EncryptionKeyRow);
+  await updateEncryptionKeyRow(userId, {
+    migrated_at: new Date().toISOString(),
+  });
 }
 
 export interface SetupEncryptionResult {
@@ -136,12 +159,11 @@ export async function unlockWithPassphrase(
     row.passphrase_kdf_params,
   );
 
-  let masterKey: Uint8Array;
-  try {
-    masterKey = await unwrapMasterKey(row.wrapped_key_passphrase, derivedKey);
-  } catch {
-    throw new UnlockError("That passphrase isn't right.");
-  }
+  const masterKey = await unwrapOrThrow(
+    row.wrapped_key_passphrase,
+    derivedKey,
+    "That passphrase isn't right.",
+  );
 
   await cacheMasterKey(userId, masterKey);
   return masterKey;
@@ -163,12 +185,11 @@ export async function unlockWithRecoveryCode(
     row.recovery_kdf_params,
   );
 
-  let masterKey: Uint8Array;
-  try {
-    masterKey = await unwrapMasterKey(row.wrapped_key_recovery, derivedKey);
-  } catch {
-    throw new UnlockError("That recovery code isn't right.");
-  }
+  const masterKey = await unwrapOrThrow(
+    row.wrapped_key_recovery,
+    derivedKey,
+    "That recovery code isn't right.",
+  );
 
   await cacheMasterKey(userId, masterKey);
   return masterKey;
@@ -191,35 +212,21 @@ export async function changePassphrase(
     row.passphrase_kdf_params,
   );
 
-  let masterKey: Uint8Array;
-  try {
-    masterKey = await unwrapMasterKey(
-      row.wrapped_key_passphrase,
-      currentDerivedKey,
-    );
-  } catch {
-    throw new UnlockError("That passphrase isn't right.");
-  }
+  const masterKey = await unwrapOrThrow(
+    row.wrapped_key_passphrase,
+    currentDerivedKey,
+    "That passphrase isn't right.",
+  );
 
   const newSalt = await generateSalt();
   const newDerivedKey = await deriveKeyFromPassphrase(newPassphrase, newSalt);
   const newWrapped = await wrapMasterKey(masterKey, newDerivedKey);
 
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("encryption_keys")
-    .update({
-      passphrase_salt: await bytesToBase64(newSalt),
-      passphrase_kdf_params: DEFAULT_ARGON2_PARAMS,
-      wrapped_key_passphrase: newWrapped,
-    })
-    .eq("user_id", userId)
-    .select()
-    .single();
-  if (error) throw error;
-
-  // Prevent old passphrase from unlocking offline.
-  await encryptionKeyRowCache.save(userId, data as EncryptionKeyRow);
+  await updateEncryptionKeyRow(userId, {
+    passphrase_salt: await bytesToBase64(newSalt),
+    passphrase_kdf_params: DEFAULT_ARGON2_PARAMS,
+    wrapped_key_passphrase: newWrapped,
+  });
 
   await cacheMasterKey(userId, masterKey);
 }
@@ -238,21 +245,11 @@ export async function reissueRecoveryCode(userId: string): Promise<string> {
   );
   const wrapped = await wrapMasterKey(masterKey, recoveryKey);
 
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from("encryption_keys")
-    .update({
-      recovery_salt: await bytesToBase64(recoverySalt),
-      recovery_kdf_params: DEFAULT_ARGON2_PARAMS,
-      wrapped_key_recovery: wrapped,
-    })
-    .eq("user_id", userId)
-    .select()
-    .single();
-  if (error) throw error;
-
-  // Prevent invalidated recovery code from unlocking offline.
-  await encryptionKeyRowCache.save(userId, data as EncryptionKeyRow);
+  await updateEncryptionKeyRow(userId, {
+    recovery_salt: await bytesToBase64(recoverySalt),
+    recovery_kdf_params: DEFAULT_ARGON2_PARAMS,
+    wrapped_key_recovery: wrapped,
+  });
 
   return recoveryCode.formatted;
 }
