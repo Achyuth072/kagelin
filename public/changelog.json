@@ -1,5 +1,29 @@
 [
   {
+    "version": "1.43.0-preview.8",
+    "date": "2026-09-15",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Reject plaintext writes server-side once a user has migrated"
+      ],
+      "Improved": [
+        "Dedupe unwrap-or-throw and encryption_keys update in keyManager",
+        "Extract shouldAutoLockNow and dedupe AsyncStatus type in useEncryptionGate",
+        "Dedupe content-key-unavailable error construction in wrapClient",
+        "Dedupe userId shape-guard in keyStore/migrationSnapshot"
+      ],
+      "Fixed": [
+        "Report single-event ICS import failures to Sentry, not console",
+        "Exempt static .js assets from the auth proxy, unbreaking SW on Firefox",
+        "Match ON CONFLICT predicate to the scoped task-dedup index",
+        "Reissue recovery code after it's used to unlock",
+        "Close displayed notifications on purge so decrypted text doesn't survive lock/sign-out",
+        "Scope task notification dedup index to reference_id, not just scheduled_at"
+      ]
+    }
+  },
+  {
     "version": "1.43.0-preview.7",
     "date": "2026-09-13",
     "channel": "preview",
@@ -752,24 +776,6 @@
         "Clear timer notification ref before cancel resolves to avoid latching scheduling off",
         "Narrow unknown errors in edge functions with shared toErrorMessage and pushStatusCode helpers",
         "Reorder sendOptions in process-queue to stop a TDZ crash killing every push"
-      ]
-    }
-  },
-  {
-    "version": "1.27.0",
-    "date": "2026-08-01",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Add mobile week view with edge-gated day-window paging"
-      ],
-      "Fixed": [
-        "Make scheduled push delivery reliable (timer/task isolation, claim, retry)",
-        "Align local and push notification tags so they replace instead of stacking",
-        "Stop duplicate timer notifications from a schedule race",
-        "Route notification clicks to their target URL instead of always /",
-        "Drop y-transform from page transition to stop PiP button flash on /focus",
-        "Make /login scrollable so content isn't cut off on short mobile viewports"
       ]
     }
   }
