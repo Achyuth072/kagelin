@@ -1,6 +1,6 @@
 {
   "name": "kagelin",
-  "version": "1.42.0",
+  "version": "1.43.0-preview.8",
   "license": "AGPL-3.0-only",
   "private": false,
   "scripts": {
@@ -22,6 +22,7 @@
     "analyze": "npx cross-env ANALYZE=true npm run build",
     "dead-code": "npx knip",
     "unused-deps": "npx depcheck",
+    "ast-grep": "ast-grep scan",
     "copy-wasm": "node -e \"require('fs').copyFileSync('node_modules/sql.js/dist/sql-wasm.wasm', 'public/sql-wasm.wasm')\"",
     "preview": "node scripts/release.cjs --channel=preview",
     "release": "node scripts/release.cjs --channel=stable",
@@ -79,6 +80,7 @@
     "ical.js": "^2.2.1",
     "idb-keyval": "^6.3.0",
     "ipaddr.js": "^2.4.0",
+    "libsodium-wrappers-sumo": "^0.8.4",
     "lucide-react": "^1.24.0",
     "next": "16.2.10",
     "next-themes": "^0.4.6",
@@ -106,6 +108,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@ast-grep/cli": "^0.45.3",
     "@commitlint/cli": "^21.2.1",
     "@commitlint/config-conventional": "^21.2.0",
     "@next/bundle-analyzer": "^16.2.10",
@@ -139,5 +142,8 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^6.0.3",
     "vitest": "^4.0.16"
+  },
+  "allowScripts": {
+    "@ast-grep/cli@0.45.3": true
   }
 }

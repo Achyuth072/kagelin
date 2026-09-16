@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
+import { useActiveBanner } from "@/components/bannerSlot";
 import { Button } from "@/components/ui/button";
 import { LoaderOverlay } from "@/components/ui/loader-overlay";
 import {
@@ -41,7 +42,9 @@ import { PwaInstallRow } from "@/components/settings/PwaInstallRow";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
 import { BackupSyncSettings } from "@/components/settings/BackupSyncSettings";
 import { AccountSection } from "@/components/settings/AccountSection";
+import { EncryptionSection } from "@/components/settings/EncryptionSection";
 import { PrivacySection } from "@/components/settings/PrivacySection";
+import { DiagnosticExportSettings } from "@/components/settings/DiagnosticExportSettings";
 import { useAccountData } from "@/lib/hooks/useAccountData";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -105,6 +108,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const goals = useUiStore((state) => state.goals);
   const setGoals = useUiStore((state) => state.setGoals);
   const { user, signOut, isGuestMode } = useAuth();
+  const hasTopBanner = useActiveBanner() !== null;
   const router = useRouter();
   const anchoredBack = useAnchoredBack();
   const searchParams = useSearchParams();
@@ -130,6 +134,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const { trigger } = useHaptic();
   const { clearCloudData } = useAccountData();
   const { profile } = useProfile({ enabled: activeTab === "account" });
+  const mainRef = useRef<HTMLElement>(null);
 
   // user goes null before the redirect to /login lands; avoids a flash.
   if (!user) {
@@ -139,6 +144,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const handleTabChange = (v: string) => {
     trigger("toggle");
     setActiveTab(v as "appearance" | "preferences" | "account");
+    mainRef.current?.scrollTo(0, 0);
   };
 
   const handleSignOut = async () => {
@@ -171,7 +177,16 @@ export function SettingsClient({ version }: SettingsClientProps) {
 
   return (
     <>
-      <div className="flex flex-col min-h-[calc(100svh-4rem)] p-4 md:p-6 gap-6 md:gap-8 relative overflow-hidden scrollbar-hide">
+      <div
+        className={cn(
+          "flex flex-col p-4 md:p-6 gap-6 md:gap-8 relative overflow-hidden scrollbar-hide",
+          // AppShell adds top padding for the offline/update banner on this route
+          // (hideMobileNav skips its header padding); match it so content isn't clipped.
+          hasTopBanner
+            ? "h-[calc(100dvh-var(--offline-banner-height))]"
+            : "h-dvh",
+        )}
+      >
         <div className="md:hidden">
           <div className="flex items-center gap-3 mb-2">
             <Button
@@ -191,7 +206,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
           </p>
         </div>
 
-        <div className="md:hidden sticky top-0 z-20 -mx-4 border-b border-border/50 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="md:hidden -mx-4 border-b border-border/50 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <Tabs
             value={activeTab}
             onValueChange={handleTabChange}
@@ -218,8 +233,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
           </p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8 md:gap-12 items-start w-full flex-1">
-          <aside className="hidden md:block w-56 shrink-0 sticky top-6">
+        <div className="flex flex-col md:flex-row gap-8 md:gap-12 w-full flex-1 min-h-0">
+          <aside className="hidden md:block w-56 shrink-0">
             <Tabs
               value={activeTab}
               onValueChange={handleTabChange}
@@ -244,7 +259,10 @@ export function SettingsClient({ version }: SettingsClientProps) {
             className="hidden md:block self-stretch bg-brand/20 shrink-0"
           />
 
-          <main className="space-y-8 md:space-y-12 flex flex-col flex-1 min-w-0 max-w-6xl w-full">
+          <main
+            ref={mainRef}
+            className="space-y-8 md:space-y-12 flex flex-col flex-1 min-w-0 min-h-0 max-w-6xl w-full overflow-y-auto scrollbar-hide safe-bottom"
+          >
             {activeTab === "appearance" && (
               <section className={cn("space-y-4", SECTION_MAX_WIDTH)}>
                 <div>
@@ -367,8 +385,18 @@ export function SettingsClient({ version }: SettingsClientProps) {
                     <NotificationSettings />
 
                     <PwaInstallRow />
+                  </div>
+                </section>
 
+                <section className="space-y-4">
+                  <div>
+                    <h2 className="type-h3">Privacy &amp; Diagnostics</h2>
+                  </div>
+
+                  <div className="space-y-3">
                     <PrivacySection />
+
+                    <DiagnosticExportSettings />
                   </div>
                 </section>
 
@@ -434,7 +462,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
                         className="w-full bg-brand hover:bg-brand/90 text-brand-foreground transition-all font-semibold"
                         onClick={() => {
                           trigger("toggle");
-                          router.push("/login");
+                          router.push("/signup");
                         }}
                       >
                         <User className="h-4 w-4 mr-2" />
@@ -495,6 +523,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
                   />
 
                   {!isGuestMode && <AccountSection />}
+
+                  {!isGuestMode && <EncryptionSection />}
 
                   <BackupSyncSettings />
 
@@ -608,7 +638,6 @@ interface GoalFieldProps {
   onCommit: (value: number | null) => void;
 }
 
-/** Local draft; commits to the store on blur. */
 function GoalField({ label, value, onCommit }: GoalFieldProps) {
   const [text, setText] = useState(value != null ? String(value) : "");
   const [prevValue, setPrevValue] = useState(value);

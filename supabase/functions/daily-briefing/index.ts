@@ -45,21 +45,20 @@ serve(async (req: Request) => {
           profile?.settings?.notifications?.morning_briefing ?? true;
         if (!isEnabled) continue;
 
-        const { data: tasks } = await supabaseAdmin
+        const { count } = await supabaseAdmin
           .from("tasks")
-          .select("content")
+          .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
           .eq("is_completed", false)
-          .filter("do_date", "gte", new Date().toISOString().split("T")[0])
-          .limit(5);
+          .filter("do_date", "gte", new Date().toISOString().split("T")[0]);
 
-        const taskCount = tasks?.length || 0;
+        const taskCount = count || 0;
         if (taskCount === 0) continue;
 
         const body =
           taskCount > 1
-            ? `You have ${taskCount} tasks for today. First up: ${tasks[0].content}`
-            : `Ready for today? Your task is: ${tasks[0].content}`;
+            ? `You have ${taskCount} tasks for today.`
+            : `Ready for today? You have 1 task.`;
 
         await supabaseAdmin.from("notification_queue").insert({
           user_id: user.id,
@@ -87,15 +86,14 @@ serve(async (req: Request) => {
           profile?.settings?.notifications?.evening_plan ?? true;
         if (!isEnabled) continue;
 
-        const { data: eveningTasks } = await supabaseAdmin
+        const { count: eveningCount } = await supabaseAdmin
           .from("tasks")
-          .select("content")
+          .select("id", { count: "exact", head: true })
           .eq("user_id", user.id)
           .eq("is_completed", false)
-          .eq("is_evening", true)
-          .limit(5);
+          .eq("is_evening", true);
 
-        const taskCount = eveningTasks?.length || 0;
+        const taskCount = eveningCount || 0;
         if (taskCount === 0) continue;
 
         const body = `You have ${taskCount} tasks set for tonight. Ready to wrap up?`;

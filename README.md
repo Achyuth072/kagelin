@@ -85,6 +85,7 @@ Most productivity apps want your email before you've written a single task, and 
 
 - **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed.
 - **Accounts & Auth**: Google, GitHub, or breach-checked email/password sign-in with multi-provider identity linking and password reset.
+- **Zero-knowledge encryption**: tasks, habits, projects, labels, and calendar content are encrypted on your device under a passphrase Kagelin never sees. We can't read what you wrote — only that an item exists and when it's due.
 - **WebDAV backup**: keep a copy of everything on a server you own (Nextcloud, Synology). Available at every tier, account or not. It is a backup, not a sync: each upload replaces the last.
 - **Backups & Portability**: encrypted `.zip` export/import, guest backup reminders, and instant cloud data wipe.
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.

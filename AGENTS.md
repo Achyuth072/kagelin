@@ -20,6 +20,7 @@ npm run e2e                 # playwright (automatically starts dev server if not
 npx playwright test <path>  # run a single e2e spec
 npm run dead-code           # knip — unused exports/files
 npm run unused-deps          # depcheck
+npm run ast-grep             # ast-grep scan — repo-specific structural lint rules (.ast-grep/rules), advisory
 ```
 
 Playwright automatically manages the dev server via the `webServer` block in `playwright.config.ts`.
@@ -60,6 +61,7 @@ Kagelin (codename Kanso) is a Next.js 16 App Router monolith backed by Supabase 
 - Unused vars/params: prefix with `_` (linter ignores `^_`).
 - A catch block that only does `console.*` is a lint error — rethrow, surface to the UI, or report to Sentry instead of swallowing it silently.
 - React Compiler is on (`eslint-plugin-react-compiler` set to error) — manual `useMemo`/`useCallback` should generally be unnecessary; a compiler bailout is a smell worth checking rather than papering over.
+- **Code Search Constraint**: for _structural_ searches on source files (`.ts`, `.tsx`, `.js`, `.jsx`) — a call pattern, a JSX shape, a catch block, a hook's argument list — use `ast-grep` via `Bash` (`npx ast-grep run -p '<pattern>' -l ts <path>`), not grep; it matches by AST so formatting and string contents that look like code don't fool it. Plain grep/rg is fine for simple lexical lookups (where is `addEvent` called, does this file import `X`) and for non-code files (`.md`, `.json`, `.env`). `npm run ast-grep` runs the repo's custom `.ast-grep/rules/` lint rules (advisory only, not yet part of `validate`); see [`.scratch/tooling/ast-grep-usage-research.md`](.scratch/tooling/ast-grep-usage-research.md) for pattern syntax and more advanced usage.
 
 ## Agent skills
 

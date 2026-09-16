@@ -35,6 +35,8 @@ import {
 } from "@/lib/hooks/useConnectedCalendarProviders";
 import { useQueryClient } from "@tanstack/react-query";
 import { notify } from "@/lib/notify";
+import { connectCalendars } from "@/lib/mutations/external-calendar";
+import { handleMutationError } from "@/lib/utils/mutation-error";
 
 interface ConnectCalendarDialogProps {
   onSuccess?: () => void;
@@ -123,28 +125,16 @@ export function ConnectCalendarDialog({
     if (!selectedProvider) return;
     setPickerSaving(true);
     try {
-      const picks = pickerCalendars
-        .filter((c) => pickerSelected.has(c.url))
-        .map((c) => ({
-          remote_calendar_id: c.url,
-          name: c.displayName,
-          color: c.color,
-        }));
-      const res = await fetch(`/api/calendar/calendars`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: selectedProvider, calendars: picks }),
-      });
-      if (!res.ok) {
-        const { error } = await res.json().catch(() => ({ error: "" }));
-        throw new Error(error || "Failed to save");
-      }
+      await connectCalendars(
+        selectedProvider,
+        pickerCalendars.filter((c) => pickerSelected.has(c.url)),
+      );
       queryClient.invalidateQueries({ queryKey: ["calendar-events"] });
       notify.success("Calendars saved — run Sync to pull events");
       setOpen(false);
       onSuccess?.();
     } catch (e) {
-      notify.error(e instanceof Error ? e.message : "Failed to save calendars");
+      handleMutationError(e);
     } finally {
       setPickerSaving(false);
     }

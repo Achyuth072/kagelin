@@ -130,6 +130,7 @@ CREATE TABLE IF NOT EXISTS public.notification_queue (
   reference_id UUID,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   sent_at TIMESTAMPTZ,
+  -- Scrubbed plaintext (ADR 0016); must not store raw error payloads.
   error_message TEXT,
   retry_count INT NOT NULL DEFAULT 0,
   claimed_at TIMESTAMPTZ,
@@ -391,22 +392,32 @@ SELECT cron.schedule(
   $$SELECT public.invoke_edge_function('daily-briefing')$$
 );
 
--- C. Task Notification Sync Trigger Function
+-- Returns encrypted payload envelope for valid ciphertext, or NULL to omit via jsonb_strip_nulls.
+-- Scheme literal below must match SCHEME in src/lib/crypto/envelope.ts.
+CREATE OR REPLACE FUNCTION public.encrypted_notification_body(
+  template TEXT,
+  ciphertext TEXT
+)
+RETURNS JSONB
+LANGUAGE sql
+IMMUTABLE
+SET search_path = public
+AS $$
+  SELECT CASE
+    WHEN ciphertext LIKE 'xchacha20poly1305-v1:%'
+    THEN jsonb_build_object('template', template, 'ciphertext', ciphertext)
+  END;
+$$;
+
 CREATE OR REPLACE FUNCTION handle_task_notification_sync()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = public
 AS $$
 DECLARE
-  payload_title TEXT;
-  payload_body TEXT;
   user_settings JSONB;
 BEGIN
-  -- 1. CLEANUP: cancel only the notifications this trigger itself creates.
-  -- timer_end rows share reference_id with the task but are owned by the focus
-  -- timer — cancelling those killed running timers' notifications. Scoped to
-  -- scheduled_at > now() (#155) so a row that's already due is left for the
-  -- poller instead of being cancelled by this write.
+  -- Cancel only task-owned due/do notifications; leave timer_end rows and past-due rows (#155) untouched.
   IF TG_OP IN ('UPDATE', 'DELETE') THEN
     UPDATE public.notification_queue
     SET status = 'cancelled'
@@ -416,41 +427,37 @@ BEGIN
       AND scheduled_at > now();
   END IF;
 
-  -- 2. CREATE NEW NOTIFICATIONS: If task is created or updated (and not completed)
   IF (TG_OP IN ('INSERT', 'UPDATE')) AND (NEW.is_completed = FALSE) THEN
-    -- Fetch user settings to check preferences
     SELECT settings INTO user_settings FROM profiles WHERE id = NEW.user_id;
 
-    -- i. Handle Due Date
     IF (user_settings->'notifications'->>'due_date_alerts')::boolean IS NOT FALSE 
        AND NEW.due_date IS NOT NULL AND NEW.due_date > now() THEN
-      payload_title := 'Task Due Soon';
-      payload_body := 'Your task "' || NEW.content || '" is due now.';
-
       INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
       VALUES (NEW.user_id, NEW.due_date, 'due_date',
-              jsonb_build_object(
-                'title', payload_title,
-                'body', payload_body,
+              jsonb_strip_nulls(jsonb_build_object(
+                'title', 'Task Due Soon',
+                'body', 'You have a task due now.',
+                'encrypted', public.encrypted_notification_body(
+                  'Your task "{}" is due now.', NEW.content),
                 'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
-              ),
-              NEW.id);
+              )),
+              NEW.id)
+      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type IN ('due_date', 'do_date') DO NOTHING;
     END IF;
 
-    -- ii. Handle Do Date
-    IF (user_settings->'notifications'->>'do_date_alerts')::boolean IS NOT FALSE 
+    IF (user_settings->'notifications'->>'do_date_alerts')::boolean IS NOT FALSE
        AND NEW.do_date IS NOT NULL AND NEW.do_date > now() THEN
-      payload_title := 'Time to focus';
-      payload_body := 'Scheduled: ' || NEW.content;
-
       INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
       VALUES (NEW.user_id, NEW.do_date, 'do_date',
-              jsonb_build_object(
-                'title', payload_title,
-                'body', payload_body,
+              jsonb_strip_nulls(jsonb_build_object(
+                'title', 'Time to focus',
+                'body', 'You have a task scheduled now.',
+                'encrypted', public.encrypted_notification_body(
+                  'Scheduled: {}', NEW.content),
                 'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
-              ),
-              NEW.id);
+              )),
+              NEW.id)
+      ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type IN ('due_date', 'do_date') DO NOTHING;
     END IF;
   END IF;
 
@@ -602,19 +609,9 @@ CREATE POLICY "Users can delete own notification_queue" ON notification_queue
 -- 11. MIGRATION: 20260109_rls_hardening (Validation Constraints)
 -- =============================================================================
 
--- 1. Projects Table Constraints
-ALTER TABLE public.projects
-  ADD CONSTRAINT projects_name_length_check CHECK (char_length(name) <= 50);
-
+-- Projects Table Constraints
 ALTER TABLE public.projects
   ADD CONSTRAINT projects_color_check CHECK (color ~* '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$');
-
--- 2. Tasks Table Constraints
-ALTER TABLE public.tasks
-  ADD CONSTRAINT tasks_content_length_check CHECK (char_length(content) <= 500);
-
-ALTER TABLE public.tasks
-  ADD CONSTRAINT tasks_description_length_check CHECK (char_length(description) <= 5000);
 
 -- =============================================================================
 -- 12. HABITS & HABIT_ENTRIES
@@ -634,10 +631,7 @@ CREATE TABLE IF NOT EXISTS public.habits (
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   archived_at TIMESTAMPTZ,
   -- Links to its raw record in habit_imports for round-trip export (ADR 0006).
-  source_uuid TEXT,
-
-  CONSTRAINT habits_name_length_check CHECK (char_length(name) <= 100),
-  CONSTRAINT habits_description_length_check CHECK (char_length(description) <= 500)
+  source_uuid TEXT
 );
 
 -- Index for faster user-scoped lookups
@@ -716,6 +710,7 @@ CREATE TABLE IF NOT EXISTS public.habit_imports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   source_app TEXT NOT NULL DEFAULT 'uhabits',
+  -- Client-encrypted (ADR 0016). raw holds JSON ciphertext; do not use JSONB operators.
   file_name TEXT,
   raw JSONB NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL
@@ -771,8 +766,6 @@ CREATE TABLE IF NOT EXISTS public.calendar_events (
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   
-  CONSTRAINT calendar_events_title_length_check CHECK (char_length(title) <= 200),
-  CONSTRAINT calendar_events_description_length_check CHECK (char_length(description) <= 2000),
   CONSTRAINT calendar_events_end_after_start CHECK (end_time >= start_time)
 );
 
@@ -780,6 +773,7 @@ CREATE TABLE IF NOT EXISTS public.calendar_events (
 CREATE INDEX IF NOT EXISTS calendar_events_user_id_idx ON public.calendar_events (user_id);
 CREATE INDEX IF NOT EXISTS calendar_events_start_time_idx ON public.calendar_events (start_time);
 CREATE INDEX IF NOT EXISTS calendar_events_remote_id_idx ON public.calendar_events (remote_id) WHERE remote_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS calendar_events_user_ics_uid_key ON public.calendar_events (user_id, ics_uid) WHERE ics_uid IS NOT NULL;
 
 -- Updated At Trigger
 CREATE TRIGGER calendar_events_updated_at
@@ -831,8 +825,9 @@ CREATE TABLE IF NOT EXISTS public.external_calendars (
   sync_token TEXT, -- CTag for CalDAV, nextSyncToken for Google, deltaLink for MS Graph
   last_sync_at TIMESTAMPTZ,
   sync_status TEXT DEFAULT 'pending' CHECK (sync_status IN ('pending', 'syncing', 'success', 'error')),
+  -- Scrubbed plaintext (ADR 0016); see notification_queue.error_message.
   sync_error TEXT,
-  
+
   -- Settings
   sync_enabled BOOLEAN DEFAULT true,
   sync_direction TEXT DEFAULT 'bidirectional' CHECK (sync_direction IN ('bidirectional', 'pull', 'push')),
@@ -842,9 +837,7 @@ CREATE TABLE IF NOT EXISTS public.external_calendars (
   
   -- Timestamps
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
-  
-  CONSTRAINT external_calendars_name_length CHECK (char_length(name) <= 100)
+  updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
 
 -- Indexes
@@ -936,10 +929,15 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.user_timer_state;
 -- race-free WHERE ends_at = <deadline> claim) are unchanged — see ADR 0002.
 -- =============================================================================
 
--- One row per (user, type, deadline) while pending.
+-- timer_end has one pending row per deadline; task reminders include
+-- reference_id so distinct tasks due at the same instant do not collide.
 CREATE UNIQUE INDEX IF NOT EXISTS notification_queue_pending_dedup_idx
   ON public.notification_queue (user_id, type, scheduled_at)
-  WHERE status = 'pending';
+  WHERE status = 'pending' AND type = 'timer_end';
+
+CREATE UNIQUE INDEX IF NOT EXISTS notification_queue_task_pending_dedup_idx
+  ON public.notification_queue (user_id, type, scheduled_at, reference_id)
+  WHERE status = 'pending' AND type IN ('due_date', 'do_date');
 
 CREATE OR REPLACE FUNCTION handle_timer_notification_sync()
 RETURNS TRIGGER
@@ -949,7 +947,6 @@ AS $$
 DECLARE
   user_settings JSONB;
   timer_settings JSONB;
-  task_content TEXT;
   session_threshold INT;
   auto_start_break BOOLEAN;
   auto_start_focus BOOLEAN;
@@ -1002,10 +999,6 @@ BEGIN
       auto_start_break := COALESCE((timer_settings->>'autoStartBreak')::boolean, false);
       auto_start_focus := COALESCE((timer_settings->>'autoStartFocus')::boolean, false);
 
-      IF NEW.active_task_id IS NOT NULL THEN
-        SELECT content INTO task_content FROM tasks WHERE id = NEW.active_task_id;
-      END IF;
-
       -- Replays timerStore's completeTimer() state machine: a focus interval
       -- advances to shortBreak/longBreak depending on the post-increment
       -- session count vs. the threshold; a break interval always advances
@@ -1018,7 +1011,6 @@ BEGIN
 
         payload_title := CASE WHEN cur_mode = 'focus' THEN 'Focus Complete' ELSE 'Break Complete' END;
         payload_body := CASE
-          WHEN task_content IS NOT NULL THEN 'Finished your "' || task_content || '" session. Great work!'
           WHEN cur_mode = 'focus' THEN 'Your focus session is complete. Take a break!'
           ELSE 'Your break is over. Time to focus!'
         END;
@@ -1375,4 +1367,121 @@ SELECT cron.schedule(
   $$DELETE FROM cron.job_run_details WHERE end_time < now() - interval '7 days'$$
 );
 
+-- Prune terminal notifications to prevent indefinite payload retention (ADR 0016).
+CREATE OR REPLACE FUNCTION public.prune_terminal_notification_queue()
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  DELETE FROM public.notification_queue
+  WHERE status IN ('sent', 'failed', 'cancelled')
+    AND scheduled_at < now() - interval '7 days';
+$$;
 
+REVOKE EXECUTE ON FUNCTION public.prune_terminal_notification_queue() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.prune_terminal_notification_queue() FROM anon, authenticated;
+
+SELECT cron.unschedule(jobname)
+FROM cron.job
+WHERE jobname = 'notification-queue-prune-terminal';
+
+SELECT cron.schedule(
+  'notification-queue-prune-terminal',
+  '45 0 * * *',
+  $$SELECT public.prune_terminal_notification_queue()$$
+);
+
+-- =============================================================================
+-- 21. ENCRYPTION_KEYS TABLE (Content Encryption Master Key)
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS public.encryption_keys (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  passphrase_salt TEXT NOT NULL,
+  passphrase_kdf_params JSONB NOT NULL,
+  wrapped_key_passphrase TEXT NOT NULL,
+  recovery_salt TEXT NOT NULL,
+  recovery_kdf_params JSONB NOT NULL,
+  wrapped_key_recovery TEXT NOT NULL,
+  migrated_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
+);
+
+ALTER TABLE public.encryption_keys ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own encryption_keys" ON public.encryption_keys
+  FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own encryption_keys" ON public.encryption_keys
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own encryption_keys" ON public.encryption_keys
+  FOR UPDATE USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE TRIGGER encryption_keys_updated_at
+  BEFORE UPDATE ON public.encryption_keys
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- =============================================================================
+-- 22. SERVER-SIDE PLAINTEXT BACKSTOP (post-migration)
+-- =============================================================================
+-- Rejects plaintext writes once encryption backfill completes (migrated_at set)
+-- to prevent stale clients from silently storing unencrypted content.
+
+CREATE OR REPLACE FUNCTION public.reject_unmigrated_plaintext()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  is_migrated BOOLEAN;
+  col TEXT;
+  val TEXT;
+BEGIN
+  SELECT migrated_at IS NOT NULL INTO is_migrated
+  FROM public.encryption_keys
+  WHERE user_id = NEW.user_id;
+
+  IF NOT COALESCE(is_migrated, FALSE) THEN
+    RETURN NEW;
+  END IF;
+
+  FOREACH col IN ARRAY TG_ARGV LOOP
+    val := (to_jsonb(NEW) -> col) #>> '{}';
+    IF val IS NOT NULL AND val NOT LIKE 'xchacha20poly1305-v1:%' THEN
+      RAISE EXCEPTION 'Column %.% must be encrypted once a user has completed content-key setup', TG_TABLE_NAME, col
+        USING ERRCODE = 'check_violation';
+    END IF;
+  END LOOP;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER tasks_reject_unmigrated_plaintext
+  BEFORE INSERT OR UPDATE ON public.tasks
+  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('content', 'description');
+
+CREATE TRIGGER habits_reject_unmigrated_plaintext
+  BEFORE INSERT OR UPDATE ON public.habits
+  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('name', 'description');
+
+CREATE TRIGGER projects_reject_unmigrated_plaintext
+  BEFORE INSERT OR UPDATE ON public.projects
+  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('name');
+
+CREATE TRIGGER labels_reject_unmigrated_plaintext
+  BEFORE INSERT OR UPDATE ON public.labels
+  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('name');
+
+CREATE TRIGGER calendar_events_reject_unmigrated_plaintext
+  BEFORE INSERT OR UPDATE ON public.calendar_events
+  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('title', 'description', 'location', 'category', 'metadata');
+
+CREATE TRIGGER external_calendars_reject_unmigrated_plaintext
+  BEFORE INSERT OR UPDATE ON public.external_calendars
+  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('name', 'username');
+
+CREATE TRIGGER habit_imports_reject_unmigrated_plaintext
+  BEFORE INSERT OR UPDATE ON public.habit_imports
+  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('raw', 'file_name');

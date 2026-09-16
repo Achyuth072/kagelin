@@ -1,5 +1,155 @@
 [
   {
+    "version": "1.43.0-preview.8",
+    "date": "2026-09-15",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Reject plaintext writes server-side once a user has migrated"
+      ],
+      "Improved": [
+        "Dedupe unwrap-or-throw and encryption_keys update in keyManager",
+        "Extract shouldAutoLockNow and dedupe AsyncStatus type in useEncryptionGate",
+        "Dedupe content-key-unavailable error construction in wrapClient",
+        "Dedupe userId shape-guard in keyStore/migrationSnapshot"
+      ],
+      "Fixed": [
+        "Report single-event ICS import failures to Sentry, not console",
+        "Exempt static .js assets from the auth proxy, unbreaking SW on Firefox",
+        "Match ON CONFLICT predicate to the scoped task-dedup index",
+        "Reissue recovery code after it's used to unlock",
+        "Close displayed notifications on purge so decrypted text doesn't survive lock/sign-out",
+        "Scope task notification dedup index to reference_id, not just scheduled_at"
+      ]
+    }
+  },
+  {
+    "version": "1.43.0-preview.7",
+    "date": "2026-09-13",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Don't drop migration onComplete() on StrictMode's phantom cleanup",
+        "Scope content key and guest data per account, allowlist webdav headers, redact old payloads"
+      ]
+    }
+  },
+  {
+    "version": "1.43.0-preview.6",
+    "date": "2026-09-12",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Guard getFailureCount against SSR, where localStorage doesn't exist"
+      ]
+    }
+  },
+  {
+    "version": "1.43.0-preview.5",
+    "date": "2026-09-11",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Harden guest migration against silent data loss with idempotent id-based sync",
+        "Dedupe task notification insert against pending index"
+      ]
+    }
+  },
+  {
+    "version": "1.43.0-preview.4",
+    "date": "2026-09-10",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Resume guest migration after partial failure instead of losing data"
+      ]
+    }
+  },
+  {
+    "version": "1.43.0-preview.3",
+    "date": "2026-09-10",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Prevent migration reload loop on demo-only guest data"
+      ]
+    }
+  },
+  {
+    "version": "1.43.0-preview.2",
+    "date": "2026-09-10",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Confirm large ics imports, batch invalidation, race-proof dedup"
+      ],
+      "Fixed": [
+        "Seed guest demo data with an injectable RNG for deterministic tests",
+        "Make caldav-adapter honour pastDays/futureDays sync window",
+        "Key guest migration off guest data, not the cleared flag",
+        "Settings scrolls its content pane, not the whole document",
+        "Replace amber/raw-blue colors with palette tokens in alerts",
+        "Report or rethrow console-only catch blocks in push/timer/sw code"
+      ]
+    }
+  },
+  {
+    "version": "1.43.0-preview.1",
+    "date": "2026-09-09",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Parallelize serial encryption work"
+      ],
+      "Fixed": [
+        "Encryption correctness follow-ups",
+        "Unify wrapped-client locked-key error contract across call sites"
+      ]
+    }
+  },
+  {
+    "version": "1.43.0-preview.0",
+    "date": "2026-09-08",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "End-to-end encryption for task, habit, and calendar content",
+        "Content passphrase setup, unlock, recovery, and rewrap",
+        "Locked state and manual lock, distinct from sign-out",
+        "Auto-lock after inactivity, off by default",
+        "Diagnostic export for bug reports",
+        "Warn that Backup exports leave the encrypted envelope"
+      ],
+      "Improved": [
+        "Consolidate the ciphertext envelope format into one module",
+        "Contain egress with content security policy",
+        "Scrub user content from error reports before send",
+        "Queue and display notifications without readable content"
+      ],
+      "Fixed": [
+        "Clamp auto-lock minutes against a corrupted zero value",
+        "Cancel in-flight queries before purging device content",
+        "Update the offline key-row cache directly after passphrase/recovery rotation",
+        "Surface an actionable message when sync hits a locked content key",
+        "Canonicalize visually-ambiguous chars in recovery codes",
+        "Fail migration loudly on a stale concurrent write",
+        "Guard backfill migration against concurrent edits and stale offline state",
+        "Gate migrated_at on pre-existing plaintext so backfill isn't skipped",
+        "DecryptRow throws instead of leaking ciphertext when key is unavailable",
+        "Backfill cancels legacy plaintext notifications and scrubs stale diagnostic text",
+        "Guest conversion sets a passphrase and encrypts before upload",
+        "Restart the idle clock when caching the master key so unlock sticks",
+        "Purge persisted query cache on sign-out",
+        "Dedupe ICS imports on ics_uid so re-importing a file adds nothing",
+        "Pad drawer bodies that inherit no padding on mobile",
+        "Restructure the diagnostic bundle dialog for mobile and warn before sharing",
+        "Give telemetry and diagnostics their own settings section",
+        "Point Sync to Account at signup instead of the sign-in form",
+        "Swap amber alerts for terracotta tokens that pass AA contrast in dark mode"
+      ]
+    }
+  },
+  {
     "version": "1.42.0",
     "date": "2026-09-01",
     "channel": "stable",
@@ -626,179 +776,6 @@
         "Clear timer notification ref before cancel resolves to avoid latching scheduling off",
         "Narrow unknown errors in edge functions with shared toErrorMessage and pushStatusCode helpers",
         "Reorder sendOptions in process-queue to stop a TDZ crash killing every push"
-      ]
-    }
-  },
-  {
-    "version": "1.27.0",
-    "date": "2026-08-01",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Add mobile week view with edge-gated day-window paging"
-      ],
-      "Fixed": [
-        "Make scheduled push delivery reliable (timer/task isolation, claim, retry)",
-        "Align local and push notification tags so they replace instead of stacking",
-        "Stop duplicate timer notifications from a schedule race",
-        "Route notification clicks to their target URL instead of always /",
-        "Drop y-transform from page transition to stop PiP button flash on /focus",
-        "Make /login scrollable so content isn't cut off on short mobile viewports"
-      ]
-    }
-  },
-  {
-    "version": "1.27.0-preview.2",
-    "date": "2026-08-01",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Align local and push notification tags so they replace instead of stacking",
-        "Stop duplicate timer notifications from a schedule race"
-      ]
-    }
-  },
-  {
-    "version": "1.27.0-preview.1",
-    "date": "2026-08-01",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Make scheduled push delivery reliable (timer/task isolation, claim, retry)"
-      ]
-    }
-  },
-  {
-    "version": "1.27.0-preview.0",
-    "date": "2026-07-27",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add mobile week view with edge-gated day-window paging"
-      ],
-      "Improved": [
-        "Extract TimeGutter and DayColumn from TimeGrid, align header offset to 80px"
-      ],
-      "Fixed": [
-        "Drop y-transform from page transition to stop PiP button flash on /focus",
-        "Make /login scrollable so content isn't cut off on short mobile viewports"
-      ]
-    }
-  },
-  {
-    "version": "1.26.2",
-    "date": "2026-07-24",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Only show dialog close button focus ring on keyboard focus",
-        "Always render habits page header, even when the list is empty",
-        "Reset timer settings to live saved values",
-        "Add haptic feedback to toggle group items on mobile"
-      ]
-    }
-  },
-  {
-    "version": "1.26.1",
-    "date": "2026-07-23",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Fix habit heatmap empty-cell contrast and scroll boundary clipping",
-        "Extend habit heatmap to a full 12-month grid for better visibility",
-        "Guard Notification access so iOS Safari/Chrome tabs don't crash on load"
-      ]
-    }
-  },
-  {
-    "version": "1.26.0",
-    "date": "2026-07-22",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Derive changelog entries and version bumps from commits on both release channels, supporting curation choices on stable releases and raw-commit previews in a review loop",
-        "Wire provenance capture and habit frequency tracking into the uhabits import flow for streak fidelity",
-        "Implement guest mode management in AuthProvider",
-        "Add /api/health uptime-monitor endpoint"
-      ],
-      "Improved": [
-        "Batch uhabits import habit creation with a prefetched sort_order",
-        "Rework guest mode seed data generation"
-      ],
-      "Fixed": [
-        "Current streak now reports the most-recent run within a pending window",
-        "Update UI to indicate beta status for Loop Habit Tracker and improve error message clarity",
-        "Paginate habit_entries fetch, stats, and account data export to load history past 1000 rows",
-        "Fix deployed uhabits import by copying sql.js wasm on build and excluding wasm assets from auth middleware",
-        "Bulk-write guest habit entries and report storage write errors to Sentry instead of swallowing them",
-        "Replace UI emoji with lucide icons and strip them from notification titles",
-        "Update classNames/props for react-day-picker v10 rename",
-        "Pin function search_path and revoke public execute per supabase advisors"
-      ]
-    }
-  },
-  {
-    "version": "1.26.0-preview.0",
-    "date": "2026-07-21",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Derive changelog entries and version bumps from commits on both release channels",
-        "Wire provenance capture into the uhabits import flow",
-        "Add habit_imports table and habits.source_uuid column",
-        "Add persistImportSource for round-trip provenance capture",
-        "Capture raw uhabits source and stamp source_uuid in the import mapper",
-        "Forward source_uuid through CreateHabitInput and the create mutation",
-        "Add source_uuid to Habit for import provenance linking",
-        "Carry uhabits habit frequency through import for streak fidelity",
-        "Implement guest mode management in AuthProvider",
-        "Add /api/health uptime-monitor endpoint"
-      ],
-      "Improved": [
-        "Batch uhabits import habit creation with a prefetched sort_order",
-        "Rework guest mode seed data generation"
-      ],
-      "Fixed": [
-        "Current streak now reports the most-recent run within a pending window",
-        "Update UI to indicate beta status for Loop Habit Tracker and improve error message clarity",
-        "Extend row-cap pagination to stats and account data export",
-        "Paginate habit_entries fetch so history past 1000 rows loads",
-        "Copy sql.js wasm on build so uhabits import works on deploy",
-        "Report guest storage write failures to Sentry",
-        "Exclude wasm assets from auth middleware so uhabits import works",
-        "Bulk-write guest habit entries and stop swallowing storage errors",
-        "Replace UI emoji with lucide icons and strip them from notification titles",
-        "Update classNames/props for react-day-picker v10 rename",
-        "Pin function search_path and revoke public execute per supabase advisors",
-        "Don't drop index that backs the push_subscriptions constraint",
-        "Drop only via constraint to avoid dropping index backing it",
-        "Make calendar_events and push_subscriptions migrations idempotent",
-        "Rename out-of-order migration files to sort after remote history"
-      ]
-    }
-  },
-  {
-    "version": "1.25.0",
-    "date": "2026-07-12",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Cloudflare Turnstile bot protection on the magic-link sign-in form",
-        "Persistent reconnect banner when a Google Calendar connection is revoked",
-        "Root and global error boundaries so unexpected errors show a recovery screen instead of a blank page"
-      ],
-      "Improved": [
-        "Rate limiting added to the WebDAV and push notification routes to prevent abuse",
-        "WebDAV proxy hardened against SSRF with a DNS-pinned guard",
-        "Focus timer play/pause/cancel controls now sync reliably to the server instead of only updating locally",
-        "Next.js upgraded to patch known security advisories"
-      ],
-      "Fixed": [
-        "Focus timer no longer auto-starts again after being paused",
-        "WebDAV credentials no longer persisted to browser storage, and gated to registered users",
-        "Google Calendar connect/callback redirect mismatch that could break the OAuth flow",
-        "Auth callback no longer accepts unsafe redirect values",
-        "Unfinished CalDAV providers hidden from the connect flow"
       ]
     }
   }

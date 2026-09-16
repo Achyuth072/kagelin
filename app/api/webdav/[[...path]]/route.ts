@@ -16,6 +16,33 @@ const ALLOWED_METHODS = [
   "HEAD",
 ];
 
+// Prevent leaking session cookies to third-party WebDAV hosts or accepting set-cookie.
+const FORWARDED_REQUEST_HEADERS = new Set([
+  "authorization",
+  "content-type",
+  "depth",
+  "destination",
+  "overwrite",
+  "if",
+  "if-match",
+  "if-none-match",
+  "lock-token",
+  "timeout",
+  "range",
+]);
+
+// Omit content-length and content-encoding; the response body is decompressed by undici.
+const RETURNED_RESPONSE_HEADERS = new Set([
+  "content-type",
+  "etag",
+  "last-modified",
+  "dav",
+  "allow",
+  "accept-ranges",
+  "content-range",
+  "lock-token",
+]);
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path?: string[] }> },
@@ -91,14 +118,7 @@ async function proxyWebDAV(
 
   const forwardHeaders = new Headers();
   for (const [key, value] of request.headers.entries()) {
-    const lower = key.toLowerCase();
-    if (
-      lower === "host" ||
-      lower === "x-webdav-url" ||
-      lower === "connection"
-    ) {
-      continue;
-    }
+    if (!FORWARDED_REQUEST_HEADERS.has(key.toLowerCase())) continue;
     forwardHeaders.set(key, value);
   }
 
@@ -118,8 +138,7 @@ async function proxyWebDAV(
     const responseHeaders = new Headers();
 
     for (const [key, value] of response.headers.entries()) {
-      const lower = key.toLowerCase();
-      if (lower === "transfer-encoding") continue; // not valid in HTTP/2
+      if (!RETURNED_RESPONSE_HEADERS.has(key.toLowerCase())) continue;
       responseHeaders.set(key, value);
     }
 

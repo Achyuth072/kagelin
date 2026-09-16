@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { format } from "date-fns";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -13,7 +14,7 @@ import { BetaBadge } from "@/components/ui/beta-badge";
 import { Database, Loader2, Calendar, FileUp } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
-import { useIcsImport } from "@/lib/hooks/useIcsImport";
+import { useIcsImport, ICS_CONFIRM_THRESHOLD } from "@/lib/hooks/useIcsImport";
 
 interface ImportDialogProps {
   open: boolean;
@@ -26,7 +27,13 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
   const { trigger } = useHaptic();
 
   const { importUhabits, isImporting: isImportingUhabits } = useUhabitsImport();
-  const { importIcs, isImporting: isImportingIcs } = useIcsImport();
+  const {
+    prepareImport,
+    commitImport,
+    cancelImport,
+    preview,
+    isImporting: isImportingIcs,
+  } = useIcsImport();
 
   const handleImportUhabits = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -41,12 +48,100 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
   const handleImportIcs = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const success = await importIcs(file);
-    if (success) onOpenChange(false);
+    const result = await prepareImport(file);
     if (icsInputRef.current) icsInputRef.current.value = "";
+    if (!result) return;
+    if (result.toCreate.length < ICS_CONFIRM_THRESHOLD) {
+      const success = await commitImport(result);
+      if (success) onOpenChange(false);
+    }
+  };
+
+  const handleConfirmIcsImport = async () => {
+    trigger("toggle");
+    const success = await commitImport();
+    if (success) onOpenChange(false);
+  };
+
+  const handleCancelIcsImport = () => {
+    trigger("tick");
+    cancelImport();
   };
 
   const isAnyImporting = isImportingUhabits || isImportingIcs;
+
+  if (preview) {
+    const dateRange =
+      preview.earliest && preview.latest
+        ? preview.earliest === preview.latest
+          ? format(new Date(preview.earliest), "MMM d, yyyy")
+          : `${format(new Date(preview.earliest), "MMM d, yyyy")} – ${format(new Date(preview.latest), "MMM d, yyyy")}`
+        : null;
+
+    return (
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) cancelImport();
+          onOpenChange(next);
+        }}
+      >
+        <ResponsiveDialogContent className="sm:max-w-[425px]">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="type-h2">
+              Confirm Import
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              This is a large import — review before adding it to your calendar.
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <div className="px-4 py-4 sm:px-0">
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Events found</dt>
+                <dd>{preview.totalParsed}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">New events</dt>
+                <dd>{preview.toCreate.length}</dd>
+              </div>
+              {preview.duplicateCount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Duplicates skipped</dt>
+                  <dd>{preview.duplicateCount}</dd>
+                </div>
+              )}
+              {dateRange && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Date range</dt>
+                  <dd>{dateRange}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="ghost"
+              onClick={handleCancelIcsImport}
+              className="text-muted-foreground hover:text-foreground"
+              disabled={isImportingIcs}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmIcsImport} disabled={isImportingIcs}>
+              {isImportingIcs ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                `Import ${preview.toCreate.length} events`
+              )}
+            </Button>
+          </div>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+    );
+  }
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
@@ -60,9 +155,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <div className="py-4">
+        <div className="px-4 py-4 sm:px-0">
           <div className="space-y-4">
-            {/* UHabits Import */}
             <div
               className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group"
               onClick={() => {
@@ -107,7 +201,6 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
               />
             </div>
 
-            {/* ICS Import */}
             <div
               className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group"
               onClick={() => {
@@ -116,7 +209,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
               }}
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-full bg-blue-500/10 text-blue-500">
+                <div className="p-2 rounded-full bg-brand/10 text-brand">
                   <Calendar className="h-5 w-5" />
                 </div>
                 <div>
@@ -129,7 +222,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500 hover:text-blue-600"
+                className="h-8 opacity-0 group-hover:opacity-100 transition-opacity text-brand"
                 disabled={isAnyImporting}
                 aria-label="Select iCalendar ICS file"
               >
