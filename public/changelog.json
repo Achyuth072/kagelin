@@ -1,5 +1,30 @@
 [
   {
+    "version": "1.43.0",
+    "date": "2026-09-16",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "End-to-end encryption for tasks, habits, projects, labels, and calendar content — protected by a passphrase only you know, with a recovery code as backup",
+        "Manual lock (and optional auto-lock after inactivity) to hide your encrypted content without signing out",
+        "Confirmation step when importing large .ics calendar files, so big imports don't silently overload your task list"
+      ],
+      "Improved": [
+        "Faster encryption during passphrase setup and account migration",
+        "Guest-to-account migration now resumes cleanly if interrupted, instead of risking data loss",
+        "CalDAV sync now respects your configured sync window instead of pulling full history"
+      ],
+      "Fixed": [
+        "Duplicate reminder notifications for the same task",
+        "Recovery code could be reused after it had already unlocked your account",
+        "Notifications could show decrypted content briefly after locking or signing out",
+        "Low-contrast alert banner colors in dark mode",
+        "Settings page scrolled the whole window instead of just its content pane",
+        "Offline mode and installed app not working correctly on Firefox"
+      ]
+    }
+  },
+  {
     "version": "1.43.0-preview.8",
     "date": "2026-09-15",
     "channel": "preview",
@@ -756,26 +781,6 @@
         "Fixed duplicate and missing focus-timer notifications",
         "Fixed notifications on iOS stacking instead of replacing each other",
         "Fixed a stray notification firing after skipping a session"
-      ]
-    }
-  },
-  {
-    "version": "1.27.1-preview.1",
-    "date": "2026-08-02",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add displayNotification as the shared iOS-safe notification choke point"
-      ],
-      "Fixed": [
-        "Cancel scheduled push notification when the focus timer is skipped",
-        "Stop local test notification from bypassing dedup and defaults",
-        "Route client-side showNotification through displayNotification",
-        "Guarantee every SW push displays and dedupes via displayNotification",
-        "Re-alert on tag-collapsed push notifications instead of replacing them silently",
-        "Clear timer notification ref before cancel resolves to avoid latching scheduling off",
-        "Narrow unknown errors in edge functions with shared toErrorMessage and pushStatusCode helpers",
-        "Reorder sendOptions in process-queue to stop a TDZ crash killing every push"
       ]
     }
   }
