@@ -1,5 +1,6 @@
 import type { BackupData } from "./types";
 import { parseBackupZip } from "./export-import";
+import { isFetchFailureMessage } from "@/lib/utils/network-error";
 
 export interface WebDAVCredentials {
   serverUrl: string;
@@ -127,10 +128,7 @@ function handleWebDAVError(error: unknown): WebDAVResult {
   const message = error instanceof Error ? error.message : String(error);
 
   const isCorsError =
-    message.includes("CORS") ||
-    message.includes("NetworkError") ||
-    message.includes("Failed to fetch") ||
-    message.includes("Load failed");
+    message.includes("CORS") || isFetchFailureMessage(message);
 
   if (isCorsError) {
     return {

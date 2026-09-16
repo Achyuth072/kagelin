@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, ReactNode, useMemo } from "react";
 import { useFocusTimer } from "@/lib/hooks/useFocusTimer";
+import { usePushSubscriptionSync } from "@/lib/hooks/usePushNotifications";
 import type { TimerState, TimerSettings } from "@/lib/types/timer";
 
 interface TimerContextValue {
@@ -42,6 +43,8 @@ const TimerActionsContext = createContext<TimerActionsContextValue | null>(
 export function TimerProvider({ children }: { children: ReactNode }) {
   // This hook handles intervals and side-effects centrally
   const timer = useFocusTimer();
+
+  usePushSubscriptionSync();
 
   // `timer.state` changes every second, so `value` below churns on every tick.
   // Memoizing `actions` separately keeps it stable for useTimerActions()

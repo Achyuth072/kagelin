@@ -5,6 +5,11 @@ import * as Sentry from "@sentry/nextjs";
 import { useUiStore } from "@/lib/store/uiStore";
 import { removePushSubscription, syncPushSubscription } from "@/lib/push-api";
 import { displayNotification } from "@/lib/notifications";
+import { isTransientNetworkError } from "@/lib/utils/network-error";
+import {
+  SW_NOT_REGISTERED,
+  SW_REGISTRATION_TIMEOUT,
+} from "@/lib/errors/serviceWorkerErrors";
 import { useAuth } from "@/components/AuthProvider";
 
 type NotificationPermission = "default" | "granted" | "denied";
@@ -13,12 +18,37 @@ interface SubscribeOptions {
   forceRefresh?: boolean;
 }
 
+interface UsePushNotificationsOptions {
+  manageSubscription?: boolean;
+}
+
+// Controller is null while a new worker activates mid-deploy.
+function serviceWorkerState(): string {
+  return navigator.serviceWorker.controller?.state ?? "uncontrolled";
+}
+
+// Transient network drops are retried on the next resume.
+function reportUnexpected(error: unknown, operation: string) {
+  if (isTransientNetworkError(error)) return;
+  Sentry.captureException(error, {
+    tags: { pushOperation: operation, swState: serviceWorkerState() },
+  });
+}
+
 interface PushPermissionResult {
   permission: NotificationPermission;
   subscription: PushSubscription | null;
 }
 
-export function usePushNotifications() {
+// Mount once in TimerProvider; subscription lifecycle is singleton state.
+export function usePushSubscriptionSync(): void {
+  usePushNotifications({ manageSubscription: true });
+}
+
+export function usePushNotifications(
+  options: UsePushNotificationsOptions = {},
+) {
+  const { manageSubscription = false } = options;
   const { isGuestMode } = useAuth();
   const notificationsEnabled = useUiStore(
     (state) => state.notificationsEnabled,
@@ -50,14 +80,11 @@ export function usePushNotifications() {
     // Fail fast in dev without ENABLE_PWA=true, instead of hanging on `ready`
     const existing = await navigator.serviceWorker.getRegistration();
     if (!existing) {
-      throw new Error("No service worker registered");
+      throw new Error(SW_NOT_REGISTERED);
     }
     const swPromise = navigator.serviceWorker.ready;
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error("Service worker registration timeout")),
-        5000,
-      ),
+      setTimeout(() => reject(new Error(SW_REGISTRATION_TIMEOUT)), 5000),
     );
     return Promise.race([swPromise, timeoutPromise]);
   }, []);
@@ -76,7 +103,7 @@ export function usePushNotifications() {
       try {
         await removePushSubscription(endpoint);
       } catch (error) {
-        Sentry.captureException(error);
+        reportUnexpected(error, "remove");
       }
     },
     [isGuestMode],
@@ -87,7 +114,7 @@ export function usePushNotifications() {
       try {
         await sub.unsubscribe();
       } catch (error) {
-        Sentry.captureException(error);
+        reportUnexpected(error, "unsubscribe");
       }
 
       await removeSubscriptionFromBackend(sub.endpoint);
@@ -225,14 +252,20 @@ export function usePushNotifications() {
         const registration = await getServiceWorkerRegistration();
         await displayNotification(registration, title, options);
       } catch (error) {
-        Sentry.captureException(error);
+        reportUnexpected(error, "display");
       }
     },
     [isSupported, permission, getServiceWorkerRegistration],
   );
 
   useEffect(() => {
-    if (isGuestMode || !isSupported || !notificationsEnabled) return;
+    if (
+      !manageSubscription ||
+      isGuestMode ||
+      !isSupported ||
+      !notificationsEnabled
+    )
+      return;
     const initSubscription = async () => {
       try {
         const registration = await getServiceWorkerRegistration();
@@ -244,11 +277,12 @@ export function usePushNotifications() {
           await subscribeToPush();
         }
       } catch (error) {
-        Sentry.captureException(error);
+        reportUnexpected(error, "init");
       }
     };
     initSubscription();
   }, [
+    manageSubscription,
     isGuestMode,
     isSupported,
     notificationsEnabled,
@@ -266,7 +300,13 @@ export function usePushNotifications() {
 
   // Re-validate on tab focus to catch Chrome Android's auto-rotated subscriptions
   useEffect(() => {
-    if (isGuestMode || !isSupported || !notificationsEnabled) return;
+    if (
+      !manageSubscription ||
+      isGuestMode ||
+      !isSupported ||
+      !notificationsEnabled
+    )
+      return;
 
     const handleVisibilityChange = async () => {
       if (document.visibilityState !== "visible") return;
@@ -290,7 +330,7 @@ export function usePushNotifications() {
           await subscribeToPush();
         }
       } catch (error) {
-        Sentry.captureException(error);
+        reportUnexpected(error, "revalidate");
       }
     };
 
@@ -300,6 +340,7 @@ export function usePushNotifications() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [
+    manageSubscription,
     isGuestMode,
     isSupported,
     notificationsEnabled,

@@ -65,6 +65,25 @@ describe("scrubEvent", () => {
     expect(JSON.stringify(scrubbed)).not.toContain(TASK_TITLE);
   });
 
+  it.each([
+    "Failed to fetch",
+    "Load failed",
+    "No service worker registered",
+    "Service worker registration timeout",
+  ])("keeps the content-free message %j", (message) => {
+    const event = eventCarryingContent();
+    event.exception.values[0].value = message;
+
+    expect(scrubEvent(event).exception.values[0].value).toBe(message);
+  });
+
+  it("redacts a message that only looks like a safe one", () => {
+    const event = eventCarryingContent();
+    event.exception.values[0].value = `Failed to fetch task "${TASK_TITLE}"`;
+
+    expect(scrubEvent(event).exception.values[0].value).toBe("[redacted]");
+  });
+
   it("retains what diagnosis needs", () => {
     const scrubbed = scrubEvent(eventCarryingContent());
 

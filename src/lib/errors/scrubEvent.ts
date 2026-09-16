@@ -1,3 +1,8 @@
+import {
+  SW_NOT_REGISTERED,
+  SW_REGISTRATION_TIMEOUT,
+} from "@/lib/errors/serviceWorkerErrors";
+
 // Structural payload shape so changing reporting backends requires only a DSN update.
 export const REDACTED = "[redacted]";
 
@@ -5,6 +10,16 @@ export const REDACTED = "[redacted]";
 const SAFE_DATA_KEYS = ["method", "status_code", "from", "to", "url"];
 
 const URL_DATA_KEYS = ["url", "from", "to", "http.url"];
+
+// Exact match only: substring matching risks leaking interpolated user content.
+const SAFE_EXCEPTION_MESSAGES = new Set([
+  "Failed to fetch",
+  "Load failed",
+  "NetworkError when attempting to fetch resource.",
+  "The user aborted a request.",
+  SW_NOT_REGISTERED,
+  SW_REGISTRATION_TIMEOUT,
+]);
 
 type ScrubbableBreadcrumb = {
   message?: unknown;
@@ -58,7 +73,11 @@ export function scrubEvent<T extends object>(event: T): T {
   if (typeof payload.message === "string") payload.message = REDACTED;
 
   for (const exception of payload.exception?.values ?? []) {
-    if (typeof exception.value === "string") exception.value = REDACTED;
+    if (typeof exception.value === "string") {
+      exception.value = SAFE_EXCEPTION_MESSAGES.has(exception.value)
+        ? exception.value
+        : REDACTED;
+    }
     for (const frame of exception.stacktrace?.frames ?? []) {
       delete frame.vars;
     }
