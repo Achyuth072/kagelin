@@ -191,8 +191,28 @@ export async function unlockWithRecoveryCode(
     "That recovery code isn't right.",
   );
 
+  // Must persist reset requirement before caching to avoid failing open on network error.
+  await updateEncryptionKeyRow(userId, { passphrase_reset_required: true });
   await cacheMasterKey(userId, masterKey);
   return masterKey;
+}
+
+async function rewrapPassphrase(
+  userId: string,
+  masterKey: Uint8Array,
+  newPassphrase: string,
+): Promise<void> {
+  const newSalt = await generateSalt();
+  const newDerivedKey = await deriveKeyFromPassphrase(newPassphrase, newSalt);
+  const newWrapped = await wrapMasterKey(masterKey, newDerivedKey);
+
+  await updateEncryptionKeyRow(userId, {
+    passphrase_salt: await bytesToBase64(newSalt),
+    passphrase_kdf_params: DEFAULT_ARGON2_PARAMS,
+    wrapped_key_passphrase: newWrapped,
+    passphrase_reset_required: false,
+  });
+  await cacheMasterKey(userId, masterKey);
 }
 
 export async function changePassphrase(
@@ -218,17 +238,19 @@ export async function changePassphrase(
     "That passphrase isn't right.",
   );
 
-  const newSalt = await generateSalt();
-  const newDerivedKey = await deriveKeyFromPassphrase(newPassphrase, newSalt);
-  const newWrapped = await wrapMasterKey(masterKey, newDerivedKey);
+  await rewrapPassphrase(userId, masterKey, newPassphrase);
+}
 
-  await updateEncryptionKeyRow(userId, {
-    passphrase_salt: await bytesToBase64(newSalt),
-    passphrase_kdf_params: DEFAULT_ARGON2_PARAMS,
-    wrapped_key_passphrase: newWrapped,
-  });
+export async function setPassphraseAfterRecovery(
+  userId: string,
+  newPassphrase: string,
+): Promise<void> {
+  const masterKey = await keyStore.load(userId);
+  if (!masterKey) {
+    throw new UnlockError("Unlock before setting a new passphrase.");
+  }
 
-  await cacheMasterKey(userId, masterKey);
+  await rewrapPassphrase(userId, masterKey, newPassphrase);
 }
 
 export async function reissueRecoveryCode(userId: string): Promise<string> {

@@ -19,10 +19,10 @@ import {
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog";
 import { RecoveryCodeDisplay } from "@/components/encryption/RecoveryCodeDisplay";
-import { PassphraseStrengthHints } from "@/components/encryption/PassphraseStrengthHints";
+import { NewPassphraseFields } from "@/components/encryption/NewPassphraseFields";
 import { Loader2, Lock, RefreshCw, ShieldCheck, TimerOff } from "lucide-react";
 import { changePassphrase, reissueRecoveryCode } from "@/lib/crypto/keyManager";
-import { checkPassphraseStrength } from "@/lib/crypto/passphraseStrength";
+import { useNewPassphraseForm } from "@/lib/hooks/useNewPassphraseForm";
 import { notify } from "@/lib/notify";
 import { SETTINGS_CARD_CLASS } from "@/components/settings/settingsCardClass";
 import { useEncryptionGateActions } from "@/components/encryption/EncryptionGate";
@@ -145,14 +145,19 @@ function LockNowCard() {
 
 function ChangePassphraseCard({ userId }: { userId: string }) {
   const [currentPassphrase, setCurrentPassphrase] = useState("");
-  const [newPassphrase, setNewPassphrase] = useState("");
-  const [confirmPassphrase, setConfirmPassphrase] = useState("");
+  const {
+    passphrase: newPassphrase,
+    setPassphrase: setNewPassphrase,
+    confirmPassphrase,
+    setConfirmPassphrase,
+    tooShort,
+    weak,
+    mismatch,
+    showMismatch,
+    reset: resetNewPassphrase,
+  } = useNewPassphraseForm();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const { tooShort, weak } = checkPassphraseStrength(newPassphrase);
-  const mismatch = confirmPassphrase !== newPassphrase;
-  const showMismatch = confirmPassphrase.length > 0 && mismatch;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,8 +169,7 @@ function ChangePassphraseCard({ userId }: { userId: string }) {
       await changePassphrase(userId, currentPassphrase, newPassphrase);
       notify.success("Passphrase changed");
       setCurrentPassphrase("");
-      setNewPassphrase("");
-      setConfirmPassphrase("");
+      resetNewPassphrase();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Couldn't change passphrase.",
@@ -199,37 +203,20 @@ function ChangePassphraseCard({ userId }: { userId: string }) {
             autoComplete="current-password"
           />
 
-          <AuthPasswordField
-            id="encryption-new-passphrase"
-            label="New Passphrase"
+          <NewPassphraseFields
+            idPrefix="encryption-new-passphrase"
+            passphraseLabel="New Passphrase"
+            confirmLabel="Confirm New Passphrase"
             labelClassName="text-[11px] uppercase tracking-wider text-muted-foreground/60"
-            value={newPassphrase}
-            onChange={setNewPassphrase}
+            passphrase={newPassphrase}
+            onPassphraseChange={setNewPassphrase}
+            confirmPassphrase={confirmPassphrase}
+            onConfirmPassphraseChange={setConfirmPassphrase}
+            tooShort={tooShort}
+            weak={weak}
+            showMismatch={showMismatch}
             disabled={submitting}
-            autoComplete="new-password"
-          >
-            <PassphraseStrengthHints
-              passphrase={newPassphrase}
-              tooShort={tooShort}
-              weak={weak}
-            />
-          </AuthPasswordField>
-
-          <AuthPasswordField
-            id="encryption-confirm-new-passphrase"
-            label="Confirm New Passphrase"
-            labelClassName="text-[11px] uppercase tracking-wider text-muted-foreground/60"
-            value={confirmPassphrase}
-            onChange={setConfirmPassphrase}
-            disabled={submitting}
-            autoComplete="new-password"
-          >
-            {showMismatch && (
-              <p className="text-xs text-destructive">
-                Passphrases don&apos;t match.
-              </p>
-            )}
-          </AuthPasswordField>
+          />
 
           {error && (
             <p role="alert" className="text-xs text-destructive font-medium">

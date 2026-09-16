@@ -28,6 +28,10 @@ vi.mock("@/components/encryption/EncryptionMigrationScreen", () => ({
   EncryptionMigrationScreen: () => <div>migration-screen</div>,
 }));
 
+vi.mock("@/components/encryption/NewPassphraseStep", () => ({
+  NewPassphraseStep: () => <div>new-passphrase-step</div>,
+}));
+
 function mockGate(status: EncryptionGateStatus, lock = vi.fn()) {
   vi.mocked(useEncryptionGate).mockReturnValue({
     status,
@@ -105,6 +109,17 @@ describe("EncryptionGate", () => {
       </EncryptionGate>,
     );
     expect(screen.getByText("migration-screen")).toBeInTheDocument();
+    expect(screen.queryByText("app-content")).not.toBeInTheDocument();
+  });
+
+  it("renders the new-passphrase step and withholds children when a recovery unlock requires resetting the passphrase — even though the device is otherwise unlocked, so a reload can't skip it", () => {
+    mockGate("needs-passphrase-reset");
+    render(
+      <EncryptionGate>
+        <div>app-content</div>
+      </EncryptionGate>,
+    );
+    expect(screen.getByText("new-passphrase-step")).toBeInTheDocument();
     expect(screen.queryByText("app-content")).not.toBeInTheDocument();
   });
 

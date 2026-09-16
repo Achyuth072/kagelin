@@ -5,6 +5,7 @@ import { createFakeSupabaseClient } from "../../support/fakeSupabaseClient";
 type Row = Record<string, any>;
 const rows = new Map<string, Row>();
 let lastUpdatePayload: Row | null = null;
+let updateError: Error | null = null;
 let offline = false;
 
 function createEncryptionKeysTable() {
@@ -30,10 +31,13 @@ function createEncryptionKeysTable() {
           then: (onFulfilled: (v: typeof result) => unknown) =>
             Promise.resolve(result).then(onFulfilled),
           select: () => ({
-            single: async () => ({
-              data: rows.get(userId) ?? null,
-              error: null,
-            }),
+            single: async () => {
+              if (updateError) return { data: null, error: updateError };
+              return {
+                data: rows.get(userId) ?? null,
+                error: null,
+              };
+            },
           }),
         };
       },
@@ -97,6 +101,7 @@ import {
   unlockWithPassphrase,
   unlockWithRecoveryCode,
   changePassphrase,
+  setPassphraseAfterRecovery,
   reissueRecoveryCode,
   hasEncryptionKey,
   getEncryptionKeyRow,
@@ -111,6 +116,7 @@ describe("keyManager", () => {
     rows.clear();
     rowCache.clear();
     lastUpdatePayload = null;
+    updateError = null;
     keyStoreState.key = null;
     offline = false;
     rawClient = createFakeSupabaseClient();
@@ -208,6 +214,68 @@ describe("keyManager", () => {
     const byPassphrase = await unlockWithPassphrase(USER_ID, "my passphrase");
     const byNewRecovery = await unlockWithRecoveryCode(USER_ID, newCode);
     expect(byPassphrase).toEqual(byNewRecovery);
+  }, 20000);
+
+  it("setPassphraseAfterRecovery rewraps the passphrase columns without requiring the old passphrase", async () => {
+    const { recoveryCode } = await setupEncryption(
+      USER_ID,
+      "forgotten passphrase",
+    );
+    await unlockWithRecoveryCode(USER_ID, recoveryCode);
+    const before = { ...rows.get(USER_ID) };
+
+    await setPassphraseAfterRecovery(USER_ID, "brand new passphrase");
+
+    const after = rows.get(USER_ID)!;
+    expect(after.passphrase_salt).not.toBe(before.passphrase_salt);
+    expect(after.wrapped_key_passphrase).not.toBe(
+      before.wrapped_key_passphrase,
+    );
+    expect(after.recovery_salt).toBe(before.recovery_salt);
+    expect(after.wrapped_key_recovery).toBe(before.wrapped_key_recovery);
+
+    await expect(
+      unlockWithPassphrase(USER_ID, "forgotten passphrase"),
+    ).rejects.toThrow(UnlockError);
+    const masterKey = await unlockWithPassphrase(
+      USER_ID,
+      "brand new passphrase",
+    );
+    expect(masterKey).toBeInstanceOf(Uint8Array);
+  }, 20000);
+
+  it("unlockWithRecoveryCode flags the row as needing a passphrase reset, and setPassphraseAfterRecovery clears the flag", async () => {
+    const { recoveryCode } = await setupEncryption(USER_ID, "old passphrase");
+    expect(rows.get(USER_ID)!.passphrase_reset_required).toBeFalsy();
+
+    await unlockWithRecoveryCode(USER_ID, recoveryCode);
+    expect(rows.get(USER_ID)!.passphrase_reset_required).toBe(true);
+
+    await setPassphraseAfterRecovery(USER_ID, "brand new passphrase");
+    expect(rows.get(USER_ID)!.passphrase_reset_required).toBe(false);
+  }, 20000);
+
+  it("unlockWithRecoveryCode does not cache the master key if flagging passphrase_reset_required fails", async () => {
+    const { recoveryCode } = await setupEncryption(USER_ID, "old passphrase");
+    keyStoreState.key = null;
+    keyStoreState.userId = null;
+
+    updateError = new Error("Database network error");
+
+    await expect(unlockWithRecoveryCode(USER_ID, recoveryCode)).rejects.toThrow(
+      "Database network error",
+    );
+
+    expect(keyStoreState.key).toBeNull();
+  }, 20000);
+
+  it("setPassphraseAfterRecovery requires an unlocked device", async () => {
+    await setupEncryption(USER_ID, "my passphrase");
+    keyStoreState.key = null;
+
+    await expect(
+      setPassphraseAfterRecovery(USER_ID, "new passphrase"),
+    ).rejects.toThrow(UnlockError);
   }, 20000);
 
   it("reissueRecoveryCode requires an unlocked device", async () => {

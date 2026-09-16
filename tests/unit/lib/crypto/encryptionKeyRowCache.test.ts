@@ -25,6 +25,7 @@ const row: EncryptionKeyRow = {
   recovery_kdf_params: { m: 1, t: 1, p: 1 },
   wrapped_key_recovery: "wrapped-recovery",
   migrated_at: null,
+  passphrase_reset_required: false,
 };
 
 describe("encryptionKeyRowCache", () => {

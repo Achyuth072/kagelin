@@ -10,6 +10,7 @@ export interface EncryptionKeyRow {
   recovery_kdf_params: Argon2Params;
   wrapped_key_recovery: string;
   migrated_at: string | null;
+  passphrase_reset_required: boolean;
 }
 
 const CACHE_KEY_PREFIX = "kagelin-encryption-key-row:";
