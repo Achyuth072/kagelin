@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { getEncryptionKeyRow } from "@/lib/crypto/keyManager";
+import type { EncryptionKeyRow } from "@/lib/crypto/encryptionKeyRowCache";
 import { keyStore } from "@/lib/crypto/keyStore";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
 import { recordActivity, shouldAutoLockNow } from "@/lib/crypto/autoLock";
@@ -16,10 +17,23 @@ export type EncryptionGateStatus =
   | "needs-setup"
   | "needs-unlock"
   | "needs-migration"
+  | "needs-passphrase-reset"
   | "unlocked"
   | "unavailable";
 
 type AsyncStatus = Exclude<EncryptionGateStatus, "not-applicable">;
+
+function resolveStatus(
+  row: EncryptionKeyRow | null,
+  cachedKey: Uint8Array | null,
+): AsyncStatus {
+  if (!row) return "needs-setup";
+  if (!cachedKey) return "needs-unlock";
+  // Legacy cached rows lack migrated_at; explicit null triggers migration.
+  if (row.migrated_at === null) return "needs-migration";
+  if (row.passphrase_reset_required) return "needs-passphrase-reset";
+  return "unlocked";
+}
 
 export function useEncryptionGate(): {
   status: EncryptionGateStatus;
@@ -55,7 +69,11 @@ export function useEncryptionGate(): {
         ]);
         if (cancelled) return;
 
-        const wouldUnlock = !!row && !!cachedKey && row.migrated_at !== null;
+        const wouldUnlock =
+          !!row &&
+          !!cachedKey &&
+          row.migrated_at !== null &&
+          !row.passphrase_reset_required;
         if (
           shouldAutoLockNow(
             {
@@ -70,16 +88,7 @@ export function useEncryptionGate(): {
           return;
         }
 
-        setAsyncStatus(
-          !row
-            ? "needs-setup"
-            : !cachedKey
-              ? "needs-unlock"
-              : // Legacy cached rows lack migrated_at; explicit null triggers migration.
-                row.migrated_at === null
-                ? "needs-migration"
-                : "unlocked",
-        );
+        setAsyncStatus(resolveStatus(row, cachedKey));
       } catch {
         if (!cancelled) setAsyncStatus("unavailable");
       }

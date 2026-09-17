@@ -10,6 +10,7 @@ import { LoaderOverlay } from "@/components/ui/loader-overlay";
 import { EncryptionSetupScreen } from "@/components/encryption/EncryptionSetupScreen";
 import { UnlockScreen } from "@/components/encryption/UnlockScreen";
 import { EncryptionMigrationScreen } from "@/components/encryption/EncryptionMigrationScreen";
+import { NewPassphraseStep } from "@/components/encryption/NewPassphraseStep";
 
 interface EncryptionGateActions {
   lock: () => Promise<void>;
@@ -80,6 +81,10 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
 
   if (status === "needs-migration") {
     return <EncryptionMigrationScreen userId={user.id} onComplete={recheck} />;
+  }
+
+  if (status === "needs-passphrase-reset") {
+    return <NewPassphraseStep userId={user.id} onDone={recheck} />;
   }
 
   return (

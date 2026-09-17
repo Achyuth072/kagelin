@@ -39,6 +39,7 @@ function writeChangelogEntries(changelogFile, entries) {
 function resolveChoice(answer) {
   const normalized = answer.trim().toLowerCase();
   if (normalized === "e" || normalized === "edit") return "edit";
+  if (normalized === "b" || normalized === "blank") return "blank";
   return "raw";
 }
 
@@ -68,13 +69,16 @@ async function runCurationLoop(initialSections) {
     for (;;) {
       console.log("\nChangelog bullets:");
       console.log(JSON.stringify(sections, null, 2));
-      process.stdout.write("[r] accept as-is  [e] edit (default r): ");
+      process.stdout.write(
+        "[r] accept as-is  [e] edit  [b] blank (default r): ",
+      );
 
       const { value: answer, done } = await lines.next();
       if (done) return sections;
 
       const choice = resolveChoice(answer);
       if (choice === "raw") return sections;
+      if (choice === "blank") return {};
 
       try {
         sections = editSections(sections);

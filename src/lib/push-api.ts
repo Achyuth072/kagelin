@@ -9,6 +9,8 @@ export async function syncPushSubscription(subscription: PushSubscription) {
     headers: {
       "Content-Type": "application/json",
     },
+    // Keepalive ensures the request completes if the page is unloading.
+    keepalive: true,
   });
 
   if (!response.ok) {
@@ -24,6 +26,7 @@ export async function removePushSubscription(endpoint: string) {
     `/api/push/subscribe?endpoint=${encodeURIComponent(endpoint)}`,
     {
       method: "DELETE",
+      keepalive: true,
     },
   );
 

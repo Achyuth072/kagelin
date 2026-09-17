@@ -127,6 +127,21 @@ describe("useEncryptionGate", () => {
     await waitFor(() => expect(result.current.status).toBe("unlocked"));
   });
 
+  it("resolves to needs-passphrase-reset when a recovery-code unlock flagged the row, even though the device already has the key cached", async () => {
+    getEncryptionKeyRowMock.mockResolvedValue({
+      migrated_at: "2026-09-04T00:00:00Z",
+      passphrase_reset_required: true,
+    });
+    keyStoreLoadMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+
+    const { result } = renderHook(() => useEncryptionGate(), {
+      wrapper: ({ children }) => withQueryClient(children),
+    });
+    await waitFor(() =>
+      expect(result.current.status).toBe("needs-passphrase-reset"),
+    );
+  });
+
   it("resolves to unlocked when the device already has the key cached and migration is complete", async () => {
     getEncryptionKeyRowMock.mockResolvedValue({
       migrated_at: "2026-09-04T00:00:00Z",

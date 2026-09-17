@@ -30,4 +30,7 @@ for (const section of SECTION_ORDER) {
   lines.push("");
 }
 
-process.stdout.write(lines.join("\n").trim() + "\n");
+const body = lines.length
+  ? lines.join("\n").trim()
+  : "_No changelog entries for this release._";
+process.stdout.write(body + "\n");

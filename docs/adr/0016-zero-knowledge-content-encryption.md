@@ -126,10 +126,20 @@ everything but `id` on the user.
 
 Two deliberate choices:
 
-- **Messages go wholesale, not by pattern.** Same reasoning as
-  `describeError()`: a message is where a provider echoes the rejected payload,
-  and no regex catches every shape. The error type plus the stack is what
-  diagnosis actually used — checked against this project's real bug history.
+- **Messages are redacted unless exactly allowlisted.** A message is where a
+  provider echoes the rejected payload, so the default stays redact. This
+  originally dropped every message wholesale, on the reasoning that error type
+  plus stack was all diagnosis had ever needed. A later push-notification bug
+  disproved that: the type was `TypeError` and the stack pointed at `fetch`,
+  but distinguishing a dropped connection from a server rejection needed the
+  word `Failed to fetch`, and recovering it cost three diagnosis round trips.
+  `SAFE_EXCEPTION_MESSAGES` now holds a small set of content-free strings —
+  browser fetch and service-worker wordings — matched by **exact equality**,
+  never substring or regex, so `NetworkError: saving habit 'Buy milk'` still
+  redacts. The failure mode stays closed: an unlisted message is redacted.
+  Messages our own code throws are allowlisted via shared constants
+  (`src/lib/errors/serviceWorkerErrors.ts`) so rewording one cannot silently
+  reopen or close the hole.
 - **URLs are cut at `?`.** Supabase REST puts filter values in the query string
   (`?title=eq.Buy+milk`), so a breadcrumb URL or an `http.client` span
   description is content unless truncated. Breadcrumb and span `data` is

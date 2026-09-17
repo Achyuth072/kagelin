@@ -3,12 +3,11 @@
 import { useState } from "react";
 import { AlertTriangle, Loader2, ShieldCheck } from "lucide-react";
 import { AuthShell } from "@/components/auth/AuthShell";
-import { AuthPasswordField } from "@/components/auth/AuthPasswordField";
 import { Button } from "@/components/ui/button";
 import { setupEncryption } from "@/lib/crypto/keyManager";
-import { checkPassphraseStrength } from "@/lib/crypto/passphraseStrength";
 import { RecoveryCodeDisplay } from "@/components/encryption/RecoveryCodeDisplay";
-import { PassphraseStrengthHints } from "@/components/encryption/PassphraseStrengthHints";
+import { NewPassphraseFields } from "@/components/encryption/NewPassphraseFields";
+import { useNewPassphraseForm } from "@/lib/hooks/useNewPassphraseForm";
 
 function PassphraseStep({
   userId,
@@ -17,14 +16,18 @@ function PassphraseStep({
   userId: string;
   onSetupComplete: (recoveryCode: string) => void;
 }) {
-  const [passphrase, setPassphrase] = useState("");
-  const [confirmPassphrase, setConfirmPassphrase] = useState("");
+  const {
+    passphrase,
+    setPassphrase,
+    confirmPassphrase,
+    setConfirmPassphrase,
+    tooShort,
+    weak,
+    mismatch,
+    showMismatch,
+  } = useNewPassphraseForm();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const { tooShort, weak } = checkPassphraseStrength(passphrase);
-  const mismatch = confirmPassphrase !== passphrase;
-  const showMismatch = confirmPassphrase.length > 0 && mismatch;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,35 +87,19 @@ function PassphraseStep({
         </p>
       </div>
 
-      <AuthPasswordField
-        id="encryption-passphrase"
-        label="Passphrase"
-        value={passphrase}
-        onChange={setPassphrase}
+      <NewPassphraseFields
+        idPrefix="encryption-passphrase"
+        passphraseLabel="Passphrase"
+        confirmLabel="Confirm passphrase"
+        passphrase={passphrase}
+        onPassphraseChange={setPassphrase}
+        confirmPassphrase={confirmPassphrase}
+        onConfirmPassphraseChange={setConfirmPassphrase}
+        tooShort={tooShort}
+        weak={weak}
+        showMismatch={showMismatch}
         disabled={submitting}
-        autoComplete="new-password"
-      >
-        <PassphraseStrengthHints
-          passphrase={passphrase}
-          tooShort={tooShort}
-          weak={weak}
-        />
-      </AuthPasswordField>
-
-      <AuthPasswordField
-        id="encryption-passphrase-confirm"
-        label="Confirm passphrase"
-        value={confirmPassphrase}
-        onChange={setConfirmPassphrase}
-        disabled={submitting}
-        autoComplete="new-password"
-      >
-        {showMismatch && (
-          <p className="text-xs text-destructive">
-            Passphrases don&apos;t match.
-          </p>
-        )}
-      </AuthPasswordField>
+      />
 
       {error && (
         <p role="alert" className="text-sm text-destructive font-medium">

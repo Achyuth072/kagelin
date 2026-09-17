@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const { execFileSync } = require("child_process");
+const { parseArgs } = require("node:util");
 const path = require("path");
 const { getLastTag, getCommitSubjectsSince } = require("./lib/git-commits.cjs");
 const { determineBump } = require("./lib/determine-bump.cjs");
@@ -20,17 +21,70 @@ function computeBump(subjects) {
   return determineBump(subjects) ?? "patch";
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-  const channelArg = args.find((a) => /^--channel=(preview|stable)$/.test(a));
-  const channel = channelArg ? channelArg.split("=")[1] : null;
-  const skipValidate = args.includes("--skip-validate");
-  const consumed = new Set([channelArg, "--skip-validate"].filter(Boolean));
-  const override = args.find((a) => !consumed.has(a) && !a.startsWith("--"));
-  const passthrough = args.filter((a) => a !== override && !consumed.has(a));
+const USAGE = `Usage: release.cjs --channel=preview|stable [increment] [release-it flags...]
 
-  if (!channel) {
-    console.error("Usage: release.cjs --channel=preview|stable [version]");
+  --channel=preview|stable  required; selects the release-it config and
+                             prerelease vs. stable increment logic
+  --skip-validate           skip ci:validate before releasing
+  [increment]               optional bare positional: patch|minor|major|
+                             prepatch|preminor|premajor|prerelease|<version>
+  --help, -h                show this message
+
+Anything else is forwarded to release-it as-is (e.g. --dry-run, --ci).`;
+
+function parseCliArgs(argv) {
+  const { values, tokens } = parseArgs({
+    args: argv,
+    options: {
+      channel: { type: "string" },
+      "skip-validate": { type: "boolean" },
+      help: { type: "boolean", short: "h" },
+    },
+    tokens: true,
+    strict: false,
+    allowPositionals: true,
+  });
+
+  let override;
+  const passthrough = [];
+  for (const token of tokens) {
+    if (token.kind === "option") {
+      if (["channel", "skip-validate", "help"].includes(token.name)) continue;
+      passthrough.push(
+        token.value === undefined
+          ? token.rawName
+          : `${token.rawName}=${token.value}`,
+      );
+    } else if (token.kind === "positional") {
+      if (override === undefined) {
+        override = token.value;
+      } else {
+        passthrough.push(token.value);
+      }
+    }
+  }
+
+  return {
+    channel: values.channel,
+    skipValidate: values["skip-validate"] ?? false,
+    help: values.help ?? false,
+    override,
+    passthrough,
+  };
+}
+
+async function main() {
+  const { channel, skipValidate, help, override, passthrough } = parseCliArgs(
+    process.argv.slice(2),
+  );
+
+  if (help) {
+    console.log(USAGE);
+    return;
+  }
+
+  if (channel !== "preview" && channel !== "stable") {
+    console.error(USAGE);
     process.exit(1);
   }
 
@@ -42,10 +96,12 @@ async function main() {
   if (channel === "preview") {
     const midPrerelease = currentVersion.includes("-");
     if (override) {
+      // semver ignores preid for non-"pre*" increments (e.g. "minor").
+      const increment = BUMP_TO_PRE_INCREMENT[override] ?? override;
       releaseItArgs.push(
         "--config",
         ".release-it.json",
-        override,
+        increment,
         "--preRelease=preview",
       );
     } else if (midPrerelease) {
@@ -90,10 +146,20 @@ async function main() {
   releaseItArgs.push(...passthrough);
 
   console.log(`→ release-it ${releaseItArgs.join(" ")}`);
-  execFileSync("npx", ["release-it", ...releaseItArgs], {
-    stdio: "inherit",
-    env,
-  });
+  const releaseItBin = path.join(
+    process.cwd(),
+    "node_modules",
+    ".bin",
+    "release-it",
+  );
+  try {
+    execFileSync(process.execPath, [releaseItBin, ...releaseItArgs], {
+      stdio: "inherit",
+      env,
+    });
+  } catch (err) {
+    process.exit(err.status ?? 1);
+  }
 }
 
 main();

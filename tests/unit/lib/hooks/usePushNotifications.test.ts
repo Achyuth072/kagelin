@@ -1,5 +1,8 @@
 import { renderHook, act } from "@testing-library/react";
-import { usePushNotifications } from "@/lib/hooks/usePushNotifications";
+import {
+  usePushNotifications,
+  usePushSubscriptionSync,
+} from "@/lib/hooks/usePushNotifications";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { removePushSubscription, syncPushSubscription } from "@/lib/push-api";
 
@@ -130,7 +133,7 @@ describe("usePushNotifications", () => {
     });
 
     await act(async () => {
-      renderHook(() => usePushNotifications());
+      renderHook(() => usePushSubscriptionSync());
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
@@ -272,7 +275,7 @@ describe("usePushNotifications", () => {
 
     // Render with notifications enabled — mount effect syncs subscription
     await act(async () => {
-      renderHook(() => usePushNotifications());
+      renderHook(() => usePushSubscriptionSync());
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
@@ -319,7 +322,7 @@ describe("usePushNotifications", () => {
 
     // Render with notifications enabled — mount effect syncs
     await act(async () => {
-      renderHook(() => usePushNotifications());
+      renderHook(() => usePushSubscriptionSync());
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
