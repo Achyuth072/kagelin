@@ -12,9 +12,11 @@ function selectLastTag(tags, { excludePreRelease = false } = {}) {
 function getLastTag(options) {
   let tags;
   try {
-    tags = execFileSync("git", ["tag", "--list", "--sort=-v:refname"], {
-      encoding: "utf-8",
-    })
+    tags = execFileSync(
+      "git",
+      ["tag", "--list", "--sort=-v:refname", "--merged", "HEAD"],
+      { encoding: "utf-8" },
+    )
       .split("\n")
       .map((t) => t.trim())
       .filter(Boolean);
