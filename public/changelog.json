@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.43.1",
+    "date": "2026-09-17",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Require a new passphrase after recovery-code unlock"
+      ]
+    }
+  },
+  {
     "version": "1.43.1-preview.0",
     "date": "2026-09-17",
     "channel": "preview",
@@ -757,28 +767,6 @@
       ],
       "Fixed": [
         "Fixed focus-timer notifications sometimes arriving late or twice"
-      ]
-    }
-  },
-  {
-    "version": "1.28.0-preview.0",
-    "date": "2026-08-03",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add Android battery-optimization onboarding hint after push enable",
-        "Cut client over to server-derived timer_end scheduling, drop /api/timer/start",
-        "Server-derive timer_end notification chain via trigger, amend ADR 0002",
-        "Report notification_queue delivery health via /api/health"
-      ],
-      "Improved": [
-        "Extract Android battery hint state into useAndroidBatteryHint hook",
-        "Simplify timer notification trigger and skip callback from /simplify review",
-        "Simplify health check and timer route from /simplify review"
-      ],
-      "Fixed": [
-        "Schedule timer_end notifications off the client's endsAt deadline, not a recomputed duration",
-        "Tighten timer_end TTL to 60s and close poll-interval lateness"
       ]
     }
   }
