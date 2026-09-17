@@ -157,7 +157,7 @@ export async function collectUhabitsExportData(options?: {
   return { habits, entries, rawSources };
 }
 
-function extractRawHabits(
+export function extractRawHabits(
   rawSources: unknown[],
 ): Map<string, Record<string, unknown>> {
   const map = new Map<string, Record<string, unknown>>();
