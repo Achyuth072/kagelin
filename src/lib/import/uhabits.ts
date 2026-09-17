@@ -8,6 +8,26 @@ export interface UhabitsRawSource {
   repetitions: Record<string, unknown>[];
 }
 
+let sqlJsPromise: ReturnType<typeof initSqlJs> | undefined;
+
+// Uses local WASM binary (public/sql-wasm.wasm) to support offline and PWA environments.
+export function loadSqlJs(wasmPath?: string) {
+  if (!sqlJsPromise) {
+    const isNode =
+      typeof process !== "undefined" &&
+      Boolean(process.versions?.node) &&
+      (typeof window === "undefined" ||
+        (process as unknown as { release?: { name?: string } }).release
+          ?.name === "node");
+
+    sqlJsPromise = initSqlJs({
+      locateFile: () =>
+        wasmPath || (isNode ? "public/sql-wasm.wasm" : "/sql-wasm.wasm"),
+    });
+  }
+  return sqlJsPromise;
+}
+
 export async function parseUhabitsFile(
   file: File | Blob | ArrayBuffer | Uint8Array,
   wasmPath?: string,
@@ -16,20 +36,7 @@ export async function parseUhabitsFile(
   entries: HabitEntry[];
   source: UhabitsRawSource;
 }> {
-  // Use the locally served WASM binary so the import works in all environments
-  // (including offline / PWA) without depending on an external CDN.
-  // The file is copied to public/sql-wasm.wasm by `npm run copy-wasm` (prepare).
-  const isNode =
-    typeof process !== "undefined" &&
-    Boolean(process.versions?.node) &&
-    (typeof window === "undefined" ||
-      (process as unknown as { release?: { name?: string } }).release?.name ===
-        "node");
-
-  const SQL = await initSqlJs({
-    locateFile: () =>
-      wasmPath || (isNode ? "public/sql-wasm.wasm" : "/sql-wasm.wasm"),
-  });
+  const SQL = await loadSqlJs(wasmPath);
 
   let uint8: Uint8Array;
   if (file instanceof Uint8Array) {
@@ -83,7 +90,7 @@ function resultToObjects(result: {
 
 // Loop Habit Tracker stores colors as palette indices (not ARGB ints).
 // Source: HabitColor enum in uhabits-core (indices 0-20).
-const LOOP_COLOR_PALETTE: Record<number, string> = {
+export const LOOP_COLOR_PALETTE: Record<number, string> = {
   0: "#f44336",
   1: "#ff5722",
   2: "#ff9800",
@@ -144,7 +151,7 @@ function hexToRgb(hex: string): [number, number, number] {
   return [r, g, b];
 }
 
-function colorDistance(hex1: string, hex2: string): number {
+export function colorDistance(hex1: string, hex2: string): number {
   const [r1, g1, b1] = hexToRgb(hex1);
   const [r2, g2, b2] = hexToRgb(hex2);
   return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
