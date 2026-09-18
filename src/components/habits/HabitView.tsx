@@ -12,6 +12,8 @@ import {
   CalendarIcon,
   AlignLeft,
   Palette,
+  CheckCircle2,
+  Gauge,
 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { HabitIconPicker } from "./shared/HabitIconPicker";
@@ -19,6 +21,12 @@ import {
   HabitFrequencyField,
   type FrequencyPeriod,
 } from "./shared/HabitFrequencyField";
+import { HabitTargetField, type TargetType } from "./shared/HabitTargetField";
+import {
+  HabitQuestionField,
+  type HabitType,
+} from "./shared/HabitQuestionField";
+import { HabitReminderField } from "./shared/HabitReminderField";
 import { ColorPicker } from "@/components/shared/ColorPicker";
 import { TaskDatePicker } from "../tasks/shared/TaskDatePicker";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -34,10 +42,24 @@ interface HabitViewBaseProps {
   setIcon: (value: string) => void;
   startDate: Date | undefined;
   setStartDate: (value: Date | undefined) => void;
+  habitType: HabitType;
+  setHabitType: (value: HabitType) => void;
   frequencyCount: number;
   setFrequencyCount: (value: number) => void;
   frequencyPeriod: FrequencyPeriod;
   setFrequencyPeriod: (value: FrequencyPeriod) => void;
+  targetValue: number | undefined;
+  setTargetValue: (value: number | undefined) => void;
+  targetType: TargetType;
+  setTargetType: (value: TargetType) => void;
+  unit: string;
+  setUnit: (value: string) => void;
+  question: string;
+  setQuestion: (value: string) => void;
+  reminderTime: string | null | undefined;
+  setReminderTime: (value: string | null) => void;
+  reminderDays: number;
+  setReminderDays: (value: number) => void;
   datePickerOpen: boolean;
   setDatePickerOpen: (value: boolean) => void;
   isMobile: boolean;
@@ -68,10 +90,24 @@ export function HabitView(props: HabitViewProps) {
     setIcon,
     startDate,
     setStartDate,
+    habitType,
+    setHabitType,
     frequencyCount,
     setFrequencyCount,
     frequencyPeriod,
     setFrequencyPeriod,
+    targetValue,
+    setTargetValue,
+    targetType,
+    setTargetType,
+    unit,
+    setUnit,
+    question,
+    setQuestion,
+    reminderTime,
+    setReminderTime,
+    reminderDays,
+    setReminderDays,
     datePickerOpen,
     setDatePickerOpen,
     isMobile,
@@ -93,7 +129,6 @@ export function HabitView(props: HabitViewProps) {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full max-w-full">
-      {/* Title — native input, bottom border only, no box */}
       <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
         <input
           id={nameId}
@@ -118,9 +153,7 @@ export function HabitView(props: HabitViewProps) {
         )}
       </div>
 
-      {/* Body */}
       <div className="flex-1 overflow-y-auto min-h-0 py-2">
-        {/* Icon & color */}
         <div className="flex items-start gap-3 px-3 py-2.5 rounded-md mx-2">
           <IconCell>
             <Palette
@@ -140,7 +173,52 @@ export function HabitView(props: HabitViewProps) {
 
         <div className="h-1" />
 
-        {/* Frequency — "N times per Day/Week" */}
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-md mx-2">
+          <IconCell className="items-center pt-0">
+            {habitType === "measurable" ? (
+              <Gauge
+                className="h-4 w-4 text-muted-foreground"
+                strokeWidth={2.25}
+              />
+            ) : (
+              <CheckCircle2
+                className="h-4 w-4 text-muted-foreground"
+                strokeWidth={2.25}
+              />
+            )}
+          </IconCell>
+          <div className="inline-flex h-8 p-0.5 rounded-lg bg-secondary/10 border border-border/40 shrink-0">
+            {(
+              [
+                { value: "boolean", label: "Yes or No" },
+                { value: "measurable", label: "Measurable" },
+              ] as const
+            ).map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  if (value !== habitType) {
+                    trigger("toggle");
+                    setHabitType(value);
+                  }
+                }}
+                aria-pressed={habitType === value}
+                className={cn(
+                  "rounded-md px-2.5 h-7 text-[13px] font-medium tracking-tight border border-transparent transition-seijaku-fast",
+                  habitType === value
+                    ? "bg-brand text-brand-foreground border-brand/20"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/40",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="h-1" />
+
         <HabitFrequencyField
           count={frequencyCount}
           period={frequencyPeriod}
@@ -148,9 +226,39 @@ export function HabitView(props: HabitViewProps) {
           onPeriodChange={setFrequencyPeriod}
         />
 
+        {habitType === "measurable" && (
+          <>
+            <div className="h-1" />
+            <HabitTargetField
+              targetValue={targetValue}
+              unit={unit}
+              targetType={targetType}
+              onTargetValueChange={setTargetValue}
+              onUnitChange={setUnit}
+              onTargetTypeChange={setTargetType}
+            />
+          </>
+        )}
+
         <div className="h-1" />
 
-        {/* Description */}
+        <HabitQuestionField
+          question={question}
+          onQuestionChange={setQuestion}
+          habitType={habitType}
+        />
+
+        <div className="h-1" />
+
+        <HabitReminderField
+          reminderTime={reminderTime}
+          onReminderTimeChange={setReminderTime}
+          reminderDays={reminderDays}
+          onReminderDaysChange={setReminderDays}
+        />
+
+        <div className="h-1" />
+
         <div className="mx-2">
           <div className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast">
             <IconCell className="pt-[5px]">
@@ -174,7 +282,6 @@ export function HabitView(props: HabitViewProps) {
         <div className="h-1" />
       </div>
 
-      {/* Footer */}
       <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
         <TaskDatePicker
           date={startDate}

@@ -939,7 +939,11 @@ class MockStore {
       (e) => e.habit_id === habitId && e.date === date,
     );
 
-    if (value === 0) {
+    // Measurable habits treat 0 as a logged value, not clearing the entry.
+    const habit = this.data.habits.find((h) => h.id === habitId);
+    const isMeasurable = habit?.habit_type === "measurable";
+
+    if (value === 0 && !isMeasurable) {
       if (existingIndex !== -1) {
         this.data.habit_entries = this.data.habit_entries.filter(
           (_, i) => i !== existingIndex,

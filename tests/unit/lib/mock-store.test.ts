@@ -317,6 +317,26 @@ describe("MockStore (Guest Mode Data)", () => {
     expect(cleared).toBeNull();
     expect(mockStore.getHabitEntries(habit.id)).toHaveLength(2);
   });
+
+  it("persists an explicit 0 log for a measurable habit instead of clearing it", () => {
+    const habit = mockStore.addHabit({
+      name: "Cigarettes",
+      description: null,
+      color: "#4B6CB7",
+      icon: null,
+      start_date: null,
+      archived_at: null,
+      habit_type: "measurable",
+      target_type: "at_most",
+      target_value: 0,
+      unit: "cigarettes",
+    });
+
+    const entry = mockStore.setHabitEntry(habit.id, "2026-09-01", 0);
+    expect(entry).not.toBeNull();
+    expect(entry?.value).toBe(0);
+    expect(mockStore.getHabitEntries(habit.id)).toHaveLength(1);
+  });
 });
 
 // See docs/adr/0014-demo-data-stripped-on-signup-migration.md.

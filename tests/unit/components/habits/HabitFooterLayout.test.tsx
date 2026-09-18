@@ -3,14 +3,12 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { HabitView } from "@/components/habits/HabitView";
 
-// Mock haptics
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({
     trigger: vi.fn(),
   }),
 }));
 
-// Mock the components used in the views
 vi.mock("@/components/ui/responsive-dialog", () => ({
   ResponsiveDialogHeader: ({
     children,
@@ -59,10 +57,24 @@ describe("Habit Views Footer Layout", () => {
     setIcon: vi.fn(),
     startDate: undefined,
     setStartDate: vi.fn(),
+    habitType: "boolean" as const,
+    setHabitType: vi.fn(),
     frequencyCount: 1,
     setFrequencyCount: vi.fn(),
     frequencyPeriod: "day" as const,
     setFrequencyPeriod: vi.fn(),
+    targetValue: undefined,
+    setTargetValue: vi.fn(),
+    targetType: "at_least" as const,
+    setTargetType: vi.fn(),
+    unit: "",
+    setUnit: vi.fn(),
+    question: "",
+    setQuestion: vi.fn(),
+    reminderTime: null,
+    setReminderTime: vi.fn(),
+    reminderDays: 127,
+    setReminderDays: vi.fn(),
     datePickerOpen: false,
     setDatePickerOpen: vi.fn(),
     isMobile: false,
@@ -94,7 +106,6 @@ describe("Habit Views Footer Layout", () => {
     const colorPicker = screen.getByTestId("color-picker");
     expect(colorPicker).toBeDefined();
 
-    // Check it's not in the footer grid
     const footer = screen.getByLabelText(/start habit/i).closest("div")!;
     expect(footer.contains(colorPicker)).toBe(false);
   });
