@@ -9,13 +9,23 @@ function selectLastTag(tags, { excludePreRelease = false } = {}) {
   return tags.find((t) => !isPreReleaseTag(t)) ?? null;
 }
 
-function getLastTag(options) {
+function getLastTag({ cwd = process.cwd(), ...selectOptions } = {}) {
   let tags;
   try {
     tags = execFileSync(
       "git",
-      ["tag", "--list", "--sort=-v:refname", "--merged", "HEAD"],
-      { encoding: "utf-8" },
+      [
+        "-c",
+        "versionsort.suffix=-rc",
+        "-c",
+        "versionsort.suffix=-preview",
+        "tag",
+        "--list",
+        "--sort=-v:refname",
+        "--merged",
+        "HEAD",
+      ],
+      { encoding: "utf-8", cwd },
     )
       .split("\n")
       .map((t) => t.trim())
@@ -24,7 +34,7 @@ function getLastTag(options) {
     return null;
   }
 
-  return selectLastTag(tags, options);
+  return selectLastTag(tags, selectOptions);
 }
 
 function getCommitSubjectsSince(tag) {

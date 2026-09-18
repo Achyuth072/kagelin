@@ -299,6 +299,13 @@ export function CreateEventDialog({
     onOpenChange(false);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSubmit(onFormSubmit)();
+    }
+  };
+
   const handleDelete = () => {
     if (!event) return;
     trigger("thud");
@@ -317,6 +324,7 @@ export function CreateEventDialog({
       <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-visible">
         <form
           onSubmit={handleSubmit(onFormSubmit) as any}
+          onKeyDown={handleKeyDown}
           className="flex flex-col h-auto max-h-[85dvh]"
         >
           {/* a11y title — hidden visually; the native input is the visual title */}

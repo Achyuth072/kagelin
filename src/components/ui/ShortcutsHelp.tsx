@@ -63,7 +63,7 @@ const getShortcuts = (
       { keys: ["p"], description: "New Project" },
       { keys: ["a"], description: "Archived Projects" },
       { keys: ["c"], description: "Toggle Completed Tasks" },
-      { keys: [platformKey, "Enter"], description: "Save Task" },
+      { keys: [platformKey, "Enter"], description: "Save Task/Habit/Event" },
       { keys: [platformKey, "K"], description: "Search / Command Menu" },
       { keys: ["T"], description: "Switch Theme" },
       { keys: ["f"], description: "Focus Mode" },

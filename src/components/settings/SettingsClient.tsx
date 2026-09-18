@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { notify } from "@/lib/notify";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -107,7 +108,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const setTimeFormat = useUiStore((state) => state.setTimeFormat);
   const goals = useUiStore((state) => state.goals);
   const setGoals = useUiStore((state) => state.setGoals);
-  const { user, signOut, isGuestMode } = useAuth();
+  const { user, signOut, signOutAllDevices, isGuestMode } = useAuth();
   const hasTopBanner = useActiveBanner() !== null;
   const router = useRouter();
   const anchoredBack = useAnchoredBack();
@@ -118,6 +119,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
 
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [showSignOutAllConfirm, setShowSignOutAllConfirm] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isChangelogOpen, setIsChangelogOpen] = useState(false);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
@@ -147,10 +149,21 @@ export function SettingsClient({ version }: SettingsClientProps) {
     mainRef.current?.scrollTo(0, 0);
   };
 
-  const handleSignOut = async () => {
-    setShowSignOutConfirm(false);
+  const handleSignOut = async (allDevices: boolean) => {
+    (allDevices ? setShowSignOutAllConfirm : setShowSignOutConfirm)(false);
     setIsSigningOut(true);
-    await signOut();
+    if (allDevices) {
+      const { error } = await signOutAllDevices();
+      if (error) {
+        setIsSigningOut(false);
+        notify.error("Couldn't sign out of all devices", {
+          description: error.message,
+        });
+        return;
+      }
+    } else {
+      await signOut();
+    }
     router.push("/login");
   };
 
@@ -530,8 +543,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
 
                   {!isGuestMode && (
                     <Button
-                      variant="outline"
-                      className="w-full justify-start shadow-none text-destructive border-destructive-surface-border hover:border-destructive hover:bg-destructive-surface-hover transition-all"
+                      variant="destructive"
+                      className="w-full justify-start"
                       onClick={() => {
                         trigger("thud");
                         setIsDeleteDialogOpen(true);
@@ -544,8 +557,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
                   )}
 
                   <Button
-                    variant="destructive"
-                    className="w-full justify-start shadow-none"
+                    variant="outline"
+                    className="w-full justify-start shadow-none mt-2"
                     onClick={() => {
                       trigger("thud");
                       setShowSignOutConfirm(true);
@@ -564,6 +577,21 @@ export function SettingsClient({ version }: SettingsClientProps) {
                       </>
                     )}
                   </Button>
+
+                  {!isGuestMode && (
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start shadow-none text-destructive border-destructive-surface-border hover:border-destructive hover:bg-destructive-surface-hover transition-all"
+                      onClick={() => {
+                        trigger("thud");
+                        setShowSignOutAllConfirm(true);
+                      }}
+                      disabled={isSigningOut}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out of All Devices
+                    </Button>
+                  )}
                 </div>
               </section>
             )}
@@ -602,7 +630,14 @@ export function SettingsClient({ version }: SettingsClientProps) {
       <SignOutConfirmation
         isOpen={showSignOutConfirm}
         onClose={() => setShowSignOutConfirm(false)}
-        onConfirm={handleSignOut}
+        onConfirm={() => handleSignOut(false)}
+      />
+
+      <SignOutConfirmation
+        isOpen={showSignOutAllConfirm}
+        onClose={() => setShowSignOutAllConfirm(false)}
+        onConfirm={() => handleSignOut(true)}
+        allDevices
       />
 
       <DeleteUserDataDialog

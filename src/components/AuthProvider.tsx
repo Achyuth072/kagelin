@@ -59,6 +59,7 @@ type AuthContextType = {
   ) => Promise<{ error: AuthError | null }>;
   signInAsGuest: () => void;
   signOut: () => Promise<void>;
+  signOutAllDevices: () => Promise<{ error: AuthError | null }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -290,6 +291,16 @@ export function AuthProvider({
     setIsGuestMode(true);
   }, []);
 
+  const purgeDeviceContentSafely = useCallback(async () => {
+    try {
+      await purgeDeviceContent(queryClient);
+    } catch (err) {
+      // A purge failure (e.g. IndexedDB blocked) must not strand the user
+      // on a "signing out" screen — the session has already ended.
+      Sentry.captureException(err);
+    }
+  }, [queryClient]);
+
   const signOut = useCallback(async () => {
     if (isGuestMode) {
       // Guest data is the user's only copy — never purged.
@@ -297,16 +308,18 @@ export function AuthProvider({
       setUser(null);
       setIsGuestMode(false);
     } else {
-      await supabase.auth.signOut();
-      try {
-        await purgeDeviceContent(queryClient);
-      } catch (err) {
-        // A purge failure (e.g. IndexedDB blocked) must not strand the user
-        // on a "signing out" screen — the session has already ended.
-        Sentry.captureException(err);
-      }
+      await supabase.auth.signOut({ scope: "local" });
+      await purgeDeviceContentSafely();
     }
-  }, [supabase.auth, isGuestMode, queryClient]);
+  }, [supabase.auth, isGuestMode, purgeDeviceContentSafely]);
+
+  const signOutAllDevices = useCallback(async () => {
+    const { error } = await supabase.auth.signOut({ scope: "global" });
+    if (!error) {
+      await purgeDeviceContentSafely();
+    }
+    return { error };
+  }, [supabase.auth, purgeDeviceContentSafely]);
 
   return (
     <AuthContext.Provider
@@ -326,6 +339,7 @@ export function AuthProvider({
         unlinkIdentity,
         signInAsGuest,
         signOut,
+        signOutAllDevices,
       }}
     >
       {children}
