@@ -39,7 +39,7 @@ function getLastTag({ cwd = process.cwd(), ...selectOptions } = {}) {
 
 function getCommitSubjectsSince(tag) {
   const range = tag ? `${tag}..HEAD` : "HEAD";
-  return execFileSync("git", ["log", range, "--format=%s"], {
+  return execFileSync("git", ["log", range, "--no-merges", "--format=%s"], {
     encoding: "utf-8",
   })
     .split("\n")

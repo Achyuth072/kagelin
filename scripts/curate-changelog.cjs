@@ -78,10 +78,9 @@ async function runCurationLoop(initialSections) {
 
       const choice = resolveChoice(answer);
       if (choice === "raw") return sections;
-      if (choice === "blank") return {};
 
       try {
-        sections = editSections(sections);
+        sections = editSections(choice === "blank" ? {} : sections);
       } catch (err) {
         // Deliberate fallback: a transient editor failure shouldn't crash
         // the release over a curation nicety.
