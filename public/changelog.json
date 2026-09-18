@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.43.2-preview.0",
+    "date": "2026-09-18",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Widen delete-project dialog padding, add Ctrl/Cmd+Enter save to event dialog",
+        "Scope sign out to current device, add sign-out-all-devices option"
+      ]
+    }
+  },
+  {
     "version": "1.43.1",
     "date": "2026-09-17",
     "channel": "stable",
@@ -754,19 +765,6 @@
       ],
       "Fixed": [
         "Add clickjacking/MIME-sniffing headers, hide X-Powered-By"
-      ]
-    }
-  },
-  {
-    "version": "1.28.0",
-    "date": "2026-08-03",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Android users now get a one-time tip after enabling notifications, showing how to disable battery optimization for Chrome so timer alerts aren't silently blocked while your phone is idle"
-      ],
-      "Fixed": [
-        "Fixed focus-timer notifications sometimes arriving late or twice"
       ]
     }
   }
