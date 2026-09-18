@@ -119,7 +119,10 @@ export function DeleteProjectDialog({
   if (isDesktop) {
     return (
       <AlertDialog open={open} onOpenChange={onOpenChange}>
-        <AlertDialogContent aria-describedby="delete-project-description">
+        <AlertDialogContent
+          aria-describedby="delete-project-description"
+          className="sm:max-w-xl"
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Project</AlertDialogTitle>
             <AlertDialogDescription id="delete-project-description">
