@@ -15,7 +15,9 @@ import {
   Trash2,
   BellRing,
   AlertTriangle,
+  Database,
 } from "lucide-react";
+import { useUhabitsExport } from "@/lib/hooks/useUhabitsExport";
 import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -369,6 +371,12 @@ export function BackupSyncSettings() {
   const [isImporting, setIsImporting] = useState(false);
   const [showExternalImport, setShowExternalImport] = useState(false);
 
+  const {
+    exportLoopDb,
+    exportLoopZip,
+    isExporting: isExportingLoop,
+  } = useUhabitsExport();
+
   // Kept in memory only to avoid persisting credentials locally.
   const [webdavCredentials, setWebdavCredentials] = useState<WebDAVCredentials>(
     { serverUrl: "", username: "", password: "" },
@@ -378,7 +386,6 @@ export function BackupSyncSettings() {
     "idle" | "success" | "error"
   >("idle");
   const [isSyncing, setIsSyncing] = useState(false);
-  // Pre-fetched so the confirmation dialog can display the backup export timestamp.
   const [pendingRestore, setPendingRestore] = useState<BackupData | null>(null);
 
   const invalidateDataQueries = async () => {
@@ -448,7 +455,6 @@ export function BackupSyncSettings() {
     try {
       const backupData = await parseBackupZip(file);
 
-      // Single write so large restores don't repeatedly stringify a growing payload.
       mockStore.restoreBackup(backupData);
       useLocationHistoryStore.setState({
         locations: backupData.location_history ?? [],
@@ -700,7 +706,45 @@ export function BackupSyncSettings() {
                 </div>
               )}
               <Separator className="bg-border/20 mx-4" />
-              <div className="px-4 pb-4 pt-4">
+              <div className="px-4 pb-4 pt-4 space-y-3">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Loop Habit Tracker
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={exportLoopDb}
+                        disabled={isExportingLoop}
+                        className="text-xs h-8 gap-1.5"
+                      >
+                        {isExportingLoop ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Database className="h-3.5 w-3.5 text-brand" />
+                        )}
+                        Export (.db)
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={exportLoopZip}
+                        disabled={isExportingLoop}
+                        className="text-xs h-8 gap-1.5"
+                      >
+                        {isExportingLoop ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5 text-brand" />
+                        )}
+                        Export (CSV Zip)
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
                 <Button
                   variant="ghost"
                   size="sm"

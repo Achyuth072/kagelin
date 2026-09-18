@@ -8,6 +8,7 @@ import {
   extractRawHabits,
   collectUhabitsExportData,
   entryToRepetitionValue,
+  toFilenameDate,
   type UhabitsExportData,
 } from "@/lib/export/uhabitsExportDb";
 import { computeScores } from "@/lib/utils/habit-score";
@@ -87,11 +88,6 @@ export function formatHabitDirName(index: number, name: string): string {
   const prefix = String(index + 1).padStart(3, "0");
   const combined = sane ? `${prefix} ${sane}` : prefix;
   return `${combined.trim()}/`;
-}
-
-function toDateStr(date?: Date | string): string {
-  if (!date) return format(new Date(), "yyyy-MM-dd");
-  return date instanceof Date ? format(date, "yyyy-MM-dd") : date;
 }
 
 export function formatRepetitionValue(value: number): string {
@@ -492,7 +488,7 @@ export function generateScoresMatrixCsv(
 }
 
 export function generateUhabitsZipFilename(date?: Date | string): string {
-  return `Loop Habits CSV ${toDateStr(date)}.zip`;
+  return `Loop Habits CSV ${toFilenameDate(date)}.zip`;
 }
 
 export function buildUhabitsCsvArchive(
@@ -503,7 +499,7 @@ export function buildUhabitsCsvArchive(
   const entries = data.entries ?? [];
   const rawSources = data.rawSources ?? [];
 
-  const todayStr = toDateStr(options?.today);
+  const todayStr = toFilenameDate(options?.today);
 
   const sortedHabits = [...habits].sort(
     (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),

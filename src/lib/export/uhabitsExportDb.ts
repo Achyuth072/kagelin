@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
 import { fetchAllRows } from "@/lib/supabase/paginate";
+import { format } from "date-fns";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { KANSO_VALUE_SKIP, KANSO_VALUE_MISSED } from "@/lib/types/habit";
 import {
@@ -81,6 +82,15 @@ export function dateStringToUtcMidnightMs(dateStr: string): number {
   return Date.UTC(year, month, day);
 }
 
+export function toFilenameDate(date?: Date | string): string {
+  if (!date) return format(new Date(), "yyyy-MM-dd");
+  return date instanceof Date ? format(date, "yyyy-MM-dd") : date;
+}
+
+export function generateUhabitsDbFilename(date?: Date | string): string {
+  return `Loop Habits Backup ${toFilenameDate(date)}.db`;
+}
+
 export interface UhabitsExportData {
   habits: Habit[];
   entries: HabitEntry[];
@@ -98,7 +108,6 @@ export interface ExportToUhabitsDbOptions {
 
 const GUEST_STORE_KEY = "kanso_import_sources";
 
-// Reads through wrapped Supabase client (or mockStore) so encrypted fields are decrypted.
 export async function collectUhabitsExportData(options?: {
   supabase?: SupabaseClient;
   isGuest?: boolean;

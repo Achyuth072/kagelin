@@ -54,6 +54,20 @@ vi.mock("@/components/ui/select", () => ({
 }));
 
 const useAuthMock = vi.fn();
+const { mockExportLoopDb, mockExportLoopZip } = vi.hoisted(() => ({
+  mockExportLoopDb: vi.fn(),
+  mockExportLoopZip: vi.fn(),
+}));
+
+vi.mock("@/lib/hooks/useUhabitsExport", () => ({
+  useUhabitsExport: () => ({
+    exportLoopDb: mockExportLoopDb,
+    exportLoopZip: mockExportLoopZip,
+    isExportingDb: false,
+    isExportingZip: false,
+    isExporting: false,
+  }),
+}));
 
 vi.mock("@/components/AuthProvider", () => ({
   useAuth: () => useAuthMock(),
@@ -191,5 +205,27 @@ describe("BackupSyncSettings", () => {
     );
     expect(persisted.state.backupReminderEnabled).toBe(false);
     expect(persisted.state.backupReminderFrequencyDays).toBe(30);
+  });
+
+  it("shows Loop Habit Tracker backup triggers and allows exporting .db and CSV zip", () => {
+    useAuthMock.mockReturnValue({ isGuestMode: false });
+    render(<BackupSyncSettings />);
+
+    expect(screen.getByText("Loop Habit Tracker")).toBeInTheDocument();
+    const exportDbBtn = screen.getByRole("button", {
+      name: /export \(\.db\)/i,
+    });
+    const exportZipBtn = screen.getByRole("button", {
+      name: /export \(csv zip\)/i,
+    });
+
+    expect(exportDbBtn).toBeInTheDocument();
+    expect(exportZipBtn).toBeInTheDocument();
+
+    fireEvent.click(exportDbBtn);
+    expect(mockExportLoopDb).toHaveBeenCalled();
+
+    fireEvent.click(exportZipBtn);
+    expect(mockExportLoopZip).toHaveBeenCalled();
   });
 });

@@ -6,6 +6,7 @@ import {
   mapKagelinFrequencyToLoop,
   entryToRepetitionValue,
   dateStringToUtcMidnightMs,
+  generateUhabitsDbFilename,
   collectUhabitsExportData,
 } from "@/lib/export/uhabitsExportDb";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
@@ -69,6 +70,17 @@ describe("uhabitsExportDb - pure helpers", () => {
   it("converts YYYY-MM-DD date strings to UTC midnight epoch milliseconds", () => {
     expect(dateStringToUtcMidnightMs("2023-07-10")).toBe(1688947200000);
     expect(dateStringToUtcMidnightMs("2024-01-01")).toBe(1704067200000);
+  });
+
+  it("generates timestamped Loop SQLite backup filenames", () => {
+    expect(generateUhabitsDbFilename("2026-09-03")).toBe(
+      "Loop Habits Backup 2026-09-03.db",
+    );
+    expect(
+      generateUhabitsDbFilename(new Date("2026-09-03T10:30:56.000Z")),
+    ).toBe("Loop Habits Backup 2026-09-03.db");
+    const defaultName = generateUhabitsDbFilename();
+    expect(defaultName).toMatch(/^Loop Habits Backup \d{4}-\d{2}-\d{2}\.db$/);
   });
 });
 
