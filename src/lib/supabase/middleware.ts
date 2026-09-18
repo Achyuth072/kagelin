@@ -66,7 +66,7 @@ export async function updateSession(request: NextRequest) {
       return supabaseResponse;
     }
 
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
     return redirectToLogin();
   }
 

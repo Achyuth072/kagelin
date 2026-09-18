@@ -67,6 +67,7 @@ describe("AccountSection", () => {
       unlinkIdentity: mockUnlinkIdentity,
       signInAsGuest: vi.fn(),
       signOut: vi.fn(),
+      signOutAllDevices: vi.fn(),
     });
   }
 

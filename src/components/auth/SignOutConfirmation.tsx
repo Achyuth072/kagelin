@@ -30,18 +30,24 @@ interface SignOutConfirmationProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  allDevices?: boolean;
 }
 
 export function SignOutConfirmation({
   isOpen,
   onClose,
   onConfirm,
+  allDevices = false,
 }: SignOutConfirmationProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { trigger } = useHaptic();
 
-  // Handle back navigation on mobile to close drawer instead of navigating away
   useBackNavigation(isOpen && !isDesktop, onClose);
+
+  const title = allDevices ? "Sign Out of All Devices" : "Sign Out";
+  const description = allDevices
+    ? "This will end your session on every device signed in to this account, including this one. You'll need to log in again everywhere."
+    : "Are you sure you want to sign out? You will need to log in again to access your tasks.";
 
   if (isDesktop) {
     return (
@@ -50,12 +56,9 @@ export function SignOutConfirmation({
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <LogOut className="h-5 w-5" />
-              Sign Out
+              {title}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to sign out? You will need to log in again
-              to access your tasks.
-            </AlertDialogDescription>
+            <AlertDialogDescription>{description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel
@@ -71,7 +74,7 @@ export function SignOutConfirmation({
                 onConfirm();
               }}
             >
-              Sign Out
+              {title}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -85,12 +88,9 @@ export function SignOutConfirmation({
         <DrawerHeader className="text-left">
           <DrawerTitle className="flex items-center gap-2">
             <LogOut className="h-5 w-5" />
-            Sign Out
+            {title}
           </DrawerTitle>
-          <DrawerDescription>
-            Are you sure you want to sign out? You will need to log in again to
-            access your tasks.
-          </DrawerDescription>
+          <DrawerDescription>{description}</DrawerDescription>
         </DrawerHeader>
         <DrawerFooter className="pt-2">
           <Button
@@ -101,7 +101,7 @@ export function SignOutConfirmation({
             variant="destructive"
             className="w-full active:scale-95 transition-transform"
           >
-            Sign Out
+            {title}
           </Button>
           <DrawerClose asChild>
             <Button
