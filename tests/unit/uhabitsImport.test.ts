@@ -342,8 +342,8 @@ describe("uhabitsImport streak fidelity (integration)", () => {
       threePerWeekReps,
     );
 
-    // 12 logged reps, but the schedule fills the gaps: 2024-05-06..05-31 = 26 days.
-    expect(getCurrentStreak(habits[0], entries, today)).toBe(26);
+    // 12 logged reps, backward-snapped & interpolated: 2024-05-04..05-31 = 28 days.
+    expect(getCurrentStreak(habits[0], entries, today)).toBe(28);
   });
 
   it("would collapse to a 1-day streak without the frequency (the bug)", () => {

@@ -44,12 +44,8 @@ round-trip fidelity is unaffected. Daily habits keep the exact 1-day window, and
 Measurable habits keep it too (they interpolate nothing, so a longer window would
 credit days never logged).
 
-**Known gap (tracked, not yet fixed):** Kagelin's `interpolateDoneDays` does not
-port uhabits' `snapIntervalsTogether` backward slide, nor its unclamped intervals.
-As a result Kagelin's streak numbers run ~1–2 short of uhabits (e.g. 27 vs 28,
-11 vs 13 on the fixtures in `uhabitsStreakParity.test.ts`). This is acceptable for
-the display bug fixed here, but **true import/export round-trip parity requires
-porting the faithful interpolation.** A validated uhabits oracle
-(`tests/unit/support/uhabitsReference.ts`, checked against uhabits' own
-`testComputeBoolean` fixture) and a differential suite are in place as the golden
-target for that follow-up.
+**Known gap (resolved 2026-09-18 in Ticket 05):** Kagelin's `interpolateDoneDays`
+now ports uhabits' `snapIntervalsTogether` backward slide into
+`src/lib/utils/habit-intervals.ts`, eliminating the 1-2 day discrepancy. Streaks on
+frequency habits achieve 0 discrepancy against `uhabitsReference.ts`. In addition,
+skipped entries (`value = -2`) bridge streak continuity and freeze score decay.

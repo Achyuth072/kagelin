@@ -208,9 +208,11 @@ export const LOOP_VALUE_YES = 2;
 export const LOOP_VALUE_SKIP = 3;
 export const LOOP_VALUE_NO = 0;
 export const LOOP_VALUE_UNKNOWN = -1;
-export const KANSO_VALUE_DONE = 1;
-export const KANSO_VALUE_SKIP = -2;
-export const KANSO_VALUE_MISSED = 0;
+import {
+  KANSO_VALUE_DONE,
+  KANSO_VALUE_SKIP,
+  KANSO_VALUE_MISSED,
+} from "../types/habit";
 
 export function parseRepetitionValue(
   rawVal: number,

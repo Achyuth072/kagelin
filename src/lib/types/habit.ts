@@ -36,3 +36,7 @@ export interface HabitEntry {
 export interface HabitWithEntries extends Habit {
   entries: HabitEntry[];
 }
+
+export const KANSO_VALUE_DONE = 1;
+export const KANSO_VALUE_SKIP = -2;
+export const KANSO_VALUE_MISSED = 0;

@@ -1,11 +1,4 @@
-import {
-  format,
-  parseISO,
-  eachDayOfInterval,
-  startOfDay,
-  differenceInCalendarDays,
-  addDays,
-} from "date-fns";
+import { format, parseISO, eachDayOfInterval, startOfDay } from "date-fns";
 import { zipSync, strToU8 } from "fflate";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
@@ -18,6 +11,11 @@ import {
   type UhabitsExportData,
 } from "@/lib/export/uhabitsExportDb";
 import { computeScores } from "@/lib/utils/habit-score";
+import {
+  buildIntervals,
+  snapIntervalsTogether,
+  shift,
+} from "@/lib/utils/habit-intervals";
 
 export type { UhabitsExportData };
 
@@ -110,52 +108,6 @@ export function formatRepetitionValue(value: number): string {
       return "UNKNOWN";
     default:
       return value.toString();
-  }
-}
-
-interface Interval {
-  begin: string;
-  center: string;
-  end: string;
-}
-
-const daysUntil = (a: string, b: string): number =>
-  differenceInCalendarDays(parseISO(b), parseISO(a));
-
-const shift = (d: string, n: number): string =>
-  format(addDays(parseISO(d), n), "yyyy-MM-dd");
-
-function buildIntervals(
-  num: number,
-  den: number,
-  doneDates: string[],
-): Interval[] {
-  const filtered = [...doneDates].sort().reverse();
-  const intervals: Interval[] = [];
-  for (let i = num - 1; i < filtered.length; i++) {
-    const begin = filtered[i];
-    const center = filtered[i - num + 1];
-    if (daysUntil(begin, center) < den) {
-      intervals.push({ begin, center, end: shift(begin, den - 1) });
-    }
-  }
-  return intervals;
-}
-
-function snapIntervalsTogether(intervals: Interval[]): void {
-  for (let i = 1; i < intervals.length; i++) {
-    const curr = intervals[i];
-    const next = intervals[i - 1];
-    const gapNextToCurrent = daysUntil(next.begin, curr.end);
-    const gapCenterToEnd = daysUntil(curr.center, curr.end);
-    if (gapNextToCurrent >= 0) {
-      const s = Math.min(gapCenterToEnd, gapNextToCurrent + 1);
-      intervals[i] = {
-        begin: shift(curr.begin, -s),
-        center: curr.center,
-        end: shift(curr.end, -s),
-      };
-    }
   }
 }
 

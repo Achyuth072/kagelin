@@ -63,7 +63,7 @@ describe("getCurrentStreak — 3×/week (frequency-aware)", () => {
   const today = new Date("2026-06-11T10:00:00");
 
   it("counts a flawless 3×/week run as one continuous streak", () => {
-    // 3 reps per week, perfectly spaced: June 1,3,5,8,10 → interpolated as June 1-11
+    // 3 reps per week: June 1,3,5,8,10 → backward-snapped & interpolated May 30 - June 11
     const entries = [
       entry("2026-06-01", 1),
       entry("2026-06-03", 1),
@@ -71,7 +71,7 @@ describe("getCurrentStreak — 3×/week (frequency-aware)", () => {
       entry("2026-06-08", 1),
       entry("2026-06-10", 1),
     ];
-    expect(getCurrentStreak(threePerWeek, entries, today)).toBe(11); // June 1-11
+    expect(getCurrentStreak(threePerWeek, entries, today)).toBe(13); // May 30 - June 11
   });
 
   it("stays live through a pending period, then lapses", () => {
@@ -131,7 +131,7 @@ describe("getBestStreaks", () => {
   });
 
   it("returns streaks over interpolated days for 3×/week", () => {
-    // Flawless 3×/week: June 1,3,5,8,10 → interpolated June 1-11 → one 11-day streak
+    // Flawless 3×/week: June 1,3,5,8,10 → backward-snapped May 30 - June 11 → one 13-day streak
     const entries = [
       entry("2026-06-01", 1),
       entry("2026-06-03", 1),
@@ -140,7 +140,7 @@ describe("getBestStreaks", () => {
       entry("2026-06-10", 1),
     ];
     const best = getBestStreaks(threePerWeek, entries, 5, today);
-    expect(best).toEqual([11]);
+    expect(best).toEqual([13]);
   });
 });
 
@@ -199,5 +199,70 @@ describe("getTotalCompletions", () => {
       entry("2026-06-03", 15), // above target ✗
     ];
     expect(getTotalCompletions(atMost, entries, today)).toBe(2);
+  });
+
+  it("does not count skipped entries as completions", () => {
+    const entries = [
+      entry("2026-06-01", 1),
+      entry("2026-06-02", -2), // skip
+      entry("2026-06-03", 1),
+    ];
+    expect(getTotalCompletions(dailyBoolean, entries, today)).toBe(2);
+  });
+});
+
+describe("getCurrentStreak — skip handling (bridges streak continuity)", () => {
+  const today = new Date("2026-06-11T10:00:00");
+
+  it("bridges a streak over a single skipped day", () => {
+    // June 8 (done), June 9 (skip = -2), June 10 (done), June 11 (pending)
+    const entries = [
+      entry("2026-06-08", 1),
+      entry("2026-06-09", -2),
+      entry("2026-06-10", 1),
+    ];
+    expect(getCurrentStreak(dailyBoolean, entries, today)).toBe(3);
+  });
+
+  it("bridges a streak over multiple consecutive skipped days", () => {
+    // June 7 (done), June 8 (skip), June 9 (skip), June 10 (done), June 11 (pending)
+    const entries = [
+      entry("2026-06-07", 1),
+      entry("2026-06-08", -2),
+      entry("2026-06-09", -2),
+      entry("2026-06-10", 1),
+    ];
+    expect(getCurrentStreak(dailyBoolean, entries, today)).toBe(4);
+  });
+
+  it("maintains current streak when the most recent logged day is a skip", () => {
+    // June 9 (done), June 10 (skip), June 11 (pending)
+    const entries = [entry("2026-06-09", 1), entry("2026-06-10", -2)];
+    expect(getCurrentStreak(dailyBoolean, entries, today)).toBe(2);
+  });
+
+  it("does not bridge when a day was missed (value 0)", () => {
+    // June 8 (done), June 9 (miss = 0), June 10 (done) -> streak broken at June 9
+    const entries = [
+      entry("2026-06-08", 1),
+      entry("2026-06-09", 0),
+      entry("2026-06-10", 1),
+    ];
+    expect(getCurrentStreak(dailyBoolean, entries, today)).toBe(1);
+  });
+
+  it("bridges streaks for measurable habits over skipped entries", () => {
+    const measurableDaily: Habit = {
+      ...dailyBoolean,
+      habit_type: "measurable",
+      target_type: "at_least",
+      target_value: 10,
+    };
+    const entries = [
+      entry("2026-06-08", 10),
+      entry("2026-06-09", -2), // skip
+      entry("2026-06-10", 15),
+    ];
+    expect(getCurrentStreak(measurableDaily, entries, today)).toBe(3);
   });
 });

@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
+import { KANSO_VALUE_SKIP } from "@/lib/types/habit";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { interpolateDoneDays } from "@/lib/utils/habit-intervals";
 import {
   computeDoneSet,
   currentStreak as uhabitsCurrentStreak,
 } from "./support/uhabitsReference";
-import { entries, makeHabit } from "./support/habitFixtures";
+import { entry, entries, makeHabit } from "./support/habitFixtures";
 
 const threePerWeek = makeHabit({
   frequency_count: 3,
@@ -65,12 +66,13 @@ describe("getCurrentStreak — reports the most-recent run (the bug fix)", () =>
 
   it("shows the historical streak on import, before marking today", () => {
     const streak = getCurrentStreak(threePerWeek, entries(reproDates), today);
-    // Regression: this read 0 until the user marked today complete.
-    expect(streak).toBe(27);
-    // Still 1 short of uhabits (28) — the backward-snap gap below.
-    expect(
-      uhabitsCurrentStreak(computeDoneSet(3, 7, reproDates), "2026-06-11"),
-    ).toBe(28);
+    // Differential test parity: exact match against uhabits reference oracle (0 discrepancy)
+    const expected = uhabitsCurrentStreak(
+      computeDoneSet(3, 7, reproDates),
+      "2026-06-11",
+    );
+    expect(streak).toBe(28);
+    expect(streak).toBe(expected);
   });
 });
 
@@ -86,11 +88,13 @@ describe("getCurrentStreak — deliberate deviations from raw uhabits (documente
     expect(kagelin).toBe(0);
     expect(uhabits).toBeGreaterThan(0);
   });
+});
 
-  it("KNOWN GAP: interpolation does not port uhabits' backward interval snap", () => {
-    // uhabits slides intervals backward to fill days before the first rep;
-    // Kagelin's snap only merges overlaps. See ADR 0004.
-    const today = new Date("2026-06-11T10:00:00");
+describe("getCurrentStreak — differential parity with uhabits reference oracle", () => {
+  const todayStr = "2026-06-11";
+  const today = new Date("2026-06-11T10:00:00");
+
+  it("achieves differential parity with uhabits backward interval snap (0 discrepancy)", () => {
     const dates = [
       "2026-06-01",
       "2026-06-03",
@@ -101,11 +105,56 @@ describe("getCurrentStreak — deliberate deviations from raw uhabits (documente
     const reps = entries(dates);
     const kagelinDone = interpolateDoneDays(threePerWeek, reps, today);
     const uhabitsDone = computeDoneSet(3, 7, dates);
-    // Kagelin starts the run at the first rep; uhabits slides it 2 days earlier.
+    // Both Kagelin and uhabits slide the interval backward to 2026-05-30
     expect(kagelinDone.has("2026-06-01")).toBe(true);
-    expect(kagelinDone.has("2026-05-30")).toBe(false);
+    expect(kagelinDone.has("2026-05-30")).toBe(true);
     expect(uhabitsDone.has("2026-05-30")).toBe(true);
-    expect(getCurrentStreak(threePerWeek, reps, today)).toBe(11);
-    expect(uhabitsCurrentStreak(uhabitsDone, "2026-06-11")).toBe(13);
+    const kagelinStreak = getCurrentStreak(threePerWeek, reps, today);
+    const uhabitsStreak = uhabitsCurrentStreak(uhabitsDone, todayStr);
+    expect(kagelinStreak).toBe(13);
+    expect(kagelinStreak).toBe(uhabitsStreak);
+  });
+
+  it("matches uhabits streak calculation across skipped days on daily habits (0 discrepancy)", () => {
+    const doneDates = ["2026-06-07", "2026-06-08", "2026-06-10"];
+    const skipDates = ["2026-06-09"];
+    const habitEntries = [
+      ...entries(doneDates),
+      ...skipDates.map((d) => entry(d, KANSO_VALUE_SKIP)),
+    ];
+    const dailyHabit = makeHabit({
+      frequency_count: 1,
+      frequency_period: "day",
+    });
+    const kagelin = getCurrentStreak(dailyHabit, habitEntries, today);
+    const uhabits = uhabitsCurrentStreak(
+      computeDoneSet(1, 1, doneDates, skipDates),
+      todayStr,
+    );
+    expect(kagelin).toBe(4);
+    expect(kagelin).toBe(uhabits);
+  });
+
+  it("matches uhabits streak calculation across skipped days on 3x/week habits (0 discrepancy)", () => {
+    const doneDates = [
+      "2026-05-25",
+      "2026-05-27",
+      "2026-05-29",
+      "2026-06-02",
+      "2026-06-04",
+      "2026-06-06",
+    ];
+    const skipDates = ["2026-06-01"];
+    const habitEntries = [
+      ...entries(doneDates),
+      ...skipDates.map((d) => entry(d, KANSO_VALUE_SKIP)),
+    ];
+    const kagelin = getCurrentStreak(threePerWeek, habitEntries, today);
+    const uhabits = uhabitsCurrentStreak(
+      computeDoneSet(3, 7, doneDates, skipDates),
+      todayStr,
+    );
+    expect(kagelin).toBe(17);
+    expect(kagelin).toBe(uhabits);
   });
 });

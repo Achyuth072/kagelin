@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
 import { fetchAllRows } from "@/lib/supabase/paginate";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
+import { KANSO_VALUE_SKIP, KANSO_VALUE_MISSED } from "@/lib/types/habit";
 import {
   LOOP_COLOR_PALETTE,
   colorDistance,
@@ -11,8 +12,6 @@ import {
   LOOP_VALUE_YES,
   LOOP_VALUE_SKIP,
   LOOP_VALUE_NO,
-  KANSO_VALUE_SKIP,
-  KANSO_VALUE_MISSED,
 } from "@/lib/import/uhabits";
 
 export { LOOP_COLOR_PALETTE };

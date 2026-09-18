@@ -310,7 +310,8 @@ describe("MockStore (Guest Mode Data)", () => {
       entries,
       new Date("2026-09-03T12:00:00Z"),
     );
-    expect(streak).toBe(1);
+    // Skips bridge streaks (Ticket 05): 2026-09-01 (done), 09-02 (skip), 09-03 (done) = 3
+    expect(streak).toBe(3);
 
     const cleared = mockStore.setHabitEntry(habit.id, "2026-09-02", 0);
     expect(cleared).toBeNull();

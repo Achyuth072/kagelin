@@ -5,7 +5,11 @@ import {
   parseISO,
   differenceInCalendarDays,
 } from "date-fns";
-import type { Habit, HabitEntry } from "@/lib/types/habit";
+import {
+  type Habit,
+  type HabitEntry,
+  KANSO_VALUE_SKIP,
+} from "@/lib/types/habit";
 import { interpolateDoneDays } from "@/lib/utils/habit-intervals";
 import { dayValue, periodDays } from "@/lib/utils/habit-score";
 
@@ -144,24 +148,35 @@ function buildDoneSet(
   entries: HabitEntry[],
   today: Date,
 ): Set<string> {
+  const todayKey = format(startOfDay(today), "yyyy-MM-dd");
+  let done: Set<string>;
+
   if (habit.habit_type === "measurable") {
     // Measurable: Boolean-only, no interpolation. Use the shared dayValue
     // predicate so the Score engine, Overview, and Frequency grid agree on
     // "done" — and so a null/0 target can't mark every logged day (incl. value 0)
     // as complete via the old `value >= (target ?? 0)` shortcut.
-    const done = new Set<string>();
+    done = new Set<string>();
     for (const e of entries) {
-      if (dayValue(e.value, habit) >= 1) {
+      if (dayValue(e.value, habit) >= 1 && e.date <= todayKey) {
         done.add(e.date);
       }
     }
-    return done;
+  } else {
+    // Boolean: use frequency interpolation over completed reps (value >= 1)
+    done = interpolateDoneDays(
+      habit,
+      entries.filter((e) => e.value >= 1),
+      today,
+    );
   }
 
-  // Boolean: use frequency interpolation
-  return interpolateDoneDays(
-    habit,
-    entries.filter((e) => e.value >= 1),
-    today,
-  );
+  // Bridge streaks over skipped entries (value = -2)
+  for (const e of entries) {
+    if (e.value === KANSO_VALUE_SKIP && e.date <= todayKey) {
+      done.add(e.date);
+    }
+  }
+
+  return done;
 }

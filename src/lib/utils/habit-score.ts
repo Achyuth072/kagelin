@@ -1,5 +1,9 @@
 import { format, eachDayOfInterval, startOfDay, parseISO } from "date-fns";
-import type { Habit, HabitEntry } from "@/lib/types/habit";
+import {
+  type Habit,
+  type HabitEntry,
+  KANSO_VALUE_SKIP,
+} from "@/lib/types/habit";
 
 type FrequencyPeriod = "day" | "week" | "month";
 
@@ -77,8 +81,14 @@ export function computeScores(
   for (const day of days) {
     const key = format(day, "yyyy-MM-dd");
     const raw = entryMap.get(key) ?? 0;
-    const val = dayValue(raw, habit);
-    const score = prevScore * multiplier + val * (1 - multiplier);
+    let score: number;
+    if (raw === KANSO_VALUE_SKIP) {
+      // Skipped entry: freeze decay (S_k = S_{k-1})
+      score = prevScore;
+    } else {
+      const val = dayValue(raw, habit);
+      score = prevScore * multiplier + val * (1 - multiplier);
+    }
     scores.push({ date: key, value: score });
     prevScore = score;
   }
@@ -86,7 +96,11 @@ export function computeScores(
   return scores;
 }
 
-export function currentScore(habit: Habit, entries: HabitEntry[]): number {
-  const scores = computeScores(habit, entries);
+export function currentScore(
+  habit: Habit,
+  entries: HabitEntry[],
+  options?: { from?: Date; to?: Date },
+): number {
+  const scores = computeScores(habit, entries, options);
   return scores.length > 0 ? scores[scores.length - 1].value : 0;
 }
