@@ -1,5 +1,28 @@
 [
   {
+    "version": "1.44.0-preview.0",
+    "date": "2026-09-19",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Compact habit drawer with collapsible rows and shared segmented time picker",
+        "Uhabits backup import and export UI options and encrypted round-trip verification",
+        "Native measurable habit creation, reminders, and strip logging UX",
+        "Backward-sliding interval snap and skip handling for uhabits parity",
+        "Loop csv and zip archive exporter via fflate",
+        "Loop sqlite .db exporter via sql.js with provenance merge",
+        "Full-fidelity loop habit tracker .db import engine",
+        "Extend habit schema and data model for uhabits fidelity and entry notes"
+      ],
+      "Fixed": [
+        "Habit stats, export reminders, guest migration fields, and clearing targets and strip values",
+        "Scope and guard habit_entries encryption backfill, clamp skipped heatmap levels",
+        "Address uhabits review findings across migration, entry clearing, export, and tests",
+        "Exclude merge commits from changelog, open editor on blank curation choice"
+      ]
+    }
+  },
+  {
     "version": "1.43.2",
     "date": "2026-09-18",
     "channel": "stable",
@@ -750,19 +773,6 @@
     "sections": {
       "Fixed": [
         "Use focus-visible and softer ring color on Select/Sheet/Dialog triggers"
-      ]
-    }
-  },
-  {
-    "version": "1.28.1-preview.1",
-    "date": "2026-08-04",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Bring back Board view on mobile"
-      ],
-      "Improved": [
-        "Simplify board container class and drop stale test mock"
       ]
     }
   }
