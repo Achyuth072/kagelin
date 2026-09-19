@@ -24,6 +24,40 @@ vi.mock("@/lib/supabase/client", () => ({
 
 const USER_ID = "user-1";
 
+// Replaces rather than mutates so the read snapshot stays stale like a network read.
+function withEditAfterRead(
+  base: ReturnType<typeof createFakeSupabaseClient>,
+  table: string,
+  edit: (stored: Row) => Row,
+) {
+  let applied = false;
+  return {
+    ...base,
+    from: (name: string) => {
+      const builder = base.from(name);
+      if (name !== table) return builder;
+      return {
+        ...builder,
+        select: (...args: unknown[]) => {
+          const api = builder.select(...args);
+          const originalThen = api.then.bind(api);
+          api.then = (onFulfilled: unknown, onRejected: unknown) =>
+            originalThen((result: unknown) => {
+              if (!applied) {
+                applied = true;
+                const rows = base.rawRows(table);
+                rows[0] = edit(rows[0]);
+              }
+              return (onFulfilled as (v: unknown) => unknown)(result);
+            }, onRejected);
+          return api;
+        },
+      };
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } as any;
+}
+
 beforeEach(async () => {
   keyStoreState.key = await generateMasterKey();
 });
@@ -114,6 +148,34 @@ describe("runBackfillMigration", () => {
     const habitImport = fakeClient.rawRows("habit_imports")[0];
     expect(isCiphertext(habitImport.raw)).toBe(true);
     expect(isCiphertext(habitImport.file_name)).toBe(true);
+  });
+
+  it("encrypts habit_entries notes, which are owned through the parent habit rather than a user_id column", async () => {
+    fakeClient = createFakeSupabaseClient({
+      habits: [
+        { id: "h1", user_id: USER_ID, name: "Run", description: null },
+        {
+          id: "h2",
+          user_id: "someone-else",
+          name: "Swim",
+          description: null,
+        },
+      ],
+      habit_entries: [
+        { id: "e1", habit_id: "h1", notes: "Knee felt sore" },
+        { id: "e2", habit_id: "h1", notes: null },
+        { id: "e3", habit_id: "h2", notes: "Not mine" },
+      ],
+    });
+
+    await runBackfillMigration(USER_ID);
+
+    const entries = fakeClient.rawRows("habit_entries");
+    expect(isCiphertext(entries.find((r: Row) => r.id === "e1").notes)).toBe(
+      true,
+    );
+    expect(entries.find((r: Row) => r.id === "e2").notes).toBeNull();
+    expect(entries.find((r: Row) => r.id === "e3").notes).toBe("Not mine");
   });
 
   it("is resumable: an interrupted pass can be re-run and every row ends encrypted exactly once", async () => {
@@ -234,6 +296,43 @@ describe("runBackfillMigration", () => {
     const stored = fakeClient.rawRows("tasks")[0];
     expect(stored.content).toBe(concurrentContent);
     expect(stored.updated_at).toBe("t1");
+  });
+
+  it("guards habit_entries, which lack updated_at: a note edited after it was read is left alone rather than clobbered", async () => {
+    const base = createFakeSupabaseClient({
+      habits: [{ id: "h1", user_id: USER_ID, name: "Run", description: null }],
+      habit_entries: [{ id: "e1", habit_id: "h1", notes: "Knee sore" }],
+    });
+
+    const concurrentNotes = await encryptField(keyStoreState.key!, "Knee fine");
+    fakeClient = withEditAfterRead(base, "habit_entries", (stored) => ({
+      ...stored,
+      notes: concurrentNotes,
+    }));
+
+    await expect(runBackfillMigration(USER_ID)).rejects.toThrow(
+      /Migration conflict/,
+    );
+
+    expect(base.rawRows("habit_entries")[0].notes).toBe(concurrentNotes);
+  });
+
+  it("guards labels, which lack updated_at: a name edited after it was read is left alone rather than clobbered", async () => {
+    const base = createFakeSupabaseClient({
+      labels: [{ id: "l1", user_id: USER_ID, name: "Health" }],
+    });
+
+    const concurrentName = await encryptField(keyStoreState.key!, "Fitness");
+    fakeClient = withEditAfterRead(base, "labels", (stored) => ({
+      ...stored,
+      name: concurrentName,
+    }));
+
+    await expect(runBackfillMigration(USER_ID)).rejects.toThrow(
+      /Migration conflict/,
+    );
+
+    expect(base.rawRows("labels")[0].name).toBe(concurrentName);
   });
 
   it("reports progress incrementally rather than only at the end", async () => {

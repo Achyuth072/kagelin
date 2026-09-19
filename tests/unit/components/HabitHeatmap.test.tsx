@@ -2,6 +2,7 @@ import { render } from "@testing-library/react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
 import type { HabitEntry } from "@/lib/hooks/useHabits";
+import { ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
 
 describe("HabitHeatmap Scroll Behavior", () => {
   let mockEntries: HabitEntry[];
@@ -40,5 +41,21 @@ describe("HabitHeatmap Scroll Behavior", () => {
     // Then: It should use fit-content to let SVG drive width
     expect(wrapper).toBeTruthy();
     expect(wrapper.style.width).toBe("fit-content");
+  });
+
+  it("renders a skipped day as an empty block instead of throwing", () => {
+    const skipped = mockEntries[300];
+    skipped.value = ENTRY_VALUE_SKIPPED;
+
+    const { container } = render(
+      <HabitHeatmap
+        entries={mockEntries}
+        color={color}
+        startDate={startDate}
+      />,
+    );
+
+    const block = container.querySelector(`rect[data-date="${skipped.date}"]`);
+    expect(block?.getAttribute("data-level")).toBe("0");
   });
 });
