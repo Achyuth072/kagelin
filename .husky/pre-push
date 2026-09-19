@@ -1,0 +1,12 @@
+LIMIT=500
+BASE=origin/dev
+
+git rev-parse --verify --quiet "$BASE" >/dev/null || exit 0
+
+changed=$(git diff --numstat "$BASE"...HEAD -- . ':!tests' ':!package-lock.json' ':!*.wasm' \
+  | awk '$1 != "-" { n += $1 + $2 } END { print n + 0 }')
+
+if [ "$changed" -gt "$LIMIT" ]; then
+  echo "pre-push: branch changes $changed non-test lines vs $BASE (limit $LIMIT)."
+  echo "Merge a finished slice into dev before continuing, or split this branch."
+fi
