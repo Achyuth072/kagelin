@@ -19,7 +19,6 @@ interface PendingRow {
   row: Record<string, any>;
 }
 
-// labels and habit_imports lack updated_at in the schema.
 const TABLES_WITH_UPDATED_AT = new Set([
   "tasks",
   "habits",
@@ -27,6 +26,49 @@ const TABLES_WITH_UPDATED_AT = new Set([
   "calendar_events",
   "external_calendars",
 ]);
+
+// Keeps the habit_id list in each request URL well under PostgREST's limit.
+const HABIT_ID_CHUNK = 100;
+
+async function fetchOwnedRows(
+  raw: ReturnType<typeof createRawClient>,
+  table: string,
+  columns: string,
+  userId: string,
+): Promise<Record<string, unknown>[]> {
+  if (table !== "habit_entries") {
+    return fetchAllRows<Record<string, unknown>>((from, to) =>
+      (raw.from(table) as any)
+        .select(columns)
+        .eq("user_id", userId)
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
+  }
+
+  // habit_entries has no user_id column; ownership runs through the parent habit.
+  const habits = await fetchAllRows<{ id: string }>((from, to) =>
+    (raw.from("habits") as any)
+      .select("id")
+      .eq("user_id", userId)
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+  const rows: Record<string, unknown>[] = [];
+  for (let i = 0; i < habits.length; i += HABIT_ID_CHUNK) {
+    const habitIds = habits.slice(i, i + HABIT_ID_CHUNK).map((h) => h.id);
+    rows.push(
+      ...(await fetchAllRows<Record<string, unknown>>((from, to) =>
+        (raw.from(table) as any)
+          .select(columns)
+          .in("habit_id", habitIds)
+          .order("id", { ascending: true })
+          .range(from, to),
+      )),
+    );
+  }
+  return rows;
+}
 
 // Raw client avoids decrypt-on-select to distinguish ciphertext from plaintext.
 export async function findPendingRows(userId: string): Promise<PendingRow[]> {
@@ -41,13 +83,7 @@ export async function findPendingRows(userId: string): Promise<PendingRow[]> {
       ...(hasUpdatedAt ? ["updated_at"] : []),
       ...fields,
     ].join(",");
-    const rows = await fetchAllRows<Record<string, unknown>>((from, to) =>
-      (raw.from(table) as any)
-        .select(columns)
-        .eq("user_id", userId)
-        .order("id", { ascending: true })
-        .range(from, to),
-    );
+    const rows = await fetchOwnedRows(raw, table, columns, userId);
 
     for (const row of rows) {
       if (fields.some((field) => needsEncryption(table, field, row[field]))) {
@@ -182,7 +218,14 @@ export async function runBackfillMigration(
       .update(patch)
       .eq("id", id)
       .select("id");
-    if (updatedAt !== null) query = query.eq("updated_at", updatedAt);
+    if (updatedAt !== null) {
+      query = query.eq("updated_at", updatedAt);
+    } else {
+      // JSON columns can't be matched with eq; their siblings still guard.
+      for (const field of Object.keys(patch)) {
+        if (!isJsonField(table, field)) query = query.eq(field, row[field]);
+      }
+    }
     const { data, error } = await query;
     if (error) throw error;
     if (!data || data.length === 0) {

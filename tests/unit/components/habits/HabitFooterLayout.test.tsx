@@ -1,16 +1,14 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { HabitView } from "@/components/habits/HabitView";
 
-// Mock haptics
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({
     trigger: vi.fn(),
   }),
 }));
 
-// Mock the components used in the views
 vi.mock("@/components/ui/responsive-dialog", () => ({
   ResponsiveDialogHeader: ({
     children,
@@ -41,6 +39,7 @@ vi.mock("@/components/shared/ColorPicker", () => ({
 
 vi.mock("@/components/habits/shared/HabitIconPicker", () => ({
   HabitIconPicker: () => <div data-testid="icon-picker" />,
+  getHabitIcon: () => () => null,
 }));
 
 vi.mock("@/components/tasks/shared/TaskDatePicker", () => ({
@@ -59,10 +58,24 @@ describe("Habit Views Footer Layout", () => {
     setIcon: vi.fn(),
     startDate: undefined,
     setStartDate: vi.fn(),
+    habitType: "boolean" as const,
+    setHabitType: vi.fn(),
     frequencyCount: 1,
     setFrequencyCount: vi.fn(),
     frequencyPeriod: "day" as const,
     setFrequencyPeriod: vi.fn(),
+    targetValue: undefined,
+    setTargetValue: vi.fn(),
+    targetType: "at_least" as const,
+    setTargetType: vi.fn(),
+    unit: "",
+    setUnit: vi.fn(),
+    question: "",
+    setQuestion: vi.fn(),
+    reminderTime: null,
+    setReminderTime: vi.fn(),
+    reminderDays: 127,
+    setReminderDays: vi.fn(),
     datePickerOpen: false,
     setDatePickerOpen: vi.fn(),
     isMobile: false,
@@ -76,6 +89,7 @@ describe("Habit Views Footer Layout", () => {
     render(<HabitView {...commonProps} mode="edit" onDelete={vi.fn()} />);
 
     const footer = screen.getByLabelText(/save/i).closest("div")!;
+    fireEvent.click(screen.getByText("Icon & color"));
     const colorPicker = screen.getByTestId("color-picker");
     expect(footer.contains(colorPicker)).toBe(false);
   });
@@ -84,17 +98,27 @@ describe("Habit Views Footer Layout", () => {
     render(<HabitView {...commonProps} mode="create" />);
 
     const footer = screen.getByLabelText(/start habit/i).closest("div")!;
+    fireEvent.click(screen.getByText("Icon & color"));
     const colorPicker = screen.getByTestId("color-picker");
     expect(footer.contains(colorPicker)).toBe(false);
+  });
+
+  it("Icon & color pickers stay collapsed until the row is opened", () => {
+    render(<HabitView {...commonProps} mode="create" />);
+
+    expect(screen.queryByTestId("color-picker")).toBeNull();
+    fireEvent.click(screen.getByText("Icon & color"));
+    expect(screen.getByTestId("color-picker")).toBeDefined();
+    expect(screen.getByTestId("icon-picker")).toBeDefined();
   });
 
   it("Color picker should be in the view (structural verification)", () => {
     render(<HabitView {...commonProps} mode="create" />);
 
+    fireEvent.click(screen.getByText("Icon & color"));
     const colorPicker = screen.getByTestId("color-picker");
     expect(colorPicker).toBeDefined();
 
-    // Check it's not in the footer grid
     const footer = screen.getByLabelText(/start habit/i).closest("div")!;
     expect(footer.contains(colorPicker)).toBe(false);
   });

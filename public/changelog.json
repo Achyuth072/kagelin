@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.43.2",
+    "date": "2026-09-18",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Widen delete-project dialog padding, add Ctrl/Cmd+Enter save to event dialog",
+        "Scope sign out to current device, add sign-out-all-devices option"
+      ]
+    }
+  },
+  {
     "version": "1.43.2-preview.0",
     "date": "2026-09-18",
     "channel": "preview",
@@ -752,19 +763,6 @@
       ],
       "Improved": [
         "Simplify board container class and drop stale test mock"
-      ]
-    }
-  },
-  {
-    "version": "1.28.1-preview.0",
-    "date": "2026-08-03",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Remove redundant grid view from Tasks page, keep List and Board"
-      ],
-      "Fixed": [
-        "Add clickjacking/MIME-sniffing headers, hide X-Powered-By"
       ]
     }
   }

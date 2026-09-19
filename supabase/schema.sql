@@ -631,7 +631,10 @@ CREATE TABLE IF NOT EXISTS public.habits (
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   archived_at TIMESTAMPTZ,
   -- Links to its raw record in habit_imports for round-trip export (ADR 0006).
-  source_uuid TEXT
+  source_uuid TEXT,
+  question TEXT,
+  reminder_time TEXT,
+  reminder_days INT NOT NULL DEFAULT 127
 );
 
 -- Index for faster user-scoped lookups
@@ -667,7 +670,8 @@ CREATE TABLE IF NOT EXISTS public.habit_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   habit_id UUID NOT NULL REFERENCES public.habits(id) ON DELETE CASCADE,
   date DATE NOT NULL,
-  value INTEGER DEFAULT 1,
+  value REAL DEFAULT 1,
+  notes TEXT,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   UNIQUE(habit_id, date)
 );
@@ -1465,7 +1469,7 @@ CREATE TRIGGER tasks_reject_unmigrated_plaintext
 
 CREATE TRIGGER habits_reject_unmigrated_plaintext
   BEFORE INSERT OR UPDATE ON public.habits
-  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('name', 'description');
+  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('name', 'description', 'question');
 
 CREATE TRIGGER projects_reject_unmigrated_plaintext
   BEFORE INSERT OR UPDATE ON public.projects
@@ -1486,3 +1490,34 @@ CREATE TRIGGER external_calendars_reject_unmigrated_plaintext
 CREATE TRIGGER habit_imports_reject_unmigrated_plaintext
   BEFORE INSERT OR UPDATE ON public.habit_imports
   FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('raw', 'file_name');
+
+-- habit_entries has no user_id column, so ownership resolves through the parent habit.
+CREATE OR REPLACE FUNCTION public.reject_unmigrated_plaintext_habit_entry()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  is_migrated BOOLEAN;
+BEGIN
+  IF NEW.notes IS NULL OR NEW.notes LIKE 'xchacha20poly1305-v1:%' THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT k.migrated_at IS NOT NULL INTO is_migrated
+  FROM public.habits h
+  JOIN public.encryption_keys k ON k.user_id = h.user_id
+  WHERE h.id = NEW.habit_id;
+
+  IF COALESCE(is_migrated, FALSE) THEN
+    RAISE EXCEPTION 'Column habit_entries.notes must be encrypted once a user has completed content-key setup'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER habit_entries_reject_unmigrated_plaintext
+  BEFORE INSERT OR UPDATE ON public.habit_entries
+  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext_habit_entry();

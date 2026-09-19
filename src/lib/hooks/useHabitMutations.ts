@@ -55,7 +55,6 @@ export function useDeleteHabit() {
         { includeArchived: false, isGuestMode },
       ]);
 
-      // Optimistically remove from cache
       queryClient.setQueryData<HabitWithEntries[]>(
         ["habits", { includeArchived: false, isGuestMode }],
         (old) => old?.filter((habit) => habit.id !== habitId),
@@ -135,19 +134,24 @@ export function useMarkHabitComplete() {
         { includeArchived: false, isGuestMode },
       ]);
 
-      // Optimistically update the entry
       queryClient.setQueryData<HabitWithEntries[]>(
         ["habits", { includeArchived: false, isGuestMode }],
         (old) =>
           old?.map((habit) => {
             if (habit.id !== habitId) return habit;
 
+            if (value === null) {
+              return {
+                ...habit,
+                entries: habit.entries.filter((e) => e.date !== date),
+              };
+            }
+
             const existingEntryIndex = habit.entries.findIndex(
               (e) => e.date === date,
             );
 
             if (existingEntryIndex >= 0) {
-              // Update existing entry
               const updatedEntries = [...habit.entries];
               updatedEntries[existingEntryIndex] = {
                 ...updatedEntries[existingEntryIndex],
@@ -155,9 +159,8 @@ export function useMarkHabitComplete() {
               };
               return { ...habit, entries: updatedEntries };
             } else {
-              // Add new entry
               const newEntry: HabitEntry = {
-                id: crypto.randomUUID(), // Temporary ID
+                id: crypto.randomUUID(),
                 habit_id: habitId,
                 date,
                 value,
@@ -178,7 +181,7 @@ export function useMarkHabitComplete() {
       // shouldn't inflate the "Habit Consistency" telemetry KPI.
       if (isGuestMode && mockStore.isSeedId(variables.habitId)) return;
 
-      if ((variables.value ?? 1) >= 1) {
+      if (variables.value !== null && (variables.value ?? 1) >= 1) {
         const habits = queryClient.getQueryData<HabitWithEntries[]>([
           "habits",
           { includeArchived: false, isGuestMode },

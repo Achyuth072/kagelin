@@ -58,11 +58,12 @@ function snapIntervalsTogether(intervals: Interval[]): void {
   }
 }
 
-/** Boolean done-set: union of all interval days (== uhabits YES_AUTO/MANUAL days). */
+/** Boolean done-set: union of all interval days (== uhabits YES_AUTO/MANUAL days) plus any SKIP days. */
 export function computeDoneSet(
   num: number,
   den: number,
   doneDates: string[],
+  skipDates: string[] = [],
 ): Set<string> {
   const intervals = buildIntervals(num, den, doneDates);
   snapIntervalsTogether(intervals);
@@ -73,6 +74,9 @@ export function computeDoneSet(
       done.add(cur);
       cur = shift(cur, 1);
     }
+  }
+  for (const d of skipDates) {
+    done.add(d);
   }
   return done;
 }

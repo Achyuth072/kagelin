@@ -62,7 +62,8 @@ export function HabitHeatmap({
     .map(([date, value]) => ({
       date,
       count: value,
-      level: value === 0 ? 0 : Math.min(Math.ceil(value * 4), 4),
+      // Skipped entries are negative; the calendar rejects levels below 0.
+      level: value <= 0 ? 0 : Math.min(Math.ceil(value * 4), 4),
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 

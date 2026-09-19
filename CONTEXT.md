@@ -299,10 +299,9 @@ reason.
 An intention the user tracks day-by-day. The umbrella term covering two kinds —
 a Habit is always one or the other:
 
-- **Boolean Habit** — done / not-done per day. The original and (for now) only
-  kind with native tracking UX.
+- **Boolean Habit** — done / not-done per day.
 - **Measurable Habit** — each Entry carries a real quantity (pages read, km run)
-  judged against a target. Schema and import only for now; no native entry UX yet.
+  judged against a target.
 
 A Habit also carries a **frequency** — how often it is meant to be done
 (e.g. daily, or three times a week). "Three times a week" _is_ expressible.
@@ -313,8 +312,8 @@ _Avoid_: Goal, routine, task.
 The record of a Habit on a specific date. What counts as **done** depends on the
 Habit kind:
 
-- **Boolean Habit**: done iff `value: 1`. The absence of an Entry and `value: 0`
-  both mean "not done."
+- **Boolean Habit**: done iff `value: 1`. `value: 0` is an explicit "not done";
+  no Entry is "unknown." Both count as not done for Streak and Score.
 - **Measurable Habit**: done iff the day **meets its target** — for an `at_least`
   target, the logged quantity ≥ target; for `at_most`, ≤ target. An absent day
   reads as quantity `0`.
@@ -326,17 +325,25 @@ import from:
 
 - **Done** — the target was met (see Entry).
 - **Not done** — explicitly missed.
-- **Unknown** — never logged. Indistinguishable from "not done" in our model.
+- **Unknown** — never logged. Counts as "not done" for Streak and Score, but is
+  shown differently.
 - **Skipped** — deliberately not counted (a rest day): does not break a Streak
   and is excluded from Score.
 
-Our store records only two of these — an Entry exists (with a `value`) or it
-doesn't. **Done** and **not done / unknown** map cleanly; **Skipped has no
-representation yet** and is collapsed to "not done" on import. Consequence:
-imported habits that used the source app's skip feature show a slightly lower
-Score and shorter Streaks than the original. Fidelity guarantees (and the Score
-verification tests) are therefore scoped to **skip-free** habits until native
-tracking introduces a real skipped state.
+How the store records each state:
+
+| State    | Boolean Habit      | Measurable Habit             |
+| -------- | ------------------ | ---------------------------- |
+| Done     | Entry `value = 1`  | Entry quantity meets target  |
+| Not done | Entry `value = 0`  | Entry quantity misses target |
+| Skipped  | Entry `value = -2` | Entry `value = -2`           |
+| Unknown  | no Entry           | no Entry                     |
+
+For a Measurable Habit, `value = 0` is a logged quantity of zero, judged against
+the target like any other quantity.
+Un-marking a done day deletes its Entry (back to Unknown); only an import writes
+an explicit Not done today. Loop Habit Tracker's `UNKNOWN` rows are dropped on
+import, since "no Entry" already means Unknown.
 
 ### "Done"-counting vs strength metrics (Measurable Habits)
 

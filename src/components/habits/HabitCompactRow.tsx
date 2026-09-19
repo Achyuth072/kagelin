@@ -17,6 +17,7 @@ import {
   hasFrequencyTarget,
 } from "@/lib/utils/habit-frequency-progress";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
+import { ENTRY_VALUE_DONE } from "@/lib/types/habit";
 import { DragHandle } from "@/components/tasks/DragHandle";
 import { HabitStripCell } from "./HabitStripCell";
 import { CircularProgress } from "@/components/ui/circular-progress";
@@ -26,19 +27,13 @@ interface HabitCompactRowProps {
   icon?: LucideIcon;
   onEdit?: () => void;
   onViewInsights?: () => void;
-  // Drag wiring (compact view): desktop shows a left-edge handle, mobile spreads
-  // the listeners on the whole row behind a long-press delay.
+  // Desktop uses left handle; mobile attaches drag listeners to whole row.
   isDesktop?: boolean;
   dragListeners?: DraggableSyntheticListeners;
   dragAttributes?: DraggableAttributes;
   dragActivatorRef?: (element: HTMLElement | null) => void;
 }
 
-/**
- * Dense single-habit row for the compact view: colored icon + name + current
- * streak + rolling-7 tappable strip. Whole row opens edit; cell taps log a day
- * (cells stopPropagation). Stacked two-line on mobile, single-line on md+.
- */
 export function HabitCompactRow({
   habit,
   icon: Icon,
@@ -52,8 +47,7 @@ export function HabitCompactRow({
   const markComplete = useMarkHabitComplete();
   const coarse = useCoarsePointer();
 
-  // `today` is fixed for the row's lifetime; a date rollover is picked up on
-  // the next list re-render rather than every render of every row.
+  // Fixed for row lifetime; date rollover updates on parent list re-render.
   const today = useMemo(() => new Date(), []);
   const streak = useMemo(
     () => getCurrentStreak(habit, habit.entries, today),
@@ -64,8 +58,6 @@ export function HabitCompactRow({
     [habit.entries, today, habit.start_date],
   );
 
-  // Frequency progress ring — Boolean Habits with a non-trivial target only,
-  // same gate as HabitCard.
   const showFrequencyRing =
     habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
   const frequencyProgress = useMemo(
@@ -81,8 +73,16 @@ export function HabitCompactRow({
     markComplete.mutate({
       habitId: habit.id,
       date,
-      value: current === 1 ? 0 : 1,
+      value: current === ENTRY_VALUE_DONE ? null : ENTRY_VALUE_DONE,
     });
+  };
+
+  const handleLogValue = (date: string, value: number) => {
+    markComplete.mutate({ habitId: habit.id, date, value });
+  };
+
+  const handleClearValue = (date: string) => {
+    markComplete.mutate({ habitId: habit.id, date, value: null });
   };
 
   return (
@@ -92,7 +92,6 @@ export function HabitCompactRow({
       {...(!isDesktop ? dragListeners : {})}
       className="group flex cursor-pointer flex-col gap-3 px-4 py-3.5 transition-seijaku-fast hover:bg-secondary/20 lg:flex-row lg:items-center lg:gap-4"
     >
-      {/* Desktop: left-edge drag handle (behind a 5px mouse-sensor distance). */}
       {isDesktop && (
         <DragHandle
           ref={dragActivatorRef}
@@ -103,7 +102,6 @@ export function HabitCompactRow({
         />
       )}
 
-      {/* Left: icon + name + streak (line 1 on mobile, flex-left on desktop) */}
       <div className="flex min-w-0 items-center gap-3 lg:flex-1">
         {Icon && (
           <Icon
@@ -127,7 +125,6 @@ export function HabitCompactRow({
               className="mr-0.5"
             />
           )}
-          {/* Quiet metadata, matched to HabitCard's strip (no caps label). */}
           <span className="text-[13px] font-medium tabular-nums text-foreground/55">
             <span className="font-semibold text-foreground/90">{streak}</span>{" "}
             streak
@@ -147,8 +144,6 @@ export function HabitCompactRow({
         </div>
       </div>
 
-      {/* Rolling-7 strip (full-width grid on mobile so all 7 days fit without
-          scrolling, pinned-right fixed-size row on desktop) */}
       <div className="grid w-full grid-cols-7 gap-1 px-1.5 py-1.5 lg:flex lg:w-auto lg:grid-cols-none lg:justify-normal lg:gap-1.5 lg:shrink-0">
         {days.map((day) => (
           <HabitStripCell
@@ -157,6 +152,9 @@ export function HabitCompactRow({
             color={habit.color}
             coarse={coarse}
             onToggle={handleToggle}
+            habit={habit}
+            onLogValue={handleLogValue}
+            onClearValue={handleClearValue}
           />
         ))}
       </div>

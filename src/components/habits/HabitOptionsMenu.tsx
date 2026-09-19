@@ -1,7 +1,13 @@
 "use client";
 
 import { useRef } from "react";
-import { MoreVertical, Database, Loader2 } from "lucide-react";
+import {
+  MoreVertical,
+  Database,
+  Loader2,
+  Upload,
+  Download,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,14 +17,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { BetaBadge } from "@/components/ui/beta-badge";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
+import { useUhabitsExport } from "@/lib/hooks/useUhabitsExport";
 
 export function HabitOptionsMenu() {
   const { trigger } = useHaptic();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { importUhabits, isImporting } = useUhabitsImport();
+  const { exportLoopDb, exportLoopZip, isExporting } = useUhabitsExport();
+
+  const isBusy = isImporting || isExporting;
 
   const handleImportClick = () => {
     trigger("toggle");
@@ -40,7 +49,7 @@ export function HabitOptionsMenu() {
         accept=".db"
         className="hidden"
         onChange={handleFileChange}
-        aria-label="Import UHabits file"
+        aria-label="Import Loop (.db) file"
       />
 
       <DropdownMenu>
@@ -49,9 +58,9 @@ export function HabitOptionsMenu() {
             variant="ghost"
             size="icon"
             className="h-9 w-9 bg-transparent hover:bg-secondary/40 border-none shadow-none transition-seijaku-fast rounded-lg"
-            disabled={isImporting}
+            disabled={isBusy}
           >
-            {isImporting ? (
+            {isBusy ? (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             ) : (
               <MoreVertical className="h-4 w-4 text-muted-foreground" />
@@ -70,12 +79,29 @@ export function HabitOptionsMenu() {
 
           <DropdownMenuItem
             onClick={handleImportClick}
-            disabled={isImporting}
+            disabled={isBusy}
+            className="cursor-pointer gap-2 py-2"
+          >
+            <Upload className="h-4 w-4 text-brand" />
+            <span>Import Loop (.db)</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            onClick={exportLoopDb}
+            disabled={isBusy}
             className="cursor-pointer gap-2 py-2"
           >
             <Database className="h-4 w-4 text-brand" />
-            <span>Loop Habit Tracker</span>
-            <BetaBadge className="ml-auto" />
+            <span>Export Loop (.db)</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            onClick={exportLoopZip}
+            disabled={isBusy}
+            className="cursor-pointer gap-2 py-2"
+          >
+            <Download className="h-4 w-4 text-brand" />
+            <span>Export Loop (CSV Zip)</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

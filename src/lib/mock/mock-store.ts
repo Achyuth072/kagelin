@@ -2,7 +2,11 @@ import { isWeekend } from "date-fns";
 import * as Sentry from "@sentry/nextjs";
 import type { Task, Project } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
-import type { Habit, HabitEntry } from "@/lib/types/habit";
+import {
+  REMINDER_EVERY_DAY,
+  type Habit,
+  type HabitEntry,
+} from "@/lib/types/habit";
 import type { FocusLog } from "@/lib/types/focus";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
 import type { BackupData } from "@/lib/backup/types";
@@ -421,6 +425,9 @@ class MockStore {
         target_type: "at_least",
         target_value: 8,
         unit: "glasses",
+        question: null,
+        reminder_time: null,
+        reminder_days: REMINDER_EVERY_DAY,
       },
       {
         id: hExercise,
@@ -440,6 +447,9 @@ class MockStore {
         target_type: "at_least",
         target_value: null,
         unit: null,
+        question: null,
+        reminder_time: null,
+        reminder_days: REMINDER_EVERY_DAY,
       },
       {
         id: hRead,
@@ -459,6 +469,9 @@ class MockStore {
         target_type: "at_least",
         target_value: null,
         unit: null,
+        question: null,
+        reminder_time: null,
+        reminder_days: REMINDER_EVERY_DAY,
       },
       {
         id: hSketch,
@@ -478,6 +491,9 @@ class MockStore {
         target_type: "at_least",
         target_value: null,
         unit: null,
+        question: null,
+        reminder_time: null,
+        reminder_days: REMINDER_EVERY_DAY,
       },
       {
         id: hSideCode,
@@ -497,6 +513,9 @@ class MockStore {
         target_type: "at_least",
         target_value: null,
         unit: null,
+        question: null,
+        reminder_time: null,
+        reminder_days: REMINDER_EVERY_DAY,
       },
       {
         id: hLogOff,
@@ -516,6 +535,9 @@ class MockStore {
         target_type: "at_least",
         target_value: null,
         unit: null,
+        question: null,
+        reminder_time: null,
+        reminder_days: REMINDER_EVERY_DAY,
       },
     );
 
@@ -863,6 +885,9 @@ class MockStore {
     const now = new Date().toISOString();
     const newHabit: Habit = {
       ...habit,
+      question: habit.question ?? null,
+      reminder_time: habit.reminder_time ?? null,
+      reminder_days: habit.reminder_days ?? REMINDER_EVERY_DAY,
       id: `guest-habit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       user_id: "guest",
       created_at: now,
@@ -907,30 +932,22 @@ class MockStore {
     return true;
   }
 
-  // Idempotent upsert matching Supabase semantics so optimistic retries converge.
+  // Mirrors Supabase upsert semantics so optimistic retries converge.
   setHabitEntry(
     habitId: string,
     date: string,
     value: number,
-  ): HabitEntry | null {
+    notes?: string | null,
+  ): HabitEntry {
     const existingIndex = this.data.habit_entries.findIndex(
       (e) => e.habit_id === habitId && e.date === date,
     );
-
-    if (value === 0) {
-      if (existingIndex !== -1) {
-        this.data.habit_entries = this.data.habit_entries.filter(
-          (_, i) => i !== existingIndex,
-        );
-        this.saveToStorage();
-      }
-      return null;
-    }
 
     if (existingIndex !== -1) {
       const updated: HabitEntry = {
         ...this.data.habit_entries[existingIndex],
         value,
+        ...(notes !== undefined ? { notes: notes ?? null } : {}),
       };
       this.data.habit_entries = this.data.habit_entries.map((e, i) =>
         i === existingIndex ? updated : e,
@@ -946,11 +963,19 @@ class MockStore {
       habit_id: habitId,
       date,
       value,
+      notes: notes ?? null,
       created_at: new Date().toISOString(),
     };
     this.data.habit_entries = [...this.data.habit_entries, newEntry];
     this.saveToStorage();
     return newEntry;
+  }
+
+  clearHabitEntry(habitId: string, date: string): void {
+    this.data.habit_entries = this.data.habit_entries.filter(
+      (e) => !(e.habit_id === habitId && e.date === date),
+    );
+    this.saveToStorage();
   }
 
   getEvents(): CalendarEvent[] {

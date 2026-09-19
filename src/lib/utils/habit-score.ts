@@ -1,5 +1,9 @@
 import { format, eachDayOfInterval, startOfDay, parseISO } from "date-fns";
-import type { Habit, HabitEntry } from "@/lib/types/habit";
+import {
+  type Habit,
+  type HabitEntry,
+  ENTRY_VALUE_SKIPPED,
+} from "@/lib/types/habit";
 
 type FrequencyPeriod = "day" | "week" | "month";
 
@@ -21,6 +25,7 @@ export function dayValue(
   entryValue: number,
   habit: Pick<Habit, "habit_type" | "target_type" | "target_value">,
 ): number {
+  if (entryValue < 0) return 0;
   if (habit.habit_type === "measurable" && habit.target_value != null) {
     if (habit.target_type === "at_least") {
       if (habit.target_value <= 0) {
@@ -37,7 +42,6 @@ export function dayValue(
       return Math.max(0, Math.min(1, 2 - entryValue / habit.target_value));
     }
   }
-  // Boolean: 0 or 1
   return entryValue >= 1 ? 1 : 0;
 }
 
@@ -77,8 +81,14 @@ export function computeScores(
   for (const day of days) {
     const key = format(day, "yyyy-MM-dd");
     const raw = entryMap.get(key) ?? 0;
-    const val = dayValue(raw, habit);
-    const score = prevScore * multiplier + val * (1 - multiplier);
+    let score: number;
+    if (raw === ENTRY_VALUE_SKIPPED) {
+      // Skipped entry: freeze decay (S_k = S_{k-1})
+      score = prevScore;
+    } else {
+      const val = dayValue(raw, habit);
+      score = prevScore * multiplier + val * (1 - multiplier);
+    }
     scores.push({ date: key, value: score });
     prevScore = score;
   }
@@ -86,7 +96,11 @@ export function computeScores(
   return scores;
 }
 
-export function currentScore(habit: Habit, entries: HabitEntry[]): number {
-  const scores = computeScores(habit, entries);
+export function currentScore(
+  habit: Habit,
+  entries: HabitEntry[],
+  options?: { from?: Date; to?: Date },
+): number {
+  const scores = computeScores(habit, entries, options);
   return scores.length > 0 ? scores[scores.length - 1].value : 0;
 }

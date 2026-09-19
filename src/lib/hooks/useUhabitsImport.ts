@@ -134,6 +134,7 @@ export function useUhabitsImport() {
             habit_id: habitIdMap.get(e.habit_id)!,
             date: e.date,
             value: e.value,
+            notes: e.notes ?? null,
             created_at: e.created_at,
           }));
 

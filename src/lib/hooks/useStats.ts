@@ -11,6 +11,8 @@ import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 import { fetchAllRows } from "@/lib/supabase/paginate";
 import { PERIOD_DAY_COUNT, type StatsPeriod } from "@/lib/types/stats";
+import type { Habit } from "@/lib/types/habit";
+import { dayValue } from "@/lib/utils/habit-score";
 
 export interface DailyStats {
   date: string; // ISO 'yyyy-MM-dd' (local)
@@ -69,6 +71,29 @@ interface StatsTask {
 
 interface StatsHabitEntry {
   date: string;
+}
+
+type StatsHabit = Pick<
+  Habit,
+  "id" | "habit_type" | "target_type" | "target_value"
+>;
+
+interface RawHabitEntry extends StatsHabitEntry {
+  habit_id: string;
+  value: number;
+}
+
+export function selectCompletedHabitEntries(
+  entries: RawHabitEntry[],
+  habits: StatsHabit[],
+): RawHabitEntry[] {
+  const habitById = new Map(habits.map((h) => [h.id, h]));
+  return entries.filter((e) => {
+    const habit = habitById.get(e.habit_id) ?? {
+      habit_type: "boolean" as const,
+    };
+    return dayValue(e.value, habit) >= 1;
+  });
 }
 
 /**
@@ -324,7 +349,7 @@ export function useStats(period: StatsPeriod = "30d") {
     staleTime: 60000,
     placeholderData: (previousData) => previousData,
     queryFn: async (): Promise<StatsData> => {
-      let rawLogs, rawTasks, rawHabits;
+      let rawLogs, rawTasks, rawHabitEntries, rawHabits;
       const now = new Date();
       const lowerBound = fetchLowerBound(period, now);
 
@@ -335,7 +360,8 @@ export function useStats(period: StatsPeriod = "30d") {
               .filter((log) => log.start_time >= lowerBound.toISOString())
           : mockStore.getFocusLogs();
         rawTasks = mockStore.getTasks();
-        rawHabits = lowerBound
+        rawHabits = mockStore.getHabits();
+        rawHabitEntries = lowerBound
           ? mockStore
               .getHabitEntries()
               .filter((entry) => entry.date >= format(lowerBound, "yyyy-MM-dd"))
@@ -343,7 +369,7 @@ export function useStats(period: StatsPeriod = "30d") {
       } else {
         const supabase = createClient();
 
-        const [logs, tasks, habits] = await Promise.all([
+        const [logs, tasks, habitEntries, habits] = await Promise.all([
           fetchAllRows<StatsLog>((from, to) => {
             let q = supabase
               .from("focus_logs")
@@ -367,12 +393,12 @@ export function useStats(period: StatsPeriod = "30d") {
                 .range(from, to),
             );
           }),
-          fetchAllRows<{ date: string }>((from, to) => {
+          fetchAllRows<RawHabitEntry>((from, to) => {
             // date alone isn't unique across habits (schema only guarantees
             // UNIQUE(habit_id, date)) — order by id too so .range() pages deterministically
             let q = supabase
               .from("habit_entries")
-              .select("date")
+              .select("habit_id, date, value")
               .order("date", { ascending: true })
               .order("id", { ascending: true });
             if (lowerBound) {
@@ -380,14 +406,28 @@ export function useStats(period: StatsPeriod = "30d") {
             }
             return q.range(from, to);
           }),
+          fetchAllRows<StatsHabit>((from, to) =>
+            supabase
+              .from("habits")
+              .select("id, habit_type, target_type, target_value")
+              .order("id", { ascending: true })
+              .range(from, to),
+          ),
         ]);
 
         rawLogs = logs;
         rawTasks = tasks;
+        rawHabitEntries = habitEntries;
         rawHabits = habits;
       }
 
-      return calculateStats(rawLogs, rawTasks, rawHabits, period, now);
+      return calculateStats(
+        rawLogs,
+        rawTasks,
+        selectCompletedHabitEntries(rawHabitEntries, rawHabits),
+        period,
+        now,
+      );
     },
   });
 }
