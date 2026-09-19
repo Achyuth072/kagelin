@@ -185,3 +185,22 @@ describe("habitMutations.markComplete clearing", () => {
     expect(mockStore.getHabitEntries(habit.id)).toHaveLength(0);
   });
 });
+
+describe("habitMutations.update clearing a target", () => {
+  it("clears target_value when null is passed", async () => {
+    const habit = await habitMutations.create({
+      name: "Read",
+      habit_type: "measurable",
+      target_type: "at_least",
+      target_value: 20,
+    });
+
+    const updated = await habitMutations.update({
+      id: habit.id,
+      habit_type: "measurable",
+      target_value: null,
+    });
+
+    expect(updated.target_value).toBeNull();
+  });
+});

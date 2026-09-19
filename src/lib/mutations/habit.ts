@@ -37,7 +37,7 @@ export interface UpdateHabitInput {
   frequency_count?: number;
   frequency_period?: "day" | "week" | "month";
   target_type?: "at_least" | "at_most";
-  target_value?: number;
+  target_value?: number | null;
   unit?: string;
   question?: string | null;
   reminder_time?: string | null;

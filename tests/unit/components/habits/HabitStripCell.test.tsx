@@ -155,4 +155,56 @@ describe("HabitStripCell", () => {
     expect(screen.queryByText("-2")).not.toBeInTheDocument();
     expect(screen.getByLabelText(/skipped — log amount/i)).toBeInTheDocument();
   });
+
+  describe("measurable logging popover", () => {
+    const measurable = {
+      habit_type: "measurable" as const,
+      target_type: "at_least" as const,
+      target_value: 10,
+      unit: "pages",
+    };
+
+    it("does not log 0 when the amount is left empty", () => {
+      const onLogValue = vi.fn();
+      const onClearValue = vi.fn();
+      render(
+        <HabitStripCell
+          day={makeDay({ value: 0, hasEntry: false })}
+          color="#3b82f6"
+          coarse={false}
+          onToggle={vi.fn()}
+          habit={measurable}
+          onLogValue={onLogValue}
+          onClearValue={onClearValue}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button"));
+      fireEvent.click(screen.getByText("Log"));
+      expect(onLogValue).not.toHaveBeenCalled();
+      expect(onClearValue).not.toHaveBeenCalled();
+    });
+
+    it("clears an existing value when the amount is emptied and submitted", () => {
+      const onLogValue = vi.fn();
+      const onClearValue = vi.fn();
+      render(
+        <HabitStripCell
+          day={makeDay({ value: 6, hasEntry: true })}
+          color="#3b82f6"
+          coarse={false}
+          onToggle={vi.fn()}
+          habit={measurable}
+          onLogValue={onLogValue}
+          onClearValue={onClearValue}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button"));
+      fireEvent.change(screen.getByLabelText("Log amount"), {
+        target: { value: "" },
+      });
+      fireEvent.click(screen.getByText("Log"));
+      expect(onClearValue).toHaveBeenCalledWith("2026-09-18");
+      expect(onLogValue).not.toHaveBeenCalled();
+    });
+  });
 });

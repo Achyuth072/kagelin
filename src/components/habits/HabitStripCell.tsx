@@ -29,6 +29,7 @@ interface HabitStripCellProps {
   habit?: Pick<Habit, "habit_type" | "target_type" | "target_value" | "unit">;
   /** Required for measurable habits. */
   onLogValue?: (date: string, value: number) => void;
+  onClearValue?: (date: string) => void;
 }
 
 export function HabitStripCell({
@@ -38,6 +39,7 @@ export function HabitStripCell({
   onToggle,
   habit,
   onLogValue,
+  onClearValue,
 }: HabitStripCellProps) {
   const { date, weekdayLabel, value, hasEntry, isToday, isBeforeStart } = day;
   const isMeasurable = habit?.habit_type === "measurable";
@@ -158,6 +160,14 @@ export function HabitStripCell({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                if (draft.trim() === "") {
+                  if (hasEntry) {
+                    trigger("success");
+                    onClearValue?.(date);
+                    setOpen(false);
+                  }
+                  return;
+                }
                 const parsed = Number(draft);
                 if (!Number.isNaN(parsed) && parsed >= 0) {
                   trigger("success");

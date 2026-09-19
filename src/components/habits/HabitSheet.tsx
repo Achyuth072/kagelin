@@ -184,6 +184,8 @@ export function HabitSheet({
       if (initialHabit) {
         updateMutation.mutate({
           ...formattedData,
+          // undefined would leave the stored target untouched.
+          target_value: data.target_value ?? null,
           id: initialHabit.id,
         });
       } else {

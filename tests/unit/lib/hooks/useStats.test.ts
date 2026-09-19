@@ -7,7 +7,10 @@ import {
   afterAll,
   afterEach,
 } from "vitest";
-import { calculateStats } from "@/lib/hooks/useStats";
+import {
+  calculateStats,
+  selectCompletedHabitEntries,
+} from "@/lib/hooks/useStats";
 
 describe("calculateStats timezone fix", () => {
   afterAll(() => {
@@ -345,5 +348,53 @@ describe("calculateStats daily habit-reps bucketing (for CSV export)", () => {
     expect(result.dailyTrend[6].habitReps).toBe(0);
     // The headline total still counts only in-window reps.
     expect(result.habitReps).toBe(3);
+  });
+});
+
+describe("selectCompletedHabitEntries", () => {
+  const booleanHabit = { id: "h-bool", habit_type: "boolean" as const };
+  const atLeast = {
+    id: "h-read",
+    habit_type: "measurable" as const,
+    target_type: "at_least" as const,
+    target_value: 10,
+  };
+  const atMost = {
+    id: "h-sugar",
+    habit_type: "measurable" as const,
+    target_type: "at_most" as const,
+    target_value: 5,
+  };
+
+  it("keeps only done boolean entries, dropping not-done and skipped", () => {
+    const entries = [
+      { habit_id: "h-bool", date: "2024-06-14", value: 1 },
+      { habit_id: "h-bool", date: "2024-06-13", value: 0 },
+      { habit_id: "h-bool", date: "2024-06-12", value: -2 },
+    ];
+    expect(selectCompletedHabitEntries(entries, [booleanHabit])).toEqual([
+      entries[0],
+    ]);
+  });
+
+  it("drops measurable entries that fall short of the target", () => {
+    const entries = [
+      { habit_id: "h-read", date: "2024-06-14", value: 10 },
+      { habit_id: "h-read", date: "2024-06-13", value: 4 },
+      { habit_id: "h-sugar", date: "2024-06-14", value: 5 },
+      { habit_id: "h-sugar", date: "2024-06-13", value: 9 },
+    ];
+    expect(selectCompletedHabitEntries(entries, [atLeast, atMost])).toEqual([
+      entries[0],
+      entries[2],
+    ]);
+  });
+
+  it("treats entries of an unknown habit as boolean", () => {
+    const entries = [
+      { habit_id: "gone", date: "2024-06-14", value: 1 },
+      { habit_id: "gone", date: "2024-06-13", value: 0 },
+    ];
+    expect(selectCompletedHabitEntries(entries, [])).toEqual([entries[0]]);
   });
 });

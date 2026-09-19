@@ -206,6 +206,16 @@ export function useMigrationStrategy() {
               created_at: habit.created_at,
               updated_at: habit.updated_at,
               archived_at: habit.archived_at,
+              habit_type: habit.habit_type,
+              frequency_count: habit.frequency_count,
+              frequency_period: habit.frequency_period,
+              target_type: habit.target_type,
+              target_value: habit.target_value,
+              unit: habit.unit,
+              question: habit.question,
+              reminder_time: habit.reminder_time,
+              reminder_days: habit.reminder_days,
+              source_uuid: habit.source_uuid,
             };
           }),
         );
@@ -274,6 +284,7 @@ export function useMigrationStrategy() {
               habit_id: habitId,
               date: e.date,
               value: e.value,
+              notes: e.notes,
               created_at: e.created_at,
             };
           }),

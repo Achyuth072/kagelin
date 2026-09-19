@@ -81,6 +81,10 @@ export function HabitCompactRow({
     markComplete.mutate({ habitId: habit.id, date, value });
   };
 
+  const handleClearValue = (date: string) => {
+    markComplete.mutate({ habitId: habit.id, date, value: null });
+  };
+
   return (
     <div
       onClick={onEdit}
@@ -150,6 +154,7 @@ export function HabitCompactRow({
             onToggle={handleToggle}
             habit={habit}
             onLogValue={handleLogValue}
+            onClearValue={handleClearValue}
           />
         ))}
       </div>

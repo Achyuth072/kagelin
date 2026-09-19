@@ -78,12 +78,6 @@ function prepareLoopHabit(
     const [hourStr, minStr] = habit.reminder_time.split(":");
     reminder_hour = parseInt(hourStr, 10);
     reminder_min = parseInt(minStr, 10);
-  } else if (
-    typeof rawHabit?.reminder_hour === "number" &&
-    typeof rawHabit?.reminder_min === "number"
-  ) {
-    reminder_hour = rawHabit.reminder_hour;
-    reminder_min = rawHabit.reminder_min;
   }
 
   const reminder_days = numOr(

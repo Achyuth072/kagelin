@@ -408,6 +408,70 @@ describe("exportToUhabitsDb - SQLite database construction", () => {
     db.close();
   });
 
+  it("keeps a reminder the user turned off disabled instead of restoring the imported one", async () => {
+    const SQL = await getSql();
+
+    const originalUuid = "ef277f81d78b40fcb72293018228790d";
+    const habit: Habit = {
+      id: "kagelin-h3",
+      user_id: "u1",
+      name: "SHAMPOO",
+      description: null,
+      color: "#ff9800",
+      icon: null,
+      created_at: "2024-01-01T00:00:00Z",
+      updated_at: "2024-01-01T00:00:00Z",
+      archived_at: null,
+      start_date: "2023-07-10",
+      sort_order: 1,
+      source_uuid: originalUuid,
+      habit_type: "boolean",
+      frequency_count: 1,
+      frequency_period: "day",
+      question: null,
+      reminder_time: null,
+      reminder_days: 0,
+    };
+
+    const binary = await exportToUhabitsDb({
+      habits: [habit],
+      entries: [],
+      rawSources: [
+        {
+          habits: [
+            {
+              id: 3,
+              archived: 0,
+              color: 2,
+              freq_den: 1,
+              freq_num: 1,
+              highlight: 0,
+              name: "SHAMPOO",
+              position: 1,
+              reminder_hour: 7,
+              reminder_min: 30,
+              reminder_days: 127,
+              type: 0,
+              target_type: 0,
+              target_value: 0,
+              unit: "",
+              uuid: originalUuid,
+            },
+          ],
+          repetitions: [],
+        },
+      ],
+      wasmPath: "public/sql-wasm.wasm",
+    });
+
+    const db = new SQL.Database(binary);
+    const result = db.exec(
+      "SELECT reminder_hour, reminder_min, reminder_days FROM Habits",
+    );
+    expect(result[0].values[0]).toEqual([null, null, 0]);
+    db.close();
+  });
+
   it("does not allow newly created habits sorted first to steal IDs of imported habits", async () => {
     const SQL = await getSql();
 
