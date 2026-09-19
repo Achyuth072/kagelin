@@ -147,7 +147,7 @@ function TaskItemBase({
         /* Desktop fast path: no Framer Motion wrapper, which thrashed
            sidebar layout. */
         <div
-          className={cn(contentClassName, "overflow-hidden rounded-md")}
+          className={cn(contentClassName, "overflow-hidden")}
           style={{ isolation: "isolate" }}
           onClick={() => onSelect?.(task)}
         >
