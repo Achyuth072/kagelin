@@ -8,7 +8,7 @@ import {
 import {
   type Habit,
   type HabitEntry,
-  KANSO_VALUE_SKIP,
+  ENTRY_VALUE_SKIPPED,
 } from "@/lib/types/habit";
 import { interpolateDoneDays } from "@/lib/utils/habit-intervals";
 import { dayValue, periodDays } from "@/lib/utils/habit-score";
@@ -171,9 +171,9 @@ function buildDoneSet(
     );
   }
 
-  // Bridge streaks over skipped entries (value = -2)
+  // Bridge streaks over skipped entries
   for (const e of entries) {
-    if (e.value === KANSO_VALUE_SKIP && e.date <= todayKey) {
+    if (e.value === ENTRY_VALUE_SKIPPED && e.date <= todayKey) {
       done.add(e.date);
     }
   }

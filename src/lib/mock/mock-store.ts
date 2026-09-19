@@ -2,7 +2,11 @@ import { isWeekend } from "date-fns";
 import * as Sentry from "@sentry/nextjs";
 import type { Task, Project } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
-import type { Habit, HabitEntry } from "@/lib/types/habit";
+import {
+  REMINDER_EVERY_DAY,
+  type Habit,
+  type HabitEntry,
+} from "@/lib/types/habit";
 import type { FocusLog } from "@/lib/types/focus";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
 import type { BackupData } from "@/lib/backup/types";
@@ -423,7 +427,7 @@ class MockStore {
         unit: "glasses",
         question: null,
         reminder_time: null,
-        reminder_days: 127,
+        reminder_days: REMINDER_EVERY_DAY,
       },
       {
         id: hExercise,
@@ -445,7 +449,7 @@ class MockStore {
         unit: null,
         question: null,
         reminder_time: null,
-        reminder_days: 127,
+        reminder_days: REMINDER_EVERY_DAY,
       },
       {
         id: hRead,
@@ -467,7 +471,7 @@ class MockStore {
         unit: null,
         question: null,
         reminder_time: null,
-        reminder_days: 127,
+        reminder_days: REMINDER_EVERY_DAY,
       },
       {
         id: hSketch,
@@ -489,7 +493,7 @@ class MockStore {
         unit: null,
         question: null,
         reminder_time: null,
-        reminder_days: 127,
+        reminder_days: REMINDER_EVERY_DAY,
       },
       {
         id: hSideCode,
@@ -511,7 +515,7 @@ class MockStore {
         unit: null,
         question: null,
         reminder_time: null,
-        reminder_days: 127,
+        reminder_days: REMINDER_EVERY_DAY,
       },
       {
         id: hLogOff,
@@ -533,7 +537,7 @@ class MockStore {
         unit: null,
         question: null,
         reminder_time: null,
-        reminder_days: 127,
+        reminder_days: REMINDER_EVERY_DAY,
       },
     );
 
@@ -883,7 +887,7 @@ class MockStore {
       ...habit,
       question: habit.question ?? null,
       reminder_time: habit.reminder_time ?? null,
-      reminder_days: habit.reminder_days ?? 127,
+      reminder_days: habit.reminder_days ?? REMINDER_EVERY_DAY,
       id: `guest-habit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       user_id: "guest",
       created_at: now,
@@ -934,24 +938,10 @@ class MockStore {
     date: string,
     value: number,
     notes?: string | null,
-  ): HabitEntry | null {
+  ): HabitEntry {
     const existingIndex = this.data.habit_entries.findIndex(
       (e) => e.habit_id === habitId && e.date === date,
     );
-
-    // Measurable habits treat 0 as a logged value, not clearing the entry.
-    const habit = this.data.habits.find((h) => h.id === habitId);
-    const isMeasurable = habit?.habit_type === "measurable";
-
-    if (value === 0 && !isMeasurable) {
-      if (existingIndex !== -1) {
-        this.data.habit_entries = this.data.habit_entries.filter(
-          (_, i) => i !== existingIndex,
-        );
-        this.saveToStorage();
-      }
-      return null;
-    }
 
     if (existingIndex !== -1) {
       const updated: HabitEntry = {
@@ -979,6 +969,13 @@ class MockStore {
     this.data.habit_entries = [...this.data.habit_entries, newEntry];
     this.saveToStorage();
     return newEntry;
+  }
+
+  clearHabitEntry(habitId: string, date: string): void {
+    this.data.habit_entries = this.data.habit_entries.filter(
+      (e) => !(e.habit_id === habitId && e.date === date),
+    );
+    this.saveToStorage();
   }
 
   getEvents(): CalendarEvent[] {

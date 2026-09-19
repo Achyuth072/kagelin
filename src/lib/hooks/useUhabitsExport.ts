@@ -7,26 +7,23 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { downloadBackup } from "@/lib/backup/export-import";
 
 export function useUhabitsExport() {
-  const [isExportingDb, setIsExportingDb] = useState(false);
-  const [isExportingZip, setIsExportingZip] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const { trigger } = useHaptic();
 
   const runExport = async ({
-    setLoading,
     load,
     mimeType,
     loadingMessage,
     successMessage,
     errorMessage,
   }: {
-    setLoading: (val: boolean) => void;
     load: () => Promise<{ bytes: Uint8Array; filename: string }>;
     mimeType: string;
     loadingMessage: string;
     successMessage: string;
     errorMessage: string;
   }): Promise<boolean> => {
-    setLoading(true);
+    setIsExporting(true);
     trigger("toggle");
     const loadingToastId = notify.loading(loadingMessage);
 
@@ -46,13 +43,12 @@ export function useUhabitsExport() {
       trigger("thud");
       return false;
     } finally {
-      setLoading(false);
+      setIsExporting(false);
     }
   };
 
   const exportLoopDb = () =>
     runExport({
-      setLoading: setIsExportingDb,
       load: async () => {
         const mod = await import("@/lib/export/uhabitsExportDb");
         return {
@@ -68,7 +64,6 @@ export function useUhabitsExport() {
 
   const exportLoopZip = () =>
     runExport({
-      setLoading: setIsExportingZip,
       load: async () => {
         const mod = await import("@/lib/export/uhabitsExportCsv");
         return {
@@ -82,11 +77,5 @@ export function useUhabitsExport() {
       errorMessage: "Failed to export Loop CSV archive",
     });
 
-  return {
-    exportLoopDb,
-    exportLoopZip,
-    isExportingDb,
-    isExportingZip,
-    isExporting: isExportingDb || isExportingZip,
-  };
+  return { exportLoopDb, exportLoopZip, isExporting };
 }

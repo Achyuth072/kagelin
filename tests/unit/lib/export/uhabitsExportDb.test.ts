@@ -2,15 +2,21 @@ import { describe, it, expect, vi } from "vitest";
 import initSqlJs from "sql.js";
 import {
   exportToUhabitsDb,
+  dateStringToUtcMidnightMs,
+  generateUhabitsDbFilename,
+} from "@/lib/export/uhabitsExportDb";
+import {
   findClosestLoopColor,
   mapKagelinFrequencyToLoop,
   entryToRepetitionValue,
-  dateStringToUtcMidnightMs,
-  generateUhabitsDbFilename,
   collectUhabitsExportData,
-} from "@/lib/export/uhabitsExportDb";
+} from "@/lib/export/uhabitsShared";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { PROJECT_COLORS } from "@/lib/constants/colors";
+import {
+  hasRealLoopBackup,
+  readRealLoopBackup,
+} from "../../support/loopBackupFixture";
 
 describe("uhabitsExportDb - pure helpers", () => {
   it("maps hex colors to the closest Loop palette index (0-20)", () => {
@@ -462,6 +468,77 @@ describe("exportToUhabitsDb - SQLite database construction", () => {
     ]);
     db.close();
   });
+
+  const importedFrom = (
+    id: string,
+    sourceUuid: string,
+    sortOrder: number,
+  ): Habit => ({
+    id,
+    user_id: "u1",
+    name: id,
+    description: null,
+    icon: null,
+    color: "#2196f3",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+    archived_at: null,
+    start_date: "2024-01-01",
+    sort_order: sortOrder,
+    source_uuid: sourceUuid,
+    habit_type: "boolean",
+  });
+
+  it("reassigns a Loop id claimed by two backups whose habit ids overlap", async () => {
+    const SQL = await getSql();
+    const uuidA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const uuidB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+
+    const binary = await exportToUhabitsDb({
+      habits: [
+        importedFrom("first", uuidA, 0),
+        importedFrom("second", uuidB, 1),
+      ],
+      entries: [],
+      rawSources: [
+        { habits: [{ id: 1, uuid: uuidA }], repetitions: [] },
+        { habits: [{ id: 1, uuid: uuidB }], repetitions: [] },
+      ],
+      wasmPath: "public/sql-wasm.wasm",
+    });
+
+    const db = new SQL.Database(binary);
+    const rows = db.exec("SELECT id, name, uuid FROM Habits ORDER BY id");
+    expect(rows[0].values).toEqual([
+      [1, "first", uuidA],
+      [2, "second", uuidB],
+    ]);
+    db.close();
+  });
+
+  it("gives a fresh id and uuid to a Loop habit imported twice", async () => {
+    const SQL = await getSql();
+    const uuid = "cccccccccccccccccccccccccccccccc";
+
+    const binary = await exportToUhabitsDb({
+      habits: [
+        importedFrom("original", uuid, 0),
+        importedFrom("copy", uuid, 1),
+      ],
+      entries: [],
+      rawSources: [{ habits: [{ id: 4, uuid }], repetitions: [] }],
+      wasmPath: "public/sql-wasm.wasm",
+    });
+
+    const db = new SQL.Database(binary);
+    const rows = db.exec("SELECT id, name, uuid FROM Habits ORDER BY id");
+    const [first, second] = rows[0].values;
+    expect(second).toEqual([4, "original", uuid]);
+    expect(first[0]).toBe(1);
+    expect(first[1]).toBe("copy");
+    expect(first[2]).not.toBe(uuid);
+    db.close();
+  });
 });
 
 describe("collectUhabitsExportData - wrapped client & guest mode", () => {
@@ -589,106 +666,103 @@ describe("collectUhabitsExportData - wrapped client & guest mode", () => {
 });
 
 describe("real Loop Habits backup database audit round-trip", () => {
-  it("imports from Loop Habits Backup 2026-09-03 103056.db, exports to SQLite .db, and round-trips with full fidelity", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const { parseUhabitsFile } = await import("@/lib/import/uhabits");
+  it.skipIf(!hasRealLoopBackup)(
+    "imports from Loop Habits Backup 2026-09-03 103056.db, exports to SQLite .db, and round-trips with full fidelity",
+    async () => {
+      const { parseUhabitsFile } = await import("@/lib/import/uhabits");
 
-    const dbPath = path.resolve(
-      process.cwd(),
-      ".scratch/import/Loop Habits Backup 2026-09-03 103056.db",
-    );
-    expect(fs.existsSync(dbPath)).toBe(true);
+      const originalBuffer = readRealLoopBackup();
+      const { habits, entries, source } = await parseUhabitsFile(
+        originalBuffer,
+        "public/sql-wasm.wasm",
+      );
 
-    const originalBuffer = fs.readFileSync(dbPath);
-    const { habits, entries, source } = await parseUhabitsFile(
-      originalBuffer,
-      "public/sql-wasm.wasm",
-    );
+      expect(habits).toHaveLength(12);
+      expect(entries).toHaveLength(4183);
 
-    expect(habits).toHaveLength(12);
-    expect(entries).toHaveLength(4183);
+      const exportedBinary = await exportToUhabitsDb({
+        habits,
+        entries,
+        rawSources: [source],
+        wasmPath: "public/sql-wasm.wasm",
+      });
 
-    const exportedBinary = await exportToUhabitsDb({
-      habits,
-      entries,
-      rawSources: [source],
-      wasmPath: "public/sql-wasm.wasm",
-    });
+      expect(exportedBinary).toBeInstanceOf(Uint8Array);
+      expect(exportedBinary.length).toBeGreaterThan(0);
 
-    expect(exportedBinary).toBeInstanceOf(Uint8Array);
-    expect(exportedBinary.length).toBeGreaterThan(0);
+      const SQL = await initSqlJs({
+        locateFile: () => "public/sql-wasm.wasm",
+      });
+      const exportedDb = new SQL.Database(exportedBinary);
 
-    const SQL = await initSqlJs({
-      locateFile: () => "public/sql-wasm.wasm",
-    });
-    const exportedDb = new SQL.Database(exportedBinary);
+      const version = exportedDb.exec("PRAGMA user_version");
+      expect(version[0].values[0][0]).toBe(25);
 
-    const version = exportedDb.exec("PRAGMA user_version");
-    expect(version[0].values[0][0]).toBe(25);
+      const tables = exportedDb.exec(
+        "SELECT name FROM sqlite_master WHERE type='table'",
+      );
+      const tableNames = tables[0].values.map((r) => r[0]);
+      expect(tableNames).toContain("android_metadata");
+      expect(tableNames).toContain("Habits");
+      expect(tableNames).toContain("Repetitions");
+      expect(tableNames).toContain("Events");
+      expect(tableNames).toContain("sqlite_sequence");
 
-    const tables = exportedDb.exec(
-      "SELECT name FROM sqlite_master WHERE type='table'",
-    );
-    const tableNames = tables[0].values.map((r) => r[0]);
-    expect(tableNames).toContain("android_metadata");
-    expect(tableNames).toContain("Habits");
-    expect(tableNames).toContain("Repetitions");
-    expect(tableNames).toContain("Events");
-    expect(tableNames).toContain("sqlite_sequence");
+      const repsCountResult = exportedDb.exec(
+        "SELECT count(*) FROM Repetitions",
+      );
+      expect(repsCountResult[0].values[0][0]).toBe(4183);
 
-    const repsCountResult = exportedDb.exec("SELECT count(*) FROM Repetitions");
-    expect(repsCountResult[0].values[0][0]).toBe(4183);
+      exportedDb.close();
 
-    exportedDb.close();
+      const reimported = await parseUhabitsFile(
+        exportedBinary,
+        "public/sql-wasm.wasm",
+      );
 
-    const reimported = await parseUhabitsFile(
-      exportedBinary,
-      "public/sql-wasm.wasm",
-    );
+      expect(reimported.habits).toHaveLength(12);
+      expect(reimported.entries).toHaveLength(4183);
 
-    expect(reimported.habits).toHaveLength(12);
-    expect(reimported.entries).toHaveLength(4183);
+      const readBook = reimported.habits.find((h) => h.name === "READ A BOOK");
+      expect(readBook).toBeDefined();
+      expect(readBook?.habit_type).toBe("measurable");
+      expect(readBook?.target_value).toBe(10.0);
+      expect(readBook?.unit).toBe("pages");
+      expect(readBook?.question).toBe("How many pages did you read?");
+      expect(readBook?.archived_at).toBeTruthy();
 
-    const readBook = reimported.habits.find((h) => h.name === "READ A BOOK");
-    expect(readBook).toBeDefined();
-    expect(readBook?.habit_type).toBe("measurable");
-    expect(readBook?.target_value).toBe(10.0);
-    expect(readBook?.unit).toBe("pages");
-    expect(readBook?.question).toBe("How many pages did you read?");
-    expect(readBook?.archived_at).toBeTruthy();
+      const bookEntries = reimported.entries.filter(
+        (e) => e.habit_id === readBook?.id,
+      );
+      expect(bookEntries).toHaveLength(6);
+      const bookSkips = bookEntries.filter((e) => e.value === -2);
+      expect(bookSkips).toHaveLength(4);
+      const bookVals = bookEntries
+        .filter((e) => e.value > 0)
+        .map((e) => e.value)
+        .sort();
+      expect(bookVals).toEqual([1.0, 8.0]);
 
-    const bookEntries = reimported.entries.filter(
-      (e) => e.habit_id === readBook?.id,
-    );
-    expect(bookEntries).toHaveLength(6);
-    const bookSkips = bookEntries.filter((e) => e.value === -2);
-    expect(bookSkips).toHaveLength(4);
-    const bookVals = bookEntries
-      .filter((e) => e.value > 0)
-      .map((e) => e.value)
-      .sort();
-    expect(bookVals).toEqual([1.0, 8.0]);
+      const workout = reimported.habits.find((h) => h.name === "WORKOUT");
+      expect(workout).toBeDefined();
+      expect(workout?.archived_at).toBeNull();
+      const workoutEntries = reimported.entries.filter(
+        (e) => e.habit_id === workout?.id,
+      );
+      expect(workoutEntries).toHaveLength(957);
+      expect(workoutEntries.filter((e) => e.value === 1)).toHaveLength(229);
+      expect(workoutEntries.filter((e) => e.value === -2)).toHaveLength(27);
+      expect(workoutEntries.filter((e) => e.value === 0)).toHaveLength(701);
 
-    const workout = reimported.habits.find((h) => h.name === "WORKOUT");
-    expect(workout).toBeDefined();
-    expect(workout?.archived_at).toBeNull();
-    const workoutEntries = reimported.entries.filter(
-      (e) => e.habit_id === workout?.id,
-    );
-    expect(workoutEntries).toHaveLength(957);
-    expect(workoutEntries.filter((e) => e.value === 1)).toHaveLength(229);
-    expect(workoutEntries.filter((e) => e.value === -2)).toHaveLength(27);
-    expect(workoutEntries.filter((e) => e.value === 0)).toHaveLength(701);
+      const haircut = reimported.habits.find((h) => h.name === "HAIRCUT");
+      expect(haircut).toBeDefined();
+      expect(haircut?.reminder_time).toBe("07:00");
+      expect(haircut?.reminder_days).toBe(119);
 
-    const haircut = reimported.habits.find((h) => h.name === "HAIRCUT");
-    expect(haircut).toBeDefined();
-    expect(haircut?.reminder_time).toBe("07:00");
-    expect(haircut?.reminder_days).toBe(119);
-
-    const shampoo = reimported.habits.find((h) => h.name === "SHAMPOO");
-    expect(shampoo).toBeDefined();
-    expect(shampoo?.reminder_time).toBe("07:00");
-    expect(shampoo?.reminder_days).toBe(127);
-  });
+      const shampoo = reimported.habits.find((h) => h.name === "SHAMPOO");
+      expect(shampoo).toBeDefined();
+      expect(shampoo?.reminder_time).toBe("07:00");
+      expect(shampoo?.reminder_days).toBe(127);
+    },
+  );
 });

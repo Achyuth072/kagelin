@@ -18,6 +18,12 @@ import {
 } from "@/lib/export/uhabitsExportCsv";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { mockStore } from "@/lib/mock/mock-store";
+import { paletteToHex } from "@/lib/import/uhabits";
+import { findClosestLoopColor } from "@/lib/export/uhabitsShared";
+import {
+  hasRealLoopBackup,
+  readRealLoopBackup,
+} from "../../support/loopBackupFixture";
 
 describe("uhabitsExportCsv - pure helpers", () => {
   describe("escapeCsvField", () => {
@@ -274,6 +280,7 @@ describe("uhabitsExportCsv - CSV generators", () => {
       ];
       const habitWithProvenance: Habit = {
         ...mockHabit1,
+        color: paletteToHex(2),
         source_uuid: "test-uuid-1",
       };
 
@@ -283,6 +290,21 @@ describe("uhabitsExportCsv - CSV generators", () => {
       expect(lines[1]).toBe(
         "001,Meditate,YES_NO,Did you meditate this morning?,,3,14,#F57C00,,,,false",
       );
+    });
+
+    it("uses the current color over provenance when the user changed it", () => {
+      const rawSources = [{ habits: [{ uuid: "test-uuid-1", color: 2 }] }];
+      const recolored: Habit = {
+        ...mockHabit1,
+        color: "#1976D2",
+        source_uuid: "test-uuid-1",
+      };
+
+      const csv = generateHabitsCsv([recolored], rawSources);
+
+      const row = csv.trim().split("\n")[1];
+      expect(row).not.toContain(toCsvColor(2));
+      expect(row).toContain(toCsvColor(findClosestLoopColor("#1976D2")));
     });
   });
 
@@ -448,7 +470,11 @@ describe("uhabitsExportCsv - ZIP Archive Assembly", () => {
   describe("buildUhabitsCsvArchive", () => {
     it("builds the exact file dictionary matching Loop's HabitsCSVExporter", () => {
       const archive = buildUhabitsCsvArchive(
-        { habits: [mockHabit1, mockHabit2], entries: mockEntries },
+        {
+          habits: [mockHabit1, mockHabit2],
+          entries: mockEntries,
+          rawSources: [],
+        },
         { today: "2024-01-03" },
       );
 
@@ -604,81 +630,76 @@ describe("uhabitsExportCsv - ZIP Archive Assembly", () => {
   });
 
   describe("real Loop Habits backup database export verification", () => {
-    it("imports from Loop Habits Backup 2026-09-03 103056.db and exports to a valid Loop ZIP archive", async () => {
-      const fs = await import("fs");
-      const path = await import("path");
-      const { parseUhabitsFile } = await import("@/lib/import/uhabits");
+    it.skipIf(!hasRealLoopBackup)(
+      "imports from Loop Habits Backup 2026-09-03 103056.db and exports to a valid Loop ZIP archive",
+      async () => {
+        const { parseUhabitsFile } = await import("@/lib/import/uhabits");
 
-      const dbPath = path.resolve(
-        process.cwd(),
-        ".scratch/import/Loop Habits Backup 2026-09-03 103056.db",
-      );
-      expect(fs.existsSync(dbPath)).toBe(true);
+        const originalBuffer = readRealLoopBackup();
+        const { habits, entries, source } = await parseUhabitsFile(
+          originalBuffer,
+          "public/sql-wasm.wasm",
+        );
 
-      const originalBuffer = fs.readFileSync(dbPath);
-      const { habits, entries, source } = await parseUhabitsFile(
-        originalBuffer,
-        "public/sql-wasm.wasm",
-      );
+        const zipBytes = await exportToUhabitsZip({
+          habits,
+          entries,
+          rawSources: [source],
+          today: "2026-09-03",
+        });
 
-      const zipBytes = await exportToUhabitsZip({
-        habits,
-        entries,
-        rawSources: [source],
-        today: "2026-09-03",
-      });
+        expect(zipBytes).toBeInstanceOf(Uint8Array);
+        expect(zipBytes.length).toBeGreaterThan(0);
 
-      expect(zipBytes).toBeInstanceOf(Uint8Array);
-      expect(zipBytes.length).toBeGreaterThan(0);
+        const unzipped = unzipSync(zipBytes);
+        const fileNames = Object.keys(unzipped);
 
-      const unzipped = unzipSync(zipBytes);
-      const fileNames = Object.keys(unzipped);
+        expect(fileNames).toContain("Habits.csv");
+        expect(fileNames).toContain("Checkmarks.csv");
+        expect(fileNames).toContain("Scores.csv");
 
-      expect(fileNames).toContain("Habits.csv");
-      expect(fileNames).toContain("Checkmarks.csv");
-      expect(fileNames).toContain("Scores.csv");
+        expect(fileNames).toContain("001 EARLY TO RISE/Checkmarks.csv");
+        expect(fileNames).toContain("001 EARLY TO RISE/Scores.csv");
+        expect(fileNames).toContain("002 SHAMPOO/Checkmarks.csv");
+        expect(fileNames).toContain("002 SHAMPOO/Scores.csv");
+        expect(fileNames).toContain("003 WORKOUT/Checkmarks.csv");
+        expect(fileNames).toContain("003 WORKOUT/Scores.csv");
+        expect(fileNames).toContain("004 READ A BOOK/Checkmarks.csv");
+        expect(fileNames).toContain("004 READ A BOOK/Scores.csv");
+        expect(fileNames).toContain("012 WASH TOWEL/Checkmarks.csv");
+        expect(fileNames).toContain("012 WASH TOWEL/Scores.csv");
 
-      expect(fileNames).toContain("001 EARLY TO RISE/Checkmarks.csv");
-      expect(fileNames).toContain("001 EARLY TO RISE/Scores.csv");
-      expect(fileNames).toContain("002 SHAMPOO/Checkmarks.csv");
-      expect(fileNames).toContain("002 SHAMPOO/Scores.csv");
-      expect(fileNames).toContain("003 WORKOUT/Checkmarks.csv");
-      expect(fileNames).toContain("003 WORKOUT/Scores.csv");
-      expect(fileNames).toContain("004 READ A BOOK/Checkmarks.csv");
-      expect(fileNames).toContain("004 READ A BOOK/Scores.csv");
-      expect(fileNames).toContain("012 WASH TOWEL/Checkmarks.csv");
-      expect(fileNames).toContain("012 WASH TOWEL/Scores.csv");
+        const habitsCsv = strFromU8(unzipped["Habits.csv"]);
+        const habitsLines = habitsCsv.trim().split("\n");
+        expect(habitsLines).toHaveLength(13);
+        expect(habitsCsv).toContain("001,EARLY TO RISE,YES_NO");
+        expect(habitsCsv).toContain("004,READ A BOOK,NUMERICAL");
 
-      const habitsCsv = strFromU8(unzipped["Habits.csv"]);
-      const habitsLines = habitsCsv.trim().split("\n");
-      expect(habitsLines).toHaveLength(13);
-      expect(habitsCsv).toContain("001,EARLY TO RISE,YES_NO");
-      expect(habitsCsv).toContain("004,READ A BOOK,NUMERICAL");
+        const checkmarksCsv = strFromU8(unzipped["Checkmarks.csv"]);
+        const checkmarksLines = checkmarksCsv.trim().split("\n");
+        const checkmarksHeaderCols = checkmarksLines[0].split(",");
+        expect(checkmarksHeaderCols[0]).toBe("Date");
+        expect(checkmarksHeaderCols).toContain("EARLY TO RISE");
+        expect(checkmarksHeaderCols).toContain("READ A BOOK");
+        expect(checkmarksHeaderCols).toContain("WASH TOWEL");
 
-      const checkmarksCsv = strFromU8(unzipped["Checkmarks.csv"]);
-      const checkmarksLines = checkmarksCsv.trim().split("\n");
-      const checkmarksHeaderCols = checkmarksLines[0].split(",");
-      expect(checkmarksHeaderCols[0]).toBe("Date");
-      expect(checkmarksHeaderCols).toContain("EARLY TO RISE");
-      expect(checkmarksHeaderCols).toContain("READ A BOOK");
-      expect(checkmarksHeaderCols).toContain("WASH TOWEL");
+        const scoresCsv = strFromU8(unzipped["Scores.csv"]);
+        const scoresLines = scoresCsv.trim().split("\n");
+        const scoresHeaderCols = scoresLines[0].split(",");
+        expect(scoresHeaderCols[0]).toBe("Date");
+        expect(scoresHeaderCols).toContain("EARLY TO RISE");
+        expect(scoresHeaderCols).toContain("READ A BOOK");
 
-      const scoresCsv = strFromU8(unzipped["Scores.csv"]);
-      const scoresLines = scoresCsv.trim().split("\n");
-      const scoresHeaderCols = scoresLines[0].split(",");
-      expect(scoresHeaderCols[0]).toBe("Date");
-      expect(scoresHeaderCols).toContain("EARLY TO RISE");
-      expect(scoresHeaderCols).toContain("READ A BOOK");
+        const readBookChecks = strFromU8(
+          unzipped["004 READ A BOOK/Checkmarks.csv"],
+        );
+        expect(readBookChecks).toContain("1000");
+        expect(readBookChecks).toContain("8000");
 
-      const readBookChecks = strFromU8(
-        unzipped["004 READ A BOOK/Checkmarks.csv"],
-      );
-      expect(readBookChecks).toContain("1000");
-      expect(readBookChecks).toContain("8000");
-
-      const workoutChecks = strFromU8(unzipped["003 WORKOUT/Checkmarks.csv"]);
-      expect(workoutChecks).toContain("SKIP");
-      expect(workoutChecks).toContain("YES_MANUAL");
-    });
+        const workoutChecks = strFromU8(unzipped["003 WORKOUT/Checkmarks.csv"]);
+        expect(workoutChecks).toContain("SKIP");
+        expect(workoutChecks).toContain("YES_MANUAL");
+      },
+    );
   });
 });

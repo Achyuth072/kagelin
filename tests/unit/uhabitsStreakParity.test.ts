@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { KANSO_VALUE_SKIP } from "@/lib/types/habit";
+import { ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { interpolateDoneDays } from "@/lib/utils/habit-intervals";
 import {
@@ -120,7 +120,7 @@ describe("getCurrentStreak — differential parity with uhabits reference oracle
     const skipDates = ["2026-06-09"];
     const habitEntries = [
       ...entries(doneDates),
-      ...skipDates.map((d) => entry(d, KANSO_VALUE_SKIP)),
+      ...skipDates.map((d) => entry(d, ENTRY_VALUE_SKIPPED)),
     ];
     const dailyHabit = makeHabit({
       frequency_count: 1,
@@ -147,7 +147,7 @@ describe("getCurrentStreak — differential parity with uhabits reference oracle
     const skipDates = ["2026-06-01"];
     const habitEntries = [
       ...entries(doneDates),
-      ...skipDates.map((d) => entry(d, KANSO_VALUE_SKIP)),
+      ...skipDates.map((d) => entry(d, ENTRY_VALUE_SKIPPED)),
     ];
     const kagelin = getCurrentStreak(threePerWeek, habitEntries, today);
     const uhabits = uhabitsCurrentStreak(

@@ -53,10 +53,8 @@ describe("useUhabitsExport", () => {
     vi.clearAllMocks();
   });
 
-  it("initializes with non-exporting states", () => {
+  it("initializes as not exporting", () => {
     const { result } = renderHook(() => useUhabitsExport());
-    expect(result.current.isExportingDb).toBe(false);
-    expect(result.current.isExportingZip).toBe(false);
     expect(result.current.isExporting).toBe(false);
   });
 
@@ -83,7 +81,7 @@ describe("useUhabitsExport", () => {
       "Loop database exported",
       expect.objectContaining({ id: "toast-id" }),
     );
-    expect(result.current.isExportingDb).toBe(false);
+    expect(result.current.isExporting).toBe(false);
   });
 
   it("handles exportLoopDb failure with error notification and sentry report", async () => {
@@ -103,7 +101,7 @@ describe("useUhabitsExport", () => {
       "Failed to export Loop database",
       expect.objectContaining({ id: "toast-id" }),
     );
-    expect(result.current.isExportingDb).toBe(false);
+    expect(result.current.isExporting).toBe(false);
   });
 
   it("exports Loop CSV zip archive and triggers download", async () => {
@@ -129,7 +127,7 @@ describe("useUhabitsExport", () => {
       "Loop CSV archive exported",
       expect.objectContaining({ id: "toast-id" }),
     );
-    expect(result.current.isExportingZip).toBe(false);
+    expect(result.current.isExporting).toBe(false);
   });
 
   it("handles exportLoopZip failure with error notification and sentry report", async () => {
@@ -151,6 +149,6 @@ describe("useUhabitsExport", () => {
       "Failed to export Loop CSV archive",
       expect.objectContaining({ id: "toast-id" }),
     );
-    expect(result.current.isExportingZip).toBe(false);
+    expect(result.current.isExporting).toBe(false);
   });
 });

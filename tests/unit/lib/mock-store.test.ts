@@ -310,12 +310,25 @@ describe("MockStore (Guest Mode Data)", () => {
       entries,
       new Date("2026-09-03T12:00:00Z"),
     );
-    // Skips bridge streaks (Ticket 05): 2026-09-01 (done), 09-02 (skip), 09-03 (done) = 3
     expect(streak).toBe(3);
 
-    const cleared = mockStore.setHabitEntry(habit.id, "2026-09-02", 0);
-    expect(cleared).toBeNull();
+    mockStore.clearHabitEntry(habit.id, "2026-09-02");
     expect(mockStore.getHabitEntries(habit.id)).toHaveLength(2);
+  });
+
+  it("stores an explicit not-done (0) entry for a boolean habit, like the cloud upsert", () => {
+    const habit = mockStore.addHabit({
+      name: "Workout",
+      description: null,
+      color: "#4B6CB7",
+      icon: null,
+      start_date: null,
+      archived_at: null,
+    });
+
+    const entry = mockStore.setHabitEntry(habit.id, "2026-09-01", 0);
+    expect(entry?.value).toBe(0);
+    expect(mockStore.getHabitEntries(habit.id)).toHaveLength(1);
   });
 
   it("persists an explicit 0 log for a measurable habit instead of clearing it", () => {

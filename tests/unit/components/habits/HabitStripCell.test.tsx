@@ -56,10 +56,12 @@ describe("HabitStripCell", () => {
         color="#3b82f6"
         coarse={false}
         onToggle={onToggle}
-        habitType="measurable"
-        targetValue={10}
-        targetType="at_least"
-        unit="pages"
+        habit={{
+          habit_type: "measurable",
+          target_type: "at_least",
+          target_value: 10,
+          unit: "pages",
+        }}
         onLogValue={vi.fn()}
       />,
     );
@@ -77,10 +79,12 @@ describe("HabitStripCell", () => {
         color="#3b82f6"
         coarse={false}
         onToggle={vi.fn()}
-        habitType="measurable"
-        targetValue={10}
-        targetType="at_least"
-        unit="pages"
+        habit={{
+          habit_type: "measurable",
+          target_type: "at_least",
+          target_value: 10,
+          unit: "pages",
+        }}
         onLogValue={onLogValue}
       />,
     );
@@ -99,10 +103,12 @@ describe("HabitStripCell", () => {
         color="#3b82f6"
         coarse={false}
         onToggle={vi.fn()}
-        habitType="measurable"
-        targetValue={0}
-        targetType="at_most"
-        unit="cigarettes"
+        habit={{
+          habit_type: "measurable",
+          target_type: "at_most",
+          target_value: 0,
+          unit: "cigarettes",
+        }}
         onLogValue={vi.fn()}
       />,
     );
@@ -117,12 +123,36 @@ describe("HabitStripCell", () => {
         color="#3b82f6"
         coarse={false}
         onToggle={vi.fn()}
-        habitType="measurable"
-        unit="cigarettes"
+        habit={{
+          habit_type: "measurable",
+          target_type: null,
+          target_value: null,
+          unit: "cigarettes",
+        }}
         onLogValue={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByRole("button"));
     expect(screen.getByLabelText("Log amount")).toHaveValue(0);
+  });
+
+  it("renders a measurable skip as a pause only, without a value badge", () => {
+    render(
+      <HabitStripCell
+        day={makeDay({ value: -2, hasEntry: true })}
+        color="#3b82f6"
+        coarse={false}
+        onToggle={vi.fn()}
+        habit={{
+          habit_type: "measurable",
+          target_type: "at_least",
+          target_value: 10,
+          unit: "pages",
+        }}
+        onLogValue={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("-2")).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/skipped — log amount/i)).toBeInTheDocument();
   });
 });

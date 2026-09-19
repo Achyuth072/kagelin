@@ -18,6 +18,7 @@ import {
   Database,
 } from "lucide-react";
 import { useUhabitsExport } from "@/lib/hooks/useUhabitsExport";
+import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
 import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -366,6 +367,7 @@ export function BackupSyncSettings() {
   const supabase = createClient();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loopFileInputRef = useRef<HTMLInputElement>(null);
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -376,6 +378,17 @@ export function BackupSyncSettings() {
     exportLoopZip,
     isExporting: isExportingLoop,
   } = useUhabitsExport();
+  const { importUhabits, isImporting: isImportingLoop } = useUhabitsImport();
+  const isLoopBusy = isExportingLoop || isImportingLoop;
+
+  const handleLoopFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await importUhabits(file);
+    if (loopFileInputRef.current) loopFileInputRef.current.value = "";
+  };
 
   // Kept in memory only to avoid persisting credentials locally.
   const [webdavCredentials, setWebdavCredentials] = useState<WebDAVCredentials>(
@@ -712,12 +725,37 @@ export function BackupSyncSettings() {
                     <span className="text-xs font-medium text-muted-foreground">
                       Loop Habit Tracker
                     </span>
+                    <input
+                      ref={loopFileInputRef}
+                      type="file"
+                      accept=".db"
+                      className="hidden"
+                      onChange={handleLoopFileChange}
+                      aria-label="Import Loop (.db) file"
+                    />
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => {
+                          trigger("toggle");
+                          loopFileInputRef.current?.click();
+                        }}
+                        disabled={isLoopBusy}
+                        className="text-xs h-8 gap-1.5"
+                      >
+                        {isImportingLoop ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Upload className="h-3.5 w-3.5 text-brand" />
+                        )}
+                        Import (.db)
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={exportLoopDb}
-                        disabled={isExportingLoop}
+                        disabled={isLoopBusy}
                         className="text-xs h-8 gap-1.5"
                       >
                         {isExportingLoop ? (
@@ -731,7 +769,7 @@ export function BackupSyncSettings() {
                         variant="outline"
                         size="sm"
                         onClick={exportLoopZip}
-                        disabled={isExportingLoop}
+                        disabled={isLoopBusy}
                         className="text-xs h-8 gap-1.5"
                       >
                         {isExportingLoop ? (

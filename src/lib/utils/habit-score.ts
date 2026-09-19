@@ -2,7 +2,7 @@ import { format, eachDayOfInterval, startOfDay, parseISO } from "date-fns";
 import {
   type Habit,
   type HabitEntry,
-  KANSO_VALUE_SKIP,
+  ENTRY_VALUE_SKIPPED,
 } from "@/lib/types/habit";
 
 type FrequencyPeriod = "day" | "week" | "month";
@@ -82,7 +82,7 @@ export function computeScores(
     const key = format(day, "yyyy-MM-dd");
     const raw = entryMap.get(key) ?? 0;
     let score: number;
-    if (raw === KANSO_VALUE_SKIP) {
+    if (raw === ENTRY_VALUE_SKIPPED) {
       // Skipped entry: freeze decay (S_k = S_{k-1})
       score = prevScore;
     } else {

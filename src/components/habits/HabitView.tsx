@@ -12,8 +12,6 @@ import {
   CalendarIcon,
   AlignLeft,
   Palette,
-  CheckCircle2,
-  Gauge,
 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { HabitIconPicker } from "./shared/HabitIconPicker";
@@ -22,10 +20,9 @@ import {
   type FrequencyPeriod,
 } from "./shared/HabitFrequencyField";
 import { HabitTargetField, type TargetType } from "./shared/HabitTargetField";
-import {
-  HabitQuestionField,
-  type HabitType,
-} from "./shared/HabitQuestionField";
+import { HabitQuestionField } from "./shared/HabitQuestionField";
+import { HabitTypeToggle } from "./shared/HabitTypeToggle";
+import type { HabitType } from "@/lib/types/habit";
 import { HabitReminderField } from "./shared/HabitReminderField";
 import { ColorPicker } from "@/components/shared/ColorPicker";
 import { TaskDatePicker } from "../tasks/shared/TaskDatePicker";
@@ -154,6 +151,10 @@ export function HabitView(props: HabitViewProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0 py-2">
+        <HabitTypeToggle value={habitType} onChange={setHabitType} />
+
+        <div className="h-1" />
+
         <div className="flex items-start gap-3 px-3 py-2.5 rounded-md mx-2">
           <IconCell>
             <Palette
@@ -168,52 +169,6 @@ export function HabitView(props: HabitViewProps) {
               onChange={setColor}
               ariaLabel="Habit color"
             />
-          </div>
-        </div>
-
-        <div className="h-1" />
-
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-md mx-2">
-          <IconCell className="items-center pt-0">
-            {habitType === "measurable" ? (
-              <Gauge
-                className="h-4 w-4 text-muted-foreground"
-                strokeWidth={2.25}
-              />
-            ) : (
-              <CheckCircle2
-                className="h-4 w-4 text-muted-foreground"
-                strokeWidth={2.25}
-              />
-            )}
-          </IconCell>
-          <div className="inline-flex h-8 p-0.5 rounded-lg bg-secondary/10 border border-border/40 shrink-0">
-            {(
-              [
-                { value: "boolean", label: "Yes or No" },
-                { value: "measurable", label: "Measurable" },
-              ] as const
-            ).map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => {
-                  if (value !== habitType) {
-                    trigger("toggle");
-                    setHabitType(value);
-                  }
-                }}
-                aria-pressed={habitType === value}
-                className={cn(
-                  "rounded-md px-2.5 h-7 text-[13px] font-medium tracking-tight border border-transparent transition-seijaku-fast",
-                  habitType === value
-                    ? "bg-brand text-brand-foreground border-brand/20"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/40",
-                )}
-              >
-                {label}
-              </button>
-            ))}
           </div>
         </div>
 

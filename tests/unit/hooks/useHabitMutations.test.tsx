@@ -429,6 +429,61 @@ describe("useHabitMutations", () => {
       });
     });
 
+    describe("clearing a day (value: null)", () => {
+      it("deletes the cloud entry, drops it from the cache, and skips telemetry", async () => {
+        queryClient.setQueryData(
+          ["habits", { includeArchived: false, isGuestMode: false }],
+          [
+            {
+              id: "habit-1",
+              name: "Habit 1",
+              entries: [
+                {
+                  id: "entry-1",
+                  habit_id: "habit-1",
+                  date: "2024-01-15",
+                  value: 1,
+                  created_at: "2024-01-15T10:00:00Z",
+                },
+              ],
+            },
+          ],
+        );
+
+        const eqDate = vi.fn().mockResolvedValue({ error: null });
+        const eqHabit = vi.fn(() => ({ eq: eqDate }));
+        const del = vi.fn(() => ({ eq: eqHabit }));
+        const upsert = vi.fn();
+        mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
+        mockCreateClient.mockReturnValue({
+          from: vi.fn(() => ({ delete: del, upsert })),
+        } as any);
+
+        const { result } = renderHook(() => useMarkHabitComplete(), {
+          wrapper,
+        });
+
+        await act(async () => {
+          await result.current.mutateAsync({
+            habitId: "habit-1",
+            date: "2024-01-15",
+            value: null,
+          });
+        });
+
+        expect(del).toHaveBeenCalled();
+        expect(eqHabit).toHaveBeenCalledWith("habit_id", "habit-1");
+        expect(eqDate).toHaveBeenCalledWith("date", "2024-01-15");
+        expect(upsert).not.toHaveBeenCalled();
+        const cacheData: any = queryClient.getQueryData([
+          "habits",
+          { includeArchived: false, isGuestMode: false },
+        ]);
+        expect(cacheData[0].entries).toHaveLength(0);
+        expect(trackTelemetry).not.toHaveBeenCalled();
+      });
+    });
+
     describe("habit_logged telemetry", () => {
       it("fires habit_logged telemetry when a habit is completed", async () => {
         const existingHabits = [

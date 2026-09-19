@@ -10,7 +10,7 @@ export interface Habit {
   archived_at: string | null;
   start_date: string | null;
   sort_order: number;
-  habit_type?: "boolean" | "measurable";
+  habit_type?: HabitType;
   frequency_count?: number | null;
   frequency_period?: "day" | "week" | "month" | null;
   target_type?: "at_least" | "at_most" | null;
@@ -37,6 +37,11 @@ export interface HabitWithEntries extends Habit {
   entries: HabitEntry[];
 }
 
-export const KANSO_VALUE_DONE = 1;
-export const KANSO_VALUE_SKIP = -2;
-export const KANSO_VALUE_MISSED = 0;
+export type HabitType = "boolean" | "measurable";
+
+export const ENTRY_VALUE_DONE = 1;
+export const ENTRY_VALUE_NOT_DONE = 0;
+export const ENTRY_VALUE_SKIPPED = -2;
+
+// Bitmask of reminder weekdays, bit 0 = Sunday; all seven set = every day.
+export const REMINDER_EVERY_DAY = 127;

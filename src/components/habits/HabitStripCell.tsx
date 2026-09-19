@@ -6,10 +6,12 @@ import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getContrastingColor } from "@/lib/utils/color";
 import type { RollingDay } from "@/lib/utils/habit-rolling";
+import { dayValue } from "@/lib/utils/habit-score";
 import {
-  KANSO_VALUE_DONE,
-  KANSO_VALUE_SKIP,
-  KANSO_VALUE_MISSED,
+  ENTRY_VALUE_DONE,
+  ENTRY_VALUE_SKIPPED,
+  ENTRY_VALUE_NOT_DONE,
+  type Habit,
 } from "@/lib/types/habit";
 import {
   Popover,
@@ -24,21 +26,9 @@ interface HabitStripCellProps {
   /** Coarse pointer requires ≥44×44 touch targets. */
   coarse: boolean;
   onToggle: (date: string) => void;
-  habitType?: "boolean" | "measurable";
-  targetValue?: number | null;
-  targetType?: "at_least" | "at_most" | null;
-  unit?: string | null;
+  habit?: Pick<Habit, "habit_type" | "target_type" | "target_value" | "unit">;
   /** Required for measurable habits. */
   onLogValue?: (date: string, value: number) => void;
-}
-
-function isTargetMet(
-  value: number,
-  targetValue: number | null | undefined,
-  targetType: "at_least" | "at_most" | null | undefined,
-): boolean {
-  if (!targetValue) return false;
-  return targetType === "at_most" ? value <= targetValue : value >= targetValue;
 }
 
 export function HabitStripCell({
@@ -46,23 +36,21 @@ export function HabitStripCell({
   color,
   coarse,
   onToggle,
-  habitType = "boolean",
-  targetValue,
-  targetType,
-  unit,
+  habit,
   onLogValue,
 }: HabitStripCellProps) {
   const { date, weekdayLabel, value, hasEntry, isToday, isBeforeStart } = day;
-  const isMeasurable = habitType === "measurable";
-  const complete = !isMeasurable && hasEntry && value === KANSO_VALUE_DONE;
-  const missed = !isMeasurable && hasEntry && value === KANSO_VALUE_MISSED;
-  const skipped = hasEntry && value === KANSO_VALUE_SKIP;
-  const logged = isMeasurable && hasEntry;
+  const isMeasurable = habit?.habit_type === "measurable";
+  const unit = habit?.unit;
+  const complete = !isMeasurable && hasEntry && value === ENTRY_VALUE_DONE;
+  const missed = !isMeasurable && hasEntry && value === ENTRY_VALUE_NOT_DONE;
+  const skipped = hasEntry && value === ENTRY_VALUE_SKIPPED;
+  const logged = isMeasurable && hasEntry && !skipped;
   const filled =
-    complete || (logged && isTargetMet(value, targetValue, targetType));
+    complete || (logged && habit != null && dayValue(value, habit) >= 1);
 
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(hasEntry ? String(value) : "");
+  const [draft, setDraft] = useState(logged ? String(value) : "");
   const { trigger } = useHaptic();
 
   // Square aspect ratio ensures 7 days fit narrow viewports without scrolling.
@@ -96,7 +84,7 @@ export function HabitStripCell({
         ? "skipped"
         : "not completed";
   const cellLabel = isMeasurable
-    ? `${format(parseISO(date), "EEEE MMM d")}, ${logged ? `${value}${unit ? ` ${unit}` : ""} logged` : "not logged"} — log amount`
+    ? `${format(parseISO(date), "EEEE MMM d")}, ${logged ? `${value}${unit ? ` ${unit}` : ""} logged` : skipped ? "skipped" : "not logged"} — log amount`
     : `${format(parseISO(date), "EEEE MMM d")}, ${status} — toggle`;
 
   const cellContent = (
@@ -147,7 +135,7 @@ export function HabitStripCell({
           open={open}
           onOpenChange={(next) => {
             setOpen(next);
-            if (next) setDraft(hasEntry ? String(value) : "");
+            if (next) setDraft(logged ? String(value) : "");
           }}
         >
           <PopoverTrigger asChild>

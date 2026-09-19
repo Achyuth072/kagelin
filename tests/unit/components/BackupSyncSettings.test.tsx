@@ -54,18 +54,26 @@ vi.mock("@/components/ui/select", () => ({
 }));
 
 const useAuthMock = vi.fn();
-const { mockExportLoopDb, mockExportLoopZip } = vi.hoisted(() => ({
-  mockExportLoopDb: vi.fn(),
-  mockExportLoopZip: vi.fn(),
-}));
+const { mockExportLoopDb, mockExportLoopZip, mockImportUhabits } = vi.hoisted(
+  () => ({
+    mockExportLoopDb: vi.fn(),
+    mockExportLoopZip: vi.fn(),
+    mockImportUhabits: vi.fn(),
+  }),
+);
 
 vi.mock("@/lib/hooks/useUhabitsExport", () => ({
   useUhabitsExport: () => ({
     exportLoopDb: mockExportLoopDb,
     exportLoopZip: mockExportLoopZip,
-    isExportingDb: false,
-    isExportingZip: false,
     isExporting: false,
+  }),
+}));
+
+vi.mock("@/lib/hooks/useUhabitsImport", () => ({
+  useUhabitsImport: () => ({
+    importUhabits: mockImportUhabits,
+    isImporting: false,
   }),
 }));
 
@@ -227,5 +235,20 @@ describe("BackupSyncSettings", () => {
 
     fireEvent.click(exportZipBtn);
     expect(mockExportLoopZip).toHaveBeenCalled();
+  });
+
+  it("imports a Loop .db backup from Settings", () => {
+    useAuthMock.mockReturnValue({ isGuestMode: false });
+    render(<BackupSyncSettings />);
+
+    expect(
+      screen.getByRole("button", { name: /import \(\.db\)/i }),
+    ).toBeInTheDocument();
+
+    const file = new File(["sqlite"], "backup.db");
+    fireEvent.change(screen.getByLabelText("Import Loop (.db) file"), {
+      target: { files: [file] },
+    });
+    expect(mockImportUhabits).toHaveBeenCalledWith(file);
   });
 });

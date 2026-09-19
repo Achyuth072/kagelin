@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
-import type { Habit, HabitEntry } from "@/lib/types/habit";
+import {
+  REMINDER_EVERY_DAY,
+  type Habit,
+  type HabitEntry,
+  type HabitType,
+} from "@/lib/types/habit";
 
 export interface CreateHabitInput {
   name: string;
@@ -9,15 +14,10 @@ export interface CreateHabitInput {
   icon?: string;
   start_date?: string;
   archived_at?: string | null;
-  habitType?: "boolean" | "measurable";
-  habit_type?: "boolean" | "measurable";
-  frequencyCount?: number;
+  habit_type?: HabitType;
   frequency_count?: number;
-  frequencyPeriod?: "day" | "week" | "month";
   frequency_period?: "day" | "week" | "month";
-  targetType?: "at_least" | "at_most";
   target_type?: "at_least" | "at_most";
-  targetValue?: number;
   target_value?: number;
   unit?: string;
   question?: string | null;
@@ -33,15 +33,10 @@ export interface UpdateHabitInput {
   description?: string;
   color?: string;
   icon?: string;
-  habitType?: "boolean" | "measurable";
-  habit_type?: "boolean" | "measurable";
-  frequencyCount?: number;
+  habit_type?: HabitType;
   frequency_count?: number;
-  frequencyPeriod?: "day" | "week" | "month";
   frequency_period?: "day" | "week" | "month";
-  targetType?: "at_least" | "at_most";
   target_type?: "at_least" | "at_most";
-  targetValue?: number;
   target_value?: number;
   unit?: string;
   question?: string | null;
@@ -52,7 +47,7 @@ export interface UpdateHabitInput {
 export interface MarkHabitCompleteInput {
   habitId: string;
   date: string;
-  value?: number;
+  value?: number | null;
   notes?: string | null;
 }
 
@@ -62,7 +57,7 @@ export const habitMutations = {
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
 
-    const habit_type = input.habit_type || input.habitType || "boolean";
+    const habit_type = input.habit_type || "boolean";
     const isMeasurable = habit_type === "measurable";
 
     const habitData = {
@@ -73,19 +68,14 @@ export const habitMutations = {
       archived_at: input.archived_at ?? null,
       start_date: input.start_date || new Date().toISOString().split("T")[0],
       habit_type,
-      frequency_count: input.frequency_count ?? input.frequencyCount ?? null,
-      frequency_period:
-        input.frequency_period || input.frequencyPeriod || "day",
-      target_type: isMeasurable
-        ? input.target_type || input.targetType || "at_least"
-        : null,
-      target_value: isMeasurable
-        ? (input.target_value ?? input.targetValue ?? null)
-        : null,
+      frequency_count: input.frequency_count ?? null,
+      frequency_period: input.frequency_period || "day",
+      target_type: isMeasurable ? input.target_type || "at_least" : null,
+      target_value: isMeasurable ? (input.target_value ?? null) : null,
       unit: isMeasurable ? input.unit || null : null,
       question: input.question || null,
       reminder_time: input.reminder_time ?? null,
-      reminder_days: input.reminder_days ?? 127,
+      reminder_days: input.reminder_days ?? REMINDER_EVERY_DAY,
       source_uuid: input.source_uuid ?? null,
     };
 
@@ -138,15 +128,10 @@ export const habitMutations = {
       description,
       color,
       icon,
-      habitType,
       habit_type,
-      frequencyCount,
       frequency_count,
-      frequencyPeriod,
       frequency_period,
-      targetType,
       target_type,
-      targetValue,
       target_value,
       unit,
       question,
@@ -159,24 +144,22 @@ export const habitMutations = {
     if (description !== undefined) updates.description = description;
     if (color !== undefined) updates.color = color;
     if (icon !== undefined) updates.icon = icon;
-    const resolvedHabitType = habit_type ?? habitType;
-    if (resolvedHabitType !== undefined) updates.habit_type = resolvedHabitType;
-    const resolvedFreqCount = frequency_count ?? frequencyCount;
-    if (resolvedFreqCount !== undefined)
-      updates.frequency_count = resolvedFreqCount;
-    const resolvedFreqPeriod = frequency_period ?? frequencyPeriod;
-    if (resolvedFreqPeriod !== undefined)
-      updates.frequency_period = resolvedFreqPeriod;
-    const resolvedTargetType = target_type ?? targetType;
-    if (resolvedTargetType !== undefined)
-      updates.target_type = resolvedTargetType;
-    const resolvedTargetValue = target_value ?? targetValue;
-    if (resolvedTargetValue !== undefined)
-      updates.target_value = resolvedTargetValue;
+    if (habit_type !== undefined) updates.habit_type = habit_type;
+    if (frequency_count !== undefined)
+      updates.frequency_count = frequency_count;
+    if (frequency_period !== undefined)
+      updates.frequency_period = frequency_period;
+    if (target_type !== undefined) updates.target_type = target_type;
+    if (target_value !== undefined) updates.target_value = target_value;
     if (unit !== undefined) updates.unit = unit;
     if (question !== undefined) updates.question = question;
     if (reminder_time !== undefined) updates.reminder_time = reminder_time;
     if (reminder_days !== undefined) updates.reminder_days = reminder_days;
+    if (habit_type === "boolean") {
+      updates.target_type = null;
+      updates.target_value = null;
+      updates.unit = null;
+    }
 
     if (isGuest) {
       const result = mockStore.updateHabit(id, updates);
@@ -237,7 +220,9 @@ export const habitMutations = {
     if (error) throw new Error(error.message);
   },
 
-  markComplete: async (input: MarkHabitCompleteInput): Promise<HabitEntry> => {
+  markComplete: async (
+    input: MarkHabitCompleteInput,
+  ): Promise<HabitEntry | null> => {
     const isGuest =
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
@@ -245,20 +230,24 @@ export const habitMutations = {
     const { habitId, date, value = 1, notes } = input;
 
     if (isGuest) {
-      const entry = mockStore.setHabitEntry(habitId, date, value, notes);
-      return (
-        entry || {
-          id: `guest-cleared-${habitId}-${date}`,
-          habit_id: habitId,
-          date,
-          value: 0,
-          notes: notes ?? null,
-          created_at: new Date().toISOString(),
-        }
-      );
+      if (value === null) {
+        mockStore.clearHabitEntry(habitId, date);
+        return null;
+      }
+      return mockStore.setHabitEntry(habitId, date, value, notes);
     }
 
     const supabase = createClient();
+    if (value === null) {
+      const { error } = await supabase
+        .from("habit_entries")
+        .delete()
+        .eq("habit_id", habitId)
+        .eq("date", date);
+      if (error) throw new Error(error.message);
+      return null;
+    }
+
     const payload: {
       habit_id: string;
       date: string;

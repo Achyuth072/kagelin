@@ -11,6 +11,12 @@ import {
   SCHEMA_ERROR_MESSAGE,
 } from "../../src/lib/import/uhabitsErrors";
 import { PROJECT_COLORS } from "../../src/lib/constants/colors";
+import {
+  LOOP_FIXTURE,
+  buildLoopBackupFixture,
+  hasRealLoopBackup,
+  readRealLoopBackup,
+} from "./support/loopBackupFixture";
 
 describe("uhabitsImport", () => {
   it("should correctly map habits from uhabits schema", () => {
@@ -275,14 +281,14 @@ describe("toCreateHabitInput", () => {
     expect(input.color).toBe("#4A8A8A");
     expect(input.icon).toBe("Dumbbell");
     expect(input.start_date).toBe("2024-01-01");
-    expect(input.frequencyCount).toBe(3);
-    expect(input.frequencyPeriod).toBe("week");
+    expect(input.frequency_count).toBe(3);
+    expect(input.frequency_period).toBe("week");
   });
 
   it("omits frequency when the habit has none", () => {
     const input = toCreateHabitInput(baseHabit);
-    expect(input.frequencyCount).toBeUndefined();
-    expect(input.frequencyPeriod).toBeUndefined();
+    expect(input.frequency_count).toBeUndefined();
+    expect(input.frequency_period).toBeUndefined();
   });
 
   it("forwards source_uuid so the origin link survives persist", () => {
@@ -553,69 +559,111 @@ describe("uhabitsImport full-fidelity mapping", () => {
   });
 });
 
-describe("real Loop Habits backup database audit", () => {
-  it("imports cleanly from Loop Habits Backup 2026-09-03 103056.db with full fidelity", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
+describe("synthetic Loop backup import", () => {
+  it("imports every fidelity path from a Loop-schema .db", async () => {
     const { parseUhabitsFile } = await import("../../src/lib/import/uhabits");
-
-    const dbPath = path.resolve(
-      process.cwd(),
-      ".scratch/import/Loop Habits Backup 2026-09-03 103056.db",
+    const { habits, entries } = await parseUhabitsFile(
+      await buildLoopBackupFixture(),
     );
-    if (!fs.existsSync(dbPath)) return;
 
-    const buf = fs.readFileSync(dbPath);
-    const { habits, entries } = await parseUhabitsFile(buf);
+    expect(habits).toHaveLength(LOOP_FIXTURE.habitCount);
+    expect(habits.filter((h) => h.archived_at === null)).toHaveLength(
+      LOOP_FIXTURE.activeCount,
+    );
+    expect(entries).toHaveLength(LOOP_FIXTURE.entryCount);
 
-    // 2 UNKNOWN rows lack Kagelin equivalents and are dropped.
-    expect(entries).toHaveLength(4183);
+    const workout = habits.find((h) => h.name === "WORKOUT")!;
+    expect(workout.question).toBe("Did you work out?");
+    expect(workout.reminder_time).toBe("06:00");
+    const workoutEntries = entries.filter((e) => e.habit_id === workout.id);
+    expect(workoutEntries.filter((e) => e.value === 1)).toHaveLength(3);
+    expect(workoutEntries.filter((e) => e.value === 0)).toHaveLength(2);
+    expect(workoutEntries.filter((e) => e.value === -2)).toHaveLength(1);
+    expect(workoutEntries.find((e) => e.value === -2)?.notes).toBe("Rest day");
 
-    expect(habits).toHaveLength(12);
+    const book = habits.find((h) => h.name === "READ A BOOK")!;
+    expect(book.archived_at).toBeTruthy();
+    expect(book.habit_type).toBe("measurable");
+    expect(book.target_value).toBe(10);
+    expect(book.unit).toBe("pages");
+    const bookEntries = entries.filter((e) => e.habit_id === book.id);
+    expect(
+      bookEntries
+        .filter((e) => e.value > 0)
+        .map((e) => e.value)
+        .sort(),
+    ).toEqual([1, 8]);
+    expect(bookEntries.filter((e) => e.value === -2)).toHaveLength(2);
 
-    const activeHabits = habits.filter((h) => h.archived_at === null);
-    const archivedHabits = habits.filter((h) => h.archived_at !== null);
-    expect(activeHabits).toHaveLength(6);
-    expect(archivedHabits).toHaveLength(6);
+    const haircut = habits.find((h) => h.name === "HAIRCUT")!;
+    expect(haircut.frequency_period).toBe("month");
+    expect(haircut.reminder_time).toBe("07:00");
+    expect(haircut.reminder_days).toBe(119);
 
-    const readBook = habits.find((h) => h.name === "READ A BOOK");
-    expect(readBook).toBeDefined();
-    expect(readBook?.archived_at).toBeTruthy();
-    expect(readBook?.habit_type).toBe("measurable");
-    expect(readBook?.target_value).toBe(10.0);
-    expect(readBook?.unit).toBe("pages");
-    expect(readBook?.target_type).toBe("at_least");
-    expect(readBook?.question).toBe("How many pages did you read?");
-
-    const bookEntries = entries.filter((e) => e.habit_id === readBook?.id);
-    expect(bookEntries).toHaveLength(6);
-    const skipBookEntries = bookEntries.filter((e) => e.value === -2);
-    expect(skipBookEntries).toHaveLength(4);
-    const numericalEntries = bookEntries.filter((e) => e.value > 0);
-    expect(numericalEntries.map((e) => e.value).sort()).toEqual([1.0, 8.0]);
-
-    const workout = habits.find((h) => h.name === "WORKOUT");
-    expect(workout).toBeDefined();
-    expect(workout?.archived_at).toBeNull();
-    const workoutEntries = entries.filter((e) => e.habit_id === workout?.id);
-    const workoutSkips = workoutEntries.filter((e) => e.value === -2);
-    const workoutDone = workoutEntries.filter((e) => e.value === 1);
-    const workoutMissed = workoutEntries.filter((e) => e.value === 0);
-    expect(workoutSkips).toHaveLength(27);
-    expect(workoutDone).toHaveLength(229);
-    expect(workoutMissed).toHaveLength(701);
-    expect(workoutEntries).toHaveLength(957);
-
-    const earlyToRise = habits.find((h) => h.name === "EARLY TO RISE");
-    expect(earlyToRise?.reminder_time).toBe("06:00");
-    expect(earlyToRise?.reminder_days).toBe(127);
-
-    const haircut = habits.find((h) => h.name === "HAIRCUT");
-    expect(haircut?.reminder_time).toBe("07:00");
-    expect(haircut?.reminder_days).toBe(119);
-
-    const earlyToBed = habits.find((h) => h.name === "EARLY TO BED");
-    expect(earlyToBed?.reminder_time).toBe("22:45");
-    expect(earlyToBed?.reminder_days).toBe(127);
+    const gym = habits.find((h) => h.name === "GYM")!;
+    expect(gym.frequency_count).toBe(3);
+    expect(gym.frequency_period).toBe("week");
   });
+});
+
+describe("real Loop Habits backup database audit", () => {
+  it.skipIf(!hasRealLoopBackup)(
+    "imports cleanly from Loop Habits Backup 2026-09-03 103056.db with full fidelity",
+    async () => {
+      const { parseUhabitsFile } = await import("../../src/lib/import/uhabits");
+
+      const buf = readRealLoopBackup();
+      const { habits, entries } = await parseUhabitsFile(buf);
+
+      // 2 UNKNOWN rows lack Kagelin equivalents and are dropped.
+      expect(entries).toHaveLength(4183);
+
+      expect(habits).toHaveLength(12);
+
+      const activeHabits = habits.filter((h) => h.archived_at === null);
+      const archivedHabits = habits.filter((h) => h.archived_at !== null);
+      expect(activeHabits).toHaveLength(6);
+      expect(archivedHabits).toHaveLength(6);
+
+      const readBook = habits.find((h) => h.name === "READ A BOOK");
+      expect(readBook).toBeDefined();
+      expect(readBook?.archived_at).toBeTruthy();
+      expect(readBook?.habit_type).toBe("measurable");
+      expect(readBook?.target_value).toBe(10.0);
+      expect(readBook?.unit).toBe("pages");
+      expect(readBook?.target_type).toBe("at_least");
+      expect(readBook?.question).toBe("How many pages did you read?");
+
+      const bookEntries = entries.filter((e) => e.habit_id === readBook?.id);
+      expect(bookEntries).toHaveLength(6);
+      const skipBookEntries = bookEntries.filter((e) => e.value === -2);
+      expect(skipBookEntries).toHaveLength(4);
+      const numericalEntries = bookEntries.filter((e) => e.value > 0);
+      expect(numericalEntries.map((e) => e.value).sort()).toEqual([1.0, 8.0]);
+
+      const workout = habits.find((h) => h.name === "WORKOUT");
+      expect(workout).toBeDefined();
+      expect(workout?.archived_at).toBeNull();
+      const workoutEntries = entries.filter((e) => e.habit_id === workout?.id);
+      const workoutSkips = workoutEntries.filter((e) => e.value === -2);
+      const workoutDone = workoutEntries.filter((e) => e.value === 1);
+      const workoutMissed = workoutEntries.filter((e) => e.value === 0);
+      expect(workoutSkips).toHaveLength(27);
+      expect(workoutDone).toHaveLength(229);
+      expect(workoutMissed).toHaveLength(701);
+      expect(workoutEntries).toHaveLength(957);
+
+      const earlyToRise = habits.find((h) => h.name === "EARLY TO RISE");
+      expect(earlyToRise?.reminder_time).toBe("06:00");
+      expect(earlyToRise?.reminder_days).toBe(127);
+
+      const haircut = habits.find((h) => h.name === "HAIRCUT");
+      expect(haircut?.reminder_time).toBe("07:00");
+      expect(haircut?.reminder_days).toBe(119);
+
+      const earlyToBed = habits.find((h) => h.name === "EARLY TO BED");
+      expect(earlyToBed?.reminder_time).toBe("22:45");
+      expect(earlyToBed?.reminder_days).toBe(127);
+    },
+  );
 });

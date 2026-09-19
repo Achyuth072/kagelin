@@ -19,7 +19,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateHabitSchema, type CreateHabitInput } from "@/lib/schemas/habit";
-import type { Habit } from "@/lib/types/habit";
+import { REMINDER_EVERY_DAY, type Habit } from "@/lib/types/habit";
 import { HabitView } from "./HabitView";
 import { HabitInsightsPanel } from "./HabitInsightsPanel";
 import { SheetTabToggle, type SheetTab } from "@/components/ui/SheetTabToggle";
@@ -84,7 +84,7 @@ export function HabitSheet({
       unit: "",
       question: "",
       reminder_time: null,
-      reminder_days: 127,
+      reminder_days: REMINDER_EVERY_DAY,
     },
   });
 
@@ -105,7 +105,8 @@ export function HabitSheet({
   const unit = useWatch({ control, name: "unit" }) || "";
   const question = useWatch({ control, name: "question" }) || "";
   const reminderTime = useWatch({ control, name: "reminder_time" });
-  const reminderDays = useWatch({ control, name: "reminder_days" }) ?? 127;
+  const reminderDays =
+    useWatch({ control, name: "reminder_days" }) ?? REMINDER_EVERY_DAY;
 
   const createMutation = useCreateHabit();
   const updateMutation = useUpdateHabit();
@@ -132,7 +133,7 @@ export function HabitSheet({
           unit: initialHabit.unit ?? "",
           question: initialHabit.question ?? "",
           reminder_time: initialHabit.reminder_time ?? null,
-          reminder_days: initialHabit.reminder_days ?? 127,
+          reminder_days: initialHabit.reminder_days ?? REMINDER_EVERY_DAY,
         });
         void triggerValidation();
       } else {
@@ -150,7 +151,7 @@ export function HabitSheet({
           unit: "",
           question: "",
           reminder_time: null,
-          reminder_days: 127,
+          reminder_days: REMINDER_EVERY_DAY,
         });
       }
     }
@@ -170,9 +171,8 @@ export function HabitSheet({
             ? data.start_date.toISOString().split("T")[0]
             : data.start_date,
         habit_type: data.habit_type,
-        // Mutation layer expects camelCase; form schema uses snake_case.
-        frequencyCount: data.frequency_count,
-        frequencyPeriod: data.frequency_period,
+        frequency_count: data.frequency_count,
+        frequency_period: data.frequency_period,
         target_type: data.target_type,
         target_value: data.target_value,
         unit: data.unit,

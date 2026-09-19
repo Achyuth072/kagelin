@@ -27,11 +27,11 @@ describe("habitMutations.create", () => {
   it("creates a measurable habit with new fields", async () => {
     const habit = await habitMutations.create({
       name: "Drink Water",
-      habitType: "measurable",
-      frequencyCount: 1,
-      frequencyPeriod: "day",
-      targetType: "at_least",
-      targetValue: 8,
+      habit_type: "measurable",
+      frequency_count: 1,
+      frequency_period: "day",
+      target_type: "at_least",
+      target_value: 8,
       unit: "glasses",
     });
 
@@ -77,8 +77,8 @@ describe("habitMutations.update", () => {
 
     const updated = await habitMutations.update({
       id: habit.id,
-      habitType: "measurable",
-      targetValue: 5,
+      habit_type: "measurable",
+      target_value: 5,
     });
 
     expect(updated.habit_type).toBe("measurable");
@@ -113,8 +113,8 @@ describe("habitMutations.update", () => {
   it("leaves unspecified new fields unchanged", async () => {
     const habit = await habitMutations.create({
       name: "Test Habit",
-      habitType: "measurable",
-      targetValue: 8,
+      habit_type: "measurable",
+      target_value: 8,
     });
 
     const updated = await habitMutations.update({
@@ -125,6 +125,26 @@ describe("habitMutations.update", () => {
     expect(updated.name).toBe("Renamed");
     expect(updated.habit_type).toBe("measurable");
     expect(updated.target_value).toBe(8);
+  });
+
+  it("clears measurable target fields when switching to boolean", async () => {
+    const habit = await habitMutations.create({
+      name: "Read",
+      habit_type: "measurable",
+      target_type: "at_most",
+      target_value: 20,
+      unit: "pages",
+    });
+
+    const updated = await habitMutations.update({
+      id: habit.id,
+      habit_type: "boolean",
+    });
+
+    expect(updated.habit_type).toBe("boolean");
+    expect(updated.target_type).toBeNull();
+    expect(updated.target_value).toBeNull();
+    expect(updated.unit).toBeNull();
   });
 });
 
@@ -141,7 +161,27 @@ describe("habitMutations.markComplete", () => {
       notes: "Felt very productive today.",
     });
 
-    expect(entry.value).toBe(1);
-    expect(entry.notes).toBe("Felt very productive today.");
+    expect(entry?.value).toBe(1);
+    expect(entry?.notes).toBe("Felt very productive today.");
+  });
+});
+
+describe("habitMutations.markComplete clearing", () => {
+  it("deletes the entry when value is null", async () => {
+    const habit = await habitMutations.create({ name: "Stretch" });
+    await habitMutations.markComplete({
+      habitId: habit.id,
+      date: "2026-09-01",
+      value: 1,
+    });
+
+    const result = await habitMutations.markComplete({
+      habitId: habit.id,
+      date: "2026-09-01",
+      value: null,
+    });
+
+    expect(result).toBeNull();
+    expect(mockStore.getHabitEntries(habit.id)).toHaveLength(0);
   });
 });

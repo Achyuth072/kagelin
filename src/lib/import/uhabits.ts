@@ -1,5 +1,13 @@
 import initSqlJs from "sql.js";
-import type { Habit, HabitEntry } from "../types/habit";
+import {
+  ENTRY_VALUE_DONE,
+  ENTRY_VALUE_NOT_DONE,
+  ENTRY_VALUE_SKIPPED,
+  REMINDER_EVERY_DAY,
+  type Habit,
+  type HabitEntry,
+  type HabitType,
+} from "@/lib/types/habit";
 import type { CreateHabitInput } from "../mutations/habit";
 import { PROJECT_COLORS } from "../constants/colors";
 
@@ -172,7 +180,7 @@ function findClosestKansoColor(loopHex: string): string {
   return closest;
 }
 
-function paletteToHex(colorIndex: number): string {
+export function paletteToHex(colorIndex: number): string {
   const loopHex = LOOP_COLOR_PALETTE[colorIndex];
   if (!loopHex) return "#4B6CB7";
   return findClosestKansoColor(loopHex);
@@ -205,26 +213,22 @@ function inferIcon(habitName: string, description?: string): string {
 }
 
 export const LOOP_VALUE_YES = 2;
+export const LOOP_VALUE_YES_AUTO = 1;
 export const LOOP_VALUE_SKIP = 3;
 export const LOOP_VALUE_NO = 0;
 export const LOOP_VALUE_UNKNOWN = -1;
-import {
-  KANSO_VALUE_DONE,
-  KANSO_VALUE_SKIP,
-  KANSO_VALUE_MISSED,
-} from "../types/habit";
 
 export function parseRepetitionValue(
   rawVal: number,
-  habitType: "boolean" | "measurable",
+  habitType: HabitType,
 ): number | null {
-  if (rawVal === LOOP_VALUE_SKIP) return KANSO_VALUE_SKIP;
-  if (rawVal === LOOP_VALUE_NO) return KANSO_VALUE_MISSED;
+  if (rawVal === LOOP_VALUE_SKIP) return ENTRY_VALUE_SKIPPED;
+  if (rawVal === LOOP_VALUE_NO) return ENTRY_VALUE_NOT_DONE;
   if (rawVal === LOOP_VALUE_UNKNOWN) return null;
   if (habitType === "measurable") {
     return rawVal > 0 ? rawVal / 1000.0 : null;
   }
-  if (rawVal === LOOP_VALUE_YES) return KANSO_VALUE_DONE;
+  if (rawVal === LOOP_VALUE_YES) return ENTRY_VALUE_DONE;
   return null;
 }
 
@@ -240,8 +244,8 @@ export function toCreateHabitInput(habit: Habit): CreateHabitInput {
     archived_at: habit.archived_at ?? undefined,
     habit_type: habit.habit_type,
     sort_order: habit.sort_order ?? undefined,
-    frequencyCount: habit.frequency_count ?? undefined,
-    frequencyPeriod: habit.frequency_period ?? undefined,
+    frequency_count: habit.frequency_count ?? undefined,
+    frequency_period: habit.frequency_period ?? undefined,
     target_type: habit.target_type ?? undefined,
     target_value: habit.target_value ?? undefined,
     unit: habit.unit ?? undefined,
@@ -258,7 +262,7 @@ export function mapUhabitsToKanso(
 ) {
   const today = new Date().toISOString().split("T")[0];
 
-  const habitTypeMap = new Map<number, "boolean" | "measurable">();
+  const habitTypeMap = new Map<number, HabitType>();
   uhHabits.forEach((rawHabit) => {
     habitTypeMap.set(
       rawHabit.id as number,
@@ -303,7 +307,7 @@ export function mapUhabitsToKanso(
     const reminder_days =
       typeof rawHabit.reminder_days === "number"
         ? (rawHabit.reminder_days as number)
-        : 127;
+        : REMINDER_EVERY_DAY;
 
     const hasReminderTime =
       reminder_days > 0 &&

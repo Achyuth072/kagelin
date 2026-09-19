@@ -17,6 +17,7 @@ import {
   hasFrequencyTarget,
 } from "@/lib/utils/habit-frequency-progress";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
+import { ENTRY_VALUE_DONE } from "@/lib/types/habit";
 import { DragHandle } from "@/components/tasks/DragHandle";
 import { HabitStripCell } from "./HabitStripCell";
 import { CircularProgress } from "@/components/ui/circular-progress";
@@ -72,7 +73,7 @@ export function HabitCompactRow({
     markComplete.mutate({
       habitId: habit.id,
       date,
-      value: current === 1 ? 0 : 1,
+      value: current === ENTRY_VALUE_DONE ? null : ENTRY_VALUE_DONE,
     });
   };
 
@@ -147,10 +148,7 @@ export function HabitCompactRow({
             color={habit.color}
             coarse={coarse}
             onToggle={handleToggle}
-            habitType={habit.habit_type}
-            targetValue={habit.target_value}
-            targetType={habit.target_type}
-            unit={habit.unit}
+            habit={habit}
             onLogValue={handleLogValue}
           />
         ))}

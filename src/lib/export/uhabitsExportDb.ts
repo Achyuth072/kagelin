@@ -1,78 +1,19 @@
-import { get } from "idb-keyval";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabase/client";
-import { mockStore } from "@/lib/mock/mock-store";
-import { fetchAllRows } from "@/lib/supabase/paginate";
-import { format } from "date-fns";
-import type { Habit, HabitEntry } from "@/lib/types/habit";
-import { KANSO_VALUE_SKIP, KANSO_VALUE_MISSED } from "@/lib/types/habit";
+import type { Habit } from "@/lib/types/habit";
+import { REMINDER_EVERY_DAY } from "@/lib/types/habit";
+import { loadSqlJs } from "@/lib/import/uhabits";
 import {
-  LOOP_COLOR_PALETTE,
-  colorDistance,
-  loadSqlJs,
-  LOOP_VALUE_YES,
-  LOOP_VALUE_SKIP,
-  LOOP_VALUE_NO,
-} from "@/lib/import/uhabits";
-
-export { LOOP_COLOR_PALETTE };
-
-const LOOP_COLOR_ENTRIES = Object.entries(LOOP_COLOR_PALETTE);
-
-export function findClosestLoopColor(hex: string): number {
-  let closest = 0;
-  let minDistance = Infinity;
-
-  for (const [idxStr, loopHex] of LOOP_COLOR_ENTRIES) {
-    const idx = Number(idxStr);
-    const dist = colorDistance(hex, loopHex);
-    if (dist < minDistance) {
-      minDistance = dist;
-      closest = idx;
-    }
-  }
-
-  return closest;
-}
-
-function normalizeUuid(uuid: string): string {
-  return uuid.replace(/-/g, "").toLowerCase();
-}
-
-export function mapKagelinFrequencyToLoop(
-  count?: number | null,
-  period?: "day" | "week" | "month" | null,
-): { freq_num: number; freq_den: number } {
-  const validCount = typeof count === "number" && count > 0 ? count : 1;
-
-  if (period === "day") {
-    return { freq_num: validCount, freq_den: 1 };
-  }
-  if (period === "week") {
-    return { freq_num: validCount, freq_den: 7 };
-  }
-  if (period === "month") {
-    return { freq_num: validCount, freq_den: 30 };
-  }
-
-  return { freq_num: validCount, freq_den: 1 };
-}
-
-export function entryToRepetitionValue(
-  value: number,
-  habitType: "boolean" | "measurable",
-): number {
-  if (value === KANSO_VALUE_SKIP) {
-    return LOOP_VALUE_SKIP;
-  }
-  if (value === KANSO_VALUE_MISSED) {
-    return LOOP_VALUE_NO;
-  }
-  if (habitType === "measurable") {
-    return Math.round(value * 1000);
-  }
-  return LOOP_VALUE_YES;
-}
+  entryToRepetitionValue,
+  extractRawHabits,
+  getHabitFrequency,
+  getRawHabitByProvenance,
+  normalizeUuid,
+  resolveLoopColor,
+  resolveUhabitsExportData,
+  sortHabitsByOrder,
+  toFilenameDate,
+  type RawLoopHabit,
+  type UhabitsExportOptions,
+} from "@/lib/export/uhabitsShared";
 
 export function dateStringToUtcMidnightMs(dateStr: string): number {
   const [yearStr, monthStr, dayStr] = dateStr.split("-");
@@ -82,118 +23,8 @@ export function dateStringToUtcMidnightMs(dateStr: string): number {
   return Date.UTC(year, month, day);
 }
 
-export function toFilenameDate(date?: Date | string): string {
-  if (!date) return format(new Date(), "yyyy-MM-dd");
-  return date instanceof Date ? format(date, "yyyy-MM-dd") : date;
-}
-
 export function generateUhabitsDbFilename(date?: Date | string): string {
   return `Loop Habits Backup ${toFilenameDate(date)}.db`;
-}
-
-export interface UhabitsExportData {
-  habits: Habit[];
-  entries: HabitEntry[];
-  rawSources?: unknown[];
-}
-
-export interface ExportToUhabitsDbOptions {
-  habits?: Habit[];
-  entries?: HabitEntry[];
-  rawSources?: unknown[];
-  supabase?: SupabaseClient;
-  isGuest?: boolean;
-  wasmPath?: string;
-}
-
-const GUEST_STORE_KEY = "kanso_import_sources";
-
-export async function collectUhabitsExportData(options?: {
-  supabase?: SupabaseClient;
-  isGuest?: boolean;
-}): Promise<UhabitsExportData> {
-  const isGuest =
-    options?.isGuest ??
-    (typeof window !== "undefined" &&
-      localStorage.getItem("kanso_guest_mode") === "true");
-
-  if (isGuest) {
-    const habits = mockStore.getHabits();
-    const entries = mockStore.getHabitEntries();
-    let rawSources: unknown[] = [];
-    if (typeof indexedDB !== "undefined") {
-      try {
-        const stored = (await get<{ raw: unknown }[]>(GUEST_STORE_KEY)) ?? [];
-        rawSources = stored.map((record) => record.raw);
-      } catch {
-        rawSources = [];
-      }
-    }
-    return { habits, entries, rawSources };
-  }
-
-  const supabase = options?.supabase ?? createClient();
-
-  const [habits, entries, habitImports] = await Promise.all([
-    fetchAllRows<Habit>((from, to) =>
-      supabase
-        .from("habits")
-        .select("*")
-        .order("sort_order", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, to),
-    ),
-    fetchAllRows<HabitEntry>((from, to) =>
-      supabase
-        .from("habit_entries")
-        .select("*")
-        .order("date", { ascending: true })
-        .order("id", { ascending: true })
-        .range(from, to),
-    ),
-    fetchAllRows<{ raw: unknown }>((from, to) =>
-      supabase
-        .from("habit_imports")
-        .select("*")
-        .order("id", { ascending: true })
-        .range(from, to),
-    ),
-  ]);
-
-  const rawSources = habitImports.map((row) => row.raw);
-
-  return { habits, entries, rawSources };
-}
-
-export function extractRawHabits(
-  rawSources: unknown[],
-): Map<string, Record<string, unknown>> {
-  const map = new Map<string, Record<string, unknown>>();
-
-  for (const source of rawSources) {
-    if (
-      !source ||
-      typeof source !== "object" ||
-      !("habits" in source) ||
-      !Array.isArray((source as { habits: unknown[] }).habits)
-    ) {
-      continue;
-    }
-
-    for (const h of (source as { habits: unknown[] }).habits) {
-      if (
-        h &&
-        typeof h === "object" &&
-        "uuid" in h &&
-        typeof (h as { uuid: unknown }).uuid === "string"
-      ) {
-        const rawH = h as Record<string, unknown>;
-        map.set(normalizeUuid(rawH.uuid as string), rawH);
-      }
-    }
-  }
-
-  return map;
 }
 
 interface PreparedLoopHabit {
@@ -228,39 +59,15 @@ function strOr(value: unknown, fallback: string | null): string | null {
 
 function prepareLoopHabit(
   habit: Habit,
-  rawHabit: Record<string, unknown> | undefined,
-  cleanSourceUuid: string | undefined,
+  rawHabit: RawLoopHabit | undefined,
+  uuid: string,
   sqliteId: number,
   position: number,
 ): PreparedLoopHabit {
   const archived = habit.archived_at ? 1 : 0;
-
-  const color =
-    typeof rawHabit?.color === "number"
-      ? rawHabit.color
-      : findClosestLoopColor(habit.color);
-
+  const color = resolveLoopColor(habit, rawHabit);
   const description = habit.description ?? strOr(rawHabit?.description, null);
-
-  let freq_num: number;
-  let freq_den: number;
-  if (
-    rawHabit &&
-    typeof rawHabit.freq_num === "number" &&
-    typeof rawHabit.freq_den === "number" &&
-    rawHabit.freq_num > 0 &&
-    rawHabit.freq_den > 0
-  ) {
-    freq_num = rawHabit.freq_num;
-    freq_den = rawHabit.freq_den;
-  } else {
-    const mapped = mapKagelinFrequencyToLoop(
-      habit.frequency_count,
-      habit.frequency_period,
-    );
-    freq_num = mapped.freq_num;
-    freq_den = mapped.freq_den;
-  }
+  const { freq_num, freq_den } = getHabitFrequency(habit, rawHabit);
 
   const highlight = numOr(rawHabit?.highlight, 0);
 
@@ -281,7 +88,10 @@ function prepareLoopHabit(
 
   const reminder_days = numOr(
     habit.reminder_days,
-    numOr(rawHabit?.reminder_days, reminder_hour !== null ? 127 : 0),
+    numOr(
+      rawHabit?.reminder_days,
+      reminder_hour !== null ? REMINDER_EVERY_DAY : 0,
+    ),
   );
 
   const isMeasurable = habit.habit_type === "measurable";
@@ -302,12 +112,6 @@ function prepareLoopHabit(
     : "";
 
   const question = habit.question ?? strOr(rawHabit?.question, null);
-
-  const uuid =
-    cleanSourceUuid ??
-    (typeof rawHabit?.uuid === "string" && rawHabit.uuid
-      ? normalizeUuid(rawHabit.uuid)
-      : normalizeUuid(crypto.randomUUID()));
 
   return {
     habitId: habit.id,
@@ -333,31 +137,11 @@ function prepareLoopHabit(
 }
 
 export async function exportToUhabitsDb(
-  input?: ExportToUhabitsDbOptions | UhabitsExportData,
-  extraOptions?: { wasmPath?: string },
+  options: UhabitsExportOptions & { wasmPath?: string } = {},
 ): Promise<Uint8Array> {
-  const wasmPath =
-    extraOptions?.wasmPath ??
-    (input && "wasmPath" in input ? input.wasmPath : undefined);
-
-  const SQL = await loadSqlJs(wasmPath);
-
-  let habits: Habit[];
-  let entries: HabitEntry[];
-  let rawSources: unknown[];
-
-  if (input && "habits" in input && Array.isArray(input.habits)) {
-    habits = input.habits;
-    entries = input.entries ?? [];
-    rawSources = input.rawSources ?? [];
-  } else {
-    const collected = await collectUhabitsExportData(
-      input as { supabase?: SupabaseClient; isGuest?: boolean } | undefined,
-    );
-    habits = collected.habits;
-    entries = collected.entries;
-    rawSources = collected.rawSources ?? [];
-  }
+  const SQL = await loadSqlJs(options.wasmPath);
+  const { habits, entries, rawSources } =
+    await resolveUhabitsExportData(options);
 
   const rawHabitsByUuid = extractRawHabits(rawSources);
 
@@ -405,35 +189,31 @@ export async function exportToUhabitsDb(
 
   db.run("INSERT INTO android_metadata (locale) VALUES (?);", ["en_US"]);
 
-  const sortedHabits = [...habits].sort(
-    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
-  );
+  const sortedHabits = sortHabitsByOrder(habits);
 
-  // Reserve provenance IDs first so auto-assigned IDs avoid collisions.
-  const usedSqliteIds = new Set<number>();
-  const habitToRawMap = new Map<
-    string,
-    { rawHabit: Record<string, unknown> | undefined; cleanSourceUuid?: string }
-  >();
+  // Provenance IDs and UUIDs go to the first habit that claims them, reserved
+  // before auto-assignment. Later claimants (overlapping backups, or the same
+  // Loop habit imported twice) get fresh ones instead of colliding.
+  const sqliteIdOwner = new Map<number, string>();
+  const uuidOwner = new Map<string, string>();
+  const rawByHabitId = new Map<string, RawLoopHabit | undefined>();
 
   for (const habit of sortedHabits) {
-    const cleanSourceUuid = habit.source_uuid
-      ? normalizeUuid(habit.source_uuid)
-      : undefined;
-    const rawHabit = cleanSourceUuid
-      ? rawHabitsByUuid.get(cleanSourceUuid)
-      : undefined;
-    habitToRawMap.set(habit.id, { rawHabit, cleanSourceUuid });
+    const rawHabit = getRawHabitByProvenance(habit, rawHabitsByUuid);
+    rawByHabitId.set(habit.id, rawHabit);
 
-    if (
-      rawHabit &&
-      typeof rawHabit.id === "number" &&
-      rawHabit.id > 0 &&
-      !usedSqliteIds.has(rawHabit.id)
-    ) {
-      usedSqliteIds.add(rawHabit.id);
+    if (typeof rawHabit?.id === "number" && rawHabit.id > 0) {
+      if (!sqliteIdOwner.has(rawHabit.id)) {
+        sqliteIdOwner.set(rawHabit.id, habit.id);
+      }
+    }
+    if (habit.source_uuid) {
+      const uuid = normalizeUuid(habit.source_uuid);
+      if (!uuidOwner.has(uuid)) uuidOwner.set(uuid, habit.id);
     }
   }
+
+  const usedSqliteIds = new Set(sqliteIdOwner.keys());
 
   let nextId = 1;
   const getNextAvailableId = (): number => {
@@ -450,14 +230,21 @@ export async function exportToUhabitsDb(
 
   for (let index = 0; index < sortedHabits.length; index++) {
     const habit = sortedHabits[index];
-    const { rawHabit, cleanSourceUuid } = habitToRawMap.get(habit.id)!;
+    const rawHabit = rawByHabitId.get(habit.id);
 
-    let sqliteId: number;
-    if (rawHabit && typeof rawHabit.id === "number" && rawHabit.id > 0) {
-      sqliteId = rawHabit.id;
-    } else {
-      sqliteId = getNextAvailableId();
-    }
+    const sqliteId =
+      typeof rawHabit?.id === "number" &&
+      sqliteIdOwner.get(rawHabit.id) === habit.id
+        ? rawHabit.id
+        : getNextAvailableId();
+
+    const sourceUuid = habit.source_uuid
+      ? normalizeUuid(habit.source_uuid)
+      : undefined;
+    const uuid =
+      sourceUuid && uuidOwner.get(sourceUuid) === habit.id
+        ? sourceUuid
+        : normalizeUuid(crypto.randomUUID());
 
     const position =
       typeof habit.sort_order === "number"
@@ -467,7 +254,7 @@ export async function exportToUhabitsDb(
           : index;
 
     preparedHabits.push(
-      prepareLoopHabit(habit, rawHabit, cleanSourceUuid, sqliteId, position),
+      prepareLoopHabit(habit, rawHabit, uuid, sqliteId, position),
     );
     habitIdToSqliteId.set(habit.id, sqliteId);
     habitMap.set(habit.id, habit);

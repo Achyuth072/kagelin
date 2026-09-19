@@ -1,33 +1,32 @@
 import { format, parseISO, eachDayOfInterval, startOfDay } from "date-fns";
 import { zipSync, strToU8 } from "fflate";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import {
-  mapKagelinFrequencyToLoop,
-  findClosestLoopColor,
-  extractRawHabits,
-  collectUhabitsExportData,
+  LOOP_VALUE_NO,
+  LOOP_VALUE_SKIP,
+  LOOP_VALUE_UNKNOWN,
+  LOOP_VALUE_YES,
+  LOOP_VALUE_YES_AUTO,
+} from "@/lib/import/uhabits";
+import {
   entryToRepetitionValue,
+  extractRawHabits,
+  getHabitFrequency,
+  getRawHabitByProvenance,
+  resolveLoopColor,
+  resolveUhabitsExportData,
+  sortHabitsByOrder,
   toFilenameDate,
+  type RawLoopHabit,
   type UhabitsExportData,
-} from "@/lib/export/uhabitsExportDb";
+  type UhabitsExportOptions,
+} from "@/lib/export/uhabitsShared";
 import { computeScores } from "@/lib/utils/habit-score";
 import {
   buildIntervals,
   snapIntervalsTogether,
   shift,
 } from "@/lib/utils/habit-intervals";
-
-export type { UhabitsExportData };
-
-export interface ExportToUhabitsZipOptions {
-  habits?: Habit[];
-  entries?: HabitEntry[];
-  rawSources?: unknown[];
-  supabase?: SupabaseClient;
-  isGuest?: boolean;
-  today?: Date | string;
-}
 
 export const LOOP_CSV_COLORS = [
   "#D32F2F",
@@ -90,21 +89,16 @@ export function formatHabitDirName(index: number, name: string): string {
   return `${combined.trim()}/`;
 }
 
+const REPETITION_LABELS: Record<number, string> = {
+  [LOOP_VALUE_YES]: "YES_MANUAL",
+  [LOOP_VALUE_YES_AUTO]: "YES_AUTO",
+  [LOOP_VALUE_NO]: "NO",
+  [LOOP_VALUE_SKIP]: "SKIP",
+  [LOOP_VALUE_UNKNOWN]: "UNKNOWN",
+};
+
 export function formatRepetitionValue(value: number): string {
-  switch (value) {
-    case 2:
-      return "YES_MANUAL";
-    case 1:
-      return "YES_AUTO";
-    case 0:
-      return "NO";
-    case 3:
-      return "SKIP";
-    case -1:
-      return "UNKNOWN";
-    default:
-      return value.toString();
-  }
+  return REPETITION_LABELS[value] ?? value.toString();
 }
 
 export function computeDoneDays(
@@ -125,41 +119,11 @@ export function computeDoneDays(
   return done;
 }
 
-export function getRawHabitByProvenance(
-  habit: Habit,
-  rawHabitsByUuid: Map<string, Record<string, unknown>>,
-): Record<string, unknown> | undefined {
-  if (!habit.source_uuid) return undefined;
-  const cleanSourceUuid = habit.source_uuid.replace(/-/g, "").toLowerCase();
-  return rawHabitsByUuid.get(cleanSourceUuid);
-}
-
-export function getHabitFrequency(
-  habit: Habit,
-  rawHabit?: Record<string, unknown>,
-): { freq_num: number; freq_den: number } {
-  if (
-    rawHabit &&
-    typeof rawHabit.freq_num === "number" &&
-    typeof rawHabit.freq_den === "number" &&
-    rawHabit.freq_num > 0 &&
-    rawHabit.freq_den > 0
-  ) {
-    return { freq_num: rawHabit.freq_num, freq_den: rawHabit.freq_den };
-  }
-  return mapKagelinFrequencyToLoop(
-    habit.frequency_count,
-    habit.frequency_period,
-  );
-}
-
 export function generateHabitsCsv(
   habits: Habit[],
   rawSources: unknown[] = [],
 ): string {
-  const sortedHabits = [...habits].sort(
-    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
-  );
+  const sortedHabits = sortHabitsByOrder(habits);
   const rawHabitsByUuid = extractRawHabits(rawSources);
 
   const header = [
@@ -196,11 +160,7 @@ export function generateHabitsCsv(
 
     const { freq_num, freq_den } = getHabitFrequency(habit, rawHabit);
 
-    const colorIdx =
-      typeof rawHabit?.color === "number"
-        ? rawHabit.color
-        : findClosestLoopColor(habit.color);
-    const colorHex = toCsvColor(colorIdx);
+    const colorHex = toCsvColor(resolveLoopColor(habit, rawHabit));
 
     const unit = isMeasurable
       ? (habit.unit ??
@@ -255,14 +215,14 @@ function formatEntryValueForHabit(
 ): string {
   if (!entry) {
     if (habit.habit_type !== "measurable" && isAutoDone) {
-      return formatRepetitionValue(1);
+      return formatRepetitionValue(LOOP_VALUE_YES_AUTO);
     }
-    return formatRepetitionValue(-1);
+    return formatRepetitionValue(LOOP_VALUE_UNKNOWN);
   }
 
   const repVal = entryToRepetitionValue(
     entry.value,
-    habit.habit_type === "measurable" ? "measurable" : "boolean",
+    habit.habit_type ?? "boolean",
   );
   return formatRepetitionValue(repVal);
 }
@@ -378,7 +338,7 @@ function buildMatrixHeader(habits: Habit[]): string {
 function buildHabitCheckmarkHelper(
   habit: Habit,
   entries: HabitEntry[],
-  rawHabitsByUuid: Map<string, Record<string, unknown>>,
+  rawHabitsByUuid: Map<string, RawLoopHabit>,
 ): { entryByDate: Map<string, HabitEntry>; doneSet: Set<string> } {
   const habitEntries = entries.filter((e) => e.habit_id === habit.id);
   const rawHabit = getRawHabitByProvenance(habit, rawHabitsByUuid);
@@ -404,9 +364,7 @@ export function generateCheckmarksMatrixCsv(
   entries: HabitEntry[],
   options?: { today?: string; rawSources?: unknown[] },
 ): string {
-  const sortedHabits = [...habits].sort(
-    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
-  );
+  const sortedHabits = sortHabitsByOrder(habits);
   const todayStr = options?.today ?? format(new Date(), "yyyy-MM-dd");
   const { oldest, newest } = computeDateRange(entries, todayStr);
   const header = buildMatrixHeader(sortedHabits);
@@ -444,9 +402,7 @@ export function generateScoresMatrixCsv(
   entries: HabitEntry[],
   options?: { today?: string },
 ): string {
-  const sortedHabits = [...habits].sort(
-    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
-  );
+  const sortedHabits = sortHabitsByOrder(habits);
   const todayStr = options?.today ?? format(new Date(), "yyyy-MM-dd");
   const { oldest, newest } = computeDateRange(entries, todayStr);
   const header = buildMatrixHeader(sortedHabits);
@@ -495,15 +451,11 @@ export function buildUhabitsCsvArchive(
   data: UhabitsExportData,
   options?: { today?: string | Date },
 ): Record<string, Uint8Array> {
-  const habits = data.habits ?? [];
-  const entries = data.entries ?? [];
-  const rawSources = data.rawSources ?? [];
+  const { habits, entries, rawSources } = data;
 
   const todayStr = toFilenameDate(options?.today);
 
-  const sortedHabits = [...habits].sort(
-    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
-  );
+  const sortedHabits = sortHabitsByOrder(habits);
 
   const archive: Record<string, Uint8Array> = {};
 
@@ -541,34 +493,8 @@ export function buildUhabitsCsvArchive(
 }
 
 export async function exportToUhabitsZip(
-  input?: ExportToUhabitsZipOptions | UhabitsExportData,
-  extraOptions?: { today?: string | Date },
+  options: UhabitsExportOptions & { today?: string | Date } = {},
 ): Promise<Uint8Array> {
-  let habits: Habit[];
-  let entries: HabitEntry[];
-  let rawSources: unknown[];
-
-  if (input && "habits" in input && Array.isArray(input.habits)) {
-    habits = input.habits;
-    entries = input.entries ?? [];
-    rawSources = input.rawSources ?? [];
-  } else {
-    const collected = await collectUhabitsExportData(
-      input as { supabase?: SupabaseClient; isGuest?: boolean } | undefined,
-    );
-    habits = collected.habits;
-    entries = collected.entries;
-    rawSources = collected.rawSources ?? [];
-  }
-
-  const today =
-    extraOptions?.today ??
-    (input && "today" in input ? input.today : undefined);
-
-  const archive = buildUhabitsCsvArchive(
-    { habits, entries, rawSources },
-    { today },
-  );
-
-  return zipSync(archive);
+  const data = await resolveUhabitsExportData(options);
+  return zipSync(buildUhabitsCsvArchive(data, { today: options.today }));
 }

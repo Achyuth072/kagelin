@@ -2,8 +2,7 @@
 
 import { HelpCircle } from "lucide-react";
 import { IconCell } from "@/components/ui/IconCell";
-
-export type HabitType = "boolean" | "measurable";
+import type { HabitType } from "@/lib/types/habit";
 
 interface HabitQuestionFieldProps {
   question: string;
