@@ -103,8 +103,6 @@ function getDefaultEndDate(start: Date) {
   return new Date(start.getTime() + 3600000);
 }
 
-// Wraps a disabled button with a cursor-not-allowed span and a tooltip explaining
-// why recurring events are read-only.
 function RecurringTooltip({
   isRecurring,
   children,
@@ -203,7 +201,6 @@ export function CreateEventDialog({
 
   const isRecurring = !!event?.metadata?.recurring_series_id;
 
-  // NLP parsing on title change (only when creating)
   useEffect(() => {
     if (event || !title || title.length < 3) return;
     const parsed = parseEventInput(title);
@@ -234,7 +231,6 @@ export function CreateEventDialog({
   );
   useBackNavigation(isDrawer && showEndPicker, () => setShowEndPicker(false));
 
-  // Reset/Initialize form when dialog opens
   useEffect(() => {
     if (open) {
       const timer = setTimeout(() => {
@@ -339,7 +335,6 @@ export function CreateEventDialog({
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          {/* Title — native input, bottom border only, no box */}
           <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
             <input
               {...register("title")}
@@ -365,9 +360,7 @@ export function CreateEventDialog({
               so the fixed-position popup never clips at the scroll container edge. */}
           <div ref={setLocationPortalEl} />
 
-          {/* Body */}
           <div className="flex-1 overflow-y-auto min-h-0 py-2">
-            {/* All-day row */}
             <div className={cn(rowCls, hoverCls)}>
               <IconCell>
                 <Sun
@@ -387,14 +380,12 @@ export function CreateEventDialog({
               />
             </div>
 
-            {/* Time block — left accent groups start + end */}
             <div
               className={cn(
                 "mx-2 my-1 pl-3 border-l-2 border-brand/40 rounded-r-md",
                 !isRecurring && "hover:bg-muted/40 transition-seijaku-fast",
               )}
             >
-              {/* Start */}
               <Popover open={showStartPicker} onOpenChange={setShowStartPicker}>
                 <PopoverTrigger asChild>
                   <button
@@ -437,7 +428,6 @@ export function CreateEventDialog({
                 </PopoverContent>
               </Popover>
 
-              {/* End */}
               <Popover open={showEndPicker} onOpenChange={setShowEndPicker}>
                 <PopoverTrigger asChild>
                   <button
@@ -483,7 +473,6 @@ export function CreateEventDialog({
 
             <div className="h-1" />
 
-            {/* Location */}
             <div className="mx-2">
               <Controller
                 name="location"
@@ -616,7 +605,6 @@ export function CreateEventDialog({
               />
             </div>
 
-            {/* Notes */}
             <div className="mx-2">
               <div
                 className={cn(
@@ -636,11 +624,12 @@ export function CreateEventDialog({
                   placeholder="Add notes"
                   aria-label="Event notes"
                   disabled={isRecurring}
+                  rows={1}
                   style={{ fontSize: "0.875rem" }}
                   className={cn(
                     "flex-1 bg-transparent border-0 outline-none resize-none",
                     "text-sm text-foreground placeholder:text-muted-foreground",
-                    "leading-normal p-0 min-h-[48px]",
+                    "leading-normal p-0 min-h-6 field-sizing-content max-h-32",
                   )}
                 />
               </div>
@@ -649,7 +638,6 @@ export function CreateEventDialog({
             <div className="h-1" />
           </div>
 
-          {/* Footer */}
           <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background sm:rounded-b-lg">
             {event && (
               <RecurringTooltip isRecurring={isRecurring}>

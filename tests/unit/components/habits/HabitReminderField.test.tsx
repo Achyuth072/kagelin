@@ -34,7 +34,7 @@ describe("HabitReminderField", () => {
     expect(onReminderTimeChange).toHaveBeenCalledWith("09:00");
   });
 
-  it("shows the time input and day chips once a reminder time is set", () => {
+  it("shows the time trigger and day chips once a reminder time is set", () => {
     render(
       <HabitReminderField
         reminderTime="08:30"
@@ -43,9 +43,26 @@ describe("HabitReminderField", () => {
         onReminderDaysChange={vi.fn()}
       />,
     );
-    expect(screen.getByLabelText("Reminder time")).toHaveValue("08:30");
+    expect(screen.getByLabelText("Reminder time")).toHaveTextContent(/8:30/);
     expect(screen.getByLabelText("Sunday")).toBeInTheDocument();
     expect(screen.getByLabelText("Saturday")).toBeInTheDocument();
+  });
+
+  it("writes the picked time back as HH:mm", () => {
+    const onReminderTimeChange = vi.fn();
+    render(
+      <HabitReminderField
+        reminderTime="08:30"
+        onReminderTimeChange={onReminderTimeChange}
+        reminderDays={127}
+        onReminderDaysChange={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Reminder time"));
+    fireEvent.keyDown(screen.getByLabelText("Adjust Hours"), {
+      key: "ArrowUp",
+    });
+    expect(onReminderTimeChange).toHaveBeenCalledWith("09:30");
   });
 
   it("toggles a day's bit off when its chip is clicked", () => {

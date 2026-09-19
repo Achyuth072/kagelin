@@ -721,65 +721,69 @@ export function BackupSyncSettings() {
               <Separator className="bg-border/20 mx-4" />
               <div className="px-4 pb-4 pt-4 space-y-3">
                 <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Loop Habit Tracker
-                    </span>
-                    <input
-                      ref={loopFileInputRef}
-                      type="file"
-                      accept=".db"
-                      className="hidden"
-                      onChange={handleLoopFileChange}
-                      aria-label="Import Loop (.db) file"
-                    />
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          trigger("toggle");
-                          loopFileInputRef.current?.click();
-                        }}
-                        disabled={isLoopBusy}
-                        className="text-xs h-8 gap-1.5"
-                      >
-                        {isImportingLoop ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Upload className="h-3.5 w-3.5 text-brand" />
-                        )}
-                        Import (.db)
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={exportLoopDb}
-                        disabled={isLoopBusy}
-                        className="text-xs h-8 gap-1.5"
-                      >
-                        {isExportingLoop ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Database className="h-3.5 w-3.5 text-brand" />
-                        )}
-                        Export (.db)
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={exportLoopZip}
-                        disabled={isLoopBusy}
-                        className="text-xs h-8 gap-1.5"
-                      >
-                        {isExportingLoop ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Download className="h-3.5 w-3.5 text-brand" />
-                        )}
-                        Export (CSV Zip)
-                      </Button>
-                    </div>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Loop Habit Tracker
+                  </span>
+                  <input
+                    ref={loopFileInputRef}
+                    type="file"
+                    accept=".db"
+                    className="hidden"
+                    onChange={handleLoopFileChange}
+                    aria-label="Import Loop (.db) file"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        trigger("toggle");
+                        loopFileInputRef.current?.click();
+                      }}
+                      disabled={isLoopBusy}
+                      className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
+                    >
+                      {isImportingLoop ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          strokeWidth={2.25}
+                        />
+                      ) : (
+                        <Upload className="h-4 w-4" strokeWidth={2.25} />
+                      )}
+                      Import (.db)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={exportLoopDb}
+                      disabled={isLoopBusy}
+                      className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
+                    >
+                      {isExportingLoop ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          strokeWidth={2.25}
+                        />
+                      ) : (
+                        <Database className="h-4 w-4" strokeWidth={2.25} />
+                      )}
+                      Export (.db)
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={exportLoopZip}
+                      disabled={isLoopBusy}
+                      className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
+                    >
+                      {isExportingLoop ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          strokeWidth={2.25}
+                        />
+                      ) : (
+                        <Download className="h-4 w-4" strokeWidth={2.25} />
+                      )}
+                      Export (CSV Zip)
+                    </Button>
                   </div>
                 </div>
 

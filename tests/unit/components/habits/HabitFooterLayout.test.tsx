@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { HabitView } from "@/components/habits/HabitView";
 
@@ -39,6 +39,7 @@ vi.mock("@/components/shared/ColorPicker", () => ({
 
 vi.mock("@/components/habits/shared/HabitIconPicker", () => ({
   HabitIconPicker: () => <div data-testid="icon-picker" />,
+  getHabitIcon: () => () => null,
 }));
 
 vi.mock("@/components/tasks/shared/TaskDatePicker", () => ({
@@ -88,6 +89,7 @@ describe("Habit Views Footer Layout", () => {
     render(<HabitView {...commonProps} mode="edit" onDelete={vi.fn()} />);
 
     const footer = screen.getByLabelText(/save/i).closest("div")!;
+    fireEvent.click(screen.getByText("Icon & color"));
     const colorPicker = screen.getByTestId("color-picker");
     expect(footer.contains(colorPicker)).toBe(false);
   });
@@ -96,13 +98,24 @@ describe("Habit Views Footer Layout", () => {
     render(<HabitView {...commonProps} mode="create" />);
 
     const footer = screen.getByLabelText(/start habit/i).closest("div")!;
+    fireEvent.click(screen.getByText("Icon & color"));
     const colorPicker = screen.getByTestId("color-picker");
     expect(footer.contains(colorPicker)).toBe(false);
+  });
+
+  it("Icon & color pickers stay collapsed until the row is opened", () => {
+    render(<HabitView {...commonProps} mode="create" />);
+
+    expect(screen.queryByTestId("color-picker")).toBeNull();
+    fireEvent.click(screen.getByText("Icon & color"));
+    expect(screen.getByTestId("color-picker")).toBeDefined();
+    expect(screen.getByTestId("icon-picker")).toBeDefined();
   });
 
   it("Color picker should be in the view (structural verification)", () => {
     render(<HabitView {...commonProps} mode="create" />);
 
+    fireEvent.click(screen.getByText("Icon & color"));
     const colorPicker = screen.getByTestId("color-picker");
     expect(colorPicker).toBeDefined();
 

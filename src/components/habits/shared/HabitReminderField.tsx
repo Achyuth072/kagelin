@@ -3,7 +3,14 @@
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { SegmentedTimePicker } from "@/components/ui/segmented-time-picker";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 
 interface HabitReminderFieldProps {
   reminderTime: string | null | undefined;
@@ -25,6 +32,16 @@ const DAY_CHIPS: { bit: number; label: string; ariaLabel: string }[] = [
   { bit: 6, label: "S", ariaLabel: "Saturday" },
 ];
 
+const parseTime = (value: string) => {
+  const [hours, minutes] = value.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+};
+
+const toTimeString = (date: Date) =>
+  `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
 export function HabitReminderField({
   reminderTime,
   onReminderTimeChange,
@@ -32,6 +49,7 @@ export function HabitReminderField({
   onReminderDaysChange,
 }: HabitReminderFieldProps) {
   const { trigger } = useHaptic();
+  const { formatTime } = useTimeFormat();
   const isOn = !!reminderTime;
 
   const toggleOn = () => {
@@ -69,13 +87,25 @@ export function HabitReminderField({
 
         {isOn && (
           <>
-            <input
-              type="time"
-              aria-label="Reminder time"
-              value={reminderTime ?? DEFAULT_TIME}
-              onChange={(e) => onReminderTimeChange(e.target.value)}
-              className="h-8 px-2 text-[13px] rounded-lg border border-border/40 bg-secondary/10 outline-none shrink-0"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Reminder time"
+                  onClick={() => trigger("toggle")}
+                  className="h-8 px-2.5 rounded-lg text-[13px] font-medium tabular-nums border border-border/40 bg-secondary/10 text-foreground transition-seijaku-fast hover:bg-secondary/40 shrink-0"
+                >
+                  {formatTime(parseTime(reminderTime ?? DEFAULT_TIME))}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-3" align="start">
+                <SegmentedTimePicker
+                  compact
+                  value={parseTime(reminderTime ?? DEFAULT_TIME)}
+                  onChange={(date) => onReminderTimeChange(toTimeString(date))}
+                />
+              </PopoverContent>
+            </Popover>
 
             <div className="flex items-center gap-1 shrink-0">
               {DAY_CHIPS.map(({ bit, label, ariaLabel }) => {

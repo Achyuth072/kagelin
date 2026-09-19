@@ -11,10 +11,13 @@ import {
   Trash2,
   CalendarIcon,
   AlignLeft,
-  Palette,
+  SlidersHorizontal,
 } from "lucide-react";
+import { useState } from "react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { HabitIconPicker } from "./shared/HabitIconPicker";
+import { CollapsibleReveal } from "../tasks/shared/CollapsibleReveal";
+import { HabitDisclosureRow } from "./shared/HabitDisclosureRow";
+import { HabitAppearanceField } from "./shared/HabitAppearanceField";
 import {
   HabitFrequencyField,
   type FrequencyPeriod,
@@ -24,7 +27,6 @@ import { HabitQuestionField } from "./shared/HabitQuestionField";
 import { HabitTypeToggle } from "./shared/HabitTypeToggle";
 import type { HabitType } from "@/lib/types/habit";
 import { HabitReminderField } from "./shared/HabitReminderField";
-import { ColorPicker } from "@/components/shared/ColorPicker";
 import { TaskDatePicker } from "../tasks/shared/TaskDatePicker";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
@@ -116,6 +118,14 @@ export function HabitView(props: HabitViewProps) {
   } = props;
 
   const { trigger } = useHaptic();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreSummary = [
+    question.trim() && "Question",
+    reminderTime && "Reminder",
+    description.trim() && "Notes",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const isFinePointer = useMediaQuery("(pointer: fine)");
 
   const nameId = mode === "create" ? "habit-name" : "habit-name-edit";
@@ -155,22 +165,12 @@ export function HabitView(props: HabitViewProps) {
 
         <div className="h-1" />
 
-        <div className="flex items-start gap-3 px-3 py-2.5 rounded-md mx-2">
-          <IconCell>
-            <Palette
-              className="h-4 w-4 text-muted-foreground"
-              strokeWidth={2.25}
-            />
-          </IconCell>
-          <div className="flex-1 min-w-0 space-y-3">
-            <HabitIconPicker value={icon} onChange={setIcon} />
-            <ColorPicker
-              value={color}
-              onChange={setColor}
-              ariaLabel="Habit color"
-            />
-          </div>
-        </div>
+        <HabitAppearanceField
+          icon={icon}
+          onIconChange={setIcon}
+          color={color}
+          onColorChange={setColor}
+        />
 
         <div className="h-1" />
 
@@ -197,41 +197,60 @@ export function HabitView(props: HabitViewProps) {
 
         <div className="h-1" />
 
-        <HabitQuestionField
-          question={question}
-          onQuestionChange={setQuestion}
-          habitType={habitType}
-        />
-
-        <div className="h-1" />
-
-        <HabitReminderField
-          reminderTime={reminderTime}
-          onReminderTimeChange={setReminderTime}
-          reminderDays={reminderDays}
-          onReminderDaysChange={setReminderDays}
-        />
-
-        <div className="h-1" />
-
         <div className="mx-2">
-          <div className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast">
-            <IconCell className="pt-[5px]">
-              <AlignLeft
+          <HabitDisclosureRow
+            icon={
+              <SlidersHorizontal
                 className="h-4 w-4 text-muted-foreground"
                 strokeWidth={2.25}
               />
-            </IconCell>
-            <textarea
-              id={descriptionId}
-              placeholder="Add details (optional)"
-              aria-label="Habit details"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              className="flex-1 bg-transparent border-0 outline-none resize-none text-[15px] text-foreground placeholder:text-muted-foreground/70 leading-relaxed p-0 min-h-[48px]"
-            />
-          </div>
+            }
+            label="More options"
+            summary={moreSummary}
+            open={moreOpen}
+            onOpenChange={setMoreOpen}
+          />
+
+          <CollapsibleReveal open={moreOpen}>
+            <div className="-mx-2">
+              <HabitQuestionField
+                question={question}
+                onQuestionChange={setQuestion}
+                habitType={habitType}
+              />
+
+              <div className="h-1" />
+
+              <HabitReminderField
+                reminderTime={reminderTime}
+                onReminderTimeChange={setReminderTime}
+                reminderDays={reminderDays}
+                onReminderDaysChange={setReminderDays}
+              />
+
+              <div className="h-1" />
+
+              <div className="mx-2">
+                <div className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast">
+                  <IconCell className="pt-[5px]">
+                    <AlignLeft
+                      className="h-4 w-4 text-muted-foreground"
+                      strokeWidth={2.25}
+                    />
+                  </IconCell>
+                  <textarea
+                    id={descriptionId}
+                    placeholder="Add details (optional)"
+                    aria-label="Habit details"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={1}
+                    className="flex-1 bg-transparent border-0 outline-none resize-none text-[15px] text-foreground placeholder:text-muted-foreground/70 leading-relaxed p-0 min-h-6 field-sizing-content max-h-32"
+                  />
+                </div>
+              </div>
+            </div>
+          </CollapsibleReveal>
         </div>
 
         <div className="h-1" />

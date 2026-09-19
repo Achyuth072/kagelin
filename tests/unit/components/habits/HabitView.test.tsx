@@ -27,6 +27,7 @@ vi.mock("@/components/shared/ColorPicker", () => ({
 
 vi.mock("@/components/habits/shared/HabitIconPicker", () => ({
   HabitIconPicker: () => <div data-testid="icon-picker" />,
+  getHabitIcon: () => () => null,
 }));
 
 vi.mock("@/components/tasks/shared/TaskDatePicker", () => ({
@@ -106,6 +107,7 @@ describe("HabitView", () => {
     const { rerender } = render(
       <HabitView {...baseProps} habitType="boolean" setHabitType={vi.fn()} />,
     );
+    fireEvent.click(screen.getByText("More options"));
     expect(
       screen.getByPlaceholderText("Did you wake up early today?"),
     ).toBeInTheDocument();
@@ -120,6 +122,39 @@ describe("HabitView", () => {
     expect(
       screen.getByPlaceholderText("How many pages did you read?"),
     ).toBeInTheDocument();
+  });
+
+  it("keeps question, reminder and details behind More options", () => {
+    render(
+      <HabitView
+        {...baseProps}
+        mode="create"
+        habitType="boolean"
+        setHabitType={vi.fn()}
+      />,
+    );
+    expect(screen.queryByLabelText("Habit question")).toBeNull();
+    expect(screen.queryByLabelText("Habit details")).toBeNull();
+
+    fireEvent.click(screen.getByText("More options"));
+    expect(screen.getByLabelText("Habit question")).toBeInTheDocument();
+    expect(screen.getByLabelText("Habit details")).toBeInTheDocument();
+    expect(screen.getByText("Off")).toBeInTheDocument();
+  });
+
+  it("summarises what is set while More options is collapsed", () => {
+    render(
+      <HabitView
+        {...baseProps}
+        mode="create"
+        habitType="boolean"
+        setHabitType={vi.fn()}
+        question="Did you run?"
+        reminderTime="09:00"
+        description=""
+      />,
+    );
+    expect(screen.getByText("Question · Reminder")).toBeInTheDocument();
   });
 
   it("marks the active habit type segment", () => {
