@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.44.0-preview.1",
+    "date": "2026-09-20",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Remove rounded corners clipping project bar on desktop task rows"
+      ]
+    }
+  },
+  {
     "version": "1.44.0-preview.0",
     "date": "2026-09-19",
     "channel": "preview",
@@ -763,16 +773,6 @@
         "Match select dropdown width to trigger, extract ToggleRow",
         "Fold description into title on the 3 oversized-Toast sites, enforce via lint",
         "Separate goals section header and apply ink & matte styling to android battery hint"
-      ]
-    }
-  },
-  {
-    "version": "1.28.1-preview.2",
-    "date": "2026-08-04",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Use focus-visible and softer ring color on Select/Sheet/Dialog triggers"
       ]
     }
   }
