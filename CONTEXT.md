@@ -189,8 +189,9 @@ Guest capability either.
 ### Registered (free)
 
 A user with a Kagelin account (`auth.uid()`). Data persists to the cloud. Gets
-**on-demand calendar sync**, **WebDAV backup**, and **timer handoff**. Does
-**not** get realtime cross-device mirroring, background auto-sync, or push.
+**on-demand calendar sync**, **WebDAV backup**, **timer handoff**, and **push
+notifications**. Does **not** get realtime cross-device mirroring or background
+auto-sync.
 
 Content is **encrypted**: what the user wrote — task and habit names, notes,
 event titles and locations — is unreadable to Kagelin. What the user _scheduled_
@@ -203,8 +204,10 @@ precisely; "your data is encrypted" overclaims. See
 ### Premium (paid)
 
 A registered user with the Premium entitlement. Adds realtime cross-device
-mirroring, background auto-sync, and push notifications on top of the
-registered-free capabilities. Usually paid for, but a **founding grant** confers
+mirroring and background auto-sync on top of the registered-free capabilities.
+The line is **work Kagelin's servers do while the app is shut**, not reach:
+push delivery is registered-free, because a queued notification costs a row,
+while mirroring and scheduled sync cost ongoing compute per user. Usually paid for, but a **founding grant** confers
 the same entitlement without payment — the tier records the entitlement, never
 its source.
 
@@ -550,6 +553,23 @@ The only mechanism that reaches the user with the app fully closed. "Notificatio
 settings" in the UI means **Push notification settings** specifically — the
 permission and subscription flow — and governs neither Toasts nor Local
 notifications.
+
+### Habit reminder
+
+The **Push notification** a **Habit** sends at its own set time — a
+`reminder_time` (`HH:mm`, in the Account's timezone) and a `reminder_days`
+weekday mask, both round-tripped from uhabits. Distinct from the daily
+**briefing**, which is one digest for the whole account, not one per Habit.
+
+A Habit's reminder days are **not** its **Frequency**. Frequency is the goal
+("2x/week") and says nothing about which days; `reminder_days` is the schedule
+and is the only thing that decides when a reminder fires. The two may disagree,
+and that is allowed. _Avoid_: "habit notification"; _avoid_: calling the
+reminder days a schedule the Habit is "due" on — a Habit is not due.
+
+A reminder is suppressed when the Habit is archived or already has an **Entry**
+for that day, in any **Entry state**. A **Locked** account still receives it,
+saying only that a habit is scheduled, never which.
 
 ### Backup reminder
 
