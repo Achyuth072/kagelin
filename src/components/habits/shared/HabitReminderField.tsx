@@ -131,13 +131,13 @@ export function HabitReminderField({
                 );
               })}
             </div>
-          </>
-        )}
 
-        {isGuestMode && (
-          <p className="basis-full text-[11px] text-muted-foreground">
-            Saved with your habit, but only delivered once you sign in.
-          </p>
+            {isGuestMode && (
+              <p className="basis-full text-[11px] text-muted-foreground">
+                Saved with your habit, but only delivered once you sign in.
+              </p>
+            )}
+          </>
         )}
       </div>
     </div>

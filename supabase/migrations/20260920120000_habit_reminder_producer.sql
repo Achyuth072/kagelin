@@ -1,5 +1,18 @@
-ALTER TABLE public.notification_queue
-  DROP CONSTRAINT IF EXISTS notification_queue_type_check;
+-- Inline CHECK constraint was generated anonymously; resolve by definition.
+DO $$
+DECLARE
+  check_name text;
+BEGIN
+  SELECT conname INTO check_name
+  FROM pg_constraint
+  WHERE conrelid = 'public.notification_queue'::regclass
+    AND contype = 'c'
+    AND pg_get_constraintdef(oid) LIKE '%''timer_end''%';
+  IF check_name IS NOT NULL THEN
+    EXECUTE format('ALTER TABLE public.notification_queue DROP CONSTRAINT %I', check_name);
+  END IF;
+END;
+$$;
 ALTER TABLE public.notification_queue
   ADD CONSTRAINT notification_queue_type_check
   CHECK (type IN ('timer_end', 'due_date', 'do_date', 'evening', 'briefing', 'habit_reminder'));
@@ -29,19 +42,27 @@ BEGIN
   JOIN public.profiles p ON p.id = h.user_id
   CROSS JOIN LATERAL (
     SELECT
-      now() AT TIME ZONE p.timezone AS local_now,
-      -- Guards against malformed text aborting the batch on cast.
-      CASE WHEN h.reminder_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
-        THEN h.reminder_time::time
-      END AS remind_at
+      s.local_now,
+      -- Reminders due just before midnight belong to yesterday when evaluated past 00:00.
+      CASE WHEN s.remind_at > s.local_now::time
+        THEN s.local_now::date - 1
+        ELSE s.local_now::date
+      END + s.remind_at AS remind_ts
+    FROM (
+      SELECT
+        now() AT TIME ZONE p.timezone AS local_now,
+        -- Guards against malformed text aborting the batch on cast.
+        CASE WHEN h.reminder_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          THEN h.reminder_time::time
+        END AS remind_at
+    ) s
   ) t
   WHERE h.archived_at IS NULL
-    AND (h.reminder_days >> EXTRACT(DOW FROM t.local_now)::int) & 1 = 1
-    AND t.local_now::time - t.remind_at >= interval '0'
-    AND t.local_now::time - t.remind_at < interval '10 minutes'
+    AND (h.reminder_days >> EXTRACT(DOW FROM t.remind_ts)::int) & 1 = 1
+    AND t.local_now - t.remind_ts < interval '10 minutes'
     AND NOT EXISTS (
       SELECT 1 FROM public.habit_entries e
-      WHERE e.habit_id = h.id AND e.date = t.local_now::date
+      WHERE e.habit_id = h.id AND e.date = t.remind_ts::date
     )
     AND (p.settings->'notifications'->>'habit_reminders')::boolean IS NOT FALSE
     AND NOT EXISTS (

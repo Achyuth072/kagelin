@@ -24,8 +24,7 @@ export interface UserSettings {
     due_date_alerts: boolean;
     do_date_alerts: boolean;
     timer_alerts: boolean;
-    // Absent means on, matching the producer's IS NOT FALSE check.
-    habit_reminders?: boolean;
+    habit_reminders: boolean;
   };
   // Admin-only: where an admin lands after login. Irrelevant (and unused)
   // for non-admin accounts.
@@ -39,6 +38,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
     due_date_alerts: true,
     do_date_alerts: true,
     timer_alerts: true,
+    habit_reminders: true,
   },
   adminLandingPage: "tasks",
 };

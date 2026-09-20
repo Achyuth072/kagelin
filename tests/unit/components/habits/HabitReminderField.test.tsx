@@ -127,6 +127,21 @@ describe("HabitReminderField", () => {
       expect(onReminderTimeChange).toHaveBeenCalledWith(null);
     });
 
+    it("shows no hint to a Guest while the reminder is off", () => {
+      (useAuth as Mock).mockReturnValue({ isGuestMode: true });
+      render(
+        <HabitReminderField
+          reminderTime={null}
+          onReminderTimeChange={vi.fn()}
+          reminderDays={127}
+          onReminderDaysChange={vi.fn()}
+        />,
+      );
+      expect(
+        screen.queryByText(/only delivered once you sign in/i),
+      ).not.toBeInTheDocument();
+    });
+
     it("shows no hint for a registered user", () => {
       renderField();
       expect(
