@@ -3,6 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { HabitView } from "@/components/habits/HabitView";
 
+vi.mock("@/components/AuthProvider", () => ({
+  useAuth: () => ({ isGuestMode: false }),
+}));
+
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: vi.fn() }),
 }));

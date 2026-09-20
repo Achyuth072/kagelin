@@ -9,6 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { SegmentedTimePicker } from "@/components/ui/segmented-time-picker";
+import { useAuth } from "@/components/AuthProvider";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 
@@ -50,6 +51,7 @@ export function HabitReminderField({
 }: HabitReminderFieldProps) {
   const { trigger } = useHaptic();
   const { formatTime } = useTimeFormat();
+  const { isGuestMode } = useAuth();
   const isOn = !!reminderTime;
 
   const toggleOn = () => {
@@ -130,6 +132,12 @@ export function HabitReminderField({
               })}
             </div>
           </>
+        )}
+
+        {isGuestMode && (
+          <p className="basis-full text-[11px] text-muted-foreground">
+            Saved with your habit, but only delivered once you sign in.
+          </p>
         )}
       </div>
     </div>

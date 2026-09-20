@@ -24,6 +24,8 @@ export interface UserSettings {
     due_date_alerts: boolean;
     do_date_alerts: boolean;
     timer_alerts: boolean;
+    // Absent means on, matching the producer's IS NOT FALSE check.
+    habit_reminders?: boolean;
   };
   // Admin-only: where an admin lands after login. Irrelevant (and unused)
   // for non-admin accounts.

@@ -1,12 +1,19 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { HabitReminderField } from "@/components/habits/shared/HabitReminderField";
+import { useAuth } from "@/components/AuthProvider";
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: vi.fn() }),
 }));
 
+vi.mock("@/components/AuthProvider");
+
 describe("HabitReminderField", () => {
+  beforeEach(() => {
+    (useAuth as Mock).mockReturnValue({ isGuestMode: false });
+  });
+
   it("renders Off and hides the time/day chips when there is no reminder time", () => {
     render(
       <HabitReminderField
@@ -91,5 +98,40 @@ describe("HabitReminderField", () => {
     );
     fireEvent.click(screen.getByLabelText("Monday"));
     expect(onReminderDaysChange).toHaveBeenCalledWith(2);
+  });
+
+  describe("Guest hint", () => {
+    const renderField = (onReminderTimeChange = vi.fn()) =>
+      render(
+        <HabitReminderField
+          reminderTime="08:30"
+          onReminderTimeChange={onReminderTimeChange}
+          reminderDays={127}
+          onReminderDaysChange={vi.fn()}
+        />,
+      );
+
+    it("tells a Guest the reminder is saved but needs an account to arrive", () => {
+      (useAuth as Mock).mockReturnValue({ isGuestMode: true });
+      renderField();
+      expect(
+        screen.getByText(/only delivered once you sign in/i),
+      ).toBeVisible();
+    });
+
+    it("keeps the field usable for a Guest", () => {
+      (useAuth as Mock).mockReturnValue({ isGuestMode: true });
+      const onReminderTimeChange = vi.fn();
+      renderField(onReminderTimeChange);
+      fireEvent.click(screen.getByText("On"));
+      expect(onReminderTimeChange).toHaveBeenCalledWith(null);
+    });
+
+    it("shows no hint for a registered user", () => {
+      renderField();
+      expect(
+        screen.queryByText(/only delivered once you sign in/i),
+      ).not.toBeInTheDocument();
+    });
   });
 });
