@@ -571,6 +571,11 @@ A reminder is suppressed when the Habit is archived or already has an **Entry**
 for that day, in any **Entry state**. A **Locked** account still receives it,
 saying only that a habit is scheduled, never which.
 
+A reminder fires only if it can be delivered within 10 minutes of its `HH:mm`.
+On the day a timezone springs forward an hour of local time never happens, so a
+reminder set inside it is skipped rather than delivered late — see
+[ADR 0018](docs/adr/0018-reminders-skip-nonexistent-local-times.md).
+
 ### Backup reminder
 
 The periodic nudge to a **Guest** to export a Backup, because Guest data exists only
