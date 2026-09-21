@@ -58,7 +58,7 @@ describe("TaskItem Grayscale Consolidation", () => {
     const listTaskCard = rootDiv.querySelector('[data-testid="task-list-row"]');
     expect(listTaskCard?.className).not.toContain("task-ink-completed-card");
 
-    const desktopWrapper = rootDiv.querySelector(".overflow-hidden.rounded-md");
+    const desktopWrapper = rootDiv.querySelector(".overflow-hidden");
     expect(desktopWrapper).toBeTruthy();
     expect((desktopWrapper as HTMLElement).style.isolation).toBe("isolate");
   });

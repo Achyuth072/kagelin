@@ -9,6 +9,7 @@ import {
   Calendar,
   Clock,
   Timer,
+  Repeat,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -239,7 +240,6 @@ export function NotificationSettings() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Master Toggle */}
       <div className="space-y-3">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -316,7 +316,6 @@ export function NotificationSettings() {
           ))}
       </div>
 
-      {/* 2. Timezone Selection */}
       {!isGuestMode && (
         <div className="space-y-3 pt-2 border-t border-border/50">
           <div className="flex items-center gap-2 mb-1">
@@ -384,7 +383,6 @@ export function NotificationSettings() {
         </div>
       )}
 
-      {/* 3. Detailed Schedules */}
       {permission === "granted" && notificationsEnabled && !isGuestMode && (
         <div className="space-y-3 pt-2 border-t border-border/50">
           <div className="flex items-center gap-2 mb-1">
@@ -425,6 +423,14 @@ export function NotificationSettings() {
               description="When your focus or break ends"
               checked={settings?.timer_alerts ?? true}
               onChange={(c) => updateNotifySetting("timer_alerts", c)}
+            />
+
+            <ToggleRow
+              icon={Repeat}
+              title="Habit Reminders"
+              description="At the reminder time set on each habit"
+              checked={settings?.habit_reminders ?? true}
+              onChange={(c) => updateNotifySetting("habit_reminders", c)}
             />
           </div>
         </div>
