@@ -409,6 +409,20 @@ AS $$
   END;
 $$;
 
+-- An unrecognised profile timezone must skip that user, not abort the per-minute batch.
+CREATE OR REPLACE FUNCTION public.at_timezone_or_null(ts TIMESTAMPTZ, tz TEXT)
+RETURNS TIMESTAMP
+LANGUAGE plpgsql
+STABLE
+SET search_path = ''
+AS $$
+BEGIN
+  RETURN ts AT TIME ZONE tz;
+EXCEPTION WHEN invalid_parameter_value THEN
+  RETURN NULL;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.enqueue_due_habit_reminders()
 RETURNS void
 LANGUAGE plpgsql
@@ -442,7 +456,7 @@ BEGIN
       END + s.remind_at AS remind_ts
     FROM (
       SELECT
-        now() AT TIME ZONE p.timezone AS local_now,
+        public.at_timezone_or_null(now(), p.timezone) AS local_now,
         -- Guards against malformed text aborting the batch on cast.
         CASE WHEN h.reminder_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
           THEN h.reminder_time::time

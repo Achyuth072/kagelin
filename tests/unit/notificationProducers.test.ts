@@ -58,6 +58,11 @@ describe("enqueue_due_habit_reminders", () => {
   it("queues a body that names no habit for a device with no key", () => {
     expect(body).toContain("'You have a habit scheduled now.'");
   });
+
+  it("tolerates an unrecognised profile timezone instead of aborting the batch", () => {
+    expect(body).not.toMatch(/AT TIME ZONE\s+p\.timezone/);
+    expect(body).toContain("public.at_timezone_or_null(now(), p.timezone)");
+  });
 });
 
 describe("daily-briefing", () => {
