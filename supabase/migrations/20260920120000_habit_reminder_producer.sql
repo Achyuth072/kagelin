@@ -1,21 +1,23 @@
 -- Inline CHECK constraint was generated anonymously; resolve by definition.
-DO $$
+DO $type_check$
 DECLARE
   check_name text;
 BEGIN
-  SELECT conname INTO check_name
-  FROM pg_constraint
-  WHERE conrelid = 'public.notification_queue'::regclass
-    AND contype = 'c'
-    AND pg_get_constraintdef(oid) LIKE '%''timer_end''%';
-  IF check_name IS NOT NULL THEN
+  FOR check_name IN
+    SELECT conname
+    FROM pg_constraint
+    WHERE conrelid = 'public.notification_queue'::regclass
+      AND contype = 'c'
+      AND pg_get_constraintdef(oid) LIKE '%''timer_end''%'
+  LOOP
     EXECUTE format('ALTER TABLE public.notification_queue DROP CONSTRAINT %I', check_name);
-  END IF;
-END;
-$$;
-ALTER TABLE public.notification_queue
-  ADD CONSTRAINT notification_queue_type_check
-  CHECK (type IN ('timer_end', 'due_date', 'do_date', 'evening', 'briefing', 'habit_reminder'));
+  END LOOP;
+
+  ALTER TABLE public.notification_queue
+    ADD CONSTRAINT notification_queue_type_check
+    CHECK (type IN ('timer_end', 'due_date', 'do_date', 'evening', 'briefing', 'habit_reminder'));
+END
+$type_check$;
 
 -- An unrecognised profile timezone must skip that user, not abort the per-minute batch.
 CREATE OR REPLACE FUNCTION public.at_timezone_or_null(ts TIMESTAMPTZ, tz TEXT)

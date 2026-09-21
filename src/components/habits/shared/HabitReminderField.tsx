@@ -22,7 +22,7 @@ interface HabitReminderFieldProps {
 
 const DEFAULT_TIME = "09:00";
 
-// Bit i = Date.getDay() (Sunday is bit 0) to match JS weekday indexing.
+// Bit i is Date.getDay() (Sunday = 0).
 const DAY_CHIPS: { bit: number; label: string; ariaLabel: string }[] = [
   { bit: 0, label: "S", ariaLabel: "Sunday" },
   { bit: 1, label: "M", ariaLabel: "Monday" },
@@ -131,13 +131,13 @@ export function HabitReminderField({
                 );
               })}
             </div>
-
-            {isGuestMode && (
-              <p className="basis-full text-[11px] text-muted-foreground">
-                Saved with your habit, but only delivered once you sign in.
-              </p>
-            )}
           </>
+        )}
+
+        {isGuestMode && (
+          <p className="basis-full text-[11px] text-muted-foreground">
+            Saved with your habit, but only delivered once you sign in.
+          </p>
         )}
       </div>
     </div>

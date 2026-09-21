@@ -13,12 +13,40 @@ ALTER TABLE public.habit_entries
 -- Unchecking a day used to upsert value 0; it now deletes the entry, and value 0
 -- means an explicit "not done" (shown as a miss). Before this, nothing else wrote
 -- 0 to a non-measurable habit, so these rows are all stale unchecks.
-DELETE FROM public.habit_entries e
-USING public.habits h
-WHERE e.habit_id = h.id
-  AND e.value = 0
-  AND h.habit_type IS DISTINCT FROM 'measurable'
-  AND e.notes IS NULL;
+--
+-- Production has no PITR: this is the only way back if the stale-uncheck premise
+-- is wrong for some account. Safe to drop once a release ships without complaints.
+CREATE TABLE IF NOT EXISTS public.habit_entries_stale_uncheck_backup (
+  LIKE public.habit_entries INCLUDING DEFAULTS
+);
+
+-- No policies: RLS with none denies every PostgREST caller outright.
+ALTER TABLE public.habit_entries_stale_uncheck_backup ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.habit_entries_stale_uncheck_backup FROM anon, authenticated;
+
+DO $cleanup$
+DECLARE
+  removed BIGINT;
+BEGIN
+  WITH deleted AS (
+    DELETE FROM public.habit_entries e
+    USING public.habits h
+    WHERE e.habit_id = h.id
+      AND e.value = 0
+      AND h.habit_type IS DISTINCT FROM 'measurable'
+      AND e.notes IS NULL
+      -- Only rows that predate this migration can be stale unchecks; anything
+      -- written afterwards is an explicit miss from the new client.
+      AND e.created_at < TIMESTAMPTZ '2026-09-19 12:00:00+00'
+    RETURNING e.*
+  )
+  INSERT INTO public.habit_entries_stale_uncheck_backup
+  SELECT * FROM deleted;
+
+  GET DIAGNOSTICS removed = ROW_COUNT;
+  RAISE NOTICE 'stale-uncheck cleanup removed % habit_entries row(s); originals retained in public.habit_entries_stale_uncheck_backup', removed;
+END
+$cleanup$;
 
 DROP TRIGGER IF EXISTS habits_reject_unmigrated_plaintext ON public.habits;
 CREATE TRIGGER habits_reject_unmigrated_plaintext

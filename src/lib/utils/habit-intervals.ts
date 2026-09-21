@@ -20,10 +20,7 @@ const daysUntil = (a: string, b: string): number =>
 export const shift = (d: string, n: number): string =>
   format(addDays(parseISO(d), n), "yyyy-MM-dd");
 
-/**
- * Builds frequency intervals from done-day strings (newest first).
- * Ported verbatim from uhabits EntryList.buildIntervals.
- */
+// Ported verbatim from uhabits EntryList.buildIntervals.
 export function buildIntervals(
   num: number,
   den: number,
@@ -41,11 +38,8 @@ export function buildIntervals(
   return intervals;
 }
 
-/**
- * Starting from the second newest interval, slides intervals backwards into
- * the past to eliminate gaps and maximize streak continuity.
- * Ported verbatim from uhabits EntryList.snapIntervalsTogether.
- */
+// Slides intervals backwards in time to close gaps so streaks stay continuous.
+// Ported verbatim from uhabits EntryList.snapIntervalsTogether.
 export function snapIntervalsTogether(intervals: Interval[]): void {
   for (let i = 1; i < intervals.length; i++) {
     const curr = intervals[i];
@@ -63,15 +57,11 @@ export function snapIntervalsTogether(intervals: Interval[]): void {
   }
 }
 
-/**
- * Forward-merges overlapping or adjacent date intervals into contiguous ranges.
- */
-export function forwardMergeIntervals(
+function forwardMergeIntervals(
   intervals: [string, string][],
 ): [string, string][] {
   if (intervals.length === 0) return [];
 
-  // Sort by start date
   const sorted = [...intervals].sort((a, b) => a[0].localeCompare(b[0]));
   const merged: [string, string][] = [sorted[0]];
 
@@ -79,7 +69,6 @@ export function forwardMergeIntervals(
     const prev = merged[merged.length - 1];
     const curr = sorted[i];
 
-    // Overlapping or adjacent: merge
     if (curr[0] <= shift(prev[1], 1)) {
       if (curr[1] > prev[1]) {
         prev[1] = curr[1];
@@ -92,12 +81,8 @@ export function forwardMergeIntervals(
   return merged;
 }
 
-/**
- * Interpolates done-days from the frequency schedule.
- * For daily habits (1/1), returns the raw done-set (identity).
- * For sub-daily habits (e.g. 3×/week), fills the off-days implied by
- * the schedule using uhabits' interval algorithm.
- */
+// Fills the off-days implied by the frequency schedule (e.g. 3×/week) using
+// uhabits' interval algorithm.
 export function interpolateDoneDays(
   habit: Pick<Habit, "frequency_count" | "frequency_period">,
   entries: HabitEntry[],
@@ -113,7 +98,6 @@ export function interpolateDoneDays(
   const freqCount = habit.frequency_count ?? 1;
   const period = periodDays(habit.frequency_period ?? null);
 
-  // Daily habit: no interpolation needed
   if (freqCount === 1 && period === 1) {
     return new Set(doneDates);
   }
@@ -122,14 +106,12 @@ export function interpolateDoneDays(
   const intervals = buildIntervals(freqCount, period, doneDates);
   snapIntervalsTogether(intervals);
 
-  // Forward-merge overlapping or adjacent intervals
   const rawIntervals: [string, string][] = intervals.map((inv) => [
     inv.begin,
     inv.end,
   ]);
   const merged = forwardMergeIntervals(rawIntervals);
 
-  // Union of all interval days clamped to todayKey
   const result = new Set<string>();
   for (const [start, end] of merged) {
     let cursor = parseISO(start);

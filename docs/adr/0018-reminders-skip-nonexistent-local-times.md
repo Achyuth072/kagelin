@@ -47,6 +47,6 @@ does not have to rediscover it.
 
 No automated test pins this. The repository has no database test harness — no
 `supabase/config.toml`, no pgTAP — and standing one up is a larger piece of work
-than the behaviour it would cover (already tracked as a follow-up in
-`.scratch/habit-reminders/spec.md`). Until then this ADR is the only guard, and
-a change to the producer's time arithmetic should be checked against it by hand.
+than the behaviour it would cover, so it is tracked separately. Until then this
+ADR is the only guard, and a change to the producer's time arithmetic should be
+checked against it by hand.

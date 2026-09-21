@@ -16,6 +16,7 @@ import {
   buildLoopBackupFixture,
   hasRealLoopBackup,
   readRealLoopBackup,
+  toBlob,
 } from "./support/loopBackupFixture";
 
 describe("uhabitsImport", () => {
@@ -563,7 +564,8 @@ describe("synthetic Loop backup import", () => {
   it("imports every fidelity path from a Loop-schema .db", async () => {
     const { parseUhabitsFile } = await import("../../src/lib/import/uhabits");
     const { habits, entries } = await parseUhabitsFile(
-      await buildLoopBackupFixture(),
+      toBlob(await buildLoopBackupFixture()),
+      "public/sql-wasm.wasm",
     );
 
     expect(habits).toHaveLength(LOOP_FIXTURE.habitCount);
@@ -613,7 +615,10 @@ describe("real Loop Habits backup database audit", () => {
       const { parseUhabitsFile } = await import("../../src/lib/import/uhabits");
 
       const buf = readRealLoopBackup();
-      const { habits, entries } = await parseUhabitsFile(buf);
+      const { habits, entries } = await parseUhabitsFile(
+        toBlob(buf),
+        "public/sql-wasm.wasm",
+      );
 
       // 2 UNKNOWN rows lack Kagelin equivalents and are dropped.
       expect(entries).toHaveLength(4183);

@@ -127,7 +127,7 @@ describe("HabitReminderField", () => {
       expect(onReminderTimeChange).toHaveBeenCalledWith(null);
     });
 
-    it("shows no hint to a Guest while the reminder is off", () => {
+    it("still shows a Guest the hint while the reminder is off", () => {
       (useAuth as Mock).mockReturnValue({ isGuestMode: true });
       render(
         <HabitReminderField
@@ -138,8 +138,8 @@ describe("HabitReminderField", () => {
         />,
       );
       expect(
-        screen.queryByText(/only delivered once you sign in/i),
-      ).not.toBeInTheDocument();
+        screen.getByText(/only delivered once you sign in/i),
+      ).toBeVisible();
     });
 
     it("shows no hint for a registered user", () => {

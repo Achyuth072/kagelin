@@ -14,6 +14,7 @@ import {
   buildLoopBackupFixture,
   hasRealLoopBackup,
   readRealLoopBackup,
+  toBlob,
 } from "../../support/loopBackupFixture";
 
 const keyStoreState: { key: Uint8Array | null } = { key: null };
@@ -43,7 +44,7 @@ describe("Zero-Knowledge Content Encrypted Round-Trip Verification", () => {
     const wrapped = wrapSupabaseClient(backend, FIELD_MAP);
 
     const { habits, entries, source } = await parseUhabitsFile(
-      backup,
+      toBlob(backup),
       wasmPath,
     );
 
@@ -231,7 +232,10 @@ describe("Zero-Knowledge Content Encrypted Round-Trip Verification", () => {
       expect(workoutRepCounts[2]).toBe(229);
       expect(workoutRepCounts[3]).toBe(27);
 
-      const reimported = await parseUhabitsFile(exportedDbBytes, wasmPath);
+      const reimported = await parseUhabitsFile(
+        toBlob(exportedDbBytes),
+        wasmPath,
+      );
       expect(reimported.habits).toHaveLength(12);
       expect(reimported.entries).toHaveLength(4183);
 
@@ -353,7 +357,10 @@ describe("Zero-Knowledge Content Encrypted Round-Trip Verification", () => {
     ]);
     exported.close();
 
-    const reimported = await parseUhabitsFile(exportedDbBytes, wasmPath);
+    const reimported = await parseUhabitsFile(
+      toBlob(exportedDbBytes),
+      wasmPath,
+    );
     expect(reimported.habits).toHaveLength(LOOP_FIXTURE.habitCount);
     expect(reimported.entries).toHaveLength(LOOP_FIXTURE.entryCount);
 

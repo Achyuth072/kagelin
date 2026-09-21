@@ -157,3 +157,6 @@ export async function buildLoopBackupFixture(
   db.close();
   return bytes;
 }
+
+// parseUhabitsFile takes a Blob, the way the app's file input supplies one.
+export const toBlob = (bytes: Uint8Array): Blob => new Blob([bytes.slice()]);

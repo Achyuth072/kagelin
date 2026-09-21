@@ -23,6 +23,7 @@ import { findClosestLoopColor } from "@/lib/export/uhabitsShared";
 import {
   hasRealLoopBackup,
   readRealLoopBackup,
+  toBlob,
 } from "../../support/loopBackupFixture";
 
 describe("uhabitsExportCsv - pure helpers", () => {
@@ -637,7 +638,7 @@ describe("uhabitsExportCsv - ZIP Archive Assembly", () => {
 
         const originalBuffer = readRealLoopBackup();
         const { habits, entries, source } = await parseUhabitsFile(
-          originalBuffer,
+          toBlob(originalBuffer),
           "public/sql-wasm.wasm",
         );
 

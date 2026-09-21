@@ -18,26 +18,16 @@ export interface UhabitsRawSource {
 
 let sqlJsPromise: ReturnType<typeof initSqlJs> | undefined;
 
-// Uses local WASM binary (public/sql-wasm.wasm) to support offline and PWA environments.
-export function loadSqlJs(wasmPath?: string) {
+// Served from public/ rather than a CDN so import works offline and in the PWA.
+export function loadSqlJs(wasmPath = "/sql-wasm.wasm") {
   if (!sqlJsPromise) {
-    const isNode =
-      typeof process !== "undefined" &&
-      Boolean(process.versions?.node) &&
-      (typeof window === "undefined" ||
-        (process as unknown as { release?: { name?: string } }).release
-          ?.name === "node");
-
-    sqlJsPromise = initSqlJs({
-      locateFile: () =>
-        wasmPath || (isNode ? "public/sql-wasm.wasm" : "/sql-wasm.wasm"),
-    });
+    sqlJsPromise = initSqlJs({ locateFile: () => wasmPath });
   }
   return sqlJsPromise;
 }
 
 export async function parseUhabitsFile(
-  file: File | Blob | ArrayBuffer | Uint8Array,
+  file: Blob,
   wasmPath?: string,
 ): Promise<{
   habits: Habit[];
@@ -45,21 +35,7 @@ export async function parseUhabitsFile(
   source: UhabitsRawSource;
 }> {
   const SQL = await loadSqlJs(wasmPath);
-
-  let uint8: Uint8Array;
-  if (file instanceof Uint8Array) {
-    uint8 = file;
-  } else if (ArrayBuffer.isView(file)) {
-    uint8 = new Uint8Array(file.buffer, file.byteOffset, file.byteLength);
-  } else if (file instanceof ArrayBuffer) {
-    uint8 = new Uint8Array(file);
-  } else if (typeof (file as Blob).arrayBuffer === "function") {
-    uint8 = new Uint8Array(await file.arrayBuffer());
-  } else {
-    throw new Error("Unsupported file input");
-  }
-
-  const db = new SQL.Database(uint8);
+  const db = new SQL.Database(new Uint8Array(await file.arrayBuffer()));
 
   const habitsResult = db.exec("SELECT * FROM habits");
   const repetitionsResult = db.exec("SELECT * FROM Repetitions");
@@ -96,8 +72,7 @@ function resultToObjects(result: {
   });
 }
 
-// Loop Habit Tracker stores colors as palette indices (not ARGB ints).
-// Source: HabitColor enum in uhabits-core (indices 0-20).
+// Loop stores colors as HabitColor palette indices (0-20, uhabits-core), not ARGB ints.
 export const LOOP_COLOR_PALETTE: Record<number, string> = {
   0: "#f44336",
   1: "#ff5722",
@@ -232,8 +207,8 @@ export function parseRepetitionValue(
   return null;
 }
 
-// Habit → createHabit payload; carries frequency and fidelity fields through so
-// they aren't dropped between parse and persist. See ADR 0005.
+// Carries frequency and fidelity fields through so they aren't dropped between
+// parse and persist. See ADR 0005.
 export function toCreateHabitInput(habit: Habit): CreateHabitInput {
   return {
     name: habit.name,

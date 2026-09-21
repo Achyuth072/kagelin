@@ -16,6 +16,7 @@ import { PROJECT_COLORS } from "@/lib/constants/colors";
 import {
   hasRealLoopBackup,
   readRealLoopBackup,
+  toBlob,
 } from "../../support/loopBackupFixture";
 
 describe("uhabitsExportDb - pure helpers", () => {
@@ -737,7 +738,7 @@ describe("real Loop Habits backup database audit round-trip", () => {
 
       const originalBuffer = readRealLoopBackup();
       const { habits, entries, source } = await parseUhabitsFile(
-        originalBuffer,
+        toBlob(originalBuffer),
         "public/sql-wasm.wasm",
       );
 
@@ -780,7 +781,7 @@ describe("real Loop Habits backup database audit round-trip", () => {
       exportedDb.close();
 
       const reimported = await parseUhabitsFile(
-        exportedBinary,
+        toBlob(exportedBinary),
         "public/sql-wasm.wasm",
       );
 
