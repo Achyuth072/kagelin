@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.44.1-preview.0",
+    "date": "2026-09-22",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Reject bad responses before they poison the sql-wasm runtime cache",
+        "Heal poisoned sql.js precache, preserve wasm diagnostics in Sentry"
+      ]
+    }
+  },
+  {
     "version": "1.44.0",
     "date": "2026-09-22",
     "channel": "stable",
@@ -746,27 +757,6 @@
         "Fixed tapping back after opening a notification sometimes exiting the app instead of returning to the previous screen",
         "Fixed a brief flash when opening the mobile Week view",
         "Fixed the changelog drawer going blank when overscrolled on mobile"
-      ]
-    }
-  },
-  {
-    "version": "1.29.1-preview.1",
-    "date": "2026-08-08",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Simplify code comments and configure playwright webserver"
-      ],
-      "Fixed": [
-        "Resync focus settings after late hydration, harden task-creation e2e",
-        "Rename cold-open back trap to back anchor, fix login sign-in wedge",
-        "Reach Focus via the mobile sidebar sheet in the in-app back-nav e2e",
-        "E2e cold-open trap wait, mobile week scroll-park, and PiP hotkey retry flake",
-        "Derive mobile 3-Day's day count from measured width, matching Week",
-        "Unify 3-Day/mobile-Week indicator, scroll-align, and scrollbar",
-        "Cold-opened notification back-nav via real history trap, not a counter",
-        "Notification cold-open back navigation exits the PWA",
-        "Measure mobile week grid width before first paint to stop mount flash"
       ]
     }
   }
