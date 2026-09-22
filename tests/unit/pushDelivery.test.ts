@@ -19,6 +19,7 @@ describe("buildSendOptions", () => {
       "do_date",
       "evening",
       "briefing",
+      "habit_reminder",
     ] as const) {
       expect(buildSendOptions(type).urgency).toBe("high");
     }
@@ -27,6 +28,10 @@ describe("buildSendOptions", () => {
   it("gives a focus-timer alert a short TTL and a briefing a long one", () => {
     expect(buildSendOptions("timer_end").TTL).toBe(60);
     expect(buildSendOptions("briefing").TTL).toBe(3600);
+  });
+
+  it("gives a habit reminder the same one-hour TTL as a due date", () => {
+    expect(buildSendOptions("habit_reminder").TTL).toBe(3600);
   });
 });
 
@@ -42,6 +47,19 @@ describe("buildTopic", () => {
     expect(buildTopic("due_date", id)).toBe(buildTopic("due_date", id));
   });
 
+  it("keys habit reminders on the habit so two habits at the same minute do not collapse", () => {
+    const a = buildTopic(
+      "habit_reminder",
+      "11111111-2222-3333-4444-555555555555",
+    );
+    const b = buildTopic(
+      "habit_reminder",
+      "99999999-8888-7777-6666-555555555555",
+    );
+    expect(a).not.toBe(b);
+    expect(a).toBe("habit_reminder-11111111");
+  });
+
   it("uses the bare type for singleton notifications", () => {
     expect(buildTopic("timer_end", "any-task-id")).toBe("timer_end");
     expect(buildTopic("briefing", null)).toBe("briefing");
@@ -51,6 +69,7 @@ describe("buildTopic", () => {
     const topics = [
       buildTopic("due_date", "11111111-2222-3333-4444-555555555555"),
       buildTopic("do_date", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
+      buildTopic("habit_reminder", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"),
       buildTopic("timer_end", null),
       buildTopic("briefing", null),
     ];

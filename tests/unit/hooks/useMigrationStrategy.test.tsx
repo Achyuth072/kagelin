@@ -573,6 +573,76 @@ describe("useMigrationStrategy", () => {
       expect(everythingStored).not.toContain("Take medication");
     });
 
+    it("MIG-N-04: carries habit question, reminders, type, target and entry notes to the account", async () => {
+      keyStoreState.key = await generateMasterKey();
+      const raw = createFakeSupabaseClient();
+      vi.mocked(createClient).mockReturnValue(
+        wrapSupabaseClient(raw, FIELD_MAP) as unknown as ReturnType<
+          typeof createClient
+        >,
+      );
+
+      localStorage.setItem("kanso_guest_mode", "true");
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          tasks: [],
+          projects: [],
+          habits: [
+            {
+              id: "g-h1",
+              name: "Read",
+              habit_type: "measurable",
+              frequency_count: 5,
+              frequency_period: "week",
+              target_type: "at_least",
+              target_value: 20,
+              unit: "pages",
+              question: "How many pages?",
+              reminder_time: "21:00",
+              reminder_days: 62,
+              source_uuid: "abc123",
+            },
+          ],
+          habit_entries: [
+            {
+              id: "g-e1",
+              habit_id: "g-h1",
+              date: "2024-06-14",
+              value: 12,
+              notes: "chapter 3",
+              created_at: "2024-06-14T00:00:00Z",
+            },
+          ],
+          focus_logs: [],
+        }),
+      );
+      mockAuthAsRealUser();
+
+      renderHook(() => useMigrationStrategy());
+      await waitFor(() => expect(window.location.reload).toHaveBeenCalled(), {
+        timeout: 4000,
+      });
+
+      const habit = raw.rawRows("habits")[0];
+      expect(habit).toMatchObject({
+        habit_type: "measurable",
+        frequency_count: 5,
+        frequency_period: "week",
+        target_type: "at_least",
+        target_value: 20,
+        unit: "pages",
+        reminder_time: "21:00",
+        reminder_days: 62,
+        source_uuid: "abc123",
+      });
+      expect(isCiphertext(habit.question)).toBe(true);
+
+      const entry = raw.rawRows("habit_entries")[0];
+      expect(entry.value).toBe(12);
+      expect(isCiphertext(entry.notes)).toBe(true);
+    });
+
     it("MIG-ENC-06: reuses the account's existing Inbox project instead of creating a second one", async () => {
       keyStoreState.key = await generateMasterKey();
       // Accounts already have an Inbox created on signup by handle_new_user.

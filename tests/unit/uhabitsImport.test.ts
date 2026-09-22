@@ -11,6 +11,13 @@ import {
   SCHEMA_ERROR_MESSAGE,
 } from "../../src/lib/import/uhabitsErrors";
 import { PROJECT_COLORS } from "../../src/lib/constants/colors";
+import {
+  LOOP_FIXTURE,
+  buildLoopBackupFixture,
+  hasRealLoopBackup,
+  readRealLoopBackup,
+  toBlob,
+} from "./support/loopBackupFixture";
 
 describe("uhabitsImport", () => {
   it("should correctly map habits from uhabits schema", () => {
@@ -19,16 +26,15 @@ describe("uhabitsImport", () => {
         id: 1,
         name: "Drink Water",
         description: "Stay hydrated",
-        color: 8, // Loop palette index 8 = Cyan
+        color: 8,
         archived: 0,
       },
     ];
 
-    // Loop Habit Tracker uses value=2 for YES (completed)
     const mockRepetitions = [
       {
         habit: 1,
-        timestamp: 1715097600000, // 2024-05-07
+        timestamp: 1715097600000,
         value: 2,
       },
     ];
@@ -38,11 +44,10 @@ describe("uhabitsImport", () => {
     expect(result.habits).toHaveLength(1);
     expect(result.habits[0].name).toBe("Drink Water");
     expect(result.habits[0].description).toBe("Stay hydrated");
-    expect(result.habits[0].icon).toBe("Droplet"); // "water" keyword → Droplet
+    expect(result.habits[0].icon).toBe("Droplet");
 
     expect(result.entries).toHaveLength(1);
     expect(result.entries[0].date).toBe("2024-05-07");
-    // Loop's YES (value=2) must be normalized to Kagelin's completed (value=1)
     expect(result.entries[0].value).toBe(1);
   });
 
@@ -52,7 +57,7 @@ describe("uhabitsImport", () => {
     expect(result.entries).toHaveLength(0);
   });
 
-  it("should skip archived habits", () => {
+  it("should import archived habits with archived_at timestamp", () => {
     const mockHabits = [
       {
         id: 1,
@@ -61,15 +66,30 @@ describe("uhabitsImport", () => {
       },
     ];
     const result = mapUhabitsToKanso(mockHabits, []);
-    expect(result.habits).toHaveLength(0);
+    expect(result.habits).toHaveLength(1);
+    expect(result.habits[0].archived_at).toBeTruthy();
+    expect(new Date(result.habits[0].archived_at!).getTime()).not.toBeNaN();
   });
 
-  it("should filter out value=0 (NO) repetitions — only completed entries imported", () => {
+  it("should map value=0 (NO) to an explicit miss, value=2 (YES) to done, and value=3 (SKIP) to skip", () => {
     const mockHabits = [{ id: 1, name: "Exercise", archived: 0 }];
     const mockRepetitions = [
-      { habit: 1, timestamp: 1715097600000, value: 0 }, // NO — should be skipped
-      { habit: 1, timestamp: 1715184000000, value: 2 }, // YES — should be imported
-      { habit: 1, timestamp: 1715270400000, value: 3 }, // SKIP — should be skipped
+      { habit: 1, timestamp: 1715097600000, value: 0 },
+      { habit: 1, timestamp: 1715184000000, value: 2 },
+      { habit: 1, timestamp: 1715270400000, value: 3 },
+    ];
+    const result = mapUhabitsToKanso(mockHabits, mockRepetitions);
+    expect(result.entries).toHaveLength(3);
+    expect(result.entries[0].value).toBe(0);
+    expect(result.entries[1].value).toBe(1);
+    expect(result.entries[2].value).toBe(-2);
+  });
+
+  it("should drop value=-1 (UNKNOWN) repetitions", () => {
+    const mockHabits = [{ id: 1, name: "Exercise", archived: 0 }];
+    const mockRepetitions = [
+      { habit: 1, timestamp: 1715097600000, value: -1 },
+      { habit: 1, timestamp: 1715184000000, value: 2 },
     ];
     const result = mapUhabitsToKanso(mockHabits, mockRepetitions);
     expect(result.entries).toHaveLength(1);
@@ -87,20 +107,18 @@ describe("uhabitsImport", () => {
     const kansoHexes = new Set(PROJECT_COLORS.map((c) => c.hex.toLowerCase()));
 
     const mockHabits = [
-      { id: 1, name: "Test", archived: 0, color: 0 }, // Loop Red → closest Kagelin
-      { id: 2, name: "Test2", archived: 0, color: 7 }, // Loop Teal → closest Kagelin
-      { id: 3, name: "Test3", archived: 0, color: 99 }, // Unknown index → default
+      { id: 1, name: "Test", archived: 0, color: 0 },
+      { id: 2, name: "Test2", archived: 0, color: 7 },
+      { id: 3, name: "Test3", archived: 0, color: 99 },
     ];
     const result = mapUhabitsToKanso(mockHabits, []);
 
-    // All mapped colors must exist in the Kagelin palette
     expect(kansoHexes.has(result.habits[0].color.toLowerCase())).toBe(true);
     expect(kansoHexes.has(result.habits[1].color.toLowerCase())).toBe(true);
 
-    // Specific mappings (nearest-neighbor in RGB space against the 24-color palette)
-    expect(result.habits[0].color).toBe("#B56C5A"); // Loop Red #f44336 → Terracotta
-    expect(result.habits[1].color).toBe("#4A8A8A"); // Loop Teal #009688 → Teal
-    expect(result.habits[2].color).toBe("#4B6CB7"); // unknown → Kagelin Blue default
+    expect(result.habits[0].color).toBe("#B56C5A");
+    expect(result.habits[1].color).toBe("#4A8A8A");
+    expect(result.habits[2].color).toBe("#4B6CB7");
   });
 
   it("should infer icon from habit name keywords", () => {
@@ -113,20 +131,20 @@ describe("uhabitsImport", () => {
       { id: 6, name: "RANDOM HABIT XYZ", archived: 0, color: 0 },
     ];
     const result = mapUhabitsToKanso(habits, []);
-    expect(result.habits[0].icon).toBe("Dumbbell"); // workout
-    expect(result.habits[1].icon).toBe("Book"); // read
-    expect(result.habits[2].icon).toBe("Brain"); // meditation
-    expect(result.habits[3].icon).toBe("Sun"); // rise/morning
-    expect(result.habits[4].icon).toBe("Droplet"); // shampoo/hygiene
-    expect(result.habits[5].icon).toBe("Flame"); // no match → default
+    expect(result.habits[0].icon).toBe("Dumbbell");
+    expect(result.habits[1].icon).toBe("Book");
+    expect(result.habits[2].icon).toBe("Brain");
+    expect(result.habits[3].icon).toBe("Sun");
+    expect(result.habits[4].icon).toBe("Droplet");
+    expect(result.habits[5].icon).toBe("Flame");
   });
 
   it("should set start_date from earliest completed entry, not today", () => {
     const mockHabits = [{ id: 1, name: "Exercise", archived: 0 }];
     const mockRepetitions = [
-      { habit: 1, timestamp: 1689120000000, value: 2 }, // 2023-07-12
-      { habit: 1, timestamp: 1715097600000, value: 2 }, // 2024-05-07 (later)
-      { habit: 1, timestamp: 1688947200000, value: 2 }, // 2023-07-10 (earliest)
+      { habit: 1, timestamp: 1689120000000, value: 2 },
+      { habit: 1, timestamp: 1715097600000, value: 2 },
+      { habit: 1, timestamp: 1688947200000, value: 2 },
     ];
     const result = mapUhabitsToKanso(mockHabits, mockRepetitions);
     expect(result.habits[0].start_date).toBe("2023-07-10");
@@ -142,29 +160,32 @@ describe("uhabitsImport", () => {
   it("should deduplicate entries with the same habit+date", () => {
     const mockHabits = [{ id: 1, name: "Exercise", archived: 0 }];
     const mockRepetitions = [
-      { habit: 1, timestamp: 1715097600000, value: 2 }, // 2024-05-07
-      { habit: 1, timestamp: 1715097600000, value: 2 }, // 2024-05-07 duplicate
-      { habit: 1, timestamp: 1715184000000, value: 2 }, // 2024-05-08 different date
+      { habit: 1, timestamp: 1715097600000, value: 2 },
+      { habit: 1, timestamp: 1715097600000, value: 2 },
+      { habit: 1, timestamp: 1715184000000, value: 2 },
     ];
     const result = mapUhabitsToKanso(mockHabits, mockRepetitions);
-    expect(result.entries).toHaveLength(2); // not 3
+    expect(result.entries).toHaveLength(2);
     const dates = result.entries.map((e) => e.date);
-    expect(new Set(dates).size).toBe(dates.length); // all unique dates
+    expect(new Set(dates).size).toBe(dates.length);
   });
 
-  it("should not import entries for archived habits", () => {
+  it("should import entries for archived habits", () => {
     const mockHabits = [
       { id: 1, name: "Active", archived: 0 },
       { id: 2, name: "Archived", archived: 1 },
     ];
     const mockRepetitions = [
       { habit: 1, timestamp: 1715097600000, value: 2 },
-      { habit: 2, timestamp: 1715097600000, value: 2 }, // archived habit — entries skipped
+      { habit: 2, timestamp: 1715097600000, value: 2 },
     ];
     const result = mapUhabitsToKanso(mockHabits, mockRepetitions);
-    expect(result.habits).toHaveLength(1);
-    expect(result.entries).toHaveLength(1);
-    expect(result.entries[0].habit_id).toBe(result.habits[0].id);
+    expect(result.habits).toHaveLength(2);
+    expect(result.entries).toHaveLength(2);
+    expect(result.habits[1].archived_at).toBeTruthy();
+    expect(result.entries.map((e) => e.habit_id)).toContain(
+      result.habits[1].id,
+    );
   });
 });
 
@@ -213,12 +234,11 @@ describe("uhabitsImport frequency mapping", () => {
     ];
     const result = mapUhabitsToKanso(mockHabits, []);
 
-    // count = max(1, round(freq_num * 7 / freq_den)), period = week
     expect(result.habits[0].frequency_period).toBe("week");
-    expect(result.habits[0].frequency_count).toBe(4); // round(3.5)
-    expect(result.habits[1].frequency_count).toBe(2); // round(2.33)
-    expect(result.habits[2].frequency_count).toBe(1); // round(1.4)
-    expect(result.habits[3].frequency_count).toBe(4); // round(3.5)
+    expect(result.habits[0].frequency_count).toBe(4);
+    expect(result.habits[1].frequency_count).toBe(2);
+    expect(result.habits[2].frequency_count).toBe(1);
+    expect(result.habits[3].frequency_count).toBe(4);
   });
 
   it("leaves frequency unset for absent or invalid freq columns", () => {
@@ -262,14 +282,14 @@ describe("toCreateHabitInput", () => {
     expect(input.color).toBe("#4A8A8A");
     expect(input.icon).toBe("Dumbbell");
     expect(input.start_date).toBe("2024-01-01");
-    expect(input.frequencyCount).toBe(3);
-    expect(input.frequencyPeriod).toBe("week");
+    expect(input.frequency_count).toBe(3);
+    expect(input.frequency_period).toBe("week");
   });
 
   it("omits frequency when the habit has none", () => {
     const input = toCreateHabitInput(baseHabit);
-    expect(input.frequencyCount).toBeUndefined();
-    expect(input.frequencyPeriod).toBeUndefined();
+    expect(input.frequency_count).toBeUndefined();
+    expect(input.frequency_period).toBeUndefined();
   });
 
   it("forwards source_uuid so the origin link survives persist", () => {
@@ -278,6 +298,29 @@ describe("toCreateHabitInput", () => {
       source_uuid: "abc-123-uuid",
     });
     expect(input.source_uuid).toBe("abc-123-uuid");
+  });
+
+  it("forwards full-fidelity habit fields (measurable, reminders, prompt, archived_at)", () => {
+    const input = toCreateHabitInput({
+      ...baseHabit,
+      archived_at: "2026-09-03T12:00:00.000Z",
+      habit_type: "measurable",
+      target_type: "at_least",
+      target_value: 10,
+      unit: "pages",
+      question: "How many pages?",
+      reminder_time: "08:00",
+      reminder_days: 127,
+    });
+
+    expect(input.archived_at).toBe("2026-09-03T12:00:00.000Z");
+    expect(input.habit_type).toBe("measurable");
+    expect(input.target_type).toBe("at_least");
+    expect(input.target_value).toBe(10);
+    expect(input.unit).toBe("pages");
+    expect(input.question).toBe("How many pages?");
+    expect(input.reminder_time).toBe("08:00");
+    expect(input.reminder_days).toBe(127);
   });
 });
 
@@ -298,7 +341,7 @@ describe("uhabitsImport streak fidelity (integration)", () => {
     "2024-05-31",
   ].map((d) => ({ habit: 1, timestamp: Date.parse(d), value: 2 }));
 
-  const today = new Date(2024, 4, 31); // local Fri 2024-05-31
+  const today = new Date(2024, 4, 31);
 
   it("interpolates a 3×/week habit into one continuous run", () => {
     const { habits, entries } = mapUhabitsToKanso(
@@ -306,8 +349,8 @@ describe("uhabitsImport streak fidelity (integration)", () => {
       threePerWeekReps,
     );
 
-    // 12 logged reps, but the schedule fills the gaps: 2024-05-06..05-31 = 26 days.
-    expect(getCurrentStreak(habits[0], entries, today)).toBe(26);
+    // 12 logged reps, backward-snapped & interpolated: 2024-05-04..05-31 = 28 days.
+    expect(getCurrentStreak(habits[0], entries, today)).toBe(28);
   });
 
   it("would collapse to a 1-day streak without the frequency (the bug)", () => {
@@ -397,4 +440,235 @@ describe("uhabits module exports", () => {
     const mod = await import("../../src/lib/import/uhabits");
     expect(typeof mod.mapUhabitsToKanso).toBe("function");
   });
+});
+
+describe("uhabitsImport full-fidelity mapping", () => {
+  it("maps measurable habit type, target_type, target_value, and unit", () => {
+    const mockHabits = [
+      {
+        id: 1,
+        name: "Read",
+        archived: 0,
+        type: 1,
+        target_type: 0,
+        target_value: 10.0,
+        unit: "pages",
+      },
+      {
+        id: 2,
+        name: "Limit Sugar",
+        archived: 0,
+        type: 1,
+        target_type: 1,
+        target_value: 25.0,
+        unit: "grams",
+      },
+    ];
+    const result = mapUhabitsToKanso(mockHabits, []);
+    expect(result.habits[0].habit_type).toBe("measurable");
+    expect(result.habits[0].target_type).toBe("at_least");
+    expect(result.habits[0].target_value).toBe(10.0);
+    expect(result.habits[0].unit).toBe("pages");
+
+    expect(result.habits[1].habit_type).toBe("measurable");
+    expect(result.habits[1].target_type).toBe("at_most");
+    expect(result.habits[1].target_value).toBe(25.0);
+    expect(result.habits[1].unit).toBe("grams");
+  });
+
+  it("maps question prompt, reminder_time formatted as HH:mm, and reminder_days", () => {
+    const mockHabits = [
+      {
+        id: 1,
+        name: "Wake Early",
+        archived: 0,
+        question: "Did you wake up early?",
+        reminder_hour: 6,
+        reminder_min: 0,
+        reminder_days: 127,
+      },
+      {
+        id: 2,
+        name: "Night Stretch",
+        archived: 0,
+        question: "Did you stretch before bed?",
+        reminder_hour: 22,
+        reminder_min: 45,
+        reminder_days: 119,
+      },
+      {
+        id: 3,
+        name: "No Reminder",
+        archived: 0,
+        reminder_hour: null,
+        reminder_min: null,
+        reminder_days: 0,
+      },
+    ];
+    const result = mapUhabitsToKanso(mockHabits, []);
+    expect(result.habits[0].question).toBe("Did you wake up early?");
+    expect(result.habits[0].reminder_time).toBe("06:00");
+    expect(result.habits[0].reminder_days).toBe(127);
+
+    expect(result.habits[1].question).toBe("Did you stretch before bed?");
+    expect(result.habits[1].reminder_time).toBe("22:45");
+    expect(result.habits[1].reminder_days).toBe(119);
+
+    expect(result.habits[2].reminder_time).toBeNull();
+    expect(result.habits[2].reminder_days).toBe(0);
+  });
+
+  it("maps numerical repetitions by dividing by 1000.0 and preserves notes", () => {
+    const mockHabits = [
+      {
+        id: 1,
+        name: "Read",
+        archived: 0,
+        type: 1,
+        target_value: 10.0,
+        unit: "pages",
+      },
+    ];
+    const mockRepetitions = [
+      {
+        habit: 1,
+        timestamp: 1715097600000,
+        value: 1000,
+        notes: "Read 1 page intro",
+      },
+      {
+        habit: 1,
+        timestamp: 1715184000000,
+        value: 8000,
+        notes: "Read chapter 2",
+      },
+      {
+        habit: 1,
+        timestamp: 1715270400000,
+        value: 3,
+        notes: "Rest day",
+      },
+    ];
+    const result = mapUhabitsToKanso(mockHabits, mockRepetitions);
+    expect(result.entries).toHaveLength(3);
+    expect(result.entries[0].value).toBe(1.0);
+    expect(result.entries[0].notes).toBe("Read 1 page intro");
+    expect(result.entries[1].value).toBe(8.0);
+    expect(result.entries[1].notes).toBe("Read chapter 2");
+    expect(result.entries[2].value).toBe(-2);
+    expect(result.entries[2].notes).toBe("Rest day");
+  });
+});
+
+describe("synthetic Loop backup import", () => {
+  it("imports every fidelity path from a Loop-schema .db", async () => {
+    const { parseUhabitsFile } = await import("../../src/lib/import/uhabits");
+    const { habits, entries } = await parseUhabitsFile(
+      toBlob(await buildLoopBackupFixture()),
+      "public/sql-wasm.wasm",
+    );
+
+    expect(habits).toHaveLength(LOOP_FIXTURE.habitCount);
+    expect(habits.filter((h) => h.archived_at === null)).toHaveLength(
+      LOOP_FIXTURE.activeCount,
+    );
+    expect(entries).toHaveLength(LOOP_FIXTURE.entryCount);
+
+    const workout = habits.find((h) => h.name === "WORKOUT")!;
+    expect(workout.question).toBe("Did you work out?");
+    expect(workout.reminder_time).toBe("06:00");
+    const workoutEntries = entries.filter((e) => e.habit_id === workout.id);
+    expect(workoutEntries.filter((e) => e.value === 1)).toHaveLength(3);
+    expect(workoutEntries.filter((e) => e.value === 0)).toHaveLength(2);
+    expect(workoutEntries.filter((e) => e.value === -2)).toHaveLength(1);
+    expect(workoutEntries.find((e) => e.value === -2)?.notes).toBe("Rest day");
+
+    const book = habits.find((h) => h.name === "READ A BOOK")!;
+    expect(book.archived_at).toBeTruthy();
+    expect(book.habit_type).toBe("measurable");
+    expect(book.target_value).toBe(10);
+    expect(book.unit).toBe("pages");
+    const bookEntries = entries.filter((e) => e.habit_id === book.id);
+    expect(
+      bookEntries
+        .filter((e) => e.value > 0)
+        .map((e) => e.value)
+        .sort(),
+    ).toEqual([1, 8]);
+    expect(bookEntries.filter((e) => e.value === -2)).toHaveLength(2);
+
+    const haircut = habits.find((h) => h.name === "HAIRCUT")!;
+    expect(haircut.frequency_period).toBe("month");
+    expect(haircut.reminder_time).toBe("07:00");
+    expect(haircut.reminder_days).toBe(119);
+
+    const gym = habits.find((h) => h.name === "GYM")!;
+    expect(gym.frequency_count).toBe(3);
+    expect(gym.frequency_period).toBe("week");
+  });
+});
+
+describe("real Loop Habits backup database audit", () => {
+  it.skipIf(!hasRealLoopBackup)(
+    "imports cleanly from Loop Habits Backup 2026-09-03 103056.db with full fidelity",
+    async () => {
+      const { parseUhabitsFile } = await import("../../src/lib/import/uhabits");
+
+      const buf = readRealLoopBackup();
+      const { habits, entries } = await parseUhabitsFile(
+        toBlob(buf),
+        "public/sql-wasm.wasm",
+      );
+
+      // 2 UNKNOWN rows lack Kagelin equivalents and are dropped.
+      expect(entries).toHaveLength(4183);
+
+      expect(habits).toHaveLength(12);
+
+      const activeHabits = habits.filter((h) => h.archived_at === null);
+      const archivedHabits = habits.filter((h) => h.archived_at !== null);
+      expect(activeHabits).toHaveLength(6);
+      expect(archivedHabits).toHaveLength(6);
+
+      const readBook = habits.find((h) => h.name === "READ A BOOK");
+      expect(readBook).toBeDefined();
+      expect(readBook?.archived_at).toBeTruthy();
+      expect(readBook?.habit_type).toBe("measurable");
+      expect(readBook?.target_value).toBe(10.0);
+      expect(readBook?.unit).toBe("pages");
+      expect(readBook?.target_type).toBe("at_least");
+      expect(readBook?.question).toBe("How many pages did you read?");
+
+      const bookEntries = entries.filter((e) => e.habit_id === readBook?.id);
+      expect(bookEntries).toHaveLength(6);
+      const skipBookEntries = bookEntries.filter((e) => e.value === -2);
+      expect(skipBookEntries).toHaveLength(4);
+      const numericalEntries = bookEntries.filter((e) => e.value > 0);
+      expect(numericalEntries.map((e) => e.value).sort()).toEqual([1.0, 8.0]);
+
+      const workout = habits.find((h) => h.name === "WORKOUT");
+      expect(workout).toBeDefined();
+      expect(workout?.archived_at).toBeNull();
+      const workoutEntries = entries.filter((e) => e.habit_id === workout?.id);
+      const workoutSkips = workoutEntries.filter((e) => e.value === -2);
+      const workoutDone = workoutEntries.filter((e) => e.value === 1);
+      const workoutMissed = workoutEntries.filter((e) => e.value === 0);
+      expect(workoutSkips).toHaveLength(27);
+      expect(workoutDone).toHaveLength(229);
+      expect(workoutMissed).toHaveLength(701);
+      expect(workoutEntries).toHaveLength(957);
+
+      const earlyToRise = habits.find((h) => h.name === "EARLY TO RISE");
+      expect(earlyToRise?.reminder_time).toBe("06:00");
+      expect(earlyToRise?.reminder_days).toBe(127);
+
+      const haircut = habits.find((h) => h.name === "HAIRCUT");
+      expect(haircut?.reminder_time).toBe("07:00");
+      expect(haircut?.reminder_days).toBe(119);
+
+      const earlyToBed = habits.find((h) => h.name === "EARLY TO BED");
+      expect(earlyToBed?.reminder_time).toBe("22:45");
+      expect(earlyToBed?.reminder_days).toBe(127);
+    },
+  );
 });

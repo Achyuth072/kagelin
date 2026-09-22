@@ -94,6 +94,22 @@ describe("NotificationSettings Component", () => {
     expect(mockUpdateSettings.mutateAsync).toHaveBeenCalled();
   });
 
+  it("TC-NS-02b: the Habit Reminders toggle writes notifications.habit_reminders", () => {
+    render(<NotificationSettings />);
+
+    fireEvent.click(screen.getByLabelText("Habit Reminders"));
+
+    expect(mockUpdateSettings.mutateAsync).toHaveBeenCalledWith({
+      notifications: expect.objectContaining({ habit_reminders: false }),
+    });
+  });
+
+  it("TC-NS-02c: Habit Reminders reads as on when the key is absent", () => {
+    render(<NotificationSettings />);
+
+    expect(screen.getByLabelText("Habit Reminders")).toBeChecked();
+  });
+
   it("TC-NS-03: should send the test notification to the current subscription endpoint", async () => {
     render(<NotificationSettings />);
 
@@ -149,12 +165,7 @@ describe("NotificationSettings Component", () => {
       });
     };
 
-    // usePushNotifications is mocked, so nothing makes `permission` /
-    // `notificationsEnabled` react to a resolved requestPermission() call the
-    // way the real hook would. Back the mock with a mutable object that
-    // requestPermission's mock implementation updates in place, so the
-    // re-render triggered by the component's own state change picks up the
-    // hook's "new" values too.
+    // Mutable mock state so requestPermission() updates reflect across re-renders.
     let hookState: {
       isSupported: boolean;
       permission: "default" | "granted" | "denied";

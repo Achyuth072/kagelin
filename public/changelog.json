@@ -1,5 +1,63 @@
 [
   {
+    "version": "1.44.0-preview.3",
+    "date": "2026-09-22",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Default missing habit columns instead of nulling them on guest migration"
+      ]
+    }
+  },
+  {
+    "version": "1.44.0-preview.2",
+    "date": "2026-09-21",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add habit reminders setting and Guest hint on the reminder field",
+        "Queue habit reminders from a per-minute pg_cron producer"
+      ],
+      "Fixed": [
+        "Skip profiles with an unrecognised timezone in the habit reminder producer",
+        "Habit reminder midnight lookback, constraint lookup and Guest hint scope"
+      ]
+    }
+  },
+  {
+    "version": "1.44.0-preview.1",
+    "date": "2026-09-20",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Remove rounded corners clipping project bar on desktop task rows"
+      ]
+    }
+  },
+  {
+    "version": "1.44.0-preview.0",
+    "date": "2026-09-19",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Compact habit drawer with collapsible rows and shared segmented time picker",
+        "Uhabits backup import and export UI options and encrypted round-trip verification",
+        "Native measurable habit creation, reminders, and strip logging UX",
+        "Backward-sliding interval snap and skip handling for uhabits parity",
+        "Loop csv and zip archive exporter via fflate",
+        "Loop sqlite .db exporter via sql.js with provenance merge",
+        "Full-fidelity loop habit tracker .db import engine",
+        "Extend habit schema and data model for uhabits fidelity and entry notes"
+      ],
+      "Fixed": [
+        "Habit stats, export reminders, guest migration fields, and clearing targets and strip values",
+        "Scope and guard habit_entries encryption backfill, clamp skipped heatmap levels",
+        "Address uhabits review findings across migration, entry clearing, export, and tests",
+        "Exclude merge commits from changelog, open editor on blank curation choice"
+      ]
+    }
+  },
+  {
     "version": "1.43.2",
     "date": "2026-09-18",
     "channel": "stable",
@@ -700,69 +758,6 @@
       ],
       "Fixed": [
         "Prevent mobile changelog drawer from going blank on overscroll"
-      ]
-    }
-  },
-  {
-    "version": "1.29.0",
-    "date": "2026-08-04",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Guests can now choose how often they get backup reminders, or turn them off entirely",
-        "Board view is back on mobile"
-      ],
-      "Improved": [
-        "Dropdown menus now match the width of the button that opens them",
-        "Softened the focus ring on dropdowns, sheets, and dialogs so it no longer flashes on tap on mobile",
-        "Added security headers to block clickjacking and MIME-sniffing attacks"
-      ],
-      "Fixed": [
-        "Fixed notification toasts overflowing their card on longer messages",
-        "Cleaned up spacing on the Goals section header and the Android battery-optimization hint"
-      ]
-    }
-  },
-  {
-    "version": "1.28.1-preview.3",
-    "date": "2026-08-04",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Let guests control Backup reminder cadence/on-off",
-        "Add notify.ts interface wrapping sonner"
-      ],
-      "Improved": [
-        "Drop pointless dynamic import, close error() action hole",
-        "Rename Toaster and migrate all call sites off sonner"
-      ],
-      "Fixed": [
-        "Match select dropdown width to trigger, extract ToggleRow",
-        "Fold description into title on the 3 oversized-Toast sites, enforce via lint",
-        "Separate goals section header and apply ink & matte styling to android battery hint"
-      ]
-    }
-  },
-  {
-    "version": "1.28.1-preview.2",
-    "date": "2026-08-04",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Use focus-visible and softer ring color on Select/Sheet/Dialog triggers"
-      ]
-    }
-  },
-  {
-    "version": "1.28.1-preview.1",
-    "date": "2026-08-04",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Bring back Board view on mobile"
-      ],
-      "Improved": [
-        "Simplify board container class and drop stale test mock"
       ]
     }
   }

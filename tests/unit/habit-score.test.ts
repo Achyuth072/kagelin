@@ -271,3 +271,60 @@ describe("currentScore — daily boolean", () => {
     expect(score).toBeLessThan(1);
   });
 });
+
+describe("computeScores — skipped entries (freeze decay)", () => {
+  it("freezes score decay on a skipped entry (S_k = S_{k-1})", () => {
+    // Day 1: done (score rises)
+    // Day 2: skip (-2) -> score should equal Day 1 score exactly (frozen, no decay)
+    // Day 3: miss (0) -> score decays from Day 2's frozen score
+    const entries = [
+      entry("2026-06-08", 1),
+      entry("2026-06-09", -2),
+      entry("2026-06-10", 0),
+    ];
+    const to = new Date("2026-06-10T12:00:00");
+    const scores = computeScores(dailyBoolean, entries, {
+      from: new Date("2026-06-08"),
+      to,
+    });
+
+    expect(scores).toHaveLength(3);
+    const day1Score = scores[0].value;
+    const day2Score = scores[1].value;
+    const day3Score = scores[2].value;
+
+    expect(day1Score).toBeGreaterThan(0);
+    // Day 2 is skipped: score MUST freeze at Day 1 score
+    expect(day2Score).toBe(day1Score);
+    // Day 3 is missed: score decays below Day 2 score
+    expect(day3Score).toBeLessThan(day2Score);
+  });
+
+  it("freezes score over multiple consecutive skipped days", () => {
+    const entries = [
+      entry("2026-06-01", 1),
+      entry("2026-06-02", -2),
+      entry("2026-06-03", -2),
+      entry("2026-06-04", -2),
+    ];
+    const to = new Date("2026-06-04T12:00:00");
+    const scores = computeScores(dailyBoolean, entries, {
+      from: new Date("2026-06-01"),
+      to,
+    });
+
+    expect(scores).toHaveLength(4);
+    const day1Score = scores[0].value;
+    expect(scores[1].value).toBe(day1Score);
+    expect(scores[2].value).toBe(day1Score);
+    expect(scores[3].value).toBe(day1Score);
+  });
+
+  it("currentScore preserves frozen score when the most recent entry is a skip", () => {
+    const to = new Date("2026-06-09T12:00:00");
+    const entries = [entry("2026-06-08", 1), entry("2026-06-09", -2)];
+    const scores = computeScores(dailyBoolean, entries, { to });
+    const score = currentScore(dailyBoolean, entries, { to });
+    expect(score).toBe(scores[0].value);
+  });
+});

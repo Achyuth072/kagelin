@@ -1,7 +1,12 @@
 // No Deno/Node APIs — tests/unit imports this directly.
 
 export type NotificationType =
-  "timer_end" | "due_date" | "do_date" | "evening" | "briefing";
+  | "timer_end"
+  | "due_date"
+  | "do_date"
+  | "evening"
+  | "briefing"
+  | "habit_reminder";
 
 export interface SendOptions {
   TTL: number;
@@ -16,6 +21,7 @@ const TTL_SECONDS: Record<NotificationType, number> = {
   do_date: 3600,
   evening: 3600,
   briefing: 3600,
+  habit_reminder: 3600,
 };
 
 // RFC 8030 topic: a later message collapses a still-queued one with the same topic.
@@ -23,7 +29,8 @@ export function buildTopic(
   type: NotificationType,
   referenceId?: string | null,
 ): string {
-  if (type !== "due_date" && type !== "do_date") return type;
+  if (type !== "due_date" && type !== "do_date" && type !== "habit_reminder")
+    return type;
   if (!referenceId) return type;
   const suffix = referenceId.replace(/-/g, "").slice(0, 8);
   return `${type}-${suffix}`;

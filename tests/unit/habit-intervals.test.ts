@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { interpolateDoneDays } from "@/lib/utils/habit-intervals";
+import {
+  interpolateDoneDays,
+  snapIntervalsTogether,
+} from "@/lib/utils/habit-intervals";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 
 function entry(date: string, value: number): HabitEntry {
@@ -78,7 +81,10 @@ describe("interpolateDoneDays — 3×/week flawless", () => {
       entry("2026-06-10", 1),
     ];
     const result = interpolateDoneDays(threePerWeek, entries, today);
-    // Should include all days from June 1 to June 11 (continuous)
+    // With backward sliding (uhabits snapIntervalsTogether), intervals slide back
+    // to fill days before the first rep: June 1, 3, 5 slides back to May 30
+    expect(result.has("2026-05-30")).toBe(true); // backward slid
+    expect(result.has("2026-05-31")).toBe(true); // backward slid
     expect(result.has("2026-06-01")).toBe(true);
     expect(result.has("2026-06-02")).toBe(true); // interpolated
     expect(result.has("2026-06-04")).toBe(true); // interpolated
@@ -86,7 +92,7 @@ describe("interpolateDoneDays — 3×/week flawless", () => {
     expect(result.has("2026-06-07")).toBe(true); // interpolated
     expect(result.has("2026-06-09")).toBe(true); // interpolated
     expect(result.has("2026-06-11")).toBe(true); // clamped to today
-    expect(result.size).toBe(11); // June 1-11
+    expect(result.size).toBe(13); // May 30 - June 11
   });
 
   it("clamps intervals to today", () => {
@@ -126,5 +132,43 @@ describe("interpolateDoneDays — 3×/week flawless", () => {
     // Interval 2: June 15-21 (from second window)
     expect(result.has("2026-06-15")).toBe(true);
     expect(result.has("2026-06-21")).toBe(true);
+  });
+});
+
+describe("snapIntervalsTogether — backward sliding logic", () => {
+  it("slides intervals backward when they overlap or touch to eliminate gaps", () => {
+    // Two intervals in newest-first order:
+    // next (newer): [2026-06-05, center 2026-06-10, end 2026-06-11]
+    // curr (older): [2026-06-03, center 2026-06-08, end 2026-06-09]
+    // gapNextToCurrent = 2026-06-09 - 2026-06-05 = 4 days
+    // gapCenterToEnd = 2026-06-09 - 2026-06-08 = 1 day
+    // s = min(1, 4 + 1) = 1 day
+    // curr slides back by 1 day: [2026-06-02, 2026-06-08]
+    const intervals = [
+      { begin: "2026-06-05", center: "2026-06-10", end: "2026-06-11" },
+      { begin: "2026-06-03", center: "2026-06-08", end: "2026-06-09" },
+    ];
+    snapIntervalsTogether(intervals);
+    expect(intervals[1]).toEqual({
+      begin: "2026-06-02",
+      center: "2026-06-08",
+      end: "2026-06-08",
+    });
+  });
+
+  it("does not slide when there is a strict positive gap between intervals", () => {
+    // next: begin 2026-06-15, center 2026-06-19, end 2026-06-21
+    // curr: begin 2026-06-01, center 2026-06-05, end 2026-06-07
+    // gapNextToCurrent = 2026-06-07 - 2026-06-15 = -8 (< 0) -> no slide
+    const intervals = [
+      { begin: "2026-06-15", center: "2026-06-19", end: "2026-06-21" },
+      { begin: "2026-06-01", center: "2026-06-05", end: "2026-06-07" },
+    ];
+    snapIntervalsTogether(intervals);
+    expect(intervals[1]).toEqual({
+      begin: "2026-06-01",
+      center: "2026-06-05",
+      end: "2026-06-07",
+    });
   });
 });

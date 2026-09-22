@@ -36,7 +36,7 @@ const ColorButton = memo(
       aria-checked={isSelected}
       onClick={() => onSelect(color.hex)}
       className={cn(
-        variant === "compact" ? "h-7 w-7" : "h-9 w-9",
+        "h-9 w-9",
         "rounded-xl transition-all shrink-0 border border-white/10",
         isSelected
           ? "ring-2 ring-brand ring-offset-2 ring-offset-background scale-110 opacity-100"
@@ -77,7 +77,7 @@ export function ColorPicker({
         ref={scrollRef}
         data-testid="color-picker"
         className={cn(
-          "flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-1 px-2 -mx-2 flex-nowrap",
+          "flex items-center gap-2.5 overflow-x-auto scrollbar-hide py-2 px-2 -mx-2 flex-nowrap",
           className,
         )}
         role="radiogroup"

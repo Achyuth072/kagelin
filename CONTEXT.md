@@ -189,8 +189,9 @@ Guest capability either.
 ### Registered (free)
 
 A user with a Kagelin account (`auth.uid()`). Data persists to the cloud. Gets
-**on-demand calendar sync**, **WebDAV backup**, and **timer handoff**. Does
-**not** get realtime cross-device mirroring, background auto-sync, or push.
+**on-demand calendar sync**, **WebDAV backup**, **timer handoff**, and **push
+notifications**. Does **not** get realtime cross-device mirroring or background
+auto-sync.
 
 Content is **encrypted**: what the user wrote — task and habit names, notes,
 event titles and locations — is unreadable to Kagelin. What the user _scheduled_
@@ -203,8 +204,10 @@ precisely; "your data is encrypted" overclaims. See
 ### Premium (paid)
 
 A registered user with the Premium entitlement. Adds realtime cross-device
-mirroring, background auto-sync, and push notifications on top of the
-registered-free capabilities. Usually paid for, but a **founding grant** confers
+mirroring and background auto-sync on top of the registered-free capabilities.
+The line is **work Kagelin's servers do while the app is shut**, not reach:
+push delivery is registered-free, because a queued notification costs a row,
+while mirroring and scheduled sync cost ongoing compute per user. Usually paid for, but a **founding grant** confers
 the same entitlement without payment — the tier records the entitlement, never
 its source.
 
@@ -299,10 +302,9 @@ reason.
 An intention the user tracks day-by-day. The umbrella term covering two kinds —
 a Habit is always one or the other:
 
-- **Boolean Habit** — done / not-done per day. The original and (for now) only
-  kind with native tracking UX.
+- **Boolean Habit** — done / not-done per day.
 - **Measurable Habit** — each Entry carries a real quantity (pages read, km run)
-  judged against a target. Schema and import only for now; no native entry UX yet.
+  judged against a target.
 
 A Habit also carries a **frequency** — how often it is meant to be done
 (e.g. daily, or three times a week). "Three times a week" _is_ expressible.
@@ -313,8 +315,8 @@ _Avoid_: Goal, routine, task.
 The record of a Habit on a specific date. What counts as **done** depends on the
 Habit kind:
 
-- **Boolean Habit**: done iff `value: 1`. The absence of an Entry and `value: 0`
-  both mean "not done."
+- **Boolean Habit**: done iff `value: 1`. `value: 0` is an explicit "not done";
+  no Entry is "unknown." Both count as not done for Streak and Score.
 - **Measurable Habit**: done iff the day **meets its target** — for an `at_least`
   target, the logged quantity ≥ target; for `at_most`, ≤ target. An absent day
   reads as quantity `0`.
@@ -326,17 +328,25 @@ import from:
 
 - **Done** — the target was met (see Entry).
 - **Not done** — explicitly missed.
-- **Unknown** — never logged. Indistinguishable from "not done" in our model.
+- **Unknown** — never logged. Counts as "not done" for Streak and Score, but is
+  shown differently.
 - **Skipped** — deliberately not counted (a rest day): does not break a Streak
   and is excluded from Score.
 
-Our store records only two of these — an Entry exists (with a `value`) or it
-doesn't. **Done** and **not done / unknown** map cleanly; **Skipped has no
-representation yet** and is collapsed to "not done" on import. Consequence:
-imported habits that used the source app's skip feature show a slightly lower
-Score and shorter Streaks than the original. Fidelity guarantees (and the Score
-verification tests) are therefore scoped to **skip-free** habits until native
-tracking introduces a real skipped state.
+How the store records each state:
+
+| State    | Boolean Habit      | Measurable Habit             |
+| -------- | ------------------ | ---------------------------- |
+| Done     | Entry `value = 1`  | Entry quantity meets target  |
+| Not done | Entry `value = 0`  | Entry quantity misses target |
+| Skipped  | Entry `value = -2` | Entry `value = -2`           |
+| Unknown  | no Entry           | no Entry                     |
+
+For a Measurable Habit, `value = 0` is a logged quantity of zero, judged against
+the target like any other quantity.
+Un-marking a done day deletes its Entry (back to Unknown); only an import writes
+an explicit Not done today. Loop Habit Tracker's `UNKNOWN` rows are dropped on
+import, since "no Entry" already means Unknown.
 
 ### "Done"-counting vs strength metrics (Measurable Habits)
 
@@ -543,6 +553,28 @@ The only mechanism that reaches the user with the app fully closed. "Notificatio
 settings" in the UI means **Push notification settings** specifically — the
 permission and subscription flow — and governs neither Toasts nor Local
 notifications.
+
+### Habit reminder
+
+The **Push notification** a **Habit** sends at its own set time — a
+`reminder_time` (`HH:mm`, in the Account's timezone) and a `reminder_days`
+weekday mask, both round-tripped from uhabits. Distinct from the daily
+**briefing**, which is one digest for the whole account, not one per Habit.
+
+A Habit's reminder days are **not** its **Frequency**. Frequency is the goal
+("2x/week") and says nothing about which days; `reminder_days` is the schedule
+and is the only thing that decides when a reminder fires. The two may disagree,
+and that is allowed. _Avoid_: "habit notification"; _avoid_: calling the
+reminder days a schedule the Habit is "due" on — a Habit is not due.
+
+A reminder is suppressed when the Habit is archived or already has an **Entry**
+for that day, in any **Entry state**. A **Locked** account still receives it,
+saying only that a habit is scheduled, never which.
+
+A reminder fires only if it can be delivered within 10 minutes of its `HH:mm`.
+On the day a timezone springs forward an hour of local time never happens, so a
+reminder set inside it is skipped rather than delivered late — see
+[ADR 0018](docs/adr/0018-reminders-skip-nonexistent-local-times.md).
 
 ### Backup reminder
 

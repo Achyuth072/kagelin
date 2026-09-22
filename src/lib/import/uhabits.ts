@@ -1,5 +1,13 @@
 import initSqlJs from "sql.js";
-import type { Habit, HabitEntry } from "../types/habit";
+import {
+  ENTRY_VALUE_DONE,
+  ENTRY_VALUE_NOT_DONE,
+  ENTRY_VALUE_SKIPPED,
+  REMINDER_EVERY_DAY,
+  type Habit,
+  type HabitEntry,
+  type HabitType,
+} from "@/lib/types/habit";
 import type { CreateHabitInput } from "../mutations/habit";
 import { PROJECT_COLORS } from "../constants/colors";
 
@@ -8,20 +16,26 @@ export interface UhabitsRawSource {
   repetitions: Record<string, unknown>[];
 }
 
-export async function parseUhabitsFile(file: File): Promise<{
+let sqlJsPromise: ReturnType<typeof initSqlJs> | undefined;
+
+// Served from public/ rather than a CDN so import works offline and in the PWA.
+export function loadSqlJs(wasmPath = "/sql-wasm.wasm") {
+  if (!sqlJsPromise) {
+    sqlJsPromise = initSqlJs({ locateFile: () => wasmPath });
+  }
+  return sqlJsPromise;
+}
+
+export async function parseUhabitsFile(
+  file: Blob,
+  wasmPath?: string,
+): Promise<{
   habits: Habit[];
   entries: HabitEntry[];
   source: UhabitsRawSource;
 }> {
-  // Use the locally served WASM binary so the import works in all environments
-  // (including offline / PWA) without depending on an external CDN.
-  // The file is copied to public/sql-wasm.wasm by `npm run copy-wasm` (prepare).
-  const SQL = await initSqlJs({
-    locateFile: () => "/sql-wasm.wasm",
-  });
-
-  const buffer = await file.arrayBuffer();
-  const db = new SQL.Database(new Uint8Array(buffer));
+  const SQL = await loadSqlJs(wasmPath);
+  const db = new SQL.Database(new Uint8Array(await file.arrayBuffer()));
 
   const habitsResult = db.exec("SELECT * FROM habits");
   const repetitionsResult = db.exec("SELECT * FROM Repetitions");
@@ -58,33 +72,31 @@ function resultToObjects(result: {
   });
 }
 
-// Loop Habit Tracker stores colors as palette indices (not ARGB ints).
-// Source: HabitColor enum in uhabits-core (indices 0-20).
-const LOOP_COLOR_PALETTE: Record<number, string> = {
-  0: "#f44336", // Red
-  1: "#ff5722", // Deep Orange
-  2: "#ff9800", // Orange
-  3: "#ffc107", // Amber
-  4: "#ffeb3b", // Yellow
-  5: "#cddc39", // Lime
-  6: "#4caf50", // Green
-  7: "#009688", // Teal
-  8: "#00bcd4", // Cyan
-  9: "#03a9f4", // Light Blue
-  10: "#2196f3", // Blue
-  11: "#3f51b5", // Indigo
-  12: "#673ab7", // Deep Purple
-  13: "#9c27b0", // Purple
-  14: "#e91e63", // Pink
-  15: "#f50057", // Magenta
-  16: "#607d8b", // Blue Grey
-  17: "#9e9e9e", // Grey
-  18: "#616161", // Dark Grey
-  19: "#795548", // Brown
-  20: "#4e342e", // Dark Brown
+// Loop stores colors as HabitColor palette indices (0-20, uhabits-core), not ARGB ints.
+export const LOOP_COLOR_PALETTE: Record<number, string> = {
+  0: "#f44336",
+  1: "#ff5722",
+  2: "#ff9800",
+  3: "#ffc107",
+  4: "#ffeb3b",
+  5: "#cddc39",
+  6: "#4caf50",
+  7: "#009688",
+  8: "#00bcd4",
+  9: "#03a9f4",
+  10: "#2196f3",
+  11: "#3f51b5",
+  12: "#673ab7",
+  13: "#9c27b0",
+  14: "#e91e63",
+  15: "#f50057",
+  16: "#607d8b",
+  17: "#9e9e9e",
+  18: "#616161",
+  19: "#795548",
+  20: "#4e342e",
 };
 
-// Keyword → icon mapping for common habit categories
 const ICON_KEYWORDS: Array<[RegExp, string]> = [
   [/workout|exercise|gym|run(ning)?|jog|swim|sport|fitness|lift/i, "Dumbbell"],
   [/read|book|study|learn/i, "Book"],
@@ -122,7 +134,7 @@ function hexToRgb(hex: string): [number, number, number] {
   return [r, g, b];
 }
 
-function colorDistance(hex1: string, hex2: string): number {
+export function colorDistance(hex1: string, hex2: string): number {
   const [r1, g1, b1] = hexToRgb(hex1);
   const [r2, g2, b2] = hexToRgb(hex2);
   return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
@@ -143,9 +155,9 @@ function findClosestKansoColor(loopHex: string): string {
   return closest;
 }
 
-function paletteToHex(colorIndex: number): string {
+export function paletteToHex(colorIndex: number): string {
   const loopHex = LOOP_COLOR_PALETTE[colorIndex];
-  if (!loopHex) return "#4B6CB7"; // default Kagelin Blue
+  if (!loopHex) return "#4B6CB7";
   return findClosestKansoColor(loopHex);
 }
 
@@ -175,8 +187,28 @@ function inferIcon(habitName: string, description?: string): string {
   return "Flame";
 }
 
-// Habit → createHabit payload; carries frequency through so it isn't dropped
-// between parse and persist. See ADR 0005.
+export const LOOP_VALUE_YES = 2;
+export const LOOP_VALUE_YES_AUTO = 1;
+export const LOOP_VALUE_SKIP = 3;
+export const LOOP_VALUE_NO = 0;
+export const LOOP_VALUE_UNKNOWN = -1;
+
+export function parseRepetitionValue(
+  rawVal: number,
+  habitType: HabitType,
+): number | null {
+  if (rawVal === LOOP_VALUE_SKIP) return ENTRY_VALUE_SKIPPED;
+  if (rawVal === LOOP_VALUE_NO) return ENTRY_VALUE_NOT_DONE;
+  if (rawVal === LOOP_VALUE_UNKNOWN) return null;
+  if (habitType === "measurable") {
+    return rawVal > 0 ? rawVal / 1000.0 : null;
+  }
+  if (rawVal === LOOP_VALUE_YES) return ENTRY_VALUE_DONE;
+  return null;
+}
+
+// Carries frequency and fidelity fields through so they aren't dropped between
+// parse and persist. See ADR 0005.
 export function toCreateHabitInput(habit: Habit): CreateHabitInput {
   return {
     name: habit.name,
@@ -184,8 +216,17 @@ export function toCreateHabitInput(habit: Habit): CreateHabitInput {
     color: habit.color,
     icon: habit.icon || undefined,
     start_date: habit.start_date ?? undefined,
-    frequencyCount: habit.frequency_count ?? undefined,
-    frequencyPeriod: habit.frequency_period ?? undefined,
+    archived_at: habit.archived_at ?? undefined,
+    habit_type: habit.habit_type,
+    sort_order: habit.sort_order ?? undefined,
+    frequency_count: habit.frequency_count ?? undefined,
+    frequency_period: habit.frequency_period ?? undefined,
+    target_type: habit.target_type ?? undefined,
+    target_value: habit.target_value ?? undefined,
+    unit: habit.unit ?? undefined,
+    question: habit.question ?? undefined,
+    reminder_time: habit.reminder_time ?? undefined,
+    reminder_days: habit.reminder_days ?? undefined,
     source_uuid: habit.source_uuid ?? undefined,
   };
 }
@@ -196,12 +237,29 @@ export function mapUhabitsToKanso(
 ) {
   const today = new Date().toISOString().split("T")[0];
 
-  // Pre-compute earliest completed entry date per Loop integer habit ID
+  const habitTypeMap = new Map<number, HabitType>();
+  uhHabits.forEach((rawHabit) => {
+    habitTypeMap.set(
+      rawHabit.id as number,
+      rawHabit.type === 1 ? "measurable" : "boolean",
+    );
+  });
+
   const earliestDate = new Map<number, string>();
-  uhRepetitions.forEach((ci) => {
-    if ((ci.value as number) !== 2) return;
-    const loopId = ci.habit as number;
-    const date = new Date(ci.timestamp as number).toISOString().split("T")[0];
+  uhRepetitions.forEach((rawRepetition) => {
+    const loopId = rawRepetition.habit as number;
+    const habitType = habitTypeMap.get(loopId) ?? "boolean";
+    const rawVal = rawRepetition.value as number;
+    const mapped = parseRepetitionValue(rawVal, habitType);
+    const hasNotes =
+      typeof rawRepetition.notes === "string" &&
+      rawRepetition.notes.trim().length > 0;
+
+    if (mapped === null && !hasNotes) return;
+
+    const date = new Date(rawRepetition.timestamp as number)
+      .toISOString()
+      .split("T")[0];
     const prev = earliestDate.get(loopId);
     if (!prev || date < prev) earliestDate.set(loopId, date);
   });
@@ -210,34 +268,66 @@ export function mapUhabitsToKanso(
   const rawEntries: HabitEntry[] = [];
   const idMap = new Map<number, string>();
 
-  uhHabits.forEach((uh) => {
-    if (uh.archived === 1) return;
-
+  uhHabits.forEach((rawHabit) => {
     const id = crypto.randomUUID();
-    idMap.set(uh.id as number, id);
+    idMap.set(rawHabit.id as number, id);
 
     const frequency = mapFrequency(
-      uh.freq_num as number,
-      uh.freq_den as number,
+      rawHabit.freq_num as number,
+      rawHabit.freq_den as number,
     );
+
+    const isMeasurable = rawHabit.type === 1;
+
+    const reminder_days =
+      typeof rawHabit.reminder_days === "number"
+        ? (rawHabit.reminder_days as number)
+        : REMINDER_EVERY_DAY;
+
+    const hasReminderTime =
+      reminder_days > 0 &&
+      rawHabit.reminder_hour !== null &&
+      rawHabit.reminder_hour !== undefined &&
+      rawHabit.reminder_min !== null &&
+      rawHabit.reminder_min !== undefined;
+    const reminder_time = hasReminderTime
+      ? `${String(rawHabit.reminder_hour).padStart(2, "0")}:${String(rawHabit.reminder_min).padStart(2, "0")}`
+      : null;
 
     habits.push({
       id,
       user_id: "",
-      name: uh.name as string,
-      description:
-        (uh.description as string) || (uh.question as string) || null,
-      color: paletteToHex(uh.color as number),
+      name: rawHabit.name as string,
+      description: (rawHabit.description as string) || null,
+      color: paletteToHex(rawHabit.color as number),
       icon: inferIcon(
-        uh.name as string,
-        (uh.description as string) || (uh.question as string),
+        rawHabit.name as string,
+        (rawHabit.description as string) || (rawHabit.question as string),
       ),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      archived_at: null,
-      start_date: earliestDate.get(uh.id as number) ?? today,
-      sort_order: habits.length,
-      source_uuid: (uh.uuid as string | undefined) ?? null,
+      archived_at: rawHabit.archived === 1 ? new Date().toISOString() : null,
+      start_date: earliestDate.get(rawHabit.id as number) ?? today,
+      sort_order:
+        typeof rawHabit.position === "number"
+          ? (rawHabit.position as number)
+          : habits.length,
+      source_uuid: (rawHabit.uuid as string | undefined) ?? null,
+      habit_type: isMeasurable ? "measurable" : "boolean",
+      target_type: isMeasurable
+        ? (rawHabit.target_type as number) === 1
+          ? "at_most"
+          : "at_least"
+        : null,
+      target_value: isMeasurable
+        ? typeof rawHabit.target_value === "number"
+          ? rawHabit.target_value
+          : Number(rawHabit.target_value) || null
+        : null,
+      unit: isMeasurable ? (rawHabit.unit as string) || null : null,
+      question: (rawHabit.question as string) || null,
+      reminder_time,
+      reminder_days,
       ...(frequency && {
         frequency_count: frequency.count,
         frequency_period: frequency.period,
@@ -245,23 +335,35 @@ export function mapUhabitsToKanso(
     });
   });
 
-  uhRepetitions.forEach((ci) => {
-    const habitId = idMap.get(ci.habit as number);
+  uhRepetitions.forEach((rawRepetition) => {
+    const habitId = idMap.get(rawRepetition.habit as number);
     if (!habitId) return;
 
-    // Loop uses value=2 (YES_MANUAL) for completed. value=0=NO, value=3=SKIP.
-    if ((ci.value as number) !== 2) return;
+    const habitType =
+      habitTypeMap.get(rawRepetition.habit as number) ?? "boolean";
+    const rawVal = rawRepetition.value as number;
+    const mappedValue = parseRepetitionValue(rawVal, habitType);
+
+    const notes =
+      typeof rawRepetition.notes === "string" &&
+      rawRepetition.notes.trim().length > 0
+        ? rawRepetition.notes.trim()
+        : null;
+
+    if (mappedValue === null && !notes) return;
 
     rawEntries.push({
       id: crypto.randomUUID(),
       habit_id: habitId,
-      date: new Date(ci.timestamp as number).toISOString().split("T")[0],
-      value: 1,
+      date: new Date(rawRepetition.timestamp as number)
+        .toISOString()
+        .split("T")[0],
+      value: mappedValue !== null ? mappedValue : 0,
+      notes,
       created_at: new Date().toISOString(),
     });
   });
 
-  // Deduplicate by habit_id+date — keep first seen (all are value=1 at this point)
   const seen = new Set<string>();
   const entries = rawEntries.filter((e) => {
     const key = `${e.habit_id}|${e.date}`;

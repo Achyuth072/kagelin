@@ -10,6 +10,7 @@ interface SegmentedTimePickerProps {
   value: Date;
   onChange: (date: Date) => void;
   className?: string;
+  compact?: boolean;
   timeFormat?: "12h" | "24h" | "system";
 }
 
@@ -17,15 +18,14 @@ export function SegmentedTimePicker({
   value,
   onChange,
   className,
+  compact = false,
   timeFormat: timeFormatProp,
 }: SegmentedTimePickerProps) {
   const { trigger } = useHaptic();
   const { timeFormat: defaultTimeFormat } = useTimeFormat();
 
-  // Resolve effective time format: prop > store default (12h)
   const effectiveFormat = timeFormatProp ?? defaultTimeFormat ?? "12h";
 
-  // For system mode, detect browser locale preference
   const is24hr = useMemo(() => {
     if (effectiveFormat === "system") {
       return new Intl.DateTimeFormat(navigator.language, {
@@ -60,10 +60,8 @@ export function SegmentedTimePicker({
     (hoursVal: number, min: number, pm?: boolean) => {
       const newDate = new Date(value);
       if (is24hr) {
-        // 24hr mode: hoursVal is 0-23
         newDate.setHours(hoursVal);
       } else {
-        // 12hr mode: hoursVal is 1-12, pm flag determines AM/PM
         let finalHours = hoursVal;
         if (pm && hoursVal !== 12) finalHours += 12;
         if (!pm && hoursVal === 12) finalHours = 0;
@@ -219,21 +217,21 @@ export function SegmentedTimePicker({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center py-2 select-none touch-none",
+        "flex flex-col items-center justify-center select-none touch-none",
+        compact ? "py-0" : "py-2",
         className,
       )}
       data-vaul-no-drag
     >
       <div className="flex items-center gap-1.5 md:gap-2 font-light tabular-nums tracking-tighter">
         <div className="flex items-center gap-0.5">
-          {/* Hours Segment */}
           <div className="relative group">
-            {/* Visible display — pointer-events-none so the input overlay receives all interactions */}
             <div
               className={cn(
-                "relative px-3 md:px-4 py-2 rounded-lg transition-all duration-300 border-2 touch-none pointer-events-none select-none",
+                "relative rounded-lg transition-all duration-300 border-2 touch-none pointer-events-none select-none",
+                compact ? "px-2 py-1" : "px-3 md:px-4 py-2",
                 activeSegment === "h"
-                  ? "text-foreground bg-brand/10 border-brand/40 shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)]"
+                  ? "text-foreground bg-brand/10 border-brand/40"
                   : "text-foreground/80 border-transparent",
               )}
             >
@@ -242,12 +240,14 @@ export function SegmentedTimePicker({
                 initial={{ y: lastDelta > 0 ? -2 : 2, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                className="text-4xl md:text-5xl leading-none block font-semibold tracking-tight"
+                className={cn(
+                  "leading-none block font-semibold tracking-tight",
+                  compact ? "text-2xl" : "text-4xl md:text-5xl",
+                )}
               >
                 {(is24hr ? hours : h12).toString().padStart(2, "0")}
               </motion.span>
             </div>
-            {/* Transparent input — receives focus and summons Android keyboard via inputMode */}
             <input
               type="text"
               inputMode="numeric"
@@ -272,19 +272,21 @@ export function SegmentedTimePicker({
 
           <span
             aria-hidden="true"
-            className="text-2xl md:text-3xl text-foreground/40 font-thin self-center translate-y-[-1px]"
+            className={cn(
+              "text-foreground/40 font-thin self-center translate-y-[-1px]",
+              compact ? "text-xl" : "text-2xl md:text-3xl",
+            )}
           >
             :
           </span>
 
-          {/* Minutes Segment */}
           <div className="relative group">
-            {/* Visible display */}
             <div
               className={cn(
-                "relative px-3 md:px-4 py-2 rounded-lg transition-all duration-300 border-2 touch-none pointer-events-none select-none",
+                "relative rounded-lg transition-all duration-300 border-2 touch-none pointer-events-none select-none",
+                compact ? "px-2 py-1" : "px-3 md:px-4 py-2",
                 activeSegment === "m"
-                  ? "text-foreground bg-brand/10 border-brand/40 shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)]"
+                  ? "text-foreground bg-brand/10 border-brand/40"
                   : "text-foreground/80 border-transparent",
               )}
             >
@@ -293,12 +295,14 @@ export function SegmentedTimePicker({
                 initial={{ y: lastDelta > 0 ? -2 : 2, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                className="text-4xl md:text-5xl leading-none block font-semibold tracking-tight"
+                className={cn(
+                  "leading-none block font-semibold tracking-tight",
+                  compact ? "text-2xl" : "text-4xl md:text-5xl",
+                )}
               >
                 {minutes.toString().padStart(2, "0")}
               </motion.span>
             </div>
-            {/* Transparent input */}
             <input
               type="text"
               inputMode="numeric"
@@ -321,7 +325,6 @@ export function SegmentedTimePicker({
           </div>
         </div>
 
-        {/* AM/PM Toggle - hidden in 24hr mode */}
         {!is24hr && (
           <button
             type="button"
@@ -337,7 +340,8 @@ export function SegmentedTimePicker({
             data-vaul-no-drag
             aria-label="Toggle AM PM"
             className={cn(
-              "relative w-14 h-9 flex items-center justify-center rounded-md transition-all duration-300 outline-none uppercase font-bold tracking-[0.05em] text-[10px] self-center border touch-none",
+              "relative flex items-center justify-center rounded-md transition-all duration-300 outline-none uppercase font-bold tracking-[0.05em] text-[10px] self-center border touch-none",
+              compact ? "w-11 h-8" : "w-14 h-9",
               activeSegment === "p"
                 ? "text-brand bg-brand/15 border-brand/40 shadow-sm"
                 : "text-foreground/80 bg-transparent border-border/20 hover:border-border/50 hover:text-foreground focus-visible:bg-brand/15 focus-visible:border-brand/40",

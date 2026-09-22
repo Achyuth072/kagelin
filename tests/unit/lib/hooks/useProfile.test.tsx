@@ -124,6 +124,7 @@ describe("useProfile", () => {
         due_date_alerts: true,
         do_date_alerts: true,
         timer_alerts: true,
+        habit_reminders: true,
       },
     });
 

@@ -2,31 +2,22 @@ import { format, subDays } from "date-fns";
 import type { HabitEntry } from "@/lib/types/habit";
 
 export interface RollingDay {
-  /** ISO date (YYYY-MM-DD) */
   date: string;
-  /** Narrow weekday letter (M T W T F S S) */
   weekdayLabel: string;
-  /** Entry value for the day; 0 when there is no entry */
   value: number;
-  /** True for the rightmost cell (today) */
+  /** Distinguishes an explicit 0 from an unlogged day. */
+  hasEntry: boolean;
   isToday: boolean;
-  /** True for days before the habit's start_date (inert) */
   isBeforeStart: boolean;
 }
 
-/**
- * Build the rolling 7-day window ending at `today` (today last), with a
- * per-day descriptor for the compact strip. Days before `startDate` are
- * flagged inert; absent entries read as value 0.
- */
 export function getRolling7Days(
   entries: HabitEntry[],
   today: Date,
   startDate: string | null,
 ): RollingDay[] {
   const valueByDate = new Map(entries.map((e) => [e.date, e.value]));
-  // A null start_date (legacy / imported / direct-insert rows) means no
-  // before-start cutoff — every day in the window is active.
+  // Null start_date (legacy/imported rows) has no before-start cutoff.
   const startDay = startDate ? startDate.slice(0, 10) : null;
   const todayStr = format(today, "yyyy-MM-dd");
 
@@ -37,6 +28,7 @@ export function getRolling7Days(
       date: dateStr,
       weekdayLabel: format(date, "EEEEE"),
       value: valueByDate.get(dateStr) ?? 0,
+      hasEntry: valueByDate.has(dateStr),
       isToday: dateStr === todayStr,
       isBeforeStart: startDay !== null && dateStr < startDay,
     };

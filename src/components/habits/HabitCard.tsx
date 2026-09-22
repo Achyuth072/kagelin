@@ -102,11 +102,10 @@ export function HabitCard({
       return;
     }
 
-    // Default: mark today as complete/incomplete
     markComplete.mutate({
       habitId: habit.id,
       date: today,
-      value: isCompletedToday ? 0 : 1,
+      value: isCompletedToday ? null : 1,
     });
   }, [onToggle, markComplete, habit.id, today, isCompletedToday]);
 

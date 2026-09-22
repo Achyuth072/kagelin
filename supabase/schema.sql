@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS public.notification_queue (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   scheduled_at TIMESTAMPTZ NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('timer_end', 'due_date', 'do_date', 'evening', 'briefing')),
+  type TEXT NOT NULL CHECK (type IN ('timer_end', 'due_date', 'do_date', 'evening', 'briefing', 'habit_reminder')),
   payload JSONB NOT NULL DEFAULT '{}',
   -- 'processing' = claimed by a sender run, not yet resolved.
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'sent', 'failed', 'cancelled')),
@@ -409,6 +409,91 @@ AS $$
   END;
 $$;
 
+-- An unrecognised profile timezone must skip that user, not abort the per-minute batch.
+CREATE OR REPLACE FUNCTION public.at_timezone_or_null(ts TIMESTAMPTZ, tz TEXT)
+RETURNS TIMESTAMP
+LANGUAGE plpgsql
+STABLE
+SET search_path = ''
+AS $$
+BEGIN
+  RETURN ts AT TIME ZONE tz;
+EXCEPTION WHEN invalid_parameter_value THEN
+  RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.enqueue_due_habit_reminders()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
+  SELECT
+    h.user_id,
+    now(),
+    'habit_reminder',
+    jsonb_strip_nulls(jsonb_build_object(
+      'title', 'Habit reminder',
+      'body', 'You have a habit scheduled now.',
+      'encrypted', public.encrypted_notification_body(
+        CASE WHEN NULLIF(h.question, '') IS NOT NULL THEN '{}' ELSE 'Time for {}' END,
+        COALESCE(NULLIF(h.question, ''), h.name)),
+      'data', jsonb_build_object('url', '/habits', 'habitId', h.id)
+    )),
+    h.id
+  FROM public.habits h
+  JOIN public.profiles p ON p.id = h.user_id
+  CROSS JOIN LATERAL (
+    SELECT
+      s.local_now,
+      -- Reminders due just before midnight belong to yesterday when evaluated past 00:00.
+      CASE WHEN s.remind_at > s.local_now::time
+        THEN s.local_now::date - 1
+        ELSE s.local_now::date
+      END + s.remind_at AS remind_ts
+    FROM (
+      SELECT
+        public.at_timezone_or_null(now(), p.timezone) AS local_now,
+        -- Guards against malformed text aborting the batch on cast.
+        CASE WHEN h.reminder_time ~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          THEN h.reminder_time::time
+        END AS remind_at
+    ) s
+  ) t
+  WHERE h.archived_at IS NULL
+    AND (h.reminder_days >> EXTRACT(DOW FROM t.remind_ts)::int) & 1 = 1
+    AND t.local_now - t.remind_ts < interval '10 minutes'
+    AND NOT EXISTS (
+      SELECT 1 FROM public.habit_entries e
+      WHERE e.habit_id = h.id AND e.date = t.remind_ts::date
+    )
+    AND (p.settings->'notifications'->>'habit_reminders')::boolean IS NOT FALSE
+    AND NOT EXISTS (
+      SELECT 1 FROM public.notification_queue n
+      WHERE n.reference_id = h.id
+        AND n.type = 'habit_reminder'
+        AND n.created_at > now() - interval '20 hours'
+    );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.enqueue_due_habit_reminders() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.enqueue_due_habit_reminders() TO service_role;
+
+SELECT cron.unschedule(jobname)
+FROM cron.job
+WHERE jobname IS NOT NULL
+  AND command ILIKE '%enqueue_due_habit_reminders%';
+
+SELECT cron.schedule(
+  'enqueue-habit-reminders',
+  '* * * * *',
+  $$SELECT public.enqueue_due_habit_reminders()$$
+);
+
 CREATE OR REPLACE FUNCTION handle_task_notification_sync()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -631,7 +716,10 @@ CREATE TABLE IF NOT EXISTS public.habits (
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   archived_at TIMESTAMPTZ,
   -- Links to its raw record in habit_imports for round-trip export (ADR 0006).
-  source_uuid TEXT
+  source_uuid TEXT,
+  question TEXT,
+  reminder_time TEXT,
+  reminder_days INT NOT NULL DEFAULT 127
 );
 
 -- Index for faster user-scoped lookups
@@ -667,7 +755,8 @@ CREATE TABLE IF NOT EXISTS public.habit_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   habit_id UUID NOT NULL REFERENCES public.habits(id) ON DELETE CASCADE,
   date DATE NOT NULL,
-  value INTEGER DEFAULT 1,
+  value REAL DEFAULT 1,
+  notes TEXT,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   UNIQUE(habit_id, date)
 );
@@ -1465,7 +1554,7 @@ CREATE TRIGGER tasks_reject_unmigrated_plaintext
 
 CREATE TRIGGER habits_reject_unmigrated_plaintext
   BEFORE INSERT OR UPDATE ON public.habits
-  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('name', 'description');
+  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('name', 'description', 'question');
 
 CREATE TRIGGER projects_reject_unmigrated_plaintext
   BEFORE INSERT OR UPDATE ON public.projects
@@ -1486,3 +1575,34 @@ CREATE TRIGGER external_calendars_reject_unmigrated_plaintext
 CREATE TRIGGER habit_imports_reject_unmigrated_plaintext
   BEFORE INSERT OR UPDATE ON public.habit_imports
   FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext('raw', 'file_name');
+
+-- habit_entries has no user_id column, so ownership resolves through the parent habit.
+CREATE OR REPLACE FUNCTION public.reject_unmigrated_plaintext_habit_entry()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  is_migrated BOOLEAN;
+BEGIN
+  IF NEW.notes IS NULL OR NEW.notes LIKE 'xchacha20poly1305-v1:%' THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT k.migrated_at IS NOT NULL INTO is_migrated
+  FROM public.habits h
+  JOIN public.encryption_keys k ON k.user_id = h.user_id
+  WHERE h.id = NEW.habit_id;
+
+  IF COALESCE(is_migrated, FALSE) THEN
+    RAISE EXCEPTION 'Column habit_entries.notes must be encrypted once a user has completed content-key setup'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER habit_entries_reject_unmigrated_plaintext
+  BEFORE INSERT OR UPDATE ON public.habit_entries
+  FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext_habit_entry();

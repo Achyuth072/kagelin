@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { REMINDER_EVERY_DAY } from "@/lib/types/habit";
 
 export const CreateHabitSchema = z.object({
   name: z.string().min(1, "Habit name is required").max(100),
@@ -17,6 +18,13 @@ export const CreateHabitSchema = z.object({
   target_type: z.enum(["at_least", "at_most"]).optional(),
   target_value: z.number().optional(),
   unit: z.string().max(50).optional(),
+  question: z.string().max(200).optional(),
+  reminder_time: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .optional()
+    .nullable(),
+  reminder_days: z.number().int().min(0).max(REMINDER_EVERY_DAY).optional(),
 });
 
 export type CreateHabitInput = z.infer<typeof CreateHabitSchema>;
