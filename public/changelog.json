@@ -1,5 +1,27 @@
 [
   {
+    "version": "1.44.0",
+    "date": "2026-09-22",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Import your habit history from Loop Habit Tracker (uhabits) backups, including notes and full entry fidelity",
+        "Export your habits as a Loop-compatible .db file, or as CSV/zip archives",
+        "Measurable (numeric) habits — track amounts, not just yes/no completion",
+        "Habit reminders, with a per-minute check so they fire on time",
+        "Redesigned, more compact habit editor with collapsible sections"
+      ],
+      "Improved": [
+        "Streak and score calculations now more accurately match Loop Habit Tracker's behavior for weekly/monthly habits and skipped days"
+      ],
+      "Fixed": [
+        "Guest-to-account migration no longer wipes habit fields it doesn't recognize",
+        "Habit reminders no longer skip around midnight or for unrecognized timezones",
+        "Clipped rounded corners on the project bar in desktop task rows"
+      ]
+    }
+  },
+  {
     "version": "1.44.0-preview.3",
     "date": "2026-09-22",
     "channel": "preview",
@@ -745,19 +767,6 @@
         "Cold-opened notification back-nav via real history trap, not a counter",
         "Notification cold-open back navigation exits the PWA",
         "Measure mobile week grid width before first paint to stop mount flash"
-      ]
-    }
-  },
-  {
-    "version": "1.29.1-preview.0",
-    "date": "2026-08-05",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Simplify desktop settings layout"
-      ],
-      "Fixed": [
-        "Prevent mobile changelog drawer from going blank on overscroll"
       ]
     }
   }
