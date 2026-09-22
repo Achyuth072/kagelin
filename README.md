@@ -70,8 +70,9 @@ Most productivity apps want your email before you've written a single task, and 
 
 - **Focus Timer**: PiP-enabled Pomodoro engine that hands off between your devices, so pausing on one pauses on all of them.
 - **Push notifications**: server-derived Web Push notifications for timer completions and task reminders (supporting desktop, Android, and iOS standalone PWA).
-- **Habit tracking**: standardized tracking with longevity streaks and uhabits `.db` import.
-- **Compact habit view**: tappable rolling-7 day strip with drag-and-drop reordering.
+- **Habit tracking**: Yes/No and Measurable habits with frequency-aware streaks, targets, and reminders.
+- **Compact habit view**: collapsible drawer with a tappable rolling-7 day strip, drag-and-drop reordering, and per-day logging.
+- **uhabits portability**: full-fidelity Loop Habit Tracker `.db` import and export, with provenance-preserving round-trips.
 - **Activity heatmap**: visualize focus minutes and habit completions over time.
 
 ### Calendar
@@ -127,6 +128,8 @@ Most productivity apps want your email before you've written a single task, and 
 - **Framer Motion** + **@dnd-kit** (flat-DOM drag-and-drop)
 - **Serwist** (typed service worker, offline-first PWA)
 - **tsdav** (CalDAV, currently deferred) + **ical.js** (ICS import/export)
+- **libsodium-wrappers-sumo** (zero-knowledge content encryption)
+- **sql.js** (uhabits `.db` import/export)
 
 </details>
 
