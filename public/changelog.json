@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.44.1",
+    "date": "2026-09-22",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Prevent a corrupted download from getting stuck in the offline cache and breaking Loop (.db) habit import",
+        "Automatically recover if that cache was already corrupted"
+      ]
+    }
+  },
+  {
     "version": "1.44.1-preview.0",
     "date": "2026-09-22",
     "channel": "preview",
@@ -738,25 +749,6 @@
         "Resolve focus ring cutoff and phantom outline artifacts",
         "Stop dnd-kit keyboard drag from colliding with board Space/Enter",
         "Derive modal-open hotkey gating from state, not a DOM probe race"
-      ]
-    }
-  },
-  {
-    "version": "1.29.1",
-    "date": "2026-08-08",
-    "channel": "stable",
-    "sections": {
-      "Improved": [
-        "Simplified the desktop settings layout"
-      ],
-      "Fixed": [
-        "Fixed focus settings occasionally showing stale values right after the app loads",
-        "Fixed signing in sometimes getting stuck on the login screen",
-        "Fixed the mobile 3-Day view showing the wrong number of days on some screen sizes",
-        "Made the mobile 3-Day and Week views' today indicator, scrolling, and scrollbar consistent",
-        "Fixed tapping back after opening a notification sometimes exiting the app instead of returning to the previous screen",
-        "Fixed a brief flash when opening the mobile Week view",
-        "Fixed the changelog drawer going blank when overscrolled on mobile"
       ]
     }
   }
