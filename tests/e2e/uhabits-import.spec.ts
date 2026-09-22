@@ -19,13 +19,31 @@ const readGuestCounts = (page: Page) =>
     };
   });
 
+// Settings renders a mobile and a desktop nav, and these buttons expose no
+// accessible name, so match visible elements by text rather than by role.
+const visibleButton = (page: Page, text: RegExp) =>
+  page
+    .locator("button")
+    .filter({ hasText: text })
+    .filter({ visible: true })
+    .first();
+
 const openImport = async (page: Page) => {
+  // The notification-permission prompt overlays the page and swallows clicks.
+  const dismiss = page.getByRole("button", { name: /no thanks/i });
+  if (await dismiss.count()) await dismiss.first().click();
+
+  await visibleButton(page, /^Account$/).click();
+  // The Account panel animates in and re-renders, detaching the button mid-click.
+  const importButton = visibleButton(page, /import from other apps/i);
+  await importButton.waitFor();
+  await page.waitForTimeout(750);
+  await importButton.click();
+  // Settings renders more than one .db input; only the dialog's is the target.
   await page
-    .getByRole("button", { name: "Account", exact: true })
-    .first()
-    .click();
-  await page.getByRole("button", { name: /import from other apps/i }).click();
-  await page.setInputFiles('input[type="file"][accept=".db"]', DB_FILE);
+    .getByRole("dialog")
+    .locator('input[type="file"][accept=".db"]')
+    .setInputFiles(DB_FILE);
 };
 
 test.describe("Loop Habit Tracker import (guest mode)", () => {

@@ -12,6 +12,7 @@ import {
   type EncryptedNotificationBody,
   type NotificationDisplayOptions,
 } from "@/lib/notifications";
+import { hasWasmMagicBytes } from "@/lib/sw/wasmIntegrity";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -67,8 +68,29 @@ const navigationRoute: RuntimeCaching = {
   }),
 };
 
+// Rejects a bad response before it reaches the runtime cache (e.g. an HTML
+// error page served in place of the binary) rather than relying on the next
+// fetch to overwrite it.
+const wasmIntegrityPlugin: SerwistPlugin = {
+  cacheWillUpdate: async ({ response }) => {
+    if (response.status !== 200) return null;
+    const bytes = await response.clone().arrayBuffer();
+    return hasWasmMagicBytes(bytes) ? response : null;
+  },
+};
+
+const wasmRoute: RuntimeCaching = {
+  matcher: ({ url }) => url.pathname === "/sql-wasm.wasm",
+  handler: new NetworkFirst({
+    cacheName: "sql-wasm",
+    networkTimeoutSeconds: 10,
+    plugins: [wasmIntegrityPlugin],
+  }),
+};
+
 const finalCache: RuntimeCaching[] = [
   navigationRoute,
+  wasmRoute,
   ...patchedCache.filter((e) => {
     const isCatchAll =
       e.matcher instanceof RegExp &&
