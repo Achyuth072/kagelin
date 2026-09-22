@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { HabitCard } from "@/components/habits/HabitCard";
 import type { HabitWithEntries } from "@/lib/types/habit";
@@ -67,5 +67,96 @@ describe("HabitCard Scroll Initialization", () => {
     expect(scrollContainer).toBeTruthy();
     expect(scrollContainer.className).toContain("scrollbar-hide");
     expect(scrollContainer.className).not.toContain("custom-scrollbar");
+  });
+});
+
+describe("HabitCard today button", () => {
+  const mutate = vi.fn();
+  const today = new Date().toISOString().split("T")[0];
+  const base: HabitWithEntries = {
+    id: "habit-test",
+    user_id: "user-test",
+    name: "Read a book",
+    description: null,
+    color: "#3b82f6",
+    icon: "Book",
+    created_at: today,
+    updated_at: today,
+    archived_at: null,
+    start_date: today,
+    sort_order: 0,
+    entries: [],
+  };
+  const measurable: HabitWithEntries = {
+    ...base,
+    habit_type: "measurable",
+    target_type: "at_least",
+    target_value: 10,
+    unit: "pages",
+  };
+  const entry = (value: number) => ({
+    id: "e1",
+    habit_id: base.id,
+    date: today,
+    value,
+    created_at: today,
+  });
+
+  beforeEach(() => {
+    mutate.mockReset();
+    vi.mocked(useIsMobileModule.useIsMobile).mockReturnValue(false);
+    vi.mocked(useHabitMutationsModule.useMarkHabitComplete).mockReturnValue({
+      mutate,
+      mutateAsync: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<
+      typeof useHabitMutationsModule.useMarkHabitComplete
+    >);
+  });
+
+  it("still toggles a Boolean Habit with the done value", () => {
+    render(<HabitCard habit={base} />);
+    fireEvent.click(screen.getByRole("button", { name: "Mark complete" }));
+    expect(mutate).toHaveBeenCalledWith({
+      habitId: base.id,
+      date: today,
+      value: 1,
+    });
+  });
+
+  it("asks a Measurable Habit for a quantity instead of writing one", () => {
+    render(<HabitCard habit={measurable} />);
+    fireEvent.click(screen.getByRole("button", { name: /log amount/i }));
+    expect(mutate).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("Log amount"), {
+      target: { value: "8" },
+    });
+    fireEvent.click(screen.getByText("Log"));
+    expect(mutate).toHaveBeenCalledWith({
+      habitId: base.id,
+      date: today,
+      value: 8,
+    });
+  });
+
+  it("judges a Measurable Habit's day against its target", () => {
+    const { rerender } = render(
+      <HabitCard habit={{ ...measurable, entries: [entry(8)] }} />,
+    );
+    expect(screen.getByText("total")).toHaveTextContent("0 total");
+    expect(
+      screen
+        .getByRole("button", { name: /log amount/i })
+        .querySelector(".lucide-check"),
+    ).toBeNull();
+
+    rerender(<HabitCard habit={{ ...measurable, entries: [entry(12)] }} />);
+    expect(screen.getByText("total")).toHaveTextContent("1 total");
+    expect(
+      screen
+        .getByRole("button", { name: /log amount/i })
+        .querySelector(".lucide-check"),
+    ).not.toBeNull();
   });
 });

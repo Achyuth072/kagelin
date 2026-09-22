@@ -1,24 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import { Check, X, Pause } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getContrastingColor } from "@/lib/utils/color";
 import type { RollingDay } from "@/lib/utils/habit-rolling";
-import { dayValue } from "@/lib/utils/habit-score";
+import { dayValue, isLoggedEntry } from "@/lib/utils/habit-score";
 import {
   ENTRY_VALUE_DONE,
-  ENTRY_VALUE_SKIPPED,
   ENTRY_VALUE_NOT_DONE,
   type Habit,
 } from "@/lib/types/habit";
 import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
-import { useHaptic } from "@/lib/hooks/useHaptic";
+  HabitQuantityPopover,
+  quantityLoggedPhrase,
+} from "./HabitQuantityPopover";
 
 interface HabitStripCellProps {
   day: RollingDay;
@@ -46,14 +42,10 @@ export function HabitStripCell({
   const unit = habit?.unit;
   const complete = !isMeasurable && hasEntry && value === ENTRY_VALUE_DONE;
   const missed = !isMeasurable && hasEntry && value === ENTRY_VALUE_NOT_DONE;
-  const skipped = hasEntry && value === ENTRY_VALUE_SKIPPED;
+  const skipped = hasEntry && !isLoggedEntry(value);
   const logged = isMeasurable && hasEntry && !skipped;
   const filled =
     complete || (logged && habit != null && dayValue(value, habit) >= 1);
-
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(logged ? String(value) : "");
-  const { trigger } = useHaptic();
 
   // Square aspect ratio ensures 7 days fit narrow viewports without scrolling.
   const cellSizing = coarse
@@ -86,7 +78,7 @@ export function HabitStripCell({
         ? "skipped"
         : "not completed";
   const cellLabel = isMeasurable
-    ? `${format(parseISO(date), "EEEE MMM d")}, ${logged ? `${value}${unit ? ` ${unit}` : ""} logged` : skipped ? "skipped" : "not logged"} — log amount`
+    ? `${format(parseISO(date), "EEEE MMM d")}, ${quantityLoggedPhrase(logged ? value : null, unit, skipped)} — log amount`
     : `${format(parseISO(date), "EEEE MMM d")}, ${status} — toggle`;
 
   const cellContent = (
@@ -133,74 +125,25 @@ export function HabitStripCell({
     return (
       <div className="flex min-w-0 flex-col items-center gap-1 lg:flex-none lg:gap-1.5">
         {weekdayHeader}
-        <Popover
-          open={open}
-          onOpenChange={(next) => {
-            setOpen(next);
-            if (next) setDraft(logged ? String(value) : "");
-          }}
+        <HabitQuantityPopover
+          loggedValue={logged ? value : null}
+          hasEntry={hasEntry}
+          unit={unit}
+          onLog={(amount) => onLogValue?.(date, amount)}
+          onClear={() => onClearValue?.(date)}
         >
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              onClick={(e) => e.stopPropagation()}
-              aria-label={cellLabel}
-              className={cn(
-                "group flex items-center justify-center rounded-md transition-seijaku-fast",
-                cellSizing,
-              )}
-            >
-              {cellContent}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-48 p-3"
+          <button
+            type="button"
             onClick={(e) => e.stopPropagation()}
+            aria-label={cellLabel}
+            className={cn(
+              "group flex items-center justify-center rounded-md transition-seijaku-fast",
+              cellSizing,
+            )}
           >
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (draft.trim() === "") {
-                  if (hasEntry) {
-                    trigger("success");
-                    onClearValue?.(date);
-                    setOpen(false);
-                  }
-                  return;
-                }
-                const parsed = Number(draft);
-                if (!Number.isNaN(parsed) && parsed >= 0) {
-                  trigger("success");
-                  onLogValue?.(date, parsed);
-                  setOpen(false);
-                }
-              }}
-              className="flex items-center gap-2"
-            >
-              <input
-                type="number"
-                inputMode="decimal"
-                min={0}
-                autoFocus
-                aria-label="Log amount"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                className="h-8 w-16 text-center text-[13px] font-medium rounded-lg border border-border/40 bg-secondary/10 p-0 outline-none"
-              />
-              {unit && (
-                <span className="text-[13px] text-muted-foreground">
-                  {unit}
-                </span>
-              )}
-              <button
-                type="submit"
-                className="ml-auto h-8 px-2.5 rounded-lg bg-brand text-brand-foreground text-[13px] font-medium transition-seijaku-fast hover:bg-brand/90"
-              >
-                Log
-              </button>
-            </form>
-          </PopoverContent>
-        </Popover>
+            {cellContent}
+          </button>
+        </HabitQuantityPopover>
       </div>
     );
   }
