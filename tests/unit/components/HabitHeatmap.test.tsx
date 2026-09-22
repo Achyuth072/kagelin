@@ -59,3 +59,70 @@ describe("HabitHeatmap Scroll Behavior", () => {
     expect(block?.getAttribute("data-level")).toBe("0");
   });
 });
+
+describe("HabitHeatmap shading", () => {
+  const color = "#3b82f6";
+  const daysAgo = (n: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - n);
+    return d.toISOString().split("T")[0];
+  };
+  const entry = (date: string, value: number): HabitEntry => ({
+    id: date,
+    habit_id: "habit-1",
+    date,
+    value,
+    created_at: date,
+  });
+  const levelOf = (container: HTMLElement, date: string) =>
+    container
+      .querySelector(`rect[data-date="${date}"]`)
+      ?.getAttribute("data-level");
+
+  it("shades Boolean Habit entries exactly as before", () => {
+    const entries = [
+      entry(daysAgo(3), 1),
+      entry(daysAgo(2), 0),
+      entry(daysAgo(1), ENTRY_VALUE_SKIPPED),
+    ];
+
+    for (const habit of [undefined, { habit_type: "boolean" as const }]) {
+      const { container, unmount } = render(
+        <HabitHeatmap entries={entries} color={color} habit={habit} />,
+      );
+      expect(levelOf(container, daysAgo(3))).toBe("4");
+      expect(levelOf(container, daysAgo(2))).toBe("0");
+      expect(levelOf(container, daysAgo(1))).toBe("0");
+      unmount();
+    }
+  });
+
+  it("shades a Measurable Habit by progress toward its target", () => {
+    const habit = {
+      habit_type: "measurable" as const,
+      target_type: "at_least" as const,
+      target_value: 10,
+    };
+    const entries = [
+      entry(daysAgo(4), 1),
+      entry(daysAgo(3), 8),
+      entry(daysAgo(2), 10),
+      entry(daysAgo(1), 20),
+    ];
+
+    const { container } = render(
+      <HabitHeatmap entries={entries} color={color} habit={habit} />,
+    );
+
+    const barelyStarted = levelOf(container, daysAgo(4));
+    const belowTarget = levelOf(container, daysAgo(3));
+    const atTarget = levelOf(container, daysAgo(2));
+    const overTarget = levelOf(container, daysAgo(1));
+
+    expect(barelyStarted).toBe("1");
+    expect(belowTarget).not.toBe(overTarget);
+    expect(belowTarget).not.toBe(atTarget);
+    expect(atTarget).toBe("4");
+    expect(overTarget).toBe("4");
+  });
+});

@@ -9,6 +9,8 @@ import {
 import "react-activity-calendar/tooltips.css";
 import { useTheme } from "next-themes";
 import { subMonths, format } from "date-fns";
+import type { Habit } from "@/lib/types/habit";
+import { dayValue } from "@/lib/utils/habit-score";
 
 interface HabitHeatmapProps {
   entries: Array<{ date: string; value: number }>;
@@ -17,6 +19,8 @@ interface HabitHeatmapProps {
   blockSize?: number;
   blockMargin?: number;
   startDate?: string;
+  /** Omit for non-habit history (e.g. task series) — shades as Boolean. */
+  habit?: Pick<Habit, "habit_type" | "target_type" | "target_value">;
 }
 
 function renderBlock(block: BlockElement, activity: Activity) {
@@ -43,6 +47,7 @@ export function HabitHeatmap({
   blockSize = 9,
   blockMargin = 2,
   startDate,
+  habit = {},
 }: HabitHeatmapProps) {
   const { resolvedTheme } = useTheme();
 
@@ -59,12 +64,15 @@ export function HabitHeatmap({
   ensureDay(format(subMonths(new Date(), 12), "yyyy-MM-dd"));
 
   const calendarData = Array.from(dataMap.entries())
-    .map(([date, value]) => ({
-      date,
-      count: value,
-      // Skipped entries are negative; the calendar rejects levels below 0.
-      level: value <= 0 ? 0 : Math.min(Math.ceil(value * 4), 4),
-    }))
+    .map(([date, value]) => {
+      const progress = dayValue(value, habit);
+      return {
+        date,
+        count: value,
+        // Floored: any progress > 0 gets at least the lightest shade, only progress >= 1 gets the darkest.
+        level: progress <= 0 ? 0 : Math.max(1, Math.floor(progress * 4)),
+      };
+    })
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const theme = {

@@ -3,6 +3,10 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { HabitHeatmap } from "./HabitHeatmap";
+import {
+  HabitQuantityPopover,
+  quantityLoggedPhrase,
+} from "./HabitQuantityPopover";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useMarkHabitComplete } from "@/lib/hooks/useHabitMutations";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
@@ -11,6 +15,8 @@ import { format } from "date-fns";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { getContrastingColor } from "@/lib/utils/color";
+import { dayValue, isLoggedEntry } from "@/lib/utils/habit-score";
+import { ENTRY_VALUE_DONE } from "@/lib/types/habit";
 import {
   getFrequencyProgress,
   frequencyProgressLabel,
@@ -26,14 +32,6 @@ interface HabitCardProps {
   onViewInsights?: () => void;
 }
 
-/**
- * HabitCard Component
- *
- * Displays a habit with its heatmap, stats, and completion toggle.
- * Implements a prioritized heatmap layout:
- * - Stats moved to header for better focus hierarchy.
- * - Auto-scrolls heatmap to most recent data in the background.
- */
 export function HabitCard({
   habit,
   icon: Icon,
@@ -47,14 +45,12 @@ export function HabitCard({
   const horizontalScrollRef = useHorizontalScroll();
   const hasAutoScrolled = useRef(false);
 
-  // Stable ref setter — only sets the ref once on mount, never triggers detach/reattach
   const setScrollRef = useCallback((node: HTMLDivElement | null) => {
     (
       scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>
     ).current = node;
   }, []);
 
-  // Attach/detach horizontal scroll listener only when isMobile changes, not on every render
   useEffect(() => {
     const node = scrollContainerRef.current;
     if (!node) return;
@@ -64,9 +60,7 @@ export function HabitCard({
     }
   }, [isMobile, horizontalScrollRef]);
 
-  // Background scroll to end on mount
   useLayoutEffect(() => {
-    // Only auto-scroll once on initial mount / data load, not on every re-render
     if (hasAutoScrolled.current) return;
 
     const frame = requestAnimationFrame(() => {
@@ -81,15 +75,21 @@ export function HabitCard({
 
   const today = format(new Date(), "yyyy-MM-dd");
   const todayEntry = habit.entries.find((e) => e.date === today);
-  const isCompletedToday = todayEntry?.value === 1;
+  const isMeasurable = habit.habit_type === "measurable";
+  const isCompletedToday =
+    todayEntry != null && dayValue(todayEntry.value, habit) >= 1;
+  const todayLogged =
+    isMeasurable && todayEntry != null && isLoggedEntry(todayEntry.value)
+      ? todayEntry.value
+      : null;
 
-  const totalCompletions = habit.entries.filter((e) => e.value === 1).length;
+  const totalCompletions = habit.entries.filter(
+    (e) => dayValue(e.value, habit) >= 1,
+  ).length;
   const currentStreak = getCurrentStreak(habit, habit.entries);
 
-  // Frequency progress ring — Boolean Habits only (CONTEXT.md "Done"-counting
-  // vs strength metrics): an at_most Measurable Habit would read misleadingly
-  // against a raw frequency count. Also requires a non-trivial target — a plain
-  // daily habit's "1/1" ring is redundant next to the toggle.
+  // Boolean-only (CONTEXT.md "Done" vs strength metrics): an at_most Measurable
+  // habit's raw count would read misleadingly as frequency progress.
   const showFrequencyRing =
     habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
   const frequencyProgress = showFrequencyRing
@@ -105,9 +105,41 @@ export function HabitCard({
     markComplete.mutate({
       habitId: habit.id,
       date: today,
-      value: isCompletedToday ? null : 1,
+      value: isCompletedToday ? null : ENTRY_VALUE_DONE,
     });
   }, [onToggle, markComplete, habit.id, today, isCompletedToday]);
+
+  // before:-inset-1 gives the 36px button a 44px invisible tap area (mobile touch-target minimum).
+  const renderTodayButton = (
+    onClick: (e: React.MouseEvent<HTMLButtonElement>) => void,
+  ) => (
+    <button
+      onClick={onClick}
+      className={`relative h-9 w-9 rounded-lg flex items-center justify-center transition-seijaku-fast shrink-0 before:absolute before:-inset-1 before:content-[''] ${
+        isCompletedToday
+          ? "bg-primary text-primary-foreground"
+          : "bg-secondary border border-border hover:bg-secondary/80 text-muted-foreground hover:text-foreground"
+      }`}
+      style={isCompletedToday ? { backgroundColor: habit.color } : undefined}
+      aria-label={
+        isMeasurable
+          ? `Today, ${quantityLoggedPhrase(todayLogged, habit.unit)} — log amount`
+          : isCompletedToday
+            ? "Mark incomplete"
+            : "Mark complete"
+      }
+    >
+      {isCompletedToday ? (
+        <Check
+          className="w-5 h-5"
+          strokeWidth={3}
+          style={{ color: getContrastingColor(habit.color) }}
+        />
+      ) : (
+        <Plus className="w-5 h-5" />
+      )}
+    </button>
+  );
 
   return (
     <Card
@@ -151,38 +183,34 @@ export function HabitCard({
                   <BarChart2 className="w-4 h-4" strokeWidth={2.25} />
                 </button>
               )}
-              {/* Primary action: sleek 36px visual, but an invisible
-                  before:-inset-1 halo expands the tap area to the 44px mobile
-                  touch-target minimum. */}
-              <button
-                onClick={(e) => {
+              {isMeasurable ? (
+                <HabitQuantityPopover
+                  loggedValue={todayLogged}
+                  hasEntry={todayEntry != null}
+                  unit={habit.unit}
+                  onLog={(value) =>
+                    markComplete.mutate({
+                      habitId: habit.id,
+                      date: today,
+                      value,
+                    })
+                  }
+                  onClear={() =>
+                    markComplete.mutate({
+                      habitId: habit.id,
+                      date: today,
+                      value: null,
+                    })
+                  }
+                >
+                  {renderTodayButton((e) => e.stopPropagation())}
+                </HabitQuantityPopover>
+              ) : (
+                renderTodayButton((e) => {
                   e.stopPropagation();
                   handleToggle();
-                }}
-                className={`relative h-9 w-9 rounded-lg flex items-center justify-center transition-seijaku-fast shrink-0 before:absolute before:-inset-1 before:content-[''] ${
-                  isCompletedToday
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary border border-border hover:bg-secondary/80 text-muted-foreground hover:text-foreground"
-                }`}
-                style={
-                  isCompletedToday
-                    ? { backgroundColor: habit.color }
-                    : undefined
-                }
-                aria-label={
-                  isCompletedToday ? "Mark incomplete" : "Mark complete"
-                }
-              >
-                {isCompletedToday ? (
-                  <Check
-                    className="w-5 h-5"
-                    strokeWidth={3}
-                    style={{ color: getContrastingColor(habit.color) }}
-                  />
-                ) : (
-                  <Plus className="w-5 h-5" />
-                )}
-              </button>
+                })
+              )}
             </div>
           </div>
 
@@ -238,6 +266,7 @@ export function HabitCard({
             blockSize={isMobile ? 10 : 14}
             blockMargin={2}
             startDate={habit.start_date ?? undefined}
+            habit={habit}
           />
         </div>
       </div>

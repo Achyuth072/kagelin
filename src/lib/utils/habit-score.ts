@@ -21,6 +21,10 @@ export function periodDays(period: FrequencyPeriod | null): number {
   }
 }
 
+export function isLoggedEntry(entryValue: number): boolean {
+  return entryValue !== ENTRY_VALUE_SKIPPED;
+}
+
 export function dayValue(
   entryValue: number,
   habit: Pick<Habit, "habit_type" | "target_type" | "target_value">,

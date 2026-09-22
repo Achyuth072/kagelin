@@ -50,9 +50,7 @@ export function HabitInsightsPanel({
     );
   }
 
-  // Prefer the freshly-fetched habit so its fields (frequency, target, color)
-  // stay consistent with the entries from the same query — the prop comes from
-  // the list cache and can lag behind an edit.
+  // data is fetched with entries from the same query; habitProp is the list cache and can lag behind an edit.
   const habit = data ?? habitProp;
   const entries = data?.entries ?? [];
 
@@ -77,8 +75,7 @@ export function HabitInsightsPanel({
     }
   };
 
-  // Frequency progress ring — Boolean Habits with a non-trivial target only
-  // (a plain daily habit's "1/1" ring is noise). Same gate as HabitCard.
+  // Same gate as HabitCard: Boolean-only, non-trivial target.
   const showFrequencyRing =
     habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
   const frequencyProgress = showFrequencyRing
@@ -129,6 +126,7 @@ export function HabitInsightsPanel({
             entries={entries}
             color={habit.color}
             startDate={habit.start_date ?? undefined}
+            habit={habit}
           />
         </div>
       </InsightSection>
