@@ -390,8 +390,6 @@ describe("classifyUhabitsError", () => {
     expect(classifyUhabitsError(err)).toBe(WASM_ERROR_MESSAGE);
   });
 
-  // When the wasm fetch is redirected to /login, the browser compiles the HTML
-  // login page as wasm. The resulting errors must not blame the user's .db file.
   it("returns WASM_ERROR_MESSAGE when an HTML page is compiled as wasm (Chrome)", () => {
     const err = new Error(
       "CompileError: WebAssembly.instantiate(): expected magic word 00 61 73 6d, found 3c 21 44 4f @+0",
@@ -409,6 +407,20 @@ describe("classifyUhabitsError", () => {
   it("returns WASM_ERROR_MESSAGE for an unsupported MIME type response", () => {
     const err = new Error(
       "TypeError: WebAssembly: Response has unsupported MIME type 'text/html' expected 'application/wasm'",
+    );
+    expect(classifyUhabitsError(err)).toBe(WASM_ERROR_MESSAGE);
+  });
+
+  it("returns WASM_ERROR_MESSAGE for a truncated wasm body", () => {
+    const err = new Error(
+      "CompileError: WebAssembly.instantiate(): expected 4 bytes, fell off end @+0",
+    );
+    expect(classifyUhabitsError(err)).toBe(WASM_ERROR_MESSAGE);
+  });
+
+  it("returns WASM_ERROR_MESSAGE for an empty wasm body", () => {
+    const err = new Error(
+      "CompileError: WebAssembly.instantiate(): BufferSource argument is empty",
     );
     expect(classifyUhabitsError(err)).toBe(WASM_ERROR_MESSAGE);
   });

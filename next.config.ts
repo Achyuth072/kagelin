@@ -19,6 +19,8 @@ const withSerwist = withSerwistInit({
   // App Router routes are reached via client-side navigation, so a document
   // fetch never happens for them unless we cache it ourselves on navigate.
   cacheOnNavigation: true,
+  // Precache keys are content hashes, so a bad cached response never re-fetches.
+  globPublicPatterns: ["**/!(*.wasm)"],
 });
 
 const isMobile = process.env.NEXT_PUBLIC_IS_CAPACITOR === "true";

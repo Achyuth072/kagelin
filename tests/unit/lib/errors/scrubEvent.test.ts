@@ -174,3 +174,61 @@ describe("sentryOptions", () => {
     expect(JSON.stringify(sent)).not.toContain(TASK_TITLE);
   });
 });
+
+describe("WebAssembly diagnostics survive scrubbing", () => {
+  it("keeps the compile error from a wasm binary that is not wasm", () => {
+    const event = {
+      exception: {
+        values: [
+          {
+            type: "CompileError",
+            value:
+              "WebAssembly.instantiate(): expected magic word 00 61 73 6d, found 3c 21 44 4f @+0",
+          },
+        ],
+      },
+    };
+    expect(scrubEvent(event).exception.values[0].value).toBe(
+      "WebAssembly.instantiate(): expected magic word 00 61 73 6d, found 3c 21 44 4f @+0",
+    );
+  });
+
+  it("keeps the sql.js abort wrapper around a compile error", () => {
+    const event = {
+      exception: {
+        values: [
+          {
+            type: "Error",
+            value:
+              "Aborted(CompileError: WebAssembly.instantiate(): expected 4 bytes, fell off end @+0)",
+          },
+        ],
+      },
+    };
+    expect(scrubEvent(event).exception.values[0].value).toContain("Aborted(");
+  });
+
+  it("keeps wasm console breadcrumbs", () => {
+    const crumb = {
+      category: "console",
+      message: "wasm streaming compile failed: TypeError",
+    };
+    expect(scrubBreadcrumb(crumb).message).toBe(
+      "wasm streaming compile failed: TypeError",
+    );
+  });
+
+  it("still redacts console breadcrumbs carrying user content", () => {
+    const crumb = { category: "console", message: `Saved "${TASK_TITLE}"` };
+    expect(scrubBreadcrumb(crumb).message).toBe(REDACTED);
+  });
+
+  it("still redacts an unrelated exception value", () => {
+    const event = {
+      exception: {
+        values: [{ type: "TypeError", value: `Cannot read "${TASK_TITLE}"` }],
+      },
+    };
+    expect(scrubEvent(event).exception.values[0].value).toBe(REDACTED);
+  });
+});

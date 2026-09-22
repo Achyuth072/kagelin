@@ -2,6 +2,7 @@ import {
   SW_NOT_REGISTERED,
   SW_REGISTRATION_TIMEOUT,
 } from "@/lib/errors/serviceWorkerErrors";
+import { isWasmDiagnostic } from "@/lib/import/uhabitsErrors";
 
 // Structural payload shape so changing reporting backends requires only a DSN update.
 export const REDACTED = "[redacted]";
@@ -12,6 +13,8 @@ const SAFE_DATA_KEYS = ["method", "status_code", "from", "to", "url"];
 const URL_DATA_KEYS = ["url", "from", "to", "http.url"];
 
 // Exact match only: substring matching risks leaking interpolated user content.
+// WASM diagnostics are the one exception — engine text only, never user content
+// (see isWasmDiagnostic in @/lib/import/uhabitsErrors, the source of truth for these patterns).
 const SAFE_EXCEPTION_MESSAGES = new Set([
   "Failed to fetch",
   "Load failed",
@@ -22,6 +25,7 @@ const SAFE_EXCEPTION_MESSAGES = new Set([
 ]);
 
 type ScrubbableBreadcrumb = {
+  category?: unknown;
   message?: unknown;
   data?: Record<string, unknown>;
 };
@@ -62,7 +66,11 @@ function pickSafeData(
 
 export function scrubBreadcrumb<T extends object>(breadcrumb: T): T {
   const crumb = breadcrumb as ScrubbableBreadcrumb;
-  if (typeof crumb.message === "string") crumb.message = REDACTED;
+  if (typeof crumb.message === "string") {
+    const keep =
+      crumb.category === "console" && isWasmDiagnostic(crumb.message);
+    if (!keep) crumb.message = REDACTED;
+  }
   if (crumb.data) crumb.data = pickSafeData(crumb.data);
   return breadcrumb;
 }
@@ -74,9 +82,10 @@ export function scrubEvent<T extends object>(event: T): T {
 
   for (const exception of payload.exception?.values ?? []) {
     if (typeof exception.value === "string") {
-      exception.value = SAFE_EXCEPTION_MESSAGES.has(exception.value)
-        ? exception.value
-        : REDACTED;
+      const safe =
+        SAFE_EXCEPTION_MESSAGES.has(exception.value) ||
+        isWasmDiagnostic(exception.value);
+      exception.value = safe ? exception.value : REDACTED;
     }
     for (const frame of exception.stacktrace?.frames ?? []) {
       delete frame.vars;
