@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.44.0-preview.3",
+    "date": "2026-09-22",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Default missing habit columns instead of nulling them on guest migration"
+      ]
+    }
+  },
+  {
     "version": "1.44.0-preview.2",
     "date": "2026-09-21",
     "channel": "preview",
@@ -748,26 +758,6 @@
       ],
       "Fixed": [
         "Prevent mobile changelog drawer from going blank on overscroll"
-      ]
-    }
-  },
-  {
-    "version": "1.29.0",
-    "date": "2026-08-04",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Guests can now choose how often they get backup reminders, or turn them off entirely",
-        "Board view is back on mobile"
-      ],
-      "Improved": [
-        "Dropdown menus now match the width of the button that opens them",
-        "Softened the focus ring on dropdowns, sheets, and dialogs so it no longer flashes on tap on mobile",
-        "Added security headers to block clickjacking and MIME-sniffing attacks"
-      ],
-      "Fixed": [
-        "Fixed notification toasts overflowing their card on longer messages",
-        "Cleaned up spacing on the Goals section header and the Android battery-optimization hint"
       ]
     }
   }
