@@ -36,15 +36,19 @@ function getFailureCount(): number {
 }
 
 // Deterministic IDs and ignoreDuplicates make row inserts idempotent across retries.
+// defaultToNull: false — PostgREST fills a column listed in `?columns=` but absent
+// from the JSON body with NULL, which would otherwise stomp DEFAULT values.
 async function upsertRows(
   supabase: ReturnType<typeof createClient>,
   table: string,
   rows: Record<string, unknown>[],
 ): Promise<void> {
   if (rows.length === 0) return;
-  const { error } = await supabase
-    .from(table)
-    .upsert(rows, { onConflict: "id", ignoreDuplicates: true });
+  const { error } = await supabase.from(table).upsert(rows, {
+    onConflict: "id",
+    ignoreDuplicates: true,
+    defaultToNull: false,
+  });
   if (error) throw error;
 }
 
