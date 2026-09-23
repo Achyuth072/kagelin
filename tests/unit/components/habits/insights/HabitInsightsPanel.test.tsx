@@ -1,10 +1,17 @@
 import { render, screen } from "@testing-library/react";
+import { format } from "date-fns";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { HabitInsightsPanel } from "@/components/habits/HabitInsightsPanel";
 import type { Habit } from "@/lib/types/habit";
 import * as useHabitsModule from "@/lib/hooks/useHabits";
 
 vi.mock("@/lib/hooks/useHabits");
+vi.mock("@/lib/hooks/useHabitMutations", () => ({
+  useMarkHabitComplete: () => ({ mutate: vi.fn() }),
+}));
+vi.mock("@/components/habits/HabitHeatmap", () => ({
+  HabitHeatmap: () => <div data-testid="habit-heatmap" />,
+}));
 vi.mock("@/lib/hooks/useMediaQuery", () => ({
   useMediaQuery: () => false,
 }));
@@ -52,7 +59,6 @@ describe("HabitInsightsPanel", () => {
 
     render(<HabitInsightsPanel habit={mockHabit} />);
 
-    // Skeleton pulses
     expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
       0,
     );
@@ -88,18 +94,21 @@ describe("HabitInsightsPanel", () => {
 
     render(<HabitInsightsPanel habit={mockHabit} />);
 
-    // Overview cards (Score appears twice: MetricCard + section title)
+    // MetricCard and section title both match "Score".
     expect(screen.getAllByText("Score")).toHaveLength(2);
     expect(screen.getByText("Current Streak")).toBeInTheDocument();
     expect(screen.getByText("Best Streak")).toBeInTheDocument();
     expect(screen.getByText("Total Completions")).toBeInTheDocument();
 
-    // Section cards
     expect(screen.getByText("History")).toBeInTheDocument();
     expect(screen.getByText("Best Streaks")).toBeInTheDocument();
     expect(screen.getByText("Frequency")).toBeInTheDocument();
 
-    // Chart renders
     expect(screen.getByTestId("area-chart")).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("group", { name: format(new Date(), "MMMM yyyy") }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("habit-heatmap")).toBeNull();
   });
 });

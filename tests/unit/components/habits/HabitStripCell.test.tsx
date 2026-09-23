@@ -16,6 +16,7 @@ function makeDay(overrides: Partial<RollingDay>): RollingDay {
     hasEntry: false,
     isToday: false,
     isBeforeStart: false,
+    isFuture: false,
     ...overrides,
   };
 }
@@ -297,5 +298,21 @@ describe("HabitStripCell", () => {
       expect(onClearValue).toHaveBeenCalledWith("2026-09-18");
       expect(onLogValue).not.toHaveBeenCalled();
     });
+  });
+
+  it("applies compact sm styling when size prop is sm", () => {
+    const { container } = render(
+      <HabitStripCell
+        day={makeDay({ value: 1, hasEntry: true })}
+        color="#3b82f6"
+        coarse={false}
+        onToggle={vi.fn()}
+        size="sm"
+      />,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper).toHaveClass("w-full");
+    const button = screen.getByRole("button");
+    expect(button).toHaveClass("h-8", "w-8", "aspect-square");
   });
 });
