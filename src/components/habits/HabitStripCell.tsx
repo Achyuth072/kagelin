@@ -5,16 +5,16 @@ import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getContrastingColor } from "@/lib/utils/color";
 import type { RollingDay } from "@/lib/utils/habit-rolling";
-import { dayValue, isLoggedEntry } from "@/lib/utils/habit-score";
+import { dayValue } from "@/lib/utils/habit-score";
+import { entryStateName } from "@/lib/utils/habit-entry-cycle";
+import { useEntryAnnouncement } from "@/lib/hooks/useEntryAnnouncement";
 import {
   ENTRY_VALUE_DONE,
   ENTRY_VALUE_NOT_DONE,
+  ENTRY_VALUE_SKIPPED,
   type Habit,
 } from "@/lib/types/habit";
-import {
-  HabitQuantityPopover,
-  quantityLoggedPhrase,
-} from "./HabitQuantityPopover";
+import { HabitQuantityPopover } from "./HabitQuantityPopover";
 
 interface HabitStripCellProps {
   day: RollingDay;
@@ -39,13 +39,19 @@ export function HabitStripCell({
 }: HabitStripCellProps) {
   const { date, weekdayLabel, value, hasEntry, isToday, isBeforeStart } = day;
   const isMeasurable = habit?.habit_type === "measurable";
-  const unit = habit?.unit;
-  const complete = !isMeasurable && hasEntry && value === ENTRY_VALUE_DONE;
-  const missed = !isMeasurable && hasEntry && value === ENTRY_VALUE_NOT_DONE;
-  const skipped = hasEntry && !isLoggedEntry(value);
-  const logged = isMeasurable && hasEntry && !skipped;
+  const stored = hasEntry ? value : null;
+  const skipped = stored === ENTRY_VALUE_SKIPPED;
+  const complete = !isMeasurable && stored === ENTRY_VALUE_DONE;
+  const missed = !isMeasurable && stored === ENTRY_VALUE_NOT_DONE;
+  const loggedValue =
+    isMeasurable && stored !== null && !skipped ? stored : null;
   const filled =
-    complete || (logged && habit != null && dayValue(value, habit) >= 1);
+    complete ||
+    (loggedValue !== null &&
+      habit != null &&
+      dayValue(loggedValue, habit) >= 1);
+  const stateText = entryStateName(stored, habit);
+  const { liveRegion, onActivate } = useEntryAnnouncement(stored, stateText);
 
   // Square aspect ratio ensures 7 days fit narrow viewports without scrolling.
   const cellSizing = coarse
@@ -70,16 +76,7 @@ export function HabitStripCell({
     );
   }
 
-  const status = complete
-    ? "completed"
-    : missed
-      ? "missed"
-      : skipped
-        ? "skipped"
-        : "not completed";
-  const cellLabel = isMeasurable
-    ? `${format(parseISO(date), "EEEE MMM d")}, ${quantityLoggedPhrase(logged ? value : null, unit, skipped)} — log amount`
-    : `${format(parseISO(date), "EEEE MMM d")}, ${status} — toggle`;
+  const cellLabel = `${format(parseISO(date), "EEEE MMM d")}, ${stateText}${isMeasurable ? " — log amount" : ""}`;
 
   const cellContent = (
     <span
@@ -110,12 +107,12 @@ export function HabitStripCell({
       )}
       {missed && <X className="h-3.5 w-3.5" strokeWidth={3} />}
       {skipped && <Pause className="h-3 w-3" strokeWidth={3} />}
-      {logged && (
+      {loggedValue !== null && (
         <span
           className="text-[11px] font-semibold tabular-nums"
           style={filled ? { color: getContrastingColor(color) } : undefined}
         >
-          {value}
+          {loggedValue}
         </span>
       )}
     </span>
@@ -126,16 +123,21 @@ export function HabitStripCell({
       <div className="flex min-w-0 flex-col items-center gap-1 lg:flex-none lg:gap-1.5">
         {weekdayHeader}
         <HabitQuantityPopover
-          loggedValue={logged ? value : null}
+          loggedValue={loggedValue}
           hasEntry={hasEntry}
-          unit={unit}
+          unit={habit?.unit}
+          targetValue={habit?.target_value}
           onLog={(amount) => onLogValue?.(date, amount)}
           onClear={() => onClearValue?.(date)}
         >
           <button
             type="button"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onActivate();
+            }}
             aria-label={cellLabel}
+            title={stateText}
             className={cn(
               "group flex items-center justify-center rounded-md transition-seijaku-fast",
               cellSizing,
@@ -144,6 +146,7 @@ export function HabitStripCell({
             {cellContent}
           </button>
         </HabitQuantityPopover>
+        {liveRegion}
       </div>
     );
   }
@@ -155,10 +158,11 @@ export function HabitStripCell({
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+          onActivate();
           onToggle(date);
         }}
-        aria-pressed={complete}
         aria-label={cellLabel}
+        title={stateText}
         className={cn(
           "group flex items-center justify-center rounded-md transition-seijaku-fast",
           cellSizing,
@@ -166,6 +170,7 @@ export function HabitStripCell({
       >
         {cellContent}
       </button>
+      {liveRegion}
     </div>
   );
 }

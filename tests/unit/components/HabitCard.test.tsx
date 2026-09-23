@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { HabitCard } from "@/components/habits/HabitCard";
-import type { HabitWithEntries } from "@/lib/types/habit";
+import { ENTRY_VALUE_SKIPPED, type HabitWithEntries } from "@/lib/types/habit";
 import * as useIsMobileModule from "@/lib/hooks/useIsMobile";
 import * as useHabitMutationsModule from "@/lib/hooks/useHabitMutations";
 
@@ -42,11 +42,9 @@ describe("HabitCard Scroll Initialization", () => {
   });
 
   it("should use scrollbar-hide on desktop for premium look", async () => {
-    // Given: A habit card on desktop
     vi.mocked(useIsMobileModule.useIsMobile).mockReturnValue(false);
     const { container } = render(<HabitCard habit={mockHabit} />);
 
-    // Then: Scroll container should have scrollbar-hide (JS handles interaction)
     const scrollContainer = container.querySelector(
       ".overflow-x-auto",
     ) as HTMLElement;
@@ -56,11 +54,9 @@ describe("HabitCard Scroll Initialization", () => {
   });
 
   it("should use scrollbar-hide on mobile for clean UI", async () => {
-    // Given: A habit card on mobile
     vi.mocked(useIsMobileModule.useIsMobile).mockReturnValue(true);
     const { container } = render(<HabitCard habit={mockHabit} />);
 
-    // Then: Scroll container should have scrollbar-hide
     const scrollContainer = container.querySelector(
       ".overflow-x-auto",
     ) as HTMLElement;
@@ -116,11 +112,48 @@ describe("HabitCard today button", () => {
 
   it("still toggles a Boolean Habit with the done value", () => {
     render(<HabitCard habit={base} />);
-    fireEvent.click(screen.getByRole("button", { name: "Mark complete" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /^Today, .*not logged$/ }),
+    );
     expect(mutate).toHaveBeenCalledWith({
       habitId: base.id,
       date: today,
       value: 1,
+    });
+  });
+
+  it("cycles a Boolean Habit's done today to skipped, then clears it", () => {
+    const { rerender } = render(
+      <HabitCard habit={{ ...base, entries: [entry(1)] }} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^Today, .*done$/ }));
+    expect(mutate).toHaveBeenLastCalledWith({
+      habitId: base.id,
+      date: today,
+      value: ENTRY_VALUE_SKIPPED,
+    });
+
+    rerender(
+      <HabitCard habit={{ ...base, entries: [entry(ENTRY_VALUE_SKIPPED)] }} />,
+    );
+    const button = screen.getByRole("button", { name: /^Today, .*skipped$/ });
+    expect(button.querySelector(".lucide-pause")).not.toBeNull();
+    fireEvent.click(button);
+    expect(mutate).toHaveBeenLastCalledWith({
+      habitId: base.id,
+      date: today,
+      value: null,
+    });
+  });
+
+  it("skips a Measurable Habit's today from the popover", () => {
+    render(<HabitCard habit={measurable} />);
+    fireEvent.click(screen.getByRole("button", { name: /log amount/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+    expect(mutate).toHaveBeenCalledWith({
+      habitId: base.id,
+      date: today,
+      value: ENTRY_VALUE_SKIPPED,
     });
   });
 

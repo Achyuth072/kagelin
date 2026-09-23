@@ -9,7 +9,7 @@ import {
 import "react-activity-calendar/tooltips.css";
 import { useTheme } from "next-themes";
 import { subMonths, format } from "date-fns";
-import type { Habit } from "@/lib/types/habit";
+import { ENTRY_VALUE_SKIPPED, type Habit } from "@/lib/types/habit";
 import { dayValue } from "@/lib/utils/habit-score";
 
 interface HabitHeatmapProps {
@@ -23,7 +23,7 @@ interface HabitHeatmapProps {
   habit?: Pick<Habit, "habit_type" | "target_type" | "target_value">;
 }
 
-function renderBlock(block: BlockElement, activity: Activity) {
+function renderBlock(block: BlockElement, activity: Activity, color: string) {
   if (activity.level !== 0) return block;
   return React.cloneElement(block, {
     // Inset so the stroke stays inside the SVG viewBox at the edges.
@@ -33,13 +33,15 @@ function renderBlock(block: BlockElement, activity: Activity) {
     height: (block.props.height as number) - 1,
     style: {
       ...block.props.style,
-      stroke: "hsl(var(--border) / 0.5)",
+      stroke:
+        activity.count === ENTRY_VALUE_SKIPPED
+          ? color
+          : "hsl(var(--border) / 0.5)",
       strokeWidth: 1,
     },
   });
 }
 
-/** GitHub-style habit activity heatmap, monochromatic on the habit color. */
 export function HabitHeatmap({
   entries,
   color,
@@ -54,8 +56,7 @@ export function HabitHeatmap({
   const today = new Date().toISOString().split("T")[0];
   const dataMap = new Map(entries.map((e) => [e.date, e.value]));
 
-  // Calendar only fills gaps *between* first/last date — pin the edges so new
-  // habits get a full 12-month-wide grid instead of a stub a few days wide.
+  // The calendar spans only first→last date; pin both edges so a new habit still gets a full year.
   const ensureDay = (date: string) => {
     if (!dataMap.has(date)) dataMap.set(date, 0);
   };
@@ -69,7 +70,7 @@ export function HabitHeatmap({
       return {
         date,
         count: value,
-        // Floored: any progress > 0 gets at least the lightest shade, only progress >= 1 gets the darkest.
+        // Any progress gets at least the lightest shade; only a met target gets the darkest.
         level: progress <= 0 ? 0 : Math.max(1, Math.floor(progress * 4)),
       };
     })
@@ -91,7 +92,7 @@ export function HabitHeatmap({
         blockMargin={blockMargin}
         blockRadius={2}
         fontSize={12}
-        renderBlock={renderBlock}
+        renderBlock={(block, activity) => renderBlock(block, activity, color)}
         showColorLegend={false}
         showMonthLabels={false}
         showTotalCount={false}
