@@ -13,6 +13,9 @@ import {
 } from "@/lib/export/uhabitsShared";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { PROJECT_COLORS } from "@/lib/constants/colors";
+import { parseUhabitsFile } from "@/lib/import/uhabits";
+import { ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
+import { entry, makeHabit } from "../../support/habitFixtures";
 import {
   hasRealLoopBackup,
   readRealLoopBackup,
@@ -330,6 +333,24 @@ describe("exportToUhabitsDb - SQLite database construction", () => {
     expect(repMiss).toBeDefined();
 
     db.close();
+  });
+
+  it("round-trips a skip written by the UI on a habit created in Kagelin", async () => {
+    const binary = await exportToUhabitsDb({
+      habits: [makeHabit()],
+      entries: [entry("2024-01-06", ENTRY_VALUE_SKIPPED)],
+      wasmPath: "public/sql-wasm.wasm",
+    });
+
+    const { entries } = await parseUhabitsFile(
+      toBlob(binary),
+      "public/sql-wasm.wasm",
+    );
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      date: "2024-01-06",
+      value: ENTRY_VALUE_SKIPPED,
+    });
   });
 
   it("merges habits with source_uuid with raw provenance from habit_imports (preserving frequencies, UUIDs, reminders)", async () => {

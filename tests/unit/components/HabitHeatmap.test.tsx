@@ -26,7 +26,6 @@ describe("HabitHeatmap Scroll Behavior", () => {
   });
 
   it("should render with fit-content width to ensure correct overflow behavior", () => {
-    // Given: A heatmap
     const { container } = render(
       <HabitHeatmap
         entries={mockEntries}
@@ -35,10 +34,8 @@ describe("HabitHeatmap Scroll Behavior", () => {
       />,
     );
 
-    // When: The component renders
     const wrapper = container.firstChild as HTMLElement;
 
-    // Then: It should use fit-content to let SVG drive width
     expect(wrapper).toBeTruthy();
     expect(wrapper.style.width).toBe("fit-content");
   });
@@ -57,6 +54,26 @@ describe("HabitHeatmap Scroll Behavior", () => {
 
     const block = container.querySelector(`rect[data-date="${skipped.date}"]`);
     expect(block?.getAttribute("data-level")).toBe("0");
+  });
+
+  it("outlines a skipped day in the habit color, unlike an empty day", () => {
+    const skipped = mockEntries[300];
+    skipped.value = ENTRY_VALUE_SKIPPED;
+    const empty = mockEntries.splice(301, 1)[0];
+
+    const { container } = render(
+      <HabitHeatmap
+        entries={mockEntries}
+        color={color}
+        startDate={startDate}
+      />,
+    );
+
+    const strokeOf = (date: string) =>
+      (container.querySelector(`rect[data-date="${date}"]`) as SVGElement).style
+        .stroke;
+    expect(strokeOf(skipped.date)).not.toBe(strokeOf(empty.date));
+    expect(strokeOf(skipped.date)).toMatch(/#3b82f6|rgb\(59, 130, 246\)/);
   });
 });
 

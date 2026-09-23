@@ -1,7 +1,7 @@
-import { render } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { HabitCompactRow } from "@/components/habits/HabitCompactRow";
-import type { HabitWithEntries } from "@/lib/types/habit";
+import { ENTRY_VALUE_SKIPPED, type HabitWithEntries } from "@/lib/types/habit";
 import * as useHabitMutationsModule from "@/lib/hooks/useHabitMutations";
 import * as useCoarsePointerModule from "@/lib/hooks/useCoarsePointer";
 
@@ -11,10 +11,12 @@ vi.mock("@/lib/hooks/useCoarsePointer");
 describe("HabitCompactRow rolling-7 strip", () => {
   let mockHabit: HabitWithEntries;
   let yesterdayStr: string;
+  const mutate = vi.fn();
 
   beforeEach(() => {
+    mutate.mockReset();
     vi.mocked(useHabitMutationsModule.useMarkHabitComplete).mockReturnValue({
-      mutate: vi.fn(),
+      mutate,
       mutateAsync: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<
@@ -61,8 +63,7 @@ describe("HabitCompactRow rolling-7 strip", () => {
 
   it("renders days before start_date as inert (no toggle button)", () => {
     const { container } = render(<HabitCompactRow habit={mockHabit} />);
-    // start_date is yesterday → only yesterday + today are active buttons; the
-    // five earlier days render as inert transparent placeholders.
+    // start_date is yesterday: 2 active cells, 5 inert placeholders.
     expect(container.querySelectorAll("button")).toHaveLength(2);
     expect(container.querySelectorAll(".bg-transparent")).toHaveLength(5);
   });
@@ -77,8 +78,41 @@ describe("HabitCompactRow rolling-7 strip", () => {
   it("treats a null start_date as no before-start cutoff", () => {
     mockHabit.start_date = null;
     const { container } = render(<HabitCompactRow habit={mockHabit} />);
-    // No inert placeholders — every one of the 7 days is an active button.
     expect(container.querySelectorAll("button")).toHaveLength(7);
     expect(container.querySelectorAll(".bg-transparent")).toHaveLength(0);
+  });
+
+  it("cycles a done day to skipped", () => {
+    render(<HabitCompactRow habit={mockHabit} />);
+    fireEvent.click(screen.getByRole("button", { name: /, done$/ }));
+    expect(mutate).toHaveBeenCalledWith({
+      habitId: mockHabit.id,
+      date: yesterdayStr,
+      value: ENTRY_VALUE_SKIPPED,
+    });
+  });
+
+  it("returns an imported not-done day to not done on the third tap, across remounts", () => {
+    const withValue = (value: number): HabitWithEntries => ({
+      ...mockHabit,
+      id: "habit-imported",
+      entries: [{ ...mockHabit.entries[0], value }],
+    });
+    // start_date is yesterday, so the strip's first active cell is yesterday.
+    const tapYesterdayOn = (value: number) => {
+      const { unmount } = render(<HabitCompactRow habit={withValue(value)} />);
+      fireEvent.click(screen.getAllByRole("button")[0]);
+      unmount();
+    };
+
+    tapYesterdayOn(0);
+    tapYesterdayOn(1);
+    tapYesterdayOn(ENTRY_VALUE_SKIPPED);
+
+    expect(mutate.mock.calls.map(([args]) => args.value)).toEqual([
+      1,
+      ENTRY_VALUE_SKIPPED,
+      0,
+    ]);
   });
 });

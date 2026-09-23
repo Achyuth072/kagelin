@@ -7,23 +7,13 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-
-/** Shared between HabitCard and HabitStripCell trigger labels. */
-export function quantityLoggedPhrase(
-  loggedValue: number | null,
-  unit?: string | null,
-  skipped?: boolean,
-): string {
-  if (loggedValue != null) {
-    return `${loggedValue}${unit ? ` ${unit}` : ""} logged`;
-  }
-  return skipped ? "skipped" : "not logged";
-}
+import { ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
 
 interface HabitQuantityPopoverProps {
   loggedValue: number | null;
   hasEntry: boolean;
   unit?: string | null;
+  targetValue?: number | null;
   onLog: (value: number) => void;
   onClear: () => void;
   children: ReactNode;
@@ -33,6 +23,7 @@ export function HabitQuantityPopover({
   loggedValue,
   hasEntry,
   unit,
+  targetValue,
   onLog,
   onClear,
   children,
@@ -42,7 +33,9 @@ export function HabitQuantityPopover({
   const { trigger } = useHaptic();
 
   return (
+    // Modal so an outside tap only dismisses, never activating what's underneath.
     <Popover
+      modal
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
@@ -50,7 +43,10 @@ export function HabitQuantityPopover({
       }}
     >
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent className="w-48 p-3" onClick={(e) => e.stopPropagation()}>
+      <PopoverContent
+        className="flex w-52 flex-col gap-2 p-3"
+        onClick={(e) => e.stopPropagation()}
+      >
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -88,6 +84,30 @@ export function HabitQuantityPopover({
             Log
           </button>
         </form>
+        <div className="flex items-center gap-2">
+          {targetValue != null && (
+            // Fills the draft only; doesn't submit.
+            <button
+              type="button"
+              onClick={() => setDraft(String(targetValue))}
+              className="h-7 px-2 rounded-md border border-border/60 text-[12px] font-medium tabular-nums text-foreground transition-seijaku-fast hover:bg-secondary"
+            >
+              {targetValue}
+              {unit ? ` ${unit}` : ""}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              onLog(ENTRY_VALUE_SKIPPED);
+              trigger("success");
+              setOpen(false);
+            }}
+            className="ml-auto h-7 px-2 rounded-md text-[12px] font-medium text-muted-foreground transition-seijaku-fast hover:bg-secondary hover:text-foreground"
+          >
+            Skip
+          </button>
+        </div>
       </PopoverContent>
     </Popover>
   );

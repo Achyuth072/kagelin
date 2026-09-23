@@ -3,6 +3,8 @@ import * as Sentry from "@sentry/nextjs";
 import type { Task, Project } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import {
+  ENTRY_VALUE_DONE,
+  ENTRY_VALUE_SKIPPED,
   REMINDER_EVERY_DAY,
   type Habit,
   type HabitEntry,
@@ -541,23 +543,25 @@ class MockStore {
       },
     );
 
-    // Marked often enough to clear each habit's frequency_count (ADR-0004
-    // streaks read those fields), but patchy day to day.
+    // Frequent enough to build real streaks, but patchy day to day.
     const habitPatterns: {
       habitId: string;
       weekday: number;
       weekend: number;
       value?: () => number;
+      /** Chance an unmarked day is a rest day. */
+      skip?: number;
     }[] = [
       {
         habitId: hWater,
         weekday: 0.9,
         weekend: 0.8,
         value: () => 4 + Math.floor(rng() * 7),
+        skip: 0.1,
       },
-      { habitId: hExercise, weekday: 0.85, weekend: 0.45 },
-      { habitId: hRead, weekday: 0.6, weekend: 0.7 },
-      { habitId: hSketch, weekday: 0.4, weekend: 0.6 },
+      { habitId: hExercise, weekday: 0.85, weekend: 0.45, skip: 0.3 },
+      { habitId: hRead, weekday: 0.6, weekend: 0.7, skip: 0.15 },
+      { habitId: hSketch, weekday: 0.4, weekend: 0.6, skip: 0.1 },
       { habitId: hSideCode, weekday: 0.4, weekend: 0.65 },
       { habitId: hLogOff, weekday: 0.85, weekend: 0 },
     ];
@@ -568,13 +572,20 @@ class MockStore {
 
       for (const pattern of habitPatterns) {
         const probability = isWeekend(date) ? pattern.weekend : pattern.weekday;
-        if (rng() >= probability) continue;
+        let value: number;
+        if (rng() < probability) {
+          value = pattern.value ? pattern.value() : ENTRY_VALUE_DONE;
+        } else if (pattern.skip && rng() < pattern.skip) {
+          value = ENTRY_VALUE_SKIPPED;
+        } else {
+          continue;
+        }
 
         entries.push({
           id: `entry-${generateId()}`,
           habit_id: pattern.habitId,
           date: dateStr,
-          value: pattern.value ? pattern.value() : 1,
+          value,
           created_at: nowIso,
         });
       }
