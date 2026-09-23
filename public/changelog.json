@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.44.2-preview.2",
+    "date": "2026-09-23",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Any past day is reachable and editable from habit insights"
+      ]
+    }
+  },
+  {
     "version": "1.44.2-preview.1",
     "date": "2026-09-23",
     "channel": "preview",
@@ -718,19 +728,6 @@
       "Fixed": [
         "Update task views, shortcuts and cloud data details in README",
         "Enhance shortcut interface"
-      ]
-    }
-  },
-  {
-    "version": "1.30.0-preview.2",
-    "date": "2026-08-10",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Remove unused DragHandle from board view and update tests",
-        "Bring OfflineIndicator typography and motion",
-        "Reposition OfflineIndicator to a top strip on mobile, centred pill on desktop",
-        "Cache app shell offline instead of expiring after 24h"
       ]
     }
   }
