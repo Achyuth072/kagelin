@@ -91,46 +91,11 @@ export function useHabits(options: UseHabitsOptions = {}) {
   });
 }
 
+// Uses list query so optimistic entry updates reflect without cache divergence.
 export function useHabit(habitId: string | null) {
-  const { isGuestMode } = useAuth();
-
-  return useQuery({
-    queryKey: ["habit", habitId, isGuestMode],
-    staleTime: 60000,
-    queryFn: async (): Promise<HabitWithEntries | null> => {
-      if (!habitId) return null;
-
-      if (isGuestMode) {
-        const habits = mockStore.getHabits();
-        const habit = habits.find((h) => h.id === habitId);
-        if (!habit) return null;
-
-        const entries = mockStore.getHabitEntries(habitId);
-        return {
-          ...habit,
-          entries,
-        };
-      }
-
-      const supabase = createClient();
-      const { data: habit, error: habitError } = await supabase
-        .from("habits")
-        .select("*")
-        .eq("id", habitId)
-        .single();
-
-      if (habitError) {
-        throw new Error(habitError.message);
-      }
-
-      const entries = await fetchAllHabitEntries(supabase, [habitId]);
-
-      return {
-        ...(habit as Habit),
-        entries,
-      };
-    },
-    enabled: !!habitId,
-    placeholderData: (previousData) => previousData,
-  });
+  const { data, isLoading } = useHabits();
+  return {
+    data: data?.find((h) => h.id === habitId) ?? null,
+    isLoading,
+  };
 }

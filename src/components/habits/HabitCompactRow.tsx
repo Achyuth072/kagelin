@@ -7,7 +7,7 @@ import type {
   DraggableAttributes,
   DraggableSyntheticListeners,
 } from "@dnd-kit/core";
-import { useMarkHabitComplete } from "@/lib/hooks/useHabitMutations";
+import { useHabitCellActions } from "@/lib/hooks/useHabitCellActions";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { getRolling7Days } from "@/lib/utils/habit-rolling";
@@ -17,7 +17,6 @@ import {
   hasFrequencyTarget,
 } from "@/lib/utils/habit-frequency-progress";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
-import { cycleEntry } from "@/lib/utils/habit-entry-session";
 import { DragHandle } from "@/components/tasks/DragHandle";
 import { HabitStripCell } from "./HabitStripCell";
 import { CircularProgress } from "@/components/ui/circular-progress";
@@ -44,7 +43,7 @@ export function HabitCompactRow({
   dragAttributes,
   dragActivatorRef,
 }: HabitCompactRowProps) {
-  const markComplete = useMarkHabitComplete();
+  const { onToggle, onLogValue, onClearValue } = useHabitCellActions(habit);
   const coarse = useCoarsePointer();
 
   // Fixed for row lifetime; date rollover updates on parent list re-render.
@@ -67,23 +66,6 @@ export function HabitCompactRow({
         : null,
     [habit, showFrequencyRing, today],
   );
-
-  const handleToggle = (date: string) => {
-    const current = habit.entries.find((e) => e.date === date)?.value ?? null;
-    markComplete.mutate({
-      habitId: habit.id,
-      date,
-      value: cycleEntry(habit.id, date, current),
-    });
-  };
-
-  const handleLogValue = (date: string, value: number) => {
-    markComplete.mutate({ habitId: habit.id, date, value });
-  };
-
-  const handleClearValue = (date: string) => {
-    markComplete.mutate({ habitId: habit.id, date, value: null });
-  };
 
   return (
     <div
@@ -151,10 +133,10 @@ export function HabitCompactRow({
             day={day}
             color={habit.color}
             coarse={coarse}
-            onToggle={handleToggle}
+            onToggle={onToggle}
             habit={habit}
-            onLogValue={handleLogValue}
-            onClearValue={handleClearValue}
+            onLogValue={onLogValue}
+            onClearValue={onClearValue}
           />
         ))}
       </div>

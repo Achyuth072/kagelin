@@ -26,6 +26,9 @@ interface HabitStripCellProps {
   /** Required for measurable habits. */
   onLogValue?: (date: string, value: number) => void;
   onClearValue?: (date: string) => void;
+  header?: string;
+  size?: "sm" | "default";
+  fluid?: boolean;
 }
 
 export function HabitStripCell({
@@ -36,8 +39,12 @@ export function HabitStripCell({
   habit,
   onLogValue,
   onClearValue,
+  header = day.weekdayLabel,
+  size = "default",
+  fluid = false,
 }: HabitStripCellProps) {
-  const { date, weekdayLabel, value, hasEntry, isToday, isBeforeStart } = day;
+  const { date, value, hasEntry, isToday, isBeforeStart, isFuture } = day;
+  const inert = isBeforeStart || isFuture;
   const isMeasurable = habit?.habit_type === "measurable";
   const stored = hasEntry ? value : null;
   const skipped = stored === ENTRY_VALUE_SKIPPED;
@@ -53,21 +60,39 @@ export function HabitStripCell({
   const stateText = entryStateName(stored, habit);
   const { liveRegion, onActivate } = useEntryAnnouncement(stored, stateText);
 
-  // Square aspect ratio ensures 7 days fit narrow viewports without scrolling.
-  const cellSizing = coarse
-    ? "aspect-square w-full max-w-11 lg:aspect-auto lg:h-11 lg:w-11 lg:max-w-none"
+  const isCompact = size === "sm" || fluid;
+
+  // Invisible pseudo-element expands touch target to >=44px on coarse pointers.
+  const cellSizing = isCompact
+    ? "aspect-square h-8 w-8 sm:h-auto sm:w-full"
     : "aspect-square w-full max-w-9 lg:aspect-auto lg:h-9 lg:w-9 lg:max-w-none";
 
-  const weekdayHeader = (
-    <span className="text-[10px] font-bold uppercase tracking-wider leading-none text-muted-foreground">
-      {weekdayLabel}
+  const touchTargetClass = coarse
+    ? isCompact
+      ? "before:absolute before:-inset-1.5 before:content-['']"
+      : "before:absolute before:-inset-1 before:content-['']"
+    : "";
+
+  const wrapperClass = cn(
+    "flex min-w-0 flex-col items-center gap-1",
+    isCompact ? "w-full" : "lg:flex-none lg:gap-1.5",
+  );
+
+  const headerLabel = (
+    <span
+      className={cn(
+        "text-[10px] sm:text-[11px] font-bold uppercase tracking-wider leading-none text-muted-foreground",
+        inert && "opacity-40",
+      )}
+    >
+      {header}
     </span>
   );
 
-  if (isBeforeStart) {
+  if (inert) {
     return (
-      <div className="flex min-w-0 flex-col items-center gap-1 lg:flex-none lg:gap-1.5">
-        {weekdayHeader}
+      <div className={wrapperClass}>
+        {headerLabel}
         <div
           aria-hidden
           className={cn("rounded-md bg-transparent", cellSizing)}
@@ -100,16 +125,31 @@ export function HabitStripCell({
     >
       {complete && (
         <Check
-          className="h-4 w-4"
+          className={cn(isCompact ? "h-3.5 w-3.5 sm:h-4 sm:w-4" : "h-4 w-4")}
           strokeWidth={3}
           style={{ color: getContrastingColor(color) }}
         />
       )}
-      {missed && <X className="h-3.5 w-3.5" strokeWidth={3} />}
-      {skipped && <Pause className="h-3 w-3" strokeWidth={3} />}
+      {missed && (
+        <X
+          className={cn(
+            isCompact ? "h-3 w-3 sm:h-3.5 sm:w-3.5" : "h-3.5 w-3.5",
+          )}
+          strokeWidth={3}
+        />
+      )}
+      {skipped && (
+        <Pause
+          className={cn(isCompact ? "h-2.5 w-2.5 sm:h-3 sm:w-3" : "h-3 w-3")}
+          strokeWidth={3}
+        />
+      )}
       {loggedValue !== null && (
         <span
-          className="text-[11px] font-semibold tabular-nums"
+          className={cn(
+            isCompact ? "text-[10px] sm:text-xs" : "text-[11px]",
+            "font-semibold tabular-nums leading-none",
+          )}
           style={filled ? { color: getContrastingColor(color) } : undefined}
         >
           {loggedValue}
@@ -120,8 +160,8 @@ export function HabitStripCell({
 
   if (isMeasurable) {
     return (
-      <div className="flex min-w-0 flex-col items-center gap-1 lg:flex-none lg:gap-1.5">
-        {weekdayHeader}
+      <div className={wrapperClass}>
+        {headerLabel}
         <HabitQuantityPopover
           loggedValue={loggedValue}
           hasEntry={hasEntry}
@@ -139,7 +179,8 @@ export function HabitStripCell({
             aria-label={cellLabel}
             title={stateText}
             className={cn(
-              "group flex items-center justify-center rounded-md transition-seijaku-fast",
+              "group relative flex items-center justify-center rounded-md transition-seijaku-fast",
+              touchTargetClass,
               cellSizing,
             )}
           >
@@ -152,8 +193,8 @@ export function HabitStripCell({
   }
 
   return (
-    <div className="flex min-w-0 flex-col items-center gap-1 lg:flex-none lg:gap-1.5">
-      {weekdayHeader}
+    <div className={wrapperClass}>
+      {headerLabel}
       <button
         type="button"
         onClick={(e) => {
@@ -164,7 +205,8 @@ export function HabitStripCell({
         aria-label={cellLabel}
         title={stateText}
         className={cn(
-          "group flex items-center justify-center rounded-md transition-seijaku-fast",
+          "group relative flex items-center justify-center rounded-md transition-seijaku-fast",
+          touchTargetClass,
           cellSizing,
         )}
       >

@@ -64,6 +64,11 @@ describe("HabitCard Scroll Initialization", () => {
     expect(scrollContainer.className).toContain("scrollbar-hide");
     expect(scrollContainer.className).not.toContain("custom-scrollbar");
   });
+
+  it("keeps the year heatmap as its read-only glance", () => {
+    const { container } = render(<HabitCard habit={mockHabit} />);
+    expect(container.querySelector("rect[data-date]")).toBeTruthy();
+  });
 });
 
 describe("HabitCard today button", () => {
