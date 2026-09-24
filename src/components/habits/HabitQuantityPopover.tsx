@@ -10,8 +10,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
 
 interface HabitQuantityPopoverProps {
-  loggedValue: number | null;
-  hasEntry: boolean;
+  stored: number | null;
   unit?: string | null;
   targetValue?: number | null;
   onLog: (value: number) => void;
@@ -20,8 +19,7 @@ interface HabitQuantityPopoverProps {
 }
 
 export function HabitQuantityPopover({
-  loggedValue,
-  hasEntry,
+  stored,
   unit,
   targetValue,
   onLog,
@@ -31,6 +29,9 @@ export function HabitQuantityPopover({
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const { trigger } = useHaptic();
+  const hasEntry = stored !== null;
+  const loggedValue =
+    stored !== null && stored !== ENTRY_VALUE_SKIPPED ? stored : null;
 
   return (
     // Modal so an outside tap only dismisses, never activating what's underneath.

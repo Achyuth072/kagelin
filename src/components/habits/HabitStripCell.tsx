@@ -28,7 +28,6 @@ interface HabitStripCellProps {
   onClearValue?: (date: string) => void;
   header?: string;
   size?: "sm" | "default";
-  fluid?: boolean;
 }
 
 export function HabitStripCell({
@@ -41,7 +40,6 @@ export function HabitStripCell({
   onClearValue,
   header = day.weekdayLabel,
   size = "default",
-  fluid = false,
 }: HabitStripCellProps) {
   const { date, value, hasEntry, isToday, isBeforeStart, isFuture } = day;
   const inert = isBeforeStart || isFuture;
@@ -60,7 +58,7 @@ export function HabitStripCell({
   const stateText = entryStateName(stored, habit);
   const { liveRegion, onActivate } = useEntryAnnouncement(stored, stateText);
 
-  const isCompact = size === "sm" || fluid;
+  const isCompact = size === "sm";
 
   // Invisible pseudo-element expands touch target to >=44px on coarse pointers.
   const cellSizing = isCompact
@@ -163,8 +161,7 @@ export function HabitStripCell({
       <div className={wrapperClass}>
         {headerLabel}
         <HabitQuantityPopover
-          loggedValue={loggedValue}
-          hasEntry={hasEntry}
+          stored={stored}
           unit={habit?.unit}
           targetValue={habit?.target_value}
           onLog={(amount) => onLogValue?.(date, amount)}

@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { HabitHeatmap } from "./HabitHeatmap";
 import { HabitQuantityPopover } from "./HabitQuantityPopover";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
-import { useMarkHabitComplete } from "@/lib/hooks/useHabitMutations";
+import { useHabitCellActions } from "@/lib/hooks/useHabitCellActions";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
 import { BarChart2, Check, Pause, Plus, LucideIcon } from "lucide-react";
 import { format } from "date-fns";
@@ -16,7 +16,6 @@ import { dayValue } from "@/lib/utils/habit-score";
 import { ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
 import { entryStateName } from "@/lib/utils/habit-entry-cycle";
 import { useEntryAnnouncement } from "@/lib/hooks/useEntryAnnouncement";
-import { cycleEntry } from "@/lib/utils/habit-entry-session";
 import {
   getFrequencyProgress,
   frequencyProgressLabel,
@@ -40,7 +39,11 @@ export function HabitCard({
   onViewInsights,
 }: HabitCardProps) {
   const isMobile = useIsMobile();
-  const markComplete = useMarkHabitComplete();
+  const {
+    onToggle: toggleDate,
+    onLogValue,
+    onClearValue,
+  } = useHabitCellActions(habit);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const horizontalScrollRef = useHorizontalScroll();
   const hasAutoScrolled = useRef(false);
@@ -87,8 +90,6 @@ export function HabitCard({
     todayStored,
     todayStateText,
   );
-  const setToday = (value: number | null) =>
-    markComplete.mutate({ habitId: habit.id, date: today, value });
 
   const totalCompletions = habit.entries.filter(
     (e) => dayValue(e.value, habit) >= 1,
@@ -108,7 +109,7 @@ export function HabitCard({
       return;
     }
 
-    setToday(cycleEntry(habit.id, today, todayStored));
+    toggleDate(today);
   };
 
   // before:-inset-1 widens the 36px button to a 44px tap target.
@@ -182,14 +183,11 @@ export function HabitCard({
               )}
               {isMeasurable ? (
                 <HabitQuantityPopover
-                  loggedValue={
-                    todayStored !== null && !isSkippedToday ? todayStored : null
-                  }
-                  hasEntry={todayStored !== null}
+                  stored={todayStored}
                   unit={habit.unit}
                   targetValue={habit.target_value}
-                  onLog={setToday}
-                  onClear={() => setToday(null)}
+                  onLog={(value) => onLogValue(today, value)}
+                  onClear={() => onClearValue(today)}
                 >
                   {renderTodayButton((e) => {
                     e.stopPropagation();
