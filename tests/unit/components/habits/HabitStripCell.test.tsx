@@ -210,7 +210,7 @@ describe("HabitStripCell", () => {
       );
     });
 
-    it("fills the field with exactly the target from the chip, logging only on submit", () => {
+    it("logs exactly the target in one tap from the chip", () => {
       const onLogValue = vi.fn();
       render(
         <HabitStripCell
@@ -224,10 +224,6 @@ describe("HabitStripCell", () => {
       );
       fireEvent.click(screen.getByRole("button"));
       fireEvent.click(screen.getByRole("button", { name: "10 pages" }));
-      expect(screen.getByLabelText("Log amount")).toHaveValue(10);
-      expect(onLogValue).not.toHaveBeenCalled();
-
-      fireEvent.click(screen.getByText("Log"));
       expect(onLogValue).toHaveBeenCalledWith("2026-09-18", 10);
     });
 

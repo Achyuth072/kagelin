@@ -147,7 +147,6 @@ export function HabitCard({
       className="bg-card border border-border dark:border-border/40 p-4 sm:p-5 rounded-xl overflow-hidden shadow-none transition-seijaku-fast hover:border-border/60 hover:shadow-sm cursor-pointer active:scale-[0.995] min-w-0"
     >
       <div className="flex flex-col gap-4">
-        {/* Two rows so the name isn't squeezed by the actions. */}
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">

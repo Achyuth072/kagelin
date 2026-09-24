@@ -19,7 +19,6 @@ import { HabitQuantityPopover } from "./HabitQuantityPopover";
 interface HabitStripCellProps {
   day: RollingDay;
   color: string;
-  /** Coarse pointer requires ≥44×44 touch targets. */
   coarse: boolean;
   onToggle: (date: string) => void;
   habit?: Pick<Habit, "habit_type" | "target_type" | "target_value" | "unit">;

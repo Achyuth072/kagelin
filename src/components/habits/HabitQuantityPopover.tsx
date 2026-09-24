@@ -87,10 +87,13 @@ export function HabitQuantityPopover({
         </form>
         <div className="flex items-center gap-2">
           {targetValue != null && (
-            // Fills the draft only; doesn't submit.
             <button
               type="button"
-              onClick={() => setDraft(String(targetValue))}
+              onClick={() => {
+                onLog(targetValue);
+                trigger("success");
+                setOpen(false);
+              }}
               className="h-7 px-2 rounded-md border border-border/60 text-[12px] font-medium tabular-nums text-foreground transition-seijaku-fast hover:bg-secondary"
             >
               {targetValue}

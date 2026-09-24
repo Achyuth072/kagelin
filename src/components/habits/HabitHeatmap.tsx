@@ -57,8 +57,11 @@ export function HabitHeatmap({
   const dataMap = new Map(entries.map((e) => [e.date, e.value]));
 
   // The calendar spans only first→last date; pin both edges so a new habit still gets a full year.
+  const paddedDays = new Set<string>();
   const ensureDay = (date: string) => {
-    if (!dataMap.has(date)) dataMap.set(date, 0);
+    if (dataMap.has(date)) return;
+    dataMap.set(date, 0);
+    paddedDays.add(date);
   };
   if (startDate) ensureDay(startDate);
   ensureDay(today);
@@ -66,7 +69,8 @@ export function HabitHeatmap({
 
   const calendarData = Array.from(dataMap.entries())
     .map(([date, value]) => {
-      const progress = dayValue(value, habit);
+      // A padded day has no entry; scoring its 0 would read as "met" for an at_most habit.
+      const progress = paddedDays.has(date) ? 0 : dayValue(value, habit);
       return {
         date,
         count: value,
@@ -82,7 +86,6 @@ export function HabitHeatmap({
   };
 
   return (
-    // fit-content: natural blockSize, no stretching; callers scroll it into view.
     <div className={className} style={{ width: "fit-content" }}>
       <ActivityCalendar
         data={calendarData}

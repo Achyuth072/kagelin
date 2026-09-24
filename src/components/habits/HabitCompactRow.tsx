@@ -26,7 +26,6 @@ interface HabitCompactRowProps {
   icon?: LucideIcon;
   onEdit?: () => void;
   onViewInsights?: () => void;
-  // Desktop uses left handle; mobile attaches drag listeners to whole row.
   isDesktop?: boolean;
   dragListeners?: DraggableSyntheticListeners;
   dragAttributes?: DraggableAttributes;

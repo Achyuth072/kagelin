@@ -87,7 +87,6 @@ export function computeScores(
     const raw = entryMap.get(key) ?? 0;
     let score: number;
     if (raw === ENTRY_VALUE_SKIPPED) {
-      // Skipped entry: freeze decay (S_k = S_{k-1})
       score = prevScore;
     } else {
       const val = dayValue(raw, habit);

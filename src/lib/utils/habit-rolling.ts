@@ -18,7 +18,6 @@ export interface RollingDay {
   isFuture: boolean;
 }
 
-// Cache date lookup map per entries array across month views.
 const valueMaps = new WeakMap<HabitEntry[], Map<string, number>>();
 function valuesByDate(entries: HabitEntry[]): Map<string, number> {
   let map = valueMaps.get(entries);

@@ -74,7 +74,6 @@ export function HabitInsightsPanel({
     }
   };
 
-  // Same gate as HabitCard: Boolean-only, non-trivial target.
   const showFrequencyRing =
     habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
   const frequencyProgress = showFrequencyRing
