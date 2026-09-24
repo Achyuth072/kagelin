@@ -6,7 +6,7 @@ import {
   stripDemoData,
   createSeededRandom,
 } from "@/lib/mock/mock-store";
-import type { HabitEntry } from "@/lib/types/habit";
+import { ENTRY_VALUE_SKIPPED, type HabitEntry } from "@/lib/types/habit";
 
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
@@ -129,6 +129,19 @@ describe("MockStore (Guest Mode Data)", () => {
     expect(stored.seed_ids).toEqual(
       expect.arrayContaining([seedHabitId, seedTaskId]),
     );
+  });
+
+  it("seeds skipped days across several demo habits", () => {
+    seededReset();
+
+    const habitsWithSkips = mockStore
+      .getHabits()
+      .filter((h) =>
+        mockStore
+          .getHabitEntries(h.id)
+          .some((e) => e.value === ENTRY_VALUE_SKIPPED),
+      );
+    expect(habitsWithSkips.length).toBeGreaterThanOrEqual(3);
   });
 
   it("marks seeded projects and events as demo items too", () => {
@@ -303,7 +316,7 @@ describe("MockStore (Guest Mode Data)", () => {
 
     const entries = mockStore.getHabitEntries(habit.id);
     expect(entries).toHaveLength(3);
-    expect(entries.some((e) => e.value === -2)).toBe(true);
+    expect(entries.some((e) => e.value === ENTRY_VALUE_SKIPPED)).toBe(true);
 
     const streak = getCurrentStreak(
       habit,
@@ -453,9 +466,7 @@ describe("stripDemoData", () => {
   });
 });
 
-// A Loop Habit Tracker import writes thousands of entries at once. Saving on
-// every entry is quadratic, and a swallowed quota error loses data silently
-// while the UI reports success.
+// Loop imports write thousands of entries: per-entry saves are quadratic, and a swallowed quota error loses data.
 describe("MockStore bulk habit entry writes", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -468,7 +479,7 @@ describe("MockStore bulk habit entry writes", () => {
 
   it("persists a bulk insert with a single write", () => {
     const setItem = vi.spyOn(localStorage, "setItem");
-    setItem.mockClear(); // discard the write from clearData() in beforeEach
+    setItem.mockClear();
     mockStore.addHabitEntries(makeEntries(2033));
 
     expect(setItem).toHaveBeenCalledTimes(1);
@@ -492,8 +503,7 @@ describe("MockStore bulk habit entry writes", () => {
     );
   });
 
-  // Guest writes reach storage from ~30 call sites; only the uhabits import
-  // reports failures itself. Reporting here covers the rest.
+  // Only the uhabits import reports its own failures; this covers the other ~30 guest write sites.
   it("reports a failed write to Sentry", () => {
     vi.mocked(Sentry.captureException).mockClear();
     vi.spyOn(localStorage, "setItem").mockImplementationOnce(() => {

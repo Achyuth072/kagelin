@@ -9,7 +9,7 @@ import { InsightSection } from "@/components/ui/InsightSection";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { HabitOverviewCards } from "@/components/habits/insights/HabitOverviewCards";
 import { HabitScoreChart } from "@/components/habits/insights/HabitScoreChart";
-import { HabitHeatmap } from "@/components/habits/HabitHeatmap";
+import { HabitMonthGrid } from "@/components/habits/insights/HabitMonthGrid";
 import { HabitBestStreaksCard } from "@/components/habits/insights/HabitBestStreaksCard";
 import { HabitFrequencyGrid } from "@/components/habits/insights/HabitFrequencyGrid";
 import { useHabit } from "@/lib/hooks/useHabits";
@@ -24,7 +24,7 @@ import {
   habitHistoryToCsv,
   triggerDownload,
 } from "@/lib/utils/stats-export";
-import type { Habit } from "@/lib/types/habit";
+import type { Habit, HabitWithEntries } from "@/lib/types/habit";
 
 interface HabitInsightsPanelProps {
   habit: Habit;
@@ -50,11 +50,8 @@ export function HabitInsightsPanel({
     );
   }
 
-  // Prefer the freshly-fetched habit so its fields (frequency, target, color)
-  // stay consistent with the entries from the same query — the prop comes from
-  // the list cache and can lag behind an edit.
-  const habit = data ?? habitProp;
-  const entries = data?.entries ?? [];
+  const habit: HabitWithEntries = data ?? { ...habitProp, entries: [] };
+  const entries = habit.entries;
 
   const handleExportHistory = () => {
     trigger("toggle");
@@ -77,8 +74,6 @@ export function HabitInsightsPanel({
     }
   };
 
-  // Frequency progress ring — Boolean Habits with a non-trivial target only
-  // (a plain daily habit's "1/1" ring is noise). Same gate as HabitCard.
   const showFrequencyRing =
     habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
   const frequencyProgress = showFrequencyRing
@@ -104,14 +99,15 @@ export function HabitInsightsPanel({
         <HabitScoreChart habit={habit} entries={entries} />
       </InsightSection>
 
-      <InsightSection title="History">
-        <div className="flex justify-end">
+      <InsightSection
+        title="History"
+        action={
           <Button
             variant="ghost"
             size="sm"
             onClick={handleExportHistory}
             disabled={isExporting || entries.length === 0}
-            className="gap-1.5 h-7 text-xs text-muted-foreground hover:text-brand transition-colors"
+            className="gap-1.5 h-7 text-xs text-muted-foreground hover:text-brand transition-colors -my-1"
           >
             {isExporting ? (
               <Loader2
@@ -123,14 +119,9 @@ export function HabitInsightsPanel({
             )}
             Export history
           </Button>
-        </div>
-        <div className="w-full overflow-x-auto pb-1 scrollbar-hide min-w-0">
-          <HabitHeatmap
-            entries={entries}
-            color={habit.color}
-            startDate={habit.start_date ?? undefined}
-          />
-        </div>
+        }
+      >
+        <HabitMonthGrid habit={habit} />
       </InsightSection>
 
       {/* Best Streaks is a day-counting metric — Boolean Habits only (CONTEXT.md). */}

@@ -1,35 +1,32 @@
 "use client";
 
-import { useState } from "react";
 import { Check, X, Pause } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getContrastingColor } from "@/lib/utils/color";
 import type { RollingDay } from "@/lib/utils/habit-rolling";
 import { dayValue } from "@/lib/utils/habit-score";
+import { entryStateName } from "@/lib/utils/habit-entry-cycle";
+import { useEntryAnnouncement } from "@/lib/hooks/useEntryAnnouncement";
 import {
   ENTRY_VALUE_DONE,
-  ENTRY_VALUE_SKIPPED,
   ENTRY_VALUE_NOT_DONE,
+  ENTRY_VALUE_SKIPPED,
   type Habit,
 } from "@/lib/types/habit";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
-import { useHaptic } from "@/lib/hooks/useHaptic";
+import { HabitQuantityPopover } from "./HabitQuantityPopover";
 
 interface HabitStripCellProps {
   day: RollingDay;
   color: string;
-  /** Coarse pointer requires ≥44×44 touch targets. */
   coarse: boolean;
   onToggle: (date: string) => void;
   habit?: Pick<Habit, "habit_type" | "target_type" | "target_value" | "unit">;
   /** Required for measurable habits. */
   onLogValue?: (date: string, value: number) => void;
   onClearValue?: (date: string) => void;
+  header?: string;
+  size?: "sm" | "default";
 }
 
 export function HabitStripCell({
@@ -40,36 +37,59 @@ export function HabitStripCell({
   habit,
   onLogValue,
   onClearValue,
+  header = day.weekdayLabel,
+  size = "default",
 }: HabitStripCellProps) {
-  const { date, weekdayLabel, value, hasEntry, isToday, isBeforeStart } = day;
+  const { date, value, hasEntry, isToday, isBeforeStart, isFuture } = day;
+  const inert = isBeforeStart || isFuture;
   const isMeasurable = habit?.habit_type === "measurable";
-  const unit = habit?.unit;
-  const complete = !isMeasurable && hasEntry && value === ENTRY_VALUE_DONE;
-  const missed = !isMeasurable && hasEntry && value === ENTRY_VALUE_NOT_DONE;
-  const skipped = hasEntry && value === ENTRY_VALUE_SKIPPED;
-  const logged = isMeasurable && hasEntry && !skipped;
+  const stored = hasEntry ? value : null;
+  const skipped = stored === ENTRY_VALUE_SKIPPED;
+  const complete = !isMeasurable && stored === ENTRY_VALUE_DONE;
+  const missed = !isMeasurable && stored === ENTRY_VALUE_NOT_DONE;
+  const loggedValue =
+    isMeasurable && stored !== null && !skipped ? stored : null;
   const filled =
-    complete || (logged && habit != null && dayValue(value, habit) >= 1);
+    complete ||
+    (loggedValue !== null &&
+      habit != null &&
+      dayValue(loggedValue, habit) >= 1);
+  const stateText = entryStateName(stored, habit);
+  const { liveRegion, onActivate } = useEntryAnnouncement(stored, stateText);
 
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState(logged ? String(value) : "");
-  const { trigger } = useHaptic();
+  const isCompact = size === "sm";
 
-  // Square aspect ratio ensures 7 days fit narrow viewports without scrolling.
-  const cellSizing = coarse
-    ? "aspect-square w-full max-w-11 lg:aspect-auto lg:h-11 lg:w-11 lg:max-w-none"
+  // Invisible pseudo-element expands touch target to >=44px on coarse pointers.
+  const cellSizing = isCompact
+    ? "aspect-square h-8 w-8 sm:h-auto sm:w-full"
     : "aspect-square w-full max-w-9 lg:aspect-auto lg:h-9 lg:w-9 lg:max-w-none";
 
-  const weekdayHeader = (
-    <span className="text-[10px] font-bold uppercase tracking-wider leading-none text-muted-foreground">
-      {weekdayLabel}
+  const touchTargetClass = coarse
+    ? isCompact
+      ? "before:absolute before:-inset-1.5 before:content-['']"
+      : "before:absolute before:-inset-1 before:content-['']"
+    : "";
+
+  const wrapperClass = cn(
+    "flex min-w-0 flex-col items-center gap-1",
+    isCompact ? "w-full" : "lg:flex-none lg:gap-1.5",
+  );
+
+  const headerLabel = (
+    <span
+      className={cn(
+        "text-[10px] sm:text-[11px] font-bold uppercase tracking-wider leading-none text-muted-foreground",
+        inert && "opacity-40",
+      )}
+    >
+      {header}
     </span>
   );
 
-  if (isBeforeStart) {
+  if (inert) {
     return (
-      <div className="flex min-w-0 flex-col items-center gap-1 lg:flex-none lg:gap-1.5">
-        {weekdayHeader}
+      <div className={wrapperClass}>
+        {headerLabel}
         <div
           aria-hidden
           className={cn("rounded-md bg-transparent", cellSizing)}
@@ -78,16 +98,7 @@ export function HabitStripCell({
     );
   }
 
-  const status = complete
-    ? "completed"
-    : missed
-      ? "missed"
-      : skipped
-        ? "skipped"
-        : "not completed";
-  const cellLabel = isMeasurable
-    ? `${format(parseISO(date), "EEEE MMM d")}, ${logged ? `${value}${unit ? ` ${unit}` : ""} logged` : skipped ? "skipped" : "not logged"} — log amount`
-    : `${format(parseISO(date), "EEEE MMM d")}, ${status} — toggle`;
+  const cellLabel = `${format(parseISO(date), "EEEE MMM d")}, ${stateText}${isMeasurable ? " — log amount" : ""}`;
 
   const cellContent = (
     <span
@@ -111,19 +122,34 @@ export function HabitStripCell({
     >
       {complete && (
         <Check
-          className="h-4 w-4"
+          className={cn(isCompact ? "h-3.5 w-3.5 sm:h-4 sm:w-4" : "h-4 w-4")}
           strokeWidth={3}
           style={{ color: getContrastingColor(color) }}
         />
       )}
-      {missed && <X className="h-3.5 w-3.5" strokeWidth={3} />}
-      {skipped && <Pause className="h-3 w-3" strokeWidth={3} />}
-      {logged && (
+      {missed && (
+        <X
+          className={cn(
+            isCompact ? "h-3 w-3 sm:h-3.5 sm:w-3.5" : "h-3.5 w-3.5",
+          )}
+          strokeWidth={3}
+        />
+      )}
+      {skipped && (
+        <Pause
+          className={cn(isCompact ? "h-2.5 w-2.5 sm:h-3 sm:w-3" : "h-3 w-3")}
+          strokeWidth={3}
+        />
+      )}
+      {loggedValue !== null && (
         <span
-          className="text-[11px] font-semibold tabular-nums"
+          className={cn(
+            isCompact ? "text-[10px] sm:text-xs" : "text-[11px]",
+            "font-semibold tabular-nums leading-none",
+          )}
           style={filled ? { color: getContrastingColor(color) } : undefined}
         >
-          {value}
+          {loggedValue}
         </span>
       )}
     </span>
@@ -131,98 +157,58 @@ export function HabitStripCell({
 
   if (isMeasurable) {
     return (
-      <div className="flex min-w-0 flex-col items-center gap-1 lg:flex-none lg:gap-1.5">
-        {weekdayHeader}
-        <Popover
-          open={open}
-          onOpenChange={(next) => {
-            setOpen(next);
-            if (next) setDraft(logged ? String(value) : "");
-          }}
+      <div className={wrapperClass}>
+        {headerLabel}
+        <HabitQuantityPopover
+          stored={stored}
+          unit={habit?.unit}
+          targetValue={habit?.target_value}
+          onLog={(amount) => onLogValue?.(date, amount)}
+          onClear={() => onClearValue?.(date)}
         >
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              onClick={(e) => e.stopPropagation()}
-              aria-label={cellLabel}
-              className={cn(
-                "group flex items-center justify-center rounded-md transition-seijaku-fast",
-                cellSizing,
-              )}
-            >
-              {cellContent}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-48 p-3"
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onActivate();
+            }}
+            aria-label={cellLabel}
+            title={stateText}
+            className={cn(
+              "group relative flex items-center justify-center rounded-md transition-seijaku-fast",
+              touchTargetClass,
+              cellSizing,
+            )}
           >
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (draft.trim() === "") {
-                  if (hasEntry) {
-                    trigger("success");
-                    onClearValue?.(date);
-                    setOpen(false);
-                  }
-                  return;
-                }
-                const parsed = Number(draft);
-                if (!Number.isNaN(parsed) && parsed >= 0) {
-                  trigger("success");
-                  onLogValue?.(date, parsed);
-                  setOpen(false);
-                }
-              }}
-              className="flex items-center gap-2"
-            >
-              <input
-                type="number"
-                inputMode="decimal"
-                min={0}
-                autoFocus
-                aria-label="Log amount"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                className="h-8 w-16 text-center text-[13px] font-medium rounded-lg border border-border/40 bg-secondary/10 p-0 outline-none"
-              />
-              {unit && (
-                <span className="text-[13px] text-muted-foreground">
-                  {unit}
-                </span>
-              )}
-              <button
-                type="submit"
-                className="ml-auto h-8 px-2.5 rounded-lg bg-brand text-brand-foreground text-[13px] font-medium transition-seijaku-fast hover:bg-brand/90"
-              >
-                Log
-              </button>
-            </form>
-          </PopoverContent>
-        </Popover>
+            {cellContent}
+          </button>
+        </HabitQuantityPopover>
+        {liveRegion}
       </div>
     );
   }
 
   return (
-    <div className="flex min-w-0 flex-col items-center gap-1 lg:flex-none lg:gap-1.5">
-      {weekdayHeader}
+    <div className={wrapperClass}>
+      {headerLabel}
       <button
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+          onActivate();
           onToggle(date);
         }}
-        aria-pressed={complete}
         aria-label={cellLabel}
+        title={stateText}
         className={cn(
-          "group flex items-center justify-center rounded-md transition-seijaku-fast",
+          "group relative flex items-center justify-center rounded-md transition-seijaku-fast",
+          touchTargetClass,
           cellSizing,
         )}
       >
         {cellContent}
       </button>
+      {liveRegion}
     </div>
   );
 }

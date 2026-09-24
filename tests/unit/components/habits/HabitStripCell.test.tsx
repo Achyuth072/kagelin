@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { HabitStripCell } from "@/components/habits/HabitStripCell";
 import type { RollingDay } from "@/lib/utils/habit-rolling";
+import { ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: vi.fn() }),
@@ -15,23 +16,55 @@ function makeDay(overrides: Partial<RollingDay>): RollingDay {
     hasEntry: false,
     isToday: false,
     isBeforeStart: false,
+    isFuture: false,
     ...overrides,
   };
 }
 
 describe("HabitStripCell", () => {
-  it("renders a missed X for an explicit zero entry", () => {
+  it.each([
+    [{ value: 0, hasEntry: false }, "not logged"],
+    [{ value: 1, hasEntry: true }, "done"],
+    [{ value: 0, hasEntry: true }, "not done"],
+    [{ value: ENTRY_VALUE_SKIPPED, hasEntry: true }, "skipped"],
+  ])("names a %o day's date and state in words", (day, state) => {
     render(
       <HabitStripCell
-        day={makeDay({ value: 0, hasEntry: true })}
+        day={makeDay(day)}
         color="#3b82f6"
         coarse={false}
         onToggle={vi.fn()}
       />,
     );
-    expect(
-      screen.getByLabelText(/Friday.*missed.*toggle/i),
-    ).toBeInTheDocument();
+    const cell = screen.getByRole("button", {
+      name: `Friday Sep 18, ${state}`,
+    });
+    expect(cell).toHaveAttribute("title", state);
+    expect(cell).not.toHaveAttribute("aria-pressed");
+  });
+
+  it("announces the resulting state after activation, not before", () => {
+    const props = {
+      color: "#3b82f6",
+      coarse: false,
+      onToggle: vi.fn(),
+    };
+    const { rerender } = render(
+      <HabitStripCell day={makeDay({ value: 1, hasEntry: true })} {...props} />,
+    );
+    const region = document.querySelector('[aria-live="polite"]');
+    expect(region).toHaveTextContent("");
+
+    fireEvent.click(screen.getByRole("button"));
+    expect(region).toHaveTextContent("");
+
+    rerender(
+      <HabitStripCell
+        day={makeDay({ value: ENTRY_VALUE_SKIPPED, hasEntry: true })}
+        {...props}
+      />,
+    );
+    expect(region).toHaveTextContent("skipped");
   });
 
   it("calls onToggle for a boolean habit cell tap", () => {
@@ -157,6 +190,61 @@ describe("HabitStripCell", () => {
   });
 
   describe("measurable logging popover", () => {
+    it("writes the skipped value from the Skip control", () => {
+      const onLogValue = vi.fn();
+      render(
+        <HabitStripCell
+          day={makeDay({ value: 6, hasEntry: true })}
+          color="#3b82f6"
+          coarse={false}
+          onToggle={vi.fn()}
+          habit={measurable}
+          onLogValue={onLogValue}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button"));
+      fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+      expect(onLogValue).toHaveBeenCalledWith(
+        "2026-09-18",
+        ENTRY_VALUE_SKIPPED,
+      );
+    });
+
+    it("logs exactly the target in one tap from the chip", () => {
+      const onLogValue = vi.fn();
+      render(
+        <HabitStripCell
+          day={makeDay({ value: 0, hasEntry: false })}
+          color="#3b82f6"
+          coarse={false}
+          onToggle={vi.fn()}
+          habit={measurable}
+          onLogValue={onLogValue}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button"));
+      fireEvent.click(screen.getByRole("button", { name: "10 pages" }));
+      expect(onLogValue).toHaveBeenCalledWith("2026-09-18", 10);
+    });
+
+    it("shows no target chip when the habit has no target", () => {
+      render(
+        <HabitStripCell
+          day={makeDay({ value: 0, hasEntry: false })}
+          color="#3b82f6"
+          coarse={false}
+          onToggle={vi.fn()}
+          habit={{ ...measurable, target_type: null, target_value: null }}
+          onLogValue={vi.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button"));
+      expect(
+        screen.queryByRole("button", { name: /pages/ }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Skip" })).toBeInTheDocument();
+    });
+
     const measurable = {
       habit_type: "measurable" as const,
       target_type: "at_least" as const,
@@ -206,5 +294,21 @@ describe("HabitStripCell", () => {
       expect(onClearValue).toHaveBeenCalledWith("2026-09-18");
       expect(onLogValue).not.toHaveBeenCalled();
     });
+  });
+
+  it("applies compact sm styling when size prop is sm", () => {
+    const { container } = render(
+      <HabitStripCell
+        day={makeDay({ value: 1, hasEntry: true })}
+        color="#3b82f6"
+        coarse={false}
+        onToggle={vi.fn()}
+        size="sm"
+      />,
+    );
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper).toHaveClass("w-full");
+    const button = screen.getByRole("button");
+    expect(button).toHaveClass("h-8", "w-8", "aspect-square");
   });
 });

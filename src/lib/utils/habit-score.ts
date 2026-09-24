@@ -21,6 +21,10 @@ export function periodDays(period: FrequencyPeriod | null): number {
   }
 }
 
+export function isLoggedEntry(entryValue: number): boolean {
+  return entryValue !== ENTRY_VALUE_SKIPPED;
+}
+
 export function dayValue(
   entryValue: number,
   habit: Pick<Habit, "habit_type" | "target_type" | "target_value">,
@@ -83,7 +87,6 @@ export function computeScores(
     const raw = entryMap.get(key) ?? 0;
     let score: number;
     if (raw === ENTRY_VALUE_SKIPPED) {
-      // Skipped entry: freeze decay (S_k = S_{k-1})
       score = prevScore;
     } else {
       const val = dayValue(raw, habit);

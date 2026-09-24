@@ -3,14 +3,19 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { HabitHeatmap } from "./HabitHeatmap";
+import { HabitQuantityPopover } from "./HabitQuantityPopover";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
-import { useMarkHabitComplete } from "@/lib/hooks/useHabitMutations";
+import { useHabitCellActions } from "@/lib/hooks/useHabitCellActions";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
-import { BarChart2, Check, Plus, LucideIcon } from "lucide-react";
+import { BarChart2, Check, Pause, Plus, LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { getContrastingColor } from "@/lib/utils/color";
+import { dayValue } from "@/lib/utils/habit-score";
+import { ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
+import { entryStateName } from "@/lib/utils/habit-entry-cycle";
+import { useEntryAnnouncement } from "@/lib/hooks/useEntryAnnouncement";
 import {
   getFrequencyProgress,
   frequencyProgressLabel,
@@ -26,14 +31,6 @@ interface HabitCardProps {
   onViewInsights?: () => void;
 }
 
-/**
- * HabitCard Component
- *
- * Displays a habit with its heatmap, stats, and completion toggle.
- * Implements a prioritized heatmap layout:
- * - Stats moved to header for better focus hierarchy.
- * - Auto-scrolls heatmap to most recent data in the background.
- */
 export function HabitCard({
   habit,
   icon: Icon,
@@ -42,19 +39,21 @@ export function HabitCard({
   onViewInsights,
 }: HabitCardProps) {
   const isMobile = useIsMobile();
-  const markComplete = useMarkHabitComplete();
+  const {
+    onToggle: toggleDate,
+    onLogValue,
+    onClearValue,
+  } = useHabitCellActions(habit);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const horizontalScrollRef = useHorizontalScroll();
   const hasAutoScrolled = useRef(false);
 
-  // Stable ref setter — only sets the ref once on mount, never triggers detach/reattach
   const setScrollRef = useCallback((node: HTMLDivElement | null) => {
     (
       scrollContainerRef as React.MutableRefObject<HTMLDivElement | null>
     ).current = node;
   }, []);
 
-  // Attach/detach horizontal scroll listener only when isMobile changes, not on every render
   useEffect(() => {
     const node = scrollContainerRef.current;
     if (!node) return;
@@ -64,9 +63,7 @@ export function HabitCard({
     }
   }, [isMobile, horizontalScrollRef]);
 
-  // Background scroll to end on mount
   useLayoutEffect(() => {
-    // Only auto-scroll once on initial mount / data load, not on every re-render
     if (hasAutoScrolled.current) return;
 
     const frame = requestAnimationFrame(() => {
@@ -79,35 +76,70 @@ export function HabitCard({
     return () => cancelAnimationFrame(frame);
   }, [habit.entries]);
 
-  const today = format(new Date(), "yyyy-MM-dd");
-  const todayEntry = habit.entries.find((e) => e.date === today);
-  const isCompletedToday = todayEntry?.value === 1;
+  const now = new Date();
+  const today = format(now, "yyyy-MM-dd");
+  const todayStored =
+    habit.entries.find((e) => e.date === today)?.value ?? null;
+  const isMeasurable = habit.habit_type === "measurable";
+  const isCompletedToday =
+    todayStored !== null && dayValue(todayStored, habit) >= 1;
+  const isSkippedToday = todayStored === ENTRY_VALUE_SKIPPED;
+  const todayStateText = entryStateName(todayStored, habit);
+  const todayLabel = `Today, ${format(now, "EEEE MMM d")}, ${todayStateText}${isMeasurable ? " — log amount" : ""}`;
+  const { liveRegion, onActivate } = useEntryAnnouncement(
+    todayStored,
+    todayStateText,
+  );
 
-  const totalCompletions = habit.entries.filter((e) => e.value === 1).length;
+  const totalCompletions = habit.entries.filter(
+    (e) => dayValue(e.value, habit) >= 1,
+  ).length;
   const currentStreak = getCurrentStreak(habit, habit.entries);
 
-  // Frequency progress ring — Boolean Habits only (CONTEXT.md "Done"-counting
-  // vs strength metrics): an at_most Measurable Habit would read misleadingly
-  // against a raw frequency count. Also requires a non-trivial target — a plain
-  // daily habit's "1/1" ring is redundant next to the toggle.
+  // Measurable's raw count isn't frequency progress, so only boolean habits show the ring.
   const showFrequencyRing =
     habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
   const frequencyProgress = showFrequencyRing
     ? getFrequencyProgress(habit, habit.entries)
     : null;
 
-  const handleToggle = useCallback(() => {
+  const handleToggle = () => {
     if (onToggle) {
       onToggle();
       return;
     }
 
-    markComplete.mutate({
-      habitId: habit.id,
-      date: today,
-      value: isCompletedToday ? null : 1,
-    });
-  }, [onToggle, markComplete, habit.id, today, isCompletedToday]);
+    toggleDate(today);
+  };
+
+  // before:-inset-1 widens the 36px button to a 44px tap target.
+  const renderTodayButton = (
+    onClick: (e: React.MouseEvent<HTMLButtonElement>) => void,
+  ) => (
+    <button
+      onClick={onClick}
+      className={`relative h-9 w-9 rounded-lg flex items-center justify-center transition-seijaku-fast shrink-0 before:absolute before:-inset-1 before:content-[''] ${
+        isCompletedToday
+          ? "bg-primary text-primary-foreground"
+          : "bg-secondary border border-border hover:bg-secondary/80 text-muted-foreground hover:text-foreground"
+      }`}
+      style={isCompletedToday ? { backgroundColor: habit.color } : undefined}
+      aria-label={todayLabel}
+      title={todayStateText}
+    >
+      {isCompletedToday ? (
+        <Check
+          className="w-5 h-5"
+          strokeWidth={3}
+          style={{ color: getContrastingColor(habit.color) }}
+        />
+      ) : isSkippedToday ? (
+        <Pause className="w-4 h-4" strokeWidth={3} />
+      ) : (
+        <Plus className="w-5 h-5" />
+      )}
+    </button>
+  );
 
   return (
     <Card
@@ -115,9 +147,6 @@ export function HabitCard({
       className="bg-card border border-border dark:border-border/40 p-4 sm:p-5 rounded-xl overflow-hidden shadow-none transition-seijaku-fast hover:border-border/60 hover:shadow-sm cursor-pointer active:scale-[0.995] min-w-0"
     >
       <div className="flex flex-col gap-4">
-        {/* Header: two-row — identity + actions on top, quiet metadata below.
-            Unified across sizes so the name owns the width the truncated
-            single-row header used to starve it of. */}
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
@@ -151,43 +180,30 @@ export function HabitCard({
                   <BarChart2 className="w-4 h-4" strokeWidth={2.25} />
                 </button>
               )}
-              {/* Primary action: sleek 36px visual, but an invisible
-                  before:-inset-1 halo expands the tap area to the 44px mobile
-                  touch-target minimum. */}
-              <button
-                onClick={(e) => {
+              {isMeasurable ? (
+                <HabitQuantityPopover
+                  stored={todayStored}
+                  unit={habit.unit}
+                  targetValue={habit.target_value}
+                  onLog={(value) => onLogValue(today, value)}
+                  onClear={() => onClearValue(today)}
+                >
+                  {renderTodayButton((e) => {
+                    e.stopPropagation();
+                    onActivate();
+                  })}
+                </HabitQuantityPopover>
+              ) : (
+                renderTodayButton((e) => {
                   e.stopPropagation();
+                  onActivate();
                   handleToggle();
-                }}
-                className={`relative h-9 w-9 rounded-lg flex items-center justify-center transition-seijaku-fast shrink-0 before:absolute before:-inset-1 before:content-[''] ${
-                  isCompletedToday
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary border border-border hover:bg-secondary/80 text-muted-foreground hover:text-foreground"
-                }`}
-                style={
-                  isCompletedToday
-                    ? { backgroundColor: habit.color }
-                    : undefined
-                }
-                aria-label={
-                  isCompletedToday ? "Mark incomplete" : "Mark complete"
-                }
-              >
-                {isCompletedToday ? (
-                  <Check
-                    className="w-5 h-5"
-                    strokeWidth={3}
-                    style={{ color: getContrastingColor(habit.color) }}
-                  />
-                ) : (
-                  <Plus className="w-5 h-5" />
-                )}
-              </button>
+                })
+              )}
+              {liveRegion}
             </div>
           </div>
 
-          {/* Quiet metadata strip — muted, inline, dot-separated. Reads as
-              secondary data, not a competing row. */}
           <div className="flex items-center gap-2 text-[13px] font-medium tabular-nums text-foreground/55">
             {frequencyProgress && (
               <>
@@ -227,7 +243,6 @@ export function HabitCard({
           </div>
         </div>
 
-        {/* Heatmap Area - Large Visual Centerpiece */}
         <div
           ref={setScrollRef}
           className="w-full overflow-x-auto pb-1 scrollbar-hide min-w-0"
@@ -238,6 +253,7 @@ export function HabitCard({
             blockSize={isMobile ? 10 : 14}
             blockMargin={2}
             startDate={habit.start_date ?? undefined}
+            habit={habit}
           />
         </div>
       </div>
