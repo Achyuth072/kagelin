@@ -7,7 +7,8 @@ import {
   ResponsiveDialogTitle,
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog";
-import { Sparkles } from "lucide-react";
+import { MessageSquare, Sparkles } from "lucide-react";
+import { DISCUSSIONS_URL } from "@/lib/links";
 import {
   useChangelogEntries,
   isNewerThan,
@@ -97,6 +98,18 @@ export function ChangelogPopup({ open, onOpenChange }: ChangelogPopupProps) {
               No changelog entries found.
             </p>
           )}
+        </div>
+
+        <div className="border-t border-border/80 px-6 py-3 shrink-0">
+          <a
+            href={DISCUSSIONS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <MessageSquare className="h-4 w-4" />
+            Share honest feedback on GitHub
+          </a>
         </div>
       </ResponsiveDialogContent>
     </ResponsiveDialog>
