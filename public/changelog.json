@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.44.2-preview.3",
+    "date": "2026-09-24",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Habit card reuses cell actions, popover takes stored entry, drop unused fluid prop"
+      ],
+      "Fixed": [
+        "Target chip logs in one tap, heatmap padded days no longer read as met"
+      ]
+    }
+  },
+  {
     "version": "1.44.2-preview.2",
     "date": "2026-09-23",
     "channel": "preview",
@@ -717,17 +730,6 @@
         "Fixed keyboard paste sometimes landing in the wrong view or colliding with drag-and-drop",
         "Fixed notifications opened from a cold start sometimes bouncing back instead of landing on the right page",
         "Fixed a focus outline that could get cut off or linger after it shouldn't"
-      ]
-    }
-  },
-  {
-    "version": "1.30.0-preview.3",
-    "date": "2026-08-10",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Update task views, shortcuts and cloud data details in README",
-        "Enhance shortcut interface"
       ]
     }
   }
