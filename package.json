@@ -141,7 +141,7 @@
     "tailwindcss": "^4.1.18",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^6.0.3",
-    "vitest": "^4.0.16"
+    "vitest": "^5.0.1"
   },
   "allowScripts": {
     "@ast-grep/cli@0.45.3": true
