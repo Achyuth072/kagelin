@@ -306,9 +306,20 @@ a Habit is always one or the other:
 - **Measurable Habit** — each Entry carries a real quantity (pages read, km run)
   judged against a target.
 
-A Habit also carries a **frequency** — how often it is meant to be done
-(e.g. daily, or three times a week). "Three times a week" _is_ expressible.
-_Avoid_: Goal, routine, task.
+A Habit also carries a **frequency** — how often it is meant to be done,
+expressed as **N times in any D-day window** (daily = 1 in 1, three times a week
+= 3 in 7, a haircut every 50 days = 1 in 50). "Week" and "month" are just named
+windows of 7 and 30 days, not calendar periods.
+_Avoid_: Goal, routine, task, interval (as a separate concept from frequency).
+
+### Archived Habit
+
+A Habit the user has stopped pursuing but not deleted. It is hidden from every
+forward-looking surface — today's list, the Habits page, reminders, the
+Frequency ring, streaks-at-risk — but keeps all its Entries, which still count
+in historical Stats. It can be restored (unarchived) at any time with its
+Entries and settings intact; the archived days are Unknown, so Streak and Score
+reflect the gap. _Avoid_: deleted, paused, hidden.
 
 ### Entry
 
@@ -395,8 +406,8 @@ an imported Habit shows the number the user remembers.
 _Displayed as_: "Strength" is the source tracker's UI label for the same number;
 **Score** is the canonical term here. _Avoid_: Streak (a different metric).
 
-A Habit's `Frequency` rendered as week-to-date completion — "2 / 3 this week,"
-shown as a ring. It is **not a Goal**: a Habit has no Goal, only a Frequency, and
+A Habit's `Frequency` rendered as completion over its own sliding window —
+"2 / 3 in the last 7 days," shown as a ring. It is **not a Goal**: a Habit has no Goal, only a Frequency, and
 this is just that Frequency drawn against the current period. _Avoid_: Goal.
 
 Every Habit is implicitly **daily** (`1 / day`) — there is no "unset" state. The
@@ -406,9 +417,15 @@ next to the done/not-done toggle and is suppressed. The Frequency ring is shown
 for **Boolean Habits only** (a Measurable `at_most` habit would read misleadingly
 against a raw count), matching the day-counting-metric gate.
 
-Frequency is authored as **times per day or week**; `month` is accepted in the
-model for import fidelity but is not offered in the create/edit control (it stays
-editable only on a Habit that already carries it). Frequency is **not
+A **1-in-D** Habit (once every D days, D > 1 — "haircut every 50 days") shows no
+ring, since it would sit full for D − 1 days. It shows its **last done / next**
+instead: "Done 12 days ago · next in 38 days". _Avoid_: "due" (a Habit is not
+due; see Habit reminder).
+
+Frequency is authored with the source tracker's five options: **Every day**,
+**Every D days**, **N times per week**, **N times per month** (D = 30), and **N
+times in D days**. They are all spellings of N-in-D; a saved Frequency opens on
+the most specific one that matches it. Frequency is **not
 effective-dated**: it is a single current value, so editing it recomputes the
 _entire_ Frequency grid and streak history against the new target — accepted as a
 known tradeoff rather than snapshotting frequency per period.
@@ -561,15 +578,27 @@ The **Push notification** a **Habit** sends at its own set time — a
 weekday mask, both round-tripped from uhabits. Distinct from the daily
 **briefing**, which is one digest for the whole account, not one per Habit.
 
-A Habit's reminder days are **not** its **Frequency**. Frequency is the goal
-("2x/week") and says nothing about which days; `reminder_days` is the schedule
-and is the only thing that decides when a reminder fires. The two may disagree,
-and that is allowed. _Avoid_: "habit notification"; _avoid_: calling the
-reminder days a schedule the Habit is "due" on — a Habit is not due.
+A Habit's reminder days are **not** its **Frequency**. `reminder_days` says which
+weekdays the user is willing to be reminded; Frequency says how often the Habit
+is meant to be done. A reminder fires only when **both** allow it: it is a
+reminder day, **and** the Habit's current window is **not yet satisfied** — fewer
+than N Done days in the last D days (Skipped and Unknown days count for nothing).
+So a haircut done yesterday stays quiet for 50 days; a skipped or unlogged day
+is reminded again on the next reminder day. _Avoid_: "habit notification";
+_avoid_: calling the reminder days a schedule the Habit is "due" on — a Habit is
+not due.
 
 A reminder is suppressed when the Habit is archived or already has an **Entry**
 for that day, in any **Entry state**. A **Locked** account still receives it,
 saying only that a habit is scheduled, never which.
+
+A reminder is always dismissible; a Habit has at most one reminder showing, and
+a newer one replaces it. Where the platform supports it, a reminder offers
+actions that record that day's Entry state without opening the app: **Done** and
+**Skip** for a Boolean Habit, **Skip** only for a Measurable Habit (Done needs a
+quantity), and none while **Locked** (the reminder cannot say which Habit it is).
+Elsewhere (iOS), tapping it opens that Habit. There is no "Not done" action —
+only an import writes an explicit Not done.
 
 A reminder fires only if it can be delivered within 10 minutes of its `HH:mm`.
 On the day a timezone springs forward an hour of local time never happens, so a

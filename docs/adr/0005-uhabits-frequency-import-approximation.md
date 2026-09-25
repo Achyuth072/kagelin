@@ -1,3 +1,7 @@
+---
+status: superseded by ADR 0019
+---
+
 # uhabits frequency import approximates inexpressible schedules
 
 uhabits stores no streak — both it and Kagelin recompute streaks at runtime from
