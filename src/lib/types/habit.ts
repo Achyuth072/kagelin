@@ -12,6 +12,7 @@ export interface Habit {
   sort_order: number;
   habit_type?: HabitType;
   frequency_count?: number | null;
+  frequency_days?: number | null;
   frequency_period?: "day" | "week" | "month" | null;
   target_type?: "at_least" | "at_most" | null;
   target_value?: number | null;

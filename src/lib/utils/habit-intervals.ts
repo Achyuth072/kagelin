@@ -6,7 +6,7 @@ import {
   differenceInCalendarDays,
 } from "date-fns";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
-import { periodDays } from "@/lib/utils/habit-score";
+import { frequencyWindowDays } from "@/lib/utils/habit-frequency";
 
 export interface Interval {
   begin: string; // oldest day covered
@@ -81,10 +81,9 @@ function forwardMergeIntervals(
   return merged;
 }
 
-// Fills the off-days implied by the frequency schedule (e.g. 3×/week) using
-// uhabits' interval algorithm.
+// Ported from uhabits for cross-platform streak parity (ADR 0004).
 export function interpolateDoneDays(
-  habit: Pick<Habit, "frequency_count" | "frequency_period">,
+  habit: Pick<Habit, "frequency_count" | "frequency_days" | "frequency_period">,
   entries: HabitEntry[],
   today: Date = new Date(),
 ): Set<string> {
@@ -96,7 +95,7 @@ export function interpolateDoneDays(
   if (doneDates.length === 0) return new Set();
 
   const freqCount = habit.frequency_count ?? 1;
-  const period = periodDays(habit.frequency_period ?? null);
+  const period = frequencyWindowDays(habit);
 
   if (freqCount === 1 && period === 1) {
     return new Set(doneDates);

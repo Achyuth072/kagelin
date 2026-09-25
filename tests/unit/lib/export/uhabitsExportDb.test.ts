@@ -43,26 +43,52 @@ describe("uhabitsExportDb - pure helpers", () => {
   });
 
   it("maps Kagelin frequency periods and counts to freq_num / freq_den", () => {
-    expect(mapKagelinFrequencyToLoop(1, "day")).toEqual({
+    expect(
+      mapKagelinFrequencyToLoop({
+        frequency_count: 1,
+        frequency_period: "day",
+      }),
+    ).toEqual({
       freq_num: 1,
       freq_den: 1,
     });
-    expect(mapKagelinFrequencyToLoop(2, "day")).toEqual({
+    expect(
+      mapKagelinFrequencyToLoop({
+        frequency_count: 2,
+        frequency_period: "day",
+      }),
+    ).toEqual({
       freq_num: 2,
       freq_den: 1,
     });
-    expect(mapKagelinFrequencyToLoop(3, "week")).toEqual({
+    expect(
+      mapKagelinFrequencyToLoop({
+        frequency_count: 3,
+        frequency_period: "week",
+      }),
+    ).toEqual({
       freq_num: 3,
       freq_den: 7,
     });
-    expect(mapKagelinFrequencyToLoop(5, "month")).toEqual({
+    expect(
+      mapKagelinFrequencyToLoop({
+        frequency_count: 5,
+        frequency_period: "month",
+      }),
+    ).toEqual({
       freq_num: 5,
       freq_den: 30,
     });
-    expect(mapKagelinFrequencyToLoop(undefined, undefined)).toEqual({
+    expect(mapKagelinFrequencyToLoop({})).toEqual({
       freq_num: 1,
       freq_den: 1,
     });
+    expect(
+      mapKagelinFrequencyToLoop({ frequency_count: 1, frequency_days: 50 }),
+    ).toEqual({ freq_num: 1, freq_den: 50 });
+    expect(
+      mapKagelinFrequencyToLoop({ frequency_count: 2, frequency_days: 7 }),
+    ).toEqual({ freq_num: 2, freq_den: 7 });
   });
 
   it("maps entry values to Loop repetition values", () => {

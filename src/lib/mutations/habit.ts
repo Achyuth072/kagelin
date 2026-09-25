@@ -6,6 +6,10 @@ import {
   type HabitEntry,
   type HabitType,
 } from "@/lib/types/habit";
+import {
+  frequencyWindowDays,
+  periodForFrequencyDays,
+} from "@/lib/utils/habit-frequency";
 
 export interface CreateHabitInput {
   name: string;
@@ -16,6 +20,7 @@ export interface CreateHabitInput {
   archived_at?: string | null;
   habit_type?: HabitType;
   frequency_count?: number;
+  frequency_days?: number;
   frequency_period?: "day" | "week" | "month";
   target_type?: "at_least" | "at_most";
   target_value?: number;
@@ -35,6 +40,7 @@ export interface UpdateHabitInput {
   icon?: string;
   habit_type?: HabitType;
   frequency_count?: number;
+  frequency_days?: number;
   frequency_period?: "day" | "week" | "month";
   target_type?: "at_least" | "at_most";
   target_value?: number | null;
@@ -50,6 +56,17 @@ export interface MarkHabitCompleteInput {
   date: string;
   value?: number | null;
   notes?: string | null;
+}
+
+// Writers keep both columns in step during the transition window (ADR 0019).
+function frequencyColumns(
+  input: Pick<CreateHabitInput, "frequency_days" | "frequency_period">,
+): Pick<Habit, "frequency_days" | "frequency_period"> {
+  const frequency_days = frequencyWindowDays(input);
+  return {
+    frequency_days,
+    frequency_period: periodForFrequencyDays(frequency_days),
+  };
 }
 
 export const habitMutations = {
@@ -70,7 +87,7 @@ export const habitMutations = {
       start_date: input.start_date || new Date().toISOString().split("T")[0],
       habit_type,
       frequency_count: input.frequency_count ?? null,
-      frequency_period: input.frequency_period || "day",
+      ...frequencyColumns(input),
       target_type: isMeasurable ? input.target_type || "at_least" : null,
       target_value: isMeasurable ? (input.target_value ?? null) : null,
       unit: isMeasurable ? input.unit || null : null,
@@ -130,6 +147,7 @@ export const habitMutations = {
       icon,
       habit_type,
       frequency_count,
+      frequency_days,
       frequency_period,
       target_type,
       target_value,
@@ -148,8 +166,8 @@ export const habitMutations = {
     if (habit_type !== undefined) updates.habit_type = habit_type;
     if (frequency_count !== undefined)
       updates.frequency_count = frequency_count;
-    if (frequency_period !== undefined)
-      updates.frequency_period = frequency_period;
+    if (frequency_days !== undefined || frequency_period !== undefined)
+      Object.assign(updates, frequencyColumns(input));
     if (target_type !== undefined) updates.target_type = target_type;
     if (target_value !== undefined) updates.target_value = target_value;
     if (unit !== undefined) updates.unit = unit;

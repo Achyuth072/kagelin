@@ -126,6 +126,7 @@ describe("useHabitMutations", () => {
           sort_order: 3,
           habit_type: "boolean",
           frequency_count: null,
+          frequency_days: 1,
           frequency_period: "day",
           target_type: null,
           target_value: null,

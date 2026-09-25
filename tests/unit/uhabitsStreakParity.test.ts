@@ -158,3 +158,51 @@ describe("getCurrentStreak — differential parity with uhabits reference oracle
     expect(kagelin).toBe(uhabits);
   });
 });
+
+describe("arbitrary N-in-D frequencies match the uhabits reference oracle", () => {
+  const today = new Date("2026-06-11T10:00:00");
+  const cases: [string, number, number, string[]][] = [
+    ["HAIRCUT 1/50", 1, 50, ["2026-04-01", "2026-05-15"]],
+    ["SHAMPOO 1/3", 1, 3, ["2026-06-01", "2026-06-04", "2026-06-10"]],
+    ["WASH TOWEL 1/2", 1, 2, ["2026-06-05", "2026-06-07", "2026-06-11"]],
+    ["EXFOLIATE 2/7", 2, 7, ["2026-06-02", "2026-06-05", "2026-06-09"]],
+  ];
+
+  it.each(cases)("%s: done-set and streak", (_name, num, den, dates) => {
+    const habit = makeHabit({
+      frequency_count: num,
+      frequency_days: den,
+      frequency_period: null,
+    });
+    const reps = entries(dates);
+    const done = interpolateDoneDays(habit, reps, today);
+    // Kagelin clips interpolated days to today; uhabits projects past it.
+    const oracle = new Set(
+      [...computeDoneSet(num, den, dates)].filter((d) => d <= "2026-06-11"),
+    );
+    expect(done).toEqual(oracle);
+    expect(getCurrentStreak(habit, reps, today)).toBe(
+      uhabitsCurrentStreak(oracle, "2026-06-11"),
+    );
+  });
+
+  it("a period-only habit behaves like the same frequency_days", () => {
+    const dates = ["2026-06-01", "2026-06-03", "2026-06-10"];
+    const periodOnly = makeHabit({
+      frequency_count: 3,
+      frequency_days: undefined,
+      frequency_period: "week",
+    });
+    const explicit = makeHabit({
+      frequency_count: 3,
+      frequency_days: 7,
+      frequency_period: "week",
+    });
+    expect(interpolateDoneDays(periodOnly, entries(dates), today)).toEqual(
+      interpolateDoneDays(explicit, entries(dates), today),
+    );
+    expect(getCurrentStreak(periodOnly, entries(dates), today)).toBe(
+      uhabitsCurrentStreak(computeDoneSet(3, 7, dates), "2026-06-11"),
+    );
+  });
+});

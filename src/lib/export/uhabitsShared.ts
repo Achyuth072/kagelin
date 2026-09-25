@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
+import { frequencyWindowDays } from "@/lib/utils/habit-frequency";
 import { mockStore } from "@/lib/mock/mock-store";
 import { fetchAllRows } from "@/lib/supabase/paginate";
 import {
@@ -54,8 +55,7 @@ export function findClosestLoopColor(hex: string): number {
   return closest;
 }
 
-// Import snaps Loop colors to Kagelin's palette, so an unchanged color maps back
-// to its original Loop index; any other color is a user edit and wins.
+// Preserves original Loop color index when color is unchanged.
 export function resolveLoopColor(
   habit: Habit,
   rawHabit?: RawLoopHabit,
@@ -74,18 +74,13 @@ export function normalizeUuid(uuid: string): string {
 }
 
 export function mapKagelinFrequencyToLoop(
-  count?: number | null,
-  period?: "day" | "week" | "month" | null,
+  habit: Pick<Habit, "frequency_count" | "frequency_days" | "frequency_period">,
 ): { freq_num: number; freq_den: number } {
-  const validCount = typeof count === "number" && count > 0 ? count : 1;
-
-  if (period === "week") {
-    return { freq_num: validCount, freq_den: 7 };
-  }
-  if (period === "month") {
-    return { freq_num: validCount, freq_den: 30 };
-  }
-  return { freq_num: validCount, freq_den: 1 };
+  const count = habit.frequency_count;
+  return {
+    freq_num: typeof count === "number" && count > 0 ? count : 1,
+    freq_den: frequencyWindowDays(habit),
+  };
 }
 
 export function entryToRepetitionValue(
@@ -152,8 +147,7 @@ export function getRawHabitByProvenance(
   return rawHabitsByUuid.get(normalizeUuid(habit.source_uuid));
 }
 
-// Loop's own frequency wins for imported habits: Kagelin's day/week/month
-// periods can't express every Loop num/den (e.g. 3 per 10 days).
+// Preserves original import provenance when available.
 export function getHabitFrequency(
   habit: Habit,
   rawHabit?: RawLoopHabit,
@@ -167,10 +161,7 @@ export function getHabitFrequency(
   ) {
     return { freq_num: rawHabit.freq_num, freq_den: rawHabit.freq_den };
   }
-  return mapKagelinFrequencyToLoop(
-    habit.frequency_count,
-    habit.frequency_period,
-  );
+  return mapKagelinFrequencyToLoop(habit);
 }
 
 const GUEST_STORE_KEY = "kanso_import_sources";
@@ -192,7 +183,7 @@ export async function collectUhabitsExportData(
         const stored = (await get<{ raw: unknown }[]>(GUEST_STORE_KEY)) ?? [];
         rawSources = stored.map((record) => record.raw);
       } catch (err) {
-        // Export still succeeds from current state; only Loop-only fields are lost.
+        // Fall back to in-memory state if indexedDB lookup fails.
         Sentry.captureException(err);
       }
     }

@@ -129,6 +129,7 @@ export function HabitSheet({
           start_date: initialHabit.start_date ?? undefined,
           habit_type: initialHabit.habit_type ?? "boolean",
           frequency_count: initialHabit.frequency_count ?? 1,
+          frequency_days: initialHabit.frequency_days ?? undefined,
           frequency_period: initialHabit.frequency_period ?? "day",
           target_type: initialHabit.target_type ?? "at_least",
           target_value: initialHabit.target_value ?? undefined,
@@ -174,6 +175,7 @@ export function HabitSheet({
             : data.start_date,
         habit_type: data.habit_type,
         frequency_count: data.frequency_count,
+        frequency_days: data.frequency_days,
         frequency_period: data.frequency_period,
         target_type: data.target_type,
         target_value: data.target_value,
@@ -252,8 +254,11 @@ export function HabitSheet({
     setFrequencyCount: (v: number) =>
       setValue("frequency_count", v, { shouldValidate: true }),
     frequencyPeriod,
-    setFrequencyPeriod: (v: CreateHabitInput["frequency_period"]) =>
-      setValue("frequency_period", v, { shouldValidate: true }),
+    setFrequencyPeriod: (v: CreateHabitInput["frequency_period"]) => {
+      // Presets override custom frequency_days.
+      setValue("frequency_days", undefined);
+      setValue("frequency_period", v, { shouldValidate: true });
+    },
     targetValue,
     setTargetValue: (v: number | undefined) =>
       setValue("target_value", v, { shouldValidate: true }),
