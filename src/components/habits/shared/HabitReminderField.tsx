@@ -68,8 +68,8 @@ export function HabitReminderField({
   };
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast mx-2">
-      <IconCell className="items-center pt-0">
+    <div className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast mx-2">
+      <IconCell className="h-8 items-center pt-0">
         <Bell className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
       </IconCell>
       <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
@@ -109,7 +109,7 @@ export function HabitReminderField({
               </PopoverContent>
             </Popover>
 
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-0.5 min-[400px]:gap-1 shrink-0">
               {DAY_CHIPS.map(({ bit, label, ariaLabel }) => {
                 const active = (reminderDays & (1 << bit)) !== 0;
                 return (
@@ -120,7 +120,7 @@ export function HabitReminderField({
                     aria-pressed={active}
                     aria-label={ariaLabel}
                     className={cn(
-                      "h-6 w-6 rounded-full text-[11px] font-semibold flex items-center justify-center border border-transparent transition-seijaku-fast",
+                      "h-5 w-5 min-[400px]:h-6 min-[400px]:w-6 rounded-full text-[11px] font-semibold flex items-center justify-center border border-transparent transition-seijaku-fast",
                       active
                         ? "bg-brand text-brand-foreground"
                         : "text-muted-foreground bg-secondary/10 border-border/40 hover:text-foreground hover:bg-secondary/40",

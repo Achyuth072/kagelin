@@ -291,7 +291,9 @@ export function HabitSheet({
         <div
           className={cn(
             "flex flex-col",
-            isDrawer ? "flex-1 min-h-0" : "max-h-[90dvh]",
+            isDrawer
+              ? "flex-1 min-h-0 max-h-[calc(85dvh-2rem)]"
+              : "max-h-[90dvh]",
           )}
         >
           <ResponsiveDialogHeader className="sr-only">
@@ -314,7 +316,7 @@ export function HabitSheet({
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto min-h-0 scrollbar-hide">
+          <div className="flex flex-col flex-1 overflow-y-auto min-h-0 scrollbar-hide">
             {tab === "insights" && !isCreationMode ? (
               <HabitInsightsPanel habit={effectiveHabit!} />
             ) : isCreationMode ? (
