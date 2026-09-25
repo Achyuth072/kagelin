@@ -1,38 +1,22 @@
-import {
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  format,
-} from "date-fns";
+import { format, subDays } from "date-fns";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { dayValue } from "@/lib/utils/habit-score";
+import { frequencyWindowDays } from "@/lib/utils/habit-frequency";
 
 export interface FrequencyProgress {
   completed: number;
   target: number;
-  period: "day" | "week" | "month";
+  windowDays: number;
 }
 
-/**
- * Whether a Habit carries a *non-trivial* Frequency target worth surfacing as a
- * ring. Every Habit is implicitly daily (`1 / day`); that resting default is
- * redundant next to the done/not-done toggle, so the ring is shown only when the
- * target is more than once a day or spans a longer period. See CONTEXT.md
- * "Frequency progress".
- */
+// Suppresses the ring for 1-in-1d habits to avoid redundancy with the toggle.
 export function hasFrequencyTarget(
-  habit: Pick<Habit, "frequency_count" | "frequency_period">,
+  habit: Pick<Habit, "frequency_count" | "frequency_days" | "frequency_period">,
 ): boolean {
   const count = habit.frequency_count ?? 1;
-  const period = habit.frequency_period ?? "day";
-  return count > 1 || period !== "day";
+  return count > 1 || frequencyWindowDays(habit) !== 1;
 }
 
-/**
- * A Habit's Frequency rendered as progress against the current period
- * (day/week/month), per CONTEXT.md "Frequency progress" — not a Goal.
- */
 export function getFrequencyProgress(
   habit: Pick<
     Habit,
@@ -40,31 +24,17 @@ export function getFrequencyProgress(
     | "target_type"
     | "target_value"
     | "frequency_count"
+    | "frequency_days"
     | "frequency_period"
   >,
   entries: HabitEntry[],
   referenceDate: Date = new Date(),
 ): FrequencyProgress {
   const target = habit.frequency_count ?? 1;
-  const period = habit.frequency_period ?? "day";
+  const windowDays = frequencyWindowDays(habit);
 
-  let windowStart: Date;
-  let windowEnd: Date;
-  switch (period) {
-    case "week":
-      windowStart = startOfWeek(referenceDate, { weekStartsOn: 1 });
-      windowEnd = endOfWeek(referenceDate, { weekStartsOn: 1 });
-      break;
-    case "month":
-      windowStart = startOfMonth(referenceDate);
-      windowEnd = endOfMonth(referenceDate);
-      break;
-    default:
-      windowStart = referenceDate;
-      windowEnd = referenceDate;
-  }
-  const startKey = format(windowStart, "yyyy-MM-dd");
-  const endKey = format(windowEnd, "yyyy-MM-dd");
+  const startKey = format(subDays(referenceDate, windowDays - 1), "yyyy-MM-dd");
+  const endKey = format(referenceDate, "yyyy-MM-dd");
 
   let completed = 0;
   for (const e of entries) {
@@ -72,16 +42,13 @@ export function getFrequencyProgress(
     if (dayValue(e.value, habit) >= 1) completed++;
   }
 
-  return { completed, target, period };
+  return { completed, target, windowDays };
 }
 
-const PERIOD_LABELS: Record<FrequencyProgress["period"], string> = {
-  day: "today",
-  week: "this week",
-  month: "this month",
-};
-
-/** Plain-language window for the sr-only ring description, e.g. "2 of 3 this week". */
 export function frequencyProgressLabel(progress: FrequencyProgress): string {
-  return `${progress.completed} of ${progress.target} ${PERIOD_LABELS[progress.period]}`;
+  const window =
+    progress.windowDays === 1
+      ? "today"
+      : `in the last ${progress.windowDays} days`;
+  return `${progress.completed} of ${progress.target} ${window}`;
 }

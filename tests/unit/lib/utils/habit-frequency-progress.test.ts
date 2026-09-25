@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { getFrequencyProgress } from "@/lib/utils/habit-frequency-progress";
+import {
+  getFrequencyProgress,
+  frequencyProgressLabel,
+} from "@/lib/utils/habit-frequency-progress";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 
 function entry(date: string, value: number): HabitEntry {
@@ -37,7 +40,7 @@ describe("getFrequencyProgress — daily habit", () => {
       [entry("2026-06-10", 1)],
       ref,
     );
-    expect(result).toEqual({ completed: 1, target: 1, period: "day" });
+    expect(result).toEqual({ completed: 1, target: 1, windowDays: 1 });
   });
 
   it("0/1 when today is not logged", () => {
@@ -47,53 +50,60 @@ describe("getFrequencyProgress — daily habit", () => {
       [entry("2026-06-09", 1)],
       ref,
     );
-    expect(result).toEqual({ completed: 0, target: 1, period: "day" });
+    expect(result).toEqual({ completed: 0, target: 1, windowDays: 1 });
   });
 });
 
-describe("getFrequencyProgress — weekly habit (Monday-start)", () => {
+describe("getFrequencyProgress — sliding window", () => {
   const weekly: Habit = {
     ...baseHabit,
     frequency_count: 3,
+    frequency_days: 7,
     frequency_period: "week",
   };
 
-  it("counts completions within the Monday-start week, partial completion", () => {
-    // 2026-06-08 is a Monday.
-    const ref = new Date("2026-06-10T12:00:00.000Z"); // Wednesday, same week
+  it("counts completions in the last 7 days, today included", () => {
+    const ref = new Date("2026-06-10T12:00:00.000Z");
     const entries = [
-      entry("2026-06-08", 1), // Monday — in window
-      entry("2026-06-09", 1), // Tuesday — in window
-      entry("2026-06-01", 1), // previous week — out of window
+      entry("2026-06-10", 1),
+      entry("2026-06-04", 1),
+      entry("2026-06-03", 1),
     ];
-    const result = getFrequencyProgress(weekly, entries, ref);
-    expect(result).toEqual({ completed: 2, target: 3, period: "week" });
+    expect(getFrequencyProgress(weekly, entries, ref)).toEqual({
+      completed: 2,
+      target: 3,
+      windowDays: 7,
+    });
   });
 
-  it("resets to 0 on Monday (new week)", () => {
-    const ref = new Date("2026-06-08T06:00:00.000Z"); // Monday morning
-    const entries = [entry("2026-06-07", 1)]; // Sunday (prior week)
-    const result = getFrequencyProgress(weekly, entries, ref);
-    expect(result).toEqual({ completed: 0, target: 3, period: "week" });
+  it("does not reset on Monday", () => {
+    const ref = new Date("2026-06-08T06:00:00.000Z");
+    const result = getFrequencyProgress(weekly, [entry("2026-06-07", 1)], ref);
+    expect(result.completed).toBe(1);
   });
-});
 
-describe("getFrequencyProgress — monthly habit", () => {
-  const monthly: Habit = {
-    ...baseHabit,
-    frequency_count: 10,
-    frequency_period: "month",
-  };
+  it("uses an arbitrary D (1 in 50)", () => {
+    const habit: Habit = {
+      ...baseHabit,
+      frequency_days: 50,
+      frequency_period: null,
+    };
+    const ref = new Date("2026-06-10T12:00:00.000Z");
+    const result = getFrequencyProgress(habit, [entry("2026-04-22", 1)], ref);
+    expect(result).toEqual({ completed: 1, target: 1, windowDays: 50 });
+    const older = getFrequencyProgress(habit, [entry("2026-04-21", 1)], ref);
+    expect(older.completed).toBe(0);
+  });
 
-  it("counts completions within the calendar month", () => {
+  it("falls back to the period for period-only habits", () => {
+    const habit: Habit = {
+      ...baseHabit,
+      frequency_count: 10,
+      frequency_period: "month",
+    };
     const ref = new Date("2026-06-15T12:00:00.000Z");
-    const entries = [
-      entry("2026-06-01", 1),
-      entry("2026-06-14", 1),
-      entry("2026-05-31", 1), // previous month — out of window
-    ];
-    const result = getFrequencyProgress(monthly, entries, ref);
-    expect(result).toEqual({ completed: 2, target: 10, period: "month" });
+    const result = getFrequencyProgress(habit, [entry("2026-05-20", 1)], ref);
+    expect(result).toEqual({ completed: 1, target: 10, windowDays: 30 });
   });
 });
 
@@ -106,7 +116,7 @@ describe("getFrequencyProgress — null frequency_count fallback", () => {
     };
     const ref = new Date("2026-06-10T12:00:00.000Z");
     const result = getFrequencyProgress(habit, [entry("2026-06-10", 1)], ref);
-    expect(result).toEqual({ completed: 1, target: 1, period: "day" });
+    expect(result).toEqual({ completed: 1, target: 1, windowDays: 1 });
   });
 });
 
@@ -120,12 +130,20 @@ describe("getFrequencyProgress — measurable at_most habit", () => {
       frequency_count: 7,
       frequency_period: "week",
     };
-    const ref = new Date("2026-06-10T12:00:00.000Z"); // Wednesday, week of 06-08
-    const entries = [
-      entry("2026-06-08", 1), // meets at_most 1 → counts
-      entry("2026-06-09", 3), // exceeds at_most 1 → does not count
-    ];
+    const ref = new Date("2026-06-10T12:00:00.000Z");
+    const entries = [entry("2026-06-08", 1), entry("2026-06-09", 3)];
     const result = getFrequencyProgress(habit, entries, ref);
-    expect(result).toEqual({ completed: 1, target: 7, period: "week" });
+    expect(result).toEqual({ completed: 1, target: 7, windowDays: 7 });
+  });
+});
+
+describe("frequencyProgressLabel", () => {
+  it("reads as the last D days", () => {
+    expect(
+      frequencyProgressLabel({ completed: 2, target: 3, windowDays: 7 }),
+    ).toBe("2 of 3 in the last 7 days");
+    expect(
+      frequencyProgressLabel({ completed: 1, target: 1, windowDays: 1 }),
+    ).toBe("1 of 1 today");
   });
 });

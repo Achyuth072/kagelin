@@ -4,6 +4,7 @@ import {
   toCreateHabitInput,
 } from "../../src/lib/import/uhabits";
 import type { Habit } from "../../src/lib/types/habit";
+import { mapKagelinFrequencyToLoop } from "../../src/lib/export/uhabitsShared";
 import { getCurrentStreak } from "../../src/lib/utils/habit-streak";
 import {
   classifyUhabitsError,
@@ -206,39 +207,66 @@ describe("uhabitsImport source provenance", () => {
 });
 
 describe("uhabitsImport frequency mapping", () => {
-  it("maps exact denominators to day/week/month with count = freq_num", () => {
+  it("maps freq_num/freq_den directly to count and frequency_days", () => {
     const mockHabits = [
       { id: 1, name: "Daily", archived: 0, freq_num: 1, freq_den: 1 },
       { id: 2, name: "Thrice weekly", archived: 0, freq_num: 3, freq_den: 7 },
       { id: 3, name: "Monthly", archived: 0, freq_num: 1, freq_den: 30 },
-      { id: 4, name: "Monthly31", archived: 0, freq_num: 2, freq_den: 31 },
+      { id: 4, name: "HAIRCUT", archived: 0, freq_num: 1, freq_den: 50 },
+      { id: 5, name: "SHAMPOO", archived: 0, freq_num: 1, freq_den: 3 },
+      { id: 6, name: "WASH TOWEL", archived: 0, freq_num: 1, freq_den: 2 },
+      { id: 7, name: "EXFOLIATE", archived: 0, freq_num: 2, freq_den: 7 },
     ];
     const result = mapUhabitsToKanso(mockHabits, []);
+    const got = result.habits.map((h) => [
+      h.frequency_count,
+      h.frequency_days,
+      h.frequency_period,
+    ]);
 
-    expect(result.habits[0].frequency_count).toBe(1);
-    expect(result.habits[0].frequency_period).toBe("day");
-    expect(result.habits[1].frequency_count).toBe(3);
-    expect(result.habits[1].frequency_period).toBe("week");
-    expect(result.habits[2].frequency_count).toBe(1);
-    expect(result.habits[2].frequency_period).toBe("month");
-    expect(result.habits[3].frequency_count).toBe(2);
-    expect(result.habits[3].frequency_period).toBe("month");
+    expect(got).toEqual([
+      [1, 1, "day"],
+      [3, 7, "week"],
+      [1, 30, "month"],
+      [1, 50, null],
+      [1, 3, null],
+      [1, 2, null],
+      [2, 7, "week"],
+    ]);
   });
 
-  it("approximates inexpressible fractions to weekly, half-up", () => {
-    const mockHabits = [
-      { id: 1, name: "Every other day", archived: 0, freq_num: 1, freq_den: 2 },
-      { id: 2, name: "Every 3 days", archived: 0, freq_num: 1, freq_den: 3 },
-      { id: 3, name: "Every 5 days", archived: 0, freq_num: 1, freq_den: 5 },
-      { id: 4, name: "Custom 5/10", archived: 0, freq_num: 5, freq_den: 10 },
+  it("import → export keeps the exact fraction", () => {
+    const fractions = [
+      [1, 50],
+      [1, 3],
+      [1, 2],
+      [2, 7],
     ];
-    const result = mapUhabitsToKanso(mockHabits, []);
+    const { habits } = mapUhabitsToKanso(
+      fractions.map(([n, d], i) => ({
+        id: i + 1,
+        name: `H${i}`,
+        archived: 0,
+        freq_num: n,
+        freq_den: d,
+      })),
+      [],
+    );
+    const exported = habits.map((h) => {
+      const { freq_num, freq_den } = mapKagelinFrequencyToLoop(h);
+      return [freq_num, freq_den];
+    });
+    expect(exported).toEqual(fractions);
+  });
 
-    expect(result.habits[0].frequency_period).toBe("week");
-    expect(result.habits[0].frequency_count).toBe(4);
-    expect(result.habits[1].frequency_count).toBe(2);
-    expect(result.habits[2].frequency_count).toBe(1);
-    expect(result.habits[3].frequency_count).toBe(4);
+  it("round-trips through the create input keeping frequency_days", () => {
+    const [haircut] = mapUhabitsToKanso(
+      [{ id: 1, name: "HAIRCUT", archived: 0, freq_num: 1, freq_den: 50 }],
+      [],
+    ).habits;
+    const input = toCreateHabitInput(haircut);
+    expect(input.frequency_count).toBe(1);
+    expect(input.frequency_days).toBe(50);
   });
 
   it("leaves frequency unset for absent or invalid freq columns", () => {

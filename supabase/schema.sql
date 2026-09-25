@@ -719,7 +719,9 @@ CREATE TABLE IF NOT EXISTS public.habits (
   source_uuid TEXT,
   question TEXT,
   reminder_time TEXT,
-  reminder_days INT NOT NULL DEFAULT 127
+  reminder_days INT NOT NULL DEFAULT 127,
+  -- N-in-D window length; source of truth over frequency_period (ADR 0019).
+  frequency_days INT CHECK (frequency_days BETWEEN 1 AND 365)
 );
 
 -- Index for faster user-scoped lookups

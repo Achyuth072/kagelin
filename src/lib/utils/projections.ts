@@ -6,6 +6,7 @@ import {
 } from "date-fns";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
+import { frequencyWindowDays } from "@/lib/utils/habit-frequency";
 
 type RiskCandidateHabit = Pick<
   Habit,
@@ -15,6 +16,7 @@ type RiskCandidateHabit = Pick<
   | "archived_at"
   | "habit_type"
   | "frequency_count"
+  | "frequency_days"
   | "frequency_period"
   | "target_type"
   | "target_value"
@@ -100,24 +102,10 @@ export interface StreakAtRisk {
 
 function isDailyFrequency(habit: RiskCandidateHabit): boolean {
   const count = habit.frequency_count ?? 1;
-  const period = habit.frequency_period ?? "day";
-  return count === 1 && period === "day";
+  return count === 1 && frequencyWindowDays(habit) === 1;
 }
 
-/**
- * Daily-frequency boolean habits with an active streak that haven't logged
- * today — missing today breaks the streak tonight.
- *
- * Scoped to daily habits only: the frequency-aware streak algorithm
- * (habit-streak.ts) interpolates a non-daily habit's covered days from its
- * last logged rep, so its coverage window doesn't shrink day-by-day as
- * "today" advances — it either still has slack or has already dropped to
- * zero, with no reliable "tight but still alive" state to flag. Non-daily
- * habits already surface a frequency-progress ring elsewhere (habit cards /
- * Insights), so this signal focuses on the case it can call precisely.
- * Measurable and archived habits are excluded, matching the Boolean-only
- * streak precedent.
- */
+// Non-daily schedules are excluded: interval interpolation leaves no reliable "at risk" state.
 export function getStreaksAtRisk(
   habits: RiskCandidateHabit[],
   now: Date = new Date(),

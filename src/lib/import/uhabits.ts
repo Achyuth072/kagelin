@@ -10,6 +10,7 @@ import {
 } from "@/lib/types/habit";
 import type { CreateHabitInput } from "../mutations/habit";
 import { PROJECT_COLORS } from "../constants/colors";
+import { periodForFrequencyDays } from "../utils/habit-frequency";
 
 export interface UhabitsRawSource {
   habits: Record<string, unknown>[];
@@ -161,22 +162,14 @@ export function paletteToHex(colorIndex: number): string {
   return findClosestKansoColor(loopHex);
 }
 
-// uhabits frequency is a fraction freq_num/freq_den; Kagelin has only
-// day/week/month, so inexpressible denominators are approximated. See ADR 0005.
+// Days capped at 365 to satisfy schema check constraint (ADR 0019).
 function mapFrequency(
   freqNum: number,
   freqDen: number,
-): { count: number; period: "day" | "week" | "month" } | null {
-  if (!Number.isFinite(freqNum) || !Number.isFinite(freqDen)) return null;
-  if (freqDen <= 0 || freqNum <= 0) return null;
-
-  if (freqDen === 1) return { count: freqNum, period: "day" };
-  if (freqDen === 7) return { count: freqNum, period: "week" };
-  if (freqDen === 30 || freqDen === 31)
-    return { count: freqNum, period: "month" };
-
-  const count = Math.max(1, Math.round((freqNum * 7) / freqDen));
-  return { count, period: "week" };
+): { count: number; days: number } | null {
+  if (!Number.isInteger(freqNum) || !Number.isInteger(freqDen)) return null;
+  if (freqDen < 1 || freqNum < 1) return null;
+  return { count: freqNum, days: Math.min(freqDen, 365) };
 }
 
 function inferIcon(habitName: string, description?: string): string {
@@ -207,8 +200,6 @@ export function parseRepetitionValue(
   return null;
 }
 
-// Carries frequency and fidelity fields through so they aren't dropped between
-// parse and persist. See ADR 0005.
 export function toCreateHabitInput(habit: Habit): CreateHabitInput {
   return {
     name: habit.name,
@@ -220,6 +211,7 @@ export function toCreateHabitInput(habit: Habit): CreateHabitInput {
     habit_type: habit.habit_type,
     sort_order: habit.sort_order ?? undefined,
     frequency_count: habit.frequency_count ?? undefined,
+    frequency_days: habit.frequency_days ?? undefined,
     frequency_period: habit.frequency_period ?? undefined,
     target_type: habit.target_type ?? undefined,
     target_value: habit.target_value ?? undefined,
@@ -350,7 +342,8 @@ export function mapUhabitsToKanso(
       reminder_days,
       ...(frequency && {
         frequency_count: frequency.count,
-        frequency_period: frequency.period,
+        frequency_days: frequency.days,
+        frequency_period: periodForFrequencyDays(frequency.days),
       }),
     });
   });
