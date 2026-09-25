@@ -40,35 +40,96 @@ export function useUpdateHabit() {
   });
 }
 
+type HabitsSnapshot = [readonly unknown[], HabitWithEntries[] | undefined][];
+
+// Habits are cached per {includeArchived, isGuestMode}; prefix-matching keeps
+// every variant in step and rolls all of them back from one snapshot.
+function rollBack(
+  queryClient: ReturnType<typeof useQueryClient>,
+  snapshot?: HabitsSnapshot,
+) {
+  snapshot?.forEach(([key, data]) => queryClient.setQueryData(key, data));
+}
+
+function useSetHabitArchived(archive: boolean) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: [archive ? "archiveHabit" : "unarchiveHabit"],
+    mutationFn: (habitId: string) =>
+      habitMutations.update({
+        id: habitId,
+        archived_at: archive ? new Date().toISOString() : null,
+      }),
+    onMutate: async (habitId) => {
+      await queryClient.cancelQueries({ queryKey: ["habits"] });
+      const snapshot = queryClient.getQueriesData<HabitWithEntries[]>({
+        queryKey: ["habits"],
+      });
+      const target = snapshot
+        .flatMap(([, data]) => data ?? [])
+        .find((h) => h.id === habitId);
+      const archivedAt = archive ? new Date().toISOString() : null;
+      const isAllSlice = (key: readonly unknown[]) =>
+        (key[1] as { includeArchived: boolean }).includeArchived;
+
+      queryClient.setQueriesData<HabitWithEntries[]>(
+        { queryKey: ["habits"], predicate: (q) => isAllSlice(q.queryKey) },
+        (old) =>
+          old?.map((h) =>
+            h.id === habitId ? { ...h, archived_at: archivedAt } : h,
+          ),
+      );
+      queryClient.setQueriesData<HabitWithEntries[]>(
+        { queryKey: ["habits"], predicate: (q) => !isAllSlice(q.queryKey) },
+        (old) => {
+          if (!old) return old;
+          if (archive) return old.filter((h) => h.id !== habitId);
+          if (!target || old.some((h) => h.id === habitId)) return old;
+          return [...old, { ...target, archived_at: null }].sort(
+            (a, b) => a.sort_order - b.sort_order,
+          );
+        },
+      );
+      return { snapshot };
+    },
+    onError: (err, _vars, context) => {
+      rollBack(queryClient, context?.snapshot);
+      handleMutationError(err);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["habits"] });
+    },
+  });
+}
+
+export function useArchiveHabit() {
+  return useSetHabitArchived(true);
+}
+
+export function useUnarchiveHabit() {
+  return useSetHabitArchived(false);
+}
+
 export function useDeleteHabit() {
   const queryClient = useQueryClient();
-  const { isGuestMode } = useAuth();
 
   return useMutation({
     mutationKey: ["deleteHabit"],
     mutationFn: habitMutations.delete,
     onMutate: async (habitId) => {
       await queryClient.cancelQueries({ queryKey: ["habits"] });
-
-      const previousHabits = queryClient.getQueryData<HabitWithEntries[]>([
-        "habits",
-        { includeArchived: false, isGuestMode },
-      ]);
-
-      queryClient.setQueryData<HabitWithEntries[]>(
-        ["habits", { includeArchived: false, isGuestMode }],
+      const snapshot = queryClient.getQueriesData<HabitWithEntries[]>({
+        queryKey: ["habits"],
+      });
+      queryClient.setQueriesData<HabitWithEntries[]>(
+        { queryKey: ["habits"] },
         (old) => old?.filter((habit) => habit.id !== habitId),
       );
-
-      return { previousHabits };
+      return { snapshot };
     },
     onError: (err, _vars, context) => {
-      if (context?.previousHabits) {
-        queryClient.setQueryData(
-          ["habits", { includeArchived: false, isGuestMode }],
-          context.previousHabits,
-        );
-      }
+      rollBack(queryClient, context?.snapshot);
       handleMutationError(err);
     },
     onSettled: () => {
@@ -91,8 +152,6 @@ export function useReorderHabits() {
       const previousHabits =
         queryClient.getQueryData<HabitWithEntries[]>(queryKey);
 
-      // Optimistically write the new sort_order into the cache and re-sort so the
-      // list reflects the drop immediately (survives the onSettled refetch).
       queryClient.setQueryData<HabitWithEntries[]>(queryKey, (old) => {
         if (!old) return old;
         const sortOrderById = new Map(pairs.map((p) => [p.id, p.sort_order]));

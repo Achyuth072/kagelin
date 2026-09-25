@@ -99,3 +99,11 @@ export function useHabit(habitId: string | null) {
     isLoading,
   };
 }
+
+export function useArchivedHabits() {
+  const query = useHabits({ includeArchived: true });
+  return {
+    ...query,
+    data: query.data?.filter((h) => h.archived_at),
+  };
+}

@@ -9,6 +9,7 @@ import {
   Send,
   Save,
   Trash2,
+  Archive,
   CalendarIcon,
   AlignLeft,
   SlidersHorizontal,
@@ -73,6 +74,7 @@ export type HabitViewProps =
   | (HabitViewBaseProps & { mode: "create" })
   | (HabitViewBaseProps & {
       mode: "edit";
+      onArchive: () => void;
       onDelete: () => void;
     });
 
@@ -274,6 +276,23 @@ export function HabitView(props: HabitViewProps) {
         />
 
         <div className="flex-1" />
+
+        {mode === "edit" && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg transition-seijaku-fast"
+            onClick={() => {
+              trigger("toggle");
+              props.onArchive();
+            }}
+            disabled={isPending}
+            aria-label="Archive habit"
+          >
+            <Archive strokeWidth={2.25} />
+          </Button>
+        )}
 
         {mode === "edit" && (
           <Button
