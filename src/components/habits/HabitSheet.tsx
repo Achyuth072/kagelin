@@ -101,6 +101,8 @@ export function HabitSheet({
   const frequencyCount = useWatch({ control, name: "frequency_count" }) ?? 1;
   const frequencyPeriod =
     useWatch({ control, name: "frequency_period" }) ?? "day";
+  const frequencyDays = useWatch({ control, name: "frequency_days" }) as
+    number | undefined;
   const targetValue = useWatch({ control, name: "target_value" });
   const targetType = useWatch({ control, name: "target_type" }) ?? "at_least";
   const unit = useWatch({ control, name: "unit" }) || "";
@@ -254,10 +256,14 @@ export function HabitSheet({
     setFrequencyCount: (v: number) =>
       setValue("frequency_count", v, { shouldValidate: true }),
     frequencyPeriod,
-    setFrequencyPeriod: (v: CreateHabitInput["frequency_period"]) => {
-      // Presets override custom frequency_days.
+    setFrequencyPeriod: (v: CreateHabitInput["frequency_period"] | null) => {
+      setValue("frequency_period", v ?? undefined, { shouldValidate: true });
       setValue("frequency_days", undefined);
-      setValue("frequency_period", v, { shouldValidate: true });
+    },
+    frequencyDays,
+    setFrequencyDays: (v: number | undefined) => {
+      setValue("frequency_days", v, { shouldValidate: true });
+      if (v !== undefined) setValue("frequency_period", undefined);
     },
     targetValue,
     setTargetValue: (v: number | undefined) =>

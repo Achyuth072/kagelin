@@ -422,10 +422,11 @@ ring, since it would sit full for D − 1 days. It shows its **last done / next*
 instead: "Done 12 days ago · next in 38 days". _Avoid_: "due" (a Habit is not
 due; see Habit reminder).
 
-Frequency is authored with the source tracker's five options: **Every day**,
-**Every D days**, **N times per week**, **N times per month** (D = 30), and **N
-times in D days**. They are all spellings of N-in-D; a saved Frequency opens on
-the most specific one that matches it. Frequency is **not
+Frequency is authored with four segments: **Daily**, **Weekly** (D = 7),
+**Monthly** (D = 30), and **Custom** ("N times every D days"; N = 1 is "every D
+days"). They are all spellings of N-in-D and cover the source tracker's five
+options; a saved Frequency opens on Daily, Weekly or Monthly when D is 1, 7 or
+30, otherwise on Custom. Frequency is **not
 effective-dated**: it is a single current value, so editing it recomputes the
 _entire_ Frequency grid and streak history against the new target — accepted as a
 known tradeoff rather than snapshotting frequency per period.

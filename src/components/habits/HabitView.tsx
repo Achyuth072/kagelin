@@ -46,8 +46,10 @@ interface HabitViewBaseProps {
   setHabitType: (value: HabitType) => void;
   frequencyCount: number;
   setFrequencyCount: (value: number) => void;
-  frequencyPeriod: FrequencyPeriod;
-  setFrequencyPeriod: (value: FrequencyPeriod) => void;
+  frequencyPeriod: FrequencyPeriod | null | undefined;
+  setFrequencyPeriod: (value: FrequencyPeriod | null) => void;
+  frequencyDays: number | undefined;
+  setFrequencyDays: (value: number | undefined) => void;
   targetValue: number | undefined;
   setTargetValue: (value: number | undefined) => void;
   targetType: TargetType;
@@ -97,6 +99,8 @@ export function HabitView(props: HabitViewProps) {
     setFrequencyCount,
     frequencyPeriod,
     setFrequencyPeriod,
+    frequencyDays,
+    setFrequencyDays,
     targetValue,
     setTargetValue,
     targetType,
@@ -179,8 +183,10 @@ export function HabitView(props: HabitViewProps) {
         <HabitFrequencyField
           count={frequencyCount}
           period={frequencyPeriod}
+          frequencyDays={frequencyDays}
           onCountChange={setFrequencyCount}
           onPeriodChange={setFrequencyPeriod}
+          onFrequencyDaysChange={setFrequencyDays}
         />
 
         {habitType === "measurable" && (
