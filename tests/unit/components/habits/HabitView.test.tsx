@@ -54,6 +54,8 @@ describe("HabitView", () => {
     setFrequencyCount: vi.fn(),
     frequencyPeriod: "day" as const,
     setFrequencyPeriod: vi.fn(),
+    frequencyDays: undefined,
+    setFrequencyDays: vi.fn(),
     targetValue: undefined,
     setTargetValue: vi.fn(),
     targetType: "at_least" as const,

@@ -20,6 +20,9 @@ import {
   getFrequencyProgress,
   frequencyProgressLabel,
   hasFrequencyTarget,
+  isOnceEveryDDays,
+  getLastDoneNext,
+  lastDoneNextLabel,
 } from "@/lib/utils/habit-frequency-progress";
 import { CircularProgress } from "@/components/ui/circular-progress";
 
@@ -96,11 +99,18 @@ export function HabitCard({
   ).length;
   const currentStreak = getCurrentStreak(habit, habit.entries);
 
-  // Measurable's raw count isn't frequency progress, so only boolean habits show the ring.
+  // 1-in-D Boolean habits show last-done/next text instead of the ring.
+  const showLastDoneNext = isOnceEveryDDays(habit);
+  // Measurable and 1-in-D habits don't show the ring.
   const showFrequencyRing =
-    habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
+    !showLastDoneNext &&
+    habit.habit_type !== "measurable" &&
+    hasFrequencyTarget(habit);
   const frequencyProgress = showFrequencyRing
     ? getFrequencyProgress(habit, habit.entries)
+    : null;
+  const lastDoneNext = showLastDoneNext
+    ? getLastDoneNext(habit, habit.entries)
     : null;
 
   const handleToggle = () => {
@@ -205,41 +215,49 @@ export function HabitCard({
           </div>
 
           <div className="flex items-center gap-2 text-[13px] font-medium tabular-nums text-foreground/55">
-            {frequencyProgress && (
+            {lastDoneNext ? (
+              <span className="font-medium text-foreground/70">
+                {lastDoneNextLabel(lastDoneNext)}
+              </span>
+            ) : (
               <>
-                <span className="flex items-center gap-1.5">
-                  <CircularProgress
-                    value={frequencyProgress.completed}
-                    max={frequencyProgress.target}
-                    size={18}
-                    strokeWidth={2.5}
-                    color={habit.color}
-                    label={frequencyProgressLabel(frequencyProgress)}
-                  />
+                {frequencyProgress && (
+                  <>
+                    <span className="flex items-center gap-1.5">
+                      <CircularProgress
+                        value={frequencyProgress.completed}
+                        max={frequencyProgress.target}
+                        size={18}
+                        strokeWidth={2.5}
+                        color={habit.color}
+                        label={frequencyProgressLabel(frequencyProgress)}
+                      />
+                      <span className="font-semibold text-foreground/90">
+                        {frequencyProgress.completed}/{frequencyProgress.target}
+                      </span>
+                    </span>
+                    <span className="text-foreground/25" aria-hidden="true">
+                      ·
+                    </span>
+                  </>
+                )}
+                <span>
                   <span className="font-semibold text-foreground/90">
-                    {frequencyProgress.completed}/{frequencyProgress.target}
-                  </span>
+                    {currentStreak}
+                  </span>{" "}
+                  streak
                 </span>
                 <span className="text-foreground/25" aria-hidden="true">
                   ·
                 </span>
+                <span>
+                  <span className="font-semibold text-foreground/90">
+                    {totalCompletions}
+                  </span>{" "}
+                  total
+                </span>
               </>
             )}
-            <span>
-              <span className="font-semibold text-foreground/90">
-                {currentStreak}
-              </span>{" "}
-              streak
-            </span>
-            <span className="text-foreground/25" aria-hidden="true">
-              ·
-            </span>
-            <span>
-              <span className="font-semibold text-foreground/90">
-                {totalCompletions}
-              </span>{" "}
-              total
-            </span>
           </div>
         </div>
 

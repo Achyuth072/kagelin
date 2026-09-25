@@ -15,6 +15,9 @@ import {
   getFrequencyProgress,
   frequencyProgressLabel,
   hasFrequencyTarget,
+  isOnceEveryDDays,
+  getLastDoneNext,
+  lastDoneNextLabel,
 } from "@/lib/utils/habit-frequency-progress";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
 import { DragHandle } from "@/components/tasks/DragHandle";
@@ -56,14 +59,22 @@ export function HabitCompactRow({
     [habit.entries, today, habit.start_date],
   );
 
+  const showLastDoneNext = isOnceEveryDDays(habit);
   const showFrequencyRing =
-    habit.habit_type !== "measurable" && hasFrequencyTarget(habit);
+    !showLastDoneNext &&
+    habit.habit_type !== "measurable" &&
+    hasFrequencyTarget(habit);
   const frequencyProgress = useMemo(
     () =>
       showFrequencyRing
         ? getFrequencyProgress(habit, habit.entries, today)
         : null,
     [habit, showFrequencyRing, today],
+  );
+  const lastDoneNext = useMemo(
+    () =>
+      showLastDoneNext ? getLastDoneNext(habit, habit.entries, today) : null,
+    [habit, showLastDoneNext, today],
   );
 
   return (
@@ -95,21 +106,31 @@ export function HabitCompactRow({
           {habit.name}
         </span>
         <div className="ml-auto flex shrink-0 items-center gap-2 pl-2 lg:ml-0">
-          {frequencyProgress && (
-            <CircularProgress
-              value={frequencyProgress.completed}
-              max={frequencyProgress.target}
-              size={18}
-              strokeWidth={2.5}
-              color={habit.color}
-              label={frequencyProgressLabel(frequencyProgress)}
-              className="mr-0.5"
-            />
+          {lastDoneNext ? (
+            <span className="text-[13px] font-medium text-foreground/70">
+              {lastDoneNextLabel(lastDoneNext)}
+            </span>
+          ) : (
+            <>
+              {frequencyProgress && (
+                <CircularProgress
+                  value={frequencyProgress.completed}
+                  max={frequencyProgress.target}
+                  size={18}
+                  strokeWidth={2.5}
+                  color={habit.color}
+                  label={frequencyProgressLabel(frequencyProgress)}
+                  className="mr-0.5"
+                />
+              )}
+              <span className="text-[13px] font-medium tabular-nums text-foreground/55">
+                <span className="font-semibold text-foreground/90">
+                  {streak}
+                </span>{" "}
+                streak
+              </span>
+            </>
           )}
-          <span className="text-[13px] font-medium tabular-nums text-foreground/55">
-            <span className="font-semibold text-foreground/90">{streak}</span>{" "}
-            streak
-          </span>
           {onViewInsights && (
             <button
               onClick={(e) => {
