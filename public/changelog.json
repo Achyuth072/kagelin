@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.45.0-preview.1",
+    "date": "2026-09-25",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Lossless N-in-D habit frequency via frequency_days"
+      ]
+    }
+  },
+  {
     "version": "1.45.0-preview.0",
     "date": "2026-09-25",
     "channel": "preview",
@@ -699,22 +709,6 @@
         "Correct handle_new_user OAuth display_name fallback field",
         "Auth error labelling, duplication, and naming cleanups",
         "Auth callback error routing, update-password shell, signup-disabled message"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0-preview.1",
-    "date": "2026-08-15",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add PWA install prompt for mobile, fix iOS notifications messaging",
-        "Add About section to Settings for AGPL source-offer compliance"
-      ],
-      "Fixed": [
-        "Compact and declutter the auth page layout",
-        "Press feedback, focus/tap-highlight, and haptics on offline.html buttons",
-        "Center the footer wrapper"
       ]
     }
   }
