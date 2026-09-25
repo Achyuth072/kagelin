@@ -437,10 +437,12 @@ BEGIN
     'habit_reminder',
     jsonb_strip_nulls(jsonb_build_object(
       'title', 'Habit reminder',
-      'body', 'You have a habit scheduled now.',
-      'encrypted', public.encrypted_notification_body(
-        CASE WHEN NULLIF(h.question, '') IS NOT NULL THEN '{}' ELSE 'Time for {}' END,
-        COALESCE(NULLIF(h.question, ''), h.name)),
+      'body', CASE WHEN NULLIF(h.question, '') IS NOT NULL THEN 'You have a habit scheduled now.' ELSE 'Time to check in.' END,
+      'encryptedTitle', public.encrypted_notification_body('{}', h.name),
+      'encrypted', CASE WHEN NULLIF(h.question, '') IS NOT NULL
+                        THEN public.encrypted_notification_body('{}', h.question)
+                        ELSE NULL
+                   END,
       'data', jsonb_build_object('url', '/habits', 'habitId', h.id)
     )),
     h.id

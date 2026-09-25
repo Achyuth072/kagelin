@@ -145,6 +145,7 @@ interface PushPayload {
   data?: unknown;
   actions?: NotificationDisplayOptions["actions"];
   encrypted?: EncryptedNotificationBody;
+  encryptedTitle?: EncryptedNotificationBody;
 }
 
 const FALLBACK_TITLE = "Kagelin";
@@ -159,9 +160,7 @@ function readPushText(data: PushMessageData): string | undefined {
   }
 }
 
-// json() and text() each throw on a payload that doesn't decode. Neither may
-// escape: a push that displays nothing reads as a silent push, and iOS revokes
-// the subscription for those.
+// iOS revokes the push subscription if a push displays nothing.
 function readPushPayload(data: PushMessageData | null): PushPayload {
   if (!data) return {};
   try {
@@ -173,7 +172,6 @@ function readPushPayload(data: PushMessageData | null): PushPayload {
 }
 
 async function showPushNotification(payload: PushPayload): Promise<void> {
-  // No default tag: a shared one would collapse unrelated notifications.
   const options: NotificationDisplayOptions = {
     body: payload.body || FALLBACK_BODY,
   };
@@ -182,13 +180,15 @@ async function showPushNotification(payload: PushPayload): Promise<void> {
   if (payload.badge) options.badge = payload.badge;
   if (payload.tag) {
     options.tag = payload.tag;
-    // Without renotify, a tagged notification replaces its predecessor silently.
     options.renotify = true;
   }
   if (payload.data) options.data = payload.data;
   if (payload.actions) options.actions = payload.actions;
   if (payload.encrypted?.ciphertext && payload.encrypted?.template) {
     options.encrypted = payload.encrypted;
+  }
+  if (payload.encryptedTitle?.ciphertext && payload.encryptedTitle?.template) {
+    options.encryptedTitle = payload.encryptedTitle;
   }
 
   try {
@@ -198,8 +198,6 @@ async function showPushNotification(payload: PushPayload): Promise<void> {
       options,
     );
   } catch (err) {
-    // Something in the payload was rejected. Show the barest possible
-    // notification rather than none — see readPushPayload on silent pushes.
     console.error("[SW] Failed to show notification; showing fallback", err);
     await displayNotification(self.registration, FALLBACK_TITLE, {
       body: FALLBACK_BODY,

@@ -8,12 +8,12 @@ export interface EncryptedNotificationBody {
 
 const PLACEHOLDER = "{}";
 
-// Some envs' NotificationOptions type is missing these.
 export interface NotificationDisplayOptions extends NotificationOptions {
   vibrate?: number[];
   actions?: Array<{ action: string; title: string; icon?: string }>;
   renotify?: boolean;
   encrypted?: EncryptedNotificationBody;
+  encryptedTitle?: EncryptedNotificationBody;
 }
 
 export const DEFAULT_NOTIFICATION_OPTIONS: NotificationDisplayOptions = {
@@ -22,10 +22,7 @@ export const DEFAULT_NOTIFICATION_OPTIONS: NotificationDisplayOptions = {
   vibrate: [200, 100, 200],
 };
 
-// Every display goes through here rather than registration.showNotification:
-// WebKit never implemented tag coalescing
-// (https://bugs.webkit.org/show_bug.cgi?id=258922) and ignores `renotify`, so iOS
-// stacks what Chrome replaces unless we close the predecessors ourselves.
+// WebKit does not coalesce tags or honour renotify (WebKit bug #258922).
 export async function displayNotification(
   registration: ServiceWorkerRegistration,
   title: string,
@@ -35,29 +32,39 @@ export async function displayNotification(
     await closeNotificationsWithTag(registration, options.tag);
   }
 
-  const { encrypted, ...displayable } = options ?? {};
-  if (encrypted) {
-    displayable.body = await resolveEncryptedBody(encrypted, displayable.body);
-  }
+  const { encrypted, encryptedTitle, ...displayable } = options ?? {};
+  const [resolvedTitle, resolvedBody] = await Promise.all([
+    encryptedTitle
+      ? resolveEncryptedField(encryptedTitle, title, "title")
+      : title,
+    encrypted
+      ? resolveEncryptedField(encrypted, displayable.body, "body")
+      : displayable.body,
+  ]);
+  displayable.body = resolvedBody;
 
-  await registration.showNotification(title, {
+  await registration.showNotification(resolvedTitle, {
     ...DEFAULT_NOTIFICATION_OPTIONS,
     ...displayable,
   } as NotificationOptions);
 }
 
-async function resolveEncryptedBody(
+async function resolveEncryptedField<T extends string | undefined>(
   encrypted: EncryptedNotificationBody,
-  fallback: string | undefined,
-): Promise<string | undefined> {
+  fallback: T,
+  fieldName: string,
+): Promise<T> {
   try {
     const key = await keyStore.load();
     if (!key) return fallback;
     const plaintext = await decryptField(key, encrypted.ciphertext);
     // Function replacer avoids interpreting "$" in plaintext as special replacement patterns.
-    return encrypted.template.replace(PLACEHOLDER, () => plaintext);
+    return encrypted.template.replace(PLACEHOLDER, () => plaintext) as T;
   } catch (err) {
-    console.warn("[notifications] Could not decrypt notification body", err);
+    console.warn(
+      `[notifications] Could not decrypt notification ${fieldName}`,
+      err,
+    );
     return fallback;
   }
 }
@@ -72,7 +79,6 @@ async function closeNotificationsWithTag(
       notification.close();
     }
   } catch (err) {
-    // A duplicate beats nothing: on iOS a push that shows nothing costs the subscription.
     console.warn(
       "[notifications] Could not close superseded notifications",
       err,
