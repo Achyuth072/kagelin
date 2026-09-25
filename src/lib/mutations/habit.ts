@@ -42,6 +42,7 @@ export interface UpdateHabitInput {
   question?: string | null;
   reminder_time?: string | null;
   reminder_days?: number;
+  archived_at?: string | null;
 }
 
 export interface MarkHabitCompleteInput {
@@ -90,8 +91,7 @@ export const habitMutations = {
     const user = session?.user;
     if (!user) throw new Error("Not authenticated");
 
-    // Append to the bottom: new habit gets max(sort_order) + 1 for the user.
-    // Bulk callers (e.g. import) can pass sort_order to skip this lookup.
+    // Bulk callers (e.g. import) pass sort_order to skip this lookup.
     let nextSortOrder = input.sort_order;
     if (nextSortOrder === undefined) {
       const { data: lastHabit } = await supabase
@@ -137,6 +137,7 @@ export const habitMutations = {
       question,
       reminder_time,
       reminder_days,
+      archived_at,
     } = input;
 
     const updates: Partial<Habit> = {};
@@ -155,6 +156,7 @@ export const habitMutations = {
     if (question !== undefined) updates.question = question;
     if (reminder_time !== undefined) updates.reminder_time = reminder_time;
     if (reminder_days !== undefined) updates.reminder_days = reminder_days;
+    if (archived_at !== undefined) updates.archived_at = archived_at;
     if (habit_type === "boolean") {
       updates.target_type = null;
       updates.target_value = null;

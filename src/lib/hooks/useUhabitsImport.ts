@@ -4,6 +4,7 @@ import { useState } from "react";
 import * as Sentry from "@sentry/nextjs";
 import {
   parseUhabitsFile,
+  partitionAgainstExisting,
   toCreateHabitInput,
   type UhabitsRawSource,
 } from "@/lib/import/uhabits";
@@ -76,25 +77,23 @@ export function useUhabitsImport() {
         // eslint-disable-next-line local/no-unbounded-supabase-select -- habit definitions, not entries
         const { data: existing } = await supabase
           .from("habits")
-          .select("name, sort_order");
+          .select("name, sort_order, source_uuid");
         if (existing && existing.length > 0) {
-          const existingNames = new Set(
-            existing.map((h) => h.name.toLowerCase()),
+          const { toImport, skippedCount: skipped } = partitionAgainstExisting(
+            habits,
+            existing,
           );
-          habitsToImport = habits.filter(
-            (h) => !existingNames.has(h.name.toLowerCase()),
-          );
-          skippedCount = habits.length - habitsToImport.length;
+          habitsToImport = toImport;
+          skippedCount = skipped;
           nextSortOrder = Math.max(...existing.map((h) => h.sort_order)) + 1;
         }
       } else {
-        const existingNames = new Set(
-          mockStore.getHabits().map((h) => h.name.toLowerCase()),
+        const { toImport, skippedCount: skipped } = partitionAgainstExisting(
+          habits,
+          mockStore.getHabits(),
         );
-        habitsToImport = habits.filter(
-          (h) => !existingNames.has(h.name.toLowerCase()),
-        );
-        skippedCount = habits.length - habitsToImport.length;
+        habitsToImport = toImport;
+        skippedCount = skipped;
       }
 
       if (habitsToImport.length === 0) {

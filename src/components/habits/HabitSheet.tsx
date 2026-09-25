@@ -12,6 +12,7 @@ import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDial
 import {
   useCreateHabit,
   useUpdateHabit,
+  useArchiveHabit,
   useDeleteHabit,
 } from "@/lib/hooks/useHabitMutations";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -110,6 +111,7 @@ export function HabitSheet({
 
   const createMutation = useCreateHabit();
   const updateMutation = useUpdateHabit();
+  const archiveMutation = useArchiveHabit();
   const deleteMutation = useDeleteHabit();
   const isMobile = useMediaQuery("(max-width: 768px)");
   // Matches ResponsiveDialog breakpoint; desktop CSS grid requires explicit max-height.
@@ -196,6 +198,12 @@ export function HabitSheet({
     },
     [initialHabit, updateMutation, createMutation, onClose, triggerHaptic],
   );
+
+  const handleArchive = useCallback(() => {
+    if (!initialHabit) return;
+    onClose();
+    archiveMutation.mutate(initialHabit.id);
+  }, [initialHabit, onClose, archiveMutation]);
 
   const handleDelete = useCallback(() => {
     if (!initialHabit) return;
@@ -314,6 +322,7 @@ export function HabitSheet({
             ) : (
               <HabitView
                 mode="edit"
+                onArchive={handleArchive}
                 onDelete={handleDelete}
                 {...sharedViewProps}
               />

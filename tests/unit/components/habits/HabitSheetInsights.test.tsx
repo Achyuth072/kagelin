@@ -6,6 +6,7 @@ import {
   useCreateHabit,
   useUpdateHabit,
   useDeleteHabit,
+  useArchiveHabit,
 } from "@/lib/hooks/useHabitMutations";
 import type { Habit } from "@/lib/types/habit";
 
@@ -13,6 +14,7 @@ vi.mock("@/lib/hooks/useHabitMutations", () => ({
   useCreateHabit: vi.fn(),
   useUpdateHabit: vi.fn(),
   useDeleteHabit: vi.fn(),
+  useArchiveHabit: vi.fn(),
 }));
 
 vi.mock("@/components/ui/responsive-dialog", () => ({
@@ -94,6 +96,10 @@ describe("HabitSheet — Insights tab", () => {
       mutate: vi.fn(),
       isPending: false,
     });
+    (useArchiveHabit as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    });
     (useDeleteHabit as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
@@ -101,7 +107,6 @@ describe("HabitSheet — Insights tab", () => {
   });
 
   it("toggles to Insights: swaps body, dialog width stays unified", async () => {
-    // Given: edit mode, currently on the Edit tab
     await act(async () => {
       render(
         <HabitSheet open={true} onClose={() => {}} initialHabit={mockHabit} />,
@@ -111,23 +116,19 @@ describe("HabitSheet — Insights tab", () => {
       "sm:max-w-lg",
     );
 
-    // When: the Insights tab is clicked
     await act(async () => {
       fireEvent.mouseDown(screen.getByRole("tab", { name: "Insights" }));
     });
 
-    // Then: the edit form is gone, Insights content is shown, width unchanged
     expect(screen.queryByPlaceholderText("Habit name")).not.toBeInTheDocument();
     expect(screen.getByTestId("dialog-content").className).toContain(
       "sm:max-w-lg",
     );
 
-    // When: toggled back to Edit
     await act(async () => {
       fireEvent.mouseDown(screen.getByRole("tab", { name: "Edit" }));
     });
 
-    // Then: edit form returns, width still unchanged
     expect(screen.getByPlaceholderText("Habit name")).toBeInTheDocument();
     expect(screen.getByTestId("dialog-content").className).toContain(
       "sm:max-w-lg",
@@ -135,14 +136,12 @@ describe("HabitSheet — Insights tab", () => {
   });
 
   it("hides the toggle in create mode, even with initialTab='insights'", async () => {
-    // Given/When: create mode (no initialHabit) with a stale initialTab
     await act(async () => {
       render(
         <HabitSheet open={true} onClose={() => {}} initialTab="insights" />,
       );
     });
 
-    // Then: no Insights/Edit toggle renders, and the create form is shown
     expect(
       screen.queryByRole("tab", { name: "Insights" }),
     ).not.toBeInTheDocument();
@@ -153,7 +152,6 @@ describe("HabitSheet — Insights tab", () => {
   });
 
   it("opens directly on Insights when initialTab='insights' in edit mode", async () => {
-    // Given/When: edit mode opened with initialTab="insights"
     await act(async () => {
       render(
         <HabitSheet
@@ -165,7 +163,6 @@ describe("HabitSheet — Insights tab", () => {
       );
     });
 
-    // Then: Insights is already active, edit form is not shown
     expect(screen.getByRole("tab", { name: "Insights" })).toHaveAttribute(
       "aria-selected",
       "true",

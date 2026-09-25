@@ -231,6 +231,26 @@ export function toCreateHabitInput(habit: Habit): CreateHabitInput {
   };
 }
 
+// A matched habit is skipped whole, so a re-import can never resurrect an
+// archived habit or duplicate a renamed one. Loop identity beats name.
+export function partitionAgainstExisting(
+  incoming: Habit[],
+  existing: Pick<Habit, "name" | "source_uuid">[],
+) {
+  const uuids = new Set(
+    existing.map((h) => h.source_uuid).filter((u): u is string => !!u),
+  );
+  const names = new Set(existing.map((h) => h.name.toLowerCase()));
+  const toImport = incoming.filter(
+    (habit) =>
+      !(
+        (habit.source_uuid && uuids.has(habit.source_uuid)) ||
+        names.has(habit.name.toLowerCase())
+      ),
+  );
+  return { toImport, skippedCount: incoming.length - toImport.length };
+}
+
 export function mapUhabitsToKanso(
   uhHabits: Record<string, unknown>[],
   uhRepetitions: Record<string, unknown>[],

@@ -86,7 +86,14 @@ describe("Habit Views Footer Layout", () => {
   };
 
   it("HabitView edit footer should not contain color picker", () => {
-    render(<HabitView {...commonProps} mode="edit" onDelete={vi.fn()} />);
+    render(
+      <HabitView
+        {...commonProps}
+        mode="edit"
+        onArchive={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
 
     const footer = screen.getByLabelText(/save/i).closest("div")!;
     fireEvent.click(screen.getByText("Icon & color"));
