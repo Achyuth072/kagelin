@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.45.0-preview.0",
+    "date": "2026-09-25",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Archive and restore habits, re-import matches by Loop identity"
+      ],
+      "Fixed": [
+        "Keep habit drawer footer fixed and reminder row on one line on narrow screens"
+      ]
+    }
+  },
+  {
     "version": "1.44.2",
     "date": "2026-09-24",
     "channel": "stable",
@@ -702,31 +715,6 @@
         "Compact and declutter the auth page layout",
         "Press feedback, focus/tap-highlight, and haptics on offline.html buttons",
         "Center the footer wrapper"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0-preview.0",
-    "date": "2026-08-13",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Broaden handle_new_user display_name fallback to include OAuth metadata",
-        "Implement settings account section for provider management and password setup",
-        "Add forgot-password reset flow and new-password route",
-        "Warn on breached passwords via HIBP range API on sign-up",
-        "Add password sign-up/sign-in with existing-email collision screen",
-        "Replace logo with image and update terms/privacy policy links in AuthPage",
-        "Rebuild login/signup page with OAuth row and mode toggle",
-        "Grant Premium to the founding waitlist cohort on email confirmation"
-      ],
-      "Improved": [
-        "Collapse signInWithGoogle into signInWithOAuth(provider)"
-      ],
-      "Fixed": [
-        "Apply Icon-Led Row pattern and mobile touch targets to Account section",
-        "Align identity linking error message",
-        "Keep Turnstile widget inside auth card on mobile viewports"
       ]
     }
   }
