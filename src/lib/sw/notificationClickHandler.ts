@@ -1,9 +1,13 @@
 import type { NotificationDisplayOptions } from "@/lib/notifications";
+import type { HabitType } from "@/lib/types/habit";
+
+export const HABIT_URL_PARAM = "habit";
+export const HABIT_ENTRY_UPDATED = "HABIT_ENTRY_UPDATED";
 
 export interface HabitNotificationData {
   habitId?: string;
   date?: string;
-  habitKind?: "boolean" | "measurable";
+  habitKind?: HabitType;
   url?: string;
 }
 
@@ -40,23 +44,23 @@ export async function handleNotificationClick(
 
     if (ok) {
       for (const client of await matchWindows(deps)) {
-        client.postMessage({ type: "HABIT_ENTRY_UPDATED" });
+        client.postMessage({ type: HABIT_ENTRY_UPDATED });
       }
     } else {
       await deps.displayNotification(deps.registration, "Action not saved", {
         tag: notificationTag,
         body: "Could not save your response. Tap to open the habit.",
-        data: { url: data.url ?? "/habits" },
+        data: { url: habitUrl(data) },
       });
     }
     return;
   }
 
-  // Body tap (action === "") or unknown — navigate to the habit URL.
-  const url = data?.url ?? "/habits";
+  const url = habitUrl(data);
   for (const client of await matchWindows(deps)) {
     if (!("focus" in client)) continue;
-    const alreadyThere = new URL(client.url).pathname === url;
+    const { pathname, search } = new URL(client.url);
+    const alreadyThere = pathname + search === url;
     if (alreadyThere) {
       await client.focus();
       return;
@@ -74,6 +78,13 @@ export async function handleNotificationClick(
   }
 
   deps.openWindow(url);
+}
+
+function habitUrl(data: HabitNotificationData | undefined): string {
+  if (data?.habitId) {
+    return `/habits?${HABIT_URL_PARAM}=${encodeURIComponent(data.habitId)}`;
+  }
+  return data?.url ?? "/habits";
 }
 
 function matchWindows(deps: NotificationClickDeps) {

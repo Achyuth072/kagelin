@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   handleNotificationClick,
+  HABIT_ENTRY_UPDATED,
   type NotificationClickDeps,
   type HabitNotificationData,
 } from "@/lib/sw/notificationClickHandler";
@@ -99,7 +100,7 @@ describe("handleNotificationClick — Done/Skip actions", () => {
         .value
     )[0];
     expect(client.postMessage).toHaveBeenCalledWith({
-      type: "HABIT_ENTRY_UPDATED",
+      type: HABIT_ENTRY_UPDATED,
     });
   });
 
@@ -114,7 +115,7 @@ describe("handleNotificationClick — Done/Skip actions", () => {
       expect.any(String),
       expect.objectContaining({
         tag: "habit-tag",
-        data: expect.objectContaining({ url: "/habits" }),
+        data: expect.objectContaining({ url: "/habits?habit=habit-uuid-123" }),
       }),
     );
   });
@@ -133,20 +134,21 @@ describe("handleNotificationClick — Done/Skip actions", () => {
       expect.any(String),
       expect.objectContaining({ tag: "habit-tag" }),
     );
-    // clients.matchAll is never called for postMessage on failure
     expect(deps.clients.matchAll).not.toHaveBeenCalled();
   });
 });
 
 describe("handleNotificationClick — body tap", () => {
-  it("focuses an existing open window at the habit URL", async () => {
+  it("focuses an open window already at the habit URL", async () => {
     const mockFocus = vi.fn().mockResolvedValue(undefined);
+    const mockNavigate = vi.fn().mockResolvedValue(null);
     const deps = makeDeps({
       clients: {
         matchAll: vi.fn().mockResolvedValue([
           {
-            url: "http://localhost/habits",
+            url: "http://localhost/habits?habit=habit-uuid-123",
             focus: mockFocus,
+            navigate: mockNavigate,
           },
         ]),
       } as unknown as Clients,
@@ -155,9 +157,31 @@ describe("handleNotificationClick — body tap", () => {
     await handleNotificationClick("", habitData, undefined, deps);
 
     expect(mockFocus).toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it("opens a new window when no open client exists", async () => {
+  it("navigates an open window elsewhere to the habit", async () => {
+    const mockFocus = vi.fn().mockResolvedValue(undefined);
+    const mockNavigate = vi.fn().mockResolvedValue(null);
+    const deps = makeDeps({
+      clients: {
+        matchAll: vi.fn().mockResolvedValue([
+          {
+            url: "http://localhost/habits",
+            focus: mockFocus,
+            navigate: mockNavigate,
+          },
+        ]),
+      } as unknown as Clients,
+    });
+
+    await handleNotificationClick("", habitData, undefined, deps);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/habits?habit=habit-uuid-123");
+    expect(mockFocus).toHaveBeenCalled();
+  });
+
+  it("opens a new window at the habit when no open client exists", async () => {
     const deps = makeDeps({
       clients: {
         matchAll: vi.fn().mockResolvedValue([]),
@@ -166,6 +190,20 @@ describe("handleNotificationClick — body tap", () => {
 
     await handleNotificationClick("", habitData, undefined, deps);
 
-    expect(deps.openWindow).toHaveBeenCalledWith("/habits");
+    expect(deps.openWindow).toHaveBeenCalledWith(
+      "/habits?habit=habit-uuid-123",
+    );
+  });
+
+  it("uses the payload URL for notifications without a habit", async () => {
+    const deps = makeDeps({
+      clients: {
+        matchAll: vi.fn().mockResolvedValue([]),
+      } as unknown as Clients,
+    });
+
+    await handleNotificationClick("", { url: "/tasks" }, undefined, deps);
+
+    expect(deps.openWindow).toHaveBeenCalledWith("/tasks");
   });
 });

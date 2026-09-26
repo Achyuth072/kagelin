@@ -1,5 +1,6 @@
 import { keyStore } from "@/lib/crypto/keyStore";
 import { decryptField } from "@/lib/crypto/contentCipher";
+import type { HabitType } from "@/lib/types/habit";
 
 export interface EncryptedNotificationBody {
   template: string;
@@ -14,7 +15,7 @@ export interface NotificationDisplayOptions extends NotificationOptions {
   renotify?: boolean;
   encrypted?: EncryptedNotificationBody;
   encryptedTitle?: EncryptedNotificationBody;
-  habitKind?: "boolean" | "measurable";
+  habitKind?: HabitType;
 }
 
 export const DEFAULT_NOTIFICATION_OPTIONS: NotificationDisplayOptions = {
@@ -36,8 +37,7 @@ export async function displayNotification(
   const { encrypted, encryptedTitle, habitKind, ...displayable } =
     options ?? {};
 
-  const key =
-    encrypted || encryptedTitle || habitKind ? await loadKeyOrNull() : null;
+  const key = encrypted || encryptedTitle ? await loadKeyOrNull() : null;
 
   const [decryptedTitle, decryptedBody] = await Promise.all([
     encryptedTitle
@@ -48,9 +48,11 @@ export async function displayNotification(
       : displayable.body,
   ]);
 
-  // Only a device that could decrypt is unlocked enough to act blindly.
+  // Only a device that decrypted the habit name is unlocked enough to act blindly.
   const unlocked =
-    key !== null && decryptedTitle !== null && decryptedBody !== null;
+    encryptedTitle !== undefined &&
+    decryptedTitle !== null &&
+    decryptedBody !== null;
   if (habitKind && unlocked && !displayable.actions) {
     displayable.actions = HABIT_ACTIONS[habitKind];
   }
@@ -73,7 +75,8 @@ const HABIT_ACTIONS = {
 async function loadKeyOrNull(): Promise<Uint8Array | null> {
   try {
     return await keyStore.load();
-  } catch {
+  } catch (err) {
+    console.warn("[notifications] Could not load the content key", err);
     return null;
   }
 }

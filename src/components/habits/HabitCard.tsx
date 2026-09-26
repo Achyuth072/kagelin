@@ -19,7 +19,7 @@ import { useEntryAnnouncement } from "@/lib/hooks/useEntryAnnouncement";
 import {
   getFrequencyProgress,
   frequencyProgressLabel,
-  hasFrequencyTarget,
+  showsFrequencyRing,
   isOnceEveryDDays,
   getLastDoneNext,
   lastDoneNextLabel,
@@ -99,13 +99,8 @@ export function HabitCard({
   ).length;
   const currentStreak = getCurrentStreak(habit, habit.entries);
 
-  // 1-in-D Boolean habits show last-done/next text instead of the ring.
   const showLastDoneNext = isOnceEveryDDays(habit);
-  // Measurable and 1-in-D habits don't show the ring.
-  const showFrequencyRing =
-    !showLastDoneNext &&
-    habit.habit_type !== "measurable" &&
-    hasFrequencyTarget(habit);
+  const showFrequencyRing = showsFrequencyRing(habit);
   const frequencyProgress = showFrequencyRing
     ? getFrequencyProgress(habit, habit.entries)
     : null;

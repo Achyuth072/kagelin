@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { REMINDER_EVERY_DAY } from "@/lib/types/habit";
+import { MAX_FREQUENCY_DAYS, REMINDER_EVERY_DAY } from "@/lib/types/habit";
 
 export const CreateHabitSchema = z.object({
   name: z.string().min(1, "Habit name is required").max(100),
@@ -14,7 +14,7 @@ export const CreateHabitSchema = z.object({
     .optional(),
   habit_type: z.enum(["boolean", "measurable"]).optional(),
   frequency_count: z.number().int().positive().optional(),
-  frequency_days: z.number().int().min(1).max(365).optional(),
+  frequency_days: z.number().int().min(1).max(MAX_FREQUENCY_DAYS).optional(),
   frequency_period: z.enum(["day", "week", "month"]).optional(),
   target_type: z.enum(["at_least", "at_most"]).optional(),
   target_value: z.number().optional(),

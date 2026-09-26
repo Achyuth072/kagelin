@@ -70,7 +70,7 @@ export function useUhabitsImport() {
       ).catch((err) => Sentry.captureException(err));
 
       let habitsToImport = habits;
-      let skippedCount = 0;
+      let skippedNames: string[] = [];
       let nextSortOrder = 0;
       if (!isGuest) {
         const supabase = createClient();
@@ -79,21 +79,15 @@ export function useUhabitsImport() {
           .from("habits")
           .select("name, sort_order, source_uuid");
         if (existing && existing.length > 0) {
-          const { toImport, skippedCount: skipped } = partitionAgainstExisting(
-            habits,
-            existing,
-          );
-          habitsToImport = toImport;
-          skippedCount = skipped;
+          ({ toImport: habitsToImport, skippedNames } =
+            partitionAgainstExisting(habits, existing));
           nextSortOrder = Math.max(...existing.map((h) => h.sort_order)) + 1;
         }
       } else {
-        const { toImport, skippedCount: skipped } = partitionAgainstExisting(
+        ({ toImport: habitsToImport, skippedNames } = partitionAgainstExisting(
           habits,
           mockStore.getHabits(),
-        );
-        habitsToImport = toImport;
-        skippedCount = skipped;
+        ));
       }
 
       if (habitsToImport.length === 0) {
@@ -153,7 +147,9 @@ export function useUhabitsImport() {
       await queryClient.invalidateQueries({ queryKey: ["habits"] });
 
       const skippedMsg =
-        skippedCount > 0 ? ` (${skippedCount} already existed, skipped)` : "";
+        skippedNames.length > 0
+          ? `. Already existed, skipped: ${skippedNames.join(", ")}`
+          : "";
       notify.success(
         `Imported ${habitsToImport.length} habits with ${entries.length} history entries${skippedMsg}`,
         { id: loadingToastId },

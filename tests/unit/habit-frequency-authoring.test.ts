@@ -40,9 +40,6 @@ function makeEntry(date: string, value = 1): HabitEntry {
   };
 }
 
-// ---------------------------------------------------------------------------
-// isOnceEveryDDays
-// ---------------------------------------------------------------------------
 describe("isOnceEveryDDays", () => {
   it("returns false for daily habit (count=1, days=1)", () => {
     expect(isOnceEveryDDays(makeHabit({ frequency_days: 1 }))).toBe(false);
@@ -73,7 +70,6 @@ describe("isOnceEveryDDays", () => {
   });
 
   it("falls back to period when frequency_days is null", () => {
-    // period=week means 7 days, count=1 → once every 7 days → true
     expect(
       isOnceEveryDDays(
         makeHabit({
@@ -86,9 +82,6 @@ describe("isOnceEveryDDays", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// getLastDoneNext + lastDoneNextLabel
-// ---------------------------------------------------------------------------
 describe("getLastDoneNext", () => {
   const ref = new Date("2026-09-25");
   const habit = makeHabit({ frequency_count: 1, frequency_days: 50 });
@@ -136,7 +129,7 @@ describe("getLastDoneNext", () => {
     if (result.kind === "late") {
       expect(result.daysLate).toBe(10);
     }
-    expect(lastDoneNextLabel(result)).toBe("10 days late");
+    expect(lastDoneNextLabel(result)).toBe("Done 60 days ago · 10 days late");
   });
 
   it("does not count skipped entries as done", () => {
@@ -152,10 +145,7 @@ describe("getLastDoneNext", () => {
   });
 
   it("uses the most recent done entry when multiple exist", () => {
-    const entries = [
-      makeEntry("2026-09-10"),
-      makeEntry("2026-09-20"), // 5 days ago
-    ];
+    const entries = [makeEntry("2026-09-10"), makeEntry("2026-09-20")];
     const result = getLastDoneNext(habit, entries, ref);
     expect(result.kind).toBe("done_ago");
     if (result.kind === "done_ago") {
@@ -170,23 +160,17 @@ describe("getLastDoneNext", () => {
     expect(lastDoneNextLabel(result)).toBe("Done today · next in 50 days");
   });
 
-  it("returns done_ago with daysNext=0 and label 'Due today' when done exactly windowDays ago", () => {
-    // done exactly 50 days ago → daysRemaining = 0 → "Due today"
+  it("returns done_ago with daysNext=0 and label 'next today' when done exactly windowDays ago", () => {
     const entries = [makeEntry("2026-08-06")];
     const result = getLastDoneNext(habit, entries, ref);
     expect(result.kind).toBe("done_ago");
     if (result.kind === "done_ago") {
       expect(result.daysNext).toBe(0);
     }
-    expect(lastDoneNextLabel(result)).toBe("Due today");
+    expect(lastDoneNextLabel(result)).toBe("Done 50 days ago · next today");
   });
 });
 
-// ---------------------------------------------------------------------------
-// Frequency control: most-specific mode round-trip
-// (Logic lives in HabitFrequencyField; tested here via hasFrequencyTarget and
-// getFrequencyProgress to verify the D-value feeds the metric layer correctly.)
-// ---------------------------------------------------------------------------
 describe("frequency metric layer with custom frequency_days", () => {
   it("hasFrequencyTarget is true for count=1, days=50", () => {
     expect(

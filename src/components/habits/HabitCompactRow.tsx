@@ -14,7 +14,7 @@ import { getRolling7Days } from "@/lib/utils/habit-rolling";
 import {
   getFrequencyProgress,
   frequencyProgressLabel,
-  hasFrequencyTarget,
+  showsFrequencyRing,
   isOnceEveryDDays,
   getLastDoneNext,
   lastDoneNextLabel,
@@ -60,10 +60,7 @@ export function HabitCompactRow({
   );
 
   const showLastDoneNext = isOnceEveryDDays(habit);
-  const showFrequencyRing =
-    !showLastDoneNext &&
-    habit.habit_type !== "measurable" &&
-    hasFrequencyTarget(habit);
+  const showFrequencyRing = showsFrequencyRing(habit);
   const frequencyProgress = useMemo(
     () =>
       showFrequencyRing

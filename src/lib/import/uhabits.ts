@@ -3,6 +3,7 @@ import {
   ENTRY_VALUE_DONE,
   ENTRY_VALUE_NOT_DONE,
   ENTRY_VALUE_SKIPPED,
+  MAX_FREQUENCY_DAYS,
   REMINDER_EVERY_DAY,
   type Habit,
   type HabitEntry,
@@ -162,14 +163,13 @@ export function paletteToHex(colorIndex: number): string {
   return findClosestKansoColor(loopHex);
 }
 
-// Days capped at 365 to satisfy schema check constraint (ADR 0019).
 function mapFrequency(
   freqNum: number,
   freqDen: number,
 ): { count: number; days: number } | null {
   if (!Number.isInteger(freqNum) || !Number.isInteger(freqDen)) return null;
   if (freqDen < 1 || freqNum < 1) return null;
-  return { count: freqNum, days: Math.min(freqDen, 365) };
+  return { count: freqNum, days: Math.min(freqDen, MAX_FREQUENCY_DAYS) };
 }
 
 function inferIcon(habitName: string, description?: string): string {
@@ -233,14 +233,16 @@ export function partitionAgainstExisting(
     existing.map((h) => h.source_uuid).filter((u): u is string => !!u),
   );
   const names = new Set(existing.map((h) => h.name.toLowerCase()));
-  const toImport = incoming.filter(
-    (habit) =>
-      !(
-        (habit.source_uuid && uuids.has(habit.source_uuid)) ||
-        names.has(habit.name.toLowerCase())
-      ),
-  );
-  return { toImport, skippedCount: incoming.length - toImport.length };
+  const toImport: Habit[] = [];
+  const skippedNames: string[] = [];
+  for (const habit of incoming) {
+    const exists =
+      (habit.source_uuid && uuids.has(habit.source_uuid)) ||
+      names.has(habit.name.toLowerCase());
+    if (exists) skippedNames.push(habit.name);
+    else toImport.push(habit);
+  }
+  return { toImport, skippedNames };
 }
 
 export function mapUhabitsToKanso(

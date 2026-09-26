@@ -19,14 +19,11 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { CollapsibleReveal } from "../tasks/shared/CollapsibleReveal";
 import { HabitDisclosureRow } from "./shared/HabitDisclosureRow";
 import { HabitAppearanceField } from "./shared/HabitAppearanceField";
-import {
-  HabitFrequencyField,
-  type FrequencyPeriod,
-} from "./shared/HabitFrequencyField";
+import { HabitFrequencyField } from "./shared/HabitFrequencyField";
 import { HabitTargetField, type TargetType } from "./shared/HabitTargetField";
 import { HabitQuestionField } from "./shared/HabitQuestionField";
 import { HabitTypeToggle } from "./shared/HabitTypeToggle";
-import type { HabitType } from "@/lib/types/habit";
+import type { FrequencyPeriod, HabitType } from "@/lib/types/habit";
 import { HabitReminderField } from "./shared/HabitReminderField";
 import { TaskDatePicker } from "../tasks/shared/TaskDatePicker";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";

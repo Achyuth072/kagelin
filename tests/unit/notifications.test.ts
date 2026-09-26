@@ -330,12 +330,28 @@ describe("displayNotification habit actions", () => {
 
     await displayNotification(registration, "Habit reminder", {
       body: "Time to check in.",
+      encryptedTitle: {
+        template: "{}",
+        ciphertext: await encryptField(key, "Pushups"),
+      },
       habitKind: "measurable",
     });
 
     expect(actionsShown(registration)).toEqual([
       { action: "skip", title: "Skip" },
     ]);
+  });
+
+  it("adds no actions when the payload has no encrypted title to prove the key", async () => {
+    loadKey.mockResolvedValue(key);
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "Time to check in.",
+      habitKind: "boolean",
+    });
+
+    expect(actionsShown(registration)).toBeUndefined();
   });
 
   it("adds no actions when no key is loaded (locked account)", async () => {

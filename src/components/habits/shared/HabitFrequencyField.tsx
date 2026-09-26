@@ -5,14 +5,17 @@ import { Repeat, Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { MAX_FREQUENCY_DAYS, type FrequencyPeriod } from "@/lib/types/habit";
+import {
+  frequencyWindowDays,
+  periodForFrequencyDays,
+} from "@/lib/utils/habit-frequency";
 
-export type FrequencyPeriod = "day" | "week" | "month";
 type FrequencyMode = "daily" | "weekly" | "monthly" | "custom";
 
 const MIN_COUNT = 1;
 const MAX_COUNT = 30;
 const MIN_DAYS = 2;
-const MAX_DAYS = 365;
 const DEFAULT_CUSTOM_DAYS = 3;
 
 const MODE_LABELS: Record<FrequencyMode, string> = {
@@ -24,22 +27,15 @@ const MODE_LABELS: Record<FrequencyMode, string> = {
 
 const MODES = Object.keys(MODE_LABELS) as FrequencyMode[];
 
-// Derives the effective D-value from period + optional explicit frequencyDays.
-function resolvedDays(
-  period: FrequencyPeriod | null | undefined,
-  frequencyDays: number | undefined,
-): number {
-  if (frequencyDays != null) return frequencyDays;
-  if (period === "week") return 7;
-  if (period === "month") return 30;
-  return 1;
-}
+const MODE_FOR_PERIOD: Record<FrequencyPeriod, FrequencyMode> = {
+  day: "daily",
+  week: "weekly",
+  month: "monthly",
+};
 
 function deriveMode(days: number): FrequencyMode {
-  if (days === 1) return "daily";
-  if (days === 7) return "weekly";
-  if (days === 30) return "monthly";
-  return "custom";
+  const period = periodForFrequencyDays(days);
+  return period ? MODE_FOR_PERIOD[period] : "custom";
 }
 
 interface HabitFrequencyFieldProps {
@@ -62,7 +58,10 @@ export function HabitFrequencyField({
   const { trigger } = useHaptic();
   // Keeps the Custom row open while the user types a D that equals 7 or 30.
   const [customPicked, setCustomPicked] = useState(false);
-  const days = resolvedDays(period, frequencyDays);
+  const days = frequencyWindowDays({
+    frequency_days: frequencyDays,
+    frequency_period: period,
+  });
   const mode = customPicked ? "custom" : deriveMode(days);
 
   const setCount = (next: number) => {
@@ -76,7 +75,9 @@ export function HabitFrequencyField({
   const setD = (raw: string) => {
     const n = parseInt(raw, 10);
     if (!isNaN(n)) {
-      onFrequencyDaysChange(Math.max(MIN_DAYS, Math.min(MAX_DAYS, n)));
+      onFrequencyDaysChange(
+        Math.max(MIN_DAYS, Math.min(MAX_FREQUENCY_DAYS, n)),
+      );
     }
   };
 
@@ -207,7 +208,7 @@ function DayInput({
       type="number"
       value={value}
       min={MIN_DAYS}
-      max={MAX_DAYS}
+      max={MAX_FREQUENCY_DAYS}
       onChange={(e) => onChange(e.target.value)}
       aria-label="Number of days"
       className="h-8 w-16 rounded-lg border border-border/40 bg-secondary/10 text-center text-[13px] font-medium tabular-nums text-foreground outline-none focus:ring-1 focus:ring-brand/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"

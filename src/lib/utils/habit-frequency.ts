@@ -1,6 +1,4 @@
-import type { Habit } from "@/lib/types/habit";
-
-type FrequencyPeriod = "day" | "week" | "month";
+import type { FrequencyPeriod, Habit } from "@/lib/types/habit";
 
 // uhabits approximates a month as 30 days; kept for parity.
 const PERIOD_DAYS: Record<FrequencyPeriod, number> = {

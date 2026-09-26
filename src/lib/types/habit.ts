@@ -13,7 +13,7 @@ export interface Habit {
   habit_type?: HabitType;
   frequency_count?: number | null;
   frequency_days?: number | null;
-  frequency_period?: "day" | "week" | "month" | null;
+  frequency_period?: FrequencyPeriod | null;
   target_type?: "at_least" | "at_most" | null;
   target_value?: number | null;
   unit?: string | null;
@@ -39,6 +39,11 @@ export interface HabitWithEntries extends Habit {
 }
 
 export type HabitType = "boolean" | "measurable";
+
+export type FrequencyPeriod = "day" | "week" | "month";
+
+// Upper bound of the habits.frequency_days CHECK constraint (ADR 0019).
+export const MAX_FREQUENCY_DAYS = 365;
 
 export const ENTRY_VALUE_DONE = 1;
 export const ENTRY_VALUE_NOT_DONE = 0;

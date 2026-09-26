@@ -46,7 +46,6 @@ export function getFrequencyProgress(
   return { completed, target, windowDays };
 }
 
-// True for a Boolean "every D days" habit (count=1, D>1) — these show last-done/next instead of a ring.
 export function isOnceEveryDDays(
   habit: Pick<
     Habit,
@@ -59,10 +58,23 @@ export function isOnceEveryDDays(
   return count === 1 && days > 1;
 }
 
+export function showsFrequencyRing(
+  habit: Pick<
+    Habit,
+    "habit_type" | "frequency_count" | "frequency_days" | "frequency_period"
+  >,
+): boolean {
+  return (
+    habit.habit_type !== "measurable" &&
+    !isOnceEveryDDays(habit) &&
+    hasFrequencyTarget(habit)
+  );
+}
+
 export type LastDoneNext =
   | { kind: "never_done" }
   | { kind: "done_ago"; daysDone: number; daysNext: number }
-  | { kind: "late"; daysLate: number };
+  | { kind: "late"; daysDone: number; daysLate: number };
 
 export function getLastDoneNext(
   habit: Pick<Habit, "frequency_count" | "frequency_days" | "frequency_period">,
@@ -71,7 +83,6 @@ export function getLastDoneNext(
 ): LastDoneNext {
   const windowDays = frequencyWindowDays(habit);
   const refKey = format(referenceDate, "yyyy-MM-dd");
-  // Only count entries where value=1 (done); skipped (-2) and not-done (0) excluded.
   const doneDates = entries
     .filter((e) => e.value === ENTRY_VALUE_DONE && e.date <= refKey)
     .map((e) => e.date)
@@ -88,19 +99,23 @@ export function getLastDoneNext(
   if (daysRemaining >= 0) {
     return { kind: "done_ago", daysDone, daysNext: daysRemaining };
   }
-  return { kind: "late", daysLate: -daysRemaining };
+  return { kind: "late", daysDone, daysLate: -daysRemaining };
+}
+
+function daysLabel(n: number): string {
+  return `${n} day${n === 1 ? "" : "s"}`;
 }
 
 export function lastDoneNextLabel(metric: LastDoneNext): string {
   if (metric.kind === "never_done") return "Not done yet";
-  if (metric.kind === "late")
-    return `${metric.daysLate} day${metric.daysLate === 1 ? "" : "s"} late`;
-  if (metric.daysNext === 0) return "Due today";
   const done =
     metric.daysDone === 0
       ? "Done today"
-      : `Done ${metric.daysDone} day${metric.daysDone === 1 ? "" : "s"} ago`;
-  return `${done} · next in ${metric.daysNext} day${metric.daysNext === 1 ? "" : "s"}`;
+      : `Done ${daysLabel(metric.daysDone)} ago`;
+  if (metric.kind === "late")
+    return `${done} · ${daysLabel(metric.daysLate)} late`;
+  if (metric.daysNext === 0) return `${done} · next today`;
+  return `${done} · next in ${daysLabel(metric.daysNext)}`;
 }
 
 export function frequencyProgressLabel(progress: FrequencyProgress): string {
