@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.45.0-preview.3",
+    "date": "2026-09-26",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Habit reminders follow frequency window",
+        "Done/skip actions on habit reminders",
+        "Habit reminders name the habit via encrypted title envelope"
+      ]
+    }
+  },
+  {
     "version": "1.45.0-preview.2",
     "date": "2026-09-25",
     "channel": "preview",
@@ -694,19 +706,6 @@
         "Force account picker for GitHub too, not just Google, when linking",
         "Close two translucent destructive spots missed in the finding-9 sweep",
         "Show account display name, restyle email-confirmed, fix connect flash and destructive surfaces"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0-preview.3",
-    "date": "2026-08-17",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Refresh session from server after unlinking an identity",
-        "Flatten AuthConfirmationCard and restore missing space in confirmation copy",
-        "Require explicit sign-in after signup confirmation and password reset",
-        "Add password visibility toggle and confirm-password field"
       ]
     }
   }
