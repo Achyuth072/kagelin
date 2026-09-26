@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.45.0-preview.4",
+    "date": "2026-09-26",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Old clients' period edits reach frequency_days, measurable reminders match dayValue",
+        "Reminder actions save, frequency field typing, export keeps edited frequency",
+        "Reminder deep link keeps the back anchor, name all-skipped imports, share habit link contract",
+        "Reminders open their habit, import names skipped habits, and review cleanups"
+      ]
+    }
+  },
+  {
     "version": "1.45.0-preview.3",
     "date": "2026-09-26",
     "channel": "preview",
@@ -694,18 +707,6 @@
         "Change sign-up button label to Sign up",
         "Has_password RPC, redirect error_code threading, and auth code-review cleanup",
         "Show email/password sign-in in Settings connected identities (#149)"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0-preview.4",
-    "date": "2026-08-17",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Force account picker for GitHub too, not just Google, when linking",
-        "Close two translucent destructive spots missed in the finding-9 sweep",
-        "Show account display name, restyle email-confirmed, fix connect flash and destructive surfaces"
       ]
     }
   }
