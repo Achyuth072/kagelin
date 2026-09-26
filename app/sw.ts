@@ -12,6 +12,10 @@ import {
   type EncryptedNotificationBody,
   type NotificationDisplayOptions,
 } from "@/lib/notifications";
+import {
+  handleNotificationClick,
+  type HabitNotificationData,
+} from "@/lib/sw/notificationClickHandler";
 import { hasWasmMagicBytes } from "@/lib/sw/wasmIntegrity";
 
 declare global {
@@ -142,7 +146,7 @@ interface PushPayload {
   icon?: string;
   badge?: string;
   tag?: string;
-  data?: unknown;
+  data?: HabitNotificationData & Record<string, unknown>;
   actions?: NotificationDisplayOptions["actions"];
   encrypted?: EncryptedNotificationBody;
   encryptedTitle?: EncryptedNotificationBody;
@@ -190,6 +194,9 @@ async function showPushNotification(payload: PushPayload): Promise<void> {
   if (payload.encryptedTitle?.ciphertext && payload.encryptedTitle?.template) {
     options.encryptedTitle = payload.encryptedTitle;
   }
+  if (payload.data?.habitKind) {
+    options.habitKind = payload.data.habitKind;
+  }
 
   try {
     await displayNotification(
@@ -212,41 +219,23 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const target = (event.notification.data as { url?: string } | undefined)?.url;
-  const url = typeof target === "string" && target ? target : "/";
+  const data = event.notification.data as HabitNotificationData | undefined;
+  const action = event.action;
 
   event.waitUntil(
-    (async () => {
-      const allClients = await self.clients.matchAll({
-        type: "window",
-        includeUncontrolled: true,
-      });
-
-      for (const client of allClients) {
-        if (!("focus" in client)) continue;
-
-        const alreadyThere = new URL(client.url).pathname === url;
-        if (!alreadyThere && "navigate" in client) {
-          // navigate() can reject (cross-origin, unloaded client).
-          const navigated = await client.navigate(url).then(
-            () => true,
-            () => false,
-          );
-          if (!navigated) {
-            return self.clients.openWindow?.(url);
-          }
-        }
-        return client.focus();
-      }
-
-      if (self.clients.openWindow) {
+    handleNotificationClick(action, data, event.notification.tag || undefined, {
+      fetch,
+      clients: self.clients,
+      displayNotification,
+      registration: self.registration,
+      openWindow: (url: string) => {
         const openUrl =
           url !== "/" && url.startsWith("/")
             ? `/?redirect=${encodeURIComponent(url)}`
             : url;
-        return self.clients.openWindow(openUrl);
-      }
-    })(),
+        return self.clients.openWindow?.(openUrl);
+      },
+    }),
   );
 });
 

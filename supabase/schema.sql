@@ -443,7 +443,12 @@ BEGIN
                         THEN public.encrypted_notification_body('{}', h.question)
                         ELSE NULL
                    END,
-      'data', jsonb_build_object('url', '/habits', 'habitId', h.id)
+      'data', jsonb_build_object(
+        'url', '/habits',
+        'habitId', h.id,
+        'date', to_char(t.remind_ts::date, 'YYYY-MM-DD'),
+        'habitKind', h.habit_type
+      )
     )),
     h.id
   FROM public.habits h

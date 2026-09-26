@@ -291,3 +291,108 @@ describe("displayNotification with an encrypted title", () => {
     expect(titleShown(registration)).toBe("Habit reminder");
   });
 });
+
+describe("displayNotification habit actions", () => {
+  const key = new Uint8Array(32).fill(7);
+
+  function actionsShown(
+    registration: ServiceWorkerRegistration,
+  ): Array<{ action: string; title: string }> | undefined {
+    const showNotification = registration.showNotification as unknown as {
+      mock: { calls: [string, NotificationDisplayOptions][] };
+    };
+    return showNotification.mock.calls[0][1].actions as
+      Array<{ action: string; title: string }> | undefined;
+  }
+
+  it("adds Done and Skip for a boolean habit when the key is loaded", async () => {
+    loadKey.mockResolvedValue(key);
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "Time to check in.",
+      encryptedTitle: {
+        template: "{}",
+        ciphertext: await encryptField(key, "Morning run"),
+      },
+      habitKind: "boolean",
+    });
+
+    expect(actionsShown(registration)).toEqual([
+      { action: "done", title: "Done" },
+      { action: "skip", title: "Skip" },
+    ]);
+  });
+
+  it("adds only Skip for a measurable habit when the key is loaded", async () => {
+    loadKey.mockResolvedValue(key);
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "Time to check in.",
+      habitKind: "measurable",
+    });
+
+    expect(actionsShown(registration)).toEqual([
+      { action: "skip", title: "Skip" },
+    ]);
+  });
+
+  it("adds no actions when no key is loaded (locked account)", async () => {
+    loadKey.mockResolvedValue(null);
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "Time to check in.",
+      encryptedTitle: {
+        template: "{}",
+        ciphertext: await encryptField(key, "Morning run"),
+      },
+      habitKind: "boolean",
+    });
+
+    expect(actionsShown(registration)).toBeUndefined();
+  });
+
+  it("adds no actions when decryption fails (wrong key)", async () => {
+    loadKey.mockResolvedValue(new Uint8Array(32).fill(9));
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "Time to check in.",
+      encryptedTitle: {
+        template: "{}",
+        ciphertext: await encryptField(key, "Morning run"),
+      },
+      habitKind: "boolean",
+    });
+
+    expect(actionsShown(registration)).toBeUndefined();
+  });
+
+  it("adds no actions when habitKind is not set", async () => {
+    loadKey.mockResolvedValue(key);
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "Time to check in.",
+    });
+
+    expect(actionsShown(registration)).toBeUndefined();
+  });
+
+  it("keeps the habitKind out of the shown notification options", async () => {
+    loadKey.mockResolvedValue(key);
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "Time to check in.",
+      habitKind: "boolean",
+    });
+
+    expect(registration.showNotification).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.not.objectContaining({ habitKind: expect.anything() }),
+    );
+  });
+});
