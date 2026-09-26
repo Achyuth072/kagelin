@@ -28,7 +28,7 @@ export interface Habit {
 export interface HabitEntry {
   id: string;
   habit_id: string;
-  date: string; // ISO 8601 date (YYYY-MM-DD)
+  date: string;
   value: number;
   notes?: string | null;
   created_at: string;
@@ -40,7 +40,8 @@ export interface HabitWithEntries extends Habit {
 
 export type HabitType = "boolean" | "measurable";
 
-export type FrequencyPeriod = "day" | "week" | "month";
+export const FREQUENCY_PERIODS = ["day", "week", "month"] as const;
+export type FrequencyPeriod = (typeof FREQUENCY_PERIODS)[number];
 
 // Upper bound of the habits.frequency_days CHECK constraint (ADR 0019).
 export const MAX_FREQUENCY_DAYS = 365;

@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   handleNotificationClick,
-  HABIT_ENTRY_UPDATED,
   type NotificationClickDeps,
   type HabitNotificationData,
 } from "@/lib/sw/notificationClickHandler";
+import { HABIT_ENTRY_UPDATED } from "@/lib/habit-links";
 
 function makeDeps(
   overrides?: Partial<NotificationClickDeps>,

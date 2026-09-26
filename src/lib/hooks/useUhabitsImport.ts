@@ -63,7 +63,6 @@ export function useUhabitsImport() {
         typeof window !== "undefined" &&
         localStorage.getItem("kanso_guest_mode") === "true";
 
-      // Best-effort, backgrounded capture for round-trip export (ADR 0006).
       void persistImportSource(
         { source_app: "uhabits", file_name: file.name, raw: source },
         { isGuest },
@@ -92,7 +91,7 @@ export function useUhabitsImport() {
 
       if (habitsToImport.length === 0) {
         notify.info(
-          `All ${habits.length} habits already exist — nothing imported`,
+          `All ${habits.length} habits already exist — nothing imported: ${skippedNames.join(", ")}`,
           { id: loadingToastId },
         );
         return true;
@@ -102,10 +101,8 @@ export function useUhabitsImport() {
         id: loadingToastId,
       });
 
-      // tempId (from parseUhabitsFile) -> actualId (DB / mock store)
       const habitIdMap = new Map<string, string>();
 
-      // Raw create avoids invalidating the habits query once per habit.
       for (const habit of habitsToImport) {
         const created = await habitMutations.create({
           ...toCreateHabitInput(habit),
@@ -157,7 +154,6 @@ export function useUhabitsImport() {
       trigger("success");
       return true;
     } catch (err) {
-      // Parsing already succeeded, so this is a save failure, not a bad file.
       return reportImportFailure(err, SAVE_ERROR_MESSAGE);
     } finally {
       setIsImporting(false);

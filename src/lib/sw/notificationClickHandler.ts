@@ -1,8 +1,6 @@
 import type { NotificationDisplayOptions } from "@/lib/notifications";
 import type { HabitType } from "@/lib/types/habit";
-
-export const HABIT_URL_PARAM = "habit";
-export const HABIT_ENTRY_UPDATED = "HABIT_ENTRY_UPDATED";
+import { HABITS_PATH, HABIT_ENTRY_UPDATED, habitPath } from "@/lib/habit-links";
 
 export interface HabitNotificationData {
   habitId?: string;
@@ -81,10 +79,8 @@ export async function handleNotificationClick(
 }
 
 function habitUrl(data: HabitNotificationData | undefined): string {
-  if (data?.habitId) {
-    return `/habits?${HABIT_URL_PARAM}=${encodeURIComponent(data.habitId)}`;
-  }
-  return data?.url ?? "/habits";
+  if (data?.habitId) return habitPath(data.habitId);
+  return data?.url ?? HABITS_PATH;
 }
 
 function matchWindows(deps: NotificationClickDeps) {
