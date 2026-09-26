@@ -112,8 +112,7 @@ export function lastDoneNextLabel(metric: LastDoneNext): string {
     metric.daysDone === 0
       ? "Done today"
       : `Done ${daysLabel(metric.daysDone)} ago`;
-  if (metric.kind === "late")
-    return `${done} · ${daysLabel(metric.daysLate)} late`;
+  if (metric.kind === "late") return `${done} · due now`;
   if (metric.daysNext === 0) return `${done} · next today`;
   return `${done} · next in ${daysLabel(metric.daysNext)}`;
 }

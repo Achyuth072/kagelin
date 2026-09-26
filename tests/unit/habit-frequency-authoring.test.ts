@@ -122,14 +122,14 @@ describe("getLastDoneNext", () => {
     expect(lastDoneNextLabel(result)).toContain("Done 1 day ago");
   });
 
-  it("returns late when done 60 days ago (10 days late)", () => {
+  it("returns late when done 60 days ago (10 days past due), labelled without a lateness count", () => {
     const entries = [makeEntry("2026-07-27")];
     const result = getLastDoneNext(habit, entries, ref);
     expect(result.kind).toBe("late");
     if (result.kind === "late") {
       expect(result.daysLate).toBe(10);
     }
-    expect(lastDoneNextLabel(result)).toBe("Done 60 days ago · 10 days late");
+    expect(lastDoneNextLabel(result)).toBe("Done 60 days ago · due now");
   });
 
   it("does not count skipped entries as done", () => {
