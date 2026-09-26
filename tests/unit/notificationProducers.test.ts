@@ -110,15 +110,49 @@ describe("enqueue_due_habit_reminders", () => {
   });
 
   it("judges a Measurable Done against the target in either direction", () => {
+    expect(body).toContain("WHEN 'at_least' THEN e.value >= h.target_value");
+    expect(body).toContain("WHEN 'at_most' THEN e.value <= h.target_value");
+  });
+
+  it("judges a Measurable Done like dayValue when the target is unset or not positive", () => {
     expect(body).toContain(
-      "h.target_type = 'at_most' THEN e.value <= h.target_value",
+      "WHEN h.habit_type = 'measurable' AND h.target_value > 0 THEN",
     );
-    expect(body).toContain("ELSE e.value >= h.target_value");
+    expect(body).toMatch(/h\.target_type = 'at_most' THEN e\.value <= 0/);
+    expect(body).toContain(
+      "WHEN h.habit_type = 'measurable' THEN e.value >= 1",
+    );
+    expect(body).not.toContain("e.value > 0");
   });
 
   it("tolerates an unrecognised profile timezone instead of aborting the batch", () => {
     expect(body).not.toMatch(/AT TIME ZONE\s+p\.timezone/);
     expect(body).toContain("public.at_timezone_or_null(now(), p.timezone)");
+  });
+});
+
+describe("sync_habit_frequency_days", () => {
+  const body = functionBody(schemaSql, "public.sync_habit_frequency_days");
+
+  it("carries a period-only preset change into frequency_days", () => {
+    expect(body).toContain(
+      "NEW.frequency_period IS DISTINCT FROM OLD.frequency_period",
+    );
+    expect(body).toContain(
+      "NEW.frequency_days IS NOT DISTINCT FROM OLD.frequency_days",
+    );
+    expect(body).toMatch(/WHEN 'week' THEN 7\s+WHEN 'month' THEN 30\s+ELSE 1/);
+  });
+
+  it("leaves a custom (period-less) habit alone", () => {
+    expect(body).toContain("OLD.frequency_period IS NOT NULL");
+    expect(body).toContain("NEW.frequency_period IS NOT NULL");
+  });
+
+  it("runs before updates to habits' period", () => {
+    expect(schemaSql).toMatch(
+      /BEFORE UPDATE OF frequency_period ON public\.habits\s+FOR EACH ROW EXECUTE FUNCTION public\.sync_habit_frequency_days\(\)/,
+    );
   });
 });
 

@@ -487,13 +487,17 @@ BEGIN
           ) - 1
         ) AND t.remind_ts::date
         AND e.value >= 0
+        -- Mirrors dayValue() >= 1 in src/lib/utils/habit-score.ts.
         AND CASE
-          WHEN h.habit_type = 'measurable' THEN
-            CASE
-              WHEN h.target_value IS NULL THEN e.value > 0
-              WHEN h.target_type = 'at_most' THEN e.value <= h.target_value
-              ELSE e.value >= h.target_value
+          WHEN h.habit_type = 'measurable' AND h.target_value > 0 THEN
+            CASE h.target_type
+              WHEN 'at_least' THEN e.value >= h.target_value
+              WHEN 'at_most' THEN e.value <= h.target_value
+              ELSE e.value >= 1
             END
+          WHEN h.habit_type = 'measurable' AND h.target_value IS NOT NULL
+            AND h.target_type = 'at_most' THEN e.value <= 0
+          WHEN h.habit_type = 'measurable' THEN e.value >= 1
           ELSE e.value = 1
         END
     ) < COALESCE(h.frequency_count, 1)
@@ -761,6 +765,31 @@ CREATE INDEX IF NOT EXISTS habits_user_sort_idx ON public.habits (user_id, sort_
 CREATE TRIGGER habits_updated_at
   BEFORE UPDATE ON public.habits
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- Pre-ADR-0019 clients update only frequency_period; keep frequency_days in sync.
+CREATE OR REPLACE FUNCTION public.sync_habit_frequency_days()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.frequency_period IS DISTINCT FROM OLD.frequency_period
+     AND NEW.frequency_days IS NOT DISTINCT FROM OLD.frequency_days
+     AND OLD.frequency_period IS NOT NULL
+     AND NEW.frequency_period IS NOT NULL THEN
+    NEW.frequency_days := CASE NEW.frequency_period
+      WHEN 'week' THEN 7
+      WHEN 'month' THEN 30
+      ELSE 1
+    END;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER habits_sync_frequency_days
+  BEFORE UPDATE OF frequency_period ON public.habits
+  FOR EACH ROW EXECUTE FUNCTION public.sync_habit_frequency_days();
 
 -- Atomic reorder: one transactional UPDATE for all rows so a partial failure
 -- can't leave a half-reordered set. SECURITY INVOKER keeps RLS scoping in force.
