@@ -93,6 +93,29 @@ describe("enqueue_due_habit_reminders", () => {
     expect(body).toMatch(/h\.habit_type/);
   });
 
+  it("stays quiet once the window holds N Done days in the last D days", () => {
+    expect(body).toMatch(/e\.date BETWEEN t\.remind_ts::date - \(/);
+    expect(body).toMatch(/\)\s*<\s*COALESCE\(h\.frequency_count, 1\)/);
+  });
+
+  it("falls back to the period's day count when frequency_days is unset", () => {
+    expect(body).toMatch(
+      /COALESCE\(\s*h\.frequency_days,\s*CASE h\.frequency_period WHEN 'week' THEN 7 WHEN 'month' THEN 30 ELSE 1 END\s*\)/,
+    );
+  });
+
+  it("counts a Boolean Done as value = 1 and never counts Skipped (negative) values", () => {
+    expect(body).toContain("e.value >= 0");
+    expect(body).toContain("ELSE e.value = 1");
+  });
+
+  it("judges a Measurable Done against the target in either direction", () => {
+    expect(body).toContain(
+      "h.target_type = 'at_most' THEN e.value <= h.target_value",
+    );
+    expect(body).toContain("ELSE e.value >= h.target_value");
+  });
+
   it("tolerates an unrecognised profile timezone instead of aborting the batch", () => {
     expect(body).not.toMatch(/AT TIME ZONE\s+p\.timezone/);
     expect(body).toContain("public.at_timezone_or_null(now(), p.timezone)");

@@ -477,6 +477,26 @@ BEGIN
       SELECT 1 FROM public.habit_entries e
       WHERE e.habit_id = h.id AND e.date = t.remind_ts::date
     )
+    AND (
+      SELECT count(*) FROM public.habit_entries e
+      WHERE e.habit_id = h.id
+        AND e.date BETWEEN t.remind_ts::date - (
+          COALESCE(
+            h.frequency_days,
+            CASE h.frequency_period WHEN 'week' THEN 7 WHEN 'month' THEN 30 ELSE 1 END
+          ) - 1
+        ) AND t.remind_ts::date
+        AND e.value >= 0
+        AND CASE
+          WHEN h.habit_type = 'measurable' THEN
+            CASE
+              WHEN h.target_value IS NULL THEN e.value > 0
+              WHEN h.target_type = 'at_most' THEN e.value <= h.target_value
+              ELSE e.value >= h.target_value
+            END
+          ELSE e.value = 1
+        END
+    ) < COALESCE(h.frequency_count, 1)
     AND (p.settings->'notifications'->>'habit_reminders')::boolean IS NOT FALSE
     AND NOT EXISTS (
       SELECT 1 FROM public.notification_queue n
