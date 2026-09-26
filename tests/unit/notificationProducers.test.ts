@@ -82,6 +82,17 @@ describe("enqueue_due_habit_reminders", () => {
     expect(body).not.toContain("'Time for {}'");
   });
 
+  it("includes the reminder's local date in the payload data", () => {
+    expect(body).toMatch(/to_char\s*\(/i);
+    expect(body).toMatch(/'date'/);
+    expect(body).toMatch(/'YYYY-MM-DD'/);
+  });
+
+  it("includes the habit kind in the payload data", () => {
+    expect(body).toMatch(/'habitKind'/);
+    expect(body).toMatch(/h\.habit_type/);
+  });
+
   it("tolerates an unrecognised profile timezone instead of aborting the batch", () => {
     expect(body).not.toMatch(/AT TIME ZONE\s+p\.timezone/);
     expect(body).toContain("public.at_timezone_or_null(now(), p.timezone)");

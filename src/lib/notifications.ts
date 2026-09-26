@@ -14,6 +14,7 @@ export interface NotificationDisplayOptions extends NotificationOptions {
   renotify?: boolean;
   encrypted?: EncryptedNotificationBody;
   encryptedTitle?: EncryptedNotificationBody;
+  habitKind?: "boolean" | "measurable";
 }
 
 export const DEFAULT_NOTIFICATION_OPTIONS: NotificationDisplayOptions = {
@@ -32,40 +33,68 @@ export async function displayNotification(
     await closeNotificationsWithTag(registration, options.tag);
   }
 
-  const { encrypted, encryptedTitle, ...displayable } = options ?? {};
-  const [resolvedTitle, resolvedBody] = await Promise.all([
+  const { encrypted, encryptedTitle, habitKind, ...displayable } =
+    options ?? {};
+
+  const key =
+    encrypted || encryptedTitle || habitKind ? await loadKeyOrNull() : null;
+
+  const [decryptedTitle, decryptedBody] = await Promise.all([
     encryptedTitle
-      ? resolveEncryptedField(encryptedTitle, title, "title")
+      ? resolveEncryptedField(key, encryptedTitle, "title")
       : title,
     encrypted
-      ? resolveEncryptedField(encrypted, displayable.body, "body")
+      ? resolveEncryptedField(key, encrypted, "body")
       : displayable.body,
   ]);
-  displayable.body = resolvedBody;
 
-  await registration.showNotification(resolvedTitle, {
+  // Only a device that could decrypt is unlocked enough to act blindly.
+  const unlocked =
+    key !== null && decryptedTitle !== null && decryptedBody !== null;
+  if (habitKind && unlocked && !displayable.actions) {
+    displayable.actions = HABIT_ACTIONS[habitKind];
+  }
+
+  await registration.showNotification(decryptedTitle ?? title, {
     ...DEFAULT_NOTIFICATION_OPTIONS,
     ...displayable,
+    body: decryptedBody ?? displayable.body,
   } as NotificationOptions);
 }
 
-async function resolveEncryptedField<T extends string | undefined>(
-  encrypted: EncryptedNotificationBody,
-  fallback: T,
-  fieldName: string,
-): Promise<T> {
+const HABIT_ACTIONS = {
+  boolean: [
+    { action: "done", title: "Done" },
+    { action: "skip", title: "Skip" },
+  ],
+  measurable: [{ action: "skip", title: "Skip" }],
+};
+
+async function loadKeyOrNull(): Promise<Uint8Array | null> {
   try {
-    const key = await keyStore.load();
-    if (!key) return fallback;
+    return await keyStore.load();
+  } catch {
+    return null;
+  }
+}
+
+// Returns null when the field cannot be shown decrypted.
+async function resolveEncryptedField(
+  key: Uint8Array | null,
+  encrypted: EncryptedNotificationBody,
+  fieldName: string,
+): Promise<string | null> {
+  if (!key) return null;
+  try {
     const plaintext = await decryptField(key, encrypted.ciphertext);
     // Function replacer avoids interpreting "$" in plaintext as special replacement patterns.
-    return encrypted.template.replace(PLACEHOLDER, () => plaintext) as T;
+    return encrypted.template.replace(PLACEHOLDER, () => plaintext);
   } catch (err) {
     console.warn(
       `[notifications] Could not decrypt notification ${fieldName}`,
       err,
     );
-    return fallback;
+    return null;
   }
 }
 
