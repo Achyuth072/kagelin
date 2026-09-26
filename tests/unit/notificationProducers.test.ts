@@ -59,6 +59,29 @@ describe("enqueue_due_habit_reminders", () => {
     expect(body).toContain("'You have a habit scheduled now.'");
   });
 
+  it("includes an encrypted title envelope over the habit name", () => {
+    expect(body).toContain("'encryptedTitle'");
+    expect(body).toMatch(
+      /encrypted_notification_body\(\s*'{}'\s*,\s*h\.name\s*\)/,
+    );
+  });
+
+  it("keeps the plaintext title generic — never the habit name", () => {
+    expect(body).toContain("'Habit reminder'");
+    expect(body).not.toMatch(/'title'\s*,\s*h\.(name|question)/);
+  });
+
+  it("uses the question as the encrypted body when present", () => {
+    expect(body).toMatch(
+      /encrypted_notification_body\(\s*'{}'\s*,\s*h\.question\s*\)/,
+    );
+  });
+
+  it("omits the encrypted body and shows 'Time to check in.' when there is no question", () => {
+    expect(body).toContain("'Time to check in.'");
+    expect(body).not.toContain("'Time for {}'");
+  });
+
   it("tolerates an unrecognised profile timezone instead of aborting the batch", () => {
     expect(body).not.toMatch(/AT TIME ZONE\s+p\.timezone/);
     expect(body).toContain("public.at_timezone_or_null(now(), p.timezone)");

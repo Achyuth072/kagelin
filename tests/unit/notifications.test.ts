@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   DEFAULT_NOTIFICATION_OPTIONS,
   displayNotification,
+  type NotificationDisplayOptions,
 } from "@/lib/notifications";
 import { encryptField } from "@/lib/crypto/contentCipher";
 
@@ -197,5 +198,96 @@ describe("displayNotification with an encrypted body", () => {
       "Task Due Soon",
       expect.not.objectContaining({ encrypted: expect.anything() }),
     );
+  });
+});
+
+describe("displayNotification with an encrypted title", () => {
+  const key = new Uint8Array(32).fill(7);
+
+  function titleShown(registration: ServiceWorkerRegistration): string {
+    const showNotification = registration.showNotification as unknown as {
+      mock: { calls: [string, NotificationDisplayOptions][] };
+    };
+    return showNotification.mock.calls[0][0];
+  }
+
+  it("uses the decrypted habit name as the title when key is present", async () => {
+    loadKey.mockResolvedValue(key);
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "You have a habit scheduled now.",
+      encryptedTitle: {
+        template: "{}",
+        ciphertext: await encryptField(key, "Morning run"),
+      },
+    });
+
+    expect(titleShown(registration)).toBe("Morning run");
+  });
+
+  it("falls back to the generic title when no key is loaded (locked account)", async () => {
+    loadKey.mockResolvedValue(null);
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "You have a habit scheduled now.",
+      encryptedTitle: {
+        template: "{}",
+        ciphertext: await encryptField(key, "Morning run"),
+      },
+    });
+
+    expect(titleShown(registration)).toBe("Habit reminder");
+  });
+
+  it("falls back to the generic title when the ciphertext does not decrypt", async () => {
+    loadKey.mockResolvedValue(new Uint8Array(32).fill(9));
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "You have a habit scheduled now.",
+      encryptedTitle: {
+        template: "{}",
+        ciphertext: await encryptField(key, "Morning run"),
+      },
+    });
+
+    expect(titleShown(registration)).toBe("Habit reminder");
+  });
+
+  it("keeps the encrypted title envelope out of the shown notification options", async () => {
+    loadKey.mockResolvedValue(key);
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "You have a habit scheduled now.",
+      encryptedTitle: {
+        template: "{}",
+        ciphertext: await encryptField(key, "Morning run"),
+      },
+    });
+
+    expect(registration.showNotification).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.not.objectContaining({ encryptedTitle: expect.anything() }),
+    );
+  });
+
+  it("does not expose ciphertext as the title on decrypt failure", async () => {
+    loadKey.mockResolvedValue(new Uint8Array(32).fill(9));
+    const registration = registrationWith([]);
+    const ciphertext = await encryptField(key, "Morning run");
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "You have a habit scheduled now.",
+      encryptedTitle: {
+        template: "{}",
+        ciphertext,
+      },
+    });
+
+    expect(titleShown(registration)).not.toContain("xchacha20");
+    expect(titleShown(registration)).toBe("Habit reminder");
   });
 });
