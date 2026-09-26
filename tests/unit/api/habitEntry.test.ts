@@ -69,6 +69,19 @@ describe("POST /api/habits/entry", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when date is not a real calendar day", async () => {
+    mockAuthGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+
+    const res = await POST(
+      makeRequest({
+        habitId: HABIT_UUID,
+        date: "2026-02-30",
+        state: "skipped",
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
   it("returns 400 when state is invalid", async () => {
     mockAuthGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
 

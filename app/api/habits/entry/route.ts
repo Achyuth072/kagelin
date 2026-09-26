@@ -5,7 +5,7 @@ import { ENTRY_VALUE_DONE, ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
 
 const schema = z.object({
   habitId: z.string().uuid(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date: z.iso.date(),
   state: z.enum(["done", "skipped"]),
 });
 

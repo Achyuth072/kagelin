@@ -55,7 +55,6 @@ export function findClosestLoopColor(hex: string): number {
   return closest;
 }
 
-// Preserves original Loop color index when color is unchanged.
 export function resolveLoopColor(
   habit: Habit,
   rawHabit?: RawLoopHabit,
@@ -147,11 +146,12 @@ export function getRawHabitByProvenance(
   return rawHabitsByUuid.get(normalizeUuid(habit.source_uuid));
 }
 
-// Preserves original import provenance when available.
+// Pre-ADR-0019 imports stored approximated frequencies; preserve raw Loop values until edited.
 export function getHabitFrequency(
   habit: Habit,
   rawHabit?: RawLoopHabit,
 ): { freq_num: number; freq_den: number } {
+  const current = mapKagelinFrequencyToLoop(habit);
   if (
     rawHabit &&
     typeof rawHabit.freq_num === "number" &&
@@ -159,9 +159,33 @@ export function getHabitFrequency(
     rawHabit.freq_num > 0 &&
     rawHabit.freq_den > 0
   ) {
-    return { freq_num: rawHabit.freq_num, freq_den: rawHabit.freq_den };
+    const raw = { freq_num: rawHabit.freq_num, freq_den: rawHabit.freq_den };
+    const legacy = legacyImportedFrequency(raw);
+    if (
+      current.freq_num === legacy.freq_num &&
+      current.freq_den === legacy.freq_den
+    ) {
+      return raw;
+    }
   }
-  return mapKagelinFrequencyToLoop(habit);
+  return current;
+}
+
+function legacyImportedFrequency({
+  freq_num,
+  freq_den,
+}: {
+  freq_num: number;
+  freq_den: number;
+}): { freq_num: number; freq_den: number } {
+  if (freq_den === 1 || freq_den === 7 || freq_den === 30) {
+    return { freq_num, freq_den };
+  }
+  if (freq_den === 31) return { freq_num, freq_den: 30 };
+  return {
+    freq_num: Math.max(1, Math.round((freq_num * 7) / freq_den)),
+    freq_den: 7,
+  };
 }
 
 const GUEST_STORE_KEY = "kanso_import_sources";
@@ -183,7 +207,6 @@ export async function collectUhabitsExportData(
         const stored = (await get<{ raw: unknown }[]>(GUEST_STORE_KEY)) ?? [];
         rawSources = stored.map((record) => record.raw);
       } catch (err) {
-        // Fall back to in-memory state if indexedDB lookup fails.
         Sentry.captureException(err);
       }
     }

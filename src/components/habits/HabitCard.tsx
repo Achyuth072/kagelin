@@ -211,48 +211,51 @@ export function HabitCard({
 
           <div className="flex items-center gap-2 text-[13px] font-medium tabular-nums text-foreground/55">
             {lastDoneNext ? (
-              <span className="font-medium text-foreground/70">
-                {lastDoneNextLabel(lastDoneNext)}
-              </span>
-            ) : (
               <>
-                {frequencyProgress && (
-                  <>
-                    <span className="flex items-center gap-1.5">
-                      <CircularProgress
-                        value={frequencyProgress.completed}
-                        max={frequencyProgress.target}
-                        size={18}
-                        strokeWidth={2.5}
-                        color={habit.color}
-                        label={frequencyProgressLabel(frequencyProgress)}
-                      />
-                      <span className="font-semibold text-foreground/90">
-                        {frequencyProgress.completed}/{frequencyProgress.target}
-                      </span>
-                    </span>
-                    <span className="text-foreground/25" aria-hidden="true">
-                      ·
-                    </span>
-                  </>
-                )}
-                <span>
-                  <span className="font-semibold text-foreground/90">
-                    {currentStreak}
-                  </span>{" "}
-                  streak
+                <span className="font-medium text-foreground/70">
+                  {lastDoneNextLabel(lastDoneNext)}
                 </span>
                 <span className="text-foreground/25" aria-hidden="true">
                   ·
                 </span>
-                <span>
-                  <span className="font-semibold text-foreground/90">
-                    {totalCompletions}
-                  </span>{" "}
-                  total
-                </span>
               </>
+            ) : (
+              frequencyProgress && (
+                <>
+                  <span className="flex items-center gap-1.5">
+                    <CircularProgress
+                      value={frequencyProgress.completed}
+                      max={frequencyProgress.target}
+                      size={18}
+                      strokeWidth={2.5}
+                      color={habit.color}
+                      label={frequencyProgressLabel(frequencyProgress)}
+                    />
+                    <span className="font-semibold text-foreground/90">
+                      {frequencyProgress.completed}/{frequencyProgress.target}
+                    </span>
+                  </span>
+                  <span className="text-foreground/25" aria-hidden="true">
+                    ·
+                  </span>
+                </>
+              )
             )}
+            <span>
+              <span className="font-semibold text-foreground/90">
+                {currentStreak}
+              </span>{" "}
+              streak
+            </span>
+            <span className="text-foreground/25" aria-hidden="true">
+              ·
+            </span>
+            <span>
+              <span className="font-semibold text-foreground/90">
+                {totalCompletions}
+              </span>{" "}
+              total
+            </span>
           </div>
         </div>
 

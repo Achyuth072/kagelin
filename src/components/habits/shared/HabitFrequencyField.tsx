@@ -72,15 +72,6 @@ export function HabitFrequencyField({
     }
   };
 
-  const setD = (raw: string) => {
-    const n = parseInt(raw, 10);
-    if (!isNaN(n)) {
-      onFrequencyDaysChange(
-        Math.max(MIN_DAYS, Math.min(MAX_FREQUENCY_DAYS, n)),
-      );
-    }
-  };
-
   const selectMode = (next: FrequencyMode) => {
     if (next === mode) return;
     trigger("toggle");
@@ -131,7 +122,8 @@ export function HabitFrequencyField({
           ))}
         </div>
 
-        {mode !== "daily" && (
+        {/* Daily is 1-in-1, but pre-D habits may still be N per day. */}
+        {(mode !== "daily" || count > 1) && (
           <div className="flex items-center gap-2 flex-wrap text-[13px] text-muted-foreground">
             <CountStepper
               value={count}
@@ -141,13 +133,14 @@ export function HabitFrequencyField({
             />
             <span className="shrink-0">
               {count === 1 ? "time" : "times"}
+              {mode === "daily" && " per day"}
               {mode === "weekly" && " per week"}
               {mode === "monthly" && " per month"}
               {mode === "custom" && " every"}
             </span>
             {mode === "custom" && (
               <>
-                <DayInput value={days} onChange={setD} />
+                <DayInput value={days} onChange={onFrequencyDaysChange} />
                 <span className="shrink-0">days</span>
               </>
             )}
@@ -201,15 +194,35 @@ function DayInput({
   onChange,
 }: {
   value: number;
-  onChange: (raw: string) => void;
+  onChange: (days: number) => void;
 }) {
+  // Clamping per keystroke would turn a leading "1" into 2 (MIN_DAYS).
+  const [draft, setDraft] = useState<string | null>(null);
+  const inRange = (n: number) => n >= MIN_DAYS && n <= MAX_FREQUENCY_DAYS;
+
+  const change = (raw: string) => {
+    setDraft(raw);
+    const n = parseInt(raw, 10);
+    if (inRange(n)) onChange(n);
+  };
+
+  const blur = () => {
+    if (draft === null) return;
+    const n = parseInt(draft, 10);
+    if (!isNaN(n) && !inRange(n)) {
+      onChange(Math.max(MIN_DAYS, Math.min(MAX_FREQUENCY_DAYS, n)));
+    }
+    setDraft(null);
+  };
+
   return (
     <input
       type="number"
-      value={value}
+      value={draft ?? value}
       min={MIN_DAYS}
       max={MAX_FREQUENCY_DAYS}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={(e) => change(e.target.value)}
+      onBlur={blur}
       aria-label="Number of days"
       className="h-8 w-16 rounded-lg border border-border/40 bg-secondary/10 text-center text-[13px] font-medium tabular-nums text-foreground outline-none focus:ring-1 focus:ring-brand/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
     />

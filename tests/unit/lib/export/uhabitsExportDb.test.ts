@@ -8,6 +8,7 @@ import {
 import {
   findClosestLoopColor,
   mapKagelinFrequencyToLoop,
+  getHabitFrequency,
   entryToRepetitionValue,
   collectUhabitsExportData,
 } from "@/lib/export/uhabitsShared";
@@ -90,6 +91,46 @@ describe("uhabitsExportDb - pure helpers", () => {
       mapKagelinFrequencyToLoop({ frequency_count: 2, frequency_days: 7 }),
     ).toEqual({ freq_num: 2, freq_den: 7 });
   });
+
+  it.each([
+    [
+      "unchanged lossless import",
+      { frequency_count: 1, frequency_days: 50 },
+      { freq_num: 1, freq_den: 50 },
+      { freq_num: 1, freq_den: 50 },
+    ],
+    [
+      "frequency edited after import",
+      { frequency_count: 1, frequency_days: 60 },
+      { freq_num: 1, freq_den: 50 },
+      { freq_num: 1, freq_den: 60 },
+    ],
+    [
+      "pre-lossless import still holding the weekly approximation",
+      { frequency_count: 1, frequency_days: 7, frequency_period: "week" },
+      { freq_num: 1, freq_den: 50 },
+      { freq_num: 1, freq_den: 50 },
+    ],
+    [
+      "pre-lossless 31-day import still holding the month approximation",
+      { frequency_count: 2, frequency_days: 30, frequency_period: "month" },
+      { freq_num: 2, freq_den: 31 },
+      { freq_num: 2, freq_den: 31 },
+    ],
+    [
+      "pre-lossless import edited away from the approximation",
+      { frequency_count: 3, frequency_days: 7, frequency_period: "week" },
+      { freq_num: 1, freq_den: 50 },
+      { freq_num: 3, freq_den: 7 },
+    ],
+  ] as const)(
+    "exports an imported habit's frequency: %s",
+    (_label, habitFrequency, raw, expected) => {
+      expect(getHabitFrequency(makeHabit(habitFrequency), raw)).toEqual(
+        expected,
+      );
+    },
+  );
 
   it("maps entry values to Loop repetition values", () => {
     expect(entryToRepetitionValue(1, "boolean")).toBe(2);

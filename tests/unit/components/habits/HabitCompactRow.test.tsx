@@ -53,6 +53,16 @@ describe("HabitCompactRow rolling-7 strip", () => {
     };
   });
 
+  it("keeps the streak next to last done / next for a 1-in-D habit", () => {
+    render(
+      <HabitCompactRow
+        habit={{ ...mockHabit, frequency_count: 1, frequency_days: 7 }}
+      />,
+    );
+    expect(screen.getByText(/done 1 day ago/i)).toBeInTheDocument();
+    expect(screen.getByText(/streak/)).toBeInTheDocument();
+  });
+
   it("renders a fixed 7-cell strip (one column per day, no scroll)", () => {
     const { container } = render(<HabitCompactRow habit={mockHabit} />);
     const strip = container.querySelector(".grid-cols-7");

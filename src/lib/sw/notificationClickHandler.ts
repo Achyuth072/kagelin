@@ -1,6 +1,6 @@
 import type { NotificationDisplayOptions } from "@/lib/notifications";
 import type { HabitType } from "@/lib/types/habit";
-import { HABITS_PATH, HABIT_ENTRY_UPDATED, habitPath } from "@/lib/habit-links";
+import { HABIT_ENTRY_UPDATED, habitPath } from "@/lib/habit-links";
 
 export interface HabitNotificationData {
   habitId?: string;
@@ -29,16 +29,16 @@ export async function handleNotificationClick(
 ): Promise<void> {
   if ((action === "done" || action === "skip") && data?.habitId && data?.date) {
     const state = action === "done" ? "done" : "skipped";
-    const ok = await deps
-      .fetch("/api/habits/entry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ habitId: data.habitId, date: data.date, state }),
-      })
-      .then(
-        (res) => res.ok,
-        () => false,
-      );
+    // Platform fetch throws "Illegal invocation" when called as a method of deps.
+    const { fetch } = deps;
+    const ok = await fetch("/api/habits/entry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ habitId: data.habitId, date: data.date, state }),
+    }).then(
+      (res) => res.ok,
+      () => false,
+    );
 
     if (ok) {
       for (const client of await matchWindows(deps)) {
@@ -75,12 +75,12 @@ export async function handleNotificationClick(
     }
   }
 
-  deps.openWindow(url);
+  await deps.openWindow(url);
 }
 
 function habitUrl(data: HabitNotificationData | undefined): string {
   if (data?.habitId) return habitPath(data.habitId);
-  return data?.url ?? HABITS_PATH;
+  return data?.url || "/";
 }
 
 function matchWindows(deps: NotificationClickDeps) {

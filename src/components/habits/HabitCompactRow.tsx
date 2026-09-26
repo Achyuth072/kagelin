@@ -108,26 +108,22 @@ export function HabitCompactRow({
               {lastDoneNextLabel(lastDoneNext)}
             </span>
           ) : (
-            <>
-              {frequencyProgress && (
-                <CircularProgress
-                  value={frequencyProgress.completed}
-                  max={frequencyProgress.target}
-                  size={18}
-                  strokeWidth={2.5}
-                  color={habit.color}
-                  label={frequencyProgressLabel(frequencyProgress)}
-                  className="mr-0.5"
-                />
-              )}
-              <span className="text-[13px] font-medium tabular-nums text-foreground/55">
-                <span className="font-semibold text-foreground/90">
-                  {streak}
-                </span>{" "}
-                streak
-              </span>
-            </>
+            frequencyProgress && (
+              <CircularProgress
+                value={frequencyProgress.completed}
+                max={frequencyProgress.target}
+                size={18}
+                strokeWidth={2.5}
+                color={habit.color}
+                label={frequencyProgressLabel(frequencyProgress)}
+                className="mr-0.5"
+              />
+            )
           )}
+          <span className="text-[13px] font-medium tabular-nums text-foreground/55">
+            <span className="font-semibold text-foreground/90">{streak}</span>{" "}
+            streak
+          </span>
           {onViewInsights && (
             <button
               onClick={(e) => {

@@ -67,6 +67,22 @@ describe("handleNotificationClick — Done/Skip actions", () => {
     );
   });
 
+  it("calls fetch unbound, as the platform fetch requires", async () => {
+    const calls: unknown[] = [];
+    const deps = makeDeps({
+      fetch: function (this: unknown) {
+        calls.push(this);
+        if (this !== undefined) throw new TypeError("Illegal invocation");
+        return Promise.resolve({ ok: true } as Response);
+      } as typeof globalThis.fetch,
+    });
+
+    await handleNotificationClick("done", habitData, "habit-tag", deps);
+
+    expect(calls).toEqual([undefined]);
+    expect(deps.displayNotification).not.toHaveBeenCalled();
+  });
+
   it("posts skipped state for Skip", async () => {
     const deps = makeDeps();
     vi.mocked(deps.fetch).mockResolvedValue({ ok: true } as Response);
@@ -205,5 +221,37 @@ describe("handleNotificationClick — body tap", () => {
     await handleNotificationClick("", { url: "/tasks" }, undefined, deps);
 
     expect(deps.openWindow).toHaveBeenCalledWith("/tasks");
+  });
+
+  it("opens Home for notifications without any data", async () => {
+    const deps = makeDeps({
+      clients: {
+        matchAll: vi.fn().mockResolvedValue([]),
+      } as unknown as Clients,
+    });
+
+    await handleNotificationClick("", undefined, undefined, deps);
+
+    expect(deps.openWindow).toHaveBeenCalledWith("/");
+  });
+
+  it("waits for the new window to open before resolving", async () => {
+    let opened = false;
+    const deps = makeDeps({
+      clients: {
+        matchAll: vi.fn().mockResolvedValue([]),
+      } as unknown as Clients,
+      openWindow: () =>
+        new Promise((resolve) =>
+          setTimeout(() => {
+            opened = true;
+            resolve(null);
+          }, 0),
+        ),
+    });
+
+    await handleNotificationClick("", habitData, undefined, deps);
+
+    expect(opened).toBe(true);
   });
 });

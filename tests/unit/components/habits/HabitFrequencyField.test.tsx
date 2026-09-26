@@ -141,3 +141,53 @@ describe("HabitFrequencyField — D input bounds", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("HabitFrequencyField — typing D", () => {
+  it("lets a D starting with 1 be typed without clamping mid-entry", () => {
+    const { onFrequencyDaysChange } = renderField({
+      count: 1,
+      period: undefined,
+      frequencyDays: 5,
+    });
+    const input = screen.getByLabelText(/number of days/i) as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: "1" } });
+    expect(input.value).toBe("1");
+    expect(onFrequencyDaysChange).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: "14" } });
+    expect(onFrequencyDaysChange).toHaveBeenLastCalledWith(14);
+  });
+
+  it("clamps an out-of-range D on blur", () => {
+    const { onFrequencyDaysChange } = renderField({
+      count: 1,
+      period: undefined,
+      frequencyDays: 5,
+    });
+    const input = screen.getByLabelText(/number of days/i);
+
+    fireEvent.change(input, { target: { value: "1" } });
+    fireEvent.blur(input);
+    expect(onFrequencyDaysChange).toHaveBeenLastCalledWith(2);
+
+    fireEvent.change(input, { target: { value: "900" } });
+    fireEvent.blur(input);
+    expect(onFrequencyDaysChange).toHaveBeenLastCalledWith(365);
+  });
+});
+
+describe("HabitFrequencyField — legacy N per day", () => {
+  it("shows the count for a D=1 habit with count > 1", () => {
+    renderField({ count: 3, period: "day" });
+    expect(pressed(/daily/i)).toBe("true");
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText(/times per day/i)).toBeInTheDocument();
+  });
+
+  it("lets that count be lowered in place", () => {
+    const { onCountChange } = renderField({ count: 3, period: "day" });
+    fireEvent.click(screen.getByRole("button", { name: /fewer times/i }));
+    expect(onCountChange).toHaveBeenCalledWith(2);
+  });
+});
