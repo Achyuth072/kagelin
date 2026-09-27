@@ -32,7 +32,7 @@ interface PreparedLoopHabit {
   sqliteId: number;
   archived: number;
   color: number;
-  description: string | null;
+  description: string;
   freq_den: number;
   freq_num: number;
   highlight: number;
@@ -45,7 +45,7 @@ interface PreparedLoopHabit {
   target_type: number;
   target_value: number;
   unit: string;
-  question: string | null;
+  question: string;
   uuid: string;
 }
 
@@ -53,7 +53,7 @@ function numOr(value: unknown, fallback: number): number {
   return typeof value === "number" ? value : fallback;
 }
 
-function strOr(value: unknown, fallback: string | null): string | null {
+function strOr(value: unknown, fallback: string): string {
   return typeof value === "string" ? value : fallback;
 }
 
@@ -66,7 +66,7 @@ function prepareLoopHabit(
 ): PreparedLoopHabit {
   const archived = habit.archived_at ? 1 : 0;
   const color = resolveLoopColor(habit, rawHabit);
-  const description = habit.description ?? strOr(rawHabit?.description, null);
+  const description = habit.description ?? strOr(rawHabit?.description, "");
   const { freq_num, freq_den } = getHabitFrequency(habit, rawHabit);
 
   const highlight = numOr(rawHabit?.highlight, 0);
@@ -101,11 +101,9 @@ function prepareLoopHabit(
     ? numOr(habit.target_value, numOr(rawHabit?.target_value, 0))
     : 0;
 
-  const unit = isMeasurable
-    ? (habit.unit ?? strOr(rawHabit?.unit, "") ?? "")
-    : "";
+  const unit = isMeasurable ? (habit.unit ?? strOr(rawHabit?.unit, "")) : "";
 
-  const question = habit.question ?? strOr(rawHabit?.question, null);
+  const question = habit.question ?? strOr(rawHabit?.question, "");
 
   return {
     habitId: habit.id,
@@ -185,9 +183,7 @@ export async function exportToUhabitsDb(
 
   const sortedHabits = sortHabitsByOrder(habits);
 
-  // Provenance IDs and UUIDs go to the first habit that claims them, reserved
-  // before auto-assignment. Later claimants (overlapping backups, or the same
-  // Loop habit imported twice) get fresh ones instead of colliding.
+  // Overlapping backups or duplicate imports get fresh IDs to avoid collisions.
   const sqliteIdOwner = new Map<number, string>();
   const uuidOwner = new Map<string, string>();
   const rawByHabitId = new Map<string, RawLoopHabit | undefined>();

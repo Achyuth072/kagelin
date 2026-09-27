@@ -1,11 +1,3 @@
-/**
- * Pick a legible foreground (black or white) for content overlaid on `hex`,
- * by the WCAG relative-luminance of the fill. Used so a completed-habit check
- * stays visible on both light fills (e.g. pale yellow) and dark ones (e.g.
- * Sumi Ink #1A1A1A), where a fixed black check would vanish.
- *
- * Accepts #rgb / #rrggbb; falls back to black for unparseable input.
- */
 export function getContrastingColor(hex: string): "#000000" | "#ffffff" {
   const rgb = hexToRgb(hex);
   if (!rgb) return "#000000";
@@ -18,7 +10,7 @@ export function getContrastingColor(hex: string): "#000000" | "#ffffff" {
   return luminance > 0.179 ? "#000000" : "#ffffff";
 }
 
-function hexToRgb(hex: string): [number, number, number] | null {
+export function hexToRgb(hex: string): [number, number, number] | null {
   let h = hex.replace("#", "");
   if (h.length === 3) {
     h = h

@@ -14,7 +14,7 @@ import {
 } from "@/lib/export/uhabitsShared";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { PROJECT_COLORS } from "@/lib/constants/colors";
-import { parseUhabitsFile } from "@/lib/import/uhabits";
+import { LOOP_COLOR_PALETTE, parseUhabitsFile } from "@/lib/import/uhabits";
 import { ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
 import { entry, makeHabit } from "../../support/habitFixtures";
 import {
@@ -40,6 +40,26 @@ describe("uhabitsExportDb - pure helpers", () => {
       const idx = findClosestLoopColor(color.hex);
       expect(idx).toBeGreaterThanOrEqual(0);
       expect(idx).toBeLessThanOrEqual(20);
+    }
+  });
+
+  it("keeps the guest demo habits visually distinct in Loop instead of folding muted colors into greys", () => {
+    const demoHexes = [
+      "#5B7C99",
+      "#A3B18A",
+      "#9F8189",
+      "#8B6B80",
+      "#6B8E8A",
+      "#A48C7A",
+    ];
+    const indices = demoHexes.map(findClosestLoopColor);
+    expect(new Set(indices).size).toBe(demoHexes.length);
+    for (const idx of indices) expect([16, 17, 18]).not.toContain(idx);
+  });
+
+  it("returns an exact Loop palette color unchanged, greys included", () => {
+    for (const [idx, hex] of Object.entries(LOOP_COLOR_PALETTE)) {
+      expect(findClosestLoopColor(hex)).toBe(Number(idx));
     }
   });
 
@@ -400,6 +420,30 @@ describe("exportToUhabitsDb - SQLite database construction", () => {
     expect(repMiss).toBeDefined();
 
     db.close();
+  });
+
+  it("never writes NULL description, question or unit, which Loop's HabitRecord.copyTo dereferences with !!", async () => {
+    const SQL = await getSql();
+    const binary = await exportToUhabitsDb({
+      habits: [
+        makeHabit({
+          id: "h-bare",
+          name: "Bare",
+          description: null,
+          question: null,
+        }),
+      ],
+      entries: [],
+      wasmPath: "public/sql-wasm.wasm",
+    });
+
+    const db = new SQL.Database(binary);
+    const res = db.exec(
+      "SELECT description, question, unit FROM Habits WHERE name = 'Bare'",
+    );
+    db.close();
+
+    expect(res[0].values[0]).toEqual(["", "", ""]);
   });
 
   it("round-trips a skip written by the UI on a habit created in Kagelin", async () => {

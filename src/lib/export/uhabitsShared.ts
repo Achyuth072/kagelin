@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
+import { hexToRgb } from "@/lib/utils/color";
 import { frequencyWindowDays } from "@/lib/utils/habit-frequency";
 import { mockStore } from "@/lib/mock/mock-store";
 import { fetchAllRows } from "@/lib/supabase/paginate";
@@ -18,7 +19,6 @@ import {
   LOOP_VALUE_NO,
   LOOP_VALUE_SKIP,
   LOOP_VALUE_YES,
-  colorDistance,
   paletteToHex,
 } from "@/lib/import/uhabits";
 
@@ -38,17 +38,46 @@ export interface UhabitsExportOptions {
 
 export type RawLoopHabit = Record<string, unknown>;
 
-const LOOP_COLOR_ENTRIES = Object.entries(LOOP_COLOR_PALETTE);
+const GREY_SATURATION = 0.12;
+const HUE_WEIGHT = 3;
 
+function hexToHsl(hex: string): { h: number; s: number; l: number } {
+  const [r, g, b] = (hexToRgb(hex) ?? [0, 0, 0]).map((c) => c / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const delta = max - min;
+  if (delta === 0) return { h: 0, s: 0, l };
+  const s = delta / (1 - Math.abs(2 * l - 1));
+  const sector =
+    max === r
+      ? ((g - b) / delta) % 6
+      : max === g
+        ? (b - r) / delta + 2
+        : (r - g) / delta + 4;
+  return { h: (sector * 60 + 360) % 360, s, l };
+}
+
+const LOOP_COLOR_ENTRIES = Object.entries(LOOP_COLOR_PALETTE).map(
+  ([idx, hex]) => ({ idx: Number(idx), hsl: hexToHsl(hex) }),
+);
+
+// Plain RGB distance collapses Kagelin's muted palette onto Loop's greys.
 export function findClosestLoopColor(hex: string): number {
+  const source = hexToHsl(hex);
+  const wantsGrey = source.s < GREY_SATURATION;
   let closest = 0;
   let minDistance = Infinity;
 
-  for (const [idxStr, loopHex] of LOOP_COLOR_ENTRIES) {
-    const dist = colorDistance(hex, loopHex);
+  for (const { idx, hsl } of LOOP_COLOR_ENTRIES) {
+    if (hsl.s < GREY_SATURATION !== wantsGrey) continue;
+    const hueGap = Math.abs(source.h - hsl.h);
+    const hueDistance = Math.min(hueGap, 360 - hueGap) / 180;
+    const dist =
+      (wantsGrey ? 0 : HUE_WEIGHT * hueDistance) + Math.abs(source.l - hsl.l);
     if (dist < minDistance) {
       minDistance = dist;
-      closest = Number(idxStr);
+      closest = idx;
     }
   }
 
