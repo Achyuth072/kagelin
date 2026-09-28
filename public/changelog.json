@@ -1,5 +1,74 @@
 [
   {
+    "version": "1.45.0-preview.5",
+    "date": "2026-09-27",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Uhabits export writes empty strings not null, matches colors by hue",
+        "Overdue 1-in-D habits say due now instead of counting days late"
+      ]
+    }
+  },
+  {
+    "version": "1.45.0-preview.4",
+    "date": "2026-09-26",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Old clients' period edits reach frequency_days, measurable reminders match dayValue",
+        "Reminder actions save, frequency field typing, export keeps edited frequency",
+        "Reminder deep link keeps the back anchor, name all-skipped imports, share habit link contract",
+        "Reminders open their habit, import names skipped habits, and review cleanups"
+      ]
+    }
+  },
+  {
+    "version": "1.45.0-preview.3",
+    "date": "2026-09-26",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Habit reminders follow frequency window",
+        "Done/skip actions on habit reminders",
+        "Habit reminders name the habit via encrypted title envelope"
+      ]
+    }
+  },
+  {
+    "version": "1.45.0-preview.2",
+    "date": "2026-09-25",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Five-option frequency authoring and last-done/next display for 1-in-D habits"
+      ]
+    }
+  },
+  {
+    "version": "1.45.0-preview.1",
+    "date": "2026-09-25",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Lossless N-in-D habit frequency via frequency_days"
+      ]
+    }
+  },
+  {
+    "version": "1.45.0-preview.0",
+    "date": "2026-09-25",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Archive and restore habits, re-import matches by Loop identity"
+      ],
+      "Fixed": [
+        "Keep habit drawer footer fixed and reminder row on one line on narrow screens"
+      ]
+    }
+  },
+  {
     "version": "1.44.2",
     "date": "2026-09-24",
     "channel": "stable",
@@ -634,99 +703,6 @@
       "Fixed": [
         "Don't reflect raw URL error text in AccountSection alert",
         "Reject control-character next params to close open redirect (H-3)"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0-preview.5",
-    "date": "2026-08-18",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Simplify has_password RPC hook and auth captcha/error components"
-      ],
-      "Fixed": [
-        "Change sign-up button label to Sign up",
-        "Has_password RPC, redirect error_code threading, and auth code-review cleanup",
-        "Show email/password sign-in in Settings connected identities (#149)"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0-preview.4",
-    "date": "2026-08-17",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Force account picker for GitHub too, not just Google, when linking",
-        "Close two translucent destructive spots missed in the finding-9 sweep",
-        "Show account display name, restyle email-confirmed, fix connect flash and destructive surfaces"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0-preview.3",
-    "date": "2026-08-17",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Refresh session from server after unlinking an identity",
-        "Flatten AuthConfirmationCard and restore missing space in confirmation copy",
-        "Require explicit sign-in after signup confirmation and password reset",
-        "Add password visibility toggle and confirm-password field"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0-preview.2",
-    "date": "2026-08-17",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Correct handle_new_user OAuth display_name fallback field",
-        "Auth error labelling, duplication, and naming cleanups",
-        "Auth callback error routing, update-password shell, signup-disabled message"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0-preview.1",
-    "date": "2026-08-15",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add PWA install prompt for mobile, fix iOS notifications messaging",
-        "Add About section to Settings for AGPL source-offer compliance"
-      ],
-      "Fixed": [
-        "Compact and declutter the auth page layout",
-        "Press feedback, focus/tap-highlight, and haptics on offline.html buttons",
-        "Center the footer wrapper"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0-preview.0",
-    "date": "2026-08-13",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Broaden handle_new_user display_name fallback to include OAuth metadata",
-        "Implement settings account section for provider management and password setup",
-        "Add forgot-password reset flow and new-password route",
-        "Warn on breached passwords via HIBP range API on sign-up",
-        "Add password sign-up/sign-in with existing-email collision screen",
-        "Replace logo with image and update terms/privacy policy links in AuthPage",
-        "Rebuild login/signup page with OAuth row and mode toggle",
-        "Grant Premium to the founding waitlist cohort on email confirmation"
-      ],
-      "Improved": [
-        "Collapse signInWithGoogle into signInWithOAuth(provider)"
-      ],
-      "Fixed": [
-        "Apply Icon-Led Row pattern and mobile touch targets to Account section",
-        "Align identity linking error message",
-        "Keep Turnstile widget inside auth card on mobile viewports"
       ]
     }
   }

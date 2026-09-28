@@ -9,6 +9,7 @@ import {
   Send,
   Save,
   Trash2,
+  Archive,
   CalendarIcon,
   AlignLeft,
   SlidersHorizontal,
@@ -18,14 +19,11 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { CollapsibleReveal } from "../tasks/shared/CollapsibleReveal";
 import { HabitDisclosureRow } from "./shared/HabitDisclosureRow";
 import { HabitAppearanceField } from "./shared/HabitAppearanceField";
-import {
-  HabitFrequencyField,
-  type FrequencyPeriod,
-} from "./shared/HabitFrequencyField";
+import { HabitFrequencyField } from "./shared/HabitFrequencyField";
 import { HabitTargetField, type TargetType } from "./shared/HabitTargetField";
 import { HabitQuestionField } from "./shared/HabitQuestionField";
 import { HabitTypeToggle } from "./shared/HabitTypeToggle";
-import type { HabitType } from "@/lib/types/habit";
+import type { FrequencyPeriod, HabitType } from "@/lib/types/habit";
 import { HabitReminderField } from "./shared/HabitReminderField";
 import { TaskDatePicker } from "../tasks/shared/TaskDatePicker";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -45,8 +43,10 @@ interface HabitViewBaseProps {
   setHabitType: (value: HabitType) => void;
   frequencyCount: number;
   setFrequencyCount: (value: number) => void;
-  frequencyPeriod: FrequencyPeriod;
-  setFrequencyPeriod: (value: FrequencyPeriod) => void;
+  frequencyPeriod: FrequencyPeriod | null | undefined;
+  setFrequencyPeriod: (value: FrequencyPeriod | null) => void;
+  frequencyDays: number | undefined;
+  setFrequencyDays: (value: number | undefined) => void;
   targetValue: number | undefined;
   setTargetValue: (value: number | undefined) => void;
   targetType: TargetType;
@@ -73,6 +73,7 @@ export type HabitViewProps =
   | (HabitViewBaseProps & { mode: "create" })
   | (HabitViewBaseProps & {
       mode: "edit";
+      onArchive: () => void;
       onDelete: () => void;
     });
 
@@ -95,6 +96,8 @@ export function HabitView(props: HabitViewProps) {
     setFrequencyCount,
     frequencyPeriod,
     setFrequencyPeriod,
+    frequencyDays,
+    setFrequencyDays,
     targetValue,
     setTargetValue,
     targetType,
@@ -177,8 +180,10 @@ export function HabitView(props: HabitViewProps) {
         <HabitFrequencyField
           count={frequencyCount}
           period={frequencyPeriod}
+          frequencyDays={frequencyDays}
           onCountChange={setFrequencyCount}
           onPeriodChange={setFrequencyPeriod}
+          onFrequencyDaysChange={setFrequencyDays}
         />
 
         {habitType === "measurable" && (
@@ -274,6 +279,23 @@ export function HabitView(props: HabitViewProps) {
         />
 
         <div className="flex-1" />
+
+        {mode === "edit" && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg transition-seijaku-fast"
+            onClick={() => {
+              trigger("toggle");
+              props.onArchive();
+            }}
+            disabled={isPending}
+            aria-label="Archive habit"
+          >
+            <Archive strokeWidth={2.25} />
+          </Button>
+        )}
 
         {mode === "edit" && (
           <Button

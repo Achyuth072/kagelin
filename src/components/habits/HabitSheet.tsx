@@ -12,6 +12,7 @@ import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDial
 import {
   useCreateHabit,
   useUpdateHabit,
+  useArchiveHabit,
   useDeleteHabit,
 } from "@/lib/hooks/useHabitMutations";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -100,6 +101,8 @@ export function HabitSheet({
   const frequencyCount = useWatch({ control, name: "frequency_count" }) ?? 1;
   const frequencyPeriod =
     useWatch({ control, name: "frequency_period" }) ?? "day";
+  const frequencyDays = useWatch({ control, name: "frequency_days" }) as
+    number | undefined;
   const targetValue = useWatch({ control, name: "target_value" });
   const targetType = useWatch({ control, name: "target_type" }) ?? "at_least";
   const unit = useWatch({ control, name: "unit" }) || "";
@@ -110,6 +113,7 @@ export function HabitSheet({
 
   const createMutation = useCreateHabit();
   const updateMutation = useUpdateHabit();
+  const archiveMutation = useArchiveHabit();
   const deleteMutation = useDeleteHabit();
   const isMobile = useMediaQuery("(max-width: 768px)");
   // Matches ResponsiveDialog breakpoint; desktop CSS grid requires explicit max-height.
@@ -127,6 +131,7 @@ export function HabitSheet({
           start_date: initialHabit.start_date ?? undefined,
           habit_type: initialHabit.habit_type ?? "boolean",
           frequency_count: initialHabit.frequency_count ?? 1,
+          frequency_days: initialHabit.frequency_days ?? undefined,
           frequency_period: initialHabit.frequency_period ?? "day",
           target_type: initialHabit.target_type ?? "at_least",
           target_value: initialHabit.target_value ?? undefined,
@@ -172,6 +177,7 @@ export function HabitSheet({
             : data.start_date,
         habit_type: data.habit_type,
         frequency_count: data.frequency_count,
+        frequency_days: data.frequency_days,
         frequency_period: data.frequency_period,
         target_type: data.target_type,
         target_value: data.target_value,
@@ -196,6 +202,12 @@ export function HabitSheet({
     },
     [initialHabit, updateMutation, createMutation, onClose, triggerHaptic],
   );
+
+  const handleArchive = useCallback(() => {
+    if (!initialHabit) return;
+    onClose();
+    archiveMutation.mutate(initialHabit.id);
+  }, [initialHabit, onClose, archiveMutation]);
 
   const handleDelete = useCallback(() => {
     if (!initialHabit) return;
@@ -244,8 +256,15 @@ export function HabitSheet({
     setFrequencyCount: (v: number) =>
       setValue("frequency_count", v, { shouldValidate: true }),
     frequencyPeriod,
-    setFrequencyPeriod: (v: CreateHabitInput["frequency_period"]) =>
-      setValue("frequency_period", v, { shouldValidate: true }),
+    setFrequencyPeriod: (v: CreateHabitInput["frequency_period"] | null) => {
+      setValue("frequency_period", v ?? undefined, { shouldValidate: true });
+      setValue("frequency_days", undefined);
+    },
+    frequencyDays,
+    setFrequencyDays: (v: number | undefined) => {
+      setValue("frequency_days", v, { shouldValidate: true });
+      if (v !== undefined) setValue("frequency_period", undefined);
+    },
     targetValue,
     setTargetValue: (v: number | undefined) =>
       setValue("target_value", v, { shouldValidate: true }),
@@ -283,7 +302,9 @@ export function HabitSheet({
         <div
           className={cn(
             "flex flex-col",
-            isDrawer ? "flex-1 min-h-0" : "max-h-[90dvh]",
+            isDrawer
+              ? "flex-1 min-h-0 max-h-[calc(85dvh-2rem)]"
+              : "max-h-[90dvh]",
           )}
         >
           <ResponsiveDialogHeader className="sr-only">
@@ -306,7 +327,7 @@ export function HabitSheet({
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto min-h-0 scrollbar-hide">
+          <div className="flex flex-col flex-1 overflow-y-auto min-h-0 scrollbar-hide">
             {tab === "insights" && !isCreationMode ? (
               <HabitInsightsPanel habit={effectiveHabit!} />
             ) : isCreationMode ? (
@@ -314,6 +335,7 @@ export function HabitSheet({
             ) : (
               <HabitView
                 mode="edit"
+                onArchive={handleArchive}
                 onDelete={handleDelete}
                 {...sharedViewProps}
               />

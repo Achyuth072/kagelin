@@ -11,31 +11,23 @@ import {
   ENTRY_VALUE_SKIPPED,
 } from "@/lib/types/habit";
 import { interpolateDoneDays } from "@/lib/utils/habit-intervals";
-import { dayValue, periodDays } from "@/lib/utils/habit-score";
+import { dayValue } from "@/lib/utils/habit-score";
+import { frequencyWindowDays } from "@/lib/utils/habit-frequency";
 
-/** Measurable habits interpolate nothing, so they keep the one-day window. */
+// Measurable habits do not interpolate off-days.
 function pendingWindowDays(
-  habit: Pick<Habit, "frequency_period" | "habit_type">,
+  habit: Pick<Habit, "frequency_days" | "frequency_period" | "habit_type">,
 ): number {
   if (habit.habit_type === "measurable") return 1;
-  return periodDays(habit.frequency_period ?? null);
+  return frequencyWindowDays(habit);
 }
 
-/**
- * Current unbroken run of done-days ending at the present.
- *
- * For daily boolean habits: identical to the original algorithm.
- * For frequency-aware habits: runs over the interpolated done-set.
- * For measurable habits: counts only logged days meeting target (no interpolation).
- *
- * The trailing gap up to today is _pending_, not a break, for one pending
- * window — a frequency Habit's interpolated run legitimately ends before today
- * while the current period is still open. See ADR 0004.
- */
+// Trailing gap within pending window is treated as open, not broken (ADR 0004).
 export function getCurrentStreak(
   habit: Pick<
     Habit,
     | "frequency_count"
+    | "frequency_days"
     | "frequency_period"
     | "habit_type"
     | "target_type"
@@ -69,13 +61,11 @@ export function getCurrentStreak(
   return streak;
 }
 
-/**
- * Top N best (longest) streaks over the interpolated done-set.
- */
 export function getBestStreaks(
   habit: Pick<
     Habit,
     | "frequency_count"
+    | "frequency_days"
     | "frequency_period"
     | "habit_type"
     | "target_type"
@@ -111,17 +101,12 @@ export function getBestStreaks(
   return runs.sort((a, b) => b - a).slice(0, topN);
 }
 
-/**
- * Total completions: count of logged Entries that meet target.
- *
- * Per the domain spec, this counts only days with a real logged entry meeting
- * target — NOT interpolated/filled off-days, which would inflate the count for
- * frequency-aware habits and diverge from the habit card's raw completion count.
- */
+// Excludes interpolated off-days to avoid inflating real completion counts.
 export function getTotalCompletions(
   habit: Pick<
     Habit,
     | "frequency_count"
+    | "frequency_days"
     | "frequency_period"
     | "habit_type"
     | "target_type"
@@ -140,6 +125,7 @@ function buildDoneSet(
   habit: Pick<
     Habit,
     | "frequency_count"
+    | "frequency_days"
     | "frequency_period"
     | "habit_type"
     | "target_type"
@@ -152,10 +138,7 @@ function buildDoneSet(
   let done: Set<string>;
 
   if (habit.habit_type === "measurable") {
-    // Measurable: Boolean-only, no interpolation. Use the shared dayValue
-    // predicate so the Score engine, Overview, and Frequency grid agree on
-    // "done" — and so a null/0 target can't mark every logged day (incl. value 0)
-    // as complete via the old `value >= (target ?? 0)` shortcut.
+    // Uses dayValue to share target evaluation rules across score and streak engines.
     done = new Set<string>();
     for (const e of entries) {
       if (dayValue(e.value, habit) >= 1 && e.date <= todayKey) {
@@ -163,7 +146,6 @@ function buildDoneSet(
       }
     }
   } else {
-    // Boolean: use frequency interpolation over completed reps (value >= 1)
     done = interpolateDoneDays(
       habit,
       entries.filter((e) => e.value >= 1),
@@ -171,7 +153,7 @@ function buildDoneSet(
     );
   }
 
-  // Bridge streaks over skipped entries
+  // Skipped entries bridge streaks without counting as completions (ADR 0004).
   for (const e of entries) {
     if (e.value === ENTRY_VALUE_SKIPPED && e.date <= todayKey) {
       done.add(e.date);

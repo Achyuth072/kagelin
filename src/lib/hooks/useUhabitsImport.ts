@@ -4,6 +4,7 @@ import { useState } from "react";
 import * as Sentry from "@sentry/nextjs";
 import {
   parseUhabitsFile,
+  partitionAgainstExisting,
   toCreateHabitInput,
   type UhabitsRawSource,
 } from "@/lib/import/uhabits";
@@ -62,44 +63,35 @@ export function useUhabitsImport() {
         typeof window !== "undefined" &&
         localStorage.getItem("kanso_guest_mode") === "true";
 
-      // Best-effort, backgrounded capture for round-trip export (ADR 0006).
       void persistImportSource(
         { source_app: "uhabits", file_name: file.name, raw: source },
         { isGuest },
       ).catch((err) => Sentry.captureException(err));
 
       let habitsToImport = habits;
-      let skippedCount = 0;
+      let skippedNames: string[] = [];
       let nextSortOrder = 0;
       if (!isGuest) {
         const supabase = createClient();
         // eslint-disable-next-line local/no-unbounded-supabase-select -- habit definitions, not entries
         const { data: existing } = await supabase
           .from("habits")
-          .select("name, sort_order");
+          .select("name, sort_order, source_uuid");
         if (existing && existing.length > 0) {
-          const existingNames = new Set(
-            existing.map((h) => h.name.toLowerCase()),
-          );
-          habitsToImport = habits.filter(
-            (h) => !existingNames.has(h.name.toLowerCase()),
-          );
-          skippedCount = habits.length - habitsToImport.length;
+          ({ toImport: habitsToImport, skippedNames } =
+            partitionAgainstExisting(habits, existing));
           nextSortOrder = Math.max(...existing.map((h) => h.sort_order)) + 1;
         }
       } else {
-        const existingNames = new Set(
-          mockStore.getHabits().map((h) => h.name.toLowerCase()),
-        );
-        habitsToImport = habits.filter(
-          (h) => !existingNames.has(h.name.toLowerCase()),
-        );
-        skippedCount = habits.length - habitsToImport.length;
+        ({ toImport: habitsToImport, skippedNames } = partitionAgainstExisting(
+          habits,
+          mockStore.getHabits(),
+        ));
       }
 
       if (habitsToImport.length === 0) {
         notify.info(
-          `All ${habits.length} habits already exist — nothing imported`,
+          `All ${habits.length} habits already exist — nothing imported: ${skippedNames.join(", ")}`,
           { id: loadingToastId },
         );
         return true;
@@ -109,10 +101,8 @@ export function useUhabitsImport() {
         id: loadingToastId,
       });
 
-      // tempId (from parseUhabitsFile) -> actualId (DB / mock store)
       const habitIdMap = new Map<string, string>();
 
-      // Raw create avoids invalidating the habits query once per habit.
       for (const habit of habitsToImport) {
         const created = await habitMutations.create({
           ...toCreateHabitInput(habit),
@@ -154,7 +144,9 @@ export function useUhabitsImport() {
       await queryClient.invalidateQueries({ queryKey: ["habits"] });
 
       const skippedMsg =
-        skippedCount > 0 ? ` (${skippedCount} already existed, skipped)` : "";
+        skippedNames.length > 0
+          ? `. Already existed, skipped: ${skippedNames.join(", ")}`
+          : "";
       notify.success(
         `Imported ${habitsToImport.length} habits with ${entries.length} history entries${skippedMsg}`,
         { id: loadingToastId },
@@ -162,7 +154,6 @@ export function useUhabitsImport() {
       trigger("success");
       return true;
     } catch (err) {
-      // Parsing already succeeded, so this is a save failure, not a bad file.
       return reportImportFailure(err, SAVE_ERROR_MESSAGE);
     } finally {
       setIsImporting(false);

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { HabitCard } from "@/components/habits/HabitCard";
 import { HabitCompactList } from "@/components/habits/HabitCompactList";
 import { useHabits, type HabitWithEntries } from "@/lib/hooks/useHabits";
@@ -13,6 +14,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 
 import { useHabitActions } from "@/components/habits/HabitActionsProvider";
 import { HabitsPageHeader } from "@/components/habits/HabitsPageHeader";
+import { HabitDeepLink } from "@/components/habits/HabitDeepLink";
 
 export default function HabitsPage() {
   const { data: habits, isLoading, error } = useHabits();
@@ -83,6 +85,9 @@ export default function HabitsPage() {
 
   return (
     <div className="flex flex-col h-[calc(100dvh-124px)] md:h-dvh overflow-hidden">
+      <Suspense fallback={null}>
+        <HabitDeepLink habits={habits ?? []} />
+      </Suspense>
       <div className="px-4 md:px-6 pt-4 pb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
         <div>
           <p className="text-sm text-muted-foreground flex items-center gap-2">

@@ -25,6 +25,24 @@ jobs:
         env:
           HUSKY: 0
 
+      - run: npm run validate
+        env:
+          CI: true
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - run: npm ci
+        env:
+          HUSKY: 0
+
       - uses: actions/cache@v6
         with:
           path: .next/cache
@@ -32,4 +50,4 @@ jobs:
           restore-keys: |
             next-${{ hashFiles('package-lock.json') }}-
 
-      - run: npm run ci:validate
+      - run: npm run build

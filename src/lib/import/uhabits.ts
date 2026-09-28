@@ -3,6 +3,7 @@ import {
   ENTRY_VALUE_DONE,
   ENTRY_VALUE_NOT_DONE,
   ENTRY_VALUE_SKIPPED,
+  MAX_FREQUENCY_DAYS,
   REMINDER_EVERY_DAY,
   type Habit,
   type HabitEntry,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/types/habit";
 import type { CreateHabitInput } from "../mutations/habit";
 import { PROJECT_COLORS } from "../constants/colors";
+import { periodForFrequencyDays } from "../utils/habit-frequency";
 
 export interface UhabitsRawSource {
   habits: Record<string, unknown>[];
@@ -161,22 +163,13 @@ export function paletteToHex(colorIndex: number): string {
   return findClosestKansoColor(loopHex);
 }
 
-// uhabits frequency is a fraction freq_num/freq_den; Kagelin has only
-// day/week/month, so inexpressible denominators are approximated. See ADR 0005.
 function mapFrequency(
   freqNum: number,
   freqDen: number,
-): { count: number; period: "day" | "week" | "month" } | null {
-  if (!Number.isFinite(freqNum) || !Number.isFinite(freqDen)) return null;
-  if (freqDen <= 0 || freqNum <= 0) return null;
-
-  if (freqDen === 1) return { count: freqNum, period: "day" };
-  if (freqDen === 7) return { count: freqNum, period: "week" };
-  if (freqDen === 30 || freqDen === 31)
-    return { count: freqNum, period: "month" };
-
-  const count = Math.max(1, Math.round((freqNum * 7) / freqDen));
-  return { count, period: "week" };
+): { count: number; days: number } | null {
+  if (!Number.isInteger(freqNum) || !Number.isInteger(freqDen)) return null;
+  if (freqDen < 1 || freqNum < 1) return null;
+  return { count: freqNum, days: Math.min(freqDen, MAX_FREQUENCY_DAYS) };
 }
 
 function inferIcon(habitName: string, description?: string): string {
@@ -207,8 +200,6 @@ export function parseRepetitionValue(
   return null;
 }
 
-// Carries frequency and fidelity fields through so they aren't dropped between
-// parse and persist. See ADR 0005.
 export function toCreateHabitInput(habit: Habit): CreateHabitInput {
   return {
     name: habit.name,
@@ -220,6 +211,7 @@ export function toCreateHabitInput(habit: Habit): CreateHabitInput {
     habit_type: habit.habit_type,
     sort_order: habit.sort_order ?? undefined,
     frequency_count: habit.frequency_count ?? undefined,
+    frequency_days: habit.frequency_days ?? undefined,
     frequency_period: habit.frequency_period ?? undefined,
     target_type: habit.target_type ?? undefined,
     target_value: habit.target_value ?? undefined,
@@ -229,6 +221,28 @@ export function toCreateHabitInput(habit: Habit): CreateHabitInput {
     reminder_days: habit.reminder_days ?? undefined,
     source_uuid: habit.source_uuid ?? undefined,
   };
+}
+
+// A matched habit is skipped whole, so a re-import can never resurrect an
+// archived habit or duplicate a renamed one. Loop identity beats name.
+export function partitionAgainstExisting(
+  incoming: Habit[],
+  existing: Pick<Habit, "name" | "source_uuid">[],
+) {
+  const uuids = new Set(
+    existing.map((h) => h.source_uuid).filter((u): u is string => !!u),
+  );
+  const names = new Set(existing.map((h) => h.name.toLowerCase()));
+  const toImport: Habit[] = [];
+  const skippedNames: string[] = [];
+  for (const habit of incoming) {
+    const exists =
+      (habit.source_uuid && uuids.has(habit.source_uuid)) ||
+      names.has(habit.name.toLowerCase());
+    if (exists) skippedNames.push(habit.name);
+    else toImport.push(habit);
+  }
+  return { toImport, skippedNames };
 }
 
 export function mapUhabitsToKanso(
@@ -330,7 +344,8 @@ export function mapUhabitsToKanso(
       reminder_days,
       ...(frequency && {
         frequency_count: frequency.count,
-        frequency_period: frequency.period,
+        frequency_days: frequency.days,
+        frequency_period: periodForFrequencyDays(frequency.days),
       }),
     });
   });

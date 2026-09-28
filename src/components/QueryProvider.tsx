@@ -2,7 +2,7 @@
 
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/client";
 import { taskMutations } from "@/lib/mutations/task";
@@ -11,6 +11,7 @@ import { projectMutations } from "@/lib/mutations/project";
 import { focusMutations } from "@/lib/mutations/focus";
 import { asyncStoragePersister } from "@/lib/query-cache-purge";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
+import { HABIT_ENTRY_UPDATED } from "@/lib/habit-links";
 
 export default function QueryProvider({
   children,
@@ -82,6 +83,20 @@ export default function QueryProvider({
     return client;
   });
 
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.serviceWorker) return;
+    const handler = (event: MessageEvent) => {
+      if (
+        (event.data as { type?: string } | null)?.type === HABIT_ENTRY_UPDATED
+      ) {
+        queryClient.invalidateQueries({ queryKey: ["habits"] });
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () =>
+      navigator.serviceWorker.removeEventListener("message", handler);
+  }, [queryClient]);
+
   return (
     <PersistQueryClientProvider
       client={queryClient}
@@ -100,7 +115,6 @@ export default function QueryProvider({
           if (user || isGuest) {
             queryClient.resumePausedMutations();
           } else {
-            // Purge cached data and keys if the restored cache lacks a valid session.
             purgeDeviceContent(queryClient).catch((err) =>
               Sentry.captureException(err),
             );

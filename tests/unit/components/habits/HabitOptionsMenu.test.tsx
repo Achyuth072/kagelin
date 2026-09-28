@@ -35,6 +35,11 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: mockTrigger }),
 }));
 
+vi.mock("@/components/habits/ArchivedHabitsDialog", () => ({
+  ArchivedHabitsDialog: ({ open }: { open: boolean }) =>
+    open ? <div>archived-dialog</div> : null,
+}));
+
 describe("HabitOptionsMenu", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -97,6 +102,18 @@ describe("HabitOptionsMenu", () => {
     fireEvent.click(exportZipItem);
 
     expect(mockExportLoopZip).toHaveBeenCalled();
+  });
+
+  it("opens the archived habits dialog", async () => {
+    render(<HabitOptionsMenu />);
+
+    const triggerBtn = screen.getByRole("button", { name: /habit options/i });
+    fireEvent.pointerDown(triggerBtn, { button: 0, ctrlKey: false });
+    fireEvent.click(triggerBtn);
+
+    fireEvent.click(await screen.findByText("Archived habits"));
+
+    expect(screen.getByText("archived-dialog")).toBeInTheDocument();
   });
 
   it("disables trigger and items when an export is running", () => {

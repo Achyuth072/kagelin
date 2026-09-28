@@ -1,0 +1,17 @@
+name: Check PR Target
+
+on:
+  pull_request:
+    types: [opened, reopened, edited, synchronize]
+    branches: [main]
+
+jobs:
+  enforce-dev-target:
+    name: Enforce dev as PR target
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate target branch
+        if: github.head_ref != 'dev'
+        run: |
+          echo "::error title=Invalid Target Branch::Direct PRs into 'main' are not permitted. Please change the base branch of this PR to 'dev'. Only 'dev' may be merged into 'main' during releases."
+          exit 1

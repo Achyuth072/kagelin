@@ -1,5 +1,6 @@
 import { keyStore } from "@/lib/crypto/keyStore";
 import { decryptField } from "@/lib/crypto/contentCipher";
+import type { HabitType } from "@/lib/types/habit";
 
 export interface EncryptedNotificationBody {
   template: string;
@@ -8,12 +9,13 @@ export interface EncryptedNotificationBody {
 
 const PLACEHOLDER = "{}";
 
-// Some envs' NotificationOptions type is missing these.
 export interface NotificationDisplayOptions extends NotificationOptions {
   vibrate?: number[];
   actions?: Array<{ action: string; title: string; icon?: string }>;
   renotify?: boolean;
   encrypted?: EncryptedNotificationBody;
+  encryptedTitle?: EncryptedNotificationBody;
+  habitKind?: HabitType;
 }
 
 export const DEFAULT_NOTIFICATION_OPTIONS: NotificationDisplayOptions = {
@@ -22,10 +24,7 @@ export const DEFAULT_NOTIFICATION_OPTIONS: NotificationDisplayOptions = {
   vibrate: [200, 100, 200],
 };
 
-// Every display goes through here rather than registration.showNotification:
-// WebKit never implemented tag coalescing
-// (https://bugs.webkit.org/show_bug.cgi?id=258922) and ignores `renotify`, so iOS
-// stacks what Chrome replaces unless we close the predecessors ourselves.
+// WebKit does not coalesce tags or honour renotify (WebKit bug #258922).
 export async function displayNotification(
   registration: ServiceWorkerRegistration,
   title: string,
@@ -35,30 +34,70 @@ export async function displayNotification(
     await closeNotificationsWithTag(registration, options.tag);
   }
 
-  const { encrypted, ...displayable } = options ?? {};
-  if (encrypted) {
-    displayable.body = await resolveEncryptedBody(encrypted, displayable.body);
+  const { encrypted, encryptedTitle, habitKind, ...displayable } =
+    options ?? {};
+
+  const key = encrypted || encryptedTitle ? await loadKeyOrNull() : null;
+
+  const [decryptedTitle, decryptedBody] = await Promise.all([
+    encryptedTitle
+      ? resolveEncryptedField(key, encryptedTitle, "title")
+      : title,
+    encrypted
+      ? resolveEncryptedField(key, encrypted, "body")
+      : displayable.body,
+  ]);
+
+  // Only a device that decrypted the habit name is unlocked enough to act blindly.
+  const unlocked =
+    encryptedTitle !== undefined &&
+    decryptedTitle !== null &&
+    decryptedBody !== null;
+  if (habitKind && unlocked && !displayable.actions) {
+    displayable.actions = HABIT_ACTIONS[habitKind];
   }
 
-  await registration.showNotification(title, {
+  await registration.showNotification(decryptedTitle ?? title, {
     ...DEFAULT_NOTIFICATION_OPTIONS,
     ...displayable,
+    body: decryptedBody ?? displayable.body,
   } as NotificationOptions);
 }
 
-async function resolveEncryptedBody(
-  encrypted: EncryptedNotificationBody,
-  fallback: string | undefined,
-): Promise<string | undefined> {
+const HABIT_ACTIONS = {
+  boolean: [
+    { action: "done", title: "Done" },
+    { action: "skip", title: "Skip" },
+  ],
+  measurable: [{ action: "skip", title: "Skip" }],
+};
+
+async function loadKeyOrNull(): Promise<Uint8Array | null> {
   try {
-    const key = await keyStore.load();
-    if (!key) return fallback;
+    return await keyStore.load();
+  } catch (err) {
+    console.warn("[notifications] Could not load the content key", err);
+    return null;
+  }
+}
+
+// Returns null when the field cannot be shown decrypted.
+async function resolveEncryptedField(
+  key: Uint8Array | null,
+  encrypted: EncryptedNotificationBody,
+  fieldName: string,
+): Promise<string | null> {
+  if (!key) return null;
+  try {
     const plaintext = await decryptField(key, encrypted.ciphertext);
     // Function replacer avoids interpreting "$" in plaintext as special replacement patterns.
     return encrypted.template.replace(PLACEHOLDER, () => plaintext);
   } catch (err) {
-    console.warn("[notifications] Could not decrypt notification body", err);
-    return fallback;
+    console.warn(
+      `[notifications] Could not decrypt notification ${fieldName}`,
+      err,
+    );
+    return null;
   }
 }
 
@@ -72,7 +111,6 @@ async function closeNotificationsWithTag(
       notification.close();
     }
   } catch (err) {
-    // A duplicate beats nothing: on iOS a push that shows nothing costs the subscription.
     console.warn(
       "[notifications] Could not close superseded notifications",
       err,

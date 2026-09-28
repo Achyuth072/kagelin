@@ -283,6 +283,9 @@ describe("uhabitsExportCsv - CSV generators", () => {
         ...mockHabit1,
         color: paletteToHex(2),
         source_uuid: "test-uuid-1",
+        // Pre-ADR-0019 import approximation for Loop's 3/14.
+        frequency_count: 2,
+        frequency_period: "week",
       };
 
       const csv = generateHabitsCsv([habitWithProvenance], rawSources);

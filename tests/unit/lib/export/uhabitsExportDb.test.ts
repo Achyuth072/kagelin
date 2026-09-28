@@ -8,12 +8,13 @@ import {
 import {
   findClosestLoopColor,
   mapKagelinFrequencyToLoop,
+  getHabitFrequency,
   entryToRepetitionValue,
   collectUhabitsExportData,
 } from "@/lib/export/uhabitsShared";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { PROJECT_COLORS } from "@/lib/constants/colors";
-import { parseUhabitsFile } from "@/lib/import/uhabits";
+import { LOOP_COLOR_PALETTE, parseUhabitsFile } from "@/lib/import/uhabits";
 import { ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
 import { entry, makeHabit } from "../../support/habitFixtures";
 import {
@@ -42,28 +43,114 @@ describe("uhabitsExportDb - pure helpers", () => {
     }
   });
 
+  it("keeps the guest demo habits visually distinct in Loop instead of folding muted colors into greys", () => {
+    const demoHexes = [
+      "#5B7C99",
+      "#A3B18A",
+      "#9F8189",
+      "#8B6B80",
+      "#6B8E8A",
+      "#A48C7A",
+    ];
+    const indices = demoHexes.map(findClosestLoopColor);
+    expect(new Set(indices).size).toBe(demoHexes.length);
+    for (const idx of indices) expect([16, 17, 18]).not.toContain(idx);
+  });
+
+  it("returns an exact Loop palette color unchanged, greys included", () => {
+    for (const [idx, hex] of Object.entries(LOOP_COLOR_PALETTE)) {
+      expect(findClosestLoopColor(hex)).toBe(Number(idx));
+    }
+  });
+
   it("maps Kagelin frequency periods and counts to freq_num / freq_den", () => {
-    expect(mapKagelinFrequencyToLoop(1, "day")).toEqual({
+    expect(
+      mapKagelinFrequencyToLoop({
+        frequency_count: 1,
+        frequency_period: "day",
+      }),
+    ).toEqual({
       freq_num: 1,
       freq_den: 1,
     });
-    expect(mapKagelinFrequencyToLoop(2, "day")).toEqual({
+    expect(
+      mapKagelinFrequencyToLoop({
+        frequency_count: 2,
+        frequency_period: "day",
+      }),
+    ).toEqual({
       freq_num: 2,
       freq_den: 1,
     });
-    expect(mapKagelinFrequencyToLoop(3, "week")).toEqual({
+    expect(
+      mapKagelinFrequencyToLoop({
+        frequency_count: 3,
+        frequency_period: "week",
+      }),
+    ).toEqual({
       freq_num: 3,
       freq_den: 7,
     });
-    expect(mapKagelinFrequencyToLoop(5, "month")).toEqual({
+    expect(
+      mapKagelinFrequencyToLoop({
+        frequency_count: 5,
+        frequency_period: "month",
+      }),
+    ).toEqual({
       freq_num: 5,
       freq_den: 30,
     });
-    expect(mapKagelinFrequencyToLoop(undefined, undefined)).toEqual({
+    expect(mapKagelinFrequencyToLoop({})).toEqual({
       freq_num: 1,
       freq_den: 1,
     });
+    expect(
+      mapKagelinFrequencyToLoop({ frequency_count: 1, frequency_days: 50 }),
+    ).toEqual({ freq_num: 1, freq_den: 50 });
+    expect(
+      mapKagelinFrequencyToLoop({ frequency_count: 2, frequency_days: 7 }),
+    ).toEqual({ freq_num: 2, freq_den: 7 });
   });
+
+  it.each([
+    [
+      "unchanged lossless import",
+      { frequency_count: 1, frequency_days: 50 },
+      { freq_num: 1, freq_den: 50 },
+      { freq_num: 1, freq_den: 50 },
+    ],
+    [
+      "frequency edited after import",
+      { frequency_count: 1, frequency_days: 60 },
+      { freq_num: 1, freq_den: 50 },
+      { freq_num: 1, freq_den: 60 },
+    ],
+    [
+      "pre-lossless import still holding the weekly approximation",
+      { frequency_count: 1, frequency_days: 7, frequency_period: "week" },
+      { freq_num: 1, freq_den: 50 },
+      { freq_num: 1, freq_den: 50 },
+    ],
+    [
+      "pre-lossless 31-day import still holding the month approximation",
+      { frequency_count: 2, frequency_days: 30, frequency_period: "month" },
+      { freq_num: 2, freq_den: 31 },
+      { freq_num: 2, freq_den: 31 },
+    ],
+    [
+      "pre-lossless import edited away from the approximation",
+      { frequency_count: 3, frequency_days: 7, frequency_period: "week" },
+      { freq_num: 1, freq_den: 50 },
+      { freq_num: 3, freq_den: 7 },
+    ],
+  ] as const)(
+    "exports an imported habit's frequency: %s",
+    (_label, habitFrequency, raw, expected) => {
+      expect(getHabitFrequency(makeHabit(habitFrequency), raw)).toEqual(
+        expected,
+      );
+    },
+  );
 
   it("maps entry values to Loop repetition values", () => {
     expect(entryToRepetitionValue(1, "boolean")).toBe(2);
@@ -333,6 +420,30 @@ describe("exportToUhabitsDb - SQLite database construction", () => {
     expect(repMiss).toBeDefined();
 
     db.close();
+  });
+
+  it("never writes NULL description, question or unit, which Loop's HabitRecord.copyTo dereferences with !!", async () => {
+    const SQL = await getSql();
+    const binary = await exportToUhabitsDb({
+      habits: [
+        makeHabit({
+          id: "h-bare",
+          name: "Bare",
+          description: null,
+          question: null,
+        }),
+      ],
+      entries: [],
+      wasmPath: "public/sql-wasm.wasm",
+    });
+
+    const db = new SQL.Database(binary);
+    const res = db.exec(
+      "SELECT description, question, unit FROM Habits WHERE name = 'Bare'",
+    );
+    db.close();
+
+    expect(res[0].values[0]).toEqual(["", "", ""]);
   });
 
   it("round-trips a skip written by the UI on a habit created in Kagelin", async () => {

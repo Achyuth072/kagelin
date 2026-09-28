@@ -212,6 +212,7 @@ export function useMigrationStrategy() {
               archived_at: habit.archived_at,
               habit_type: habit.habit_type,
               frequency_count: habit.frequency_count,
+              frequency_days: habit.frequency_days,
               frequency_period: habit.frequency_period,
               target_type: habit.target_type,
               target_value: habit.target_value,

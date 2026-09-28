@@ -12,6 +12,10 @@ import {
   type EncryptedNotificationBody,
   type NotificationDisplayOptions,
 } from "@/lib/notifications";
+import {
+  handleNotificationClick,
+  type HabitNotificationData,
+} from "@/lib/sw/notificationClickHandler";
 import { hasWasmMagicBytes } from "@/lib/sw/wasmIntegrity";
 
 declare global {
@@ -142,9 +146,10 @@ interface PushPayload {
   icon?: string;
   badge?: string;
   tag?: string;
-  data?: unknown;
+  data?: HabitNotificationData & Record<string, unknown>;
   actions?: NotificationDisplayOptions["actions"];
   encrypted?: EncryptedNotificationBody;
+  encryptedTitle?: EncryptedNotificationBody;
 }
 
 const FALLBACK_TITLE = "Kagelin";
@@ -159,9 +164,7 @@ function readPushText(data: PushMessageData): string | undefined {
   }
 }
 
-// json() and text() each throw on a payload that doesn't decode. Neither may
-// escape: a push that displays nothing reads as a silent push, and iOS revokes
-// the subscription for those.
+// iOS revokes the push subscription if a push displays nothing.
 function readPushPayload(data: PushMessageData | null): PushPayload {
   if (!data) return {};
   try {
@@ -173,7 +176,6 @@ function readPushPayload(data: PushMessageData | null): PushPayload {
 }
 
 async function showPushNotification(payload: PushPayload): Promise<void> {
-  // No default tag: a shared one would collapse unrelated notifications.
   const options: NotificationDisplayOptions = {
     body: payload.body || FALLBACK_BODY,
   };
@@ -182,13 +184,18 @@ async function showPushNotification(payload: PushPayload): Promise<void> {
   if (payload.badge) options.badge = payload.badge;
   if (payload.tag) {
     options.tag = payload.tag;
-    // Without renotify, a tagged notification replaces its predecessor silently.
     options.renotify = true;
   }
   if (payload.data) options.data = payload.data;
   if (payload.actions) options.actions = payload.actions;
   if (payload.encrypted?.ciphertext && payload.encrypted?.template) {
     options.encrypted = payload.encrypted;
+  }
+  if (payload.encryptedTitle?.ciphertext && payload.encryptedTitle?.template) {
+    options.encryptedTitle = payload.encryptedTitle;
+  }
+  if (payload.data?.habitKind) {
+    options.habitKind = payload.data.habitKind;
   }
 
   try {
@@ -198,8 +205,6 @@ async function showPushNotification(payload: PushPayload): Promise<void> {
       options,
     );
   } catch (err) {
-    // Something in the payload was rejected. Show the barest possible
-    // notification rather than none — see readPushPayload on silent pushes.
     console.error("[SW] Failed to show notification; showing fallback", err);
     await displayNotification(self.registration, FALLBACK_TITLE, {
       body: FALLBACK_BODY,
@@ -214,41 +219,23 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const target = (event.notification.data as { url?: string } | undefined)?.url;
-  const url = typeof target === "string" && target ? target : "/";
+  const data = event.notification.data as HabitNotificationData | undefined;
+  const action = event.action;
 
   event.waitUntil(
-    (async () => {
-      const allClients = await self.clients.matchAll({
-        type: "window",
-        includeUncontrolled: true,
-      });
-
-      for (const client of allClients) {
-        if (!("focus" in client)) continue;
-
-        const alreadyThere = new URL(client.url).pathname === url;
-        if (!alreadyThere && "navigate" in client) {
-          // navigate() can reject (cross-origin, unloaded client).
-          const navigated = await client.navigate(url).then(
-            () => true,
-            () => false,
-          );
-          if (!navigated) {
-            return self.clients.openWindow?.(url);
-          }
-        }
-        return client.focus();
-      }
-
-      if (self.clients.openWindow) {
+    handleNotificationClick(action, data, event.notification.tag || undefined, {
+      fetch,
+      clients: self.clients,
+      displayNotification,
+      registration: self.registration,
+      openWindow: (url: string) => {
         const openUrl =
           url !== "/" && url.startsWith("/")
             ? `/?redirect=${encodeURIComponent(url)}`
             : url;
-        return self.clients.openWindow(openUrl);
-      }
-    })(),
+        return self.clients.openWindow?.(openUrl);
+      },
+    }),
   );
 });
 

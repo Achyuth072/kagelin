@@ -204,3 +204,43 @@ describe("habitMutations.update clearing a target", () => {
     expect(updated.target_value).toBeNull();
   });
 });
+
+describe("habitMutations frequency columns", () => {
+  it("writes both columns: a preset D sets the matching period", async () => {
+    const habit = await habitMutations.create({
+      name: "Weekly",
+      frequency_days: 7,
+    });
+    expect(habit.frequency_days).toBe(7);
+    expect(habit.frequency_period).toBe("week");
+  });
+
+  it("writes a null period for a non-preset D", async () => {
+    const habit = await habitMutations.create({
+      name: "Haircut",
+      frequency_count: 1,
+      frequency_days: 50,
+    });
+    expect(habit.frequency_days).toBe(50);
+    expect(habit.frequency_period).toBeNull();
+  });
+
+  it("derives frequency_days from a period-only create", async () => {
+    const habit = await habitMutations.create({
+      name: "Monthly",
+      frequency_period: "month",
+    });
+    expect(habit.frequency_days).toBe(30);
+    expect(habit.frequency_period).toBe("month");
+  });
+
+  it("update keeps both columns in step", async () => {
+    const habit = await habitMutations.create({ name: "X" });
+    const updated = await habitMutations.update({
+      id: habit.id,
+      frequency_days: 3,
+    });
+    expect(updated.frequency_days).toBe(3);
+    expect(updated.frequency_period).toBeNull();
+  });
+});

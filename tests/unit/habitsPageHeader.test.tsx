@@ -10,6 +10,14 @@ vi.mock("@/lib/hooks/useHabits", () => ({
   useHabits: vi.fn(),
 }));
 
+vi.mock("@/components/habits/ArchivedHabitsDialog", () => ({
+  ArchivedHabitsDialog: () => null,
+}));
+
+vi.mock("@/components/habits/HabitDeepLink", () => ({
+  HabitDeepLink: () => null,
+}));
+
 vi.mock("@/components/habits/HabitActionsProvider", () => ({
   useHabitActions: () => ({
     openAddHabit: vi.fn(),

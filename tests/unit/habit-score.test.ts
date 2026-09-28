@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
-import {
-  periodDays,
-  dayValue,
-  computeScores,
-  currentScore,
-} from "@/lib/utils/habit-score";
+import { dayValue, computeScores, currentScore } from "@/lib/utils/habit-score";
+import { frequencyWindowDays } from "@/lib/utils/habit-frequency";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 
 function entry(date: string, value: number): HabitEntry {
@@ -34,21 +30,25 @@ const dailyBoolean: Habit = {
   frequency_period: "day",
 };
 
-describe("periodDays", () => {
-  it("returns 1 for day", () => {
-    expect(periodDays("day")).toBe(1);
+describe("frequencyWindowDays", () => {
+  it("prefers frequency_days over the period", () => {
+    expect(
+      frequencyWindowDays({ frequency_days: 50, frequency_period: null }),
+    ).toBe(50);
+    expect(
+      frequencyWindowDays({ frequency_days: 3, frequency_period: "week" }),
+    ).toBe(3);
   });
 
-  it("returns 7 for week", () => {
-    expect(periodDays("week")).toBe(7);
+  it("falls back to the period's day count for period-only habits", () => {
+    expect(frequencyWindowDays({ frequency_period: "day" })).toBe(1);
+    expect(frequencyWindowDays({ frequency_period: "week" })).toBe(7);
+    expect(frequencyWindowDays({ frequency_period: "month" })).toBe(30);
   });
 
-  it("returns 30 for month", () => {
-    expect(periodDays("month")).toBe(30);
-  });
-
-  it("returns 1 for null (default daily)", () => {
-    expect(periodDays(null)).toBe(1);
+  it("defaults to 1 when neither is set", () => {
+    expect(frequencyWindowDays({ frequency_period: null })).toBe(1);
+    expect(frequencyWindowDays({})).toBe(1);
   });
 });
 
@@ -326,5 +326,21 @@ describe("computeScores — skipped entries (freeze decay)", () => {
     const scores = computeScores(dailyBoolean, entries, { to });
     const score = currentScore(dailyBoolean, entries, { to });
     expect(score).toBe(scores[0].value);
+  });
+});
+
+describe("computeScores — frequency_days normalization", () => {
+  it("uses uhabits' 0.5^(sqrt(count/D)/13) multiplier for 1 in 50", () => {
+    const habit: Habit = {
+      ...dailyBoolean,
+      frequency_count: 1,
+      frequency_days: 50,
+      frequency_period: null,
+    };
+    const scores = computeScores(habit, [entry("2026-06-01", 1)], {
+      to: new Date("2026-06-01T12:00:00"),
+    });
+    const multiplier = Math.pow(0.5, Math.sqrt(1 / 50) / 13);
+    expect(scores[0].value).toBeCloseTo(1 - multiplier, 10);
   });
 });

@@ -198,3 +198,42 @@ describe("HabitCard today button", () => {
     ).not.toBeNull();
   });
 });
+
+describe("HabitCard 1-in-D habit", () => {
+  it("shows last done / next in place of the ring, keeping streak and total", () => {
+    vi.mocked(useIsMobileModule.useIsMobile).mockReturnValue(false);
+    const today = new Date().toISOString().split("T")[0];
+    render(
+      <HabitCard
+        habit={{
+          id: "habit-weekly",
+          user_id: "user-test",
+          name: "Water plants",
+          description: null,
+          color: "#3b82f6",
+          icon: "Droplets",
+          created_at: today,
+          updated_at: today,
+          archived_at: null,
+          start_date: today,
+          sort_order: 0,
+          frequency_count: 1,
+          frequency_days: 7,
+          entries: [
+            {
+              id: "e1",
+              habit_id: "habit-weekly",
+              date: today,
+              value: 1,
+              created_at: today,
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText(/done today/i)).toBeInTheDocument();
+    expect(screen.getByText(/streak/)).toBeInTheDocument();
+    expect(screen.getByText(/total/)).toBeInTheDocument();
+  });
+});

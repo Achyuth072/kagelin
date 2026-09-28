@@ -4,22 +4,7 @@ import {
   type HabitEntry,
   ENTRY_VALUE_SKIPPED,
 } from "@/lib/types/habit";
-
-type FrequencyPeriod = "day" | "week" | "month";
-
-export function periodDays(period: FrequencyPeriod | null): number {
-  switch (period) {
-    case "day":
-      return 1;
-    case "week":
-      return 7;
-    case "month":
-      // uhabits approximates a month as 30 days; kept for parity.
-      return 30;
-    default:
-      return 1;
-  }
-}
+import { frequencyWindowDays } from "@/lib/utils/habit-frequency";
 
 export function isLoggedEntry(entryValue: number): boolean {
   return entryValue !== ENTRY_VALUE_SKIPPED;
@@ -33,8 +18,7 @@ export function dayValue(
   if (habit.habit_type === "measurable" && habit.target_value != null) {
     if (habit.target_type === "at_least") {
       if (habit.target_value <= 0) {
-        // Degenerate target: fall back to boolean done-ness (avoids ÷0 → NaN
-        // poisoning the whole score series, mirroring the at_most guard below).
+        // Fall back to boolean done-ness to avoid division by zero.
         return entryValue >= 1 ? 1 : 0;
       }
       return Math.min(1, entryValue / habit.target_value);
@@ -61,9 +45,7 @@ export function computeScores(
     entryMap.set(e.date, e.value);
   }
 
-  // Entries are not guaranteed to be sorted (Supabase returns rows without an
-  // ORDER BY, and the guest-mode store preserves insertion order), so derive
-  // the series start from the earliest entry rather than entries[0].
+  // Database and guest store entries are not guaranteed to be sorted by date.
   const earliest = entries.reduce(
     (min, e) => (e.date < min ? e.date : min),
     entries[0].date,
@@ -74,7 +56,7 @@ export function computeScores(
   if (startDate > endDate) return [];
 
   const freqCount = habit.frequency_count ?? 1;
-  const freq = freqCount / periodDays(habit.frequency_period ?? null);
+  const freq = freqCount / frequencyWindowDays(habit);
   // Ported verbatim from uhabits Score.compute (0.5^(sqrt(freq)/13)); do not retune.
   const multiplier = Math.pow(0.5, Math.sqrt(freq) / 13.0);
 

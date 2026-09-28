@@ -12,6 +12,7 @@ import {
   useCreateHabit,
   useUpdateHabit,
   useDeleteHabit,
+  useArchiveHabit,
 } from "@/lib/hooks/useHabitMutations";
 import type { Habit } from "@/lib/types/habit";
 
@@ -19,9 +20,9 @@ vi.mock("@/lib/hooks/useHabitMutations", () => ({
   useCreateHabit: vi.fn(),
   useUpdateHabit: vi.fn(),
   useDeleteHabit: vi.fn(),
+  useArchiveHabit: vi.fn(),
 }));
 
-// Mock ResponsiveDialog and its subcomponents
 vi.mock("@/components/ui/responsive-dialog", () => ({
   ResponsiveDialog: ({
     children,
@@ -54,7 +55,6 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   }),
 }));
 
-// Mock TaskDatePicker as it's complex and might need more setup
 vi.mock("../tasks/shared/TaskDatePicker", () => ({
   TaskDatePicker: () => <div data-testid="date-picker">Date Picker</div>,
 }));
@@ -74,23 +74,21 @@ describe("HabitSheet", () => {
       mutate: mockUpdateMutate,
       isPending: false,
     });
+    (useArchiveHabit as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    });
     (useDeleteHabit as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: mockDeleteMutate,
       isPending: false,
     });
   });
 
-  // Given: Component is in creation mode
-  // When: Rendering HabitSheet with open={true}
-  // Then: "New Habit" should be displayed
   it('renders "New Habit" header in creation mode', () => {
     render(<HabitSheet open={true} onClose={() => {}} />);
     expect(screen.getAllByText("New Habit")[0]).toBeInTheDocument();
   });
 
-  // Given: An initial habit is provided
-  // When: Rendering HabitSheet
-  // Then: "Edit Habit" should be displayed and form populated
   it('renders "Edit Habit" header in edit mode', async () => {
     const mockHabit = {
       id: "1",
@@ -110,9 +108,6 @@ describe("HabitSheet", () => {
     expect(screen.getByPlaceholderText("Habit name")).toHaveValue("Exercise");
   });
 
-  // Given: Form is valid in creation mode
-  // When: User clicks the Send icon button (onSubmit)
-  // Then: createHabit mutation should be called
   it("calls createHabit mutation when submitting a new habit", async () => {
     render(<HabitSheet open={true} onClose={() => {}} />);
 
@@ -139,9 +134,6 @@ describe("HabitSheet", () => {
     });
   });
 
-  // Given: Form is in edit mode
-  // When: User clicks delete button and confirms
-  // Then: deleteHabit mutation should be called
   it("calls deleteHabit mutation after confirmation", async () => {
     const mockHabit = {
       id: "1",
@@ -158,7 +150,6 @@ describe("HabitSheet", () => {
       fireEvent.click(deleteBtn);
     });
 
-    // Check for confirmation dialog content
     expect(
       screen.getByText(/Are you sure you want to delete "To Delete"/i),
     ).toBeInTheDocument();
@@ -171,9 +162,6 @@ describe("HabitSheet", () => {
     expect(mockDeleteMutate).toHaveBeenCalledWith("1");
   });
 
-  // Given: Invalid data (empty name)
-  // When: User tries to submit
-  // Then: Submit button should be disabled
   it("disables submit button if name is empty", () => {
     render(<HabitSheet open={true} onClose={() => {}} />);
     const submitButton = screen.getByLabelText(/start habit/i);

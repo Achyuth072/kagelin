@@ -29,6 +29,7 @@ interface QueueRow {
     title?: string;
     body?: string;
     encrypted?: { template: string; ciphertext: string };
+    encryptedTitle?: { template: string; ciphertext: string };
     data?: Record<string, unknown>;
   } | null;
 }
@@ -149,6 +150,7 @@ serve(async (req: Request) => {
             title: item.payload?.title || "Kagelin",
             body: item.payload?.body || "Notification",
             encrypted: item.payload?.encrypted,
+            encryptedTitle: item.payload?.encryptedTitle,
             data: item.payload?.data || {},
             // Reuse the Topic: what collapses in transit collapses in the tray.
             tag: sendOptions.topic,

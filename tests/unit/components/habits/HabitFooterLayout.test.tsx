@@ -64,6 +64,8 @@ describe("Habit Views Footer Layout", () => {
     setFrequencyCount: vi.fn(),
     frequencyPeriod: "day" as const,
     setFrequencyPeriod: vi.fn(),
+    frequencyDays: undefined,
+    setFrequencyDays: vi.fn(),
     targetValue: undefined,
     setTargetValue: vi.fn(),
     targetType: "at_least" as const,
@@ -86,7 +88,14 @@ describe("Habit Views Footer Layout", () => {
   };
 
   it("HabitView edit footer should not contain color picker", () => {
-    render(<HabitView {...commonProps} mode="edit" onDelete={vi.fn()} />);
+    render(
+      <HabitView
+        {...commonProps}
+        mode="edit"
+        onArchive={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
 
     const footer = screen.getByLabelText(/save/i).closest("div")!;
     fireEvent.click(screen.getByText("Icon & color"));
