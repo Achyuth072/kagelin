@@ -159,6 +159,38 @@ _what_ is due, only that something is.
 
 _Avoid_: "log out to lock", which implies one is a way of doing the other.
 
+### Content key
+
+The key that seals an Account's **content**. An Account has exactly one
+**current** content key; any earlier ones are **retired**, kept only so content
+they sealed stays readable until it is re-sealed. The passphrase and the
+recovery code do not encrypt content themselves — each only unlocks the content
+key.
+
+_Avoid_: "master key" in anything user-facing (it is an implementation name),
+"encryption key", "password" for the key itself.
+
+### Rewrap
+
+Changing what unlocks the **content key** without changing the key — a
+passphrase change or a recovery-code reissue. Instant, and protects nothing
+already exposed: whoever already holds the content key still does.
+
+_Avoid_: calling a passphrase change "rotating".
+
+### Rotation
+
+Replacing the **content key** with a new one and **re-sealing** all content
+under it, so that a leaked key stops opening anything. Always started
+deliberately by the user, and always signs every other session out. A
+passphrase change is a **Rewrap**, never a Rotation.
+
+### Re-seal
+
+Re-encrypting every piece of an Account's content in one resumable pass. The
+same pass serves **Rotation** (new key) and a change of sealing scheme (same
+key, stronger format).
+
 ---
 
 ## Tiers

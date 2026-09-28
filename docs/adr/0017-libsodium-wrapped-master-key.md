@@ -62,6 +62,8 @@ a migration.
   dataset, and Bitwarden's own guidance warns that a session holding a stale key
   during rotation causes unrecoverable corruption — a hazard that is worse here,
   because offline multi-device is our normal state rather than an edge case.
+  _Superseded in part by ADR 0021, which designs rotation and contains that
+  hazard._
 - **The device holds plaintext, by necessity.** The persisted query cache and
   the unwrapped key both live on disk so the app works offline and the service
   worker can render reminders. Signing out or locking must purge all of it —
