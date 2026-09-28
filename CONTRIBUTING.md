@@ -4,7 +4,7 @@ Thanks for contributing to Kagelin! To maintain code quality, stability, and cle
 
 ---
 
-## ⚠️ Important: Target the `dev` Branch
+## Important: Target the `dev` Branch
 
 Kagelin uses a dual-branch structure:
 
@@ -82,6 +82,6 @@ npm run ast-grep     # Repo-specific structural AST lint rules
 
 To keep reviews fast and prevent regressions:
 
-- **Small slices**: Keep PRs focused (< ~500 non-test lines). If a feature grows larger, split it into sequential, atomic PRs.
+- **Small slices**: Try to keep PRs focused. As a soft guideline, aim for under ~500 non-test lines; if a feature grows larger, consider splitting it into sequential, atomic PRs.
 - **Surgical changes**: Avoid unrelated formatting changes or touching adjacent code.
 - **Link issues**: Mention the related issue in the PR description (`Fixes #...`).
