@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.45.0",
+    "date": "2026-09-28",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Archive and restore habits, with re-imports matched to the original by Loop identity",
+        "Five-option frequency authoring (every day, N times a week/month, every N days, N times every D days) with last-done/next-due display",
+        "Habit reminders that follow your frequency window, with done/skip actions and the habit's name shown"
+      ],
+      "Fixed": [
+        "Overdue every-N-days habits say \"due now\" instead of counting days late",
+        "Reminders open the right habit, deep links keep the back button working, and skipped imports are named",
+        "Uhabits export writes valid empty fields and matches habit colors by hue",
+        "Habit drawer footer stays fixed and the reminder row fits on one line on narrow screens"
+      ]
+    }
+  },
+  {
     "version": "1.45.0-preview.5",
     "date": "2026-09-27",
     "channel": "preview",
@@ -688,21 +706,6 @@
       "Fixed": [
         "Closed an issue where certain crafted redirect links could send you somewhere unintended after signing in",
         "Tightened up spacing/copy across the auth pages (sign-up button label, password visibility toggle, confirm-password field, small layout fixes)"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0-preview.6",
-    "date": "2026-08-18",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add support-contact reassurance to password-reset confirmation",
-        "Support Secure Password Change reauthentication in AccountSection"
-      ],
-      "Fixed": [
-        "Don't reflect raw URL error text in AccountSection alert",
-        "Reject control-character next params to close open redirect (H-3)"
       ]
     }
   }
