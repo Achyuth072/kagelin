@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback, useSyncExternalStore, memo } from "react";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -16,13 +17,35 @@ interface SplitViewLayoutProps {
   filter?: string;
 }
 
+function findCachedTask(
+  queryClient: QueryClient,
+  taskId: string | undefined,
+): Task | undefined {
+  if (!taskId) return undefined;
+  for (const [, tasks] of queryClient.getQueriesData<Task[]>({
+    queryKey: ["tasks"],
+  })) {
+    const found = tasks?.find((t) => t.id === taskId);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 function SplitViewLayoutBase({
   sortBy = "date",
   groupBy = "none",
   projectId,
   filter,
 }: SplitViewLayoutProps) {
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [selection, setSelectedTask] = useState<Task | null>(null);
+  const queryClient = useQueryClient();
+  // The selection is a snapshot from click time; edits land in the cache, so
+  // read the live copy or the detail form keeps showing pre-edit values.
+  const selectedTask = useSyncExternalStore(
+    (notify) => queryClient.getQueryCache().subscribe(notify),
+    () => findCachedTask(queryClient, selection?.id) ?? selection,
+    () => selection,
+  );
   const { trigger } = useHaptic();
   // Below 1024px, a 40% side panel is too thin for the detail form (cramped
   // footer, wrapped badges) — show task details in a modal instead.
@@ -30,14 +53,14 @@ function SplitViewLayoutBase({
 
   const handleTaskSelect = useCallback(
     (task: Task) => {
-      trigger("toggle"); // Toggle haptic for selection
+      trigger("toggle");
       setSelectedTask(task);
     },
     [trigger],
   );
 
   const handleCloseDetail = useCallback(() => {
-    trigger("tick"); // Tick haptic for close
+    trigger("tick");
     setSelectedTask(null);
   }, [trigger]);
 

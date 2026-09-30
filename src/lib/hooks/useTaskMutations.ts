@@ -22,6 +22,8 @@ const UNDO_TOAST_DURATION_MS = 5000;
 function invalidateTaskCaches(queryClient: QueryClient): void {
   void Promise.all([
     queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+    // useTask / useActiveTask copies; ["tasks"] does not prefix-match "task".
+    queryClient.invalidateQueries({ queryKey: ["task"] }),
     queryClient.invalidateQueries({ queryKey: ["subtasks"] }),
     queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
     queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] }),
