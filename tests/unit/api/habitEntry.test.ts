@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "@/../app/api/habits/entry/route";
 
-const mockAuthGetUser = vi.fn();
-const mockFrom = vi.fn();
+const mockGetClaims = vi.fn();
+const mockRpc = vi.fn();
+const mockGetUser = vi.fn();
 
 const mockSupabase = {
-  auth: { getUser: mockAuthGetUser },
-  from: mockFrom,
+  auth: { getClaims: mockGetClaims, getUser: mockGetUser },
+  rpc: mockRpc,
 };
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -23,20 +24,11 @@ function makeRequest(body: unknown) {
   });
 }
 
-function upsertBuilder(result: { error: null | { message: string } }) {
-  const builder = {
-    upsert: vi.fn().mockResolvedValue(result),
-  };
-  return builder;
-}
-
-function selectSingleBuilder(result: { data: unknown; error: null }) {
-  const builder = {
-    select: vi.fn(() => builder),
-    eq: vi.fn(() => builder),
-    single: vi.fn().mockResolvedValue(result),
-  };
-  return builder;
+function signedIn() {
+  mockGetClaims.mockResolvedValue({
+    data: { claims: { sub: "user-1" } },
+    error: null,
+  });
 }
 
 describe("POST /api/habits/entry", () => {
@@ -45,23 +37,24 @@ describe("POST /api/habits/entry", () => {
   });
 
   it("returns 401 when no user is authenticated", async () => {
-    mockAuthGetUser.mockResolvedValue({ data: { user: null } });
+    mockGetClaims.mockResolvedValue({ data: null, error: null });
 
     const res = await POST(
       makeRequest({ habitId: "abc", date: "2026-09-26", state: "done" }),
     );
     expect(res.status).toBe(401);
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it("returns 400 when habitId is missing", async () => {
-    mockAuthGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    signedIn();
 
     const res = await POST(makeRequest({ date: "2026-09-26", state: "done" }));
     expect(res.status).toBe(400);
   });
 
   it("returns 400 when date format is invalid", async () => {
-    mockAuthGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    signedIn();
 
     const res = await POST(
       makeRequest({ habitId: HABIT_UUID, date: "not-a-date", state: "done" }),
@@ -70,7 +63,7 @@ describe("POST /api/habits/entry", () => {
   });
 
   it("returns 400 when date is not a real calendar day", async () => {
-    mockAuthGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    signedIn();
 
     const res = await POST(
       makeRequest({
@@ -83,7 +76,7 @@ describe("POST /api/habits/entry", () => {
   });
 
   it("returns 400 when state is invalid", async () => {
-    mockAuthGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    signedIn();
 
     const res = await POST(
       makeRequest({
@@ -96,12 +89,8 @@ describe("POST /api/habits/entry", () => {
   });
 
   it("returns 400 when done is sent for a measurable habit", async () => {
-    mockAuthGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    const habitBuilder = selectSingleBuilder({
-      data: { habit_type: "measurable" },
-      error: null,
-    });
-    mockFrom.mockReturnValue(habitBuilder);
+    signedIn();
+    mockRpc.mockResolvedValue({ data: "measurable", error: null });
 
     const res = await POST(
       makeRequest({ habitId: HABIT_UUID, date: "2026-09-26", state: "done" }),
@@ -111,36 +100,9 @@ describe("POST /api/habits/entry", () => {
     expect(body.error).toMatch(/measurable/i);
   });
 
-  it("upserts value 1 for done on a boolean habit and only sets value (not notes)", async () => {
-    mockAuthGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    const habitBuilder = selectSingleBuilder({
-      data: { habit_type: "boolean" },
-      error: null,
-    });
-    const entryBuilder = upsertBuilder({ error: null });
-    mockFrom
-      .mockReturnValueOnce(habitBuilder)
-      .mockReturnValueOnce(entryBuilder);
-
-    const res = await POST(
-      makeRequest({ habitId: HABIT_UUID, date: "2026-09-26", state: "done" }),
-    );
-    expect(res.status).toBe(200);
-    expect(entryBuilder.upsert).toHaveBeenCalledWith(
-      { habit_id: HABIT_UUID, date: "2026-09-26", value: 1 },
-      { onConflict: "habit_id,date" },
-    );
-    // notes must not appear in the upsert payload (so existing notes are preserved)
-    expect(entryBuilder.upsert).toHaveBeenCalledWith(
-      expect.not.objectContaining({ notes: expect.anything() }),
-      expect.anything(),
-    );
-  });
-
-  it("upserts value -2 for skipped (no habit_type check needed)", async () => {
-    mockAuthGetUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
-    const entryBuilder = upsertBuilder({ error: null });
-    mockFrom.mockReturnValue(entryBuilder);
+  it("returns 400 when the habit does not exist for this user", async () => {
+    signedIn();
+    mockRpc.mockResolvedValue({ data: "not_found", error: null });
 
     const res = await POST(
       makeRequest({
@@ -149,10 +111,47 @@ describe("POST /api/habits/entry", () => {
         state: "skipped",
       }),
     );
-    expect(res.status).toBe(200);
-    expect(entryBuilder.upsert).toHaveBeenCalledWith(
-      { habit_id: HABIT_UUID, date: "2026-09-26", value: -2 },
-      { onConflict: "habit_id,date" },
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 500 when the write fails", async () => {
+    signedIn();
+    mockRpc.mockResolvedValue({ data: null, error: { message: "boom" } });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const res = await POST(
+      makeRequest({ habitId: HABIT_UUID, date: "2026-09-26", state: "done" }),
     );
+    expect(res.status).toBe(500);
+  });
+
+  it("records the requested state through one RPC on the payload's date", async () => {
+    signedIn();
+    mockRpc.mockResolvedValue({ data: "ok", error: null });
+
+    const res = await POST(
+      makeRequest({ habitId: HABIT_UUID, date: "2026-09-26", state: "done" }),
+    );
+    expect(res.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockRpc).toHaveBeenCalledWith("record_habit_entry", {
+      p_habit_id: HABIT_UUID,
+      p_date: "2026-09-26",
+      p_state: "done",
+    });
+  });
+
+  it("does not ask the Auth server who the user is", async () => {
+    signedIn();
+    mockRpc.mockResolvedValue({ data: "ok", error: null });
+
+    await POST(
+      makeRequest({
+        habitId: HABIT_UUID,
+        date: "2026-09-26",
+        state: "skipped",
+      }),
+    );
+    expect(mockGetUser).not.toHaveBeenCalled();
   });
 });

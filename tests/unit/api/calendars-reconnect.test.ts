@@ -6,7 +6,18 @@ const mockAdminFrom = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(() =>
-    Promise.resolve({ auth: { getUser: mockAuthGetUser } }),
+    Promise.resolve({
+      auth: {
+        getUser: mockAuthGetUser,
+        getClaims: async () => {
+          const { data } = await mockAuthGetUser();
+          return {
+            data: data?.user ? { claims: { sub: data.user.id } } : null,
+            error: null,
+          };
+        },
+      },
+    }),
   ),
 }));
 
