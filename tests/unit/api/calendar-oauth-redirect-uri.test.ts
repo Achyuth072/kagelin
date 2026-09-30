@@ -29,6 +29,10 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({
     auth: {
       getUser: vi.fn(async () => ({ data: { user: { id: "user-1" } } })),
+      getClaims: vi.fn(async () => ({
+        data: { claims: { sub: "user-1" } },
+        error: null,
+      })),
     },
   })),
 }));
@@ -78,7 +82,6 @@ describe("#57 — OAuth redirect_uri must match between connect and callback", (
   });
 
   it("uses the same redirect_uri even when the request origin (Vercel proxy host) differs from NEXT_PUBLIC_APP_URL", async () => {
-    // 1) Authorization request: pull redirect_uri out of the Google auth URL.
     const connectRes = await connectGET(
       new Request(`${VERCEL_INTERNAL}/api/calendar/connect/google`),
       { params: Promise.resolve({ provider: "google" }) },
@@ -86,7 +89,6 @@ describe("#57 — OAuth redirect_uri must match between connect and callback", (
     const authUrl = new URL(connectRes.headers.get("location")!);
     const connectRedirectUri = authUrl.searchParams.get("redirect_uri");
 
-    // 2) Token exchange: capture the redirect_uri the callback sends to Google.
     h.cookieStore.set("calendar_oauth_state", "test-state");
     h.cookieStore.set("calendar_oauth_verifier", "test-verifier");
     h.cookieStore.set("calendar_oauth_provider", "google");
@@ -101,7 +103,6 @@ describe("#57 — OAuth redirect_uri must match between connect and callback", (
     expect(connectRedirectUri).toBe(
       `${PUBLIC_URL}/api/calendar/oauth/callback`,
     );
-    // The bug: these must be identical or Google returns redirect_uri_mismatch.
     expect(callbackRedirectUri).toBe(connectRedirectUri);
   });
 });
