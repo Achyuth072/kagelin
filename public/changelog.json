@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.45.1-preview.0",
+    "date": "2026-09-30",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Verify auth locally and record reminder actions in one RPC"
+      ],
+      "Fixed": [
+        "Refresh task detail and single-task caches after edits"
+      ]
+    }
+  },
+  {
     "version": "1.45.0",
     "date": "2026-09-28",
     "channel": "stable",
@@ -683,29 +696,6 @@
         "Don't blindly re-push a stale local timer session on app reopen (#129)",
         "Scope task notification cleanup to future rows (#155)",
         "Scope timer notification cleanup to future rows (#139)"
-      ]
-    }
-  },
-  {
-    "version": "1.31.0",
-    "date": "2026-08-18",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Rebuilt the login/signup page with a cleaner layout and a Google/GitHub row up top",
-        "Added email + password sign-up and sign-in, with a warning if your chosen password has appeared in known data breaches",
-        "Added a forgot-password flow, including a reset-confirmation screen that reassures you support is available if anything goes wrong",
-        "New Settings → Account section for managing your sign-in methods and setting a password on an OAuth-only account",
-        "Added reauthentication for sensitive account changes, like setting a password"
-      ],
-      "Improved": [
-        "Signing in now shows which identities (Google, GitHub, email/password) are already connected",
-        "Linking/unlinking accounts is more consistent — same account picker behavior for Google and GitHub, refreshed session state after unlinking, clearer error messages",
-        "Cleaned up error messages so raw technical text no longer leaks into account alerts"
-      ],
-      "Fixed": [
-        "Closed an issue where certain crafted redirect links could send you somewhere unintended after signing in",
-        "Tightened up spacing/copy across the auth pages (sign-up button label, password visibility toggle, confirm-password field, small layout fixes)"
       ]
     }
   }
