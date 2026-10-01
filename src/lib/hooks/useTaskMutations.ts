@@ -33,6 +33,163 @@ function invalidateTaskCaches(queryClient: QueryClient): void {
   ]);
 }
 
+type TasksSnapshot = {
+  tasks: [readonly unknown[], Task[] | undefined][];
+  subtasks: [readonly unknown[], Task[] | undefined][];
+  singleTasks: [readonly unknown[], Task | null | undefined][];
+};
+
+async function prepareTasksSnapshot(
+  queryClient: QueryClient,
+): Promise<TasksSnapshot> {
+  await Promise.all([
+    queryClient.cancelQueries({ queryKey: ["tasks"] }),
+    queryClient.cancelQueries({ queryKey: ["subtasks"] }),
+    queryClient.cancelQueries({ queryKey: ["task"] }),
+  ]);
+
+  return {
+    tasks: queryClient.getQueriesData<Task[]>({ queryKey: ["tasks"] }),
+    subtasks: queryClient.getQueriesData<Task[]>({ queryKey: ["subtasks"] }),
+    singleTasks: queryClient.getQueriesData<Task | null>({
+      queryKey: ["task"],
+    }),
+  };
+}
+
+function rollbackTasksSnapshot(
+  queryClient: QueryClient,
+  snapshot?: TasksSnapshot,
+  err?: unknown,
+) {
+  if (snapshot) {
+    snapshot.tasks.forEach(([key, data]) =>
+      queryClient.setQueryData(key, data),
+    );
+    snapshot.subtasks.forEach(([key, data]) =>
+      queryClient.setQueryData(key, data),
+    );
+    snapshot.singleTasks.forEach(([key, data]) =>
+      queryClient.setQueryData(key, data),
+    );
+  }
+  if (err) handleMutationError(err);
+}
+
+interface TaskSliceParams {
+  projectId?: string | null;
+  showCompleted?: boolean;
+  filter?: string;
+  isGuestMode?: boolean;
+}
+
+function taskMatchesSlice(task: Task, params?: TaskSliceParams): boolean {
+  if (!params) return true;
+
+  if (params.showCompleted === false && task.is_completed) {
+    if (!task.completed_at) return false;
+    const completedDate = new Date(task.completed_at);
+    const today = new Date();
+    const isToday =
+      completedDate.getDate() === today.getDate() &&
+      completedDate.getMonth() === today.getMonth() &&
+      completedDate.getFullYear() === today.getFullYear();
+    if (!isToday) return false;
+  }
+
+  if (params.projectId === "inbox") {
+    if (task.project_id) return false;
+  } else if (params.projectId && params.projectId !== "all") {
+    if (task.project_id !== params.projectId) return false;
+  }
+
+  if (params.filter === "p1") {
+    if (task.priority !== 1) return false;
+  } else if (params.filter === "today") {
+    if (!task.due_date) return false;
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    if (new Date(task.due_date) > todayEnd) return false;
+  }
+
+  return true;
+}
+
+function applyOptimisticTaskInsert(
+  queryClient: QueryClient,
+  snapshot: TasksSnapshot,
+  task: Task,
+): void {
+  if (task.parent_id) {
+    snapshot.tasks.forEach(([key]) => {
+      queryClient.setQueryData<Task[]>(key, (old) =>
+        old?.map((parent) =>
+          parent.id === task.parent_id
+            ? {
+                ...parent,
+                subtasks: [
+                  ...(parent.subtasks || []),
+                  { id: task.id, is_completed: task.is_completed },
+                ],
+              }
+            : parent,
+        ),
+      );
+    });
+
+    snapshot.subtasks.forEach(([key, data]) => {
+      if (key[1] === task.parent_id) {
+        queryClient.setQueryData<Task[]>(key, [...(data ?? []), task]);
+      }
+    });
+  } else {
+    snapshot.tasks.forEach(([key, data]) => {
+      const params = key[1] as TaskSliceParams | undefined;
+      if (taskMatchesSlice(task, params)) {
+        queryClient.setQueryData<Task[]>(key, [task, ...(data ?? [])]);
+      }
+    });
+  }
+}
+
+function reconcileTempTaskId(
+  queryClient: QueryClient,
+  snapshot: TasksSnapshot | undefined,
+  tempId: string | undefined,
+  serverTask: Task | null | undefined,
+): void {
+  if (!snapshot || !tempId || !serverTask?.id || serverTask.id === tempId) {
+    return;
+  }
+
+  snapshot.tasks.forEach(([key]) => {
+    queryClient.setQueryData<Task[]>(key, (old) =>
+      old?.map((task) => {
+        if (task.id === tempId) {
+          return { ...serverTask, subtasks: task.subtasks || [] };
+        }
+        if (task.subtasks?.some((st) => st.id === tempId)) {
+          return {
+            ...task,
+            subtasks: task.subtasks.map((st) =>
+              st.id === tempId
+                ? { id: serverTask.id, is_completed: st.is_completed }
+                : st,
+            ),
+          };
+        }
+        return task;
+      }),
+    );
+  });
+
+  snapshot.subtasks.forEach(([key]) => {
+    queryClient.setQueryData<Task[]>(key, (old) =>
+      old?.map((task) => (task.id === tempId ? serverTask : task)),
+    );
+  });
+}
+
 export function useCreateTask() {
   const queryClient = useQueryClient();
   const { isGuestMode } = useAuth();
@@ -41,12 +198,7 @@ export function useCreateTask() {
     mutationKey: ["createTask"],
     mutationFn: taskMutations.create,
     onMutate: async (newTask) => {
-      await queryClient.cancelQueries({ queryKey: ["tasks"] });
-
-      const previousTasks = queryClient.getQueryData<Task[]>([
-        "tasks",
-        { projectId: undefined, showCompleted: false, isGuestMode },
-      ]);
+      const snapshot = await prepareTasksSnapshot(queryClient);
 
       const clientId =
         (newTask as CreateTaskInput & { _clientId?: string })._clientId ||
@@ -54,6 +206,7 @@ export function useCreateTask() {
       (newTask as CreateTaskInput & { _clientId?: string })._clientId =
         clientId;
 
+      const now = new Date().toISOString();
       const optimisticTask: Task = {
         id: clientId,
         user_id: isGuestMode ? "guest" : "",
@@ -72,45 +225,27 @@ export function useCreateTask() {
         recurring_series_id: null,
         google_event_id: null,
         google_etag: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: now,
+        updated_at: now,
+        subtasks: [],
       };
 
-      queryClient.setQueryData<Task[]>(
-        ["tasks", { projectId: undefined, showCompleted: false, isGuestMode }],
-        (old) =>
-          newTask.parent_id
-            ? // A step belongs on its parent's progress badge, not in the list.
-              old?.map((task) =>
-                task.id === newTask.parent_id
-                  ? {
-                      ...task,
-                      subtasks: [
-                        ...(task.subtasks || []),
-                        { id: clientId, is_completed: false },
-                      ],
-                    }
-                  : task,
-              )
-            : [optimisticTask, ...(old || [])],
-      );
+      applyOptimisticTaskInsert(queryClient, snapshot, optimisticTask);
 
-      return { previousTasks };
+      return { snapshot, clientId, tempId: clientId };
     },
-    onSuccess: () => {
+    onSuccess: (createdTask, _variables, context) => {
       trackTelemetry("task_action", { action: "created" });
+
+      reconcileTempTaskId(
+        queryClient,
+        context?.snapshot,
+        context?.clientId,
+        createdTask,
+      );
     },
     onError: (err, _newTask, context) => {
-      if (context?.previousTasks) {
-        queryClient.setQueryData(
-          [
-            "tasks",
-            { projectId: undefined, showCompleted: false, isGuestMode },
-          ],
-          context.previousTasks,
-        );
-      }
-      handleMutationError(err);
+      rollbackTasksSnapshot(queryClient, context?.snapshot, err);
     },
     onSettled: (_data, _error, variables) => {
       invalidateTaskCaches(queryClient);
@@ -131,14 +266,8 @@ export function useToggleTask() {
     mutationKey: ["toggleTask"],
     mutationFn: taskMutations.toggle,
     onMutate: async ({ id, is_completed }) => {
-      await queryClient.cancelQueries({ queryKey: ["tasks"] });
-      await queryClient.cancelQueries({ queryKey: ["subtasks"] });
-
-      const queryKey = [
-        "tasks",
-        { projectId: undefined, showCompleted: false, isGuestMode },
-      ];
-      const previousTasks = queryClient.getQueryData<Task[]>(queryKey);
+      const snapshot = await prepareTasksSnapshot(queryClient);
+      const completed_at = is_completed ? new Date().toISOString() : null;
 
       const patch = (old: Task[] | undefined) =>
         old?.map((task) => {
@@ -146,7 +275,7 @@ export function useToggleTask() {
             return {
               ...task,
               is_completed,
-              completed_at: is_completed ? new Date().toISOString() : null,
+              completed_at,
             };
           }
           if (task.subtasks?.some((st) => st.id === id)) {
@@ -160,16 +289,23 @@ export function useToggleTask() {
           return task;
         });
 
-      queryClient.setQueryData<Task[]>(queryKey, patch);
+      for (const [key] of [...snapshot.tasks, ...snapshot.subtasks]) {
+        queryClient.setQueryData<Task[]>(key, patch);
+      }
 
-      // SubtaskList reads from the ["subtasks", parentId] cache, not ["tasks"] —
-      // patch it too so a subtask checkbox reflects immediately.
-      const previousSubtaskQueries = queryClient.getQueriesData<Task[]>({
-        queryKey: ["subtasks"],
-      });
-      queryClient.setQueriesData<Task[]>({ queryKey: ["subtasks"] }, patch);
+      for (const [key] of snapshot.singleTasks) {
+        queryClient.setQueryData<Task | null>(key, (old) =>
+          old && old.id === id
+            ? {
+                ...old,
+                is_completed,
+                completed_at,
+              }
+            : old,
+        );
+      }
 
-      return { previousTasks, previousSubtaskQueries };
+      return { snapshot };
     },
     onSuccess: (_data, variables) => {
       // Guests get a year of pre-seeded demo tasks; interacting with them
@@ -181,19 +317,7 @@ export function useToggleTask() {
       }
     },
     onError: (err, _vars, context) => {
-      if (context?.previousTasks) {
-        queryClient.setQueryData(
-          [
-            "tasks",
-            { projectId: undefined, showCompleted: false, isGuestMode },
-          ],
-          context.previousTasks,
-        );
-      }
-      context?.previousSubtaskQueries?.forEach(([queryKey, data]) => {
-        queryClient.setQueryData(queryKey, data);
-      });
-      handleMutationError(err);
+      rollbackTasksSnapshot(queryClient, context?.snapshot, err);
     },
     onSettled: () => {
       invalidateTaskCaches(queryClient);
@@ -208,32 +332,49 @@ export function useUpdateTask() {
     mutationKey: ["updateTask"],
     mutationFn: taskMutations.update,
     onMutate: async (updates) => {
-      await queryClient.cancelQueries({ queryKey: ["tasks"] });
-      await queryClient.cancelQueries({ queryKey: ["subtasks"] });
+      const snapshot = await prepareTasksSnapshot(queryClient);
+      const { id, ...rest } = updates;
 
-      const allTaskQueries = [
-        ...queryClient.getQueriesData<Task[]>({ queryKey: ["tasks"] }),
-        // SubtaskList reads from ["subtasks", parentId], not ["tasks"].
-        ...queryClient.getQueriesData<Task[]>({ queryKey: ["subtasks"] }),
-      ];
-
-      for (const [queryKey] of allTaskQueries) {
-        queryClient.setQueryData<Task[]>(queryKey, (old) =>
-          old?.map((task) =>
-            task.id === updates.id ? { ...task, ...updates } : task,
-          ),
+      snapshot.tasks.forEach(([key]) => {
+        queryClient.setQueryData<Task[]>(key, (old) =>
+          old?.map((task) => {
+            if (task.id === id) return { ...task, ...rest };
+            if (task.subtasks?.some((st) => st.id === id)) {
+              return {
+                ...task,
+                subtasks: task.subtasks.map((st) =>
+                  st.id === id
+                    ? {
+                        ...st,
+                        ...(rest.is_completed !== undefined
+                          ? { is_completed: rest.is_completed }
+                          : {}),
+                      }
+                    : st,
+                ),
+              };
+            }
+            return task;
+          }),
         );
-      }
+      });
 
-      return { previousTaskQueries: allTaskQueries };
+      snapshot.subtasks.forEach(([key]) => {
+        queryClient.setQueryData<Task[]>(key, (old) =>
+          old?.map((task) => (task.id === id ? { ...task, ...rest } : task)),
+        );
+      });
+
+      snapshot.singleTasks.forEach(([key]) => {
+        queryClient.setQueryData<Task | null>(key, (old) =>
+          old && old.id === id ? { ...old, ...rest } : old,
+        );
+      });
+
+      return { snapshot };
     },
     onError: (err, _vars, context) => {
-      if (context?.previousTaskQueries) {
-        context.previousTaskQueries.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
-      }
-      handleMutationError(err);
+      rollbackTasksSnapshot(queryClient, context?.snapshot, err);
     },
     onSettled: () => {
       invalidateTaskCaches(queryClient);
@@ -250,28 +391,24 @@ export function useDeleteTask() {
     mutationKey: ["deleteTask"],
     mutationFn: taskMutations.delete,
     onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ["tasks"] });
-      await queryClient.cancelQueries({ queryKey: ["subtasks"] });
-
-      const allTaskQueries = [
-        ...queryClient.getQueriesData<Task[]>({ queryKey: ["tasks"] }),
-        // A deleted subtask must also disappear from its parent's ["subtasks", parentId] list.
-        ...queryClient.getQueriesData<Task[]>({ queryKey: ["subtasks"] }),
-      ];
+      const snapshot = await prepareTasksSnapshot(queryClient);
       let deletedTask: Task | undefined;
 
-      for (const [, data] of allTaskQueries) {
-        if (data) {
-          const found = data.find((task) => task.id === id);
-          if (found) {
-            deletedTask = found;
-            break;
-          }
+      for (const [, data] of [...snapshot.tasks, ...snapshot.subtasks]) {
+        const found = data?.find((task) => task.id === id);
+        if (found) {
+          deletedTask = found;
+          break;
         }
       }
+      if (!deletedTask) {
+        deletedTask =
+          snapshot.singleTasks.find(([, task]) => task?.id === id)?.[1] ??
+          undefined;
+      }
 
-      for (const [queryKey] of allTaskQueries) {
-        queryClient.setQueryData<Task[]>(queryKey, (old) =>
+      snapshot.tasks.forEach(([key]) => {
+        queryClient.setQueryData<Task[]>(key, (old) =>
           old
             ?.filter((task) => task.id !== id)
             .map((task) =>
@@ -283,7 +420,19 @@ export function useDeleteTask() {
                 : task,
             ),
         );
-      }
+      });
+
+      snapshot.subtasks.forEach(([key]) => {
+        queryClient.setQueryData<Task[]>(key, (old) =>
+          old?.filter((task) => task.id !== id),
+        );
+      });
+
+      snapshot.singleTasks.forEach(([key]) => {
+        queryClient.setQueryData<Task | null>(key, (old) =>
+          old && old.id === id ? null : old,
+        );
+      });
 
       // Cascades at the DB level — clear cached subtasks now, not orphaned later.
       for (const [queryKey] of queryClient.getQueriesData<Task[]>({
@@ -292,7 +441,7 @@ export function useDeleteTask() {
         queryClient.setQueryData<Task[]>(queryKey, []);
       }
 
-      return { deletedTask };
+      return { snapshot, deletedTask };
     },
     // Uses the delete's cascaded subtasks, not onMutate's cache (may be
     // empty); confirmed first so Undo isn't offered for a delete that never landed.
@@ -348,12 +497,8 @@ export function useDeleteTask() {
         },
       });
     },
-    onError: (err, id, _context) => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      // Undoes the optimistic subtasks-cache clear from onMutate — the
-      // delete never landed, so the subtree is still there.
-      queryClient.invalidateQueries({ queryKey: ["subtasks", id] });
-      handleMutationError(err);
+    onError: (err, _id, context) => {
+      rollbackTasksSnapshot(queryClient, context?.snapshot, err);
     },
     onSettled: () => {
       invalidateTaskCaches(queryClient);
@@ -368,67 +513,37 @@ export function useReorderTasks() {
     mutationKey: ["reorderTasks"],
     mutationFn: taskMutations.reorder,
     onMutate: async (pairs: { id: string; day_order: number }[]) => {
-      await queryClient.cancelQueries({ queryKey: ["tasks"] });
-      await queryClient.cancelQueries({ queryKey: ["subtasks"] });
-
-      const allTaskQueries = queryClient.getQueriesData<Task[]>({
-        queryKey: ["tasks"],
-      });
-      const allSubtaskQueries = queryClient.getQueriesData<Task[]>({
-        queryKey: ["subtasks"],
-      });
+      const snapshot = await prepareTasksSnapshot(queryClient);
 
       const pairById = new Map(pairs.map((p) => [p.id, p.day_order]));
-
-      for (const [queryKey] of allTaskQueries) {
-        queryClient.setQueryData<Task[]>(queryKey, (old) => {
-          if (!old) return old;
-
-          // Pairs already carry final day_order (computeMoveOrders) — apply as-is.
-          return old.map((task) => {
-            const newOrder = pairById.get(task.id);
-            return newOrder === undefined || task.day_order === newOrder
-              ? task
-              : { ...task, day_order: newOrder };
-          });
+      const applyDayOrders = (tasks: Task[] | undefined) =>
+        tasks?.map((task) => {
+          const newOrder = pairById.get(task.id);
+          return newOrder === undefined || task.day_order === newOrder
+            ? task
+            : { ...task, day_order: newOrder };
         });
+
+      for (const [queryKey] of snapshot.tasks) {
+        queryClient.setQueryData<Task[]>(queryKey, (old) =>
+          applyDayOrders(old),
+        );
       }
 
-      for (const [queryKey] of allSubtaskQueries) {
-        queryClient.setQueryData<Task[]>(queryKey, (old) => {
-          if (!old) return old;
-          return old
-            .map((task) => {
-              const newOrder = pairById.get(task.id);
-              return newOrder === undefined || task.day_order === newOrder
-                ? task
-                : { ...task, day_order: newOrder };
-            })
-            .sort(
-              (a, b) =>
-                (a.day_order ?? 0) - (b.day_order ?? 0) ||
-                a.created_at.localeCompare(b.created_at),
-            );
-        });
+      for (const [queryKey] of snapshot.subtasks) {
+        queryClient.setQueryData<Task[]>(queryKey, (old) =>
+          applyDayOrders(old)?.sort(
+            (a, b) =>
+              (a.day_order ?? 0) - (b.day_order ?? 0) ||
+              a.created_at.localeCompare(b.created_at),
+          ),
+        );
       }
 
-      return {
-        previousTaskQueries: allTaskQueries,
-        previousSubtaskQueries: allSubtaskQueries,
-      };
+      return { snapshot };
     },
     onError: (err, _vars, context) => {
-      if (context?.previousTaskQueries) {
-        context.previousTaskQueries.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
-      }
-      if (context?.previousSubtaskQueries) {
-        context.previousSubtaskQueries.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
-      }
-      handleMutationError(err);
+      rollbackTasksSnapshot(queryClient, context?.snapshot, err);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -446,30 +561,18 @@ export function useClearCompletedTasks() {
     mutationKey: ["clearCompletedTasks"],
     mutationFn: taskMutations.clearCompleted,
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["tasks"] });
+      const snapshot = await prepareTasksSnapshot(queryClient);
 
-      const previousTasks = queryClient.getQueriesData({ queryKey: ["tasks"] });
+      snapshot.tasks.forEach(([key]) => {
+        queryClient.setQueryData<Task[]>(key, (oldData) =>
+          oldData?.filter((task) => !task.is_completed),
+        );
+      });
 
-      queryClient.setQueriesData(
-        { queryKey: ["tasks"] },
-        (oldData: Task[] | undefined) => {
-          if (!oldData) return oldData;
-          if (Array.isArray(oldData)) {
-            return oldData.filter((task: Task) => !task.is_completed);
-          }
-          return oldData;
-        },
-      );
-
-      return { previousTasks };
+      return { snapshot };
     },
     onError: (err, _vars, context) => {
-      if (context?.previousTasks) {
-        context.previousTasks.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data);
-        });
-      }
-      handleMutationError(err);
+      rollbackTasksSnapshot(queryClient, context?.snapshot, err);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -493,7 +596,29 @@ export function useDuplicateTask() {
       sourceTask: Task;
       overrides?: Partial<Task>;
     }) => taskMutations.duplicate(sourceTask, overrides),
-    onSuccess: (newTask, variables) => {
+    onMutate: async ({ sourceTask, overrides }) => {
+      const snapshot = await prepareTasksSnapshot(queryClient);
+      const tempId = crypto.randomUUID();
+      const now = new Date().toISOString();
+
+      const optimisticDuplicate: Task = {
+        ...sourceTask,
+        id: tempId,
+        user_id: isGuestMode ? "guest" : sourceTask.user_id,
+        created_at: now,
+        updated_at: now,
+        ...overrides,
+        subtasks: (sourceTask.subtasks || []).map((st) => ({
+          ...st,
+          id: crypto.randomUUID(),
+        })),
+      };
+
+      applyOptimisticTaskInsert(queryClient, snapshot, optimisticDuplicate);
+
+      return { snapshot, tempId };
+    },
+    onSuccess: (newTask, variables, context) => {
       // Guests get a year of pre-seeded demo tasks; interacting with them
       // shouldn't inflate the "Engagement & Throughput" telemetry KPI.
       if (!(isGuestMode && mockStore.isSeedId(variables.sourceTask.id))) {
@@ -501,14 +626,22 @@ export function useDuplicateTask() {
       }
       trigger("success");
       notify("Task duplicated");
+
+      reconcileTempTaskId(
+        queryClient,
+        context?.snapshot,
+        context?.tempId,
+        newTask,
+      );
+
       if (newTask.parent_id) {
         queryClient.invalidateQueries({
           queryKey: ["subtasks", newTask.parent_id],
         });
       }
     },
-    onError: (err) => {
-      handleMutationError(err);
+    onError: (err, _vars, context) => {
+      rollbackTasksSnapshot(queryClient, context?.snapshot, err);
     },
     onSettled: () => {
       invalidateTaskCaches(queryClient);
