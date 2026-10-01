@@ -3,12 +3,15 @@ import { Drawer as DrawerPrimitive } from "vaul";
 
 import { cn } from "@/lib/utils";
 
+// Shrinks above the virtual keyboard so content scrolls instead of translating off-screen.
 const Drawer = ({
   shouldScaleBackground = true,
+  fixed = true,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root
     shouldScaleBackground={shouldScaleBackground}
+    fixed={fixed}
     {...props}
   />
 );

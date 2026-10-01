@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
@@ -12,6 +13,7 @@ import { SegmentedTimePicker } from "@/components/ui/segmented-time-picker";
 import { useAuth } from "@/components/AuthProvider";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
+import { useIsDrawer } from "@/components/ui/responsive-dialog";
 
 interface HabitReminderFieldProps {
   reminderTime: string | null | undefined;
@@ -33,6 +35,9 @@ const DAY_CHIPS: { bit: number; label: string; ariaLabel: string }[] = [
   { bit: 6, label: "S", ariaLabel: "Saturday" },
 ];
 
+const timeTriggerClass =
+  "h-8 px-2.5 rounded-lg text-[13px] font-medium tabular-nums border border-border/40 bg-secondary/10 text-foreground transition-seijaku-fast hover:bg-secondary/40 shrink-0";
+
 const parseTime = (value: string) => {
   const [hours, minutes] = value.split(":").map(Number);
   const date = new Date();
@@ -52,10 +57,15 @@ export function HabitReminderField({
   const { trigger } = useHaptic();
   const { formatTime } = useTimeFormat();
   const { isGuestMode } = useAuth();
+  const isDrawer = useIsDrawer();
+  const [inlineOpen, setInlineOpen] = useState(false);
+  const scrollTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(scrollTimer.current), []);
   const isOn = !!reminderTime;
 
   const toggleOn = () => {
     trigger("toggle");
+    setInlineOpen(false);
     onReminderTimeChange(isOn ? null : DEFAULT_TIME);
   };
 
@@ -66,6 +76,29 @@ export function HabitReminderField({
       reminderDays & mask ? reminderDays & ~mask : reminderDays | mask,
     );
   };
+
+  const time = parseTime(reminderTime ?? DEFAULT_TIME);
+  const picker = (
+    <SegmentedTimePicker
+      compact
+      value={time}
+      onChange={(date) => onReminderTimeChange(toTimeString(date))}
+    />
+  );
+  const timeButton = (
+    <button
+      type="button"
+      aria-label="Reminder time"
+      {...(isDrawer && { "aria-expanded": inlineOpen })}
+      onClick={() => {
+        trigger("toggle");
+        if (isDrawer) setInlineOpen((open) => !open);
+      }}
+      className={timeTriggerClass}
+    >
+      {formatTime(time)}
+    </button>
+  );
 
   return (
     <div className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast mx-2">
@@ -89,25 +122,16 @@ export function HabitReminderField({
 
         {isOn && (
           <>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Reminder time"
-                  onClick={() => trigger("toggle")}
-                  className="h-8 px-2.5 rounded-lg text-[13px] font-medium tabular-nums border border-border/40 bg-secondary/10 text-foreground transition-seijaku-fast hover:bg-secondary/40 shrink-0"
-                >
-                  {formatTime(parseTime(reminderTime ?? DEFAULT_TIME))}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-3" align="start">
-                <SegmentedTimePicker
-                  compact
-                  value={parseTime(reminderTime ?? DEFAULT_TIME)}
-                  onChange={(date) => onReminderTimeChange(toTimeString(date))}
-                />
-              </PopoverContent>
-            </Popover>
+            {isDrawer ? (
+              timeButton
+            ) : (
+              <Popover>
+                <PopoverTrigger asChild>{timeButton}</PopoverTrigger>
+                <PopoverContent className="w-auto p-3" align="start">
+                  {picker}
+                </PopoverContent>
+              </Popover>
+            )}
 
             <div className="flex items-center gap-0.5 min-[400px]:gap-1 shrink-0">
               {DAY_CHIPS.map(({ bit, label, ariaLabel }) => {
@@ -132,6 +156,23 @@ export function HabitReminderField({
               })}
             </div>
           </>
+        )}
+
+        {isOn && isDrawer && inlineOpen && (
+          <div
+            className="basis-full flex justify-start pt-1"
+            onFocusCapture={(e) => {
+              const focused = e.target;
+              // Wait for Vaul's viewport resize before scrolling.
+              clearTimeout(scrollTimer.current);
+              scrollTimer.current = setTimeout(
+                () => focused.scrollIntoView({ block: "nearest" }),
+                350,
+              );
+            }}
+          >
+            {picker}
+          </div>
         )}
 
         {isGuestMode && (

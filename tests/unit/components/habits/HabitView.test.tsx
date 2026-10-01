@@ -12,6 +12,7 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
 }));
 
 vi.mock("@/components/ui/responsive-dialog", () => ({
+  useIsDrawer: () => false,
   ResponsiveDialogHeader: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),

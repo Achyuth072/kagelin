@@ -9,9 +9,15 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
 
 vi.mock("@/components/AuthProvider");
 
+const mockIsMobile = vi.hoisted(() => ({ value: false }));
+vi.mock("@/components/ui/responsive-dialog", () => ({
+  useIsDrawer: () => mockIsMobile.value,
+}));
+
 describe("HabitReminderField", () => {
   beforeEach(() => {
     (useAuth as Mock).mockReturnValue({ isGuestMode: false });
+    mockIsMobile.value = false;
   });
 
   it("renders Off and hides the time/day chips when there is no reminder time", () => {
@@ -70,6 +76,51 @@ describe("HabitReminderField", () => {
       key: "ArrowUp",
     });
     expect(onReminderTimeChange).toHaveBeenCalledWith("09:30");
+  });
+
+  describe("on mobile", () => {
+    beforeEach(() => {
+      mockIsMobile.value = true;
+    });
+
+    const renderMobile = (onReminderTimeChange = vi.fn()) =>
+      render(
+        <HabitReminderField
+          reminderTime="08:30"
+          onReminderTimeChange={onReminderTimeChange}
+          reminderDays={127}
+          onReminderDaysChange={vi.fn()}
+        />,
+      );
+
+    it("expands the picker inline instead of opening a floating popover", () => {
+      renderMobile();
+      expect(screen.queryByLabelText("Adjust Hours")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByLabelText("Reminder time"));
+      const hours = screen.getByLabelText("Adjust Hours");
+      expect(screen.getByLabelText("Reminder time")).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+      expect(hours.closest("[role=dialog]")).toBeNull();
+    });
+
+    it("collapses the inline picker when the time is tapped again", () => {
+      renderMobile();
+      fireEvent.click(screen.getByLabelText("Reminder time"));
+      fireEvent.click(screen.getByLabelText("Reminder time"));
+      expect(screen.queryByLabelText("Adjust Hours")).not.toBeInTheDocument();
+    });
+
+    it("still writes the picked time back as HH:mm", () => {
+      const onReminderTimeChange = vi.fn();
+      renderMobile(onReminderTimeChange);
+      fireEvent.click(screen.getByLabelText("Reminder time"));
+      fireEvent.keyDown(screen.getByLabelText("Adjust Hours"), {
+        key: "ArrowUp",
+      });
+      expect(onReminderTimeChange).toHaveBeenCalledWith("09:30");
+    });
   });
 
   it("toggles a day's bit off when its chip is clicked", () => {

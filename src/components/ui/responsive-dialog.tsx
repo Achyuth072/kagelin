@@ -49,6 +49,9 @@ const ResponsiveDialogContext = React.createContext<{ isMobile: boolean }>({
   isMobile: false,
 });
 
+export const useIsDrawer = () =>
+  React.useContext(ResponsiveDialogContext).isMobile;
+
 export function ResponsiveDialog({
   open,
   onOpenChange,
@@ -56,17 +59,12 @@ export function ResponsiveDialog({
 }: ResponsiveDialogProps) {
   const isMobile = useMediaQuery("(max-width: 640px)");
 
-  // Handle back navigation on mobile to close drawer instead of navigating away
   useBackNavigation(isMobile && open, () => onOpenChange(false));
 
   if (isMobile) {
     return (
       <ResponsiveDialogContext.Provider value={{ isMobile }}>
-        <Drawer
-          open={open}
-          onOpenChange={onOpenChange}
-          repositionInputs={false}
-        >
+        <Drawer open={open} onOpenChange={onOpenChange}>
           {children}
         </Drawer>
       </ResponsiveDialogContext.Provider>
