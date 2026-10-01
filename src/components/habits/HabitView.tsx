@@ -10,7 +10,6 @@ import {
   Save,
   Trash2,
   Archive,
-  CalendarIcon,
   AlignLeft,
   SlidersHorizontal,
 } from "lucide-react";
@@ -25,7 +24,6 @@ import { HabitQuestionField } from "./shared/HabitQuestionField";
 import { HabitTypeToggle } from "./shared/HabitTypeToggle";
 import type { FrequencyPeriod, HabitType } from "@/lib/types/habit";
 import { HabitReminderField } from "./shared/HabitReminderField";
-import { TaskDatePicker } from "../tasks/shared/TaskDatePicker";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 interface HabitViewBaseProps {
@@ -37,8 +35,6 @@ interface HabitViewBaseProps {
   setColor: (value: string) => void;
   icon: string;
   setIcon: (value: string) => void;
-  startDate: Date | undefined;
-  setStartDate: (value: Date | undefined) => void;
   habitType: HabitType;
   setHabitType: (value: HabitType) => void;
   frequencyCount: number;
@@ -59,9 +55,6 @@ interface HabitViewBaseProps {
   setReminderTime: (value: string | null) => void;
   reminderDays: number;
   setReminderDays: (value: number) => void;
-  datePickerOpen: boolean;
-  setDatePickerOpen: (value: boolean) => void;
-  isMobile: boolean;
   hasContent: boolean;
   isPending: boolean;
   onSubmit: () => void;
@@ -88,8 +81,6 @@ export function HabitView(props: HabitViewProps) {
     setColor,
     icon,
     setIcon,
-    startDate,
-    setStartDate,
     habitType,
     setHabitType,
     frequencyCount,
@@ -110,9 +101,6 @@ export function HabitView(props: HabitViewProps) {
     setReminderTime,
     reminderDays,
     setReminderDays,
-    datePickerOpen,
-    setDatePickerOpen,
-    isMobile,
     hasContent,
     isPending,
     onSubmit,
@@ -262,22 +250,6 @@ export function HabitView(props: HabitViewProps) {
       </div>
 
       <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
-        <TaskDatePicker
-          date={startDate}
-          setDate={setStartDate}
-          isMobile={isMobile}
-          open={datePickerOpen}
-          onOpenChange={setDatePickerOpen}
-          variant="icon"
-          icon={CalendarIcon}
-          title="Start Date"
-          showTime={true}
-          allowPastDates={true}
-          side="top"
-          align="start"
-          sideOffset={15}
-        />
-
         <div className="flex-1" />
 
         {mode === "edit" && (

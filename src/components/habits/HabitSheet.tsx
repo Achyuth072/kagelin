@@ -90,13 +90,11 @@ export function HabitSheet({
   });
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const name = useWatch({ control, name: "name" });
   const description = useWatch({ control, name: "description" }) || "";
   const color = useWatch({ control, name: "color" }) || "#4B6CB7";
   const icon = useWatch({ control, name: "icon" }) || "Flame";
-  const startDate = useWatch({ control, name: "start_date" });
   const habitType = useWatch({ control, name: "habit_type" }) ?? "boolean";
   const frequencyCount = useWatch({ control, name: "frequency_count" }) ?? 1;
   const frequencyPeriod =
@@ -115,7 +113,6 @@ export function HabitSheet({
   const updateMutation = useUpdateHabit();
   const archiveMutation = useArchiveHabit();
   const deleteMutation = useDeleteHabit();
-  const isMobile = useMediaQuery("(max-width: 768px)");
   // Matches ResponsiveDialog breakpoint; desktop CSS grid requires explicit max-height.
   const isDrawer = useMediaQuery("(max-width: 640px)");
   const { trigger: triggerHaptic } = useHaptic();
@@ -244,11 +241,6 @@ export function HabitSheet({
     setColor: (v: string) => setValue("color", v, { shouldValidate: true }),
     icon,
     setIcon: (v: string) => setValue("icon", v, { shouldValidate: true }),
-    startDate: startDate ? new Date(startDate as string) : undefined,
-    setStartDate: (v: Date | undefined) =>
-      setValue("start_date", v?.toISOString().split("T")[0], {
-        shouldValidate: true,
-      }),
     habitType,
     setHabitType: (v: CreateHabitInput["habit_type"]) =>
       setValue("habit_type", v, { shouldValidate: true }),
@@ -282,9 +274,6 @@ export function HabitSheet({
     reminderDays,
     setReminderDays: (v: number) =>
       setValue("reminder_days", v, { shouldValidate: true }),
-    datePickerOpen,
-    setDatePickerOpen,
-    isMobile,
     hasContent: isValid,
     isPending,
     onSubmit: handleSubmit(onFormSubmit),

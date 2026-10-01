@@ -42,10 +42,6 @@ vi.mock("@/components/habits/shared/HabitIconPicker", () => ({
   getHabitIcon: () => () => null,
 }));
 
-vi.mock("@/components/tasks/shared/TaskDatePicker", () => ({
-  TaskDatePicker: () => <div data-testid="date-picker" />,
-}));
-
 describe("Habit Views Footer Layout", () => {
   const commonProps = {
     name: "Test",
@@ -56,8 +52,6 @@ describe("Habit Views Footer Layout", () => {
     setColor: vi.fn(),
     icon: "Flame",
     setIcon: vi.fn(),
-    startDate: undefined,
-    setStartDate: vi.fn(),
     habitType: "boolean" as const,
     setHabitType: vi.fn(),
     frequencyCount: 1,
@@ -78,9 +72,6 @@ describe("Habit Views Footer Layout", () => {
     setReminderTime: vi.fn(),
     reminderDays: 127,
     setReminderDays: vi.fn(),
-    datePickerOpen: false,
-    setDatePickerOpen: vi.fn(),
-    isMobile: false,
     hasContent: true,
     isPending: false,
     onSubmit: vi.fn(),
