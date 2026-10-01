@@ -4,23 +4,82 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { handleMutationError } from "@/lib/utils/mutation-error";
 import type { HabitEntry, HabitWithEntries } from "@/lib/types/habit";
+import { REMINDER_EVERY_DAY } from "@/lib/types/habit";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { trackTelemetry } from "@/lib/telemetry/client";
 import { mockStore } from "@/lib/mock/mock-store";
 
 import { habitMutations } from "@/lib/mutations/habit";
+import type { CreateHabitInput, UpdateHabitInput } from "@/lib/mutations/habit";
 
 export function useCreateHabit() {
   const queryClient = useQueryClient();
+  const { isGuestMode } = useAuth();
 
   return useMutation({
     mutationKey: ["createHabit"],
     mutationFn: habitMutations.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["habits"] });
+    onMutate: async (input: CreateHabitInput) => {
+      await queryClient.cancelQueries({ queryKey: ["habits"] });
+
+      const snapshot = queryClient.getQueriesData<HabitWithEntries[]>({
+        queryKey: ["habits"],
+      });
+
+      const allHabits = snapshot.flatMap(([, data]) => data ?? []);
+      const maxOrder = allHabits.reduce(
+        (max, h) => Math.max(max, h.sort_order ?? 0),
+        -1,
+      );
+
+      const tempId = crypto.randomUUID();
+      const today = new Date().toISOString().split("T")[0];
+      const now = new Date().toISOString();
+
+      const optimisticHabit: HabitWithEntries = {
+        id: tempId,
+        user_id: isGuestMode ? "guest" : "",
+        name: input.name,
+        description: input.description ?? null,
+        color: input.color ?? "#4B6CB7",
+        icon: input.icon ?? null,
+        start_date: input.start_date ?? today,
+        archived_at: input.archived_at ?? null,
+        sort_order: maxOrder + 1,
+        habit_type: input.habit_type ?? "boolean",
+        frequency_count: input.frequency_count ?? null,
+        frequency_days: input.frequency_days ?? null,
+        frequency_period: input.frequency_period ?? null,
+        target_type: input.target_type ?? null,
+        target_value: input.target_value ?? null,
+        unit: input.unit ?? null,
+        question: input.question ?? null,
+        reminder_time: input.reminder_time ?? null,
+        reminder_days: input.reminder_days ?? REMINDER_EVERY_DAY,
+        source_uuid: input.source_uuid ?? null,
+        created_at: now,
+        updated_at: now,
+        entries: [],
+      };
+
+      snapshot.forEach(([key, data]) => {
+        const params = key[1] as { includeArchived: boolean } | undefined;
+        const includeArchived = params?.includeArchived ?? true;
+        if (!includeArchived && optimisticHabit.archived_at) return;
+        queryClient.setQueryData<HabitWithEntries[]>(key, [
+          ...(data ?? []),
+          optimisticHabit,
+        ]);
+      });
+
+      return { snapshot, tempId };
     },
-    onError: (err) => {
+    onError: (err, _input, context) => {
+      rollBack(queryClient, context?.snapshot);
       handleMutationError(err);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["habits"] });
     },
   });
 }
@@ -31,11 +90,28 @@ export function useUpdateHabit() {
   return useMutation({
     mutationKey: ["updateHabit"],
     mutationFn: habitMutations.update,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["habits"] });
+    onMutate: async (input: UpdateHabitInput) => {
+      await queryClient.cancelQueries({ queryKey: ["habits"] });
+
+      const snapshot = queryClient.getQueriesData<HabitWithEntries[]>({
+        queryKey: ["habits"],
+      });
+
+      const { id, ...updates } = input;
+      snapshot.forEach(([key]) => {
+        queryClient.setQueryData<HabitWithEntries[]>(key, (old) =>
+          old?.map((h) => (h.id === id ? { ...h, ...updates } : h)),
+        );
+      });
+
+      return { snapshot };
     },
-    onError: (err) => {
+    onError: (err, _input, context) => {
+      rollBack(queryClient, context?.snapshot);
       handleMutationError(err);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["habits"] });
     },
   });
 }

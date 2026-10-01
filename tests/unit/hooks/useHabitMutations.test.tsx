@@ -10,7 +10,6 @@ import {
   useMarkHabitComplete,
 } from "@/lib/hooks/useHabitMutations";
 
-// Mock dependencies
 vi.mock("@/lib/supabase/client", () => ({
   createClient: vi.fn(),
 }));
@@ -52,7 +51,6 @@ describe("useHabitMutations", () => {
   describe("useCreateHabit", () => {
     describe("TC-N-01: Create habit with valid data", () => {
       it("should create habit and invalidate queries", async () => {
-        // Given: Authenticated user creating a habit
         const mockUser = { id: "user-1" };
         const newHabit = {
           id: "habit-1",
@@ -103,7 +101,6 @@ describe("useHabitMutations", () => {
 
         const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-        // When: Mutation is called
         const { result } = renderHook(() => useCreateHabit(), { wrapper });
 
         await act(async () => {
@@ -114,7 +111,6 @@ describe("useHabitMutations", () => {
           });
         });
 
-        // Then: Habit is created and queries invalidated
         expect(mockInsert).toHaveBeenCalledWith({
           user_id: "user-1",
           name: "Morning Workout",
@@ -142,13 +138,11 @@ describe("useHabitMutations", () => {
 
     describe("TC-N-05: Guest mode - create habit", () => {
       it("should create habit successfully in guest mode", async () => {
-        // Given: User in guest mode
         mockUseAuth.mockReturnValue({ isGuestMode: true } as any);
         localStorage.setItem("kanso_guest_mode", "true");
 
         const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-        // When: Mutation is called
         const { result } = renderHook(() => useCreateHabit(), { wrapper });
 
         let createdHabit: any;
@@ -159,11 +153,126 @@ describe("useHabitMutations", () => {
           });
         });
 
-        // Then: Habit is created via mockStore and queries invalidated
         expect(createdHabit).toBeDefined();
         expect(createdHabit.name).toBe("Guest Habit");
         expect(createdHabit.id).toContain("guest-habit");
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["habits"] });
+      });
+    });
+
+    describe("TC-OPT-01: useCreateHabit optimistic cache update", () => {
+      const mockSupabaseInsert = (opts: {
+        data?: unknown;
+        error?: unknown;
+        delayMs?: number;
+      }) => {
+        const run = () =>
+          opts.delayMs
+            ? new Promise((r) =>
+                setTimeout(
+                  () => r({ data: opts.data, error: opts.error ?? null }),
+                  opts.delayMs,
+                ),
+              )
+            : Promise.resolve({ data: opts.data, error: opts.error ?? null });
+
+        mockCreateClient.mockReturnValue({
+          auth: {
+            getSession: () =>
+              Promise.resolve({
+                data: { session: { user: { id: "user-1" } } },
+              }),
+            getUser: () =>
+              Promise.resolve({
+                data: { user: { id: "user-1" } },
+                error: null,
+              }),
+          },
+          from: () => ({
+            select: () => ({
+              eq: () => ({
+                order: () => ({ limit: () => ({ maybeSingle: () => run() }) }),
+              }),
+            }),
+            insert: () => ({ select: () => ({ single: () => run() }) }),
+          }),
+        } as any);
+      };
+
+      it("adds the new habit to the cache immediately before mutationFn resolves", async () => {
+        mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
+        queryClient.setQueryData(
+          ["habits", { includeArchived: false, isGuestMode: false }],
+          [
+            {
+              id: "habit-existing",
+              name: "Existing",
+              entries: [],
+              sort_order: 0,
+            },
+          ],
+        );
+
+        mockSupabaseInsert({
+          data: {
+            id: "habit-server",
+            name: "New Habit",
+            entries: [],
+            sort_order: 1,
+            archived_at: null,
+          },
+          delayMs: 50,
+        });
+
+        const { result } = renderHook(() => useCreateHabit(), { wrapper });
+        let mutatePromise: Promise<any>;
+        act(() => {
+          mutatePromise = result.current.mutateAsync({ name: "New Habit" });
+        });
+
+        await waitFor(() => {
+          const cached: any = queryClient.getQueryData([
+            "habits",
+            { includeArchived: false, isGuestMode: false },
+          ]);
+          expect(cached).toHaveLength(2);
+          expect(cached.some((h: any) => h.name === "New Habit")).toBe(true);
+        });
+
+        await act(() => mutatePromise!);
+      });
+
+      it("rolls back the cache if create fails", async () => {
+        mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
+        queryClient.setQueryData(
+          ["habits", { includeArchived: false, isGuestMode: false }],
+          [
+            {
+              id: "habit-existing",
+              name: "Existing",
+              entries: [],
+              sort_order: 0,
+            },
+          ],
+        );
+
+        mockSupabaseInsert({ error: { message: "DB error" } });
+
+        const { result } = renderHook(() => useCreateHabit(), { wrapper });
+        await act(async () => {
+          try {
+            await result.current.mutateAsync({ name: "Doomed Habit" });
+          } catch (_) {}
+        });
+
+        await waitFor(() => {
+          const cached: any = queryClient.getQueryData([
+            "habits",
+            { includeArchived: false, isGuestMode: false },
+          ]);
+          expect(cached).toHaveLength(1);
+          expect(cached[0].id).toBe("habit-existing");
+        });
       });
     });
   });
@@ -171,7 +280,6 @@ describe("useHabitMutations", () => {
   describe("useUpdateHabit", () => {
     describe("TC-N-02: Update habit metadata", () => {
       it("should update habit successfully", async () => {
-        // Given: Authenticated user updating a habit
         const updatedHabit = {
           id: "habit-1",
           name: "Updated Name",
@@ -195,7 +303,6 @@ describe("useHabitMutations", () => {
           })),
         } as any);
 
-        // When: Mutation is called
         const { result } = renderHook(() => useUpdateHabit(), { wrapper });
 
         await act(async () => {
@@ -206,10 +313,104 @@ describe("useHabitMutations", () => {
           });
         });
 
-        // Then: Update is performed
         expect(mockUpdate).toHaveBeenCalledWith({
           name: "Updated Name",
           description: "Updated description",
+        });
+      });
+    });
+
+    describe("TC-OPT-02: useUpdateHabit optimistic cache update", () => {
+      const mockSupabaseUpdate = (opts: {
+        data?: unknown;
+        error?: unknown;
+        delayMs?: number;
+      }) => {
+        const run = () =>
+          opts.delayMs
+            ? new Promise((r) =>
+                setTimeout(
+                  () => r({ data: opts.data, error: opts.error ?? null }),
+                  opts.delayMs,
+                ),
+              )
+            : Promise.resolve({ data: opts.data, error: opts.error ?? null });
+
+        mockCreateClient.mockReturnValue({
+          from: () => ({
+            update: () => ({
+              eq: () => ({ select: () => ({ single: () => run() }) }),
+            }),
+          }),
+        } as any);
+      };
+
+      it("updates the habit in the cache immediately before mutationFn resolves", async () => {
+        mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
+        queryClient.setQueryData(
+          ["habits", { includeArchived: false, isGuestMode: false }],
+          [
+            {
+              id: "habit-1",
+              name: "Old Name",
+              description: "Old desc",
+              entries: [],
+              sort_order: 0,
+            },
+          ],
+        );
+
+        mockSupabaseUpdate({
+          data: { id: "habit-1", name: "New Name", description: "New desc" },
+          delayMs: 50,
+        });
+
+        const { result } = renderHook(() => useUpdateHabit(), { wrapper });
+        let mutatePromise: Promise<any>;
+        act(() => {
+          mutatePromise = result.current.mutateAsync({
+            id: "habit-1",
+            name: "New Name",
+            description: "New desc",
+          });
+        });
+
+        await waitFor(() => {
+          const cached: any = queryClient.getQueryData([
+            "habits",
+            { includeArchived: false, isGuestMode: false },
+          ]);
+          expect(cached?.[0]?.name).toBe("New Name");
+        });
+
+        await act(() => mutatePromise!);
+      });
+
+      it("rolls back the cache when update fails", async () => {
+        mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
+        queryClient.setQueryData(
+          ["habits", { includeArchived: false, isGuestMode: false }],
+          [{ id: "habit-1", name: "Old Name", entries: [], sort_order: 0 }],
+        );
+
+        mockSupabaseUpdate({ error: { message: "fail" } });
+
+        const { result } = renderHook(() => useUpdateHabit(), { wrapper });
+        await act(async () => {
+          try {
+            await result.current.mutateAsync({
+              id: "habit-1",
+              name: "Doomed Name",
+            });
+          } catch (_) {}
+        });
+
+        await waitFor(() => {
+          const cached: any = queryClient.getQueryData([
+            "habits",
+            { includeArchived: false, isGuestMode: false },
+          ]);
+          expect(cached?.[0]?.name).toBe("Old Name");
         });
       });
     });
@@ -218,7 +419,6 @@ describe("useHabitMutations", () => {
   describe("useDeleteHabit", () => {
     describe("TC-N-03: Delete habit with optimistic update", () => {
       it("should remove from cache and delete from DB", async () => {
-        // Given: Habit exists in cache
         const existingHabits = [
           { id: "habit-1", name: "Habit 1", entries: [] },
           { id: "habit-2", name: "Habit 2", entries: [] },
@@ -240,14 +440,12 @@ describe("useHabitMutations", () => {
           })),
         } as any);
 
-        // When: Delete mutation is called
         const { result } = renderHook(() => useDeleteHabit(), { wrapper });
 
         await act(async () => {
           await result.current.mutateAsync("habit-1");
         });
 
-        // Then: Habit is removed from cache and DB
         const cacheData = queryClient.getQueryData([
           "habits",
           { includeArchived: false, isGuestMode: false },
@@ -259,7 +457,6 @@ describe("useHabitMutations", () => {
 
     describe("TC-E-02: Delete with rollback on error", () => {
       it("should revert cache on error", async () => {
-        // Given: Habit exists in cache, delete will fail
         const existingHabits = [
           { id: "habit-1", name: "Habit 1", entries: [] },
           { id: "habit-2", name: "Habit 2", entries: [] },
@@ -281,18 +478,14 @@ describe("useHabitMutations", () => {
           })),
         } as any);
 
-        // When: Delete mutation fails
         const { result } = renderHook(() => useDeleteHabit(), { wrapper });
 
         await act(async () => {
           try {
             await result.current.mutateAsync("habit-1");
-          } catch (e) {
-            // Expected to fail
-          }
+          } catch (e) {}
         });
 
-        // Then: Cache is reverted to original state
         await waitFor(() => {
           const cacheData = queryClient.getQueryData([
             "habits",
@@ -307,7 +500,6 @@ describe("useHabitMutations", () => {
   describe("useMarkHabitComplete", () => {
     describe("TC-N-04: Mark habit complete with optimistic update", () => {
       it("should upsert entry and update cache optimistically", async () => {
-        // Given: Habit with existing entries
         const existingHabits = [
           {
             id: "habit-1",
@@ -350,7 +542,6 @@ describe("useHabitMutations", () => {
           })),
         } as any);
 
-        // When: Mark complete mutation is called
         const { result } = renderHook(() => useMarkHabitComplete(), {
           wrapper,
         });
@@ -363,7 +554,6 @@ describe("useHabitMutations", () => {
           });
         });
 
-        // Then: Entry is added to cache
         const cacheData: any = queryClient.getQueryData([
           "habits",
           { includeArchived: false, isGuestMode: false },
@@ -374,7 +564,6 @@ describe("useHabitMutations", () => {
 
     describe("TC-E-03: Mark complete with rollback on error", () => {
       it("should revert cache on upsert error", async () => {
-        // Given: Habit exists, upsert will fail
         const existingHabits = [
           {
             id: "habit-1",
@@ -402,7 +591,6 @@ describe("useHabitMutations", () => {
           })),
         } as any);
 
-        // When: Mutation fails
         const { result } = renderHook(() => useMarkHabitComplete(), {
           wrapper,
         });
@@ -414,12 +602,9 @@ describe("useHabitMutations", () => {
               date: "2024-01-15",
               value: 1,
             });
-          } catch (e) {
-            // Expected
-          }
+          } catch (e) {}
         });
 
-        // Then: Cache is reverted
         await waitFor(() => {
           const cacheData = queryClient.getQueryData([
             "habits",
