@@ -48,7 +48,8 @@ BEGIN
       'habitsFinished', (
         SELECT count(*) FROM public.habit_entries e
         JOIN public.habits h ON h.id = e.habit_id
-        WHERE h.user_id = p_user_id AND e.date = local_date AND e.value > 0
+        WHERE h.user_id = p_user_id AND h.archived_at IS NULL
+          AND e.date = local_date AND e.value > 0
       ),
       'tasksTomorrow', (
         SELECT count(*) FROM public.tasks t

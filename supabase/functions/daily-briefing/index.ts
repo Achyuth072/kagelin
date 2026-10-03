@@ -2,9 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   composeBriefing,
-  type BriefingCounts,
-  type EveningCounts,
-  type NextUp,
+  type BriefingInput,
 } from "../_shared/compose-briefing.ts";
 import { toErrorMessage } from "../_shared/errors.ts";
 
@@ -37,83 +35,57 @@ serve(async (req: Request) => {
     if (eveningError) console.error("Evening Plan RPC error:", eveningError);
 
     const results = { morning_scheduled: 0, evening_scheduled: 0 };
+    const failures: unknown[] = [];
 
-    if (morningUsers && morningUsers.length > 0) {
-      for (const user of morningUsers) {
+    const schedule = async (
+      kind: "morning" | "evening",
+      users: Array<{ id: string }> | null,
+      settingKey: "morning_briefing" | "evening_plan",
+      queueType: "briefing" | "evening",
+    ) => {
+      for (const user of users ?? []) {
         const { data: profile } = await supabaseAdmin
           .from("profiles")
           .select("settings")
           .eq("id", user.id)
           .single();
 
-        const isEnabled =
-          profile?.settings?.notifications?.morning_briefing ?? true;
-        if (!isEnabled) continue;
+        if (!(profile?.settings?.notifications?.[settingKey] ?? true)) continue;
 
         const { data: facts, error: factsError } = await supabaseAdmin.rpc(
           "get_briefing_facts",
-          { p_user_id: user.id, p_kind: "morning" },
+          { p_user_id: user.id, p_kind: kind },
         );
         if (factsError) {
-          console.error("Briefing facts RPC error:", factsError);
+          failures.push(factsError);
           continue;
         }
         if (!facts) continue;
 
         const brief = composeBriefing({
-          kind: "morning",
-          counts: facts.counts as BriefingCounts,
-          nextUp: facts.nextUp as NextUp | null,
-        });
+          kind,
+          counts: facts.counts,
+          nextUp: facts.nextUp,
+        } as BriefingInput);
         if (!brief) continue;
 
         await supabaseAdmin.from("notification_queue").insert({
           user_id: user.id,
-          type: "briefing",
+          type: queueType,
           scheduled_at: new Date().toISOString(),
           payload: brief,
         });
-        results.morning_scheduled++;
+        results[`${kind}_scheduled`]++;
       }
-    }
+    };
 
-    if (eveningUsers && eveningUsers.length > 0) {
-      for (const user of eveningUsers) {
-        const { data: profile } = await supabaseAdmin
-          .from("profiles")
-          .select("settings")
-          .eq("id", user.id)
-          .single();
+    await schedule("morning", morningUsers, "morning_briefing", "briefing");
+    await schedule("evening", eveningUsers, "evening_plan", "evening");
 
-        const isEnabled =
-          profile?.settings?.notifications?.evening_plan ?? true;
-        if (!isEnabled) continue;
-
-        const { data: facts, error: factsError } = await supabaseAdmin.rpc(
-          "get_briefing_facts",
-          { p_user_id: user.id, p_kind: "evening" },
-        );
-        if (factsError) {
-          console.error("Briefing facts RPC error:", factsError);
-          continue;
-        }
-        if (!facts) continue;
-
-        const brief = composeBriefing({
-          kind: "evening",
-          counts: facts.counts as EveningCounts,
-          nextUp: facts.nextUp as NextUp | null,
-        });
-        if (!brief) continue;
-
-        await supabaseAdmin.from("notification_queue").insert({
-          user_id: user.id,
-          type: "evening",
-          scheduled_at: new Date().toISOString(),
-          payload: brief,
-        });
-        results.evening_scheduled++;
-      }
+    if (failures.length > 0) {
+      throw new Error(
+        `get_briefing_facts failed for ${failures.length} user(s): ${failures.map(toErrorMessage).join("; ")}`,
+      );
     }
 
     return new Response(JSON.stringify(results), {

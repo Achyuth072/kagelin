@@ -35,33 +35,34 @@ export interface BriefingPayload {
 const plural = (n: number, one: string, many: string) =>
   `${n} ${n === 1 ? one : many}`;
 
+const countOf = (n: number, one: string, many: string) =>
+  n > 0 && plural(n, one, many);
+
 const join = (parts: Array<string | false>) =>
   parts.filter((part): part is string => part !== false).join(", ");
 
 function composeBody(input: BriefingInput): string | null {
   if (input.kind === "morning") {
     const { counts } = input;
-    const parts = join([
-      counts.tasksToday > 0 && plural(counts.tasksToday, "task", "tasks"),
+    const summary = join([
+      countOf(counts.tasksToday, "task", "tasks"),
       counts.overdue > 0 && `${counts.overdue} overdue`,
       counts.dueToday > 0 && `${counts.dueToday} due today`,
-      counts.eventsToday > 0 && plural(counts.eventsToday, "event", "events"),
+      countOf(counts.eventsToday, "event", "events"),
       counts.habitsPending > 0 &&
         `${plural(counts.habitsPending, "habit", "habits")} pending`,
     ]);
-    return parts && `You have ${parts}.`;
+    return summary && `You have ${summary}.`;
   }
 
   const { counts } = input;
   const finished = join([
-    counts.tasksFinished > 0 && plural(counts.tasksFinished, "task", "tasks"),
-    counts.habitsFinished > 0 &&
-      plural(counts.habitsFinished, "habit", "habits"),
+    countOf(counts.tasksFinished, "task", "tasks"),
+    countOf(counts.habitsFinished, "habit", "habits"),
   ]);
   const tomorrow = join([
-    counts.tasksTomorrow > 0 && plural(counts.tasksTomorrow, "task", "tasks"),
-    counts.eventsTomorrow > 0 &&
-      plural(counts.eventsTomorrow, "event", "events"),
+    countOf(counts.tasksTomorrow, "task", "tasks"),
+    countOf(counts.eventsTomorrow, "event", "events"),
   ]);
   const sentences = [
     finished && `Finished today: ${finished}.`,
