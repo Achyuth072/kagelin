@@ -3,6 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   composeBriefing,
   type BriefingCounts,
+  type EveningCounts,
+  type NextUp,
 } from "../_shared/compose-briefing.ts";
 import { toErrorMessage } from "../_shared/errors.ts";
 
@@ -48,17 +50,21 @@ serve(async (req: Request) => {
           profile?.settings?.notifications?.morning_briefing ?? true;
         if (!isEnabled) continue;
 
-        const { data: counts, error: countsError } = await supabaseAdmin.rpc(
-          "get_briefing_counts",
-          { p_user_id: user.id },
+        const { data: facts, error: factsError } = await supabaseAdmin.rpc(
+          "get_briefing_facts",
+          { p_user_id: user.id, p_kind: "morning" },
         );
-        if (countsError) {
-          console.error("Briefing counts RPC error:", countsError);
+        if (factsError) {
+          console.error("Briefing facts RPC error:", factsError);
           continue;
         }
-        if (!counts) continue;
+        if (!facts) continue;
 
-        const brief = composeBriefing(counts as BriefingCounts);
+        const brief = composeBriefing({
+          kind: "morning",
+          counts: facts.counts as BriefingCounts,
+          nextUp: facts.nextUp as NextUp | null,
+        });
         if (!brief) continue;
 
         await supabaseAdmin.from("notification_queue").insert({
@@ -83,27 +89,28 @@ serve(async (req: Request) => {
           profile?.settings?.notifications?.evening_plan ?? true;
         if (!isEnabled) continue;
 
-        const { count: eveningCount } = await supabaseAdmin
-          .from("tasks")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("is_completed", false)
-          .eq("is_evening", true);
+        const { data: facts, error: factsError } = await supabaseAdmin.rpc(
+          "get_briefing_facts",
+          { p_user_id: user.id, p_kind: "evening" },
+        );
+        if (factsError) {
+          console.error("Briefing facts RPC error:", factsError);
+          continue;
+        }
+        if (!facts) continue;
 
-        const taskCount = eveningCount || 0;
-        if (taskCount === 0) continue;
-
-        const body = `You have ${taskCount} tasks set for tonight. Ready to wrap up?`;
+        const brief = composeBriefing({
+          kind: "evening",
+          counts: facts.counts as EveningCounts,
+          nextUp: facts.nextUp as NextUp | null,
+        });
+        if (!brief) continue;
 
         await supabaseAdmin.from("notification_queue").insert({
           user_id: user.id,
           type: "evening",
           scheduled_at: new Date().toISOString(),
-          payload: {
-            title: "Evening Plan",
-            body: body,
-            data: { url: "/" },
-          },
+          payload: brief,
         });
         results.evening_scheduled++;
       }
