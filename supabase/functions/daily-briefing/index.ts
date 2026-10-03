@@ -1,5 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  composeBriefing,
+  type BriefingCounts,
+} from "../_shared/compose-briefing.ts";
 import { toErrorMessage } from "../_shared/errors.ts";
 
 const corsHeaders = {
@@ -19,7 +23,6 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    // Morning briefing runs at 8 AM, evening plan at 6 PM (scheduler-side).
     const { data: morningUsers, error: morningError } = await supabaseAdmin.rpc(
       "get_users_for_morning_briefing",
     );
@@ -45,30 +48,24 @@ serve(async (req: Request) => {
           profile?.settings?.notifications?.morning_briefing ?? true;
         if (!isEnabled) continue;
 
-        const { count } = await supabaseAdmin
-          .from("tasks")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("is_completed", false)
-          .filter("do_date", "gte", new Date().toISOString().split("T")[0]);
+        const { data: counts, error: countsError } = await supabaseAdmin.rpc(
+          "get_briefing_counts",
+          { p_user_id: user.id },
+        );
+        if (countsError) {
+          console.error("Briefing counts RPC error:", countsError);
+          continue;
+        }
+        if (!counts) continue;
 
-        const taskCount = count || 0;
-        if (taskCount === 0) continue;
-
-        const body =
-          taskCount > 1
-            ? `You have ${taskCount} tasks for today.`
-            : `Ready for today? You have 1 task.`;
+        const brief = composeBriefing(counts as BriefingCounts);
+        if (!brief) continue;
 
         await supabaseAdmin.from("notification_queue").insert({
           user_id: user.id,
           type: "briefing",
           scheduled_at: new Date().toISOString(),
-          payload: {
-            title: "Morning Briefing",
-            body: body,
-            data: { url: "/" },
-          },
+          payload: brief,
         });
         results.morning_scheduled++;
       }

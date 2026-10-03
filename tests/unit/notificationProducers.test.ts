@@ -12,7 +12,7 @@ const schemaSql = read("supabase/schema.sql");
 const dailyBriefing = read("supabase/functions/daily-briefing/index.ts");
 
 function functionBody(sql: string, name: string): string {
-  const start = sql.indexOf(`CREATE OR REPLACE FUNCTION ${name}()`);
+  const start = sql.indexOf(`CREATE OR REPLACE FUNCTION ${name}(`);
   expect(start, `${name} not found in schema.sql`).toBeGreaterThan(-1);
   const end = sql.indexOf("\n$$;", start);
   expect(end, `${name} has no terminator in schema.sql`).toBeGreaterThan(start);
@@ -93,41 +93,83 @@ describe("enqueue_due_habit_reminders", () => {
     expect(body).toMatch(/h\.habit_type/);
   });
 
-  it("stays quiet once the window holds N Done days in the last D days", () => {
-    expect(body).toMatch(/e\.date BETWEEN t\.remind_ts::date - \(/);
-    expect(body).toMatch(/\)\s*<\s*COALESCE\(h\.frequency_count, 1\)/);
-  });
-
-  it("falls back to the period's day count when frequency_days is unset", () => {
-    expect(body).toMatch(
-      /COALESCE\(\s*h\.frequency_days,\s*CASE h\.frequency_period WHEN 'week' THEN 7 WHEN 'month' THEN 30 ELSE 1 END\s*\)/,
-    );
-  });
-
-  it("counts a Boolean Done as value = 1 and never counts Skipped (negative) values", () => {
-    expect(body).toContain("e.value >= 0");
-    expect(body).toContain("ELSE e.value = 1");
-  });
-
-  it("judges a Measurable Done against the target in either direction", () => {
-    expect(body).toContain("WHEN 'at_least' THEN e.value >= h.target_value");
-    expect(body).toContain("WHEN 'at_most' THEN e.value <= h.target_value");
-  });
-
-  it("judges a Measurable Done like dayValue when the target is unset or not positive", () => {
+  it("defers the window check to the shared helper", () => {
     expect(body).toContain(
-      "WHEN h.habit_type = 'measurable' AND h.target_value > 0 THEN",
+      "public.habit_window_unsatisfied(h, t.remind_ts::date)",
     );
-    expect(body).toMatch(/h\.target_type = 'at_most' THEN e\.value <= 0/);
-    expect(body).toContain(
-      "WHEN h.habit_type = 'measurable' THEN e.value >= 1",
-    );
-    expect(body).not.toContain("e.value > 0");
   });
 
   it("tolerates an unrecognised profile timezone instead of aborting the batch", () => {
     expect(body).not.toMatch(/AT TIME ZONE\s+p\.timezone/);
     expect(body).toContain("public.at_timezone_or_null(now(), p.timezone)");
+  });
+});
+
+describe("habit_window_unsatisfied", () => {
+  const windowBody = functionBody(schemaSql, "public.habit_window_unsatisfied");
+
+  it("stays quiet once the window holds N Done days in the last D days", () => {
+    expect(windowBody).toMatch(/e\.date BETWEEN p_date - \(/);
+    expect(windowBody).toMatch(
+      /\)\s*<\s*COALESCE\(p_habit\.frequency_count, 1\)/,
+    );
+  });
+
+  it("falls back to the period's day count when frequency_days is unset", () => {
+    expect(windowBody).toMatch(
+      /COALESCE\(\s*p_habit\.frequency_days,\s*CASE p_habit\.frequency_period WHEN 'week' THEN 7 WHEN 'month' THEN 30 ELSE 1 END\s*\)/,
+    );
+  });
+
+  it("counts a Boolean Done as value = 1 and never counts Skipped (negative) values", () => {
+    expect(windowBody).toContain("e.value >= 0");
+    expect(windowBody).toContain("ELSE e.value = 1");
+  });
+
+  it("judges a Measurable Done against the target in either direction", () => {
+    expect(windowBody).toContain(
+      "WHEN 'at_least' THEN e.value >= p_habit.target_value",
+    );
+    expect(windowBody).toContain(
+      "WHEN 'at_most' THEN e.value <= p_habit.target_value",
+    );
+  });
+
+  it("judges a Measurable Done like dayValue when the target is unset or not positive", () => {
+    expect(windowBody).toContain(
+      "WHEN p_habit.habit_type = 'measurable' AND p_habit.target_value > 0 THEN",
+    );
+    expect(windowBody).toMatch(
+      /p_habit\.target_type = 'at_most' THEN e\.value <= 0/,
+    );
+    expect(windowBody).toContain(
+      "WHEN p_habit.habit_type = 'measurable' THEN e.value >= 1",
+    );
+    expect(windowBody).not.toContain("e.value > 0");
+  });
+});
+
+describe("get_briefing_counts", () => {
+  const body = functionBody(schemaSql, "public.get_briefing_counts");
+
+  it("bounds today's tasks to the local day instead of 'today or later'", () => {
+    expect(body).toContain("t.do_date >= day_start AND t.do_date < day_end");
+  });
+
+  it("counts a Task as overdue by its do date, else its due date, like Home", () => {
+    expect(body).toContain("COALESCE(t.do_date, t.due_date) < day_start");
+  });
+
+  it("derives the day from the profile timezone without aborting on a bad zone", () => {
+    expect(body).toContain("public.at_timezone_or_null(now(), tz)");
+  });
+
+  it("counts pending habits with the same helper Habit reminders use", () => {
+    expect(body).toContain("public.habit_window_unsatisfied(h, local_date)");
+  });
+
+  it("selects no readable item text", () => {
+    expect(body).not.toMatch(/\b(content|title|name)\b/);
   });
 });
 
