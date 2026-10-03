@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.45.1-preview.1",
+    "date": "2026-10-03",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add optimistic updates and snapshot rollbacks for tasks",
+        "Add optimistic updates for calendar events and habits"
+      ],
+      "Fixed": [
+        "Keep inputs above the mobile keyboard in drawers",
+        "Remove redundant date picker from habit view footer"
+      ]
+    }
+  },
+  {
     "version": "1.45.1-preview.0",
     "date": "2026-09-30",
     "channel": "preview",
@@ -679,23 +694,6 @@
       "Fixed": [
         "Fixed the focus timer occasionally restarting a stale session from before you closed the app",
         "Fixed notification cleanup for tasks and the focus timer sometimes touching reminders that had already been sent"
-      ]
-    }
-  },
-  {
-    "version": "1.31.1-preview.0",
-    "date": "2026-08-18",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Extract shared PasswordField component (#152)"
-      ],
-      "Fixed": [
-        "Document why middleware's public-route list stays separate from AUTH_STANDALONE_ROUTES (#150)",
-        "Update docs",
-        "Don't blindly re-push a stale local timer session on app reopen (#129)",
-        "Scope task notification cleanup to future rows (#155)",
-        "Scope timer notification cleanup to future rows (#139)"
       ]
     }
   }
