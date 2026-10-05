@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.45.1-preview.2",
+    "date": "2026-10-05",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Evening plan reports finished and tomorrow, briefings carry encrypted next-up name",
+        "Morning brief counts today's tasks, overdue by do or due date, due, events and pending habits"
+      ],
+      "Fixed": [
+        "Let drawers lift above the keyboard instead of shrinking under it",
+        "Surface briefing facts failures, dedupe scheduler loops, skip archived habits"
+      ]
+    }
+  },
+  {
     "version": "1.45.1-preview.1",
     "date": "2026-10-03",
     "channel": "preview",
@@ -680,20 +695,6 @@
     "sections": {
       "Fixed": [
         "Resolve iOS PWA standalone bottom black bar and compact nav bar"
-      ]
-    }
-  },
-  {
-    "version": "1.31.1",
-    "date": "2026-08-18",
-    "channel": "stable",
-    "sections": {
-      "Improved": [
-        "Made password fields more consistent across sign-up, sign-in, and password reset"
-      ],
-      "Fixed": [
-        "Fixed the focus timer occasionally restarting a stale session from before you closed the app",
-        "Fixed notification cleanup for tasks and the focus timer sometimes touching reminders that had already been sent"
       ]
     }
   }
