@@ -12,7 +12,10 @@ test.describe("Focus Settings (Guest Mode)", () => {
   });
 
   test("should persist focus duration changes", async ({ page }) => {
-    await page.getByRole("button", { name: /adjust settings/i }).click();
+    // force: true — the telemetry consent prompt overlaps this button at 720px.
+    await page
+      .getByRole("button", { name: /adjust settings/i })
+      .click({ force: true });
 
     const durationInput = page.getByRole("spinbutton", {
       name: "Focus Duration",
