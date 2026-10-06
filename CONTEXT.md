@@ -619,7 +619,8 @@ An action on a task reminder or **Event reminder** that re-sends that same remin
 after a fixed interval. It postpones the reminder only — the task's due and do dates
 and the event's start are untouched, and it can be snoozed again. A snoozed
 reminder is dropped if its task is done or deleted, or its event is deleted or has
-started. Like other actions, it is offered only where the platform supports it and
+started (an all-day event: when its day ends), or if the item's dates or name
+change. Like other actions, it is offered only where the platform supports it and
 the account is not **Locked**. _Avoid_: "reschedule" — that changes the item's own
 dates.
 

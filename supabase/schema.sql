@@ -669,6 +669,16 @@ AS $$
 DECLARE
   user_settings JSONB;
 BEGIN
+  -- Reorders and sync touches change nothing a reminder shows; leave pending ones, snoozes included.
+  IF TG_OP = 'UPDATE'
+     AND OLD.is_completed IS NOT DISTINCT FROM NEW.is_completed
+     AND OLD.due_date IS NOT DISTINCT FROM NEW.due_date
+     AND OLD.do_date IS NOT DISTINCT FROM NEW.do_date
+     AND OLD.content IS NOT DISTINCT FROM NEW.content
+     AND OLD.recurrence IS NOT DISTINCT FROM NEW.recurrence THEN
+    RETURN NEW;
+  END IF;
+
   -- Cancel only task-owned due/do notifications; leave timer_end rows and past-due rows (#155) untouched.
   IF TG_OP IN ('UPDATE', 'DELETE') THEN
     UPDATE public.notification_queue
@@ -1155,6 +1165,18 @@ DECLARE
   remind_at TIMESTAMPTZ;
   lead_template TEXT;
 BEGIN
+  -- Reorders and sync touches change nothing a reminder shows; leave pending ones, snoozes included.
+  IF TG_OP = 'UPDATE'
+     AND OLD.start_time IS NOT DISTINCT FROM NEW.start_time
+     AND OLD.reminder_minutes IS NOT DISTINCT FROM NEW.reminder_minutes
+     AND OLD.is_archived IS NOT DISTINCT FROM NEW.is_archived
+     AND OLD.sync_state IS NOT DISTINCT FROM NEW.sync_state
+     AND OLD.all_day IS NOT DISTINCT FROM NEW.all_day
+     AND OLD.recurrence_rule IS NOT DISTINCT FROM NEW.recurrence_rule
+     AND OLD.title IS NOT DISTINCT FROM NEW.title THEN
+    RETURN NEW;
+  END IF;
+
   IF TG_OP IN ('UPDATE', 'DELETE') THEN
     UPDATE public.notification_queue
     SET status = 'cancelled'
@@ -1239,6 +1261,9 @@ AS $$
 DECLARE
   snooze_until TIMESTAMPTZ := now() + interval '10 minutes';
   sent_row public.notification_queue;
+  tz TEXT;
+  snooze_day DATE;
+  reminded_day DATE;
 BEGIN
   IF p_type NOT IN ('due_date', 'do_date', 'event_reminder') THEN
     RETURN 'not_found';
@@ -1258,13 +1283,22 @@ BEGIN
   END IF;
 
   IF p_type = 'event_reminder' THEN
+    -- An all-day event has begun by its 9:00 reminder, so it lasts to the end of
+    -- that local day instead. An unknown timezone leaves no day to compare.
+    SELECT timezone INTO tz FROM public.profiles WHERE id = auth.uid();
+    snooze_day := public.at_timezone_or_null(snooze_until, tz)::date;
+    reminded_day := public.at_timezone_or_null(sent_row.scheduled_at, tz)::date;
+
     IF NOT EXISTS (
       SELECT 1 FROM public.calendar_events e
       WHERE e.id = p_reference_id
         AND e.user_id = auth.uid()
         AND NOT COALESCE(e.is_archived, false)
         AND e.sync_state IS DISTINCT FROM 'pending_delete'
-        AND (e.all_day OR e.start_time > snooze_until)
+        AND CASE WHEN e.all_day
+              THEN COALESCE(snooze_day = reminded_day, false)
+              ELSE e.start_time > snooze_until
+            END
     ) THEN
       RETURN 'dropped';
     END IF;

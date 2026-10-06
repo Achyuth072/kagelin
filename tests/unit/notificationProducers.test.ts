@@ -131,18 +131,25 @@ describe("event reminder migration", () => {
   });
 });
 
-describe("task and event notification actions migration", () => {
-  const migration = read(
+describe("task and event notification actions migrations", () => {
+  const first = read(
     "supabase/migrations/20261006130000_task_event_notification_actions.sql",
   );
+  const second = read(
+    "supabase/migrations/20261006140000_reminder_triggers_skip_unrelated_updates.sql",
+  );
+
+  it("matches the schema's complete_task_from_notification", () => {
+    const name = "public.complete_task_from_notification";
+    expect(functionBody(first, name)).toBe(functionBody(schemaSql, name));
+  });
 
   it.each([
     "handle_task_notification_sync",
     "public.handle_event_notification_sync",
     "public.snooze_reminder",
-    "public.complete_task_from_notification",
   ])("matches the schema's %s", (name) => {
-    expect(functionBody(migration, name)).toBe(functionBody(schemaSql, name));
+    expect(functionBody(second, name)).toBe(functionBody(schemaSql, name));
   });
 });
 
@@ -366,7 +373,15 @@ describe("snooze_reminder", () => {
   it("drops the snooze for a deleted event, or a timed event that has started", () => {
     expect(body).toContain("e.is_archived");
     expect(body).toContain("pending_delete");
-    expect(body).toMatch(/e\.all_day OR e\.start_time > snooze_until/);
+    expect(body).toContain("e.start_time > snooze_until");
+  });
+
+  it("drops an all-day event's snooze once it would land past that local day", () => {
+    expect(body).toContain("WHEN e.all_day");
+    expect(body).toContain("public.at_timezone_or_null(snooze_until, tz)");
+    expect(body).toContain(
+      "public.at_timezone_or_null(sent_row.scheduled_at, tz)",
+    );
   });
 
   it("is callable by signed-in users only", () => {
@@ -407,4 +422,42 @@ describe("complete_task_from_notification", () => {
       "GRANT EXECUTE ON FUNCTION public.complete_task_from_notification(UUID) TO authenticated;",
     );
   });
+});
+
+describe("reminder triggers ignore updates that change nothing a reminder shows", () => {
+  it.each([
+    [
+      "handle_task_notification_sync",
+      ["is_completed", "due_date", "do_date", "content", "recurrence"],
+    ],
+    [
+      "public.handle_event_notification_sync",
+      [
+        "start_time",
+        "reminder_minutes",
+        "is_archived",
+        "sync_state",
+        "all_day",
+        "recurrence_rule",
+        "title",
+      ],
+    ],
+  ])(
+    "%s returns early when only unrelated columns changed",
+    (name, columns) => {
+      const body = functionBody(schemaSql, name);
+      const guard = body.slice(0, body.indexOf("RETURN NEW;"));
+
+      expect(guard).toContain("TG_OP = 'UPDATE'");
+      for (const column of columns) {
+        expect(guard).toContain(
+          `OLD.${column} IS NOT DISTINCT FROM NEW.${column}`,
+        );
+      }
+      // The early return must come before any queue cancellation.
+      expect(body.indexOf("RETURN NEW;")).toBeLessThan(
+        body.indexOf("status = 'cancelled'"),
+      );
+    },
+  );
 });
