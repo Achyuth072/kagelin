@@ -1,6 +1,7 @@
 import { keyStore } from "@/lib/crypto/keyStore";
 import { decryptField } from "@/lib/crypto/contentCipher";
 import type { HabitType } from "@/lib/types/habit";
+import type { ReminderType } from "@/lib/types/notification";
 
 export interface EncryptedNotificationBody {
   template: string;
@@ -19,8 +20,6 @@ export interface NotificationDisplayOptions extends NotificationOptions {
   reminderType?: ReminderType;
   recurring?: boolean;
 }
-
-export type ReminderType = "due_date" | "do_date" | "event_reminder";
 
 export const DEFAULT_NOTIFICATION_OPTIONS: NotificationDisplayOptions = {
   icon: "/icons/icon-192.png",

@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api/require-user";
+import { REMINDER_TYPES } from "@/lib/types/notification";
 
 const schema = z.object({
-  type: z.enum(["due_date", "do_date", "event_reminder"]),
+  type: z.enum(REMINDER_TYPES),
   referenceId: z.string().uuid(),
 });
 

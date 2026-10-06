@@ -2,9 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   handleNotificationClick,
   type NotificationClickDeps,
-  type HabitNotificationData,
+  type NotificationData,
+  TASKS_UPDATED,
 } from "@/lib/sw/notificationClickHandler";
-import { HABIT_ENTRY_UPDATED, TASKS_UPDATED } from "@/lib/habit-links";
+import { HABIT_ENTRY_UPDATED } from "@/lib/habit-links";
 
 function makeDeps(
   overrides?: Partial<NotificationClickDeps>,
@@ -35,7 +36,7 @@ function makeDeps(
   };
 }
 
-const habitData: HabitNotificationData = {
+const habitData: NotificationData = {
   habitId: "habit-uuid-123",
   date: "2026-09-26",
   habitKind: "boolean",
@@ -257,12 +258,12 @@ describe("handleNotificationClick — body tap", () => {
 });
 
 describe("handleNotificationClick — task and event actions", () => {
-  const taskData: HabitNotificationData = {
+  const taskData: NotificationData = {
     taskId: "task-uuid-1",
     reminderType: "due_date",
     url: "/",
   };
-  const eventData: HabitNotificationData = {
+  const eventData: NotificationData = {
     eventId: "event-uuid-1",
     reminderType: "event_reminder",
     url: "/calendar",

@@ -11,7 +11,8 @@ import { projectMutations } from "@/lib/mutations/project";
 import { focusMutations } from "@/lib/mutations/focus";
 import { asyncStoragePersister } from "@/lib/query-cache-purge";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
-import { HABIT_ENTRY_UPDATED, TASKS_UPDATED } from "@/lib/habit-links";
+import { HABIT_ENTRY_UPDATED } from "@/lib/habit-links";
+import { TASKS_UPDATED } from "@/lib/sw/notificationClickHandler";
 
 export default function QueryProvider({
   children,

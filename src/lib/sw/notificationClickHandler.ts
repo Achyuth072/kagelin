@@ -1,15 +1,11 @@
-import type {
-  NotificationDisplayOptions,
-  ReminderType,
-} from "@/lib/notifications";
+import type { NotificationDisplayOptions } from "@/lib/notifications";
 import type { HabitType } from "@/lib/types/habit";
-import {
-  HABIT_ENTRY_UPDATED,
-  TASKS_UPDATED,
-  habitPath,
-} from "@/lib/habit-links";
+import type { ReminderType } from "@/lib/types/notification";
+import { HABIT_ENTRY_UPDATED, habitPath } from "@/lib/habit-links";
 
-export interface HabitNotificationData {
+export const TASKS_UPDATED = "TASKS_UPDATED";
+
+export interface NotificationData {
   habitId?: string;
   date?: string;
   habitKind?: HabitType;
@@ -34,7 +30,7 @@ export interface NotificationClickDeps {
 
 export async function handleNotificationClick(
   action: string,
-  data: HabitNotificationData | undefined,
+  data: NotificationData | undefined,
   notificationTag: string | undefined,
   deps: NotificationClickDeps,
 ): Promise<void> {
@@ -76,7 +72,7 @@ export async function handleNotificationClick(
     return;
   }
 
-  const url = habitUrl(data);
+  const url = notificationUrl(data);
   for (const client of await matchWindows(deps)) {
     if (!("focus" in client)) continue;
     const { pathname, search } = new URL(client.url);
@@ -104,7 +100,7 @@ async function postAction(
   path: string,
   body: Record<string, string>,
   outcome: { message?: string; failedItem: string },
-  data: HabitNotificationData,
+  data: NotificationData,
   notificationTag: string | undefined,
   deps: NotificationClickDeps,
 ): Promise<void> {
@@ -123,7 +119,7 @@ async function postAction(
     await deps.displayNotification(deps.registration, "Action not saved", {
       tag: notificationTag,
       body: `Could not save your response. Tap to open the ${outcome.failedItem}.`,
-      data: { url: habitUrl(data) },
+      data: { url: notificationUrl(data) },
     });
     return;
   }
@@ -134,7 +130,7 @@ async function postAction(
   }
 }
 
-function habitUrl(data: HabitNotificationData | undefined): string {
+function notificationUrl(data: NotificationData | undefined): string {
   if (data?.habitId) return habitPath(data.habitId);
   return data?.url || "/";
 }
