@@ -129,11 +129,20 @@ describe("event reminder migration", () => {
     );
     expect(schemaSql).toMatch(/reminder_minutes INTEGER/);
   });
+});
 
-  it("matches the schema's trigger function", () => {
-    expect(
-      functionBody(migration, "public.handle_event_notification_sync"),
-    ).toBe(functionBody(schemaSql, "public.handle_event_notification_sync"));
+describe("task and event notification actions migration", () => {
+  const migration = read(
+    "supabase/migrations/20261006130000_task_event_notification_actions.sql",
+  );
+
+  it.each([
+    "handle_task_notification_sync",
+    "public.handle_event_notification_sync",
+    "public.snooze_reminder",
+    "public.complete_task_from_notification",
+  ])("matches the schema's %s", (name) => {
+    expect(functionBody(migration, name)).toBe(functionBody(schemaSql, name));
   });
 });
 
@@ -305,5 +314,97 @@ describe("daily-briefing", () => {
   it("counts tasks without selecting their content", () => {
     expect(dailyBriefing).not.toMatch(/\.select\(\s*"[^"]*content/);
     expect(dailyBriefing).not.toContain("tasks[0].content");
+  });
+});
+
+describe("notification action payloads", () => {
+  it("tags task reminders with their queue type and whether the task recurs", () => {
+    const body = functionBody(schemaSql, "handle_task_notification_sync");
+
+    expect(body).toContain("'reminderType', 'due_date'");
+    expect(body).toContain("'reminderType', 'do_date'");
+    expect(
+      body.match(
+        /'recurring', COALESCE\(jsonb_typeof\(NEW\.recurrence\), 'null'\) <> 'null'/g,
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("tags event reminders with their queue type", () => {
+    const body = functionBody(
+      schemaSql,
+      "public.handle_event_notification_sync",
+    );
+
+    expect(body).toContain("'reminderType', 'event_reminder'");
+  });
+});
+
+describe("snooze_reminder", () => {
+  const body = functionBody(schemaSql, "public.snooze_reminder");
+
+  it("runs as definer but only ever touches the caller's own rows", () => {
+    expect(body).toContain("SECURITY DEFINER");
+    expect(body).toContain("user_id = auth.uid()");
+    expect(body).not.toMatch(/p_user_id/);
+  });
+
+  it("re-queues the sent reminder's own payload ten minutes out", () => {
+    expect(body).toContain("interval '10 minutes'");
+    expect(body).toContain("status = 'sent'");
+    expect(body).toMatch(/payload/);
+  });
+
+  it("does not queue a second snooze while one is already pending", () => {
+    expect(body).toMatch(/IF EXISTS \([^;]*status = 'pending'/);
+  });
+
+  it("drops the snooze for a completed task", () => {
+    expect(body).toContain("NOT t.is_completed");
+  });
+
+  it("drops the snooze for a deleted event, or a timed event that has started", () => {
+    expect(body).toContain("e.is_archived");
+    expect(body).toContain("pending_delete");
+    expect(body).toMatch(/e\.all_day OR e\.start_time > snooze_until/);
+  });
+
+  it("is callable by signed-in users only", () => {
+    expect(schemaSql).toContain(
+      "REVOKE EXECUTE ON FUNCTION public.snooze_reminder(TEXT, UUID) FROM PUBLIC, anon;",
+    );
+    expect(schemaSql).toContain(
+      "GRANT EXECUTE ON FUNCTION public.snooze_reminder(TEXT, UUID) TO authenticated;",
+    );
+  });
+});
+
+describe("complete_task_from_notification", () => {
+  const body = functionBody(
+    schemaSql,
+    "public.complete_task_from_notification",
+  );
+
+  it("runs as the caller so row security scopes it to their own tasks", () => {
+    expect(body).not.toContain("SECURITY DEFINER");
+  });
+
+  it("refuses a recurring task, whose next Occurrence only the app creates", () => {
+    expect(body).toContain("RETURN 'recurring'");
+    expect(body).toContain("recurrence");
+  });
+
+  it("stamps completion and leaves an already completed task alone", () => {
+    expect(body).toContain("RETURN 'already_completed'");
+    expect(body).toMatch(/is_completed = true,\s*completed_at = now\(\)/);
+  });
+
+  it("is callable by signed-in users only", () => {
+    expect(schemaSql).toContain(
+      "REVOKE EXECUTE ON FUNCTION public.complete_task_from_notification(UUID) FROM PUBLIC, anon;",
+    );
+    expect(schemaSql).toContain(
+      "GRANT EXECUTE ON FUNCTION public.complete_task_from_notification(UUID) TO authenticated;",
+    );
   });
 });

@@ -613,6 +613,16 @@ Only an event the user gave a reminder has one; a remote provider's own alarms
 are not reminders. Distinct from **Habit reminder** (a time of day on a Habit)
 and from the daily **briefing**. _Avoid_: "event notification".
 
+### Snooze
+
+An action on a task reminder or **Event reminder** that re-sends that same reminder
+after a fixed interval. It postpones the reminder only — the task's due and do dates
+and the event's start are untouched, and it can be snoozed again. A snoozed
+reminder is dropped if its task is done or deleted, or its event is deleted or has
+started. Like other actions, it is offered only where the platform supports it and
+the account is not **Locked**. _Avoid_: "reschedule" — that changes the item's own
+dates.
+
 ### Briefing
 
 The one **Push notification** per Account that summarises a day, sent at a fixed

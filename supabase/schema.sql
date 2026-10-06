@@ -691,7 +691,7 @@ BEGIN
                 'body', 'You have a task due now.',
                 'encrypted', public.encrypted_notification_body(
                   'Your task "{}" is due now.', NEW.content),
-                'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
+                'data', jsonb_build_object('url', '/', 'taskId', NEW.id, 'reminderType', 'due_date', 'recurring', COALESCE(jsonb_typeof(NEW.recurrence), 'null') <> 'null')
               )),
               NEW.id)
       ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type IN ('due_date', 'do_date') DO NOTHING;
@@ -706,7 +706,7 @@ BEGIN
                 'body', 'You have a task scheduled now.',
                 'encrypted', public.encrypted_notification_body(
                   'Scheduled: {}', NEW.content),
-                'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
+                'data', jsonb_build_object('url', '/', 'taskId', NEW.id, 'reminderType', 'do_date', 'recurring', COALESCE(jsonb_typeof(NEW.recurrence), 'null') <> 'null')
               )),
               NEW.id)
       ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type IN ('due_date', 'do_date') DO NOTHING;
@@ -1207,7 +1207,7 @@ BEGIN
                   'title', 'Upcoming event',
                   'body', 'You have an event coming up.',
                   'encrypted', public.encrypted_notification_body(lead_template, NEW.title),
-                  'data', jsonb_build_object('url', '/calendar', 'eventId', NEW.id)
+                  'data', jsonb_build_object('url', '/calendar', 'eventId', NEW.id, 'reminderType', 'event_reminder')
                 )),
                 NEW.id)
         ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type = 'event_reminder' DO NOTHING;
@@ -1226,6 +1226,113 @@ DROP TRIGGER IF EXISTS sync_event_notifications ON public.calendar_events;
 CREATE TRIGGER sync_event_notifications
 AFTER INSERT OR UPDATE OR DELETE ON public.calendar_events
 FOR EACH ROW EXECUTE FUNCTION public.handle_event_notification_sync();
+
+-- Snooze: re-queue a sent task or event reminder 10 minutes out. The item's own
+-- dates are untouched; a task or event edit later cancels the snooze like any
+-- pending reminder (the sync triggers).
+CREATE OR REPLACE FUNCTION public.snooze_reminder(p_type TEXT, p_reference_id UUID)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  snooze_until TIMESTAMPTZ := now() + interval '10 minutes';
+  sent_row public.notification_queue;
+BEGIN
+  IF p_type NOT IN ('due_date', 'do_date', 'event_reminder') THEN
+    RETURN 'not_found';
+  END IF;
+
+  SELECT * INTO sent_row
+  FROM public.notification_queue
+  WHERE user_id = auth.uid()
+    AND type = p_type
+    AND reference_id = p_reference_id
+    AND status = 'sent'
+  ORDER BY scheduled_at DESC
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN 'not_found';
+  END IF;
+
+  IF p_type = 'event_reminder' THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.calendar_events e
+      WHERE e.id = p_reference_id
+        AND e.user_id = auth.uid()
+        AND NOT COALESCE(e.is_archived, false)
+        AND e.sync_state IS DISTINCT FROM 'pending_delete'
+        AND (e.all_day OR e.start_time > snooze_until)
+    ) THEN
+      RETURN 'dropped';
+    END IF;
+  ELSIF NOT EXISTS (
+    SELECT 1 FROM public.tasks t
+    WHERE t.id = p_reference_id
+      AND t.user_id = auth.uid()
+      AND NOT t.is_completed
+  ) THEN
+    RETURN 'dropped';
+  END IF;
+
+  -- A double tap, or a second device, must not queue a second snooze.
+  IF EXISTS (
+    SELECT 1 FROM public.notification_queue
+    WHERE user_id = auth.uid()
+      AND type = p_type
+      AND reference_id = p_reference_id
+      AND status = 'pending'
+      AND scheduled_at > now()
+  ) THEN
+    RETURN 'snoozed';
+  END IF;
+
+  INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
+  VALUES (sent_row.user_id, snooze_until, sent_row.type, sent_row.payload, sent_row.reference_id)
+  ON CONFLICT DO NOTHING;
+
+  RETURN 'snoozed';
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.snooze_reminder(TEXT, UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.snooze_reminder(TEXT, UUID) TO authenticated;
+
+-- Runs as the caller, so row security limits it to their own tasks. A recurring
+-- task is refused: its next Occurrence is created client-side, where the
+-- content key is available.
+CREATE OR REPLACE FUNCTION public.complete_task_from_notification(p_task_id UUID)
+RETURNS TEXT
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  task_row public.tasks;
+BEGIN
+  SELECT * INTO task_row FROM public.tasks WHERE id = p_task_id;
+  IF NOT FOUND THEN
+    RETURN 'not_found';
+  END IF;
+  IF COALESCE(jsonb_typeof(task_row.recurrence), 'null') <> 'null' THEN
+    RETURN 'recurring';
+  END IF;
+  IF task_row.is_completed THEN
+    RETURN 'already_completed';
+  END IF;
+
+  UPDATE public.tasks
+  SET is_completed = true,
+      completed_at = now()
+  WHERE id = p_task_id;
+
+  RETURN 'completed';
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.complete_task_from_notification(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.complete_task_from_notification(UUID) TO authenticated;
 
 -- ROW LEVEL SECURITY
 ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;
