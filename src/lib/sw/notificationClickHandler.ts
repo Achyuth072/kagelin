@@ -1,11 +1,22 @@
-import type { NotificationDisplayOptions } from "@/lib/notifications";
+import type {
+  NotificationDisplayOptions,
+  ReminderType,
+} from "@/lib/notifications";
 import type { HabitType } from "@/lib/types/habit";
-import { HABIT_ENTRY_UPDATED, habitPath } from "@/lib/habit-links";
+import {
+  HABIT_ENTRY_UPDATED,
+  TASKS_UPDATED,
+  habitPath,
+} from "@/lib/habit-links";
 
 export interface HabitNotificationData {
   habitId?: string;
   date?: string;
   habitKind?: HabitType;
+  taskId?: string;
+  eventId?: string;
+  reminderType?: ReminderType;
+  recurring?: boolean;
   url?: string;
 }
 
@@ -29,28 +40,39 @@ export async function handleNotificationClick(
 ): Promise<void> {
   if ((action === "done" || action === "skip") && data?.habitId && data?.date) {
     const state = action === "done" ? "done" : "skipped";
-    // Platform fetch throws "Illegal invocation" when called as a method of deps.
-    const { fetch } = deps;
-    const ok = await fetch("/api/habits/entry", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ habitId: data.habitId, date: data.date, state }),
-    }).then(
-      (res) => res.ok,
-      () => false,
+    await postAction(
+      "/api/habits/entry",
+      { habitId: data.habitId, date: data.date, state },
+      { message: HABIT_ENTRY_UPDATED, failedItem: "habit" },
+      data,
+      notificationTag,
+      deps,
     );
+    return;
+  }
 
-    if (ok) {
-      for (const client of await matchWindows(deps)) {
-        client.postMessage({ type: HABIT_ENTRY_UPDATED });
-      }
-    } else {
-      await deps.displayNotification(deps.registration, "Action not saved", {
-        tag: notificationTag,
-        body: "Could not save your response. Tap to open the habit.",
-        data: { url: habitUrl(data) },
-      });
-    }
+  if (action === "done" && data?.taskId) {
+    await postAction(
+      "/api/tasks/complete",
+      { taskId: data.taskId },
+      { message: TASKS_UPDATED, failedItem: "task" },
+      data,
+      notificationTag,
+      deps,
+    );
+    return;
+  }
+
+  const referenceId = data?.taskId ?? data?.eventId;
+  if (action === "snooze" && data?.reminderType && referenceId) {
+    await postAction(
+      "/api/notifications/snooze",
+      { type: data.reminderType, referenceId },
+      { failedItem: data.eventId ? "event" : "task" },
+      data,
+      notificationTag,
+      deps,
+    );
     return;
   }
 
@@ -76,6 +98,40 @@ export async function handleNotificationClick(
   }
 
   await deps.openWindow(url);
+}
+
+async function postAction(
+  path: string,
+  body: Record<string, string>,
+  outcome: { message?: string; failedItem: string },
+  data: HabitNotificationData,
+  notificationTag: string | undefined,
+  deps: NotificationClickDeps,
+): Promise<void> {
+  // Platform fetch throws "Illegal invocation" when called as a method of deps.
+  const { fetch } = deps;
+  const ok = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }).then(
+    (res) => res.ok,
+    () => false,
+  );
+
+  if (!ok) {
+    await deps.displayNotification(deps.registration, "Action not saved", {
+      tag: notificationTag,
+      body: `Could not save your response. Tap to open the ${outcome.failedItem}.`,
+      data: { url: habitUrl(data) },
+    });
+    return;
+  }
+
+  if (!outcome.message) return;
+  for (const client of await matchWindows(deps)) {
+    client.postMessage({ type: outcome.message });
+  }
 }
 
 function habitUrl(data: HabitNotificationData | undefined): string {

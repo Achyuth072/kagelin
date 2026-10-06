@@ -197,6 +197,10 @@ async function showPushNotification(payload: PushPayload): Promise<void> {
   if (payload.data?.habitKind) {
     options.habitKind = payload.data.habitKind;
   }
+  if (payload.data?.reminderType) {
+    options.reminderType = payload.data.reminderType;
+    options.recurring = payload.data.recurring;
+  }
 
   try {
     await displayNotification(

@@ -16,7 +16,11 @@ export interface NotificationDisplayOptions extends NotificationOptions {
   encrypted?: EncryptedNotificationBody;
   encryptedTitle?: EncryptedNotificationBody;
   habitKind?: HabitType;
+  reminderType?: ReminderType;
+  recurring?: boolean;
 }
+
+export type ReminderType = "due_date" | "do_date" | "event_reminder";
 
 export const DEFAULT_NOTIFICATION_OPTIONS: NotificationDisplayOptions = {
   icon: "/icons/icon-192.png",
@@ -34,8 +38,14 @@ export async function displayNotification(
     await closeNotificationsWithTag(registration, options.tag);
   }
 
-  const { encrypted, encryptedTitle, habitKind, ...displayable } =
-    options ?? {};
+  const {
+    encrypted,
+    encryptedTitle,
+    habitKind,
+    reminderType,
+    recurring,
+    ...displayable
+  } = options ?? {};
 
   const key = encrypted || encryptedTitle ? await loadKeyOrNull() : null;
 
@@ -48,13 +58,14 @@ export async function displayNotification(
       : displayable.body,
   ]);
 
-  // Only a device that decrypted the habit name is unlocked enough to act blindly.
-  const unlocked =
-    encryptedTitle !== undefined &&
-    decryptedTitle !== null &&
-    decryptedBody !== null;
-  if (habitKind && unlocked && !displayable.actions) {
-    displayable.actions = HABIT_ACTIONS[habitKind];
+  // Only a device that decrypted the item's name is unlocked enough to act blindly.
+  const decryptedAll = decryptedTitle !== null && decryptedBody !== null;
+  if (!displayable.actions) {
+    if (habitKind && encryptedTitle !== undefined && decryptedAll) {
+      displayable.actions = HABIT_ACTIONS[habitKind];
+    } else if (reminderType && encrypted !== undefined && decryptedAll) {
+      displayable.actions = reminderActions(reminderType, recurring);
+    }
   }
 
   await registration.showNotification(decryptedTitle ?? title, {
@@ -71,6 +82,14 @@ const HABIT_ACTIONS = {
   ],
   measurable: [{ action: "skip", title: "Skip" }],
 };
+
+const SNOOZE_ACTION = { action: "snooze", title: "Snooze" };
+
+// A recurring task's Done must create the next Occurrence, which only the app can do.
+function reminderActions(type: ReminderType, recurring?: boolean) {
+  if (type === "event_reminder" || recurring) return [SNOOZE_ACTION];
+  return [{ action: "done", title: "Done" }, SNOOZE_ACTION];
+}
 
 async function loadKeyOrNull(): Promise<Uint8Array | null> {
   try {

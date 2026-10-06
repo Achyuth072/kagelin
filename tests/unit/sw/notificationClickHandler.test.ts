@@ -4,7 +4,7 @@ import {
   type NotificationClickDeps,
   type HabitNotificationData,
 } from "@/lib/sw/notificationClickHandler";
-import { HABIT_ENTRY_UPDATED } from "@/lib/habit-links";
+import { HABIT_ENTRY_UPDATED, TASKS_UPDATED } from "@/lib/habit-links";
 
 function makeDeps(
   overrides?: Partial<NotificationClickDeps>,
@@ -253,5 +253,114 @@ describe("handleNotificationClick — body tap", () => {
     await handleNotificationClick("", habitData, undefined, deps);
 
     expect(opened).toBe(true);
+  });
+});
+
+describe("handleNotificationClick — task and event actions", () => {
+  const taskData: HabitNotificationData = {
+    taskId: "task-uuid-1",
+    reminderType: "due_date",
+    url: "/",
+  };
+  const eventData: HabitNotificationData = {
+    eventId: "event-uuid-1",
+    reminderType: "event_reminder",
+    url: "/calendar",
+  };
+
+  beforeEach(() => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("completes the task for Done", async () => {
+    const deps = makeDeps();
+    vi.mocked(deps.fetch).mockResolvedValue({ ok: true } as Response);
+
+    await handleNotificationClick("done", taskData, "task-tag", deps);
+
+    expect(deps.fetch).toHaveBeenCalledWith(
+      "/api/tasks/complete",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ taskId: "task-uuid-1" }),
+      }),
+    );
+  });
+
+  it("tells open windows to refresh tasks after Done", async () => {
+    const deps = makeDeps();
+    vi.mocked(deps.fetch).mockResolvedValue({ ok: true } as Response);
+
+    await handleNotificationClick("done", taskData, "task-tag", deps);
+
+    const client = (
+      await (deps.clients.matchAll as ReturnType<typeof vi.fn>).mock.results[0]
+        .value
+    )[0];
+    expect(client.postMessage).toHaveBeenCalledWith({ type: TASKS_UPDATED });
+  });
+
+  it("snoozes a task reminder by its type and task id", async () => {
+    const deps = makeDeps();
+    vi.mocked(deps.fetch).mockResolvedValue({ ok: true } as Response);
+
+    await handleNotificationClick("snooze", taskData, "task-tag", deps);
+
+    expect(deps.fetch).toHaveBeenCalledWith(
+      "/api/notifications/snooze",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          type: "due_date",
+          referenceId: "task-uuid-1",
+        }),
+      }),
+    );
+    expect(deps.clients.matchAll).not.toHaveBeenCalled();
+  });
+
+  it("snoozes an event reminder by its type and event id", async () => {
+    const deps = makeDeps();
+    vi.mocked(deps.fetch).mockResolvedValue({ ok: true } as Response);
+
+    await handleNotificationClick("snooze", eventData, "event-tag", deps);
+
+    expect(deps.fetch).toHaveBeenCalledWith(
+      "/api/notifications/snooze",
+      expect.objectContaining({
+        body: JSON.stringify({
+          type: "event_reminder",
+          referenceId: "event-uuid-1",
+        }),
+      }),
+    );
+  });
+
+  it("shows a same-tag failure notification that opens the item URL", async () => {
+    const deps = makeDeps();
+    vi.mocked(deps.fetch).mockResolvedValue({
+      ok: false,
+      status: 500,
+    } as Response);
+
+    await handleNotificationClick("snooze", eventData, "event-tag", deps);
+
+    expect(deps.displayNotification).toHaveBeenCalledWith(
+      deps.registration,
+      expect.any(String),
+      expect.objectContaining({
+        tag: "event-tag",
+        data: expect.objectContaining({ url: "/calendar" }),
+      }),
+    );
+  });
+
+  it("opens the app instead when an action has no item to act on", async () => {
+    const deps = makeDeps();
+
+    await handleNotificationClick("done", { url: "/" }, "task-tag", deps);
+
+    expect(deps.fetch).not.toHaveBeenCalled();
   });
 });

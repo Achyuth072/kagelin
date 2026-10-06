@@ -412,3 +412,90 @@ describe("displayNotification habit actions", () => {
     );
   });
 });
+
+describe("displayNotification task and event actions", () => {
+  const key = new Uint8Array(32).fill(7);
+
+  async function shownActions(
+    options: NotificationDisplayOptions,
+    loaded: Uint8Array | null = key,
+  ) {
+    loadKey.mockResolvedValue(loaded);
+    const registration = registrationWith([]);
+    await displayNotification(registration, "Task Due Soon", {
+      body: "You have a task due now.",
+      encrypted: {
+        template: 'Your task "{}" is due now.',
+        ciphertext: await encryptField(key, "Write report"),
+      },
+      ...options,
+    });
+    const showNotification = registration.showNotification as unknown as {
+      mock: { calls: [string, NotificationDisplayOptions][] };
+    };
+    return showNotification.mock.calls[0][1].actions;
+  }
+
+  it("adds Done and Snooze for a one-off task reminder", async () => {
+    expect(await shownActions({ reminderType: "due_date" })).toEqual([
+      { action: "done", title: "Done" },
+      { action: "snooze", title: "Snooze" },
+    ]);
+  });
+
+  it("adds only Snooze for a recurring task reminder", async () => {
+    expect(
+      await shownActions({ reminderType: "do_date", recurring: true }),
+    ).toEqual([{ action: "snooze", title: "Snooze" }]);
+  });
+
+  it("adds only Snooze for an event reminder", async () => {
+    expect(await shownActions({ reminderType: "event_reminder" })).toEqual([
+      { action: "snooze", title: "Snooze" },
+    ]);
+  });
+
+  it("adds no actions when no key is loaded (locked account)", async () => {
+    expect(
+      await shownActions({ reminderType: "due_date" }, null),
+    ).toBeUndefined();
+  });
+
+  it("adds no actions when decryption fails (wrong key)", async () => {
+    expect(
+      await shownActions(
+        { reminderType: "due_date" },
+        new Uint8Array(32).fill(9),
+      ),
+    ).toBeUndefined();
+  });
+
+  it("adds no actions without an encrypted body to prove the key", async () => {
+    expect(
+      await shownActions({ reminderType: "due_date", encrypted: undefined }),
+    ).toBeUndefined();
+  });
+
+  it("adds no actions when reminderType is not set", async () => {
+    expect(await shownActions({})).toBeUndefined();
+  });
+
+  it("keeps reminderType and recurring out of the shown options", async () => {
+    loadKey.mockResolvedValue(key);
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Task Due Soon", {
+      body: "You have a task due now.",
+      reminderType: "due_date",
+      recurring: true,
+    });
+
+    expect(registration.showNotification).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.not.objectContaining({
+        reminderType: expect.anything(),
+        recurring: expect.anything(),
+      }),
+    );
+  });
+});
