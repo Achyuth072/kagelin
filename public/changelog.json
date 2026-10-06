@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.45.1-preview.3",
+    "date": "2026-10-06",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add event reminder controls to the event form and notification settings",
+        "Queue event reminder pushes from a calendar event trigger"
+      ],
+      "Fixed": [
+        "Cancel reminders on pending delete, keep today's all-day reminder, route event pushes"
+      ]
+    }
+  },
+  {
     "version": "1.45.1-preview.2",
     "date": "2026-10-05",
     "channel": "preview",
@@ -685,16 +699,6 @@
     "sections": {
       "Fixed": [
         "Restore Android 48dp touch target on mobile bottom nav"
-      ]
-    }
-  },
-  {
-    "version": "1.31.2",
-    "date": "2026-08-19",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Resolve iOS PWA standalone bottom black bar and compact nav bar"
       ]
     }
   }
