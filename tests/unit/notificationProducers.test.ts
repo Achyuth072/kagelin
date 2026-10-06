@@ -34,6 +34,97 @@ describe("handle_task_notification_sync", () => {
   });
 });
 
+describe("handle_event_notification_sync", () => {
+  const body = functionBody(schemaSql, "public.handle_event_notification_sync");
+
+  it("passes the event's ciphertext through instead of interpolating the title", () => {
+    expect(body).not.toMatch(/\|\|\s*NEW\.title/);
+    expect(body).toMatch(
+      /encrypted_notification_body\(\s*[^,]+,\s*NEW\.title\s*\)/,
+    );
+  });
+
+  it("queues a plain body that names no event for a device with no key", () => {
+    expect(body).toContain("'Upcoming event'");
+    expect(body).toContain("'You have an event coming up.'");
+  });
+
+  it("words the encrypted body by lead time", () => {
+    expect(body).toContain("starts in ");
+    expect(body).toContain("is starting now");
+  });
+
+  it("deep-links to the calendar and carries the event id", () => {
+    expect(body).toContain("'url', '/calendar'");
+    expect(body).toContain("'eventId', NEW.id");
+  });
+
+  it("cancels only future pending event reminders on update and delete", () => {
+    expect(body).toContain("TG_OP IN ('UPDATE', 'DELETE')");
+    expect(body).toContain("reference_id = OLD.id");
+    expect(body).toContain("type = 'event_reminder'");
+    expect(body).toContain("scheduled_at > now()");
+  });
+
+  it("queues nothing without a reminder, once archived, or for a recurring series", () => {
+    expect(body).toContain("NEW.reminder_minutes IS NOT NULL");
+    expect(body).toContain("is_archived");
+    expect(body).toContain("NEW.recurrence_rule");
+  });
+
+  it("queues nothing for a reminder time already past or an event already started", () => {
+    expect(body).toMatch(/remind_at\s*>\s*now\(\)/);
+    expect(body).toMatch(/NEW\.start_time\s*>\s*now\(\)/);
+  });
+
+  it("honors the event_reminders switch, on when unset", () => {
+    expect(body).toContain(
+      "(user_settings->'notifications'->>'event_reminders')::boolean IS NOT FALSE",
+    );
+  });
+
+  it("schedules all-day events at 9:00 in the profile timezone, skipping nonexistent local times", () => {
+    expect(body).toContain("'09:00'");
+    expect(body).toContain("public.at_timezone_or_null(now(), tz)");
+    expect(body).toMatch(/remind_at AT TIME ZONE tz\)\s*<>\s*remind_local/);
+  });
+
+  it("is wired to inserts, updates and deletes on calendar_events", () => {
+    expect(schemaSql).toMatch(
+      /AFTER INSERT OR UPDATE OR DELETE ON public\.calendar_events\s+FOR EACH ROW EXECUTE FUNCTION public\.handle_event_notification_sync\(\)/,
+    );
+  });
+
+  it("accepts the event_reminder queue type and dedups it per event", () => {
+    expect(schemaSql).toMatch(
+      /type IN \([^)]*'habit_reminder', 'event_reminder'\)/,
+    );
+    expect(body).toContain("type = 'event_reminder'");
+    expect(schemaSql).toMatch(
+      /notification_queue_event_pending_dedup_idx\s+ON public\.notification_queue \(user_id, type, scheduled_at, reference_id\)\s+WHERE status = 'pending' AND type = 'event_reminder'/,
+    );
+  });
+});
+
+describe("event reminder migration", () => {
+  const migration = read(
+    "supabase/migrations/20261006120000_event_reminders.sql",
+  );
+
+  it("adds a nullable reminder_minutes column", () => {
+    expect(migration).toMatch(
+      /ADD COLUMN IF NOT EXISTS reminder_minutes INTEGER\s*;/,
+    );
+    expect(schemaSql).toMatch(/reminder_minutes INTEGER/);
+  });
+
+  it("matches the schema's trigger function", () => {
+    expect(
+      functionBody(migration, "public.handle_event_notification_sync"),
+    ).toBe(functionBody(schemaSql, "public.handle_event_notification_sync"));
+  });
+});
+
 describe("handle_timer_notification_sync", () => {
   const body = functionBody(schemaSql, "handle_timer_notification_sync");
 

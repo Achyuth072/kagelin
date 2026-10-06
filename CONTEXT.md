@@ -606,6 +606,13 @@ On the day a timezone springs forward an hour of local time never happens, so a
 reminder set inside it is skipped rather than delivered late — see
 [ADR 0018](docs/adr/0018-reminders-skip-nonexistent-local-times.md).
 
+### Event reminder
+
+The **Push notification** a calendar event sends a set time before it starts.
+Only an event the user gave a reminder has one; a remote provider's own alarms
+are not reminders. Distinct from **Habit reminder** (a time of day on a Habit)
+and from the daily **briefing**. _Avoid_: "event notification".
+
 ### Briefing
 
 The one **Push notification** per Account that summarises a day, sent at a fixed
