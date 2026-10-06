@@ -1,5 +1,24 @@
 [
   {
+    "version": "1.45.1-preview.4",
+    "date": "2026-10-06",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Show Done and Snooze actions on task and event reminder notifications",
+        "Add task complete and reminder snooze API routes",
+        "Queue snooze and task-complete RPCs and tag task and event reminder payloads"
+      ],
+      "Improved": [
+        "Share reminder types and name notification click data for all reminders"
+      ],
+      "Fixed": [
+        "Drop snoozes for switched-off reminders and restate a timed event's time left",
+        "Keep pending reminders on unrelated edits and end all-day snoozes with their day"
+      ]
+    }
+  },
+  {
     "version": "1.45.1-preview.3",
     "date": "2026-10-06",
     "channel": "preview",
@@ -689,16 +708,6 @@
     "sections": {
       "Fixed": [
         "Restore Android 48dp touch target on mobile bottom nav (Release v1.31.3) (#162)"
-      ]
-    }
-  },
-  {
-    "version": "1.31.3-preview.0",
-    "date": "2026-08-20",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Restore Android 48dp touch target on mobile bottom nav"
       ]
     }
   }
