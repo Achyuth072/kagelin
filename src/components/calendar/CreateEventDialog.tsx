@@ -13,6 +13,7 @@ import {
   Clock,
   MapPin,
   AlignLeft,
+  BellRing,
   Sun,
   Trash2,
   Check,
@@ -54,6 +55,13 @@ import {
   useDeleteCalendarEvent,
 } from "@/lib/hooks/useCalendarEventMutations";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useProfile } from "@/lib/hooks/useProfile";
+import { useAuth } from "@/components/AuthProvider";
+import {
+  DEFAULT_EVENT_REMINDER_MINUTES,
+  normalizeReminder,
+  reminderOptions,
+} from "@/lib/utils/eventReminder";
 import { parseEventInput } from "@/lib/utils/nlp-event";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
@@ -69,6 +77,7 @@ const CreateEventSchema = z.object({
   description: z.string().max(2000).optional(),
   location: z.string().max(200).optional(),
   all_day: z.boolean().default(false),
+  reminder_minutes: z.number().nullable().default(null),
 });
 
 type CreateEventFormData = z.infer<typeof CreateEventSchema>;
@@ -133,6 +142,19 @@ export function CreateEventDialog({
   event,
 }: CreateEventDialogProps) {
   const { trigger } = useHaptic();
+  const { isGuestMode } = useAuth();
+  const { profile } = useProfile();
+  const notificationSettings = profile?.settings?.notifications;
+  const defaultReminder =
+    !isGuestMode && (notificationSettings?.event_reminders ?? true)
+      ? (notificationSettings?.event_reminder_minutes ??
+        DEFAULT_EVENT_REMINDER_MINUTES)
+      : null;
+  // Read at open time only: a late profile load must not reset a half-filled form.
+  const defaultReminderRef = useRef(defaultReminder);
+  useEffect(() => {
+    defaultReminderRef.current = defaultReminder;
+  }, [defaultReminder]);
   const createEvent = useCreateCalendarEvent();
   const updateEvent = useUpdateCalendarEvent();
   const deleteEvent = useDeleteCalendarEvent();
@@ -184,11 +206,16 @@ export function CreateEventDialog({
         description: "",
         location: "",
         all_day: false,
+        reminder_minutes: null,
       },
     });
 
   const allDay = useWatch({ control, name: "all_day" });
   const title = useWatch({ control, name: "title" });
+  const reminderMinutes = normalizeReminder(
+    allDay,
+    useWatch({ control, name: "reminder_minutes" }),
+  );
   const { errors } = useFormState({ control });
 
   // Derive form validity from useWatch values instead of formState.isValid
@@ -245,13 +272,20 @@ export function CreateEventDialog({
             description: event.description || "",
             location: event.location || "",
             all_day: event.allDay || false,
+            reminder_minutes: event.reminderMinutes ?? null,
           });
           setDraftLocation(event.location || "");
         } else {
           const now = normalizedDefaultDate ?? new Date();
           setStartDate(now);
           setEndDate(getDefaultEndDate(now));
-          reset({ title: "", description: "", location: "", all_day: false });
+          reset({
+            title: "",
+            description: "",
+            location: "",
+            all_day: false,
+            reminder_minutes: defaultReminderRef.current,
+          });
           setDraftLocation("");
         }
       }, 0);
@@ -271,6 +305,14 @@ export function CreateEventDialog({
     if (!safeStartDate || !safeEndDate) return;
     trigger("thud");
     if (data.location) addLocation(data.location);
+    const reminderPayload = isGuestMode
+      ? {}
+      : {
+          reminder_minutes: normalizeReminder(
+            data.all_day,
+            data.reminder_minutes,
+          ),
+        };
     if (event) {
       updateEvent.mutate({
         id: event.id,
@@ -280,6 +322,7 @@ export function CreateEventDialog({
         start_time: safeStartDate.toISOString(),
         end_time: safeEndDate.toISOString(),
         all_day: data.all_day,
+        ...reminderPayload,
       });
     } else {
       createEvent.mutate({
@@ -289,6 +332,7 @@ export function CreateEventDialog({
         start_time: safeStartDate.toISOString(),
         end_time: safeEndDate.toISOString(),
         all_day: data.all_day,
+        ...reminderPayload,
       });
     }
     trigger("success");
@@ -603,6 +647,41 @@ export function CreateEventDialog({
                   </Popover>
                 )}
               />
+            </div>
+
+            <div className="mx-2">
+              <div className={cn(rowCls, "mx-0", hoverCls)}>
+                <IconCell>
+                  <BellRing
+                    className="h-4 w-4 text-muted-foreground"
+                    strokeWidth={2.25}
+                  />
+                </IconCell>
+                <select
+                  aria-label="Reminder"
+                  value={reminderMinutes ?? ""}
+                  disabled={isRecurring || isGuestMode}
+                  onChange={(e) =>
+                    setValue(
+                      "reminder_minutes",
+                      e.target.value === "" ? null : Number(e.target.value),
+                    )
+                  }
+                  className="flex-1 bg-transparent text-sm text-foreground outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">No reminder</option>
+                  {reminderOptions(allDay).map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {isGuestMode && (
+                <p className="px-3 pb-1 text-xs text-muted-foreground">
+                  Reminders need an account.
+                </p>
+              )}
             </div>
 
             <div className="mx-2">

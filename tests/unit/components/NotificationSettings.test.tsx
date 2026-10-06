@@ -110,6 +110,50 @@ describe("NotificationSettings Component", () => {
     expect(screen.getByLabelText("Habit Reminders")).toBeChecked();
   });
 
+  it("TC-NS-02d: the Event Reminders toggle writes notifications.event_reminders", () => {
+    render(<NotificationSettings />);
+
+    fireEvent.click(screen.getByLabelText("Event Reminders"));
+
+    expect(mockUpdateSettings.mutateAsync).toHaveBeenCalledWith({
+      notifications: expect.objectContaining({ event_reminders: false }),
+    });
+  });
+
+  it("TC-NS-02e: Event Reminders reads as on when the key is absent", () => {
+    render(<NotificationSettings />);
+
+    expect(screen.getByLabelText("Event Reminders")).toBeChecked();
+  });
+
+  it("TC-NS-02f: the default lead time persists as notifications.event_reminder_minutes", () => {
+    render(<NotificationSettings />);
+
+    fireEvent.change(screen.getByLabelText("Default reminder lead time"), {
+      target: { value: "30" },
+    });
+
+    expect(mockUpdateSettings.mutateAsync).toHaveBeenCalledWith({
+      notifications: expect.objectContaining({ event_reminder_minutes: 30 }),
+    });
+  });
+
+  it("TC-NS-02g: the default lead time is hidden while Event Reminders is off", () => {
+    (useProfile as Mock).mockReturnValue({
+      profile: {
+        timezone: "UTC",
+        settings: { notifications: { event_reminders: false } },
+      },
+      updateSettings: mockUpdateSettings,
+      updateProfile: mockUpdateProfile,
+    });
+    render(<NotificationSettings />);
+
+    expect(
+      screen.queryByLabelText("Default reminder lead time"),
+    ).not.toBeInTheDocument();
+  });
+
   it("TC-NS-03: should send the test notification to the current subscription endpoint", async () => {
     render(<NotificationSettings />);
 

@@ -641,6 +641,7 @@ class MockStore {
           ics_uid: null,
           sync_state: null,
           is_archived: false,
+          reminder_minutes: null,
           metadata: {},
           created_at: nowIso,
           updated_at: nowIso,

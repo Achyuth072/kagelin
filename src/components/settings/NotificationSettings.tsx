@@ -10,6 +10,7 @@ import {
   Clock,
   Timer,
   Repeat,
+  CalendarClock,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,10 @@ import { useAndroidBatteryHint } from "@/lib/hooks/useAndroidBatteryHint";
 import { AndroidBatteryHint } from "@/components/settings/AndroidBatteryHint";
 import { ToggleRow } from "@/components/settings/ToggleRow";
 import { isIOS, isStandalone } from "@/lib/utils/platform";
+import {
+  DEFAULT_EVENT_REMINDER_MINUTES,
+  TIMED_REMINDER_OPTIONS,
+} from "@/lib/utils/eventReminder";
 import {
   Select,
   SelectContent,
@@ -150,13 +155,13 @@ export function NotificationSettings() {
     }
   };
 
-  const updateNotifySetting = async (key: string, checked: boolean) => {
+  const updateNotifySetting = async (key: string, value: boolean | number) => {
     trigger("tick");
     try {
       await updateSettings.mutateAsync({
         notifications: {
           ...profile?.settings?.notifications,
-          [key]: checked,
+          [key]: value,
         },
       } as Parameters<typeof updateSettings.mutateAsync>[0]);
     } catch {
@@ -432,6 +437,45 @@ export function NotificationSettings() {
               checked={settings?.habit_reminders ?? true}
               onChange={(c) => updateNotifySetting("habit_reminders", c)}
             />
+
+            <ToggleRow
+              icon={CalendarClock}
+              title="Event Reminders"
+              description="Before calendar events that have a reminder"
+              checked={settings?.event_reminders ?? true}
+              onChange={(c) => updateNotifySetting("event_reminders", c)}
+            />
+
+            {(settings?.event_reminders ?? true) && (
+              <div className="flex items-center justify-between p-3 rounded-md border border-border/30 bg-muted/20">
+                <div>
+                  <p className="text-sm font-medium">Default lead time</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Applied to new events
+                  </p>
+                </div>
+                <select
+                  aria-label="Default reminder lead time"
+                  value={
+                    settings?.event_reminder_minutes ??
+                    DEFAULT_EVENT_REMINDER_MINUTES
+                  }
+                  onChange={(e) =>
+                    updateNotifySetting(
+                      "event_reminder_minutes",
+                      Number(e.target.value),
+                    )
+                  }
+                  className="h-8 rounded-md border border-border/50 bg-background px-2 text-sm"
+                >
+                  {TIMED_REMINDER_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -81,6 +81,7 @@ export function useCreateCalendarEvent() {
         ics_uid: input.ics_uid ?? null,
         sync_state: null,
         is_archived: false,
+        reminder_minutes: input.reminder_minutes ?? null,
         metadata: input.metadata ?? {},
         created_at: now,
         updated_at: now,

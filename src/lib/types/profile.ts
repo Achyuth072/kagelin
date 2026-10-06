@@ -1,3 +1,5 @@
+import { DEFAULT_EVENT_REMINDER_MINUTES } from "@/lib/utils/eventReminder";
+
 export interface Profile {
   id: string;
   display_name: string | null;
@@ -25,6 +27,8 @@ export interface UserSettings {
     do_date_alerts: boolean;
     timer_alerts: boolean;
     habit_reminders: boolean;
+    event_reminders: boolean;
+    event_reminder_minutes: number;
   };
   // Admin-only: where an admin lands after login. Irrelevant (and unused)
   // for non-admin accounts.
@@ -39,6 +43,8 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
     do_date_alerts: true,
     timer_alerts: true,
     habit_reminders: true,
+    event_reminders: true,
+    event_reminder_minutes: DEFAULT_EVENT_REMINDER_MINUTES,
   },
   adminLandingPage: "tasks",
 };
