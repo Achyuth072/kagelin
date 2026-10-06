@@ -615,12 +615,15 @@ and from the daily **briefing**. _Avoid_: "event notification".
 
 ### Snooze
 
-An action on a task reminder or **Event reminder** that re-sends that same reminder
-after a fixed interval. It postpones the reminder only — the task's due and do dates
-and the event's start are untouched, and it can be snoozed again. A snoozed
-reminder is dropped if its task is done or deleted, or its event is deleted or has
-started (an all-day event: when its day ends), or if the item's dates or name
-change. Like other actions, it is offered only where the platform supports it and
+An action on a task's due-date or do-date **Push notification**, or an
+**Event reminder**, that re-sends that same reminder after a fixed interval. It
+postpones the reminder only — the task's due and do dates and the event's start
+are untouched, and it can be snoozed again. A timed event's re-sent reminder
+states the time left at the moment it is sent. A snoozed reminder is dropped if
+its task is done or deleted, or its event is deleted or has started (an all-day
+event: when its day ends), or if the item's dates or name change. Snooze does
+nothing if that kind of reminder is switched off in Push notification settings
+when it is tapped. Like other actions, it is offered only where the platform supports it and
 the account is not **Locked**. _Avoid_: "reschedule" — that changes the item's own
 dates.
 

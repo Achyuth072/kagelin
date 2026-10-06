@@ -1261,9 +1261,13 @@ AS $$
 DECLARE
   snooze_until TIMESTAMPTZ := now() + interval '10 minutes';
   sent_row public.notification_queue;
+  event_row public.calendar_events;
+  user_settings JSONB;
   tz TEXT;
   snooze_day DATE;
   reminded_day DATE;
+  mins INTEGER;
+  hours INTEGER;
 BEGIN
   IF p_type NOT IN ('due_date', 'do_date', 'event_reminder') THEN
     RETURN 'not_found';
@@ -1282,25 +1286,47 @@ BEGIN
     RETURN 'not_found';
   END IF;
 
+  SELECT settings, timezone INTO user_settings, tz FROM public.profiles WHERE id = auth.uid();
+  IF (user_settings->'notifications'->>(CASE p_type
+        WHEN 'due_date' THEN 'due_date_alerts'
+        WHEN 'do_date' THEN 'do_date_alerts'
+        ELSE 'event_reminders'
+      END))::boolean IS FALSE THEN
+    RETURN 'dropped';
+  END IF;
+
   IF p_type = 'event_reminder' THEN
     -- An all-day event has begun by its 9:00 reminder, so it lasts to the end of
     -- that local day instead. An unknown timezone leaves no day to compare.
-    SELECT timezone INTO tz FROM public.profiles WHERE id = auth.uid();
     snooze_day := public.at_timezone_or_null(snooze_until, tz)::date;
     reminded_day := public.at_timezone_or_null(sent_row.scheduled_at, tz)::date;
 
-    IF NOT EXISTS (
-      SELECT 1 FROM public.calendar_events e
-      WHERE e.id = p_reference_id
-        AND e.user_id = auth.uid()
-        AND NOT COALESCE(e.is_archived, false)
-        AND e.sync_state IS DISTINCT FROM 'pending_delete'
-        AND CASE WHEN e.all_day
-              THEN COALESCE(snooze_day = reminded_day, false)
-              ELSE e.start_time > snooze_until
-            END
-    ) THEN
+    SELECT * INTO event_row FROM public.calendar_events e
+    WHERE e.id = p_reference_id
+      AND e.user_id = auth.uid()
+      AND NOT COALESCE(e.is_archived, false)
+      AND e.sync_state IS DISTINCT FROM 'pending_delete'
+      AND CASE WHEN e.all_day
+            THEN COALESCE(snooze_day = reminded_day, false)
+            ELSE e.start_time > snooze_until
+          END;
+
+    IF NOT FOUND THEN
       RETURN 'dropped';
+    END IF;
+
+    -- The sent body's lead time is stale by the time the snooze fires.
+    IF NOT event_row.all_day THEN
+      mins := ceil(extract(epoch FROM event_row.start_time - snooze_until) / 60);
+      hours := round(mins / 60.0);
+      sent_row.payload := jsonb_strip_nulls(sent_row.payload || jsonb_build_object(
+        'encrypted', public.encrypted_notification_body(
+          CASE WHEN mins = 1 THEN '"{}" starts in 1 minute'
+               WHEN mins < 60 THEN '"{}" starts in ' || mins || ' minutes'
+               WHEN hours = 1 THEN '"{}" starts in 1 hour'
+               ELSE '"{}" starts in ' || hours || ' hours'
+          END,
+          event_row.title)));
     END IF;
   ELSIF NOT EXISTS (
     SELECT 1 FROM public.tasks t

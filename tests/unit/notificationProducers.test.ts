@@ -138,6 +138,9 @@ describe("task and event notification actions migrations", () => {
   const second = read(
     "supabase/migrations/20261006140000_reminder_triggers_skip_unrelated_updates.sql",
   );
+  const third = read(
+    "supabase/migrations/20261006150000_snooze_honors_switch_and_fresh_lead_time.sql",
+  );
 
   it("matches the schema's complete_task_from_notification", () => {
     const name = "public.complete_task_from_notification";
@@ -147,9 +150,13 @@ describe("task and event notification actions migrations", () => {
   it.each([
     "handle_task_notification_sync",
     "public.handle_event_notification_sync",
-    "public.snooze_reminder",
   ])("matches the schema's %s", (name) => {
     expect(functionBody(second, name)).toBe(functionBody(schemaSql, name));
+  });
+
+  it("matches the schema's snooze_reminder", () => {
+    const name = "public.snooze_reminder";
+    expect(functionBody(third, name)).toBe(functionBody(schemaSql, name));
   });
 });
 
@@ -360,6 +367,21 @@ describe("snooze_reminder", () => {
     expect(body).toContain("interval '10 minutes'");
     expect(body).toContain("status = 'sent'");
     expect(body).toMatch(/payload/);
+  });
+
+  it("drops the snooze when that reminder type has been switched off", () => {
+    expect(body).toContain("'due_date_alerts'");
+    expect(body).toContain("'do_date_alerts'");
+    expect(body).toContain("'event_reminders'");
+    expect(body).toMatch(/::boolean IS FALSE THEN\s+RETURN 'dropped'/);
+  });
+
+  it("re-words a timed event's lead time from the snooze time, not the sent row", () => {
+    expect(body).toContain("event_row.start_time - snooze_until");
+    expect(body).toMatch(
+      /encrypted_notification_body\([\s\S]*starts in[\s\S]*event_row\.title\)/,
+    );
+    expect(body).toContain("IF NOT event_row.all_day");
   });
 
   it("does not queue a second snooze while one is already pending", () => {
