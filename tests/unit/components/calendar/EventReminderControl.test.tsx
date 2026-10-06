@@ -15,6 +15,7 @@ import { useAuth } from "@/components/AuthProvider";
 const createMutate = vi.fn();
 const updateMutate = vi.fn();
 
+vi.mock("@/components/ui/select", () => import("../../nativeSelectMock"));
 vi.mock("@/lib/hooks/useProfile");
 vi.mock("@/components/AuthProvider");
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -90,7 +91,7 @@ describe("CreateEventDialog — event reminder control", () => {
 
     const select = screen.getByLabelText("Reminder") as HTMLSelectElement;
     expect(Array.from(select.options).map((o) => o.value)).toEqual([
-      "",
+      "none",
       "0",
       "5",
       "10",
@@ -107,7 +108,7 @@ describe("CreateEventDialog — event reminder control", () => {
 
     const select = screen.getByLabelText("Reminder") as HTMLSelectElement;
     expect(Array.from(select.options).map((o) => o.value)).toEqual([
-      "",
+      "none",
       "0",
       "1440",
     ]);
@@ -127,7 +128,7 @@ describe("CreateEventDialog — event reminder control", () => {
     mockProfile({ event_reminders: false, event_reminder_minutes: 15 });
     await openDialog();
 
-    expect(screen.getByLabelText("Reminder")).toHaveValue("");
+    expect(screen.getByLabelText("Reminder")).toHaveValue("none");
     await submitWithTitle("Standup");
     expect(createMutate).toHaveBeenCalledWith(
       expect.objectContaining({ reminder_minutes: null }),
@@ -162,7 +163,7 @@ describe("CreateEventDialog — event reminder control", () => {
 
     expect(screen.getByLabelText("Reminder")).toHaveValue("5");
     fireEvent.change(screen.getByLabelText("Reminder"), {
-      target: { value: "" },
+      target: { value: "none" },
     });
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /save/i }));
@@ -171,6 +172,25 @@ describe("CreateEventDialog — event reminder control", () => {
     expect(updateMutate).toHaveBeenCalledWith(
       expect.objectContaining({ id: "evt-1", reminder_minutes: null }),
     );
+  });
+
+  it("disables the control for an event in a recurring series", async () => {
+    await openDialog({
+      defaultDate: undefined,
+      event: {
+        id: "evt-2",
+        title: "Weekly sync",
+        start: new Date("2025-06-01T10:00:00"),
+        end: new Date("2025-06-01T11:00:00"),
+        allDay: false,
+        color: "#000",
+        reminderMinutes: 10,
+        metadata: { recurring_series_id: "series-1" },
+      },
+    });
+
+    expect(screen.getByLabelText("Reminder")).toBeDisabled();
+    expect(screen.getByLabelText("Reminder")).toHaveValue("10");
   });
 
   it("shows a Guest the control with an account hint and stores no reminder", async () => {

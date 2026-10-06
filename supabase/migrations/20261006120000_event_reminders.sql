@@ -38,8 +38,8 @@ BEGIN
   IF TG_OP IN ('INSERT', 'UPDATE')
      AND NEW.reminder_minutes IS NOT NULL
      AND NOT COALESCE(NEW.is_archived, false)
-     AND COALESCE(NEW.recurrence_rule, '') = ''
-     AND NEW.start_time > now() THEN
+     AND NEW.sync_state IS DISTINCT FROM 'pending_delete'
+     AND COALESCE(NEW.recurrence_rule, '') = '' THEN
     SELECT settings, timezone INTO user_settings, tz FROM profiles WHERE id = NEW.user_id;
 
     IF (user_settings->'notifications'->>'event_reminders')::boolean IS NOT FALSE THEN
@@ -66,6 +66,8 @@ BEGIN
         remind_at := NEW.start_time - make_interval(mins => NEW.reminder_minutes);
         lead_template := CASE WHEN NEW.reminder_minutes = 0
           THEN '"{}" is starting now'
+          WHEN NEW.reminder_minutes = 60 THEN '"{}" starts in 1 hour'
+          WHEN NEW.reminder_minutes = 1440 THEN '"{}" starts in 1 day'
           ELSE '"{}" starts in ' || NEW.reminder_minutes || ' minutes' END;
       END IF;
 

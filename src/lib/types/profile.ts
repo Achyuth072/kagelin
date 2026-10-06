@@ -1,4 +1,4 @@
-import { DEFAULT_EVENT_REMINDER_MINUTES } from "@/lib/utils/eventReminder";
+export const DEFAULT_EVENT_REMINDER_MINUTES = 10;
 
 export interface Profile {
   id: string;

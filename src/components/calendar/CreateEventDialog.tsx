@@ -3,7 +3,7 @@
 "use no memo";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useEffectEvent, useMemo, useRef } from "react";
 import { useForm, useWatch, useFormState, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -44,6 +44,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -57,11 +64,8 @@ import {
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useAuth } from "@/components/AuthProvider";
-import {
-  DEFAULT_EVENT_REMINDER_MINUTES,
-  normalizeReminder,
-  reminderOptions,
-} from "@/lib/utils/eventReminder";
+import { DEFAULT_EVENT_REMINDER_MINUTES } from "@/lib/types/profile";
+import { reminderOptions, snapAllDayReminder } from "@/lib/utils/eventReminder";
 import { parseEventInput } from "@/lib/utils/nlp-event";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
@@ -81,6 +85,9 @@ const CreateEventSchema = z.object({
 });
 
 type CreateEventFormData = z.infer<typeof CreateEventSchema>;
+
+// Radix Select reserves the empty string for "no selection".
+const NO_REMINDER = "none";
 
 const PREDEFINED_LOCATIONS = [
   "Coffee Shop",
@@ -151,10 +158,7 @@ export function CreateEventDialog({
         DEFAULT_EVENT_REMINDER_MINUTES)
       : null;
   // Read at open time only: a late profile load must not reset a half-filled form.
-  const defaultReminderRef = useRef(defaultReminder);
-  useEffect(() => {
-    defaultReminderRef.current = defaultReminder;
-  }, [defaultReminder]);
+  const getDefaultReminder = useEffectEvent(() => defaultReminder);
   const createEvent = useCreateCalendarEvent();
   const updateEvent = useUpdateCalendarEvent();
   const deleteEvent = useDeleteCalendarEvent();
@@ -212,7 +216,7 @@ export function CreateEventDialog({
 
   const allDay = useWatch({ control, name: "all_day" });
   const title = useWatch({ control, name: "title" });
-  const reminderMinutes = normalizeReminder(
+  const reminderMinutes = snapAllDayReminder(
     allDay,
     useWatch({ control, name: "reminder_minutes" }),
   );
@@ -284,7 +288,7 @@ export function CreateEventDialog({
             description: "",
             location: "",
             all_day: false,
-            reminder_minutes: defaultReminderRef.current,
+            reminder_minutes: getDefaultReminder(),
           });
           setDraftLocation("");
         }
@@ -308,7 +312,7 @@ export function CreateEventDialog({
     const reminderPayload = isGuestMode
       ? {}
       : {
-          reminder_minutes: normalizeReminder(
+          reminder_minutes: snapAllDayReminder(
             data.all_day,
             data.reminder_minutes,
           ),
@@ -657,25 +661,35 @@ export function CreateEventDialog({
                     strokeWidth={2.25}
                   />
                 </IconCell>
-                <select
-                  aria-label="Reminder"
-                  value={reminderMinutes ?? ""}
+                <Select
+                  value={
+                    reminderMinutes === null
+                      ? NO_REMINDER
+                      : String(reminderMinutes)
+                  }
                   disabled={isRecurring || isGuestMode}
-                  onChange={(e) =>
+                  onValueChange={(val) =>
                     setValue(
                       "reminder_minutes",
-                      e.target.value === "" ? null : Number(e.target.value),
+                      val === NO_REMINDER ? null : Number(val),
                     )
                   }
-                  className="flex-1 bg-transparent text-sm text-foreground outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value="">No reminder</option>
-                  {reminderOptions(allDay).map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    aria-label="Reminder"
+                    className="h-auto flex-1 border-0 bg-transparent p-0 text-foreground focus-visible:ring-0"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_REMINDER}>No reminder</SelectItem>
+                    {reminderOptions(allDay).map((o) => (
+                      <SelectItem key={o.value} value={String(o.value)}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {isGuestMode && (
                 <p className="px-3 pb-1 text-xs text-muted-foreground">

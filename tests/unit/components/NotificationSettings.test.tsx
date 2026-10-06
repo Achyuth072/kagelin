@@ -25,6 +25,8 @@ vi.mock("@/lib/push-api", () => ({
   sendPushNotification: vi.fn(),
 }));
 
+vi.mock("@/components/ui/select", () => import("../nativeSelectMock"));
+
 describe("NotificationSettings Component", () => {
   const mockUpdateSettings = { mutateAsync: vi.fn() };
   const mockUpdateProfile = { mutate: vi.fn() };

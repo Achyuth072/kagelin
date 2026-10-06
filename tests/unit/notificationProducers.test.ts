@@ -74,7 +74,19 @@ describe("handle_event_notification_sync", () => {
 
   it("queues nothing for a reminder time already past or an event already started", () => {
     expect(body).toMatch(/remind_at\s*>\s*now\(\)/);
-    expect(body).toMatch(/NEW\.start_time\s*>\s*now\(\)/);
+  });
+
+  it("still queues today's 9:00 reminder for an all-day event that began at midnight", () => {
+    expect(body).not.toMatch(/NEW\.start_time\s*>\s*now\(\)/);
+  });
+
+  it("queues nothing for a synced event awaiting remote deletion", () => {
+    expect(body).toContain("NEW.sync_state IS DISTINCT FROM 'pending_delete'");
+  });
+
+  it("words hour and day lead times naturally", () => {
+    expect(body).toContain(`'"{}" starts in 1 hour'`);
+    expect(body).toContain(`'"{}" starts in 1 day'`);
   });
 
   it("honors the event_reminders switch, on when unset", () => {

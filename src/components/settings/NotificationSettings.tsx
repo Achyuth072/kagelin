@@ -26,8 +26,9 @@ import { ToggleRow } from "@/components/settings/ToggleRow";
 import { isIOS, isStandalone } from "@/lib/utils/platform";
 import {
   DEFAULT_EVENT_REMINDER_MINUTES,
-  TIMED_REMINDER_OPTIONS,
-} from "@/lib/utils/eventReminder";
+  type UserSettings,
+} from "@/lib/types/profile";
+import { TIMED_REMINDER_OPTIONS } from "@/lib/utils/eventReminder";
 import {
   Select,
   SelectContent,
@@ -41,6 +42,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useState, useMemo } from "react";
+
+type NotifySettings = NonNullable<UserSettings["notifications"]>;
 
 const getInitialTimezones = () => {
   if (typeof window === "undefined")
@@ -155,7 +158,10 @@ export function NotificationSettings() {
     }
   };
 
-  const updateNotifySetting = async (key: string, value: boolean | number) => {
+  const updateNotifySetting = async <K extends keyof NotifySettings>(
+    key: K,
+    value: NotifySettings[K],
+  ) => {
     trigger("tick");
     try {
       await updateSettings.mutateAsync({
@@ -237,6 +243,7 @@ export function NotificationSettings() {
   }
 
   const settings = profile?.settings?.notifications;
+  const eventRemindersOn = settings?.event_reminders ?? true;
   const showBatteryHintArea =
     isAndroidChromeBrowser &&
     !isGuestMode &&
@@ -442,11 +449,11 @@ export function NotificationSettings() {
               icon={CalendarClock}
               title="Event Reminders"
               description="Before calendar events that have a reminder"
-              checked={settings?.event_reminders ?? true}
+              checked={eventRemindersOn}
               onChange={(c) => updateNotifySetting("event_reminders", c)}
             />
 
-            {(settings?.event_reminders ?? true) && (
+            {eventRemindersOn && (
               <div className="flex items-center justify-between p-3 rounded-md border border-border/30 bg-muted/20">
                 <div>
                   <p className="text-sm font-medium">Default lead time</p>
@@ -454,26 +461,29 @@ export function NotificationSettings() {
                     Applied to new events
                   </p>
                 </div>
-                <select
-                  aria-label="Default reminder lead time"
-                  value={
+                <Select
+                  value={String(
                     settings?.event_reminder_minutes ??
-                    DEFAULT_EVENT_REMINDER_MINUTES
+                      DEFAULT_EVENT_REMINDER_MINUTES,
+                  )}
+                  onValueChange={(val) =>
+                    updateNotifySetting("event_reminder_minutes", Number(val))
                   }
-                  onChange={(e) =>
-                    updateNotifySetting(
-                      "event_reminder_minutes",
-                      Number(e.target.value),
-                    )
-                  }
-                  className="h-8 rounded-md border border-border/50 bg-background px-2 text-sm"
                 >
-                  {TIMED_REMINDER_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    className="h-8 w-auto"
+                    aria-label="Default reminder lead time"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIMED_REMINDER_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={String(o.value)}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
