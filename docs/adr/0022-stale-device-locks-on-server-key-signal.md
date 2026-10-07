@@ -36,10 +36,11 @@ for up to an hour.
   Re-seal, so no caller has to cooperate. The gate subscribes. We rejected the
   QueryClient `mutationCache.onError`, which misses everything that is not a
   mutation, and a `uiStore` flag, which stores an event as state.
-- **The retired-key error is silent in toasts.** `handleMutationError` and the
-  sync error text tell it apart from the local "no key on this device" error by
-  its `hint`. The unlock screen is the message. Toasts would only repeat it, one
-  for each failed write.
+- **The retired-key error is silent in toasts.** `handleMutationError` tells it
+  apart from the local "no key on this device" error by its `hint`. The unlock
+  screen is the message, and toasts would only repeat it, one for each failed
+  write. The sync status text keeps its "unlock the app" wording, because it
+  records state rather than interrupting the user.
 - **`app_update_required` does not lock.** A stale app is not a leaked key. The
   same signal shows a single sticky toast with a Reload action instead of one
   toast for each failed write.

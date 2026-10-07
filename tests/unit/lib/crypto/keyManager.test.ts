@@ -644,6 +644,32 @@ describe("keyManager", () => {
       expect(result.keySavedOnDevice).toBe(false);
     }, 60000);
 
+    it("drops the retired key from this device when the new one could not be saved, so no write reaches the server with it", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      vi.mocked(keyStore.save).mockRejectedValueOnce(new Error("quota"));
+
+      await rotateContentKey(USER_ID, "old passphrase", "new passphrase");
+
+      expect(await keyStore.loadKeyring(USER_ID)).toBeNull();
+    }, 60000);
+
+    it("reports it, and still returns the recovery code, when the retired key cannot be dropped either", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      const clearError = new Error("storage unavailable");
+      vi.mocked(keyStore.save).mockRejectedValueOnce(new Error("quota"));
+      vi.mocked(keyStore.clear).mockRejectedValueOnce(clearError);
+
+      const result = await rotateContentKey(
+        USER_ID,
+        "old passphrase",
+        "new passphrase",
+      );
+
+      expect(captureExceptionMock).toHaveBeenCalledWith(clearError);
+      expect(result.recoveryCode).toMatch(/^[0-9A-Z-]+$/);
+      expect(result.keySavedOnDevice).toBe(false);
+    }, 60000);
+
     it("refuses a stale device's key-row writes after a rotation on another device", async () => {
       const { oldKey } = await setupAndRotate();
       const after = structuredClone(rows.get(USER_ID));

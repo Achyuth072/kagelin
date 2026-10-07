@@ -424,6 +424,12 @@ export async function rotateContentKey(
   } catch (err) {
     keySavedOnDevice = false;
     Sentry.captureException(err);
+    // Until the user unlocks again, the retired key must not seal writes the server rejects.
+    try {
+      await keyStore.clear();
+    } catch (clearErr) {
+      Sentry.captureException(clearErr);
+    }
   }
 
   const { error: signOutError } = await supabase.auth.signOut({
