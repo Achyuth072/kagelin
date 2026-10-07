@@ -108,6 +108,10 @@ export function RotateContentKeyDialog({
                 <li>Every other device is signed out.</li>
                 <li>Changes not yet synced from those devices are lost.</li>
                 <li>
+                  Your passphrase and recovery code both change. The old ones
+                  stop working.
+                </li>
+                <li>
                   Your content is re-encrypted in the background. You can keep
                   using Kagelin meanwhile.
                 </li>
