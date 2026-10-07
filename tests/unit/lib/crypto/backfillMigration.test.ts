@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { runBackfillMigration } from "@/lib/crypto/backfillMigration";
+import {
+  findPendingRows,
+  runBackfillMigration,
+} from "@/lib/crypto/backfillMigration";
+import { wrapSupabaseClient } from "@/lib/supabase/wrapClient";
 import { FIELD_MAP } from "@/lib/supabase/fieldMap";
 import { isCiphertext, encryptField } from "@/lib/crypto/contentCipher";
 import { generateMasterKey } from "@/lib/crypto/masterKey";
@@ -23,6 +27,14 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 const USER_ID = "user-1";
+
+const sealed = (table: string, column: string, rowId: string, text: string) =>
+  encryptField(keyStoreState.key!, text, {
+    userId: USER_ID,
+    table,
+    column,
+    rowId,
+  });
 
 // Replaces rather than mutates so the read snapshot stays stale like a network read.
 function withEditAfterRead(
@@ -214,9 +226,11 @@ describe("runBackfillMigration", () => {
     expect(final.map((r: Row) => r.id).sort()).toEqual(["t1", "t2", "t3"]);
   });
 
-  it("does not double-encrypt a row that is already ciphertext", async () => {
-    const alreadyEncrypted = await encryptField(
-      keyStoreState.key!,
+  it("leaves a row alone that is already sealed row-bound under the current key", async () => {
+    const alreadyEncrypted = await sealed(
+      "tasks",
+      "content",
+      "t1",
       "already migrated",
     );
     fakeClient = createFakeSupabaseClient({
@@ -260,8 +274,10 @@ describe("runBackfillMigration", () => {
     });
 
     let concurrentEditApplied = false;
-    const concurrentContent = await encryptField(
-      keyStoreState.key!,
+    const concurrentContent = await sealed(
+      "tasks",
+      "content",
+      "t1",
       "edited from another device",
     );
     fakeClient = {
@@ -304,7 +320,12 @@ describe("runBackfillMigration", () => {
       habit_entries: [{ id: "e1", habit_id: "h1", notes: "Knee sore" }],
     });
 
-    const concurrentNotes = await encryptField(keyStoreState.key!, "Knee fine");
+    const concurrentNotes = await sealed(
+      "habit_entries",
+      "notes",
+      "e1",
+      "Knee fine",
+    );
     fakeClient = withEditAfterRead(base, "habit_entries", (stored) => ({
       ...stored,
       notes: concurrentNotes,
@@ -322,7 +343,7 @@ describe("runBackfillMigration", () => {
       labels: [{ id: "l1", user_id: USER_ID, name: "Health" }],
     });
 
-    const concurrentName = await encryptField(keyStoreState.key!, "Fitness");
+    const concurrentName = await sealed("labels", "name", "l1", "Fitness");
     fakeClient = withEditAfterRead(base, "labels", (stored) => ({
       ...stored,
       name: concurrentName,
@@ -454,5 +475,171 @@ describe("runBackfillMigration", () => {
     expect(
       fakeClient.rawRows("notification_queue")[0].error_message,
     ).toBeNull();
+  });
+
+  describe("re-seal of -v1 values", () => {
+    const legacy = (text: string) => encryptField(keyStoreState.key!, text);
+
+    async function seedLegacyEveryTable() {
+      const rows: Record<string, Row[]> = {
+        tasks: [
+          {
+            id: "t1",
+            user_id: USER_ID,
+            content: await legacy("Buy milk"),
+            description: await legacy("2%"),
+            updated_at: "t0",
+          },
+        ],
+        habits: [
+          {
+            id: "h1",
+            user_id: USER_ID,
+            name: await legacy("Run"),
+            description: null,
+            question: await legacy("Did you run?"),
+            updated_at: "t0",
+          },
+        ],
+        projects: [
+          {
+            id: "p1",
+            user_id: USER_ID,
+            name: await legacy("Home"),
+            updated_at: "t0",
+          },
+        ],
+        labels: [{ id: "l1", user_id: USER_ID, name: await legacy("Health") }],
+        calendar_events: [
+          {
+            id: "e1",
+            user_id: USER_ID,
+            title: await legacy("Therapy"),
+            description: null,
+            location: null,
+            category: null,
+            metadata: await legacy(JSON.stringify({ a: 1 })),
+            updated_at: "t0",
+          },
+        ],
+        external_calendars: [
+          {
+            id: "x1",
+            user_id: USER_ID,
+            name: await legacy("Work"),
+            username: await legacy("me"),
+            updated_at: "t0",
+          },
+        ],
+        habit_imports: [
+          {
+            id: "i1",
+            user_id: USER_ID,
+            raw: await legacy(JSON.stringify({ entries: [1] })),
+            file_name: await legacy("export.db"),
+          },
+        ],
+        habit_entries: [
+          { id: "n1", habit_id: "h1", notes: await legacy("Knee fine") },
+        ],
+      };
+      return rows;
+    }
+
+    it("turns -v1 values on every field-map table into row-bound -v2 that read back the same", async () => {
+      fakeClient = createFakeSupabaseClient(await seedLegacyEveryTable());
+
+      await runBackfillMigration(USER_ID);
+
+      for (const [table, fields] of Object.entries(FIELD_MAP)) {
+        const row = fakeClient.rawRows(table)[0];
+        for (const field of fields) {
+          if (row[field] === null) continue;
+          expect(row[field]).toMatch(/^xchacha20poly1305-v2:/);
+        }
+      }
+      const wrapped = wrapSupabaseClient(fakeClient, FIELD_MAP);
+      const { data: task } = await wrapped.from("tasks").select().single();
+      expect(task.content).toBe("Buy milk");
+      const { data: event } = await wrapped
+        .from("calendar_events")
+        .select()
+        .single();
+      expect(event.metadata).toEqual({ a: 1 });
+      const { data: entry } = await wrapped
+        .from("habit_entries")
+        .select()
+        .single();
+      expect(entry.notes).toBe("Knee fine");
+    });
+
+    it("after a full pass finds nothing left to upgrade", async () => {
+      fakeClient = createFakeSupabaseClient(await seedLegacyEveryTable());
+
+      await runBackfillMigration(USER_ID);
+
+      expect(await findPendingRows(USER_ID)).toEqual([]);
+    });
+
+    it("resumes after an interruption and only rewrites the rows that remain", async () => {
+      fakeClient = createFakeSupabaseClient({
+        tasks: [
+          {
+            id: "t1",
+            user_id: USER_ID,
+            content: await sealed("tasks", "content", "t1", "Done already"),
+            updated_at: "t0",
+          },
+          {
+            id: "t2",
+            user_id: USER_ID,
+            content: await legacy("Still legacy"),
+            updated_at: "t0",
+          },
+        ],
+      });
+      const finished = fakeClient.rawRows("tasks")[0].content;
+
+      const progress: Array<{ done: number; total: number }> = [];
+      await runBackfillMigration(USER_ID, (p) =>
+        progress.push({ done: p.done, total: p.total }),
+      );
+
+      expect(progress.at(-1)).toEqual({ done: 1, total: 1 });
+      expect(fakeClient.rawRows("tasks")[0].content).toBe(finished);
+      expect(fakeClient.rawRows("tasks")[1].content).toMatch(
+        /^xchacha20poly1305-v2:/,
+      );
+    });
+
+    it("surfaces a concurrent edit of a -v1 row as a conflict and picks it up on retry", async () => {
+      const base = createFakeSupabaseClient({
+        tasks: [
+          {
+            id: "t1",
+            user_id: USER_ID,
+            content: await legacy("old"),
+            updated_at: "t0",
+          },
+        ],
+      });
+      const edited = await legacy("edited elsewhere");
+      fakeClient = withEditAfterRead(base, "tasks", (stored) => ({
+        ...stored,
+        content: edited,
+        updated_at: "t1",
+      }));
+
+      await expect(runBackfillMigration(USER_ID)).rejects.toThrow(
+        /Migration conflict/,
+      );
+      expect(base.rawRows("tasks")[0].content).toBe(edited);
+
+      fakeClient = base;
+      await runBackfillMigration(USER_ID);
+      expect(base.rawRows("tasks")[0].content).toMatch(
+        /^xchacha20poly1305-v2:/,
+      );
+    });
   });
 });

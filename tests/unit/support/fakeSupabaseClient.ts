@@ -159,7 +159,7 @@ function createFakeTable(
 
 export function createFakeSupabaseClient(
   seed: Record<string, Row[]> = {},
-  opts: { failWrite?: FailWrite; userId?: string } = {},
+  opts: { failWrite?: FailWrite; userId?: string | null } = {},
 ) {
   const store = new Map<string, Row[]>(
     Object.entries(seed).map(([table, rows]) => [table, [...rows]]),
@@ -168,7 +168,10 @@ export function createFakeSupabaseClient(
     auth: {
       getSession: async () => ({
         data: {
-          session: opts.userId ? { user: { id: opts.userId } } : null,
+          session:
+            opts.userId === null
+              ? null
+              : { user: { id: opts.userId ?? "user-1" } },
         },
       }),
     },

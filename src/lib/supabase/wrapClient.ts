@@ -62,20 +62,22 @@ function createReadLoaders(ctx: WrapContext): ReadLoaders {
 export const MISSING_ROW_ID_CODE = "missing_row_id";
 
 // Row-bound ciphertext needs the row id before encryption, so the database default cannot supply it.
+function missingRowIdError(table: string) {
+  return Object.assign(
+    new Error(
+      `Cannot write to "${table}" without a client-generated id on every row.`,
+    ),
+    { code: MISSING_ROW_ID_CODE },
+  );
+}
+
 function assertRowIds(table: string, fieldMap: FieldMap, values: unknown) {
   if (!fieldMap[table]?.length) return;
   const rows = Array.isArray(values) ? values : [values];
   const idless = rows.some(
     (row) => !isPlainObject(row) || typeof row.id !== "string" || !row.id,
   );
-  if (idless) {
-    throw Object.assign(
-      new Error(
-        `Cannot write to "${table}" without a client-generated id on every row.`,
-      ),
-      { code: MISSING_ROW_ID_CODE },
-    );
-  }
+  if (idless) throw missingRowIdError(table);
 }
 
 export function isJsonField(table: string, field: string): boolean {
@@ -126,25 +128,53 @@ function rowNeedsEncryption(
   );
 }
 
+export const APP_UPDATE_REQUIRED_CODE = "app_update_required";
+
+// The server's marker of a finished upgrade rejects `-v1` writes from a stale app.
+const SEALING_SCHEME_OUTDATED_HINT = "sealing_scheme_outdated";
+
+export function isAppUpdateRequiredError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === APP_UPDATE_REQUIRED_CODE
+  );
+}
+
+interface SealContext {
+  key: Uint8Array;
+  userId: string;
+  // Updates carry no id in their payload; it comes from the `.eq("id", ...)` filter.
+  fallbackRowId?: string;
+}
+
 async function encryptRow(
   table: string,
   fields: readonly string[],
   row: unknown,
-  key: Uint8Array,
+  seal: SealContext,
 ): Promise<unknown> {
   if (!isPlainObject(row)) return row;
 
   const out = { ...row };
+  const rowId = typeof row.id === "string" ? row.id : seal.fallbackRowId;
   for (const field of fields) {
     const value = row[field];
     if (needsEncryption(table, field, value)) {
+      if (!rowId) throw missingRowIdError(table);
       out[field] = await encryptField(
-        key,
+        seal.key,
         isJsonField(table, field) ? JSON.stringify(value) : (value as string),
+        { userId: seal.userId, table, column: field, rowId },
       );
     }
   }
   return out;
+}
+
+export interface EncryptPayloadOptions {
+  userId?: string;
+  rowId?: string;
 }
 
 // Shared with call sites that write via the service-role client, which
@@ -153,6 +183,7 @@ export async function encryptPayload(
   table: string,
   values: unknown,
   fieldMap: FieldMap = FIELD_MAP,
+  options: EncryptPayloadOptions = {},
 ): Promise<unknown> {
   const fields = fieldMap[table];
   if (!fields?.length) return values;
@@ -163,16 +194,18 @@ export async function encryptPayload(
   }
 
   const key = await getContentKey();
-  if (!key) {
+  const userId = options.userId ?? (await keyStore.loadUserId());
+  if (!key || !userId) {
     throw contentKeyUnavailableError("write to", table);
   }
 
+  const seal: SealContext = { key, userId, fallbackRowId: options.rowId };
   if (Array.isArray(values)) {
     return Promise.all(
-      values.map((row) => encryptRow(table, fields, row, key)),
+      values.map((row) => encryptRow(table, fields, row, seal)),
     );
   }
-  return encryptRow(table, fields, values, key);
+  return encryptRow(table, fields, values, seal);
 }
 
 async function bindingFor(
@@ -247,6 +280,18 @@ async function decryptResult(
   ctx: WrapContext,
   result: any,
 ): Promise<any> {
+  if (isPlainObject(result) && isPlainObject(result.error)) {
+    return result.error.hint === SEALING_SCHEME_OUTDATED_HINT
+      ? {
+          ...result,
+          error: {
+            ...result.error,
+            code: APP_UPDATE_REQUIRED_CODE,
+            message: "Kagelin has been updated. Reload the app to keep saving.",
+          },
+        }
+      : result;
+  }
   if (!isPlainObject(result) || result.error || result.data == null) {
     return result;
   }
@@ -281,21 +326,31 @@ function wrapFilterBuilder(builder: any, table: string, ctx: WrapContext): any {
   return proxy;
 }
 
+interface PendingOp {
+  prop: string;
+  args: unknown[];
+}
+
+function idFilter(ops: PendingOp[]): string | undefined {
+  const op = ops.find((o) => o.prop === "eq" && o.args[0] === "id");
+  return typeof op?.args[1] === "string" ? op.args[1] : undefined;
+}
+
 // PostgREST chaining is synchronous, but payload encryption is async.
 function wrapPendingBuilder(
   table: string,
   ctx: WrapContext,
   // Boxed in an object so Promise resolution does not auto-await the PostgREST thenable.
-  resolveReal: () => Promise<{ builder: any }>,
+  resolveReal: (ops: PendingOp[]) => Promise<{ builder: any }>,
 ): any {
-  const ops: Array<{ prop: string; args: unknown[] }> = [];
+  const ops: PendingOp[] = [];
   const proxy: any = new Proxy(
     {},
     {
       get(_target, prop) {
         if (prop === "then") {
           return (onFulfilled?: any, onRejected?: any) =>
-            resolveReal()
+            resolveReal(ops)
               .then(({ builder }) =>
                 ops.reduce((acc, op) => acc[op.prop](...op.args), builder),
               )
@@ -318,11 +373,19 @@ function wrapQueryBuilder(builder: any, table: string, ctx: WrapContext): any {
       if (prop === "insert" || prop === "update" || prop === "upsert") {
         const method = prop;
         return (values: unknown, options?: unknown) =>
-          wrapPendingBuilder(table, ctx, async () => {
+          wrapPendingBuilder(table, ctx, async (ops) => {
             if (method !== "update") {
               assertRowIds(table, ctx.fieldMap, values);
             }
-            const encrypted = await encryptPayload(table, values, ctx.fieldMap);
+            const encrypted = await encryptPayload(
+              table,
+              values,
+              ctx.fieldMap,
+              {
+                userId: (await ctx.getUserId()) ?? undefined,
+                rowId: method === "update" ? idFilter(ops) : undefined,
+              },
+            );
             return { builder: target[method](encrypted, options) };
           });
       }

@@ -11,6 +11,7 @@ import { EncryptionSetupScreen } from "@/components/encryption/EncryptionSetupSc
 import { UnlockScreen } from "@/components/encryption/UnlockScreen";
 import { EncryptionMigrationScreen } from "@/components/encryption/EncryptionMigrationScreen";
 import { NewPassphraseStep } from "@/components/encryption/NewPassphraseStep";
+import { ResealIndicator } from "@/components/encryption/ResealIndicator";
 
 interface EncryptionGateActions {
   lock: () => Promise<void>;
@@ -32,7 +33,8 @@ export function useEncryptionGateActions(): EncryptionGateActions {
 
 export function EncryptionGate({ children }: { children: React.ReactNode }) {
   const { user, isGuestMode } = useAuth();
-  const { status, recheck, lock } = useEncryptionGate();
+  const { status, recheck, lock, needsReseal, finishReseal } =
+    useEncryptionGate();
 
   if (!user || isGuestMode || status === "not-applicable") {
     return <>{children}</>;
@@ -90,6 +92,9 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
   return (
     <EncryptionGateContext.Provider value={{ lock }}>
       {children}
+      {needsReseal && (
+        <ResealIndicator userId={user.id} onComplete={finishReseal} />
+      )}
     </EncryptionGateContext.Provider>
   );
 }

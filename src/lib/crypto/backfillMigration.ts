@@ -3,7 +3,12 @@ import { createRawClient } from "@/lib/supabase/client";
 import { fetchAllRows } from "@/lib/supabase/paginate";
 import { FIELD_MAP } from "@/lib/supabase/fieldMap";
 import { needsEncryption, isJsonField } from "@/lib/supabase/wrapClient";
-import { encryptField } from "@/lib/crypto/contentCipher";
+import {
+  decryptField,
+  encryptField,
+  isCiphertext,
+} from "@/lib/crypto/contentCipher";
+import { needsReseal } from "@/lib/crypto/envelope";
 import { keyStore } from "@/lib/crypto/keyStore";
 
 export interface MigrationProgress {
@@ -70,6 +75,18 @@ async function fetchOwnedRows(
   return rows;
 }
 
+// Plaintext, `-v1` and retired-key values all need sealing; null JSON/text has nothing to seal.
+function valueNeedsSealing(
+  table: string,
+  field: string,
+  value: unknown,
+): boolean {
+  return (
+    needsEncryption(table, field, value) ||
+    (isCiphertext(value) && needsReseal(value))
+  );
+}
+
 // Raw client avoids decrypt-on-select to distinguish ciphertext from plaintext.
 export async function findPendingRows(userId: string): Promise<PendingRow[]> {
   const raw = createRawClient();
@@ -86,7 +103,7 @@ export async function findPendingRows(userId: string): Promise<PendingRow[]> {
     const rows = await fetchOwnedRows(raw, table, columns, userId);
 
     for (const row of rows) {
-      if (fields.some((field) => needsEncryption(table, field, row[field]))) {
+      if (fields.some((field) => valueNeedsSealing(table, field, row[field]))) {
         pending.push({
           table,
           id: row.id as string,
@@ -179,6 +196,8 @@ async function scrubLegacyDiagnosticText(userId: string): Promise<void> {
   if (notificationError) throw notificationError;
 }
 
+// Re-seals every value not yet in the current scheme under the current key,
+// bound to its row; plaintext is the special case with nothing to open first.
 export async function runBackfillMigration(
   userId: string,
   onProgress?: (progress: MigrationProgress) => void,
@@ -205,11 +224,14 @@ export async function runBackfillMigration(
     await Promise.all(
       fields.map(async (field) => {
         const value = row[field];
-        if (!needsEncryption(table, field, value)) return;
-        const plaintext = isJsonField(table, field)
-          ? JSON.stringify(value)
-          : (value as string);
-        patch[field] = await encryptField(masterKey, plaintext);
+        if (!valueNeedsSealing(table, field, value)) return;
+        const binding = { userId, table, column: field, rowId: id };
+        const plaintext = isCiphertext(value)
+          ? await decryptField(masterKey, value, binding)
+          : isJsonField(table, field)
+            ? JSON.stringify(value)
+            : (value as string);
+        patch[field] = await encryptField(masterKey, plaintext, binding);
       }),
     );
 

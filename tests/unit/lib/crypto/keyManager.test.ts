@@ -106,6 +106,7 @@ import {
   hasEncryptionKey,
   getEncryptionKeyRow,
   markMigrationComplete,
+  markResealComplete,
   UnlockError,
 } from "@/lib/crypto/keyManager";
 
@@ -350,6 +351,40 @@ describe("keyManager", () => {
     expect((await getEncryptionKeyRow(USER_ID))?.migrated_at).toEqual(
       expect.any(String),
     );
+  }, 20000);
+
+  it("setupEncryption seals a fresh account's first write row-bound, so it needs no Re-seal", async () => {
+    await setupEncryption(USER_ID, "first passphrase");
+
+    expect((await getEncryptionKeyRow(USER_ID))?.sealed_v2_at).toEqual(
+      expect.any(String),
+    );
+  }, 20000);
+
+  it("markResealComplete sets only the -v2 marker, leaving migrated_at alone", async () => {
+    rawClient = createFakeSupabaseClient({
+      tasks: [{ id: "t1", user_id: USER_ID, content: "Buy milk" }],
+    });
+    await setupEncryption(USER_ID, "first passphrase");
+
+    await markResealComplete(USER_ID);
+
+    const row = await getEncryptionKeyRow(USER_ID);
+    expect(row?.sealed_v2_at).toEqual(expect.any(String));
+    expect(row?.migrated_at).toBeNull();
+  }, 20000);
+
+  it("markMigrationComplete sets both markers", async () => {
+    rawClient = createFakeSupabaseClient({
+      tasks: [{ id: "t1", user_id: USER_ID, content: "Buy milk" }],
+    });
+    await setupEncryption(USER_ID, "first passphrase");
+
+    await markMigrationComplete(USER_ID);
+
+    const row = await getEncryptionKeyRow(USER_ID);
+    expect(row?.migrated_at).toEqual(expect.any(String));
+    expect(row?.sealed_v2_at).toEqual(expect.any(String));
   }, 20000);
 
   it("setupEncryption leaves migrated_at null for an account with pre-existing plaintext, so the backfill migration still runs", async () => {

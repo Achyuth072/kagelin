@@ -90,9 +90,16 @@ export async function getEncryptionKeyRow(
   return fetchEncryptionKeyRow(userId);
 }
 
+// The blocking pass seals every value row-bound, so it completes both markers.
 export async function markMigrationComplete(userId: string): Promise<void> {
+  const now = new Date().toISOString();
+  await updateEncryptionKeyRow(userId, { migrated_at: now, sealed_v2_at: now });
+}
+
+// After this the server rejects `-v1` writes for the Account.
+export async function markResealComplete(userId: string): Promise<void> {
   await updateEncryptionKeyRow(userId, {
-    migrated_at: new Date().toISOString(),
+    sealed_v2_at: new Date().toISOString(),
   });
 }
 
@@ -135,6 +142,7 @@ export async function setupEncryption(
     recovery_kdf_params: DEFAULT_ARGON2_PARAMS,
     wrapped_key_recovery: wrappedByRecovery,
     migrated_at: migratedAt,
+    sealed_v2_at: migratedAt,
   });
   if (error) throw error;
 

@@ -3,7 +3,7 @@ import { getSodium } from "@/lib/crypto/sodium";
 // Must match the scheme literal in supabase/schema.sql (encrypted_notification_body).
 export const SCHEME = "xchacha20poly1305-v1";
 
-// Row-bound scheme: the AEAD associated data is the value's Binding. Opened but not yet sealed by the app.
+// Row-bound scheme: the AEAD associated data is the value's Binding.
 export const SCHEME_V2 = "xchacha20poly1305-v2";
 
 export interface Binding {
@@ -29,6 +29,34 @@ export async function bytesToBase64(bytes: Uint8Array): Promise<string> {
 export async function base64ToBytes(base64: string): Promise<Uint8Array> {
   const sodium = await getSodium();
   return sodium.from_base64(base64, sodium.base64_variants.ORIGINAL);
+}
+
+// A row-bound value failed authentication: it was moved, altered or sealed under another key.
+export const CIPHERTEXT_TAMPERED_CODE = "ciphertext_tampered";
+
+export class TamperError extends Error {
+  readonly code = CIPHERTEXT_TAMPERED_CODE;
+  constructor() {
+    super(
+      "Decryption failed: this value was moved, altered or sealed for another place.",
+    );
+  }
+}
+
+export function isTamperError(error: unknown): error is TamperError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === CIPHERTEXT_TAMPERED_CODE
+  );
+}
+
+// True for plaintext, `-v1` and retired-key values: anything a Re-seal still has to rewrite.
+export function needsReseal(value: unknown): boolean {
+  return (
+    typeof value !== "string" ||
+    !value.startsWith(`${SCHEME_V2}:${CURRENT_KEY_ID}:`)
+  );
 }
 
 export function isEnvelope(value: unknown): value is string {
@@ -120,6 +148,7 @@ export async function openEnvelope(
       toUint8Array(key),
     );
   } catch {
+    if (aad) throw new TamperError();
     throw new Error("Decryption failed: wrong key or corrupted ciphertext");
   }
 }

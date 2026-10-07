@@ -11,9 +11,10 @@ export const isCiphertext = isEnvelope;
 export async function encryptField(
   key: Uint8Array,
   plaintext: string,
+  binding?: Binding,
 ): Promise<string> {
   const sodium = await getSodium();
-  return sealEnvelope(key, sodium.from_string(plaintext));
+  return sealEnvelope(key, sodium.from_string(plaintext), undefined, binding);
 }
 
 export async function decryptField(
