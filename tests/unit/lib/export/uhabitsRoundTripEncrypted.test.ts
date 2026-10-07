@@ -49,6 +49,7 @@ describe("Zero-Knowledge Content Encrypted Round-Trip Verification", () => {
     );
 
     await wrapped.from("habit_imports").insert({
+      id: crypto.randomUUID(),
       user_id: "user-round-trip",
       source_app: "uhabits",
       file_name: "Loop Habits Backup.db",
@@ -61,6 +62,7 @@ describe("Zero-Knowledge Content Encrypted Round-Trip Verification", () => {
       const { data } = await wrapped
         .from("habits")
         .insert({
+          id: crypto.randomUUID(),
           user_id: "user-round-trip",
           name: h.name,
           description: h.description,

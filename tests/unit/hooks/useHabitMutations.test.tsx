@@ -112,6 +112,7 @@ describe("useHabitMutations", () => {
         });
 
         expect(mockInsert).toHaveBeenCalledWith({
+          id: expect.any(String),
           user_id: "user-1",
           name: "Morning Workout",
           description: "Daily exercise",
@@ -532,6 +533,13 @@ describe("useHabitMutations", () => {
         mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
         mockCreateClient.mockReturnValue({
           from: vi.fn(() => ({
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: () => Promise.resolve({ data: null }),
+                }),
+              }),
+            }),
             upsert: vi.fn(() => ({
               select: vi.fn(() => ({
                 single: vi
@@ -580,6 +588,13 @@ describe("useHabitMutations", () => {
         mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
         mockCreateClient.mockReturnValue({
           from: vi.fn(() => ({
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: () => Promise.resolve({ data: null }),
+                }),
+              }),
+            }),
             upsert: vi.fn(() => ({
               select: vi.fn(() => ({
                 single: vi.fn().mockResolvedValue({
@@ -693,6 +708,13 @@ describe("useHabitMutations", () => {
         mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
         mockCreateClient.mockReturnValue({
           from: vi.fn(() => ({
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: () => Promise.resolve({ data: null }),
+                }),
+              }),
+            }),
             upsert: vi.fn(() => ({
               select: vi.fn(() => ({
                 single: vi.fn().mockResolvedValue({
@@ -736,6 +758,13 @@ describe("useHabitMutations", () => {
         mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
         mockCreateClient.mockReturnValue({
           from: vi.fn(() => ({
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: () => Promise.resolve({ data: null }),
+                }),
+              }),
+            }),
             upsert: vi.fn(() => ({
               select: vi.fn(() => ({
                 single: vi.fn().mockResolvedValue({

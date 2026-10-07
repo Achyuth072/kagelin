@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { getSodium } from "@/lib/crypto/sodium";
 import {
   SCHEME,
+  SCHEME_V2,
   CURRENT_KEY_ID,
   isEnvelope,
   sealEnvelope,
@@ -72,5 +73,66 @@ describe("isEnvelope", () => {
     expect(isEnvelope(envelope)).toBe(true);
     expect(isEnvelope("plain text")).toBe(false);
     expect(isEnvelope(null)).toBe(false);
+  });
+});
+
+describe("row-bound (-v2) envelopes", () => {
+  const binding = {
+    userId: "user-1",
+    table: "tasks",
+    column: "content",
+    rowId: "row-1",
+  };
+  const seal = async (key: Uint8Array, b = binding) =>
+    sealEnvelope(key, new TextEncoder().encode("secret"), CURRENT_KEY_ID, b);
+
+  it("opens with the binding it was sealed under", async () => {
+    const key = await generateKey();
+    const envelope = await seal(key);
+
+    expect(isEnvelope(envelope)).toBe(true);
+    expect(envelope.startsWith(`${SCHEME_V2}:`)).toBe(true);
+    const opened = await openEnvelope(key, envelope, binding);
+    expect(new TextDecoder().decode(opened)).toBe("secret");
+  });
+
+  it.each([
+    ["user", { userId: "user-2" }],
+    ["table", { table: "habits" }],
+    ["column", { column: "description" }],
+    ["row", { rowId: "row-2" }],
+  ])("fails when opened for another %s", async (_name, change) => {
+    const key = await generateKey();
+    const envelope = await seal(key);
+
+    await expect(
+      openEnvelope(key, envelope, { ...binding, ...change }),
+    ).rejects.toThrow();
+  });
+
+  it("does not let field boundaries shift between binding parts", async () => {
+    const key = await generateKey();
+    const envelope = await seal(key, { ...binding, table: "ab", column: "c" });
+
+    await expect(
+      openEnvelope(key, envelope, { ...binding, table: "a", column: "bc" }),
+    ).rejects.toThrow();
+  });
+
+  it("refuses to open without a binding", async () => {
+    const key = await generateKey();
+    await expect(openEnvelope(key, await seal(key))).rejects.toThrow(/binding/);
+  });
+
+  it("still opens -v1 values with no binding, ignoring one if given", async () => {
+    const key = await generateKey();
+    const envelope = await sealEnvelope(key, new TextEncoder().encode("old"));
+
+    expect(new TextDecoder().decode(await openEnvelope(key, envelope))).toBe(
+      "old",
+    );
+    expect(
+      new TextDecoder().decode(await openEnvelope(key, envelope, binding)),
+    ).toBe("old");
   });
 });

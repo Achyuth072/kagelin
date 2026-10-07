@@ -273,6 +273,7 @@ export async function applyPullMutations(
       if (!match) {
         rows.push({
           ...item,
+          id: crypto.randomUUID(),
           user_id: calendar.user_id,
           remote_calendar_id: calendar.id,
         });

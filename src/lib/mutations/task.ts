@@ -306,6 +306,7 @@ export const taskMutations = {
         const { data: newTask, error: createError } = await supabase
           .from("tasks")
           .insert({
+            id: crypto.randomUUID(),
             user_id: currentTask.user_id,
             project_id: currentTask.project_id,
             content: currentTask.content,
@@ -525,6 +526,7 @@ export const taskMutations = {
     const { data: duplicatedTask, error } = await supabase
       .from("tasks")
       .insert({
+        id: crypto.randomUUID(),
         user_id: user.id,
         ...toDuplicatePayload(sourceTask, sourceTask.parent_id || null),
         ...overrides,
@@ -552,6 +554,7 @@ export const taskMutations = {
         const { data: newSubtask, error: insertError } = await supabase
           .from("tasks")
           .insert({
+            id: crypto.randomUUID(),
             user_id: user.id,
             ...toDuplicatePayload(subtask, newParentId),
             day_order: subtask.day_order ?? 0,

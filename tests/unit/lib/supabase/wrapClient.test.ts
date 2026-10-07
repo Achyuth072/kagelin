@@ -3,6 +3,7 @@ import { wrapSupabaseClient } from "@/lib/supabase/wrapClient";
 import { FIELD_MAP, type FieldMap } from "@/lib/supabase/fieldMap";
 import { generateMasterKey } from "@/lib/crypto/masterKey";
 import { isCiphertext, encryptField } from "@/lib/crypto/contentCipher";
+import { sealEnvelope, CURRENT_KEY_ID } from "@/lib/crypto/envelope";
 import {
   createFakeSupabaseClient,
   type Row,
@@ -30,7 +31,7 @@ describe("wrapSupabaseClient — with a populated field map", () => {
 
     const { data: inserted, error } = await client
       .from("tasks")
-      .insert({ content: "Buy milk", priority: 1 })
+      .insert({ id: "t1", content: "Buy milk", priority: 1 })
       .select()
       .single();
 
@@ -56,7 +57,10 @@ describe("wrapSupabaseClient — with a populated field map", () => {
 
     const { data } = await client
       .from("tasks")
-      .insert([{ content: "First" }, { content: "Second" }])
+      .insert([
+        { id: "t1", content: "First" },
+        { id: "t2", content: "Second" },
+      ])
       .select();
 
     expect(data.map((r: Row) => r.content)).toEqual(["First", "Second"]);
@@ -94,7 +98,7 @@ describe("wrapSupabaseClient — with a populated field map", () => {
       "already encrypted",
     );
 
-    await client.from("tasks").insert({ content: alreadyEncrypted });
+    await client.from("tasks").insert({ id: "t1", content: alreadyEncrypted });
 
     expect(raw.rawRows("tasks")[0].content).toBe(alreadyEncrypted);
   });
@@ -120,7 +124,7 @@ describe("wrapSupabaseClient — with a populated field map", () => {
       projects: ["name"],
     });
 
-    await client.from("projects").insert({ name: "Secret project" });
+    await client.from("projects").insert({ id: "p1", name: "Secret project" });
     await client.from("tasks").insert({ id: "t1", content: "task" });
 
     // Simulates PostgREST nested relation response structure.
@@ -158,7 +162,9 @@ describe("wrapSupabaseClient — with a populated field map", () => {
     const client = wrapSupabaseClient(raw, testFieldMap);
 
     await expect(
-      client.from("tasks").insert({ content: "should not be written" }),
+      client
+        .from("tasks")
+        .insert({ id: "t1", content: "should not be written" }),
     ).rejects.toThrow();
     expect(raw.rawRows("tasks")).toHaveLength(0);
   });
@@ -184,7 +190,7 @@ describe("wrapSupabaseClient — with the real field map", () => {
 
     const { data: inserted } = await client
       .from("tasks")
-      .insert({ content: "Buy milk", description: "2%", priority: 1 })
+      .insert({ id: "t1", content: "Buy milk", description: "2%", priority: 1 })
       .select()
       .single();
 
@@ -237,7 +243,7 @@ describe("wrapSupabaseClient — with the real field map", () => {
 
     const { data: habit } = await client
       .from("habits")
-      .insert({ name: "Take medication", description: "Twice daily" })
+      .insert({ id: "h1", name: "Take medication", description: "Twice daily" })
       .select()
       .single();
     expect(habit.name).toBe("Take medication");
@@ -247,7 +253,7 @@ describe("wrapSupabaseClient — with the real field map", () => {
 
     const { data: project } = await client
       .from("projects")
-      .insert({ name: "Divorce planning" })
+      .insert({ id: "p1", name: "Divorce planning" })
       .select()
       .single();
     expect(project.name).toBe("Divorce planning");
@@ -255,7 +261,7 @@ describe("wrapSupabaseClient — with the real field map", () => {
 
     const { data: label } = await client
       .from("labels")
-      .insert({ name: "Urgent" })
+      .insert({ id: "l1", name: "Urgent" })
       .select()
       .single();
     expect(label.name).toBe("Urgent");
@@ -274,6 +280,7 @@ describe("wrapSupabaseClient — with the real field map", () => {
     const { data: event } = await client
       .from("calendar_events")
       .insert({
+        id: "e1",
         title: "Oncology follow-up",
         description: "Bring scan results",
         location: "St Mary's, room 4",
@@ -336,7 +343,7 @@ describe("wrapSupabaseClient — with the real field map", () => {
 
     await client
       .from("calendar_events")
-      .insert({ title: "No metadata", metadata: null });
+      .insert({ id: "e1", title: "No metadata", metadata: null });
     expect(raw.rawRows("calendar_events")[0].metadata).toBeNull();
   });
 
@@ -347,6 +354,7 @@ describe("wrapSupabaseClient — with the real field map", () => {
     const { data: calendar } = await client
       .from("external_calendars")
       .insert({
+        id: "c1",
         provider: "caldav",
         name: "Therapy",
         username: "ada@example.com",
@@ -380,5 +388,142 @@ describe("wrapSupabaseClient — with the real field map", () => {
       .eq("id", "c1");
 
     expect(raw.rawRows("external_calendars")[0].sync_status).toBe("syncing");
+  });
+});
+
+describe("wrapSupabaseClient — id-less writes", () => {
+  it.each(Object.keys(FIELD_MAP))(
+    "rejects an id-less insert into %s",
+    async (table) => {
+      const raw = createFakeSupabaseClient();
+      const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+      await expect(client.from(table).insert({})).rejects.toMatchObject({
+        code: "missing_row_id",
+      });
+      expect(raw.rawRows(table)).toEqual([]);
+    },
+  );
+
+  it("rejects an id-less row anywhere in an array insert or upsert", async () => {
+    const client = wrapSupabaseClient(createFakeSupabaseClient(), FIELD_MAP);
+
+    await expect(
+      client
+        .from("tasks")
+        .insert([{ id: "t1", content: "a" }, { content: "b" }]),
+    ).rejects.toThrow(/client-generated id/);
+    await expect(client.from("tasks").upsert({ content: "a" })).rejects.toThrow(
+      /client-generated id/,
+    );
+  });
+
+  it("does not require an id on update or on tables outside the field map", async () => {
+    const raw = createFakeSupabaseClient({
+      tasks: [{ id: "t1", content: "x" }],
+    });
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    await client.from("tasks").update({ priority: 2 }).eq("id", "t1");
+    await client.from("focus_logs").insert({ duration: 25 });
+
+    expect(raw.rawRows("tasks")[0].priority).toBe(2);
+    expect(raw.rawRows("focus_logs")).toHaveLength(1);
+  });
+});
+
+describe("wrapSupabaseClient — row-bound (-v2) values", () => {
+  const userId = "user-1";
+  const sealV2 = (
+    table: string,
+    column: string,
+    rowId: string,
+    text: string,
+    owner = userId,
+  ) =>
+    sealEnvelope(
+      keyStoreState.key!,
+      new TextEncoder().encode(text),
+      CURRENT_KEY_ID,
+      { userId: owner, table, column, rowId },
+    );
+
+  async function readTask(row: Row) {
+    const raw = createFakeSupabaseClient({ tasks: [row] }, { userId });
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+    return client.from("tasks").select().eq("id", row.id).single();
+  }
+
+  it("opens a value read back in the row, column, table and account it was sealed for", async () => {
+    const { data } = await readTask({
+      id: "t1",
+      content: await sealV2("tasks", "content", "t1", "Buy milk"),
+    });
+
+    expect(data.content).toBe("Buy milk");
+  });
+
+  it("reports a value moved to another row as unreadable instead of showing it", async () => {
+    await expect(
+      readTask({
+        id: "t2",
+        content: await sealV2("tasks", "content", "t1", "Buy milk"),
+      }),
+    ).rejects.toThrow(/Decryption failed/);
+  });
+
+  it("reports a value moved to another column as unreadable", async () => {
+    await expect(
+      readTask({
+        id: "t1",
+        content: await sealV2("tasks", "description", "t1", "Buy milk"),
+      }),
+    ).rejects.toThrow(/Decryption failed/);
+  });
+
+  it("reports a value moved to another table as unreadable", async () => {
+    await expect(
+      readTask({
+        id: "t1",
+        content: await sealV2("habits", "content", "t1", "Buy milk"),
+      }),
+    ).rejects.toThrow(/Decryption failed/);
+  });
+
+  it("reports a value from another account as unreadable", async () => {
+    await expect(
+      readTask({
+        id: "t1",
+        content: await sealV2("tasks", "content", "t1", "Buy milk", "user-2"),
+      }),
+    ).rejects.toThrow(/Decryption failed/);
+  });
+
+  it("fails closed when there is no session to supply the user id", async () => {
+    const raw = createFakeSupabaseClient({
+      tasks: [
+        {
+          id: "t1",
+          content: await sealV2("tasks", "content", "t1", "Buy milk"),
+        },
+      ],
+    });
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    await expect(client.from("tasks").select().single()).rejects.toThrow(
+      /binding/,
+    );
+  });
+
+  it("still reads -v1 values with no binding and no session", async () => {
+    const raw = createFakeSupabaseClient({
+      tasks: [
+        { id: "t1", content: await encryptField(keyStoreState.key!, "old") },
+      ],
+    });
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    const { data } = await client.from("tasks").select().single();
+    expect(data.content).toBe("old");
   });
 });

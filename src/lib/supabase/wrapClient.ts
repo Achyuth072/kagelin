@@ -6,22 +6,30 @@ import {
   decryptField,
   isCiphertext,
 } from "@/lib/crypto/contentCipher";
+import { SCHEME_V2, type Binding } from "@/lib/crypto/envelope";
 import { FIELD_MAP, JSON_FIELDS, type FieldMap } from "@/lib/supabase/fieldMap";
+
+interface WrapContext {
+  fieldMap: FieldMap;
+  // Row-bound ciphertext is bound to the session's user, not to a row column (habit_entries has none).
+  getUserId: () => Promise<string | null>;
+}
 
 // Intercepts `.from(...)` queries only; `.channel` and `.rpc` bypass encryption.
 export function wrapSupabaseClient<T extends SupabaseClient>(
   client: T,
   fieldMap: FieldMap = FIELD_MAP,
 ): T {
+  const ctx: WrapContext = {
+    fieldMap,
+    getUserId: async () =>
+      (await client.auth.getSession()).data.session?.user.id ?? null,
+  };
   return new Proxy(client, {
     get(target, prop, _receiver) {
       if (prop === "from") {
         return (table: string) =>
-          wrapQueryBuilder(
-            (target as any).from(table),
-            String(table),
-            fieldMap,
-          );
+          wrapQueryBuilder((target as any).from(table), String(table), ctx);
       }
       const value = Reflect.get(target, prop, target);
       return typeof value === "function" ? value.bind(target) : value;
@@ -37,9 +45,37 @@ async function getContentKey(): Promise<Uint8Array | null> {
   return keyStore.load();
 }
 
-function createKeyLoader(): () => Promise<Uint8Array | null> {
-  let pending: Promise<Uint8Array | null> | null = null;
-  return () => (pending ??= getContentKey());
+interface ReadLoaders {
+  key: () => Promise<Uint8Array | null>;
+  userId: () => Promise<string | null>;
+}
+
+function createReadLoaders(ctx: WrapContext): ReadLoaders {
+  let key: Promise<Uint8Array | null> | null = null;
+  let userId: Promise<string | null> | null = null;
+  return {
+    key: () => (key ??= getContentKey()),
+    userId: () => (userId ??= ctx.getUserId()),
+  };
+}
+
+export const MISSING_ROW_ID_CODE = "missing_row_id";
+
+// Row-bound ciphertext needs the row id before encryption, so the database default cannot supply it.
+function assertRowIds(table: string, fieldMap: FieldMap, values: unknown) {
+  if (!fieldMap[table]?.length) return;
+  const rows = Array.isArray(values) ? values : [values];
+  const idless = rows.some(
+    (row) => !isPlainObject(row) || typeof row.id !== "string" || !row.id,
+  );
+  if (idless) {
+    throw Object.assign(
+      new Error(
+        `Cannot write to "${table}" without a client-generated id on every row.`,
+      ),
+      { code: MISSING_ROW_ID_CODE },
+    );
+  }
 }
 
 export function isJsonField(table: string, field: string): boolean {
@@ -139,26 +175,42 @@ export async function encryptPayload(
   return encryptRow(table, fields, values, key);
 }
 
+async function bindingFor(
+  table: string,
+  field: string,
+  row: Record<string, unknown>,
+  loaders: ReadLoaders,
+): Promise<Binding | undefined> {
+  if (!(row[field] as string).startsWith(`${SCHEME_V2}:`)) return undefined;
+  const userId = await loaders.userId();
+  if (!userId || typeof row.id !== "string") return undefined;
+  return { userId, table, column: field, rowId: row.id };
+}
+
 async function decryptRow(
   table: string,
-  fieldMap: FieldMap,
+  ctx: WrapContext,
   row: unknown,
-  loadKey: () => Promise<Uint8Array | null>,
+  loaders: ReadLoaders,
 ): Promise<unknown> {
   if (!isPlainObject(row)) return row;
 
   let out: Record<string, unknown> = row;
-  const fields = fieldMap[table];
+  const fields = ctx.fieldMap[table];
   if (fields?.length) {
     const encryptedFields = fields.filter((field) => isCiphertext(out[field]));
     if (encryptedFields.length) {
-      const key = await loadKey();
+      const key = await loaders.key();
       if (!key) {
         throw contentKeyUnavailableError("read", table);
       }
       const decrypted = await Promise.all(
         encryptedFields.map(async (field) => {
-          const plaintext = await decryptField(key, out[field] as string);
+          const plaintext = await decryptField(
+            key,
+            out[field] as string,
+            await bindingFor(table, field, row, loaders),
+          );
           return [
             field,
             isJsonField(table, field) ? JSON.parse(plaintext) : plaintext,
@@ -174,12 +226,12 @@ async function decryptRow(
     if (Array.isArray(value)) {
       if (!value.some(isPlainObject)) continue;
       const nested = await Promise.all(
-        value.map((item) => decryptRow(column, fieldMap, item, loadKey)),
+        value.map((item) => decryptRow(column, ctx, item, loaders)),
       );
       if (out === row) out = { ...row };
       out[column] = nested;
     } else if (isPlainObject(value)) {
-      const nested = await decryptRow(column, fieldMap, value, loadKey);
+      const nested = await decryptRow(column, ctx, value, loaders);
       if (nested !== value) {
         if (out === row) out = { ...row };
         out[column] = nested;
@@ -192,34 +244,28 @@ async function decryptRow(
 
 async function decryptResult(
   table: string,
-  fieldMap: FieldMap,
+  ctx: WrapContext,
   result: any,
 ): Promise<any> {
   if (!isPlainObject(result) || result.error || result.data == null) {
     return result;
   }
-  const loadKey = createKeyLoader();
+  const loaders = createReadLoaders(ctx);
   const data = Array.isArray(result.data)
     ? await Promise.all(
-        result.data.map((row: unknown) =>
-          decryptRow(table, fieldMap, row, loadKey),
-        ),
+        result.data.map((row: unknown) => decryptRow(table, ctx, row, loaders)),
       )
-    : await decryptRow(table, fieldMap, result.data, loadKey);
+    : await decryptRow(table, ctx, result.data, loaders);
   return { ...result, data };
 }
 
-function wrapFilterBuilder(
-  builder: any,
-  table: string,
-  fieldMap: FieldMap,
-): any {
+function wrapFilterBuilder(builder: any, table: string, ctx: WrapContext): any {
   const proxy: any = new Proxy(builder, {
     get(target, prop, _receiver) {
       if (prop === "then") {
         return (onFulfilled?: any, onRejected?: any) =>
           Promise.resolve(target)
-            .then((result: any) => decryptResult(table, fieldMap, result))
+            .then((result: any) => decryptResult(table, ctx, result))
             .then(onFulfilled, onRejected);
       }
       const value = Reflect.get(target, prop, target);
@@ -228,7 +274,7 @@ function wrapFilterBuilder(
         const result = value.apply(target, args);
         return result === target
           ? proxy
-          : wrapFilterBuilder(result, table, fieldMap);
+          : wrapFilterBuilder(result, table, ctx);
       };
     },
   });
@@ -238,7 +284,7 @@ function wrapFilterBuilder(
 // PostgREST chaining is synchronous, but payload encryption is async.
 function wrapPendingBuilder(
   table: string,
-  fieldMap: FieldMap,
+  ctx: WrapContext,
   // Boxed in an object so Promise resolution does not auto-await the PostgREST thenable.
   resolveReal: () => Promise<{ builder: any }>,
 ): any {
@@ -253,7 +299,7 @@ function wrapPendingBuilder(
               .then(({ builder }) =>
                 ops.reduce((acc, op) => acc[op.prop](...op.args), builder),
               )
-              .then((result: any) => decryptResult(table, fieldMap, result))
+              .then((result: any) => decryptResult(table, ctx, result))
               .then(onFulfilled, onRejected);
         }
         return (...args: unknown[]) => {
@@ -266,18 +312,17 @@ function wrapPendingBuilder(
   return proxy;
 }
 
-function wrapQueryBuilder(
-  builder: any,
-  table: string,
-  fieldMap: FieldMap,
-): any {
+function wrapQueryBuilder(builder: any, table: string, ctx: WrapContext): any {
   return new Proxy(builder, {
     get(target, prop, _receiver) {
       if (prop === "insert" || prop === "update" || prop === "upsert") {
         const method = prop;
         return (values: unknown, options?: unknown) =>
-          wrapPendingBuilder(table, fieldMap, async () => {
-            const encrypted = await encryptPayload(table, values, fieldMap);
+          wrapPendingBuilder(table, ctx, async () => {
+            if (method !== "update") {
+              assertRowIds(table, ctx.fieldMap, values);
+            }
+            const encrypted = await encryptPayload(table, values, ctx.fieldMap);
             return { builder: target[method](encrypted, options) };
           });
       }
@@ -286,7 +331,7 @@ function wrapQueryBuilder(
       const bound = value.bind(target);
       if (prop === "select" || prop === "delete") {
         return (...args: unknown[]) =>
-          wrapFilterBuilder(bound(...args), table, fieldMap);
+          wrapFilterBuilder(bound(...args), table, ctx);
       }
       return bound;
     },

@@ -113,7 +113,13 @@ describe("POST /api/calendar/calendars – orphan adoption on reconnect", () => 
     const response = await POST(
       makeRequest({
         provider: "google",
-        calendars: [{ remote_calendar_id: "primary", name: "My Calendar" }],
+        calendars: [
+          {
+            id: "cal-id-1",
+            remote_calendar_id: "primary",
+            name: "My Calendar",
+          },
+        ],
       }),
     );
 
@@ -164,7 +170,9 @@ describe("POST /api/calendar/calendars – orphan adoption on reconnect", () => 
     const response = await POST(
       makeRequest({
         provider: "google",
-        calendars: [{ remote_calendar_id: "primary", name: "Cal" }],
+        calendars: [
+          { id: "cal-id-1", remote_calendar_id: "primary", name: "Cal" },
+        ],
       }),
     );
 
@@ -205,7 +213,9 @@ describe("POST /api/calendar/calendars – orphan adoption on reconnect", () => 
     const response = await POST(
       makeRequest({
         provider: "google",
-        calendars: [{ remote_calendar_id: "primary", name: "Cal" }],
+        calendars: [
+          { id: "cal-id-1", remote_calendar_id: "primary", name: "Cal" },
+        ],
       }),
     );
 
@@ -231,7 +241,9 @@ describe("POST /api/calendar/calendars – orphan adoption on reconnect", () => 
     const response = await POST(
       makeRequest({
         provider: "google",
-        calendars: [{ remote_calendar_id: "primary", name: "Cal" }],
+        calendars: [
+          { id: "cal-id-1", remote_calendar_id: "primary", name: "Cal" },
+        ],
       }),
     );
 

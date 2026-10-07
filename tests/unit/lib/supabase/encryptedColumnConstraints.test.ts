@@ -61,3 +61,19 @@ CREATE TABLE IF NOT EXISTS public.notes (
     expect(envelope.length).toBeGreaterThan(500);
   });
 });
+
+describe("server-side scheme checks accept the row-bound -v2 envelope", () => {
+  const checks = schemaSql.match(/'\^?xchacha20poly1305-v[^']*'/g) ?? [];
+
+  it("recognises -v1 and -v2 in every scheme-literal check", () => {
+    // encrypted_notification_body, the plaintext backstop, and the habit-notes trigger.
+    expect(checks).toHaveLength(3);
+    for (const check of checks) {
+      expect(check).toBe("'^xchacha20poly1305-v[12]:'");
+    }
+  });
+
+  it("leaves no scheme literal that names only -v1", () => {
+    expect(schemaSql).not.toMatch(/xchacha20poly1305-v1/);
+  });
+});

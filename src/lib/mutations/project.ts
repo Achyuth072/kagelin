@@ -39,6 +39,7 @@ export const projectMutations = {
     const { data, error } = await supabase
       .from("projects")
       .insert({
+        id: crypto.randomUUID(),
         user_id: user.id,
         name: input.name,
         color: input.color,

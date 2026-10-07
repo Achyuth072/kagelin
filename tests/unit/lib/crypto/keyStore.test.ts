@@ -28,6 +28,13 @@ describe("keyStore", () => {
     expect(await keyStore.load("user-a")).toEqual(key);
   });
 
+  it("reports the user that owns the saved key", async () => {
+    await keyStore.clear();
+    expect(await keyStore.loadUserId()).toBeNull();
+    await keyStore.save("user-a", new Uint8Array([1]));
+    expect(await keyStore.loadUserId()).toBe("user-a");
+  });
+
   it("clear removes the saved key", async () => {
     await keyStore.save("user-a", new Uint8Array([1, 2, 3]));
     await keyStore.clear();
