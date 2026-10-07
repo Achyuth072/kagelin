@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.47.0-preview.3",
+    "date": "2026-10-07",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Disclose passphrase and recovery code change in rotation"
+      ],
+      "Fixed": [
+        "Cancel a replaced Re-seal run and cover the retired-key calendar pull",
+        "Finish Re-seal for imports, block stale key-row writes, purge rotated-out devices",
+        "Guard key-row markers, keep -v1 rejection through rotation, report unreadable values in Re-seal"
+      ]
+    }
+  },
+  {
     "version": "1.47.0-preview.2",
     "date": "2026-10-07",
     "channel": "preview",
@@ -686,18 +701,6 @@
       ],
       "Fixed": [
         "Paginate stats, tasks, and calendar sync queries to prevent silent truncation"
-      ]
-    }
-  },
-  {
-    "version": "1.41.0-preview.1",
-    "date": "2026-08-26",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Consolidate subtask expand/collapse into a single, faster toggle",
-        "Patch and invalidate subtasks query cache in task mutations",
-        "Enhance accessibility labels, input semantics, and low-contrast text"
       ]
     }
   }
