@@ -65,6 +65,14 @@ vi.mock("@/lib/hooks/useMediaQuery", () => ({
   useMediaQuery: vi.fn(() => true), // fine pointer = desktop
 }));
 
+vi.mock("@/components/AuthProvider", () => ({
+  useAuth: () => ({ isGuestMode: false }),
+}));
+
+vi.mock("@/lib/hooks/useProfile", () => ({
+  useProfile: () => ({ profile: null }),
+}));
+
 vi.mock("@/lib/hooks/useCalendarEventMutations", () => ({
   useCreateCalendarEvent: () => ({
     mutate: vi.fn(),

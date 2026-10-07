@@ -6,7 +6,8 @@ export type NotificationType =
   | "do_date"
   | "evening"
   | "briefing"
-  | "habit_reminder";
+  | "habit_reminder"
+  | "event_reminder";
 
 export interface SendOptions {
   TTL: number;
@@ -22,6 +23,7 @@ const TTL_SECONDS: Record<NotificationType, number> = {
   evening: 3600,
   briefing: 3600,
   habit_reminder: 3600,
+  event_reminder: 3600,
 };
 
 // RFC 8030 topic: a later message collapses a still-queued one with the same topic.
@@ -29,7 +31,12 @@ export function buildTopic(
   type: NotificationType,
   referenceId?: string | null,
 ): string {
-  if (type !== "due_date" && type !== "do_date" && type !== "habit_reminder")
+  if (
+    type !== "due_date" &&
+    type !== "do_date" &&
+    type !== "habit_reminder" &&
+    type !== "event_reminder"
+  )
     return type;
   if (!referenceId) return type;
   const suffix = referenceId.replace(/-/g, "").slice(0, 8);

@@ -33,6 +33,7 @@ export const calendarEventMutations = {
         ics_uid: input.ics_uid || null,
         sync_state: null,
         is_archived: false,
+        reminder_minutes: null,
         metadata: input.metadata || {},
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -86,6 +87,7 @@ export const calendarEventMutations = {
         ics_uid: input.ics_uid || null,
         remote_calendar_id: remoteCalendarId,
         sync_state: syncState,
+        reminder_minutes: input.reminder_minutes ?? null,
         metadata: input.metadata || {},
       })
       .select()

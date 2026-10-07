@@ -12,6 +12,7 @@ import { focusMutations } from "@/lib/mutations/focus";
 import { asyncStoragePersister } from "@/lib/query-cache-purge";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
 import { HABIT_ENTRY_UPDATED } from "@/lib/habit-links";
+import { TASKS_UPDATED } from "@/lib/sw/notificationClickHandler";
 
 export default function QueryProvider({
   children,
@@ -86,10 +87,11 @@ export default function QueryProvider({
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.serviceWorker) return;
     const handler = (event: MessageEvent) => {
-      if (
-        (event.data as { type?: string } | null)?.type === HABIT_ENTRY_UPDATED
-      ) {
+      const type = (event.data as { type?: string } | null)?.type;
+      if (type === HABIT_ENTRY_UPDATED) {
         queryClient.invalidateQueries({ queryKey: ["habits"] });
+      } else if (type === TASKS_UPDATED) {
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
       }
     };
     navigator.serviceWorker.addEventListener("message", handler);

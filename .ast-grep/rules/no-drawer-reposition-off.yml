@@ -1,0 +1,10 @@
+id: no-drawer-reposition-off
+language: Tsx
+severity: warning
+rule:
+  kind: jsx_attribute
+  regex: ^repositionInputs=\{false\}$
+message: >
+  Drawer already keeps inputs above the mobile keyboard by default. Turning it
+  off hides inputs under the keyboard — only do so with a reason, via
+  `// ast-grep-ignore: no-drawer-reposition-off`.

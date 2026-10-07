@@ -5,6 +5,7 @@ type SetAllFn = (
   cookies: { name: string; value: string; options?: object }[],
 ) => void;
 
+const mockGetClaims = vi.fn();
 const mockGetUser = vi.fn();
 const mockSignOut = vi.fn();
 let capturedSetAll: SetAllFn | null = null;
@@ -15,6 +16,7 @@ vi.mock("@supabase/ssr", () => ({
       capturedSetAll = opts.cookies.setAll;
       return {
         auth: {
+          getClaims: mockGetClaims,
           getUser: mockGetUser,
           signOut: mockSignOut,
         },
@@ -35,12 +37,11 @@ describe("updateSession cookie propagation on redirect", () => {
   });
 
   it("keeps refreshed auth cookies when redirecting an unauthenticated request", async () => {
-    // Simulates Supabase refreshing the token during getUser().
-    mockGetUser.mockImplementation(async () => {
+    mockGetClaims.mockImplementation(async () => {
       capturedSetAll!([
         { name: "sb-x-auth-token", value: "REFRESHED", options: { path: "/" } },
       ]);
-      return { data: { user: null }, error: null };
+      return { data: null, error: null };
     });
 
     const res = await requestAdminMetrics();
@@ -51,11 +52,10 @@ describe("updateSession cookie propagation on redirect", () => {
   });
 
   it("keeps the cleared auth cookies when signOut() forces a redirect", async () => {
-    mockGetUser.mockResolvedValue({
-      data: { user: null },
+    mockGetClaims.mockResolvedValue({
+      data: null,
       error: { message: "invalid claim: missing sub claim", status: 401 },
     });
-    // Simulates signOut() clearing cookies via the same setAll channel.
     mockSignOut.mockImplementation(async () => {
       capturedSetAll!([
         {
@@ -70,5 +70,17 @@ describe("updateSession cookie propagation on redirect", () => {
 
     expect(res.status).toBe(307);
     expect(res.cookies.get("sb-x-auth-token")?.value).toBe("");
+  });
+
+  it("lets a request through on verified claims without calling the Auth server", async () => {
+    mockGetClaims.mockResolvedValue({
+      data: { claims: { sub: "user-1" } },
+      error: null,
+    });
+
+    const res = await requestAdminMetrics();
+
+    expect(res.status).toBe(200);
+    expect(mockGetUser).not.toHaveBeenCalled();
   });
 });

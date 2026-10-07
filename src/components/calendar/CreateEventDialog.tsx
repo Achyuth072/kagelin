@@ -3,7 +3,7 @@
 "use no memo";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useEffectEvent, useMemo, useRef } from "react";
 import { useForm, useWatch, useFormState, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import {
   Clock,
   MapPin,
   AlignLeft,
+  BellRing,
   Sun,
   Trash2,
   Check,
@@ -43,6 +44,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -54,6 +62,10 @@ import {
   useDeleteCalendarEvent,
 } from "@/lib/hooks/useCalendarEventMutations";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useProfile } from "@/lib/hooks/useProfile";
+import { useAuth } from "@/components/AuthProvider";
+import { DEFAULT_EVENT_REMINDER_MINUTES } from "@/lib/types/profile";
+import { reminderOptions, snapAllDayReminder } from "@/lib/utils/eventReminder";
 import { parseEventInput } from "@/lib/utils/nlp-event";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
@@ -69,9 +81,13 @@ const CreateEventSchema = z.object({
   description: z.string().max(2000).optional(),
   location: z.string().max(200).optional(),
   all_day: z.boolean().default(false),
+  reminder_minutes: z.number().nullable().default(null),
 });
 
 type CreateEventFormData = z.infer<typeof CreateEventSchema>;
+
+// Radix Select reserves the empty string for "no selection".
+const NO_REMINDER = "none";
 
 const PREDEFINED_LOCATIONS = [
   "Coffee Shop",
@@ -133,6 +149,16 @@ export function CreateEventDialog({
   event,
 }: CreateEventDialogProps) {
   const { trigger } = useHaptic();
+  const { isGuestMode } = useAuth();
+  const { profile } = useProfile();
+  const notificationSettings = profile?.settings?.notifications;
+  const defaultReminder =
+    !isGuestMode && (notificationSettings?.event_reminders ?? true)
+      ? (notificationSettings?.event_reminder_minutes ??
+        DEFAULT_EVENT_REMINDER_MINUTES)
+      : null;
+  // Read at open time only: a late profile load must not reset a half-filled form.
+  const getDefaultReminder = useEffectEvent(() => defaultReminder);
   const createEvent = useCreateCalendarEvent();
   const updateEvent = useUpdateCalendarEvent();
   const deleteEvent = useDeleteCalendarEvent();
@@ -184,11 +210,16 @@ export function CreateEventDialog({
         description: "",
         location: "",
         all_day: false,
+        reminder_minutes: null,
       },
     });
 
   const allDay = useWatch({ control, name: "all_day" });
   const title = useWatch({ control, name: "title" });
+  const reminderMinutes = snapAllDayReminder(
+    allDay,
+    useWatch({ control, name: "reminder_minutes" }),
+  );
   const { errors } = useFormState({ control });
 
   // Derive form validity from useWatch values instead of formState.isValid
@@ -245,13 +276,20 @@ export function CreateEventDialog({
             description: event.description || "",
             location: event.location || "",
             all_day: event.allDay || false,
+            reminder_minutes: event.reminderMinutes ?? null,
           });
           setDraftLocation(event.location || "");
         } else {
           const now = normalizedDefaultDate ?? new Date();
           setStartDate(now);
           setEndDate(getDefaultEndDate(now));
-          reset({ title: "", description: "", location: "", all_day: false });
+          reset({
+            title: "",
+            description: "",
+            location: "",
+            all_day: false,
+            reminder_minutes: getDefaultReminder(),
+          });
           setDraftLocation("");
         }
       }, 0);
@@ -271,6 +309,14 @@ export function CreateEventDialog({
     if (!safeStartDate || !safeEndDate) return;
     trigger("thud");
     if (data.location) addLocation(data.location);
+    const reminderPayload = isGuestMode
+      ? {}
+      : {
+          reminder_minutes: snapAllDayReminder(
+            data.all_day,
+            data.reminder_minutes,
+          ),
+        };
     if (event) {
       updateEvent.mutate({
         id: event.id,
@@ -280,6 +326,7 @@ export function CreateEventDialog({
         start_time: safeStartDate.toISOString(),
         end_time: safeEndDate.toISOString(),
         all_day: data.all_day,
+        ...reminderPayload,
       });
     } else {
       createEvent.mutate({
@@ -289,6 +336,7 @@ export function CreateEventDialog({
         start_time: safeStartDate.toISOString(),
         end_time: safeEndDate.toISOString(),
         all_day: data.all_day,
+        ...reminderPayload,
       });
     }
     trigger("success");
@@ -603,6 +651,51 @@ export function CreateEventDialog({
                   </Popover>
                 )}
               />
+            </div>
+
+            <div className="mx-2">
+              <div className={cn(rowCls, "mx-0", hoverCls)}>
+                <IconCell>
+                  <BellRing
+                    className="h-4 w-4 text-muted-foreground"
+                    strokeWidth={2.25}
+                  />
+                </IconCell>
+                <Select
+                  value={
+                    reminderMinutes === null
+                      ? NO_REMINDER
+                      : String(reminderMinutes)
+                  }
+                  disabled={isRecurring || isGuestMode}
+                  onValueChange={(val) =>
+                    setValue(
+                      "reminder_minutes",
+                      val === NO_REMINDER ? null : Number(val),
+                    )
+                  }
+                >
+                  <SelectTrigger
+                    aria-label="Reminder"
+                    className="h-auto flex-1 border-0 bg-transparent p-0 text-foreground focus-visible:ring-0"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_REMINDER}>No reminder</SelectItem>
+                    {reminderOptions(allDay).map((o) => (
+                      <SelectItem key={o.value} value={String(o.value)}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {isGuestMode && (
+                <p className="px-3 pb-1 text-xs text-muted-foreground">
+                  Reminders need an account.
+                </p>
+              )}
             </div>
 
             <div className="mx-2">

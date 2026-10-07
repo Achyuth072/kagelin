@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api/require-user";
-import { ENTRY_VALUE_DONE, ENTRY_VALUE_SKIPPED } from "@/lib/types/habit";
 
 const schema = z.object({
   habitId: z.string().uuid(),
@@ -20,38 +19,27 @@ export async function POST(request: Request) {
 
   const { habitId, date, state } = parsed.data;
 
-  if (state === "done") {
-    const { data: habit } = await supabase
-      .from("habits")
-      .select("habit_type")
-      .eq("id", habitId)
-      .single();
-
-    if (!habit) {
-      return NextResponse.json({ error: "Habit not found" }, { status: 400 });
-    }
-    if (habit.habit_type === "measurable") {
-      return NextResponse.json(
-        { error: "done is not valid for measurable habits" },
-        { status: 400 },
-      );
-    }
-  }
-
-  const value = state === "done" ? ENTRY_VALUE_DONE : ENTRY_VALUE_SKIPPED;
-
-  const { error } = await supabase
-    .from("habit_entries")
-    .upsert(
-      { habit_id: habitId, date, value },
-      { onConflict: "habit_id,date" },
-    );
+  const { data: outcome, error } = await supabase.rpc("record_habit_entry", {
+    p_habit_id: habitId,
+    p_date: date,
+    p_state: state,
+  });
 
   if (error) {
     console.error("[habits/entry] Upsert failed", error);
     return NextResponse.json(
       { error: "Failed to save entry" },
       { status: 500 },
+    );
+  }
+
+  if (outcome === "not_found") {
+    return NextResponse.json({ error: "Habit not found" }, { status: 400 });
+  }
+  if (outcome === "measurable") {
+    return NextResponse.json(
+      { error: "done is not valid for measurable habits" },
+      { status: 400 },
     );
   }
 

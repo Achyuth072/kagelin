@@ -40,10 +40,9 @@ export async function updateSession(request: NextRequest) {
     return redirect;
   };
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  // Avoids an Auth-server round trip on every request.
+  const { data, error } = await supabase.auth.getClaims();
+  const user = data?.claims ?? null;
 
   // Distinct from AUTH_STANDALONE_ROUTES: gates server auth redirects
   // (covering /access-denied and /api/health), not client shell rendering.

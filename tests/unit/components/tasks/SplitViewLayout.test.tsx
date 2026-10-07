@@ -1,9 +1,9 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SplitViewLayout } from "@/components/tasks/SplitViewLayout";
 import type { Task } from "@/lib/types/task";
 
-// Mock dependencies using absolute paths
 vi.mock("@/components/tasks/TaskList", () => ({
   default: ({ onTaskSelect }: { onTaskSelect: (task: Task) => void }) => (
     <div data-testid="task-list">
@@ -50,53 +50,70 @@ vi.mock("@/lib/hooks/useMediaQuery", () => ({
   useMediaQuery: () => true,
 }));
 
+let queryClient: QueryClient;
+
+function renderLayout() {
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <SplitViewLayout />
+    </QueryClientProvider>,
+  );
+}
+
 describe("SplitViewLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient = new QueryClient();
   });
 
   it("SV-N-01: Renders with no selected task by default", () => {
-    // Given: Default props
-    // When: Rendering the layout
-    render(<SplitViewLayout />);
+    renderLayout();
 
-    // Then: Detail panel should show empty state
     expect(screen.getByText("Empty State")).toBeInTheDocument();
   });
 
   it("SV-N-02: Updates detail panel when a task is selected", () => {
-    // Given: Layout is rendered
-    render(<SplitViewLayout />);
+    renderLayout();
 
-    // When: Selecting a task from the list
     const selectBtn = screen.getByText("Select Task 1");
     fireEvent.click(selectBtn);
 
-    // Then: Detail panel should show the selected task
     expect(screen.getByText("Selected Task")).toBeInTheDocument();
     expect(mockHapticTrigger).toHaveBeenCalledWith("toggle");
   });
 
   it("SV-N-03: Returns to empty state when detail panel is closed", () => {
-    // Given: A task is selected
-    render(<SplitViewLayout />);
+    renderLayout();
     fireEvent.click(screen.getByText("Select Task 1"));
     expect(screen.queryByText("Empty State")).not.toBeInTheDocument();
 
-    // When: Clicking the close button in detail panel
     const closeBtn = screen.getByText("Close Detail");
     fireEvent.click(closeBtn);
 
-    // Then: Detail panel should show empty state again
     expect(screen.getByText("Empty State")).toBeInTheDocument();
     expect(mockHapticTrigger).toHaveBeenCalledWith("tick");
   });
 
-  it("SV-03: Has a fixed 60/40 layout split", () => {
-    // When: Rendering the layout
-    render(<SplitViewLayout />);
+  it("SV-N-04: Detail panel follows cache edits to the selected task", () => {
+    const queryKey = ["tasks", { projectId: undefined }];
+    queryClient.setQueryData(queryKey, [
+      { id: "task-1", content: "Selected Task" },
+    ]);
+    renderLayout();
+    fireEvent.click(screen.getByText("Select Task 1"));
 
-    // Then: Should have fixed width classes
+    act(() => {
+      queryClient.setQueryData<Task[]>(queryKey, (old) =>
+        old?.map((t) => ({ ...t, content: "Edited Task" })),
+      );
+    });
+
+    expect(screen.getByText("Edited Task")).toBeInTheDocument();
+  });
+
+  it("SV-03: Has a fixed 60/40 layout split", () => {
+    renderLayout();
+
     const listContainer = screen.getByTestId("task-list").parentElement;
     const detailContainer =
       screen.getByTestId("task-detail-panel").parentElement?.parentElement;

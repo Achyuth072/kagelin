@@ -14,7 +14,7 @@ import {
 } from "@/lib/notifications";
 import {
   handleNotificationClick,
-  type HabitNotificationData,
+  type NotificationData,
 } from "@/lib/sw/notificationClickHandler";
 import { hasWasmMagicBytes } from "@/lib/sw/wasmIntegrity";
 
@@ -146,7 +146,7 @@ interface PushPayload {
   icon?: string;
   badge?: string;
   tag?: string;
-  data?: HabitNotificationData & Record<string, unknown>;
+  data?: NotificationData & Record<string, unknown>;
   actions?: NotificationDisplayOptions["actions"];
   encrypted?: EncryptedNotificationBody;
   encryptedTitle?: EncryptedNotificationBody;
@@ -197,6 +197,10 @@ async function showPushNotification(payload: PushPayload): Promise<void> {
   if (payload.data?.habitKind) {
     options.habitKind = payload.data.habitKind;
   }
+  if (payload.data?.reminderType) {
+    options.reminderType = payload.data.reminderType;
+    options.recurring = payload.data.recurring;
+  }
 
   try {
     await displayNotification(
@@ -219,7 +223,7 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const data = event.notification.data as HabitNotificationData | undefined;
+  const data = event.notification.data as NotificationData | undefined;
   const action = event.action;
 
   event.waitUntil(

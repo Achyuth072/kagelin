@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS public.notification_queue (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   scheduled_at TIMESTAMPTZ NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('timer_end', 'due_date', 'do_date', 'evening', 'briefing', 'habit_reminder')),
+  type TEXT NOT NULL CHECK (type IN ('timer_end', 'due_date', 'do_date', 'evening', 'briefing', 'habit_reminder', 'event_reminder')),
   payload JSONB NOT NULL DEFAULT '{}',
   -- 'processing' = claimed by a sender run, not yet resolved.
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'sent', 'failed', 'cancelled')),
@@ -477,30 +477,7 @@ BEGIN
       SELECT 1 FROM public.habit_entries e
       WHERE e.habit_id = h.id AND e.date = t.remind_ts::date
     )
-    AND (
-      SELECT count(*) FROM public.habit_entries e
-      WHERE e.habit_id = h.id
-        AND e.date BETWEEN t.remind_ts::date - (
-          COALESCE(
-            h.frequency_days,
-            CASE h.frequency_period WHEN 'week' THEN 7 WHEN 'month' THEN 30 ELSE 1 END
-          ) - 1
-        ) AND t.remind_ts::date
-        AND e.value >= 0
-        -- Mirrors dayValue() >= 1 in src/lib/utils/habit-score.ts.
-        AND CASE
-          WHEN h.habit_type = 'measurable' AND h.target_value > 0 THEN
-            CASE h.target_type
-              WHEN 'at_least' THEN e.value >= h.target_value
-              WHEN 'at_most' THEN e.value <= h.target_value
-              ELSE e.value >= 1
-            END
-          WHEN h.habit_type = 'measurable' AND h.target_value IS NOT NULL
-            AND h.target_type = 'at_most' THEN e.value <= 0
-          WHEN h.habit_type = 'measurable' THEN e.value >= 1
-          ELSE e.value = 1
-        END
-    ) < COALESCE(h.frequency_count, 1)
+    AND public.habit_window_unsatisfied(h, t.remind_ts::date)
     AND (p.settings->'notifications'->>'habit_reminders')::boolean IS NOT FALSE
     AND NOT EXISTS (
       SELECT 1 FROM public.notification_queue n
@@ -513,6 +490,165 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.enqueue_due_habit_reminders() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.enqueue_due_habit_reminders() TO service_role;
+
+CREATE OR REPLACE FUNCTION public.get_briefing_counts(p_user_id UUID)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  tz TEXT;
+  local_now TIMESTAMP;
+  day_start TIMESTAMPTZ;
+  day_end TIMESTAMPTZ;
+  local_date DATE;
+  tasks_today BIGINT;
+  overdue BIGINT;
+  due_today BIGINT;
+BEGIN
+  SELECT timezone INTO tz FROM public.profiles WHERE id = p_user_id;
+  local_now := public.at_timezone_or_null(now(), tz);
+  IF local_now IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  local_date := local_now::date;
+  day_start := local_date::timestamp AT TIME ZONE tz;
+  day_end := (local_date + 1)::timestamp AT TIME ZONE tz;
+
+  SELECT
+    count(*) FILTER (WHERE t.do_date >= day_start AND t.do_date < day_end),
+    count(*) FILTER (WHERE COALESCE(t.do_date, t.due_date) < day_start),
+    count(*) FILTER (WHERE t.due_date >= day_start AND t.due_date < day_end)
+  INTO tasks_today, overdue, due_today
+  FROM public.tasks t
+  WHERE t.user_id = p_user_id AND NOT t.is_completed;
+
+  RETURN jsonb_build_object(
+    'tasksToday', tasks_today,
+    'overdue', overdue,
+    'dueToday', due_today,
+    'eventsToday', (
+      SELECT count(*) FROM public.calendar_events ev
+      WHERE ev.user_id = p_user_id AND NOT COALESCE(ev.is_archived, false)
+        AND ev.start_time < day_end AND ev.end_time > day_start
+    ),
+    'habitsPending', (
+      SELECT count(*) FROM public.habits h
+      WHERE h.user_id = p_user_id AND h.archived_at IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM public.habit_entries e
+          WHERE e.habit_id = h.id AND e.date = local_date
+        )
+        AND public.habit_window_unsatisfied(h, local_date)
+    )
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_briefing_counts(UUID) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_briefing_counts(UUID) TO service_role;
+-- Names leave only as ciphertext so the server cannot read them (ADR 0016); unencrypted rows yield no name.
+CREATE OR REPLACE FUNCTION public.get_briefing_facts(p_user_id UUID, p_kind TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  tz TEXT;
+  local_now TIMESTAMP;
+  local_date DATE;
+  today_start TIMESTAMPTZ;
+  today_end TIMESTAMPTZ;
+  target_start TIMESTAMPTZ;
+  target_end TIMESTAMPTZ;
+  counts JSONB;
+  next_up JSONB;
+BEGIN
+  IF p_kind NOT IN ('morning', 'evening') THEN
+    RAISE EXCEPTION 'unknown briefing kind: %', p_kind;
+  END IF;
+
+  SELECT timezone INTO tz FROM public.profiles WHERE id = p_user_id;
+  local_now := public.at_timezone_or_null(now(), tz);
+  IF local_now IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  local_date := local_now::date;
+  today_start := local_date::timestamp AT TIME ZONE tz;
+  today_end := (local_date + 1)::timestamp AT TIME ZONE tz;
+
+  IF p_kind = 'morning' THEN
+    target_start := today_start;
+    target_end := today_end;
+    counts := public.get_briefing_counts(p_user_id);
+  ELSE
+    target_start := today_end;
+    target_end := (local_date + 2)::timestamp AT TIME ZONE tz;
+    counts := jsonb_build_object(
+      'tasksFinished', (
+        SELECT count(*) FROM public.tasks t
+        WHERE t.user_id = p_user_id AND t.is_completed
+          AND t.completed_at >= today_start AND t.completed_at < today_end
+      ),
+      -- Skipped habits are stored as -2.
+      'habitsFinished', (
+        SELECT count(*) FROM public.habit_entries e
+        JOIN public.habits h ON h.id = e.habit_id
+        WHERE h.user_id = p_user_id AND h.archived_at IS NULL
+          AND e.date = local_date AND e.value > 0
+      ),
+      'tasksTomorrow', (
+        SELECT count(*) FROM public.tasks t
+        WHERE t.user_id = p_user_id AND NOT t.is_completed
+          AND t.do_date >= target_start AND t.do_date < target_end
+      ),
+      'eventsTomorrow', (
+        SELECT count(*) FROM public.calendar_events ev
+        WHERE ev.user_id = p_user_id AND NOT COALESCE(ev.is_archived, false)
+          AND ev.start_time < target_end AND ev.end_time > target_start
+      )
+    );
+  END IF;
+
+  -- All-day events have no start time to announce.
+  SELECT jsonb_build_object(
+    'ciphertext', (public.encrypted_notification_body('{}', ev.title))->>'ciphertext',
+    'time', to_char(ev.start_time AT TIME ZONE tz, 'HH24:MI')
+  )
+  INTO next_up
+  FROM public.calendar_events ev
+  WHERE ev.user_id = p_user_id
+    AND NOT COALESCE(ev.is_archived, false)
+    AND NOT COALESCE(ev.all_day, false)
+    AND ev.start_time >= GREATEST(now(), target_start)
+    AND ev.start_time < target_end
+  ORDER BY ev.start_time
+  LIMIT 1;
+
+  IF next_up IS NULL THEN
+    SELECT jsonb_build_object(
+      'ciphertext', (public.encrypted_notification_body('{}', t.content))->>'ciphertext'
+    )
+    INTO next_up
+    FROM public.tasks t
+    WHERE t.user_id = p_user_id AND NOT t.is_completed
+      AND t.do_date >= target_start AND t.do_date < target_end
+    ORDER BY t.priority, t.do_date, t.created_at
+    LIMIT 1;
+  END IF;
+
+  RETURN jsonb_build_object('counts', counts, 'nextUp', next_up);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_briefing_facts(UUID, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_briefing_facts(UUID, TEXT) TO service_role;
 
 SELECT cron.unschedule(jobname)
 FROM cron.job
@@ -533,6 +669,16 @@ AS $$
 DECLARE
   user_settings JSONB;
 BEGIN
+  -- Reorders and sync touches change nothing a reminder shows; leave pending ones, snoozes included.
+  IF TG_OP = 'UPDATE'
+     AND OLD.is_completed IS NOT DISTINCT FROM NEW.is_completed
+     AND OLD.due_date IS NOT DISTINCT FROM NEW.due_date
+     AND OLD.do_date IS NOT DISTINCT FROM NEW.do_date
+     AND OLD.content IS NOT DISTINCT FROM NEW.content
+     AND OLD.recurrence IS NOT DISTINCT FROM NEW.recurrence THEN
+    RETURN NEW;
+  END IF;
+
   -- Cancel only task-owned due/do notifications; leave timer_end rows and past-due rows (#155) untouched.
   IF TG_OP IN ('UPDATE', 'DELETE') THEN
     UPDATE public.notification_queue
@@ -555,7 +701,7 @@ BEGIN
                 'body', 'You have a task due now.',
                 'encrypted', public.encrypted_notification_body(
                   'Your task "{}" is due now.', NEW.content),
-                'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
+                'data', jsonb_build_object('url', '/', 'taskId', NEW.id, 'reminderType', 'due_date', 'recurring', COALESCE(jsonb_typeof(NEW.recurrence), 'null') <> 'null')
               )),
               NEW.id)
       ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type IN ('due_date', 'do_date') DO NOTHING;
@@ -570,7 +716,7 @@ BEGIN
                 'body', 'You have a task scheduled now.',
                 'encrypted', public.encrypted_notification_body(
                   'Scheduled: {}', NEW.content),
-                'data', jsonb_build_object('url', '/', 'taskId', NEW.id)
+                'data', jsonb_build_object('url', '/', 'taskId', NEW.id, 'reminderType', 'do_date', 'recurring', COALESCE(jsonb_typeof(NEW.recurrence), 'null') <> 'null')
               )),
               NEW.id)
       ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type IN ('due_date', 'do_date') DO NOTHING;
@@ -822,6 +968,41 @@ CREATE TABLE IF NOT EXISTS public.habit_entries (
 -- Index for performance
 CREATE INDEX IF NOT EXISTS habit_entries_habit_id_idx ON public.habit_entries (habit_id);
 
+CREATE OR REPLACE FUNCTION public.habit_window_unsatisfied(p_habit public.habits, p_date DATE)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SET search_path = ''
+AS $$
+  SELECT (
+    SELECT count(*) FROM public.habit_entries e
+    WHERE e.habit_id = p_habit.id
+      AND e.date BETWEEN p_date - (
+        COALESCE(
+          p_habit.frequency_days,
+          CASE p_habit.frequency_period WHEN 'week' THEN 7 WHEN 'month' THEN 30 ELSE 1 END
+        ) - 1
+      ) AND p_date
+      AND e.value >= 0
+      -- Mirrors dayValue() >= 1 in src/lib/utils/habit-score.ts.
+      AND CASE
+        WHEN p_habit.habit_type = 'measurable' AND p_habit.target_value > 0 THEN
+          CASE p_habit.target_type
+            WHEN 'at_least' THEN e.value >= p_habit.target_value
+            WHEN 'at_most' THEN e.value <= p_habit.target_value
+            ELSE e.value >= 1
+          END
+        WHEN p_habit.habit_type = 'measurable' AND p_habit.target_value IS NOT NULL
+          AND p_habit.target_type = 'at_most' THEN e.value <= 0
+        WHEN p_habit.habit_type = 'measurable' THEN e.value >= 1
+        ELSE e.value = 1
+      END
+  ) < COALESCE(p_habit.frequency_count, 1);
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.habit_window_unsatisfied(public.habits, DATE) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.habit_window_unsatisfied(public.habits, DATE) TO service_role;
+
 -- C. ROW LEVEL SECURITY (RLS)
 ALTER TABLE public.habits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.habit_entries ENABLE ROW LEVEL SECURITY;
@@ -851,6 +1032,43 @@ CREATE POLICY "Users can delete own habit_entries" ON public.habit_entries
   FOR DELETE USING (
     EXISTS (SELECT 1 FROM public.habits WHERE public.habits.id = habit_entries.habit_id AND public.habits.user_id = auth.uid())
   );
+
+CREATE OR REPLACE FUNCTION public.record_habit_entry(
+  p_habit_id UUID,
+  p_date DATE,
+  p_state TEXT
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+DECLARE
+  v_habit_type TEXT;
+BEGIN
+  IF p_state NOT IN ('done', 'skipped') THEN
+    RAISE EXCEPTION 'invalid state: %', p_state;
+  END IF;
+
+  SELECT habit_type INTO v_habit_type FROM public.habits WHERE id = p_habit_id;
+  IF NOT FOUND THEN
+    RETURN 'not_found';
+  END IF;
+  IF p_state = 'done' AND v_habit_type = 'measurable' THEN
+    RETURN 'measurable';
+  END IF;
+
+  -- Preserves existing notes on conflict.
+  INSERT INTO public.habit_entries (habit_id, date, value)
+  VALUES (p_habit_id, p_date, CASE p_state WHEN 'done' THEN 1 ELSE -2 END)
+  ON CONFLICT (habit_id, date) DO UPDATE SET value = EXCLUDED.value;
+
+  RETURN 'ok';
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.record_habit_entry(UUID, DATE, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.record_habit_entry(UUID, DATE, TEXT) TO authenticated;
 
 -- D. Habit Imports: raw provenance for round-trip export, write-once/immutable (ADR 0006)
 CREATE TABLE IF NOT EXISTS public.habit_imports (
@@ -889,6 +1107,7 @@ CREATE TABLE IF NOT EXISTS public.calendar_events (
   start_time TIMESTAMPTZ NOT NULL,
   end_time TIMESTAMPTZ NOT NULL,
   all_day BOOLEAN DEFAULT false,
+  reminder_minutes INTEGER,
   
   -- Categorization
   color TEXT DEFAULT '#4B6CB7',
@@ -926,6 +1145,254 @@ CREATE UNIQUE INDEX IF NOT EXISTS calendar_events_user_ics_uid_key ON public.cal
 CREATE TRIGGER calendar_events_updated_at
   BEFORE UPDATE ON public.calendar_events
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE UNIQUE INDEX IF NOT EXISTS notification_queue_event_pending_dedup_idx
+  ON public.notification_queue (user_id, type, scheduled_at, reference_id)
+  WHERE status = 'pending' AND type = 'event_reminder';
+
+-- Recurring series are skipped: nothing parses RRULEs yet.
+CREATE OR REPLACE FUNCTION public.handle_event_notification_sync()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+  user_settings JSONB;
+  tz TEXT;
+  utc_start TIMESTAMP;
+  event_day DATE;
+  remind_local TIMESTAMP;
+  remind_at TIMESTAMPTZ;
+  lead_template TEXT;
+BEGIN
+  -- Reorders and sync touches change nothing a reminder shows; leave pending ones, snoozes included.
+  IF TG_OP = 'UPDATE'
+     AND OLD.start_time IS NOT DISTINCT FROM NEW.start_time
+     AND OLD.reminder_minutes IS NOT DISTINCT FROM NEW.reminder_minutes
+     AND OLD.is_archived IS NOT DISTINCT FROM NEW.is_archived
+     AND OLD.sync_state IS NOT DISTINCT FROM NEW.sync_state
+     AND OLD.all_day IS NOT DISTINCT FROM NEW.all_day
+     AND OLD.recurrence_rule IS NOT DISTINCT FROM NEW.recurrence_rule
+     AND OLD.title IS NOT DISTINCT FROM NEW.title THEN
+    RETURN NEW;
+  END IF;
+
+  IF TG_OP IN ('UPDATE', 'DELETE') THEN
+    UPDATE public.notification_queue
+    SET status = 'cancelled'
+    WHERE reference_id = OLD.id
+      AND status = 'pending'
+      AND type = 'event_reminder'
+      AND scheduled_at > now();
+  END IF;
+
+  IF TG_OP IN ('INSERT', 'UPDATE')
+     AND NEW.reminder_minutes IS NOT NULL
+     AND NOT COALESCE(NEW.is_archived, false)
+     AND NEW.sync_state IS DISTINCT FROM 'pending_delete'
+     AND COALESCE(NEW.recurrence_rule, '') = '' THEN
+    SELECT settings, timezone INTO user_settings, tz FROM profiles WHERE id = NEW.user_id;
+
+    IF (user_settings->'notifications'->>'event_reminders')::boolean IS NOT FALSE THEN
+      IF NEW.all_day THEN
+        IF public.at_timezone_or_null(now(), tz) IS NULL THEN
+          RETURN NEW;
+        END IF;
+        -- Synced all-day events start at UTC midnight; native ones at local midnight.
+        utc_start := NEW.start_time AT TIME ZONE 'UTC';
+        IF utc_start::time = '00:00' THEN
+          event_day := utc_start::date;
+        ELSE
+          event_day := (NEW.start_time AT TIME ZONE tz)::date;
+        END IF;
+        remind_local := (event_day - (NEW.reminder_minutes >= 1440)::int)::timestamp + TIME '09:00';
+        remind_at := remind_local AT TIME ZONE tz;
+        -- ADR 0018: a local time that does not exist that day is skipped.
+        IF (remind_at AT TIME ZONE tz) <> remind_local THEN
+          RETURN NEW;
+        END IF;
+        lead_template := CASE WHEN NEW.reminder_minutes >= 1440
+          THEN '"{}" is tomorrow' ELSE '"{}" is today' END;
+      ELSE
+        remind_at := NEW.start_time - make_interval(mins => NEW.reminder_minutes);
+        lead_template := CASE WHEN NEW.reminder_minutes = 0
+          THEN '"{}" is starting now'
+          WHEN NEW.reminder_minutes = 60 THEN '"{}" starts in 1 hour'
+          WHEN NEW.reminder_minutes = 1440 THEN '"{}" starts in 1 day'
+          ELSE '"{}" starts in ' || NEW.reminder_minutes || ' minutes' END;
+      END IF;
+
+      IF remind_at > now() THEN
+        INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
+        VALUES (NEW.user_id, remind_at, 'event_reminder',
+                jsonb_strip_nulls(jsonb_build_object(
+                  'title', 'Upcoming event',
+                  'body', 'You have an event coming up.',
+                  'encrypted', public.encrypted_notification_body(lead_template, NEW.title),
+                  'data', jsonb_build_object('url', '/calendar', 'eventId', NEW.id, 'reminderType', 'event_reminder')
+                )),
+                NEW.id)
+        ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type = 'event_reminder' DO NOTHING;
+      END IF;
+    END IF;
+  END IF;
+
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS sync_event_notifications ON public.calendar_events;
+CREATE TRIGGER sync_event_notifications
+AFTER INSERT OR UPDATE OR DELETE ON public.calendar_events
+FOR EACH ROW EXECUTE FUNCTION public.handle_event_notification_sync();
+
+-- Snooze: re-queue a sent task or event reminder 10 minutes out. The item's own
+-- dates are untouched; a task or event edit later cancels the snooze like any
+-- pending reminder (the sync triggers).
+CREATE OR REPLACE FUNCTION public.snooze_reminder(p_type TEXT, p_reference_id UUID)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  snooze_until TIMESTAMPTZ := now() + interval '10 minutes';
+  sent_row public.notification_queue;
+  event_row public.calendar_events;
+  user_settings JSONB;
+  tz TEXT;
+  snooze_day DATE;
+  reminded_day DATE;
+  mins INTEGER;
+  hours INTEGER;
+BEGIN
+  IF p_type NOT IN ('due_date', 'do_date', 'event_reminder') THEN
+    RETURN 'not_found';
+  END IF;
+
+  SELECT * INTO sent_row
+  FROM public.notification_queue
+  WHERE user_id = auth.uid()
+    AND type = p_type
+    AND reference_id = p_reference_id
+    AND status = 'sent'
+  ORDER BY scheduled_at DESC
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN 'not_found';
+  END IF;
+
+  SELECT settings, timezone INTO user_settings, tz FROM public.profiles WHERE id = auth.uid();
+  IF (user_settings->'notifications'->>(CASE p_type
+        WHEN 'due_date' THEN 'due_date_alerts'
+        WHEN 'do_date' THEN 'do_date_alerts'
+        ELSE 'event_reminders'
+      END))::boolean IS FALSE THEN
+    RETURN 'dropped';
+  END IF;
+
+  IF p_type = 'event_reminder' THEN
+    -- An all-day event has begun by its 9:00 reminder, so it lasts to the end of
+    -- that local day instead. An unknown timezone leaves no day to compare.
+    snooze_day := public.at_timezone_or_null(snooze_until, tz)::date;
+    reminded_day := public.at_timezone_or_null(sent_row.scheduled_at, tz)::date;
+
+    SELECT * INTO event_row FROM public.calendar_events e
+    WHERE e.id = p_reference_id
+      AND e.user_id = auth.uid()
+      AND NOT COALESCE(e.is_archived, false)
+      AND e.sync_state IS DISTINCT FROM 'pending_delete'
+      AND CASE WHEN e.all_day
+            THEN COALESCE(snooze_day = reminded_day, false)
+            ELSE e.start_time > snooze_until
+          END;
+
+    IF NOT FOUND THEN
+      RETURN 'dropped';
+    END IF;
+
+    -- The sent body's lead time is stale by the time the snooze fires.
+    IF NOT event_row.all_day THEN
+      mins := ceil(extract(epoch FROM event_row.start_time - snooze_until) / 60);
+      hours := round(mins / 60.0);
+      sent_row.payload := jsonb_strip_nulls(sent_row.payload || jsonb_build_object(
+        'encrypted', public.encrypted_notification_body(
+          CASE WHEN mins = 1 THEN '"{}" starts in 1 minute'
+               WHEN mins < 60 THEN '"{}" starts in ' || mins || ' minutes'
+               WHEN hours = 1 THEN '"{}" starts in 1 hour'
+               ELSE '"{}" starts in ' || hours || ' hours'
+          END,
+          event_row.title)));
+    END IF;
+  ELSIF NOT EXISTS (
+    SELECT 1 FROM public.tasks t
+    WHERE t.id = p_reference_id
+      AND t.user_id = auth.uid()
+      AND NOT t.is_completed
+  ) THEN
+    RETURN 'dropped';
+  END IF;
+
+  -- A double tap, or a second device, must not queue a second snooze.
+  IF EXISTS (
+    SELECT 1 FROM public.notification_queue
+    WHERE user_id = auth.uid()
+      AND type = p_type
+      AND reference_id = p_reference_id
+      AND status = 'pending'
+      AND scheduled_at > now()
+  ) THEN
+    RETURN 'snoozed';
+  END IF;
+
+  INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
+  VALUES (sent_row.user_id, snooze_until, sent_row.type, sent_row.payload, sent_row.reference_id)
+  ON CONFLICT DO NOTHING;
+
+  RETURN 'snoozed';
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.snooze_reminder(TEXT, UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.snooze_reminder(TEXT, UUID) TO authenticated;
+
+-- Runs as the caller, so row security limits it to their own tasks. A recurring
+-- task is refused: its next Occurrence is created client-side, where the
+-- content key is available.
+CREATE OR REPLACE FUNCTION public.complete_task_from_notification(p_task_id UUID)
+RETURNS TEXT
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  task_row public.tasks;
+BEGIN
+  SELECT * INTO task_row FROM public.tasks WHERE id = p_task_id;
+  IF NOT FOUND THEN
+    RETURN 'not_found';
+  END IF;
+  IF COALESCE(jsonb_typeof(task_row.recurrence), 'null') <> 'null' THEN
+    RETURN 'recurring';
+  END IF;
+  IF task_row.is_completed THEN
+    RETURN 'already_completed';
+  END IF;
+
+  UPDATE public.tasks
+  SET is_completed = true,
+      completed_at = now()
+  WHERE id = p_task_id;
+
+  RETURN 'completed';
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.complete_task_from_notification(UUID) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.complete_task_from_notification(UUID) TO authenticated;
 
 -- ROW LEVEL SECURITY
 ALTER TABLE public.calendar_events ENABLE ROW LEVEL SECURITY;

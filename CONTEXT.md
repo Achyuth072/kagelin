@@ -606,6 +606,53 @@ On the day a timezone springs forward an hour of local time never happens, so a
 reminder set inside it is skipped rather than delivered late — see
 [ADR 0018](docs/adr/0018-reminders-skip-nonexistent-local-times.md).
 
+### Event reminder
+
+The **Push notification** a calendar event sends a set time before it starts.
+Only an event the user gave a reminder has one; a remote provider's own alarms
+are not reminders. Distinct from **Habit reminder** (a time of day on a Habit)
+and from the daily **briefing**. _Avoid_: "event notification".
+
+### Snooze
+
+An action on a task's due-date or do-date **Push notification**, or an
+**Event reminder**, that re-sends that same reminder after a fixed interval. It
+postpones the reminder only — the task's due and do dates and the event's start
+are untouched, and it can be snoozed again. A timed event's re-sent reminder
+states the time left at the moment it is sent. A snoozed reminder is dropped if
+its task is done or deleted, or its event is deleted or has started (an all-day
+event: when its day ends), or if the item's dates or name change. Snooze does
+nothing if that kind of reminder is switched off in Push notification settings
+when it is tapped. Like other actions, it is offered only where the platform supports it and
+the account is not **Locked**. _Avoid_: "reschedule" — that changes the item's own
+dates.
+
+### Briefing
+
+The one **Push notification** per Account that summarises a day, sent at a fixed
+local hour: the **Morning Brief** at 08:00 and the **Evening Plan** at 18:00, in the
+Account's timezone. Distinct from a **Habit reminder**, which is one per Habit.
+
+The Morning Brief counts what today holds — Tasks with a do date today, overdue
+Tasks, Tasks due today, today's Events, and Habits still pending under the same
+"window not yet satisfied" rule as a Habit reminder — and names a single **next-up
+item**: the next Event that has not started, else the highest-priority Task for
+today. The Evening Plan looks back (what was finished today) and ahead (the first
+Event, else the highest-priority Task, tomorrow). A Briefing is skipped only when
+every count is zero, and is read-only: it carries no actions and opens Home.
+
+A Task is **overdue** when it is not done and its do date — or its due date, if it
+has no do date — is before the start of today, the same rule Home's Overdue group
+uses. A Habit is **pending** when it is not archived, has no **Entry** today in any
+**Entry state** (a Skipped Habit is a decision, not pending), and its window is not
+yet satisfied; its `reminder_days` and `reminder_time` play no part, since the Brief
+describes the day, not a reminder. Events recurring from a local rule are not
+expanded into occurrences, here or in the calendar.
+
+A **Locked** Account, or a device without the content key, still receives the
+counts but not the next-up name — counts come from readable metadata, names do not.
+_Avoid_: "digest" and "summary" for the Briefing.
+
 ### Backup reminder
 
 The periodic nudge to a **Guest** to export a Backup, because Guest data exists only

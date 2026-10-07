@@ -14,6 +14,13 @@ const mockUpsert = vi.fn();
 const mockSupabase = {
   auth: {
     getUser: mockAuthGetUser,
+    getClaims: async () => {
+      const { data } = await mockAuthGetUser();
+      return {
+        data: data?.user ? { claims: { sub: data.user.id } } : null,
+        error: null,
+      };
+    },
   },
   from: mockFrom,
 };

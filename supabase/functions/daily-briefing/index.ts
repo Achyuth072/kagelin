@@ -1,5 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  composeBriefing,
+  type BriefingInput,
+} from "../_shared/compose-briefing.ts";
 import { toErrorMessage } from "../_shared/errors.ts";
 
 const corsHeaders = {
@@ -19,7 +23,6 @@ serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    // Morning briefing runs at 8 AM, evening plan at 6 PM (scheduler-side).
     const { data: morningUsers, error: morningError } = await supabaseAdmin.rpc(
       "get_users_for_morning_briefing",
     );
@@ -32,84 +35,57 @@ serve(async (req: Request) => {
     if (eveningError) console.error("Evening Plan RPC error:", eveningError);
 
     const results = { morning_scheduled: 0, evening_scheduled: 0 };
+    const failures: unknown[] = [];
 
-    if (morningUsers && morningUsers.length > 0) {
-      for (const user of morningUsers) {
+    const schedule = async (
+      kind: "morning" | "evening",
+      users: Array<{ id: string }> | null,
+      settingKey: "morning_briefing" | "evening_plan",
+      queueType: "briefing" | "evening",
+    ) => {
+      for (const user of users ?? []) {
         const { data: profile } = await supabaseAdmin
           .from("profiles")
           .select("settings")
           .eq("id", user.id)
           .single();
 
-        const isEnabled =
-          profile?.settings?.notifications?.morning_briefing ?? true;
-        if (!isEnabled) continue;
+        if (!(profile?.settings?.notifications?.[settingKey] ?? true)) continue;
 
-        const { count } = await supabaseAdmin
-          .from("tasks")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("is_completed", false)
-          .filter("do_date", "gte", new Date().toISOString().split("T")[0]);
+        const { data: facts, error: factsError } = await supabaseAdmin.rpc(
+          "get_briefing_facts",
+          { p_user_id: user.id, p_kind: kind },
+        );
+        if (factsError) {
+          failures.push(factsError);
+          continue;
+        }
+        if (!facts) continue;
 
-        const taskCount = count || 0;
-        if (taskCount === 0) continue;
-
-        const body =
-          taskCount > 1
-            ? `You have ${taskCount} tasks for today.`
-            : `Ready for today? You have 1 task.`;
-
-        await supabaseAdmin.from("notification_queue").insert({
-          user_id: user.id,
-          type: "briefing",
-          scheduled_at: new Date().toISOString(),
-          payload: {
-            title: "Morning Briefing",
-            body: body,
-            data: { url: "/" },
-          },
-        });
-        results.morning_scheduled++;
-      }
-    }
-
-    if (eveningUsers && eveningUsers.length > 0) {
-      for (const user of eveningUsers) {
-        const { data: profile } = await supabaseAdmin
-          .from("profiles")
-          .select("settings")
-          .eq("id", user.id)
-          .single();
-
-        const isEnabled =
-          profile?.settings?.notifications?.evening_plan ?? true;
-        if (!isEnabled) continue;
-
-        const { count: eveningCount } = await supabaseAdmin
-          .from("tasks")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id)
-          .eq("is_completed", false)
-          .eq("is_evening", true);
-
-        const taskCount = eveningCount || 0;
-        if (taskCount === 0) continue;
-
-        const body = `You have ${taskCount} tasks set for tonight. Ready to wrap up?`;
+        const brief = composeBriefing({
+          kind,
+          counts: facts.counts,
+          nextUp: facts.nextUp,
+        } as BriefingInput);
+        if (!brief) continue;
 
         await supabaseAdmin.from("notification_queue").insert({
           user_id: user.id,
-          type: "evening",
+          type: queueType,
           scheduled_at: new Date().toISOString(),
-          payload: {
-            title: "Evening Plan",
-            body: body,
-            data: { url: "/" },
-          },
+          payload: brief,
         });
-        results.evening_scheduled++;
+        results[`${kind}_scheduled`]++;
       }
+    };
+
+    await schedule("morning", morningUsers, "morning_briefing", "briefing");
+    await schedule("evening", eveningUsers, "evening_plan", "evening");
+
+    if (failures.length > 0) {
+      throw new Error(
+        `get_briefing_facts failed for ${failures.length} user(s): ${failures.map(toErrorMessage).join("; ")}`,
+      );
     }
 
     return new Response(JSON.stringify(results), {

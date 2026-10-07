@@ -16,6 +16,7 @@ export interface CalendarEvent {
   ics_uid: string | null;
   sync_state: "pending_create" | "pending_update" | "pending_delete" | null;
   is_archived: boolean;
+  reminder_minutes?: number | null;
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -32,6 +33,7 @@ export interface CreateCalendarEventInput {
   category?: string;
   recurrence_rule?: string;
   ics_uid?: string | null;
+  reminder_minutes?: number | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -47,6 +49,7 @@ export interface UpdateCalendarEventInput {
   category?: string | null;
   recurrence_rule?: string | null;
   is_archived?: boolean;
+  reminder_minutes?: number | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -61,6 +64,7 @@ export interface CalendarEventUI {
   location?: string | null;
   category?: string | null;
   isArchived?: boolean;
+  reminderMinutes?: number | null;
   metadata?: Record<string, unknown>;
 }
 
@@ -76,6 +80,7 @@ export function toCalendarEventUI(event: CalendarEvent): CalendarEventUI {
     location: event.location,
     category: event.category,
     isArchived: event.is_archived,
+    reminderMinutes: event.reminder_minutes,
     metadata: event.metadata,
   };
 }
