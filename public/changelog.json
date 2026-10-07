@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.47.0-preview.4",
+    "date": "2026-10-07",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Drop the retired key from a device that could not save the rotated one",
+        "Stop toasting retired keys and show one Reload toast for an outdated app",
+        "Lock a stale device without a loading flash when the server refuses its key",
+        "Announce server key rejections from the supabase wrapper"
+      ],
+      "Fixed": [
+        "Toast a refused save when the gate does not lock the device",
+        "Purge once for a burst of refused writes and explain a key change on load"
+      ]
+    }
+  },
+  {
     "version": "1.47.0-preview.3",
     "date": "2026-10-07",
     "channel": "preview",
@@ -685,22 +702,6 @@
         "Fix WebDAV backup failures on Node's Happy Eyeballs and null-body responses",
         "Speed up subtask expand/collapse into a single, faster toggle",
         "Improve accessibility labels, input semantics, and low-contrast text"
-      ]
-    }
-  },
-  {
-    "version": "1.41.0-preview.2",
-    "date": "2026-08-26",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add no-unbounded-supabase-select lint rule to ban unpaginated reads"
-      ],
-      "Improved": [
-        "Add user_id indexes for focus_logs and tasks tables"
-      ],
-      "Fixed": [
-        "Paginate stats, tasks, and calendar sync queries to prevent silent truncation"
       ]
     }
   }
