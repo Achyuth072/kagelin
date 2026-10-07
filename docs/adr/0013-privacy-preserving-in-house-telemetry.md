@@ -42,14 +42,15 @@ To enable cohort analysis and funnel queries without unbounded database growth o
 
 ## Event Catalog
 
-| Event Name         | Properties / Enums                                                                     | Purpose                                                               |
-| :----------------- | :------------------------------------------------------------------------------------- | :-------------------------------------------------------------------- |
-| `app_opened`       | `display_mode: 'standalone' \| 'browser'`, `platform: 'ios' \| 'android' \| 'desktop'` | Tracks Daily Active Devices (DAD) & PWA Standalone adoption ratio.    |
-| `pwa_installed`    | `platform: 'ios' \| 'android' \| 'desktop'`                                            | Measures Add to Home Screen conversion.                               |
-| `task_action`      | `action: 'created' \| 'completed'`                                                     | Measures aggregate task throughput.                                   |
-| `habit_logged`     | `streak_milestone?: '7' \| '30' \| '100'`                                              | Measures habit consistency and long-term adherence.                   |
-| `focus_session`    | `status: 'completed' \| 'abandoned'`, `duration_minutes: number`                       | Measures focus time logged and timer completion vs. abandonment rate. |
-| `signup_completed` | _(None)_                                                                               | Tracks Guest → Registered account conversion volume.                  |
+| Event Name           | Properties / Enums                                                                     | Purpose                                                               |
+| :------------------- | :------------------------------------------------------------------------------------- | :-------------------------------------------------------------------- |
+| `app_opened`         | `display_mode: 'standalone' \| 'browser'`, `platform: 'ios' \| 'android' \| 'desktop'` | Tracks Daily Active Devices (DAD) & PWA Standalone adoption ratio.    |
+| `pwa_installed`      | `platform: 'ios' \| 'android' \| 'desktop'`                                            | Measures Add to Home Screen conversion.                               |
+| `task_action`        | `action: 'created' \| 'completed'`                                                     | Measures aggregate task throughput.                                   |
+| `habit_logged`       | `streak_milestone?: '7' \| '30' \| '100'`                                              | Measures habit consistency and long-term adherence.                   |
+| `focus_session`      | `status: 'completed' \| 'abandoned'`, `duration_minutes: number`                       | Measures focus time logged and timer completion vs. abandonment rate. |
+| `signup_completed`   | _(None)_                                                                               | Tracks Guest → Registered account conversion volume.                  |
+| `content_unreadable` | `table`, `column` of an encrypted field (no row id)                                    | Counts sealed values that fail to open in place (ADR 0023).           |
 
 ---
 

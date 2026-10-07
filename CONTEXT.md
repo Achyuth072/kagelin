@@ -205,6 +205,14 @@ Re-encrypting every piece of an Account's content in one resumable pass. The
 same pass serves **Rotation** (new key) and a change of sealing scheme (same
 key, stronger format).
 
+### Unreadable value
+
+One sealed value that cannot be opened even though the content key is present:
+it was moved, tampered with or damaged. It is shown in place as "Can't be
+read", never as content, and the user can delete it or type a new value. A
+missing or locked key is not an unreadable value. See
+`docs/adr/0023-unreadable-values-render-in-place.md`.
+
 ---
 
 ## Tiers
