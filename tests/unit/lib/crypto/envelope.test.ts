@@ -7,6 +7,8 @@ import {
   isEnvelope,
   sealEnvelope,
   openEnvelope,
+  isTamperError,
+  needsReseal,
 } from "@/lib/crypto/envelope";
 
 async function generateKey(): Promise<Uint8Array> {
@@ -134,5 +136,66 @@ describe("row-bound (-v2) envelopes", () => {
     expect(
       new TextDecoder().decode(await openEnvelope(key, envelope, binding)),
     ).toBe("old");
+  });
+});
+
+describe("tamper error", () => {
+  it("is raised, and distinct from a plain failure, when a row-bound value fails to open", async () => {
+    const key = new Uint8Array(32).fill(3);
+    const binding = {
+      userId: "u",
+      table: "tasks",
+      column: "content",
+      rowId: "a",
+    };
+    const sealed = await sealEnvelope(
+      key,
+      new TextEncoder().encode("x"),
+      undefined,
+      binding,
+    );
+
+    const error = await openEnvelope(key, sealed, {
+      ...binding,
+      rowId: "b",
+    }).catch((e: unknown) => e);
+
+    expect(isTamperError(error)).toBe(true);
+    const legacy = await sealEnvelope(key, new TextEncoder().encode("x"));
+    const wrongKey = await openEnvelope(
+      new Uint8Array(32).fill(4),
+      legacy,
+    ).catch((e: unknown) => e);
+    expect(isTamperError(wrongKey)).toBe(false);
+  });
+
+  it("flags every value that is not -v2 under the current key as needing a Re-seal", async () => {
+    const key = new Uint8Array(32).fill(3);
+    const binding = {
+      userId: "u",
+      table: "tasks",
+      column: "content",
+      rowId: "a",
+    };
+    const v1 = await sealEnvelope(key, new TextEncoder().encode("x"));
+    const v2 = await sealEnvelope(
+      key,
+      new TextEncoder().encode("x"),
+      undefined,
+      binding,
+    );
+    const v2OtherKey = await sealEnvelope(
+      key,
+      new TextEncoder().encode("x"),
+      "2",
+      binding,
+    );
+
+    expect([v1, v2OtherKey, "plain"].map(needsReseal)).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(needsReseal(v2)).toBe(false);
   });
 });

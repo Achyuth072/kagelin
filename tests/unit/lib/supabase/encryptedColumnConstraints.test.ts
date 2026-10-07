@@ -63,17 +63,28 @@ CREATE TABLE IF NOT EXISTS public.notes (
 });
 
 describe("server-side scheme checks accept the row-bound -v2 envelope", () => {
-  const checks = schemaSql.match(/'\^?xchacha20poly1305-v[^']*'/g) ?? [];
-
-  it("recognises -v1 and -v2 in every scheme-literal check", () => {
+  it("recognises -v1 and -v2 in every sealed-value check", () => {
     // encrypted_notification_body, the plaintext backstop, and the habit-notes trigger.
+    const checks = schemaSql.match(/'\^?xchacha20poly1305-v\[12\]:'/g) ?? [];
     expect(checks).toHaveLength(3);
-    for (const check of checks) {
-      expect(check).toBe("'^xchacha20poly1305-v[12]:'");
+  });
+
+  it("names -v1 alone only where the backstop rejects it after the Re-seal marker", () => {
+    const v1Only = schemaSql.match(/'\^xchacha20poly1305-v1:'/g) ?? [];
+    expect(v1Only).toHaveLength(2);
+
+    const backstops = schemaSql.match(
+      /CREATE OR REPLACE FUNCTION public\.reject_unmigrated_plaintext(?:_habit_entry)?\(\)[\s\S]*?\n\$\$;/g,
+    );
+    expect(backstops).toHaveLength(2);
+    for (const fn of backstops!) {
+      expect(fn).toMatch(/sealed_v2_at IS NOT NULL/);
+      expect(fn).toMatch(/xchacha20poly1305-v1:/);
+      expect(fn).toMatch(/HINT = 'sealing_scheme_outdated'/);
     }
   });
 
-  it("leaves no scheme literal that names only -v1", () => {
-    expect(schemaSql).not.toMatch(/xchacha20poly1305-v1/);
+  it("stores the marker on the key row", () => {
+    expect(schemaSql).toMatch(/sealed_v2_at TIMESTAMPTZ/);
   });
 });

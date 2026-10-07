@@ -39,11 +39,14 @@ export function useEncryptionGate(): {
   status: EncryptionGateStatus;
   recheck: () => void;
   lock: () => Promise<void>;
+  needsReseal: boolean;
+  finishReseal: () => void;
 } {
   const { user, loading: authLoading, isGuestMode } = useAuth();
   const queryClient = useQueryClient();
   const [asyncStatus, setAsyncStatus] = useState<AsyncStatus>("loading");
   const [version, setVersion] = useState(0);
+  const [resealDue, setResealDue] = useState(false);
   const autoLockEnabled = useUiStore((s) => s.autoLockEnabled);
   const autoLockMinutes = useUiStore((s) => s.autoLockMinutes);
   // Avoid re-running the status effect on settings changes.
@@ -88,7 +91,9 @@ export function useEncryptionGate(): {
           return;
         }
 
-        setAsyncStatus(resolveStatus(row, cachedKey));
+        const status = resolveStatus(row, cachedKey);
+        setResealDue(status === "unlocked" && row?.sealed_v2_at === null);
+        setAsyncStatus(status);
       } catch {
         if (!cancelled) setAsyncStatus("unavailable");
       }
@@ -116,11 +121,19 @@ export function useEncryptionGate(): {
     lock,
   );
 
+  const finishReseal = useCallback(() => setResealDue(false), []);
+
   const status: EncryptionGateStatus = authLoading
     ? "loading"
     : notApplicable
       ? "not-applicable"
       : asyncStatus;
 
-  return { status, recheck, lock };
+  return {
+    status,
+    recheck,
+    lock,
+    needsReseal: resealDue && status === "unlocked",
+    finishReseal,
+  };
 }

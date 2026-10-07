@@ -28,15 +28,25 @@ vi.mock("@/components/encryption/EncryptionMigrationScreen", () => ({
   EncryptionMigrationScreen: () => <div>migration-screen</div>,
 }));
 
+vi.mock("@/components/encryption/ResealIndicator", () => ({
+  ResealIndicator: () => <div>reseal-indicator</div>,
+}));
+
 vi.mock("@/components/encryption/NewPassphraseStep", () => ({
   NewPassphraseStep: () => <div>new-passphrase-step</div>,
 }));
 
-function mockGate(status: EncryptionGateStatus, lock = vi.fn()) {
+function mockGate(
+  status: EncryptionGateStatus,
+  lock = vi.fn(),
+  needsReseal = false,
+) {
   vi.mocked(useEncryptionGate).mockReturnValue({
     status,
     recheck: vi.fn(),
     lock,
+    needsReseal,
+    finishReseal: vi.fn(),
   });
 }
 
@@ -139,6 +149,8 @@ describe("EncryptionGate", () => {
       status: "unavailable",
       recheck,
       lock: vi.fn(),
+      needsReseal: false,
+      finishReseal: vi.fn(),
     });
 
     render(

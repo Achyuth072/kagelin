@@ -1,9 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { wrapSupabaseClient } from "@/lib/supabase/wrapClient";
+import {
+  wrapSupabaseClient,
+  MISSING_ROW_ID_CODE,
+  isAppUpdateRequiredError,
+} from "@/lib/supabase/wrapClient";
 import { FIELD_MAP, type FieldMap } from "@/lib/supabase/fieldMap";
 import { generateMasterKey } from "@/lib/crypto/masterKey";
 import { isCiphertext, encryptField } from "@/lib/crypto/contentCipher";
-import { sealEnvelope, CURRENT_KEY_ID } from "@/lib/crypto/envelope";
+import {
+  sealEnvelope,
+  CURRENT_KEY_ID,
+  isTamperError,
+} from "@/lib/crypto/envelope";
 import {
   createFakeSupabaseClient,
   type Row,
@@ -500,14 +508,17 @@ describe("wrapSupabaseClient — row-bound (-v2) values", () => {
   });
 
   it("fails closed when there is no session to supply the user id", async () => {
-    const raw = createFakeSupabaseClient({
-      tasks: [
-        {
-          id: "t1",
-          content: await sealV2("tasks", "content", "t1", "Buy milk"),
-        },
-      ],
-    });
+    const raw = createFakeSupabaseClient(
+      {
+        tasks: [
+          {
+            id: "t1",
+            content: await sealV2("tasks", "content", "t1", "Buy milk"),
+          },
+        ],
+      },
+      { userId: null },
+    );
     const client = wrapSupabaseClient(raw, FIELD_MAP);
 
     await expect(client.from("tasks").select().single()).rejects.toThrow(
@@ -516,14 +527,184 @@ describe("wrapSupabaseClient — row-bound (-v2) values", () => {
   });
 
   it("still reads -v1 values with no binding and no session", async () => {
-    const raw = createFakeSupabaseClient({
-      tasks: [
-        { id: "t1", content: await encryptField(keyStoreState.key!, "old") },
-      ],
-    });
+    const raw = createFakeSupabaseClient(
+      {
+        tasks: [
+          { id: "t1", content: await encryptField(keyStoreState.key!, "old") },
+        ],
+      },
+      { userId: null },
+    );
     const client = wrapSupabaseClient(raw, FIELD_MAP);
 
     const { data } = await client.from("tasks").select().single();
     expect(data.content).toBe("old");
+  });
+});
+
+describe("wrapSupabaseClient — sealing writes row-bound", () => {
+  const userId = "user-1";
+  const writes: Record<string, Row> = {
+    tasks: { id: "r1", content: "Buy milk", description: "2%" },
+    habits: { id: "r1", name: "Run", description: "Daily", question: "Ran?" },
+    projects: { id: "r1", name: "Home" },
+    labels: { id: "r1", name: "Health" },
+    calendar_events: {
+      id: "r1",
+      title: "Therapy",
+      description: "d",
+      location: "l",
+      category: "c",
+      metadata: { a: 1 },
+    },
+    external_calendars: { id: "r1", name: "Work", username: "me" },
+    habit_imports: { id: "r1", raw: { entries: [1] }, file_name: "x.db" },
+    habit_entries: { id: "r1", notes: "Knee fine" },
+  };
+
+  it.each(Object.entries(writes))(
+    "writes %s as -v2 and reads it back",
+    async (table, row) => {
+      const raw = createFakeSupabaseClient({}, { userId });
+      const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+      await client.from(table).insert(row);
+
+      const stored = raw.rawRows(table)[0];
+      for (const field of FIELD_MAP[table]) {
+        expect(stored[field]).toMatch(/^xchacha20poly1305-v2:/);
+      }
+      const { data } = await client.from(table).select().single();
+      for (const field of FIELD_MAP[table]) {
+        expect(data[field]).toEqual(row[field]);
+      }
+    },
+  );
+
+  it("still reads a legacy -v1 row", async () => {
+    const raw = createFakeSupabaseClient(
+      {
+        tasks: [
+          { id: "t1", content: await encryptField(keyStoreState.key!, "old") },
+        ],
+      },
+      { userId },
+    );
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    const { data } = await client.from("tasks").select().single();
+
+    expect(data.content).toBe("old");
+  });
+
+  it("binds an update to the row named by its id filter", async () => {
+    const raw = createFakeSupabaseClient(
+      {
+        tasks: [
+          { id: "t1", content: "a" },
+          { id: "t2", content: "b" },
+        ],
+      },
+      { userId },
+    );
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    await client.from("tasks").update({ content: "edited" }).eq("id", "t2");
+
+    const rows = raw.rawRows("tasks");
+    const { data } = await client
+      .from("tasks")
+      .select()
+      .eq("id", "t2")
+      .single();
+    expect(data.content).toBe("edited");
+    rows[0].content = rows[1].content;
+    await expect(
+      client.from("tasks").select().eq("id", "t1").single(),
+    ).rejects.toThrow(/moved, altered or sealed for another place/);
+  });
+
+  it("rejects an update of a sealed column that names no row id", async () => {
+    const raw = createFakeSupabaseClient(
+      { tasks: [{ id: "t1", content: "a" }] },
+      { userId },
+    );
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    await expect(
+      client.from("tasks").update({ content: "edited" }).eq("priority", 1),
+    ).rejects.toMatchObject({ code: MISSING_ROW_ID_CODE });
+    expect(raw.rawRows("tasks")[0].content).toBe("a");
+  });
+
+  it("lets an update that touches no sealed column go without a row id", async () => {
+    const raw = createFakeSupabaseClient(
+      { tasks: [{ id: "t1", content: "a", priority: 1 }] },
+      { userId },
+    );
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    await client.from("tasks").update({ priority: 2 }).eq("priority", 1);
+
+    expect(raw.rawRows("tasks")[0].priority).toBe(2);
+  });
+
+  it.each([
+    ["another row", "tasks", { id: "t2", content: "SEALED" }, userId],
+    ["another column", "tasks", { id: "t1", description: "SEALED" }, userId],
+    ["another table", "projects", { id: "t1", name: "SEALED" }, userId],
+    ["another account", "tasks", { id: "t1", content: "SEALED" }, "user-2"],
+  ])(
+    "raises a distinct tamper error for a value moved to %s",
+    async (_place, table, row, reader) => {
+      const source = createFakeSupabaseClient({}, { userId });
+      await wrapSupabaseClient(source, FIELD_MAP)
+        .from("tasks")
+        .insert({ id: "t1", content: "secret" });
+      const sealedContent = source.rawRows("tasks")[0].content;
+      const moved = Object.fromEntries(
+        Object.entries(row).map(([k, v]) => [
+          k,
+          v === "SEALED" ? sealedContent : v,
+        ]),
+      );
+
+      const raw = createFakeSupabaseClient(
+        { [table]: [moved] },
+        { userId: reader },
+      );
+      const error = await wrapSupabaseClient(raw, FIELD_MAP)
+        .from(table)
+        .select()
+        .single()
+        .then(
+          () => null,
+          (e: unknown) => e,
+        );
+
+      expect(isTamperError(error)).toBe(true);
+    },
+  );
+
+  it("maps the server's old-scheme rejection to an update-the-app error", async () => {
+    const raw = createFakeSupabaseClient(
+      {},
+      {
+        userId,
+        failWrite: () => ({
+          code: "23514",
+          message:
+            "Column tasks.content must be sealed with the current scheme",
+          hint: "sealing_scheme_outdated",
+        }),
+      },
+    );
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    const { error } = await client
+      .from("tasks")
+      .insert({ id: "t1", content: "x" });
+
+    expect(isAppUpdateRequiredError(error)).toBe(true);
   });
 });

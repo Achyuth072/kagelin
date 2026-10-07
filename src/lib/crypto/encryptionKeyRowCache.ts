@@ -10,6 +10,8 @@ export interface EncryptionKeyRow {
   recovery_kdf_params: Argon2Params;
   wrapped_key_recovery: string;
   migrated_at: string | null;
+  // Absent on rows cached before the marker existed; explicit null means a Re-seal is due.
+  sealed_v2_at?: string | null;
   passphrase_reset_required: boolean;
 }
 
