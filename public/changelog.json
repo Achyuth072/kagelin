@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.47.0-preview.1",
+    "date": "2026-10-07",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Seal row-bound -v2, re-seal existing content and reject -v1 after upgrade"
+      ]
+    }
+  },
+  {
     "version": "1.47.0-preview.0",
     "date": "2026-10-07",
     "channel": "preview",
@@ -689,27 +699,6 @@
       "Fixed": [
         "Webdav proxy failures on Node's Happy Eyeballs and null-body responses",
         "Correct WebDAV backup's data source, unify on ZIP, extend to Guests"
-      ]
-    }
-  },
-  {
-    "version": "1.40.0",
-    "date": "2026-08-24",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Demo mode banner prompting guests to clear sample data and start fresh",
-        "Opt-in telemetry controls in settings",
-        "GitHub Issues link in the About section"
-      ],
-      "Improved": [
-        "Automatically clean up sample demo data when creating an account",
-        "Refined styling for toasts, banners, and prompts across the app"
-      ],
-      "Fixed": [
-        "Demo banner occasionally getting stuck on screen",
-        "Guest data migration issues when signing up",
-        "Mobile bottom navigation touch target sizing"
       ]
     }
   }
