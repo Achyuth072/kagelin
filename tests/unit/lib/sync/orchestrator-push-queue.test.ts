@@ -124,6 +124,61 @@ describe("pushPendingEvents", () => {
     drainTriggerRef.value = false;
   });
 
+  it.each(["pending_create", "pending_update"] as const)(
+    "%s: skips an event with unreadable content and leaves it pending",
+    async (sync_state) => {
+      const { pushPendingEvents } = await import("@/lib/sync/orchestrator");
+      pendingEventsRef.value = [
+        makeEvent({ sync_state, title: null, unreadable: ["title"] }),
+      ];
+      const mockAdapter = {
+        pushEvent: vi.fn(),
+        updateRemoteEvent: vi.fn(),
+        deleteRemoteEvent: vi.fn(),
+      };
+
+      const result = await pushPendingEvents(
+        mockCalendar as ExternalCalendar,
+        mockAdapter as Pick<
+          SyncAdapter,
+          "pushEvent" | "updateRemoteEvent" | "deleteRemoteEvent"
+        >,
+      );
+
+      expect(mockAdapter.pushEvent).not.toHaveBeenCalled();
+      expect(mockAdapter.updateRemoteEvent).not.toHaveBeenCalled();
+      expect(capturedUpdates).toEqual([]);
+      expect(result).toEqual({ pushed: 0, errors: [] });
+    },
+  );
+
+  it("pending_delete: still deletes an event with unreadable content", async () => {
+    const { pushPendingEvents } = await import("@/lib/sync/orchestrator");
+    pendingEventsRef.value = [
+      makeEvent({
+        sync_state: "pending_delete",
+        title: null,
+        unreadable: ["title"],
+      }),
+    ];
+    const mockAdapter = {
+      pushEvent: vi.fn(),
+      updateRemoteEvent: vi.fn(),
+      deleteRemoteEvent: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await pushPendingEvents(
+      mockCalendar as ExternalCalendar,
+      mockAdapter as Pick<
+        SyncAdapter,
+        "pushEvent" | "updateRemoteEvent" | "deleteRemoteEvent"
+      >,
+    );
+
+    expect(mockAdapter.deleteRemoteEvent).toHaveBeenCalledWith("remote-1");
+    expect(capturedDeletes).toEqual(["evt-1"]);
+  });
+
   it("pending_create: calls adapter.pushEvent and writes remote_id + etag + sync_state null", async () => {
     const { pushPendingEvents } = await import("@/lib/sync/orchestrator");
     const event = makeEvent({
