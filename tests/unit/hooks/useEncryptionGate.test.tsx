@@ -138,6 +138,7 @@ describe("useEncryptionGate", () => {
     });
     await waitFor(() => expect(result.current.status).toBe("needs-unlock"));
     expect(purgeDeviceContentMock).toHaveBeenCalled();
+    expect(result.current.lockReason).toBe("key-changed");
   });
 
   it("keeps a key newer than a key row cached while offline", async () => {
@@ -485,6 +486,21 @@ describe("useEncryptionGate", () => {
       expect(purgeDeviceContentMock).toHaveBeenCalledTimes(1);
       expect(result.current.lockReason).toBe("key-changed");
       expect(statuses).not.toContain("loading");
+    });
+
+    it("purges once when several writes are refused at the same time", async () => {
+      const { result } = await unlockedGate(1);
+      getEncryptionKeyRowMock.mockResolvedValue({
+        migrated_at: "2026-09-04T00:00:00Z",
+        current_key_id: 2,
+      });
+
+      await act(async () => {
+        await Promise.all([rejectedWrite(), rejectedWrite(), rejectedWrite()]);
+      });
+
+      await waitFor(() => expect(result.current.status).toBe("needs-unlock"));
+      expect(purgeDeviceContentMock).toHaveBeenCalledTimes(1);
     });
 
     it("stays unlocked when the server still has this device's key", async () => {

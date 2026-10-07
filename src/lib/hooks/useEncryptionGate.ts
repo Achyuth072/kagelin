@@ -87,6 +87,7 @@ export function useEncryptionGate(): {
   const [resealRun, setResealRun] = useState(0);
   const [lockReason, setLockReason] = useState<LockReason | null>(null);
   const recoveryCodeHeldRef = useRef(false);
+  const lockingForKeyRef = useRef(false);
   const asyncStatusRef = useRef(asyncStatus);
   useEffect(() => {
     asyncStatusRef.current = asyncStatus;
@@ -120,7 +121,10 @@ export function useEncryptionGate(): {
         // The retired key is the leaked one, so it goes with everything it decrypted.
         if (isKeyRetired(row, keyring)) {
           await purgeDeviceContent(queryClient);
-          if (!cancelled) setAsyncStatus("needs-unlock");
+          if (!cancelled) {
+            setLockReason("key-changed");
+            setAsyncStatus("needs-unlock");
+          }
           return;
         }
         const cachedKey =
@@ -175,10 +179,13 @@ export function useEncryptionGate(): {
       if (
         signal !== "content_key_retired" ||
         recoveryCodeHeldRef.current ||
+        lockingForKeyRef.current ||
         asyncStatusRef.current !== "unlocked"
       ) {
         return;
       }
+      // A burst of rejected writes would otherwise each start their own check and purge.
+      lockingForKeyRef.current = true;
       try {
         const [row, keyring] = await Promise.all([
           getEncryptionKeyRow(userId),
@@ -187,10 +194,13 @@ export function useEncryptionGate(): {
         // The check awaits the network; a hold set meanwhile still applies.
         if (recoveryCodeHeldRef.current || !isKeyRetired(row, keyring)) return;
         await purgeDeviceContent(queryClient);
+        asyncStatusRef.current = "needs-unlock";
         setLockReason("key-changed");
         setAsyncStatus("needs-unlock");
       } catch (err) {
         Sentry.captureException(err);
+      } finally {
+        lockingForKeyRef.current = false;
       }
     });
   }, [userId, queryClient]);
