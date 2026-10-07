@@ -124,6 +124,21 @@ describe("composeBriefing next-up name", () => {
     expect(brief?.encrypted?.template.match(/\{\}/g)).toHaveLength(1);
   });
 
+  it("names the source row of the next-up copy so its binding can be rebuilt", () => {
+    const task = composeBriefing({
+      kind: "morning",
+      counts: { ...none, tasksToday: 1 },
+      nextUp: { ciphertext: CIPHERTEXT, taskId: "task-1" },
+    });
+    const event = composeBriefing({
+      kind: "evening",
+      counts: { ...eveningNone, eventsTomorrow: 1 },
+      nextUp: { ciphertext: CIPHERTEXT, eventId: "event-1" },
+    });
+    expect(task?.data).toEqual({ url: "/", taskId: "task-1" });
+    expect(event?.data).toEqual({ url: "/", eventId: "event-1" });
+  });
+
   it("puts an event's local time before its name", () => {
     const brief = composeBriefing({
       kind: "evening",

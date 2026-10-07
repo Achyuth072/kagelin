@@ -619,6 +619,7 @@ BEGIN
   -- All-day events have no start time to announce.
   SELECT jsonb_build_object(
     'ciphertext', (public.encrypted_notification_body('{}', ev.title))->>'ciphertext',
+    'eventId', ev.id,
     'time', to_char(ev.start_time AT TIME ZONE tz, 'HH24:MI')
   )
   INTO next_up
@@ -633,7 +634,8 @@ BEGIN
 
   IF next_up IS NULL THEN
     SELECT jsonb_build_object(
-      'ciphertext', (public.encrypted_notification_body('{}', t.content))->>'ciphertext'
+      'ciphertext', (public.encrypted_notification_body('{}', t.content))->>'ciphertext',
+      'taskId', t.id
     )
     INTO next_up
     FROM public.tasks t
