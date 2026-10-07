@@ -1,5 +1,33 @@
 [
   {
+    "version": "1.46.0",
+    "date": "2026-10-07",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Done and Snooze buttons on task and event reminder notifications",
+        "Event reminders, with controls in the event form and notification settings",
+        "Morning brief now counts today's tasks, overdue items, events and pending habits",
+        "Evening plan shows what you finished and what's planned for tomorrow, and names your next-up item"
+      ],
+      "Improved": [
+        "Tasks, events and habits update instantly on screen and roll back if saving fails",
+        "Reminder actions are faster"
+      ],
+      "Fixed": [
+        "Drawers now lift above the mobile keyboard instead of getting squashed under it",
+        "Task details now refresh right after you edit them",
+        "Snoozed reminders stop when you switch the reminder off",
+        "Editing something unrelated no longer cancels a pending reminder",
+        "Snoozed all-day reminders end with their day, and today's all-day reminder is kept",
+        "Deleting an item cancels its reminders",
+        "Event reminders open the right event, and timed events show the time left correctly",
+        "Briefings skip archived habits and report errors instead of failing silently",
+        "Removed a duplicate date picker from the habit view footer"
+      ]
+    }
+  },
+  {
     "version": "1.45.1-preview.4",
     "date": "2026-10-06",
     "channel": "preview",
@@ -697,16 +725,6 @@
         "Stop back-anchor bounce on 404/admin routes and Firefox admin-metrics reload loop",
         "Align DemoBar, toasts, and telemetry banner with the design system",
         "Use current guest-data storage key in signup migration",
-        "Restore Android 48dp touch target on mobile bottom nav (Release v1.31.3) (#162)"
-      ]
-    }
-  },
-  {
-    "version": "1.31.3",
-    "date": "2026-08-20",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
         "Restore Android 48dp touch target on mobile bottom nav (Release v1.31.3) (#162)"
       ]
     }
