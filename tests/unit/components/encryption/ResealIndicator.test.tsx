@@ -52,6 +52,29 @@ describe("ResealIndicator", () => {
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
   });
 
+  it("cancels its run when it unmounts, without completing or reporting", async () => {
+    let signal: AbortSignal | undefined;
+    vi.mocked(resealUntilClean).mockImplementation(
+      (_userId, _onProgress, runSignal) =>
+        new Promise((_resolve, reject) => {
+          signal = runSignal;
+          runSignal.addEventListener("abort", () => reject(runSignal.reason));
+        }),
+    );
+    const onComplete = vi.fn();
+
+    const { unmount } = render(
+      <ResealIndicator userId="user-1" onComplete={onComplete} />,
+    );
+    await waitFor(() => expect(signal).toBeDefined());
+    unmount();
+
+    expect(signal!.aborted).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(Sentry.captureException).not.toHaveBeenCalled();
+  });
+
   it("names the place of each value it can't read", async () => {
     vi.mocked(resealUntilClean).mockRejectedValue(
       new UnreadableContentError([

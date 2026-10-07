@@ -130,6 +130,25 @@ describe("runReseal", () => {
     expect(progressCalls.at(-1)).toEqual({ done: 3, total: 3 });
   });
 
+  it("stops before writing once cancelled", async () => {
+    fakeClient = createFakeSupabaseClient({
+      tasks: [{ id: "t1", user_id: USER_ID, content: "Buy milk" }],
+      external_calendars: [
+        { id: "c1", user_id: USER_ID, sync_error: "Plaintext diagnostic" },
+      ],
+    });
+    const controller = new AbortController();
+    controller.abort();
+
+    await expect(runReseal(USER_ID, undefined, controller.signal)).rejects.toBe(
+      controller.signal.reason,
+    );
+    expect(fakeClient.rawRows("tasks")[0].content).toBe("Buy milk");
+    expect(fakeClient.rawRows("external_calendars")[0].sync_error).toBe(
+      "Plaintext diagnostic",
+    );
+  });
+
   it("counts what it wrote, so a pass that finds nothing left returns zero", async () => {
     fakeClient = createFakeSupabaseClient({
       tasks: [{ id: "t1", user_id: USER_ID, content: "Buy milk" }],

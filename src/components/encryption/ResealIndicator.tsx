@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import * as Sentry from "@sentry/nextjs";
 import { Button } from "@/components/ui/button";
 import type { ResealProgress } from "@/lib/crypto/reseal";
@@ -31,22 +31,29 @@ export function ResealIndicator({
   const [progress, setProgress] = useState<ResealProgress | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const running = useRef(false);
+  // A new callback identity must not restart a running Re-seal.
+  const complete = useEffectEvent(onComplete);
 
   useEffect(() => {
-    if (running.current) return;
-    running.current = true;
+    const controller = new AbortController();
+    const { signal } = controller;
+    // Rows already in flight still report after an abort.
+    const report = (p: ResealProgress) => {
+      if (!signal.aborted) setProgress(p);
+    };
 
-    resealUntilClean(userId, setProgress)
-      .then(onComplete)
+    resealUntilClean(userId, report, signal)
+      .then(() => {
+        if (!signal.aborted) complete();
+      })
       .catch((err) => {
+        if (signal.aborted) return;
         Sentry.captureException(err);
         setFailure(failureMessage(err));
-      })
-      .finally(() => {
-        running.current = false;
       });
-  }, [userId, onComplete, attempt]);
+
+    return () => controller.abort();
+  }, [userId, attempt]);
 
   return (
     <div

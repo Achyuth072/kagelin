@@ -35,7 +35,7 @@ describe("resealUntilClean", () => {
   });
 
   it("sets the marker under the key id the pass ran with once nothing is left", async () => {
-    await resealUntilClean(USER_ID, vi.fn());
+    await resealUntilClean(USER_ID, vi.fn(), new AbortController().signal);
 
     expect(markResealComplete).toHaveBeenCalledWith(USER_ID, "2");
   });
@@ -45,7 +45,7 @@ describe("resealUntilClean", () => {
       .mockResolvedValueOnce({ unreadable: [], sealed: 3 })
       .mockResolvedValue(clean);
 
-    await resealUntilClean(USER_ID, vi.fn());
+    await resealUntilClean(USER_ID, vi.fn(), new AbortController().signal);
 
     expect(runReseal).toHaveBeenCalledTimes(2);
     expect(markResealComplete).toHaveBeenCalledTimes(1);
@@ -54,9 +54,9 @@ describe("resealUntilClean", () => {
   it("does not set the marker while every pass still finds work", async () => {
     vi.mocked(runReseal).mockResolvedValue({ unreadable: [], sealed: 1 });
 
-    await expect(resealUntilClean(USER_ID, vi.fn())).rejects.toThrow(
-      /still needs upgrading/,
-    );
+    await expect(
+      resealUntilClean(USER_ID, vi.fn(), new AbortController().signal),
+    ).rejects.toThrow(/still needs upgrading/);
     expect(markResealComplete).not.toHaveBeenCalled();
   });
 
@@ -65,7 +65,7 @@ describe("resealUntilClean", () => {
       .mockRejectedValueOnce(new Error("Re-seal conflict: tasks row t1"))
       .mockResolvedValue(clean);
 
-    await resealUntilClean(USER_ID, vi.fn());
+    await resealUntilClean(USER_ID, vi.fn(), new AbortController().signal);
 
     expect(runReseal).toHaveBeenCalledTimes(2);
     expect(markResealComplete).toHaveBeenCalled();
@@ -76,16 +76,20 @@ describe("resealUntilClean", () => {
       .mockRejectedValueOnce(new Error("Re-seal conflict: notification n1"))
       .mockResolvedValue({ unreadable: [], sealed: 1 });
 
-    await expect(resealUntilClean(USER_ID, vi.fn())).rejects.toThrow(
-      /still needs upgrading/,
-    );
+    await expect(
+      resealUntilClean(USER_ID, vi.fn(), new AbortController().signal),
+    ).rejects.toThrow(/still needs upgrading/);
   });
 
   it("stops at the first clean pass that leaves only unreadable values, keeping the retired key", async () => {
     const unreadable = [{ table: "tasks", id: "t1", column: "content" }];
     vi.mocked(runReseal).mockResolvedValue({ unreadable, sealed: 0 });
 
-    const error = await resealUntilClean(USER_ID, vi.fn()).catch((e) => e);
+    const error = await resealUntilClean(
+      USER_ID,
+      vi.fn(),
+      new AbortController().signal,
+    ).catch((e) => e);
 
     expect(error).toBeInstanceOf(UnreadableContentError);
     expect(error.values).toEqual(unreadable);
@@ -94,11 +98,30 @@ describe("resealUntilClean", () => {
     expect(markResealComplete).not.toHaveBeenCalled();
   });
 
+  it("stops between passes once cancelled, without setting the marker", async () => {
+    const controller = new AbortController();
+    vi.mocked(runReseal).mockImplementation(async () => {
+      controller.abort();
+      return { unreadable: [], sealed: 1 };
+    });
+
+    await expect(
+      resealUntilClean(USER_ID, vi.fn(), controller.signal),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(runReseal).toHaveBeenCalledTimes(1);
+    expect(runReseal).toHaveBeenCalledWith(
+      USER_ID,
+      expect.any(Function),
+      controller.signal,
+    );
+    expect(markResealComplete).not.toHaveBeenCalled();
+  });
+
   it("fails instead of reporting success when the key rotated under the pass", async () => {
     vi.mocked(markResealComplete).mockResolvedValue(false);
 
-    await expect(resealUntilClean(USER_ID, vi.fn())).rejects.toThrow(
-      /key changed during the Re-seal/,
-    );
+    await expect(
+      resealUntilClean(USER_ID, vi.fn(), new AbortController().signal),
+    ).rejects.toThrow(/key changed during the Re-seal/);
   });
 });

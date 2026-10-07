@@ -327,12 +327,14 @@ export interface ResealResult {
 export async function runReseal(
   userId: string,
   onProgress?: (progress: ResealProgress) => void,
+  signal?: AbortSignal,
 ): Promise<ResealResult> {
   const ring = await keyStore.loadKeyring(userId);
   if (!ring) {
     throw new Error("Cannot re-seal: the content key is unavailable.");
   }
 
+  signal?.throwIfAborted();
   await redactLegacyPlaintextNotifications(userId);
   await scrubLegacyDiagnosticText(userId);
 
@@ -405,10 +407,12 @@ export async function runReseal(
   };
 
   for (let i = 0; i < pending.length; i += CONCURRENCY) {
+    signal?.throwIfAborted();
     const batch = pending.slice(i, i + CONCURRENCY);
     await Promise.all(batch.map(migrateRow));
   }
 
+  signal?.throwIfAborted();
   const queueSealed = await resealNotificationQueue(userId, ring);
   return { unreadable, sealed: done + queueSealed };
 }
