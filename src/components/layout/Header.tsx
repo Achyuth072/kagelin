@@ -31,6 +31,7 @@ import {
 } from "@/lib/changelog-cache";
 import { useUiStore } from "@/lib/store/uiStore";
 import { SyncIndicator } from "@/components/ui/SyncIndicator";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
@@ -69,7 +70,7 @@ const HeaderTimer = React.memo(function HeaderTimer() {
         </span>
         {activeTask && (
           <span className="text-xs text-muted-foreground truncate max-w-full">
-            {activeTask.content}
+            <ReadableText text={activeTask.content} />
           </span>
         )}
       </div>

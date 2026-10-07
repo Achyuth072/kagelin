@@ -13,6 +13,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { cn } from "@/lib/utils";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface EventOverflowPopoverProps {
   remainingEvents: CalendarEvent[];
@@ -83,7 +84,7 @@ export const EventOverflowPopover = memo(
                         isTask ? "text-foreground" : "text-white",
                       )}
                     >
-                      {event.title}
+                      <ReadableText text={event.title} />
                     </span>
                     <div className="flex items-center justify-between gap-2 overflow-hidden">
                       <span

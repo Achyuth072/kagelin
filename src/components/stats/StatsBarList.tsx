@@ -2,21 +2,22 @@
 
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { cn } from "@/lib/utils";
+import {
+  ReadableText,
+  UNREADABLE_LABEL,
+} from "@/components/encryption/ReadableText";
 
 export interface StatsBarListItem {
   key: string;
-  label: string;
+  label: string | null;
   displayValue: string;
   color: string;
-  /** 0-1 width fraction of the bar track. */
-  ratio: number;
+  ratio: number; // 0..1
 }
 
 interface StatsBarListProps {
   items: StatsBarListItem[];
   className?: string;
-  /** Tailwind width class for the label column. Wider cards can pass a larger
-   * value so long names aren't truncated; defaults to a compact width. */
   labelWidthClassName?: string;
 }
 
@@ -44,9 +45,9 @@ export function StatsBarList({
             />
             <span
               className="truncate text-sm text-muted-foreground"
-              title={item.label}
+              title={item.label ?? UNREADABLE_LABEL}
             >
-              {item.label}
+              <ReadableText text={item.label} />
             </span>
           </div>
           <div className="flex-1 h-5 rounded-[3px] bg-secondary/40 overflow-hidden">

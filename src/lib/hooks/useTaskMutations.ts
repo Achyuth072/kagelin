@@ -1,5 +1,6 @@
 "use client";
 
+import type { TaskPlacement } from "@/lib/utils/task-dnd";
 import {
   useMutation,
   useQueryClient,
@@ -15,6 +16,7 @@ import { taskMutations } from "@/lib/mutations/task";
 import { mockStore } from "@/lib/mock/mock-store";
 import { useUiStore } from "@/lib/store/uiStore";
 import { trackTelemetry } from "@/lib/telemetry/client";
+import { requireReadable } from "@/lib/crypto/unreadable";
 
 // Matches the Undo toast duration — keyboard undo shouldn't outlive it.
 const UNDO_TOAST_DURATION_MS = 5000;
@@ -457,7 +459,10 @@ export function useDeleteTask() {
       const undoAction = async () => {
         useUiStore.getState().setLastUndoAction(null);
         if (isGuestMode) {
-          mockStore.addTask(taskToRestore);
+          mockStore.addTask({
+            ...taskToRestore,
+            content: requireReadable(taskToRestore.content),
+          });
           queryClient.invalidateQueries({ queryKey: ["tasks"] });
           trigger("success");
           notify("Task restored");
@@ -594,7 +599,7 @@ export function useDuplicateTask() {
       overrides,
     }: {
       sourceTask: Task;
-      overrides?: Partial<Task>;
+      overrides?: TaskPlacement;
     }) => taskMutations.duplicate(sourceTask, overrides),
     onMutate: async ({ sourceTask, overrides }) => {
       const snapshot = await prepareTasksSnapshot(queryClient);

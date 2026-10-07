@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/client";
+import type { TaskPlacement } from "@/lib/utils/task-dnd";
 import { mockStore } from "@/lib/mock/mock-store";
 import { calculateNextDueDate } from "@/lib/utils/recurrence";
 import { isCiphertext } from "@/lib/crypto/contentCipher";
 import type { Task, CreateTaskInput, UpdateTaskInput } from "@/lib/types/task";
+import { assertReadable, requireReadable } from "@/lib/crypto/unreadable";
 
 function toRestorePayload(task: Task) {
+  assertReadable(task);
   return {
     id: task.id,
     user_id: task.user_id,
@@ -27,8 +30,9 @@ function toRestorePayload(task: Task) {
 
 // Duplicated tasks strip recurrence so occurrences cannot rejoin a source series.
 function toDuplicatePayload(task: Task, parentId: string | null) {
+  assertReadable(task);
   return {
-    content: task.content,
+    content: requireReadable(task.content),
     description: task.description || null,
     priority: task.priority || 4,
     due_date: task.due_date || null,
@@ -193,7 +197,7 @@ export const taskMutations = {
         if (!alreadyExists) {
           newRecurringTask = mockStore.addTask({
             project_id: updatedTask.project_id,
-            content: updatedTask.content,
+            content: requireReadable(updatedTask.content),
             description: updatedTask.description,
             priority: updatedTask.priority,
             due_date: nextDueDateIso,
@@ -206,7 +210,7 @@ export const taskMutations = {
             google_event_id: null,
             google_etag: null,
             parent_id: null,
-          } as Task);
+          });
         }
       }
 
@@ -221,6 +225,8 @@ export const taskMutations = {
       .single();
 
     if (fetchError) throw new Error(fetchError.message);
+    // Checked before completing, so a series is never closed without its next Occurrence.
+    if (is_completed && currentTask.recurrence) assertReadable(currentTask);
 
     const { data, error } = await supabase
       .from("tasks")
@@ -478,7 +484,7 @@ export const taskMutations = {
 
   duplicate: async (
     sourceTask: Task,
-    overrides?: Partial<Task>,
+    overrides?: TaskPlacement,
   ): Promise<Task> => {
     const isGuest =
       typeof window !== "undefined" &&

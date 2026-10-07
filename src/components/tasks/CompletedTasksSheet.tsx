@@ -33,6 +33,7 @@ import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDial
 import { Input } from "@/components/ui/input";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface CompletedTasksSheetProps {
   open: boolean;
@@ -72,7 +73,7 @@ const CompletedTaskItem = React.memo(({ task }: { task: Task }) => {
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium leading-tight line-through text-muted-foreground">
-          {task.content}
+          <ReadableText text={task.content} />
         </p>
         {completedDate && (
           <div className="flex items-center gap-1 mt-1 text-xs text-foreground/60 font-medium">
@@ -149,7 +150,7 @@ export function CompletedTasksSheet({
   const filteredCompletedTasks = useMemo(
     () =>
       completedTasks.filter((task) =>
-        task.content.toLowerCase().includes(searchQuery.toLowerCase()),
+        (task.content ?? "").toLowerCase().includes(searchQuery.toLowerCase()),
       ),
     [completedTasks, searchQuery],
   );

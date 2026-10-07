@@ -43,6 +43,10 @@ import { DragHandle } from "@/components/tasks/DragHandle";
 import { computeReorderPairs } from "@/lib/utils/task-dnd";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Task } from "@/lib/types/task";
+import {
+  ReadableText,
+  UNREADABLE_LABEL,
+} from "@/components/encryption/ReadableText";
 
 const dndAnnouncements = {
   ...defaultAnnouncements,
@@ -69,7 +73,7 @@ interface SubtaskListProps {
 interface SubtaskRowProps {
   id: string;
   index: number;
-  content: string;
+  content: string | null;
   isCompleted: boolean;
   isDraftMode: boolean;
   isEditing: boolean;
@@ -111,7 +115,7 @@ function SubtaskItemContent({
         checked={isCompleted}
         onCheckedChange={(checked) => onToggle(id, checked as boolean)}
         disabled={isDraftMode}
-        aria-label={`Mark "${content}" complete`}
+        aria-label={`Mark "${content ?? UNREADABLE_LABEL}" complete`}
         className={cn(
           "relative mt-0.5 h-3.5 w-3.5 !rounded-sm",
           !isDesktop && touchTargetClasses.default,
@@ -136,14 +140,14 @@ function SubtaskItemContent({
         />
       ) : (
         <span
-          onClick={() => onStartEdit(id, content)}
+          onClick={() => onStartEdit(id, content ?? "")}
           className={cn(
             "flex-1 text-[14px] leading-snug transition-all break-all cursor-text",
             isCompleted &&
               "text-muted-foreground/60 line-through decoration-muted-foreground/20",
           )}
         >
-          {content}
+          <ReadableText text={content} />
         </span>
       )}
       <Button
@@ -358,7 +362,7 @@ export default function SubtaskList({
       const prevContent =
         typeof prevItem === "string" ? prevItem : prevItem.content;
       setEditingId(prevId);
-      setEditingContent(prevContent);
+      setEditingContent(prevContent ?? "");
     } else {
       newStepInputRef.current?.focus();
     }
@@ -394,7 +398,16 @@ export default function SubtaskList({
   const handleSaveEdit = (id: string) => {
     if (editingId !== id) return;
     const trimmed = editingContent.trim();
-    if (!trimmed) {
+    const wasUnreadable = displayItems.some(
+      (it, idx) =>
+        getItemId(it, idx) === id &&
+        typeof it !== "string" &&
+        it.content === null,
+    );
+    // An unreadable step opens empty, so leaving it empty is not a request to delete it.
+    if (!trimmed && wasUnreadable) {
+      setEditingId(null);
+    } else if (!trimmed) {
       handleDeleteSubtask(id);
     } else if (isDraftMode) {
       const index = parseDraftIndex(id);

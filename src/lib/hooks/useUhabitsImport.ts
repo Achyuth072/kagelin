@@ -5,6 +5,7 @@ import * as Sentry from "@sentry/nextjs";
 import {
   parseUhabitsFile,
   partitionAgainstExisting,
+  type ImportedHabit,
   toCreateHabitInput,
   type UhabitsRawSource,
 } from "@/lib/import/uhabits";
@@ -13,7 +14,7 @@ import {
   classifyUhabitsError,
   SAVE_ERROR_MESSAGE,
 } from "@/lib/import/uhabitsErrors";
-import type { Habit, HabitEntry } from "@/lib/types/habit";
+import type { HabitEntry } from "@/lib/types/habit";
 import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { habitMutations } from "@/lib/mutations/habit";
@@ -43,7 +44,7 @@ export function useUhabitsImport() {
     };
 
     try {
-      let habits: Habit[];
+      let habits: ImportedHabit[];
       let entries: HabitEntry[];
       let source: UhabitsRawSource;
       try {

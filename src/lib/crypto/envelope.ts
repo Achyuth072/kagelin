@@ -51,6 +51,22 @@ export function isTamperError(error: unknown): error is TamperError {
   );
 }
 
+const CIPHERTEXT_CORRUPT_CODE = "ciphertext_corrupt";
+
+function corruptCiphertextError(message: string): Error {
+  return Object.assign(new Error(message), { code: CIPHERTEXT_CORRUPT_CODE });
+}
+
+// True when the value itself is bad, as opposed to a missing key or a failure to load libsodium.
+export function isUnopenableValueError(error: unknown): boolean {
+  if (isTamperError(error)) return true;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === CIPHERTEXT_CORRUPT_CODE
+  );
+}
+
 // True for plaintext, `-v1` and retired-key values: anything a Re-seal still has to rewrite.
 export function needsReseal(value: unknown, currentKeyId: string): boolean {
   return (
@@ -127,7 +143,7 @@ export async function openEnvelope(
     !nonceB64 ||
     !ciphertextB64
   ) {
-    throw new Error("Unrecognized ciphertext envelope");
+    throw corruptCiphertextError("Unrecognized ciphertext envelope");
   }
   let aad: Uint8Array | null = null;
   if (scheme === SCHEME_V2) {
@@ -140,8 +156,17 @@ export async function openEnvelope(
   }
 
   const sodium = await getSodium();
-  const nonce = await base64ToBytes(nonceB64);
-  const ciphertext = await base64ToBytes(ciphertextB64);
+  let nonce: Uint8Array;
+  let ciphertext: Uint8Array;
+  try {
+    nonce = sodium.from_base64(nonceB64, sodium.base64_variants.ORIGINAL);
+    ciphertext = sodium.from_base64(
+      ciphertextB64,
+      sodium.base64_variants.ORIGINAL,
+    );
+  } catch {
+    throw corruptCiphertextError("Unrecognized ciphertext envelope");
+  }
 
   try {
     return sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
@@ -153,6 +178,8 @@ export async function openEnvelope(
     );
   } catch {
     if (aad) throw new TamperError();
-    throw new Error("Decryption failed: wrong key or corrupted ciphertext");
+    throw corruptCiphertextError(
+      "Decryption failed: wrong key or corrupted ciphertext",
+    );
   }
 }

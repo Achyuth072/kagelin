@@ -10,7 +10,7 @@ import type { CalendarEvent } from "@/lib/types/calendar-event";
 
 export interface CalendarEventListItem {
   id: string;
-  title: string;
+  title: string | null;
   date: string; // ISO start_time
 }
 
@@ -18,11 +18,7 @@ interface UseCalendarEventsListOptions {
   enabled?: boolean;
 }
 
-/**
- * Shared dedicated `calendar_events` query, consumed by both the calendar
- * (via useCalendarEvents) and the command-menu search. Keeping a single
- * query key means react-query dedupes the fetch across both surfaces.
- */
+// Shared query dedupes calendar_events fetching across calendar and search.
 export function useDedicatedCalendarEventsQuery(enabled = true) {
   const { isGuestMode } = useAuth();
 
@@ -46,11 +42,7 @@ export function useDedicatedCalendarEventsQuery(enabled = true) {
   });
 }
 
-/**
- * Flat list of dedicated calendar events for content search. Returns only
- * dedicated events ({ id, title, date }) — tasks-with-due-dates are NOT folded
- * in here (that merge lives in useCalendarEvents), so search groups stay disjoint.
- */
+// Dedicated events only (no tasks with due dates) so search groups stay disjoint.
 export function useCalendarEventsList(
   options: UseCalendarEventsListOptions = {},
 ): CalendarEventListItem[] {

@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   mapUhabitsToKanso,
   toCreateHabitInput,
+  type ImportedHabit,
 } from "../../src/lib/import/uhabits";
-import type { Habit } from "../../src/lib/types/habit";
 import { mapKagelinFrequencyToLoop } from "../../src/lib/export/uhabitsShared";
 import { getCurrentStreak } from "../../src/lib/utils/habit-streak";
 import {
@@ -284,7 +284,7 @@ describe("uhabitsImport frequency mapping", () => {
 });
 
 describe("toCreateHabitInput", () => {
-  const baseHabit: Habit = {
+  const baseHabit: ImportedHabit = {
     id: "h1",
     user_id: "",
     name: "Exercise",

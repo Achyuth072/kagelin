@@ -1,9 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { partitionAgainstExisting } from "@/lib/import/uhabits";
+import {
+  partitionAgainstExisting,
+  type ImportedHabit,
+} from "@/lib/import/uhabits";
 import type { Habit } from "@/lib/types/habit";
 
 const h = (name: string, source_uuid: string | null) =>
-  ({ name, source_uuid }) as Habit;
+  ({ name, source_uuid }) as ImportedHabit;
 
 describe("partitionAgainstExisting", () => {
   it("skips a renamed or archived habit by its Loop identity", () => {

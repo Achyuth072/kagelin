@@ -17,6 +17,7 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import dynamic from "next/dynamic";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
+import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
 
 const TaskView = dynamic(
   () => import("./TaskView").then((mod) => mod.TaskView),
@@ -104,7 +105,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   useEffect(() => {
     if (task) {
       reset({
-        content: task.content,
+        content: task.content ?? "",
         description: task.description || "",
         due_date: task.due_date ?? undefined,
         do_date: task.do_date ?? undefined,
@@ -290,7 +291,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleConfirmDelete}
         title="Delete Task"
-        description={`Are you sure you want to delete "${task.content}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${task.content ?? UNREADABLE_LABEL}"? This action cannot be undone.`}
       />
     </>
   );

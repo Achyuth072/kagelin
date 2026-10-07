@@ -63,8 +63,7 @@ import { TaskGhost } from "./TaskGhost";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { taskDomId } from "./task-utils";
 
-// dnd-kit announces on every onDragOver by default, thrashing aria-live at
-// drag-over frequency — no-op it and keep only start/end/cancel announcements.
+// Suppress onDragOver announcements to prevent aria-live thrashing.
 const dndAnnouncements = {
   ...defaultAnnouncements,
   onDragOver: () => undefined,
@@ -72,7 +71,6 @@ const dndAnnouncements = {
 
 const VIM_DOUBLE_PRESS_TIMEOUT_MS = 500;
 
-// Pure and hoisted to module scope — dnd-kit calls this every auto-scroll tick during a drag.
 function canScrollTaskListContainer(element: Element): boolean {
   if (!(element instanceof HTMLElement)) {
     return false;
@@ -106,23 +104,16 @@ function TaskListBase({
   const { data: projectsData } = useProjects();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  // Snapshotted at drag start for the ghost — deriving it per render would
-  // flatMap+find over every task on each drag-over.
+  // Snapshotted at drag start to avoid O(N) lookup on each drag-over.
   const [activeTask, setActiveTask] = useState<Task | null>(null);
-  // Holds local drag state after activeId clears, until the optimistic
-  // cache update lands.
+  // Bridges local drag state until optimistic cache update lands.
   const [lockLocal, setLockLocal] = useState(false);
   const [keyboardSelectedId, setKeyboardSelectedId] = useState<string | null>(
     null,
   );
-  // keyboardSelectedId is virtual focus — DOM focus never moves to a card.
-  // Exposed via aria-activedescendant (role listbox/grid below), not roving
-  // tabindex, since focusing cards would re-arm dnd-kit's Space/Enter drag
-  // collision (see the DragHandle split in SortableBoardTaskCard).
+  // Virtual focus via aria-activedescendant to avoid focusing cards and triggering dnd-kit keys.
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  // Tracks the single most recent double-press candidate (gg / yy) so an
-  // interleaved different key (e.g. `g` then `y`) can't be mistaken for
-  // that key's own double-press.
+  // Tracks most recent candidate so interleaved keys do not trigger double-press.
   const pendingDoublePressRef = useRef<{
     key: "g" | "y";
     timestamp: number;
@@ -204,21 +195,15 @@ function TaskListBase({
     [projectsMap, groupBy],
   );
 
-  // Fed to computeReorderPairs in handleDragEnd — a drop bakes the display
-  // order (derived sort) or day_order (custom sort) into the custom order.
   const preDragFlatTasksRef = useRef<Task[]>([]);
 
-  // Freezes the pre-switch order into day_order when switching to custom sort,
-  // which is otherwise stale and visibly jumps. Reads prevDisplayedFlatRef
-  // rather than the already-resorted processedTasks, in useLayoutEffect so the
-  // first paint is correct. Drag-driven switches bake their own order.
+  // Freezes pre-switch order into day_order before first paint when switching to custom sort.
   const prevSortByRef = useRef(sortBy);
   const prevDisplayedFlatRef = useRef<Task[]>([]);
   useLayoutEffect(() => {
     const prevSortBy = prevSortByRef.current;
     prevSortByRef.current = sortBy;
 
-    // Read the snapshot from the old sort, then refresh it for next time.
     const prevDisplayed = prevDisplayedFlatRef.current;
     prevDisplayedFlatRef.current = processedTasks.groups
       ? processedTasks.groups.flatMap((g) => g.tasks)
@@ -232,7 +217,7 @@ function TaskListBase({
     const pairs = computeFreezeOrderPairs(prevDisplayed);
     if (pairs.length === 0) return;
 
-    // Synchronous, pre-paint cache write so the jumped order never paints.
+    // Pre-paint cache write prevents order jump.
     const orderById = new Map(pairs.map((p) => [p.id, p.day_order]));
     queryClient.setQueriesData<Task[]>({ queryKey: ["tasks"] }, (old) =>
       old?.map((t) =>
@@ -241,7 +226,6 @@ function TaskListBase({
           : t,
       ),
     );
-    // Persist (guest path writes the mock store; onSettled refetch reconciles).
     reorderMutation.mutate(pairs);
   }, [
     sortBy,
@@ -276,7 +260,7 @@ function TaskListBase({
 
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
-      // Synced on drag start only — otherwise every re-sort/re-group pays.
+      // Synced on drag start only to avoid per-render cost.
       setLocalActive(processedTasks.active);
       setLocalEvening(processedTasks.evening);
       setLocalGroups(processedTasks.groups);
@@ -290,8 +274,7 @@ function TaskListBase({
             .find((t) => t.id === id) ||
           null,
       );
-      // From processedTasks, not raw `tasks` — filtering and tie-broken
-      // day_order make them diverge and corrupt the reorder math.
+      // Uses processedTasks so filtered items and tie-broken orders do not corrupt reordering.
       const visibleTasks = processedTasks.groups
         ? processedTasks.groups.flatMap((g) => g.tasks)
         : [...processedTasks.active, ...processedTasks.evening];
@@ -346,8 +329,7 @@ function TaskListBase({
             setLocalGroups(newGroups);
           }
         } else {
-          // Derived buckets like "Overdue" have no settable property — the
-          // drop could never stick, so don't let the drag enter the group.
+          // "Overdue" is derived with no settable property; block drops.
           if (isDropBlockedGroup(localGroups[overGroupIndex].title, groupBy)) {
             return;
           }
@@ -460,7 +442,6 @@ function TaskListBase({
         const finalGroup = localGroups.find((g: TaskGroup) =>
           g.tasks.some((t: Task) => t.id === activeId),
         );
-        // Return before any setter, or we land half-committed.
         if (!finalGroup) {
           setActiveId(null);
           setActiveTask(null);
@@ -480,8 +461,7 @@ function TaskListBase({
         );
         const isSameSection = originalGroup?.title === finalGroup.title;
 
-        // Must precede setActiveId(null) — reversing it lets displayTasks fall
-        // through to stale server data. See dnd-residual-race-condition.md.
+        // Must precede setActiveId(null) to avoid displayTasks falling through to stale data.
         setLockLocal(true);
         if (sortBy !== "custom") {
           setCustomSortEnteredViaDrag(true);
@@ -499,8 +479,7 @@ function TaskListBase({
               (originalTask as unknown as Record<string, unknown>)[key],
           );
 
-        // Releases only once all mutations settle — otherwise reorder's refetch
-        // can beat update's and snap the task back.
+        // Releases lock only once all mutations settle to prevent refetch snap-back.
         let pendingCount = 0;
         const tryReleaseLock = () => {
           pendingCount--;
@@ -518,8 +497,7 @@ function TaskListBase({
           );
         }
 
-        // Single-task move in custom sort; otherwise every other group's
-        // day_order is stale, so freeze the whole post-drop order.
+        // In non-custom sort, freeze the full order because other groups' day_orders are stale.
         let pairs: { id: string; day_order: number }[];
         if (sortBy === "custom") {
           const orderedIds = finalGroup.tasks.map((t: Task) => t.id);
@@ -538,7 +516,6 @@ function TaskListBase({
             onSettled: tryReleaseLock,
           });
         }
-        // Nothing to persist — release the lock now; onSettled never fires.
         if (pendingCount === 0) {
           setLockLocal(false);
         }
@@ -557,7 +534,7 @@ function TaskListBase({
           return;
         }
 
-        // lockLocal must precede activeId — see the reset branch above.
+        // Must precede setActiveId(null) to avoid displayTasks falling through to stale data.
         setLockLocal(true);
         if (sortBy !== "custom") {
           setCustomSortEnteredViaDrag(true);
@@ -572,7 +549,6 @@ function TaskListBase({
         );
         const isSameSection = isInEveningNow === wasInEveningBefore;
 
-        // Same pending-count guard as the groups branch above.
         let pendingCount = 0;
         const tryReleaseLock = () => {
           pendingCount--;
@@ -593,8 +569,7 @@ function TaskListBase({
           );
         }
 
-        // Single-task move in custom sort; otherwise freeze the full order so
-        // untouched sections don't jump.
+        // In non-custom sort, freeze the full order so untouched sections don't jump.
         triggerHaptic("thud");
         let pairs: { id: string; day_order: number }[];
         if (sortBy === "custom") {
@@ -615,7 +590,6 @@ function TaskListBase({
             onSettled: tryReleaseLock,
           });
         }
-        // Nothing to persist — release the lock now; onSettled never fires.
         if (pendingCount === 0) {
           setLockLocal(false);
         }
@@ -802,18 +776,14 @@ function TaskListBase({
 
   const hasSelection = !!keyboardSelectedId;
 
-  // aria-activedescendant is inert unless the owning container has DOM
-  // focus, so arm it the moment vim nav picks a task. Cheap to call again
-  // on every selection change — an already-focused element is a no-op.
+  // Focus owning container so aria-activedescendant takes effect.
   useEffect(() => {
     if (hasSelection) {
       scrollContainerRef.current?.focus({ preventScroll: true });
     }
   }, [hasSelection]);
 
-  // Vim keys have no native behaviour worth preserving, so they always claim
-  // the keypress. Arrow keys/space drive page scroll until a task is
-  // selected, so they only claim the key once vim mode is armed.
+  // Arrow keys scroll until a task is selected; vim keys always claim keypress.
   const hotkeyOptions = {
     preventDefault: true,
     enabled: !isAnyModalOpen,
@@ -932,11 +902,7 @@ function TaskListBase({
       clearPendingDoublePress();
       const yankedTaskId = useUiStore.getState().yankedTaskId;
       if (!yankedTaskId) return;
-      // Resolved fresh from the query cache rather than a store snapshot —
-      // the task may have been edited since it was yanked. Falls through to
-      // every ["tasks", ...] query, not just this view's own `tasks` — the
-      // yank is meant to survive project/filter switches, and the task may
-      // now live in a view this TaskList instance isn't currently showing.
+      // Resolves fresh across task queries so cross-view edits since yank are reflected.
       const yankedTask =
         tasks.find((t) => t.id === yankedTaskId) ??
         queryClient
@@ -949,11 +915,11 @@ function TaskListBase({
         return;
       }
       e.preventDefault();
-      // Where "here" is: the project/filter this view is scoped to, plus —
-      // in board view — whichever column the cursor currently sits in. Without
-      // this a paste always lands back on the yanked task's own project (see
-      // toDuplicatePayload), so pasting into a different board/project/filter
-      // view silently duplicated into the *source* location instead.
+      if (yankedTask.unreadable) {
+        notify.error("Can't duplicate a task whose text can't be read");
+        return;
+      }
+      // Scopes paste to current view/column rather than the yanked task's source project.
       const targetColumn =
         viewMode === "board"
           ? boardColumns.find((c) =>
@@ -986,9 +952,7 @@ function TaskListBase({
     () => {
       clearPendingDoublePress();
       setKeyboardSelectedId(null);
-      // Release the yanked task too — otherwise it survives Escape and
-      // keeps suppressing GlobalHotkeys' New Project 'p' on this page
-      // (see GlobalHotkeys.tsx) until a hard reload clears the store.
+      // Clear yanked task on Escape so GlobalHotkeys 'p' is not suppressed.
       if (hasYankedTask) useUiStore.getState().setYankedTaskId(null);
     },
     {
@@ -1054,14 +1018,13 @@ function TaskListBase({
     <>
       <DndContext
         sensors={sensors}
-        // rectIntersection can resolve to the whole column instead of an item
-        // within it for stacked droppables — closestCorners avoids that.
+        // closestCorners avoids rectIntersection resolving to entire column in stacked droppables.
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         accessibility={{ announcements: dndAnnouncements }}
-        // WhileDragging avoids Always's idle re-measure overhead, which hurts cross-column drags.
+        // WhileDragging avoids idle re-measure overhead during cross-column drags.
         measuring={{
           droppable: {
             strategy: MeasuringStrategy.WhileDragging,
@@ -1097,8 +1060,7 @@ function TaskListBase({
               isDesktop={isDesktop}
               triggerHaptic={triggerHaptic}
               setActiveTaskId={setActiveTaskId}
-              // Omitting this drops getTaskUpdatesForGroup to its heuristic
-              // cascade, where a project named "Today" reads as a date.
+              // Preserves groupBy mode so a project named "Today" is not treated as a date.
               groupBy={groupBy}
               keyboardSelectedId={keyboardSelectedId}
             />

@@ -145,7 +145,7 @@ export default function TaskSheet({
     if (open) {
       if (initialTask) {
         reset({
-          content: initialTask.content,
+          content: initialTask.content ?? "",
           description: initialTask.description || "",
           due_date: initialTask.due_date ?? undefined,
           do_date: initialTask.do_date ?? undefined,

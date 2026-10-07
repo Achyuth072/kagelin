@@ -1,4 +1,4 @@
-// Matches the supabase external_calendars table schema.
+import type { MaybeUnreadable } from "@/lib/crypto/unreadable";
 
 export type SyncStatus = "pending" | "syncing" | "success" | "error";
 export type SyncDirection = "bidirectional" | "pull" | "push";
@@ -18,12 +18,12 @@ export const CALDAV_PROVIDERS: CalendarProvider[] = [
 /** Providers that use native OAuth (registered users only — needs auth.uid()) */
 export const OAUTH_PROVIDERS: CalendarProvider[] = ["google", "outlook"];
 
-export interface ExternalCalendar {
+export interface ExternalCalendar extends MaybeUnreadable {
   id: string;
   user_id: string;
 
   provider: CalendarProvider;
-  name: string;
+  name: string | null;
   color: string;
 
   server_url: string | null; // CalDAV only

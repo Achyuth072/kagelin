@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 import { useProjects } from "@/lib/hooks/useProjects";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 function getEndOfToday(): Date {
   const d = new Date();
@@ -219,7 +220,7 @@ export function FocusTaskPicker() {
               isCompleted && "line-through",
             )}
           >
-            {task.content}
+            <ReadableText text={task.content} />
           </span>
           {task.recurrence && (
             <Repeat

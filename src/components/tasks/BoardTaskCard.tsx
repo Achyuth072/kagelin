@@ -13,10 +13,11 @@ import {
   taskDomId,
 } from "./task-utils";
 import { KanbanBoardCardButton } from "@/components/kanban";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface BoardTaskCardProps {
   task: Task;
-  project: { color: string; name: string } | undefined;
+  project: { color: string; name: string | null } | undefined;
   handleComplete: (checked: boolean) => void;
   handlePlayFocus: (e: React.MouseEvent) => void;
   onClick?: () => void;
@@ -72,7 +73,7 @@ export function BoardTaskCard({
               className={cn(task.is_completed && "task-ink-completed-text")}
               data-animate={shouldAnimate ? "true" : "false"}
             >
-              {task.content}
+              <ReadableText text={task.content} />
             </span>
           </p>
 

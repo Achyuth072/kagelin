@@ -1,7 +1,8 @@
-export interface Habit {
+import type { MaybeUnreadable } from "@/lib/crypto/unreadable";
+export interface Habit extends MaybeUnreadable {
   id: string;
   user_id: string;
-  name: string;
+  name: string | null;
   description: string | null;
   color: string;
   icon: string | null;
@@ -20,12 +21,11 @@ export interface Habit {
   question?: string | null;
   reminder_time?: string | null;
   reminder_days?: number;
-  // Origin identifier from an import source (e.g. uhabits' `uuid`), so a future
-  // export can join current state back to its raw source record. See ADR 0006.
+  // Preserves raw source id (e.g. uhabits uuid) for round-trip export (ADR 0006).
   source_uuid?: string | null;
 }
 
-export interface HabitEntry {
+export interface HabitEntry extends MaybeUnreadable {
   id: string;
   habit_id: string;
   date: string;

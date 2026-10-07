@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
 import { mockStore } from "@/lib/mock/mock-store";
 import { createClient } from "@/lib/supabase/client";
-import type { Habit, HabitEntry } from "@/lib/types/habit";
+import type { HabitEntry } from "@/lib/types/habit";
+import type { ImportedHabit } from "@/lib/import/uhabits";
 import * as uhabitsModule from "@/lib/import/uhabits";
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -59,7 +60,7 @@ describe("useUhabitsImport hook", () => {
   it("imports full-fidelity habits and entries with notes into mockStore in guest mode", async () => {
     localStorage.setItem("kanso_guest_mode", "true");
 
-    const mockHabit: Habit = {
+    const mockHabit: ImportedHabit = {
       id: "temp-habit-1",
       user_id: "",
       name: "Read",
@@ -137,7 +138,7 @@ describe("useUhabitsImport hook", () => {
   it("inserts full-fidelity habits and entries with notes into Supabase in authenticated mode", async () => {
     localStorage.setItem("kanso_guest_mode", "false");
 
-    const mockHabit: Habit = {
+    const mockHabit: ImportedHabit = {
       id: "temp-habit-1",
       user_id: "",
       name: "Workout",

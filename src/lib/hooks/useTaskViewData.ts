@@ -1,5 +1,6 @@
 "use client";
 
+import { compareReadable } from "@/lib/crypto/unreadable";
 import { useMemo } from "react";
 import {
   compareAsc,
@@ -191,10 +192,9 @@ export function useTaskViewData({
       }
 
       if (sortBy === "alphabetical") {
-        return a.content.localeCompare(b.content);
+        return compareReadable(a.content, b.content);
       }
 
-      // Fallback: Default date sort if no other sort applies
       const aDate = getParsedDate(a);
       const bDate = getParsedDate(b);
       if (!aDate && !bDate) return 0;

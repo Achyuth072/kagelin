@@ -5,6 +5,7 @@ import { useMemo, memo } from "react";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface ScheduleViewProps {
   events: CalendarEvent[];
@@ -121,10 +122,9 @@ const ScheduleView = memo(
                           )}
                         </div>
 
-                        {/* Event Details */}
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold truncate">
-                            {event.title}
+                            <ReadableText text={event.title} />
                           </div>
                         </div>
                       </div>

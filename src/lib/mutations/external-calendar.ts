@@ -4,8 +4,7 @@ import type {
   DiscoveredCalendar,
 } from "@/lib/types/external-calendar";
 
-// Encrypts `name` here rather than relying on wrapSupabaseClient: the row is
-// written via the API route's service-role client, which bypasses it.
+// Pre-encrypts name because API route service-role writes bypass client encryption.
 export async function connectCalendars(
   provider: CalendarProvider,
   picked: DiscoveredCalendar[],

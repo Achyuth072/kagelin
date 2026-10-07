@@ -21,6 +21,26 @@ describe("Telemetry Schemas", () => {
       expect(result.success).toBe(true);
     });
 
+    it("accepts content_unreadable only for an encrypted table and column", () => {
+      const event = (table: string, column: string) =>
+        TelemetryEventSchema.safeParse({
+          name: "content_unreadable",
+          deviceId: validDeviceId,
+          properties: { table, column },
+        }).success;
+
+      expect(event("tasks", "content")).toBe(true);
+      expect(event("tasks", "name")).toBe(false);
+      expect(event("constructor", "name")).toBe(false);
+      expect(
+        TelemetryEventSchema.safeParse({
+          name: "content_unreadable",
+          deviceId: validDeviceId,
+          properties: { table: "tasks", column: "content", id: "t1" },
+        }).success,
+      ).toBe(false);
+    });
+
     it("validates valid pwa_installed event", () => {
       const result = TelemetryEventSchema.safeParse({
         name: "pwa_installed",

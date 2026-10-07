@@ -25,6 +25,7 @@ import {
   lastDoneNextLabel,
 } from "@/lib/utils/habit-frequency-progress";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface HabitCardProps {
   habit: HabitWithEntries;
@@ -163,7 +164,9 @@ export function HabitCard({
                     style={{ color: habit.color }}
                   />
                 )}
-                <span className="truncate">{habit.name}</span>
+                <span className="truncate">
+                  <ReadableText text={habit.name} />
+                </span>
               </h3>
               {habit.description && (
                 <p className="text-[13px] text-foreground/60 mt-1 truncate leading-relaxed font-medium">

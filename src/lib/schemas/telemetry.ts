@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { FIELD_MAP } from "@/lib/supabase/fieldMap";
 
 export const FOCUS_DURATION_MINUTES_MIN = 1;
 export const FOCUS_DURATION_MINUTES_MAX = 720;
@@ -76,6 +77,22 @@ export const SignupCompletedEventSchema = z
   })
   .strict();
 
+// Table and column only: no row id, no envelope (ADR 0013, ADR 0023).
+export const ContentUnreadableEventSchema = z
+  .object({
+    name: z.literal("content_unreadable"),
+    deviceId: z.string().uuid(),
+    properties: z
+      .object({ table: z.string(), column: z.string() })
+      .strict()
+      .refine(
+        ({ table, column }) =>
+          Object.hasOwn(FIELD_MAP, table) && FIELD_MAP[table].includes(column),
+        { message: "Not an encrypted column" },
+      ),
+  })
+  .strict();
+
 export const TelemetryEventSchema = z.discriminatedUnion("name", [
   AppOpenedEventSchema,
   PwaInstalledEventSchema,
@@ -83,6 +100,7 @@ export const TelemetryEventSchema = z.discriminatedUnion("name", [
   HabitLoggedEventSchema,
   FocusSessionEventSchema,
   SignupCompletedEventSchema,
+  ContentUnreadableEventSchema,
 ]);
 
 export const TelemetryBatchRequestSchema = z

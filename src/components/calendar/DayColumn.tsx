@@ -13,6 +13,7 @@ import type {
   DayColumn as DayColumnData,
 } from "@/lib/calendar/types";
 import { CurrentTimeIndicator } from "./CurrentTimeIndicator";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface DayColumnProps {
   column: DayColumnData;
@@ -111,7 +112,7 @@ export function DayColumn({
             }}
           >
             <div className="font-bold truncate text-[10px] md:text-[11px] leading-tight">
-              {event.title}
+              <ReadableText text={event.title} />
             </div>
             {heightPx > 40 && (
               <div

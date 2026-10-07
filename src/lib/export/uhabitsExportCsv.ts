@@ -475,7 +475,7 @@ export function buildUhabitsCsvArchive(
 
   for (let index = 0; index < sortedHabits.length; index++) {
     const habit = sortedHabits[index];
-    const dirName = formatHabitDirName(index, habit.name);
+    const dirName = formatHabitDirName(index, habit.name ?? "");
 
     const habitChecksCsv = generateHabitCheckmarksCsv(habit, entries, {
       today: todayStr,

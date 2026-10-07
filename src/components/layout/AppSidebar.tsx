@@ -64,6 +64,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import {
+  ReadableText,
+  UNREADABLE_LABEL,
+} from "@/components/encryption/ReadableText";
 
 const mainNavItems = [
   { label: "All Tasks", icon: CheckSquare, path: "/", isAction: false },
@@ -267,7 +271,7 @@ export function AppSidebar() {
                           <SidebarMenuButton
                             asChild
                             isActive={currentProjectId === project.id}
-                            tooltip={project.name}
+                            tooltip={project.name ?? UNREADABLE_LABEL}
                             className="peer"
                           >
                             <Link
@@ -282,7 +286,9 @@ export function AppSidebar() {
                                   style={{ backgroundColor: project.color }}
                                 />
                               </div>
-                              <span className="truncate">{project.name}</span>
+                              <span className="truncate">
+                                <ReadableText text={project.name} />
+                              </span>
                             </Link>
                           </SidebarMenuButton>
 
@@ -535,7 +541,11 @@ export function AppSidebar() {
       >
         <DrawerContent>
           <DrawerHeader className="text-left">
-            <DrawerTitle>{mobileActionProject?.name}</DrawerTitle>
+            <DrawerTitle>
+              {mobileActionProject && (
+                <ReadableText text={mobileActionProject.name} />
+              )}
+            </DrawerTitle>
             <DrawerDescription>What would you like to do?</DrawerDescription>
           </DrawerHeader>
           <DrawerFooter className="pt-2">

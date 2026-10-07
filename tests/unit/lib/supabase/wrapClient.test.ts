@@ -6,13 +6,14 @@ import {
   isContentKeyRetiredError,
   onServerKeySignal,
 } from "@/lib/supabase/wrapClient";
+import { UNREADABLE_CONTENT_CODE } from "@/lib/crypto/unreadable";
 import { FIELD_MAP, type FieldMap } from "@/lib/supabase/fieldMap";
 import { generateMasterKey } from "@/lib/crypto/masterKey";
 import { isCiphertext, encryptField } from "@/lib/crypto/contentCipher";
 import {
   sealEnvelope,
   INITIAL_KEY_ID,
-  isTamperError,
+  needsReseal,
 } from "@/lib/crypto/envelope";
 import {
   createFakeSupabaseClient,
@@ -41,7 +42,11 @@ vi.mock("@/lib/crypto/keyStore", () => ({
   },
 }));
 
+const { trackTelemetry } = vi.hoisted(() => ({ trackTelemetry: vi.fn() }));
+vi.mock("@/lib/telemetry/client", () => ({ trackTelemetry }));
+
 beforeEach(async () => {
+  trackTelemetry.mockClear();
   keyStoreState.key = await generateMasterKey();
   keyStoreState.keyId = "1";
   keyStoreState.retired = {};
@@ -488,40 +493,44 @@ describe("wrapSupabaseClient — row-bound (-v2) values", () => {
     expect(data.content).toBe("Buy milk");
   });
 
-  it("reports a value moved to another row as unreadable instead of showing it", async () => {
-    await expect(
-      readTask({
-        id: "t2",
-        content: await sealV2("tasks", "content", "t1", "Buy milk"),
-      }),
-    ).rejects.toThrow(/Decryption failed/);
+  it("marks a value moved to another row as unreadable instead of showing it", async () => {
+    const { data } = await readTask({
+      id: "t2",
+      content: await sealV2("tasks", "content", "t1", "Buy milk"),
+    });
+
+    expect(data.content).toBeNull();
+    expect(data.unreadable).toEqual(["content"]);
   });
 
-  it("reports a value moved to another column as unreadable", async () => {
-    await expect(
-      readTask({
-        id: "t1",
-        content: await sealV2("tasks", "description", "t1", "Buy milk"),
-      }),
-    ).rejects.toThrow(/Decryption failed/);
+  it("marks a value moved to another column as unreadable", async () => {
+    const { data } = await readTask({
+      id: "t1",
+      content: await sealV2("tasks", "description", "t1", "Buy milk"),
+    });
+
+    expect(data.content).toBeNull();
+    expect(data.unreadable).toEqual(["content"]);
   });
 
-  it("reports a value moved to another table as unreadable", async () => {
-    await expect(
-      readTask({
-        id: "t1",
-        content: await sealV2("habits", "content", "t1", "Buy milk"),
-      }),
-    ).rejects.toThrow(/Decryption failed/);
+  it("marks a value moved to another table as unreadable", async () => {
+    const { data } = await readTask({
+      id: "t1",
+      content: await sealV2("habits", "content", "t1", "Buy milk"),
+    });
+
+    expect(data.content).toBeNull();
+    expect(data.unreadable).toEqual(["content"]);
   });
 
-  it("reports a value from another account as unreadable", async () => {
-    await expect(
-      readTask({
-        id: "t1",
-        content: await sealV2("tasks", "content", "t1", "Buy milk", "user-2"),
-      }),
-    ).rejects.toThrow(/Decryption failed/);
+  it("marks a value from another account as unreadable", async () => {
+    const { data } = await readTask({
+      id: "t1",
+      content: await sealV2("tasks", "content", "t1", "Buy milk", "user-2"),
+    });
+
+    expect(data.content).toBeNull();
+    expect(data.unreadable).toEqual(["content"]);
   });
 
   it("fails closed when there is no session to supply the user id", async () => {
@@ -636,9 +645,13 @@ describe("wrapSupabaseClient — sealing writes row-bound", () => {
       .single();
     expect(data.content).toBe("edited");
     rows[0].content = rows[1].content;
-    await expect(
-      client.from("tasks").select().eq("id", "t1").single(),
-    ).rejects.toThrow(/moved, altered or sealed for another place/);
+    const { data: moved } = await client
+      .from("tasks")
+      .select()
+      .eq("id", "t1")
+      .single();
+    expect(moved.content).toBeNull();
+    expect(moved.unreadable).toEqual(["content"]);
   });
 
   it("rejects an update of a sealed column that names no row id", async () => {
@@ -672,7 +685,7 @@ describe("wrapSupabaseClient — sealing writes row-bound", () => {
     ["another table", "projects", { id: "t1", name: "SEALED" }, userId],
     ["another account", "tasks", { id: "t1", content: "SEALED" }, "user-2"],
   ])(
-    "raises a distinct tamper error for a value moved to %s",
+    "marks a value moved to %s as unreadable and keeps the row",
     async (_place, table, row, reader) => {
       const source = createFakeSupabaseClient({}, { userId });
       await wrapSupabaseClient(source, FIELD_MAP)
@@ -690,16 +703,15 @@ describe("wrapSupabaseClient — sealing writes row-bound", () => {
         { [table]: [moved] },
         { userId: reader },
       );
-      const error = await wrapSupabaseClient(raw, FIELD_MAP)
+      const { data } = await wrapSupabaseClient(raw, FIELD_MAP)
         .from(table)
         .select()
-        .single()
-        .then(
-          () => null,
-          (e: unknown) => e,
-        );
+        .single();
 
-      expect(isTamperError(error)).toBe(true);
+      const [field] = Object.entries(row).find(([, v]) => v === "SEALED")!;
+      expect(data.id).toBe(row.id);
+      expect(data[field]).toBeNull();
+      expect(data.unreadable).toEqual([field]);
     },
   );
 
@@ -887,5 +899,183 @@ describe("onServerKeySignal", () => {
     await rejectWith("content_key_retired");
 
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe("wrapSupabaseClient — unreadable values", () => {
+  const userId = "user-1";
+  const sealFor = (
+    table: string,
+    column: string,
+    rowId: string,
+    text: string,
+  ) =>
+    sealEnvelope(
+      keyStoreState.key!,
+      new TextEncoder().encode(text),
+      INITIAL_KEY_ID,
+      { userId, table, column, rowId },
+    );
+
+  it("keeps the rest of a list readable when one value was moved", async () => {
+    const raw = createFakeSupabaseClient(
+      {
+        tasks: [
+          { id: "t1", content: await sealFor("tasks", "content", "t1", "One") },
+          { id: "t2", content: await sealFor("tasks", "content", "t1", "One") },
+          {
+            id: "t3",
+            content: await sealFor("tasks", "content", "t3", "Three"),
+          },
+        ],
+      },
+      { userId },
+    );
+
+    const { data, error } = await wrapSupabaseClient(raw, FIELD_MAP)
+      .from("tasks")
+      .select()
+      .order("id")
+      .limit(10);
+
+    expect(error).toBeNull();
+    expect(data.map((t: Row) => t.content)).toEqual(["One", null, "Three"]);
+    expect(data[0].unreadable).toBeUndefined();
+    expect(data[1].unreadable).toEqual(["content"]);
+  });
+
+  it("marks an unreadable value inside an embedded row", async () => {
+    const project = {
+      id: "p1",
+      name: await sealFor("projects", "name", "p9", "Moved"),
+    };
+    const raw = createFakeSupabaseClient(
+      {
+        tasks: [
+          {
+            id: "t1",
+            content: await sealFor("tasks", "content", "t1", "Task"),
+            projects: project,
+          },
+        ],
+      },
+      { userId },
+    );
+
+    const { data } = await wrapSupabaseClient(raw, FIELD_MAP)
+      .from("tasks")
+      .select()
+      .single();
+
+    expect(data.content).toBe("Task");
+    expect(data.unreadable).toBeUndefined();
+    expect(data.projects.name).toBeNull();
+    expect(data.projects.unreadable).toEqual(["name"]);
+  });
+
+  it("marks a malformed envelope and a JSON field that does not parse", async () => {
+    const raw = createFakeSupabaseClient(
+      {
+        calendar_events: [
+          {
+            id: "e1",
+            title: "xchacha20poly1305-v2:1:broken",
+            description: "xchacha20poly1305-v2::nonce:ciphertext",
+            metadata: await sealFor(
+              "calendar_events",
+              "metadata",
+              "e1",
+              "{not json",
+            ),
+            location: await sealFor(
+              "calendar_events",
+              "location",
+              "e1",
+              "Room 4",
+            ),
+          },
+        ],
+      },
+      { userId },
+    );
+
+    const { data } = await wrapSupabaseClient(raw, FIELD_MAP)
+      .from("calendar_events")
+      .select()
+      .single();
+
+    expect(data.title).toBeNull();
+    expect(data.metadata).toBeNull();
+    expect(data.location).toBe("Room 4");
+    expect(data.description).toBeNull();
+    expect(data.unreadable).toEqual(["title", "description", "metadata"]);
+  });
+
+  it("reports each unreadable value once, with no row id", async () => {
+    const raw = createFakeSupabaseClient(
+      {
+        habits: [
+          {
+            id: "h-once",
+            name: await sealFor("habits", "name", "h-other", "Run"),
+          },
+        ],
+      },
+      { userId },
+    );
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    await client.from("habits").select().limit(10);
+    await client.from("habits").select().limit(10);
+
+    expect(trackTelemetry).toHaveBeenCalledTimes(1);
+    expect(trackTelemetry).toHaveBeenCalledWith("content_unreadable", {
+      table: "habits",
+      column: "name",
+    });
+  });
+
+  it.each(["insert", "upsert", "update"] as const)(
+    "refuses to %s a row that carries the unreadable marker",
+    async (method) => {
+      const raw = createFakeSupabaseClient(
+        { tasks: [{ id: "t1", content: "old" }] },
+        { userId },
+      );
+      const row = { id: "t1", content: null, unreadable: ["content"] };
+
+      const query = wrapSupabaseClient(raw, FIELD_MAP).from("tasks");
+      const write =
+        method === "update"
+          ? query.update(row).eq("id", "t1")
+          : query[method](row);
+
+      await expect(write).rejects.toMatchObject({
+        code: UNREADABLE_CONTENT_CODE,
+      });
+      expect(raw.rawRows("tasks")[0].content).toBe("old");
+    },
+  );
+
+  it("saves a new value over an unreadable one when only the edited field is sent", async () => {
+    const raw = createFakeSupabaseClient(
+      {
+        tasks: [
+          {
+            id: "t1",
+            content: await sealFor("tasks", "content", "t9", "Moved"),
+          },
+        ],
+      },
+      { userId },
+    );
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    await client.from("tasks").update({ content: "Fixed" }).eq("id", "t1");
+    const { data } = await client.from("tasks").select().single();
+
+    expect(data.content).toBe("Fixed");
+    expect(data.unreadable).toBeUndefined();
+    expect(needsReseal(raw.rawRows("tasks")[0].content, "1")).toBe(false);
   });
 });

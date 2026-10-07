@@ -25,6 +25,7 @@ import { HabitView } from "./HabitView";
 import { HabitInsightsPanel } from "./HabitInsightsPanel";
 import { SheetTabToggle, type SheetTab } from "@/components/ui/SheetTabToggle";
 import { cn } from "@/lib/utils";
+import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
 
 interface HabitSheetProps {
   open: boolean;
@@ -121,7 +122,7 @@ export function HabitSheet({
     if (open) {
       if (initialHabit) {
         reset({
-          name: initialHabit.name,
+          name: initialHabit.name ?? "",
           description: initialHabit.description || "",
           color: initialHabit.color,
           icon: initialHabit.icon || "Flame",
@@ -338,7 +339,7 @@ export function HabitSheet({
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleConfirmDelete}
         title="Delete Habit"
-        description={`Are you sure you want to delete "${initialHabit?.name}"? This will also delete all completion history.`}
+        description={`Are you sure you want to delete "${initialHabit?.name ?? UNREADABLE_LABEL}"? This will also delete all completion history.`}
       />
     </ResponsiveDialog>
   );

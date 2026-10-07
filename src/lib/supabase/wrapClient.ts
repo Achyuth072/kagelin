@@ -7,8 +7,15 @@ import {
   decryptField,
   isCiphertext,
 } from "@/lib/crypto/contentCipher";
-import { SCHEME_V2, type Binding } from "@/lib/crypto/envelope";
+import {
+  SCHEME_V2,
+  envelopeKeyId,
+  isUnopenableValueError,
+  type Binding,
+} from "@/lib/crypto/envelope";
 import { FIELD_MAP, JSON_FIELDS, type FieldMap } from "@/lib/supabase/fieldMap";
+import { trackTelemetry } from "@/lib/telemetry/client";
+import { assertReadable } from "@/lib/crypto/unreadable";
 
 interface WrapContext {
   fieldMap: FieldMap;
@@ -217,6 +224,9 @@ export async function encryptPayload(
   fieldMap: FieldMap = FIELD_MAP,
   options: EncryptPayloadOptions = {},
 ): Promise<unknown> {
+  for (const row of Array.isArray(values) ? values : [values]) {
+    if (isPlainObject(row)) assertReadable(row);
+  }
   const fields = fieldMap[table];
   if (!fields?.length) return values;
 
@@ -257,6 +267,17 @@ async function bindingFor(
   return { userId, table, column: field, rowId: row.id };
 }
 
+const reportedUnreadable = new Set<string>();
+
+function reportUnreadable(table: string, column: string, rowId: unknown) {
+  const key = `${table}.${column}.${String(rowId)}`;
+  if (reportedUnreadable.has(key)) return;
+  reportedUnreadable.add(key);
+  trackTelemetry("content_unreadable", { table, column });
+}
+
+const UNREADABLE = Symbol("unreadable");
+
 async function decryptRow(
   table: string,
   ctx: WrapContext,
@@ -276,21 +297,42 @@ async function decryptRow(
       }
       const decrypted = await Promise.all(
         encryptedFields.map(async (field) => {
-          const key = keyForEnvelope(keyring, out[field] as string);
+          const envelope = out[field] as string;
+          const unreadable = () => {
+            reportUnreadable(table, field, row.id);
+            return [field, UNREADABLE] as const;
+          };
+          // No key id at all is a damaged value, not a key this device lacks.
+          if (envelopeKeyId(envelope) === undefined) return unreadable();
+          const key = keyForEnvelope(keyring, envelope);
           if (!key) throw contentKeyUnavailableError("read", table);
-          const plaintext = await decryptField(
-            key,
-            out[field] as string,
-            await bindingFor(table, field, row, loaders),
-          );
-          return [
-            field,
-            isJsonField(table, field) ? JSON.parse(plaintext) : plaintext,
-          ] as const;
+          const binding = await bindingFor(table, field, row, loaders);
+          let plaintext: string;
+          try {
+            plaintext = await decryptField(key, envelope, binding);
+          } catch (error) {
+            if (!isUnopenableValueError(error)) throw error;
+            return unreadable();
+          }
+          if (!isJsonField(table, field)) return [field, plaintext] as const;
+          try {
+            return [field, JSON.parse(plaintext)] as const;
+          } catch {
+            return unreadable();
+          }
         }),
       );
       out = { ...row };
-      for (const [field, value] of decrypted) out[field] = value;
+      const unreadable: string[] = [];
+      for (const [field, value] of decrypted) {
+        if (value === UNREADABLE) {
+          out[field] = null;
+          unreadable.push(field);
+        } else {
+          out[field] = value;
+        }
+      }
+      if (unreadable.length) out.unreadable = unreadable;
     }
   }
 
