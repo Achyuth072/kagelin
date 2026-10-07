@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.47.0-preview.2",
+    "date": "2026-10-07",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Rotate content key with keyring reads, atomic RPC and queue re-seal"
+      ]
+    }
+  },
+  {
     "version": "1.47.0-preview.1",
     "date": "2026-10-07",
     "channel": "preview",
@@ -688,17 +698,6 @@
         "Consolidate subtask expand/collapse into a single, faster toggle",
         "Patch and invalidate subtasks query cache in task mutations",
         "Enhance accessibility labels, input semantics, and low-contrast text"
-      ]
-    }
-  },
-  {
-    "version": "1.41.0-preview.0",
-    "date": "2026-08-25",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Webdav proxy failures on Node's Happy Eyeballs and null-body responses",
-        "Correct WebDAV backup's data source, unify on ZIP, extend to Guests"
       ]
     }
   }
