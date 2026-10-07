@@ -12,10 +12,13 @@ export async function connectCalendars(
 ): Promise<void> {
   const calendars = await Promise.all(
     picked.map(async (calendar) => {
+      const id = crypto.randomUUID();
       const { name } = (await encryptPayload("external_calendars", {
+        id,
         name: calendar.displayName,
       })) as { name: string };
       return {
+        id,
         remote_calendar_id: calendar.url,
         name,
         color: calendar.color,

@@ -124,6 +124,7 @@ export const habitMutations = {
     const { data, error } = await supabase
       .from("habits")
       .insert({
+        id: crypto.randomUUID(),
         user_id: user.id,
         ...habitData,
         sort_order: nextSortOrder,
@@ -268,12 +269,22 @@ export const habitMutations = {
       return null;
     }
 
+    // An upsert that hits the conflict key rewrites id, so reuse the stored one.
+    const { data: existing } = await supabase
+      .from("habit_entries")
+      .select("id")
+      .eq("habit_id", habitId)
+      .eq("date", date)
+      .maybeSingle();
+
     const payload: {
+      id: string;
       habit_id: string;
       date: string;
       value: number;
       notes?: string | null;
     } = {
+      id: existing?.id ?? crypto.randomUUID(),
       habit_id: habitId,
       date,
       value,

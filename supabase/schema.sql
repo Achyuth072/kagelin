@@ -393,7 +393,7 @@ SELECT cron.schedule(
 );
 
 -- Returns encrypted payload envelope for valid ciphertext, or NULL to omit via jsonb_strip_nulls.
--- Scheme literal below must match SCHEME in src/lib/crypto/envelope.ts.
+-- Scheme literals below must match SCHEME and SCHEME_V2 in src/lib/crypto/envelope.ts.
 CREATE OR REPLACE FUNCTION public.encrypted_notification_body(
   template TEXT,
   ciphertext TEXT
@@ -404,7 +404,7 @@ IMMUTABLE
 SET search_path = public
 AS $$
   SELECT CASE
-    WHEN ciphertext LIKE 'xchacha20poly1305-v1:%'
+    WHEN ciphertext ~ '^xchacha20poly1305-v[12]:'
     THEN jsonb_build_object('template', template, 'ciphertext', ciphertext)
   END;
 $$;
@@ -619,6 +619,7 @@ BEGIN
   -- All-day events have no start time to announce.
   SELECT jsonb_build_object(
     'ciphertext', (public.encrypted_notification_body('{}', ev.title))->>'ciphertext',
+    'eventId', ev.id,
     'time', to_char(ev.start_time AT TIME ZONE tz, 'HH24:MI')
   )
   INTO next_up
@@ -633,7 +634,8 @@ BEGIN
 
   IF next_up IS NULL THEN
     SELECT jsonb_build_object(
-      'ciphertext', (public.encrypted_notification_body('{}', t.content))->>'ciphertext'
+      'ciphertext', (public.encrypted_notification_body('{}', t.content))->>'ciphertext',
+      'taskId', t.id
     )
     INTO next_up
     FROM public.tasks t
@@ -2063,7 +2065,7 @@ BEGIN
 
   FOREACH col IN ARRAY TG_ARGV LOOP
     val := (to_jsonb(NEW) -> col) #>> '{}';
-    IF val IS NOT NULL AND val NOT LIKE 'xchacha20poly1305-v1:%' THEN
+    IF val IS NOT NULL AND val !~ '^xchacha20poly1305-v[12]:' THEN
       RAISE EXCEPTION 'Column %.% must be encrypted once a user has completed content-key setup', TG_TABLE_NAME, col
         USING ERRCODE = 'check_violation';
     END IF;
@@ -2110,7 +2112,7 @@ AS $$
 DECLARE
   is_migrated BOOLEAN;
 BEGIN
-  IF NEW.notes IS NULL OR NEW.notes LIKE 'xchacha20poly1305-v1:%' THEN
+  IF NEW.notes IS NULL OR NEW.notes ~ '^xchacha20poly1305-v[12]:' THEN
     RETURN NEW;
   END IF;
 

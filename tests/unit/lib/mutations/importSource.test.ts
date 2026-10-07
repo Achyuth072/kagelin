@@ -64,6 +64,7 @@ describe("persistImportSource — registered", () => {
     expect(mockSupabase.from).toHaveBeenCalledWith("habit_imports");
     expect(insert).toHaveBeenCalledTimes(1);
     expect(insert).toHaveBeenCalledWith({
+      id: expect.any(String),
       user_id: "user-1",
       source_app: "uhabits",
       file_name: "Loop Backup.db",

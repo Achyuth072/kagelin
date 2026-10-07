@@ -1,5 +1,6 @@
 import { keyStore } from "@/lib/crypto/keyStore";
 import { decryptField } from "@/lib/crypto/contentCipher";
+import type { Binding } from "@/lib/crypto/envelope";
 import type { HabitType } from "@/lib/types/habit";
 import type { ReminderType } from "@/lib/types/notification";
 
@@ -47,13 +48,16 @@ export async function displayNotification(
   } = options ?? {};
 
   const key = encrypted || encryptedTitle ? await loadKeyOrNull() : null;
+  const userId = key ? await keyStore.loadUserId() : null;
+  const bindingFor = (role: "title" | "body") =>
+    sourceBinding(userId, displayable.data, role);
 
   const [decryptedTitle, decryptedBody] = await Promise.all([
     encryptedTitle
-      ? resolveEncryptedField(key, encryptedTitle, "title")
+      ? resolveEncryptedField(key, encryptedTitle, "title", bindingFor("title"))
       : title,
     encrypted
-      ? resolveEncryptedField(key, encrypted, "body")
+      ? resolveEncryptedField(key, encrypted, "body", bindingFor("body"))
       : displayable.body,
   ]);
 
@@ -90,6 +94,32 @@ function reminderActions(type: ReminderType, recurring?: boolean) {
   return [{ action: "done", title: "Done" }, SNOOZE_ACTION];
 }
 
+// Notification copies are bound to the source row, not the queue row, so a copy lifted from another row fails.
+function sourceBinding(
+  userId: string | null,
+  data: unknown,
+  role: "title" | "body",
+): Binding | undefined {
+  if (!userId || typeof data !== "object" || data === null) return undefined;
+  const { habitId, taskId, eventId } = data as Record<string, unknown>;
+  if (typeof habitId === "string") {
+    const column = role === "title" ? "name" : "question";
+    return { userId, table: "habits", column, rowId: habitId };
+  }
+  if (typeof taskId === "string") {
+    return { userId, table: "tasks", column: "content", rowId: taskId };
+  }
+  if (typeof eventId === "string") {
+    return {
+      userId,
+      table: "calendar_events",
+      column: "title",
+      rowId: eventId,
+    };
+  }
+  return undefined;
+}
+
 async function loadKeyOrNull(): Promise<Uint8Array | null> {
   try {
     return await keyStore.load();
@@ -104,10 +134,11 @@ async function resolveEncryptedField(
   key: Uint8Array | null,
   encrypted: EncryptedNotificationBody,
   fieldName: string,
+  binding: Binding | undefined,
 ): Promise<string | null> {
   if (!key) return null;
   try {
-    const plaintext = await decryptField(key, encrypted.ciphertext);
+    const plaintext = await decryptField(key, encrypted.ciphertext, binding);
     // Function replacer avoids interpreting "$" in plaintext as special replacement patterns.
     return encrypted.template.replace(PLACEHOLDER, () => plaintext);
   } catch (err) {

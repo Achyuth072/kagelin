@@ -41,6 +41,7 @@ export async function persistImportSource(
   if (!user) throw new Error("Not authenticated");
 
   const { error } = await supabase.from("habit_imports").insert({
+    id: crypto.randomUUID(),
     user_id: user.id,
     source_app: payload.source_app,
     file_name: payload.file_name,

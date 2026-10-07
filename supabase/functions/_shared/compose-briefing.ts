@@ -19,6 +19,9 @@ export interface EveningCounts {
 export interface NextUp {
   ciphertext: string;
   time?: string | null;
+  // The copy's source row; the service worker needs it to open row-bound ciphertext.
+  taskId?: string;
+  eventId?: string;
 }
 
 export type BriefingInput =
@@ -29,7 +32,7 @@ export interface BriefingPayload {
   title: string;
   body: string;
   encrypted?: { template: string; ciphertext: string };
-  data: { url: string };
+  data: { url: string; taskId?: string; eventId?: string };
 }
 
 const plural = (n: number, one: string, many: string) =>
@@ -88,6 +91,8 @@ export function composeBriefing(input: BriefingInput): BriefingPayload | null {
       template: `${body} Next: ${time}{}`,
       ciphertext: nextUp.ciphertext,
     };
+    if (nextUp.taskId) payload.data.taskId = nextUp.taskId;
+    if (nextUp.eventId) payload.data.eventId = nextUp.eventId;
   }
 
   return payload;
