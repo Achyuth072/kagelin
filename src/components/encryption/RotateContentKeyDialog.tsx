@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +57,9 @@ export function RotateContentKeyDialog({
     showMismatch,
     reset,
   } = useNewPassphraseForm();
+
+  // Leaving the page mid-rotation must not leave the device ignoring a rejected key.
+  useEffect(() => () => onHoldRecoveryCode(false), [onHoldRecoveryCode]);
 
   const close = () => {
     onHoldRecoveryCode(false);

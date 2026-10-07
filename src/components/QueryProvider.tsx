@@ -12,6 +12,8 @@ import { focusMutations } from "@/lib/mutations/focus";
 import { asyncStoragePersister } from "@/lib/query-cache-purge";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
 import { HABIT_ENTRY_UPDATED } from "@/lib/habit-links";
+import { onServerKeySignal } from "@/lib/supabase/wrapClient";
+import { handleServerKeySignal } from "@/lib/utils/mutation-error";
 import { TASKS_UPDATED } from "@/lib/sw/notificationClickHandler";
 
 export default function QueryProvider({
@@ -83,6 +85,8 @@ export default function QueryProvider({
 
     return client;
   });
+
+  useEffect(() => onServerKeySignal(handleServerKeySignal), []);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.serviceWorker) return;

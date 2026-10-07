@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { handleMutationError } from "@/lib/utils/mutation-error";
+import {
+  handleMutationError,
+  handleServerKeySignal,
+} from "@/lib/utils/mutation-error";
 import { notify } from "@/lib/notify";
 
 vi.mock("@/lib/notify", () => ({
-  notify: {
-    error: vi.fn(),
-  },
+  notify: Object.assign(vi.fn(), { error: vi.fn() }),
 }));
 
 describe("handleMutationError", () => {
@@ -46,9 +47,42 @@ describe("handleMutationError", () => {
     );
   });
 
+  it("ME-A-05: stays silent when the server refused a retired key, because the unlock screen says it", () => {
+    const error = Object.assign(new Error("Your content key changed."), {
+      code: "content_key_unavailable",
+      hint: "content_key_retired",
+    });
+
+    handleMutationError(error);
+    expect(notify.error).not.toHaveBeenCalled();
+  });
+
   it("ME-B-01: should show fallback message for unknown error types", () => {
     const error = "Something went wrong";
     handleMutationError(error);
     expect(notify.error).toHaveBeenCalledWith("An unexpected error occurred.");
+  });
+});
+
+describe("handleServerKeySignal", () => {
+  it("shows one sticky Reload toast however many writes were refused as outdated", () => {
+    handleServerKeySignal("app_update_required");
+    handleServerKeySignal("app_update_required");
+
+    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).toHaveBeenCalledWith(
+      "Kagelin has been updated. Reload to keep saving.",
+      {
+        duration: Infinity,
+        action: { label: "Reload", onClick: expect.any(Function) },
+      },
+    );
+  });
+
+  it("shows nothing for a retired key, which the gate handles", () => {
+    vi.clearAllMocks();
+    handleServerKeySignal("content_key_retired");
+
+    expect(notify).not.toHaveBeenCalled();
   });
 });
