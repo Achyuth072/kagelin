@@ -41,6 +41,10 @@ for up to an hour.
   screen is the message, and toasts would only repeat it, one for each failed
   write. The sync status text keeps its "unlock the app" wording, because it
   records state rather than interrupting the user.
+- **A rejection the gate does not act on still gets one toast.** When the gate
+  finds no newer key, or the recovery code is on screen, the silent error would
+  hide a failed save. The gate then shows a single deduplicated "couldn't be
+  saved" toast.
 - **`app_update_required` does not lock.** A stale app is not a leaked key. The
   same signal shows a single sticky toast with a Reload action instead of one
   toast for each failed write.

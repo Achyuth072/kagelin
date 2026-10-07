@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as Sentry from "@sentry/nextjs";
 import { useAuth } from "@/components/AuthProvider";
 import { onServerKeySignal } from "@/lib/supabase/wrapClient";
+import { notify } from "@/lib/notify";
 import { getEncryptionKeyRow } from "@/lib/crypto/keyManager";
 import type { EncryptionKeyRow } from "@/lib/crypto/encryptionKeyRowCache";
 import { keyStore } from "@/lib/crypto/keyStore";
@@ -27,6 +28,15 @@ export type EncryptionGateStatus =
 type AsyncStatus = Exclude<EncryptionGateStatus, "not-applicable">;
 
 export type LockReason = "key-changed";
+
+// The caller's own error toast is silent for this rejection, so a device that stays
+// unlocked must still say that a save failed.
+function notifyRejectedSave() {
+  notify.error(
+    "Changes couldn't be saved because your content key just changed. Unlock the app again if this keeps happening.",
+    { id: "content-key-rejected" },
+  );
+}
 
 function isKeyRetired(
   row: EncryptionKeyRow | null,
@@ -178,10 +188,13 @@ export function useEncryptionGate(): {
     return onServerKeySignal(async (signal) => {
       if (
         signal !== "content_key_retired" ||
-        recoveryCodeHeldRef.current ||
         lockingForKeyRef.current ||
         asyncStatusRef.current !== "unlocked"
       ) {
+        return;
+      }
+      if (recoveryCodeHeldRef.current) {
+        notifyRejectedSave();
         return;
       }
       // A burst of rejected writes would otherwise each start their own check and purge.
@@ -192,7 +205,10 @@ export function useEncryptionGate(): {
           keyStore.loadKeyring(userId),
         ]);
         // The check awaits the network; a hold set meanwhile still applies.
-        if (recoveryCodeHeldRef.current || !isKeyRetired(row, keyring)) return;
+        if (recoveryCodeHeldRef.current || !isKeyRetired(row, keyring)) {
+          notifyRejectedSave();
+          return;
+        }
         await purgeDeviceContent(queryClient);
         asyncStatusRef.current = "needs-unlock";
         setLockReason("key-changed");

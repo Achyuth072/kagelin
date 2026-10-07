@@ -39,6 +39,11 @@ vi.mock("@/lib/crypto/purge", () => ({
   purgeDeviceContent: (...args: unknown[]) => purgeDeviceContentMock(...args),
 }));
 
+const notifyErrorMock = vi.fn();
+vi.mock("@/lib/notify", () => ({
+  notify: { error: (...args: unknown[]) => notifyErrorMock(...args) },
+}));
+
 const uiState = { autoLockEnabled: false, autoLockMinutes: 60 };
 vi.mock("@/lib/store/uiStore", () => ({
   useUiStore: (selector: (s: typeof uiState) => unknown) => selector(uiState),
@@ -512,6 +517,10 @@ describe("useEncryptionGate", () => {
 
       expect(result.current.status).toBe("unlocked");
       expect(purgeDeviceContentMock).not.toHaveBeenCalled();
+      expect(notifyErrorMock).toHaveBeenCalledWith(
+        expect.stringContaining("couldn't be saved"),
+        { id: "content-key-rejected" },
+      );
     });
 
     it("ignores the rejection while the recovery code is on screen", async () => {
@@ -528,6 +537,10 @@ describe("useEncryptionGate", () => {
 
       expect(result.current.status).toBe("unlocked");
       expect(purgeDeviceContentMock).not.toHaveBeenCalled();
+      expect(notifyErrorMock).toHaveBeenCalledWith(
+        expect.stringContaining("couldn't be saved"),
+        { id: "content-key-rejected" },
+      );
     });
   });
 });
