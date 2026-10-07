@@ -157,6 +157,10 @@ deliberate action, and may additionally be set to happen after a period of
 inactivity — off by default, because while Locked, reminders can no longer say
 _what_ is due, only that something is.
 
+One exception is automatic: a **Stale device** is Locked when the server next
+refuses its write. Its key has been replaced, so staying unlocked would only make
+every save fail.
+
 _Avoid_: "log out to lock", which implies one is a way of doing the other.
 
 ### Content key
@@ -169,6 +173,16 @@ key.
 
 _Avoid_: "master key" in anything user-facing (it is an implementation name),
 "encryption key", "password" for the key itself.
+
+### Stale device
+
+A device that holds only a **retired** content key, because a **Rotation**
+happened on another device. It can still read what it has cached, but the
+server refuses every write it seals. When that happens, the device is
+**Locked**, and its unsynced changes are discarded. It is not signed out:
+unlocking with the new passphrase is enough.
+
+_Avoid_: "outdated key", "old device", "expired key".
 
 ### Rewrap
 
