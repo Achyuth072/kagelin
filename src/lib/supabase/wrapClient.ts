@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { keyStore } from "@/lib/crypto/keyStore";
+import { keyStore, type Keyring } from "@/lib/crypto/keyStore";
+import { keyForEnvelope } from "@/lib/crypto/keyring";
 import {
   encryptField,
   decryptField,
@@ -41,20 +42,16 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-async function getContentKey(): Promise<Uint8Array | null> {
-  return keyStore.load();
-}
-
 interface ReadLoaders {
-  key: () => Promise<Uint8Array | null>;
+  keyring: () => Promise<Keyring | null>;
   userId: () => Promise<string | null>;
 }
 
 function createReadLoaders(ctx: WrapContext): ReadLoaders {
-  let key: Promise<Uint8Array | null> | null = null;
+  let keyring: Promise<Keyring | null> | null = null;
   let userId: Promise<string | null> | null = null;
   return {
-    key: () => (key ??= getContentKey()),
+    keyring: () => (keyring ??= keyStore.loadKeyring()),
     userId: () => (userId ??= ctx.getUserId()),
   };
 }
@@ -132,6 +129,8 @@ export const APP_UPDATE_REQUIRED_CODE = "app_update_required";
 
 // The server's marker of a finished upgrade rejects `-v1` writes from a stale app.
 const SEALING_SCHEME_OUTDATED_HINT = "sealing_scheme_outdated";
+// The server's rejection of a write sealed with a key the Account has rotated away from.
+const CONTENT_KEY_RETIRED_HINT = "content_key_retired";
 
 export function isAppUpdateRequiredError(error: unknown): boolean {
   return (
@@ -143,6 +142,7 @@ export function isAppUpdateRequiredError(error: unknown): boolean {
 
 interface SealContext {
   key: Uint8Array;
+  keyId: string;
   userId: string;
   // Updates carry no id in their payload; it comes from the `.eq("id", ...)` filter.
   fallbackRowId?: string;
@@ -166,6 +166,7 @@ async function encryptRow(
         seal.key,
         isJsonField(table, field) ? JSON.stringify(value) : (value as string),
         { userId: seal.userId, table, column: field, rowId },
+        seal.keyId,
       );
     }
   }
@@ -193,13 +194,18 @@ export async function encryptPayload(
     return values;
   }
 
-  const key = await getContentKey();
+  const keyring = await keyStore.loadKeyring();
   const userId = options.userId ?? (await keyStore.loadUserId());
-  if (!key || !userId) {
+  if (!keyring || !userId) {
     throw contentKeyUnavailableError("write to", table);
   }
 
-  const seal: SealContext = { key, userId, fallbackRowId: options.rowId };
+  const seal: SealContext = {
+    key: keyring.key,
+    keyId: keyring.keyId,
+    userId,
+    fallbackRowId: options.rowId,
+  };
   if (Array.isArray(values)) {
     return Promise.all(
       values.map((row) => encryptRow(table, fields, row, seal)),
@@ -233,12 +239,14 @@ async function decryptRow(
   if (fields?.length) {
     const encryptedFields = fields.filter((field) => isCiphertext(out[field]));
     if (encryptedFields.length) {
-      const key = await loaders.key();
-      if (!key) {
+      const keyring = await loaders.keyring();
+      if (!keyring) {
         throw contentKeyUnavailableError("read", table);
       }
       const decrypted = await Promise.all(
         encryptedFields.map(async (field) => {
+          const key = keyForEnvelope(keyring, out[field] as string);
+          if (!key) throw contentKeyUnavailableError("read", table);
           const plaintext = await decryptField(
             key,
             out[field] as string,
@@ -281,16 +289,27 @@ async function decryptResult(
   result: any,
 ): Promise<any> {
   if (isPlainObject(result) && isPlainObject(result.error)) {
-    return result.error.hint === SEALING_SCHEME_OUTDATED_HINT
-      ? {
-          ...result,
-          error: {
-            ...result.error,
-            code: APP_UPDATE_REQUIRED_CODE,
-            message: "Kagelin has been updated. Reload the app to keep saving.",
-          },
-        }
-      : result;
+    if (result.error.hint === SEALING_SCHEME_OUTDATED_HINT) {
+      return {
+        ...result,
+        error: {
+          ...result.error,
+          code: APP_UPDATE_REQUIRED_CODE,
+          message: "Kagelin has been updated. Reload the app to keep saving.",
+        },
+      };
+    }
+    if (result.error.hint === CONTENT_KEY_RETIRED_HINT) {
+      return {
+        ...result,
+        error: {
+          ...result.error,
+          code: CONTENT_KEY_UNAVAILABLE_CODE,
+          message: "Your content key changed. Unlock again to keep saving.",
+        },
+      };
+    }
+    return result;
   }
   if (!isPlainObject(result) || result.error || result.data == null) {
     return result;

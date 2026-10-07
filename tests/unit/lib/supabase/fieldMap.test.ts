@@ -51,6 +51,7 @@ const NON_CONTENT: Record<string, string[]> = {
     "recovery_salt",
     "recovery_kdf_params",
     "wrapped_key_recovery",
+    "retired_keys",
   ],
 };
 

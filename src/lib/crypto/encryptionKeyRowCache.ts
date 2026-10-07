@@ -12,6 +12,9 @@ export interface EncryptionKeyRow {
   migrated_at: string | null;
   // Absent on rows cached before the marker existed; explicit null means a Re-seal is due.
   sealed_v2_at?: string | null;
+  // Absent on rows cached before rotation existed: key id 1, nothing retired.
+  current_key_id?: number;
+  retired_keys?: Record<string, string>;
   passphrase_reset_required: boolean;
 }
 

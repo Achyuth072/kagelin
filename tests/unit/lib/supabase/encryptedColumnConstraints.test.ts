@@ -84,7 +84,35 @@ describe("server-side scheme checks accept the row-bound -v2 envelope", () => {
     }
   });
 
-  it("stores the marker on the key row", () => {
+  it("stores the markers and key chain on the key row", () => {
+    expect(schemaSql).toMatch(/current_key_id INTEGER NOT NULL DEFAULT 1/);
+    expect(schemaSql).toMatch(/retired_keys JSONB NOT NULL DEFAULT/);
     expect(schemaSql).toMatch(/sealed_v2_at TIMESTAMPTZ/);
+  });
+});
+
+describe("server-side backstop for a rotated content key", () => {
+  const backstops = schemaSql.match(
+    /CREATE OR REPLACE FUNCTION public\.reject_unmigrated_plaintext(?:_habit_entry)?\(\)[\s\S]*?\n\$\$;/g,
+  );
+
+  it("rejects an envelope whose key id is not the current one, in both triggers", () => {
+    expect(backstops).toHaveLength(2);
+    for (const fn of backstops!) {
+      expect(fn).toMatch(/current_key_id::text/);
+      expect(fn).toMatch(/split_part\([^)]*':', 2\) <> current_key/);
+      expect(fn).toMatch(/HINT = 'content_key_retired'/);
+    }
+  });
+
+  it("commits a rotation through one RPC that bumps current_key_id only from the expected id", () => {
+    const rpc = schemaSql.match(
+      /CREATE OR REPLACE FUNCTION public\.rotate_content_key\([\s\S]*?\n\$\$;/,
+    )?.[0];
+    expect(rpc).toBeDefined();
+    expect(rpc).toMatch(/current_key_id = current_key_id \+ 1/);
+    expect(rpc).toMatch(/current_key_id = p_expected_key_id/);
+    expect(rpc).toMatch(/sealed_v2_at = NULL/);
+    expect(rpc).toMatch(/retired_keys = p_retired_keys/);
   });
 });

@@ -8,8 +8,10 @@ import {
   encryptField,
   isCiphertext,
 } from "@/lib/crypto/contentCipher";
-import { needsReseal } from "@/lib/crypto/envelope";
-import { keyStore } from "@/lib/crypto/keyStore";
+import { INITIAL_KEY_ID, needsReseal } from "@/lib/crypto/envelope";
+import { keyStore, type Keyring } from "@/lib/crypto/keyStore";
+import { keyForEnvelope } from "@/lib/crypto/keyring";
+import { sourceBinding } from "@/lib/notifications";
 
 export interface MigrationProgress {
   done: number;
@@ -80,17 +82,24 @@ function valueNeedsSealing(
   table: string,
   field: string,
   value: unknown,
+  currentKeyId: string,
 ): boolean {
   return (
     needsEncryption(table, field, value) ||
-    (isCiphertext(value) && needsReseal(value))
+    (isCiphertext(value) && needsReseal(value, currentKeyId))
   );
+}
+
+// Absent before the key is cached (first-time setup), when only plaintext can be pending.
+async function currentKeyId(userId: string): Promise<string> {
+  return (await keyStore.loadKeyring(userId))?.keyId ?? INITIAL_KEY_ID;
 }
 
 // Raw client avoids decrypt-on-select to distinguish ciphertext from plaintext.
 export async function findPendingRows(userId: string): Promise<PendingRow[]> {
   const raw = createRawClient();
   const pending: PendingRow[] = [];
+  const keyId = await currentKeyId(userId);
 
   for (const [table, fields] of Object.entries(FIELD_MAP)) {
     if (!fields.length) continue;
@@ -103,7 +112,11 @@ export async function findPendingRows(userId: string): Promise<PendingRow[]> {
     const rows = await fetchOwnedRows(raw, table, columns, userId);
 
     for (const row of rows) {
-      if (fields.some((field) => valueNeedsSealing(table, field, row[field]))) {
+      if (
+        fields.some((field) =>
+          valueNeedsSealing(table, field, row[field], keyId),
+        )
+      ) {
         pending.push({
           table,
           id: row.id as string,
@@ -196,14 +209,108 @@ async function scrubLegacyDiagnosticText(userId: string): Promise<void> {
   if (notificationError) throw notificationError;
 }
 
+const SEALED_PAYLOAD_FIELDS = [
+  ["encryptedTitle", "title"],
+  ["encrypted", "body"],
+] as const;
+
+interface QueueRow {
+  id: string;
+  status: string;
+  payload: Record<string, any>;
+}
+
+const isLive = (status: string) =>
+  status === "pending" || status === "processing";
+
+function sealedCopies(row: QueueRow) {
+  return SEALED_PAYLOAD_FIELDS.filter(
+    ([key]) => typeof row.payload?.[key]?.ciphertext === "string",
+  );
+}
+
+function queueRowNeedsWork(row: QueueRow, keyId: string): boolean {
+  return sealedCopies(row).some(
+    ([key]) =>
+      !isLive(row.status) || needsReseal(row.payload[key].ciphertext, keyId),
+  );
+}
+
+async function fetchQueueRowsNeedingWork(
+  userId: string,
+  keyId: string,
+): Promise<QueueRow[]> {
+  const raw = createRawClient();
+  const rows = await fetchAllRows<QueueRow>((from, to) =>
+    (raw.from("notification_queue") as any)
+      .select("id,status,payload")
+      .eq("user_id", userId)
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+  return rows.filter((row) => queueRowNeedsWork(row, keyId));
+}
+
+export async function findPendingQueueRows(userId: string) {
+  return fetchQueueRowsNeedingWork(userId, await currentKeyId(userId));
+}
+
+// Pending copies are re-sealed bound to their source row; the rest are stripped so a retired
+// key cannot open them. A copy that cannot be opened is dropped too: the notification falls
+// back to its generic copy instead of blocking the whole Re-seal.
+async function resealNotificationQueue(
+  userId: string,
+  ring: Keyring,
+): Promise<void> {
+  const raw = createRawClient();
+  for (const row of await fetchQueueRowsNeedingWork(userId, ring.keyId)) {
+    const payload = { ...row.payload };
+    for (const [key, role] of sealedCopies(row)) {
+      const { ciphertext, template } = row.payload[key];
+      const binding = sourceBinding(userId, row.payload.data, role);
+      const openingKey = keyForEnvelope(ring, ciphertext);
+      if (!isLive(row.status) || !binding || !openingKey) {
+        delete payload[key];
+        continue;
+      }
+      try {
+        const plaintext = await decryptField(openingKey, ciphertext, binding);
+        payload[key] = {
+          template,
+          ciphertext: await encryptField(
+            ring.key,
+            plaintext,
+            binding,
+            ring.keyId,
+          ),
+        };
+      } catch {
+        delete payload[key];
+      }
+    }
+
+    const { data, error } = await (raw.from("notification_queue") as any)
+      .update({ payload })
+      .eq("id", row.id)
+      .eq("status", row.status)
+      .select("id");
+    if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error(
+        `Migration conflict: notification ${row.id} changed during migration. Retrying will pick it up.`,
+      );
+    }
+  }
+}
+
 // Re-seals every value not yet in the current scheme under the current key,
 // bound to its row; plaintext is the special case with nothing to open first.
 export async function runBackfillMigration(
   userId: string,
   onProgress?: (progress: MigrationProgress) => void,
 ): Promise<void> {
-  const masterKey = await keyStore.load(userId);
-  if (!masterKey) {
+  const ring = await keyStore.loadKeyring(userId);
+  if (!ring) {
     throw new Error("Cannot migrate: the content key is unavailable.");
   }
 
@@ -224,14 +331,28 @@ export async function runBackfillMigration(
     await Promise.all(
       fields.map(async (field) => {
         const value = row[field];
-        if (!valueNeedsSealing(table, field, value)) return;
+        if (!valueNeedsSealing(table, field, value, ring.keyId)) return;
         const binding = { userId, table, column: field, rowId: id };
-        const plaintext = isCiphertext(value)
-          ? await decryptField(masterKey, value, binding)
-          : isJsonField(table, field)
+        let plaintext: string;
+        if (isCiphertext(value)) {
+          const openingKey = keyForEnvelope(ring, value);
+          if (!openingKey) {
+            throw new Error(
+              `Cannot re-seal ${table}.${field} of row ${id}: its key is unavailable.`,
+            );
+          }
+          plaintext = await decryptField(openingKey, value, binding);
+        } else {
+          plaintext = isJsonField(table, field)
             ? JSON.stringify(value)
             : (value as string);
-        patch[field] = await encryptField(masterKey, plaintext, binding);
+        }
+        patch[field] = await encryptField(
+          ring.key,
+          plaintext,
+          binding,
+          ring.keyId,
+        );
       }),
     );
 
@@ -264,4 +385,6 @@ export async function runBackfillMigration(
     const batch = pending.slice(i, i + CONCURRENCY);
     await Promise.all(batch.map(migrateRow));
   }
+
+  await resealNotificationQueue(userId, ring);
 }

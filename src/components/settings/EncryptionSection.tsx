@@ -18,9 +18,17 @@ import {
   ResponsiveDialogTitle,
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog";
+import { RotateContentKeyDialog } from "@/components/encryption/RotateContentKeyDialog";
 import { RecoveryCodeDisplay } from "@/components/encryption/RecoveryCodeDisplay";
 import { NewPassphraseFields } from "@/components/encryption/NewPassphraseFields";
-import { Loader2, Lock, RefreshCw, ShieldCheck, TimerOff } from "lucide-react";
+import {
+  KeyRound,
+  Loader2,
+  Lock,
+  RefreshCw,
+  ShieldCheck,
+  TimerOff,
+} from "lucide-react";
 import { changePassphrase, reissueRecoveryCode } from "@/lib/crypto/keyManager";
 import { useNewPassphraseForm } from "@/lib/hooks/useNewPassphraseForm";
 import { notify } from "@/lib/notify";
@@ -143,7 +151,13 @@ function LockNowCard() {
   );
 }
 
-function ChangePassphraseCard({ userId }: { userId: string }) {
+function ChangePassphraseCard({
+  userId,
+  onRotateInstead,
+}: {
+  userId: string;
+  onRotateInstead: () => void;
+}) {
   const [currentPassphrase, setCurrentPassphrase] = useState("");
   const {
     passphrase: newPassphrase,
@@ -244,6 +258,14 @@ function ChangePassphraseCard({ userId }: { userId: string }) {
               "Change passphrase"
             )}
           </Button>
+          <Button
+            type="button"
+            variant="link"
+            onClick={onRotateInstead}
+            className="h-auto p-0 ml-3 text-xs text-muted-foreground"
+          >
+            Also rotate my key
+          </Button>
         </form>
       </CardContent>
     </Card>
@@ -335,8 +357,37 @@ function RecoveryCodeCard({ userId }: { userId: string }) {
   );
 }
 
+function RotateKeyCard({ onRotate }: { onRotate: () => void }) {
+  return (
+    <Card className={SETTINGS_CARD_CLASS}>
+      <CardHeader className="pb-3 px-4 pt-5">
+        <CardTitle className="flex items-center gap-2 text-base font-medium tracking-tight">
+          <KeyRound className="h-4 w-4 text-brand" strokeWidth={2.25} />
+          Rotate Content Key
+        </CardTitle>
+        <CardDescription className="text-xs text-muted-foreground/80 lowercase">
+          For when you think your key leaked. Replaces the key, re-encrypts your
+          content and signs out your other devices.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="px-4 pb-5 pt-0">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onRotate}
+          className="h-11 sm:h-9 px-4 text-xs font-semibold border-border/50"
+        >
+          Rotate content key
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function EncryptionSection() {
   const { user, isGuestMode } = useAuth();
+  const { beginReseal } = useEncryptionGateActions();
+  const [rotateOpen, setRotateOpen] = useState(false);
 
   if (isGuestMode || !user) return null;
 
@@ -344,8 +395,18 @@ export function EncryptionSection() {
     <div className="space-y-6">
       <LockNowCard />
       <AutoLockCard />
-      <ChangePassphraseCard userId={user.id} />
+      <ChangePassphraseCard
+        userId={user.id}
+        onRotateInstead={() => setRotateOpen(true)}
+      />
       <RecoveryCodeCard userId={user.id} />
+      <RotateKeyCard onRotate={() => setRotateOpen(true)} />
+      <RotateContentKeyDialog
+        userId={user.id}
+        open={rotateOpen}
+        onOpenChange={setRotateOpen}
+        onCommitted={beginReseal}
+      />
     </div>
   );
 }

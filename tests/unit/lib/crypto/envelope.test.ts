@@ -3,7 +3,7 @@ import { getSodium } from "@/lib/crypto/sodium";
 import {
   SCHEME,
   SCHEME_V2,
-  CURRENT_KEY_ID,
+  INITIAL_KEY_ID,
   isEnvelope,
   sealEnvelope,
   openEnvelope,
@@ -32,7 +32,7 @@ describe("sealEnvelope / openEnvelope", () => {
     const envelope = await sealEnvelope(key, new TextEncoder().encode("x"));
     const [scheme, keyId] = envelope.split(":");
     expect(scheme).toBe(SCHEME);
-    expect(keyId).toBe(CURRENT_KEY_ID);
+    expect(keyId).toBe(INITIAL_KEY_ID);
   });
 
   it("accepts an explicit key id for rotation", async () => {
@@ -86,7 +86,7 @@ describe("row-bound (-v2) envelopes", () => {
     rowId: "row-1",
   };
   const seal = async (key: Uint8Array, b = binding) =>
-    sealEnvelope(key, new TextEncoder().encode("secret"), CURRENT_KEY_ID, b);
+    sealEnvelope(key, new TextEncoder().encode("secret"), INITIAL_KEY_ID, b);
 
   it("opens with the binding it was sealed under", async () => {
     const key = await generateKey();
@@ -191,11 +191,13 @@ describe("tamper error", () => {
       binding,
     );
 
-    expect([v1, v2OtherKey, "plain"].map(needsReseal)).toEqual([
+    expect([v1, v2OtherKey, "plain"].map((v) => needsReseal(v, "1"))).toEqual([
       true,
       true,
       true,
     ]);
-    expect(needsReseal(v2)).toBe(false);
+    expect(needsReseal(v2, "1")).toBe(false);
+    expect(needsReseal(v2OtherKey, "2")).toBe(false);
+    expect(needsReseal(v2, "2")).toBe(true);
   });
 });

@@ -24,26 +24,73 @@ function createEncryptionKeysTable() {
     },
     update: (payload: Row) => ({
       eq: (_col: string, userId: string) => {
-        lastUpdatePayload = payload;
-        rows.set(userId, { ...rows.get(userId), ...payload });
-        const result = { data: null, error: null };
-        return {
-          then: (onFulfilled: (v: typeof result) => unknown) =>
-            Promise.resolve(result).then(onFulfilled),
+        let guardKeyId: number | null = null;
+        const apply = () => {
+          const current = rows.get(userId);
+          if (
+            guardKeyId !== null &&
+            (current?.current_key_id ?? 1) !== guardKeyId
+          )
+            return null;
+          lastUpdatePayload = payload;
+          rows.set(userId, { ...current, ...payload });
+          return rows.get(userId) ?? null;
+        };
+        const builder = {
+          eq: (_c: string, value: number) => {
+            guardKeyId = value;
+            return builder;
+          },
+          then: (onFulfilled: (v: { data: null; error: null }) => unknown) => {
+            apply();
+            return Promise.resolve({ data: null, error: null }).then(
+              onFulfilled,
+            );
+          },
           select: () => ({
             single: async () => {
               if (updateError) return { data: null, error: updateError };
-              return {
-                data: rows.get(userId) ?? null,
-                error: null,
-              };
+              return { data: apply(), error: null };
+            },
+            maybeSingle: async () => {
+              if (updateError) return { data: null, error: updateError };
+              return { data: apply(), error: null };
             },
           }),
         };
+        return builder;
       },
     }),
   };
 }
+
+let rpcError: Error | null = null;
+let signOutError: Error | null = null;
+const signOutMock = vi.fn(async (_options: unknown) => ({
+  error: signOutError,
+}));
+const rpcMock = vi.fn(async (_name: string, args: Row) => {
+  if (rpcError) return { data: null, error: rpcError };
+  const userId = [...rows.keys()][0];
+  const current = rows.get(userId)!;
+  const keyId = current.current_key_id ?? 1;
+  if (keyId !== args.p_expected_key_id) {
+    return { data: null, error: new Error("content key changed") };
+  }
+  rows.set(userId, {
+    ...current,
+    passphrase_salt: args.p_passphrase_salt,
+    passphrase_kdf_params: args.p_passphrase_kdf_params,
+    wrapped_key_passphrase: args.p_wrapped_key_passphrase,
+    recovery_salt: args.p_recovery_salt,
+    recovery_kdf_params: args.p_recovery_kdf_params,
+    wrapped_key_recovery: args.p_wrapped_key_recovery,
+    retired_keys: args.p_retired_keys,
+    current_key_id: keyId + 1,
+    sealed_v2_at: null,
+  });
+  return { data: keyId + 1, error: null };
+});
 
 const mockSupabase = {
   from: vi.fn((table: string) => {
@@ -51,6 +98,8 @@ const mockSupabase = {
       throw new Error(`Unexpected table: ${table}`);
     return createEncryptionKeysTable();
   }),
+  rpc: rpcMock,
+  auth: { signOut: signOutMock },
 };
 
 let rawClient = createFakeSupabaseClient();
@@ -59,9 +108,16 @@ vi.mock("@/lib/supabase/client", () => ({
   createRawClient: () => rawClient,
 }));
 
-const keyStoreState: { userId: string | null; key: Uint8Array | null } = {
+const keyStoreState: {
+  userId: string | null;
+  key: Uint8Array | null;
+  keyId: string;
+  retired: Record<string, Uint8Array>;
+} = {
   userId: null,
   key: null,
+  keyId: "1",
+  retired: {},
 };
 vi.mock("@/lib/crypto/keyStore", () => ({
   keyStore: {
@@ -70,13 +126,34 @@ vi.mock("@/lib/crypto/keyStore", () => ({
         ? null
         : keyStoreState.key,
     ),
-    save: vi.fn(async (userId: string, k: Uint8Array) => {
-      keyStoreState.userId = userId;
-      keyStoreState.key = k;
-    }),
+    loadKeyring: vi.fn(async (userId?: string) =>
+      keyStoreState.key &&
+      (userId === undefined || keyStoreState.userId === userId)
+        ? {
+            keyId: keyStoreState.keyId,
+            key: keyStoreState.key,
+            retired: keyStoreState.retired,
+          }
+        : null,
+    ),
+    save: vi.fn(
+      async (
+        userId: string,
+        k: Uint8Array,
+        keyId = "1",
+        retired: Record<string, Uint8Array> = {},
+      ) => {
+        keyStoreState.userId = userId;
+        keyStoreState.key = k;
+        keyStoreState.keyId = keyId;
+        keyStoreState.retired = retired;
+      },
+    ),
     clear: vi.fn(async () => {
       keyStoreState.userId = null;
       keyStoreState.key = null;
+      keyStoreState.keyId = "1";
+      keyStoreState.retired = {};
     }),
   },
 }));
@@ -96,6 +173,7 @@ vi.mock("@/lib/crypto/encryptionKeyRowCache", () => ({
   },
 }));
 
+import { keyStore } from "@/lib/crypto/keyStore";
 import {
   setupEncryption,
   unlockWithPassphrase,
@@ -107,6 +185,7 @@ import {
   getEncryptionKeyRow,
   markMigrationComplete,
   markResealComplete,
+  rotateContentKey,
   UnlockError,
 } from "@/lib/crypto/keyManager";
 
@@ -118,7 +197,11 @@ describe("keyManager", () => {
     rowCache.clear();
     lastUpdatePayload = null;
     updateError = null;
+    rpcError = null;
+    signOutError = null;
     keyStoreState.key = null;
+    keyStoreState.keyId = "1";
+    keyStoreState.retired = {};
     offline = false;
     rawClient = createFakeSupabaseClient();
     vi.clearAllMocks();
@@ -367,7 +450,7 @@ describe("keyManager", () => {
     });
     await setupEncryption(USER_ID, "first passphrase");
 
-    await markResealComplete(USER_ID);
+    await markResealComplete(USER_ID, "1");
 
     const row = await getEncryptionKeyRow(USER_ID);
     expect(row?.sealed_v2_at).toEqual(expect.any(String));
@@ -431,4 +514,137 @@ describe("keyManager", () => {
 
     expect(recordActivityMock).not.toHaveBeenCalled();
   }, 20000);
+
+  describe("rotateContentKey", () => {
+    async function setupAndRotate() {
+      await setupEncryption(USER_ID, "old passphrase");
+      const oldKey = keyStoreState.key!;
+      const result = await rotateContentKey(
+        USER_ID,
+        "old passphrase",
+        "new passphrase",
+      );
+      return { oldKey, result };
+    }
+
+    it("unlocks with the new passphrase and the new recovery code", async () => {
+      const { oldKey, result } = await setupAndRotate();
+      const newKey = keyStoreState.key!;
+      expect(newKey).not.toEqual(oldKey);
+
+      expect(await unlockWithPassphrase(USER_ID, "new passphrase")).toEqual(
+        newKey,
+      );
+      expect(
+        await unlockWithRecoveryCode(USER_ID, result.recoveryCode),
+      ).toEqual(newKey);
+    }, 60000);
+
+    it("rejects the old passphrase and the old recovery code", async () => {
+      const { recoveryCode: oldCode } = await setupEncryption(
+        USER_ID,
+        "old passphrase",
+      );
+      await rotateContentKey(USER_ID, "old passphrase", "new passphrase");
+
+      await expect(
+        unlockWithPassphrase(USER_ID, "old passphrase"),
+      ).rejects.toBeInstanceOf(UnlockError);
+      await expect(
+        unlockWithRecoveryCode(USER_ID, oldCode),
+      ).rejects.toBeInstanceOf(UnlockError);
+    }, 60000);
+
+    it("advances the key id and keeps the old key reachable only through the new key", async () => {
+      const { oldKey } = await setupAndRotate();
+
+      expect(keyStoreState.keyId).toBe("2");
+      expect(keyStoreState.retired["1"]).toEqual(oldKey);
+
+      // A fresh device unlocking sees the same keyring, rebuilt from the wrapped chain.
+      await keyStore.clear();
+      await unlockWithPassphrase(USER_ID, "new passphrase");
+      expect(keyStoreState.keyId).toBe("2");
+      expect(keyStoreState.retired["1"]).toEqual(oldKey);
+    }, 60000);
+
+    it("keeps every earlier retired key when rotating again", async () => {
+      const { oldKey } = await setupAndRotate();
+      const secondKey = keyStoreState.key!;
+      await rotateContentKey(USER_ID, "new passphrase", "third passphrase");
+
+      expect(keyStoreState.keyId).toBe("3");
+      expect(keyStoreState.retired["1"]).toEqual(oldKey);
+      expect(keyStoreState.retired["2"]).toEqual(secondKey);
+    }, 90000);
+
+    it("leaves the key row untouched and returns no recovery code when the RPC fails", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      const before = { ...rows.get(USER_ID) };
+      const oldKey = keyStoreState.key!;
+      rpcError = new Error("network dropped");
+
+      await expect(
+        rotateContentKey(USER_ID, "old passphrase", "new passphrase"),
+      ).rejects.toThrow("network dropped");
+
+      expect(rows.get(USER_ID)).toEqual(before);
+      expect(keyStoreState.key).toEqual(oldKey);
+      expect(keyStoreState.keyId).toBe("1");
+      expect(signOutMock).not.toHaveBeenCalled();
+    }, 60000);
+
+    it("signs out every other session only after the commit", async () => {
+      await setupAndRotate();
+      expect(signOutMock).toHaveBeenCalledWith({ scope: "others" });
+      expect(rpcMock.mock.invocationCallOrder[0]).toBeLessThan(
+        signOutMock.mock.invocationCallOrder[0],
+      );
+    }, 60000);
+
+    it("still returns the recovery code if signing out other sessions fails", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      signOutError = new Error("offline");
+
+      const result = await rotateContentKey(
+        USER_ID,
+        "old passphrase",
+        "new passphrase",
+      );
+
+      expect(result.recoveryCode).toMatch(/^[0-9A-Z-]+$/);
+      expect(result.otherSessionsSignedOut).toBe(false);
+    }, 60000);
+
+    it("refuses to rotate without the current passphrase, leaving the key row untouched", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      const before = { ...rows.get(USER_ID) };
+
+      await expect(
+        rotateContentKey(USER_ID, "wrong passphrase", "new passphrase"),
+      ).rejects.toBeInstanceOf(UnlockError);
+
+      expect(rpcMock).not.toHaveBeenCalled();
+      expect(rows.get(USER_ID)).toEqual(before);
+    }, 60000);
+
+    it("refuses to rotate while locked", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      await keyStore.clear();
+      await expect(
+        rotateContentKey(USER_ID, "old passphrase", "new passphrase"),
+      ).rejects.toBeInstanceOf(UnlockError);
+    }, 60000);
+
+    it("markResealComplete drops retired keys, but not after a newer rotation", async () => {
+      await setupAndRotate();
+      await markResealComplete(USER_ID, "1");
+      expect(rows.get(USER_ID)?.retired_keys).toHaveProperty("1");
+
+      await markResealComplete(USER_ID, "2");
+      expect(rows.get(USER_ID)?.retired_keys).toEqual({});
+      expect(keyStoreState.retired).toEqual({});
+      expect(rows.get(USER_ID)?.sealed_v2_at).toEqual(expect.any(String));
+    }, 60000);
+  });
 });
