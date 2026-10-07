@@ -1091,6 +1091,9 @@ CREATE POLICY "Users can view own habit_imports" ON public.habit_imports
   FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own habit_imports" ON public.habit_imports
   FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- Only the Re-seal updates a row, to rewrite its sealing; the content stays as imported.
+CREATE POLICY "Users can update own habit_imports" ON public.habit_imports
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can delete own habit_imports" ON public.habit_imports
   FOR DELETE USING (auth.uid() = user_id);
 

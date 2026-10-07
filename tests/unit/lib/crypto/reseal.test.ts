@@ -130,6 +130,15 @@ describe("runReseal", () => {
     expect(progressCalls.at(-1)).toEqual({ done: 3, total: 3 });
   });
 
+  it("counts what it wrote, so a pass that finds nothing left returns zero", async () => {
+    fakeClient = createFakeSupabaseClient({
+      tasks: [{ id: "t1", user_id: USER_ID, content: "Buy milk" }],
+    });
+
+    expect((await runReseal(USER_ID)).sealed).toBe(1);
+    expect((await runReseal(USER_ID)).sealed).toBe(0);
+  });
+
   it("skips rows that only belong to a different user", async () => {
     fakeClient = createFakeSupabaseClient({
       tasks: [
@@ -769,7 +778,7 @@ describe("runReseal", () => {
       }
     });
 
-    it("fails rather than skipping a value whose key this device does not hold", async () => {
+    it("reports a value whose key this device does not hold as unreadable", async () => {
       fakeClient = createFakeSupabaseClient({
         tasks: [
           {
@@ -788,7 +797,11 @@ describe("runReseal", () => {
         ],
       });
 
-      await expect(runReseal(USER_ID)).rejects.toThrow(/key is unavailable/);
+      const { unreadable } = await runReseal(USER_ID);
+
+      expect(unreadable).toEqual([
+        { table: "tasks", id: "t1", column: "content" },
+      ]);
     });
 
     it("reports a corrupted -v1 value the same way instead of failing the pass", async () => {
@@ -800,7 +813,7 @@ describe("runReseal", () => {
         ],
       });
 
-      expect(await runReseal(USER_ID)).toEqual([
+      expect((await runReseal(USER_ID)).unreadable).toEqual([
         { table: "tasks", id: "t1", column: "content" },
       ]);
       expect(fakeClient.rawRows("tasks")[0].content).toBe(corrupted);
@@ -839,7 +852,7 @@ describe("runReseal", () => {
         ],
       });
 
-      const unreadable = await runReseal(USER_ID);
+      const { unreadable } = await runReseal(USER_ID);
 
       expect(unreadable).toEqual([
         { table: "tasks", id: "t1", column: "content" },

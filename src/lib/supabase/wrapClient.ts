@@ -129,7 +129,8 @@ function rowNeedsEncryption(
   );
 }
 
-// Server rejection hints mapped to the client error each one surfaces as.
+// Server rejection hints mapped to the client error each one is thrown as. Thrown, like a
+// locked key, because most call sites rethrow only error.message and would drop the code.
 const SERVER_HINT_ERRORS: Record<string, { code: string; message: string }> = {
   // The server's marker of a finished upgrade rejects `-v1` writes from a stale app.
   sealing_scheme_outdated: {
@@ -296,9 +297,10 @@ async function decryptResult(
       typeof result.error.hint === "string"
         ? SERVER_HINT_ERRORS[result.error.hint]
         : undefined;
-    return mapped
-      ? { ...result, error: { ...result.error, ...mapped } }
-      : result;
+    if (mapped) {
+      throw Object.assign(new Error(mapped.message), result.error, mapped);
+    }
+    return result;
   }
   if (!isPlainObject(result) || result.error || result.data == null) {
     return result;

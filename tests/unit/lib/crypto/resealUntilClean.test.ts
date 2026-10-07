@@ -3,18 +3,12 @@ import {
   resealUntilClean,
   UnreadableContentError,
 } from "@/lib/crypto/resealUntilClean";
-import {
-  findPendingQueueRows,
-  findPendingRows,
-  runReseal,
-} from "@/lib/crypto/reseal";
+import { runReseal } from "@/lib/crypto/reseal";
 import { keyStore } from "@/lib/crypto/keyStore";
 import { markResealComplete } from "@/lib/crypto/keyManager";
 
 vi.mock("@/lib/crypto/reseal", () => ({
   runReseal: vi.fn(),
-  findPendingRows: vi.fn(),
-  findPendingQueueRows: vi.fn(),
 }));
 
 vi.mock("@/lib/crypto/keyStore", () => ({
@@ -26,14 +20,13 @@ vi.mock("@/lib/crypto/keyManager", () => ({
 }));
 
 const USER_ID = "user-1";
+const clean = { unreadable: [], sealed: 0 };
 
 describe("resealUntilClean", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    vi.mocked(markResealComplete).mockResolvedValue(undefined);
-    vi.mocked(runReseal).mockResolvedValue([]);
-    vi.mocked(findPendingRows).mockResolvedValue([]);
-    vi.mocked(findPendingQueueRows).mockResolvedValue([]);
+    vi.mocked(markResealComplete).mockResolvedValue(true);
+    vi.mocked(runReseal).mockResolvedValue(clean);
     vi.mocked(keyStore.loadKeyring).mockResolvedValue({
       keyId: "2",
       key: new Uint8Array(32),
@@ -45,13 +38,21 @@ describe("resealUntilClean", () => {
     await resealUntilClean(USER_ID, vi.fn());
 
     expect(markResealComplete).toHaveBeenCalledWith(USER_ID, "2");
-    expect(findPendingQueueRows).toHaveBeenCalledWith(USER_ID, "2");
   });
 
-  it("does not set the marker while an unupgraded value remains", async () => {
-    vi.mocked(findPendingRows).mockResolvedValue([
-      { table: "tasks", id: "t1", updatedAt: null, row: {} },
-    ]);
+  it("confirms with another pass after one that wrote something", async () => {
+    vi.mocked(runReseal)
+      .mockResolvedValueOnce({ unreadable: [], sealed: 3 })
+      .mockResolvedValue(clean);
+
+    await resealUntilClean(USER_ID, vi.fn());
+
+    expect(runReseal).toHaveBeenCalledTimes(2);
+    expect(markResealComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not set the marker while every pass still finds work", async () => {
+    vi.mocked(runReseal).mockResolvedValue({ unreadable: [], sealed: 1 });
 
     await expect(resealUntilClean(USER_ID, vi.fn())).rejects.toThrow(
       /still needs upgrading/,
@@ -59,10 +60,10 @@ describe("resealUntilClean", () => {
     expect(markResealComplete).not.toHaveBeenCalled();
   });
 
-  it("picks up a conflicting edit on a second pass", async () => {
+  it("picks up a conflicting edit on a later pass", async () => {
     vi.mocked(runReseal)
       .mockRejectedValueOnce(new Error("Re-seal conflict: tasks row t1"))
-      .mockResolvedValue([]);
+      .mockResolvedValue(clean);
 
     await resealUntilClean(USER_ID, vi.fn());
 
@@ -70,12 +71,19 @@ describe("resealUntilClean", () => {
     expect(markResealComplete).toHaveBeenCalled();
   });
 
+  it("reports why it stopped, not an earlier conflict a later pass got past", async () => {
+    vi.mocked(runReseal)
+      .mockRejectedValueOnce(new Error("Re-seal conflict: notification n1"))
+      .mockResolvedValue({ unreadable: [], sealed: 1 });
+
+    await expect(resealUntilClean(USER_ID, vi.fn())).rejects.toThrow(
+      /still needs upgrading/,
+    );
+  });
+
   it("stops at the first clean pass that leaves only unreadable values, keeping the retired key", async () => {
     const unreadable = [{ table: "tasks", id: "t1", column: "content" }];
-    vi.mocked(runReseal).mockResolvedValue(unreadable);
-    vi.mocked(findPendingRows).mockResolvedValue([
-      { table: "tasks", id: "t1", updatedAt: null, row: {} },
-    ]);
+    vi.mocked(runReseal).mockResolvedValue({ unreadable, sealed: 0 });
 
     const error = await resealUntilClean(USER_ID, vi.fn()).catch((e) => e);
 
@@ -84,5 +92,13 @@ describe("resealUntilClean", () => {
     expect(error.message).toMatch(/tasks\.content of row t1/);
     expect(runReseal).toHaveBeenCalledTimes(1);
     expect(markResealComplete).not.toHaveBeenCalled();
+  });
+
+  it("fails instead of reporting success when the key rotated under the pass", async () => {
+    vi.mocked(markResealComplete).mockResolvedValue(false);
+
+    await expect(resealUntilClean(USER_ID, vi.fn())).rejects.toThrow(
+      /key changed during the Re-seal/,
+    );
   });
 });

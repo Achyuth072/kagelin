@@ -149,6 +149,9 @@ const CONTENT_FREE_NOTIFICATION_BODIES = new Set([
   "Your break is over. Time to focus!",
 ]);
 
+const isLive = (status: string) =>
+  status === "pending" || status === "processing";
+
 // Overwrite plaintext task titles in legacy notification bodies.
 async function redactLegacyPlaintextNotifications(
   userId: string,
@@ -183,7 +186,7 @@ async function redactLegacyPlaintextNotifications(
     };
     const patch: Record<string, unknown> = { payload: redacted };
     // Prevent pending notifications from delivering generic copy.
-    if (row.status === "pending" || row.status === "processing") {
+    if (isLive(row.status)) {
       patch.status = "cancelled";
     }
 
@@ -227,9 +230,6 @@ interface QueueRow {
   };
 }
 
-const isLive = (status: string) =>
-  status === "pending" || status === "processing";
-
 function sealedCopies(row: QueueRow) {
   return SEALED_PAYLOAD_FIELDS.flatMap(([key, role]) => {
     const copy = row.payload?.[key];
@@ -264,9 +264,10 @@ export async function findPendingQueueRows(
 async function resealNotificationQueue(
   userId: string,
   ring: Keyring,
-): Promise<void> {
+): Promise<number> {
   const raw = createRawClient();
-  for (const row of await findPendingQueueRows(userId, ring.keyId)) {
+  const rows = await findPendingQueueRows(userId, ring.keyId);
+  for (const row of rows) {
     const payload = { ...row.payload };
     for (const { key, role, copy } of sealedCopies(row)) {
       const { ciphertext, template } = copy;
@@ -304,6 +305,7 @@ async function resealNotificationQueue(
       );
     }
   }
+  return rows.length;
 }
 
 export interface UnreadableValue {
@@ -312,14 +314,20 @@ export interface UnreadableValue {
   column: string;
 }
 
+export interface ResealResult {
+  unreadable: UnreadableValue[];
+  // Rows and queued notifications rewritten; zero means the pass found nothing else to do.
+  sealed: number;
+}
+
 // Re-seals every value not yet in the current scheme under the current key,
 // bound to its row; plaintext is the special case with nothing to open first.
-// A value that cannot be opened (tampered, moved or corrupted) is left as it is and
-// returned, so the pass still finishes every other row.
+// A value that cannot be opened (tampered, moved, corrupted or under a key this device
+// does not hold) is left as it is and returned, so the pass still finishes every other row.
 export async function runReseal(
   userId: string,
   onProgress?: (progress: ResealProgress) => void,
-): Promise<UnreadableValue[]> {
+): Promise<ResealResult> {
   const ring = await keyStore.loadKeyring(userId);
   if (!ring) {
     throw new Error("Cannot re-seal: the content key is unavailable.");
@@ -348,17 +356,14 @@ export async function runReseal(
         let plaintext: string;
         if (isCiphertext(value)) {
           const openingKey = keyForEnvelope(ring, value);
-          if (!openingKey) {
-            throw new Error(
-              `Cannot re-seal ${table}.${field} of row ${id}: its key is unavailable.`,
-            );
-          }
-          try {
-            plaintext = await decryptField(openingKey, value, binding);
-          } catch {
+          const opened = openingKey
+            ? await decryptField(openingKey, value, binding).catch(() => null)
+            : null;
+          if (opened === null) {
             unreadable.push({ table, id, column: field });
             return;
           }
+          plaintext = opened;
         } else {
           plaintext = isJsonField(table, field)
             ? JSON.stringify(value)
@@ -404,6 +409,6 @@ export async function runReseal(
     await Promise.all(batch.map(migrateRow));
   }
 
-  await resealNotificationQueue(userId, ring);
-  return unreadable;
+  const queueSealed = await resealNotificationQueue(userId, ring);
+  return { unreadable, sealed: done + queueSealed };
 }

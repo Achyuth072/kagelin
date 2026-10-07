@@ -34,8 +34,15 @@ export function useEncryptionGateActions(): EncryptionGateActions {
 
 export function EncryptionGate({ children }: { children: React.ReactNode }) {
   const { user, isGuestMode } = useAuth();
-  const { status, recheck, lock, resealDue, finishReseal, beginReseal } =
-    useEncryptionGate();
+  const {
+    status,
+    recheck,
+    lock,
+    resealDue,
+    resealRun,
+    finishReseal,
+    beginReseal,
+  } = useEncryptionGate();
 
   if (!user || isGuestMode || status === "not-applicable") {
     return <>{children}</>;
@@ -94,7 +101,11 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
     <EncryptionGateContext.Provider value={{ lock, beginReseal }}>
       {children}
       {resealDue && (
-        <ResealIndicator userId={user.id} onComplete={finishReseal} />
+        <ResealIndicator
+          key={resealRun}
+          userId={user.id}
+          onComplete={() => finishReseal(resealRun)}
+        />
       )}
     </EncryptionGateContext.Provider>
   );

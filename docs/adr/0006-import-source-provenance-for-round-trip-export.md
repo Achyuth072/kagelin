@@ -41,8 +41,9 @@ but that needs Storage infra and isn't queryable.
   afterward aren't reflected. The exporter will need to decide whether to
   export current state or reproduce the original; this baseline keeps the
   original.
-- Rows are write-once (no UPDATE policy) and deletable, so "delete my data"
-  can clear them.
+- Rows are write-once in content and deletable, so "delete my data" can clear
+  them. An owner UPDATE policy exists only so the encryption Re-seal can
+  rewrite a row's sealing; nothing else updates these rows.
 - This makes round-trip export possible later. It does not build it — no
   export writer ships here.
 

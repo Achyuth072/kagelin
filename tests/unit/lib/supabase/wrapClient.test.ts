@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   wrapSupabaseClient,
   MISSING_ROW_ID_CODE,
+  isContentKeyUnavailableError,
 } from "@/lib/supabase/wrapClient";
 import { FIELD_MAP, type FieldMap } from "@/lib/supabase/fieldMap";
 import { generateMasterKey } from "@/lib/crypto/masterKey";
@@ -700,7 +701,7 @@ describe("wrapSupabaseClient — sealing writes row-bound", () => {
     },
   );
 
-  it("maps the server's old-scheme rejection to an update-the-app error", async () => {
+  it("throws the server's old-scheme rejection as an update-the-app error", async () => {
     const raw = createFakeSupabaseClient(
       {},
       {
@@ -715,10 +716,16 @@ describe("wrapSupabaseClient — sealing writes row-bound", () => {
     );
     const client = wrapSupabaseClient(raw, FIELD_MAP);
 
-    const { error } = await client
+    const error = await client
       .from("tasks")
-      .insert({ id: "t1", content: "x" });
+      .insert({ id: "t1", content: "x" })
+      .then(
+        () => null,
+        (e: unknown) => e,
+      );
 
+    // Thrown like a locked key, so call sites that rethrow only error.message keep the code.
+    expect(error).toBeInstanceOf(Error);
     expect(error).toMatchObject({
       code: "app_update_required",
       message: "Kagelin has been updated. Reload the app to keep saving.",
@@ -784,7 +791,7 @@ describe("wrapSupabaseClient — during a rotation's Re-seal", () => {
     });
   });
 
-  it("maps the server's retired-key rejection to the unlock-again error", async () => {
+  it("throws the server's retired-key rejection as the unlock-again error", async () => {
     const raw = createFakeSupabaseClient(
       {},
       {
@@ -797,10 +804,8 @@ describe("wrapSupabaseClient — during a rotation's Re-seal", () => {
     );
     const client = wrapSupabaseClient(raw, FIELD_MAP);
 
-    const { error } = await client
-      .from("tasks")
-      .insert({ id: "t1", content: "Stale write" });
-
-    expect(error?.code).toBe("content_key_unavailable");
+    await expect(
+      client.from("tasks").insert({ id: "t1", content: "Stale write" }),
+    ).rejects.toSatisfy(isContentKeyUnavailableError);
   });
 });

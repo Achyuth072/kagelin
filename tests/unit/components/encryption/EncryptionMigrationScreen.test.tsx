@@ -22,7 +22,7 @@ describe("EncryptionMigrationScreen", () => {
     vi.mocked(runReseal).mockImplementation(async (_userId, onProgress) => {
       onProgress?.({ done: 1, total: 2, table: "tasks" });
       onProgress?.({ done: 2, total: 2, table: "tasks" });
-      return [];
+      return { unreadable: [], sealed: 2 };
     });
     vi.mocked(markMigrationComplete).mockResolvedValue(undefined);
     const onComplete = vi.fn();
@@ -42,7 +42,7 @@ describe("EncryptionMigrationScreen", () => {
       (_userId, onProgress) =>
         new Promise((resolve) => {
           onProgress?.({ done: 3, total: 10, table: "habits" });
-          resolveMigration = () => resolve([]);
+          resolveMigration = () => resolve({ unreadable: [], sealed: 0 });
         }),
     );
 
@@ -71,16 +71,17 @@ describe("EncryptionMigrationScreen", () => {
     expect(markMigrationComplete).not.toHaveBeenCalled();
     expect(onComplete).not.toHaveBeenCalled();
 
-    vi.mocked(runReseal).mockResolvedValue([]);
+    vi.mocked(runReseal).mockResolvedValue({ unreadable: [], sealed: 0 });
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
   });
 
   it("does not mark migration complete while a value can't be opened", async () => {
-    vi.mocked(runReseal).mockResolvedValue([
-      { table: "tasks", id: "t1", column: "content" },
-    ]);
+    vi.mocked(runReseal).mockResolvedValue({
+      unreadable: [{ table: "tasks", id: "t1", column: "content" }],
+      sealed: 0,
+    });
     const onComplete = vi.fn();
 
     render(
@@ -93,7 +94,7 @@ describe("EncryptionMigrationScreen", () => {
   });
 
   it("still calls onComplete under React StrictMode's dev-only double effect invocation", async () => {
-    vi.mocked(runReseal).mockResolvedValue([]);
+    vi.mocked(runReseal).mockResolvedValue({ unreadable: [], sealed: 0 });
     vi.mocked(markMigrationComplete).mockResolvedValue(undefined);
     const onComplete = vi.fn();
 

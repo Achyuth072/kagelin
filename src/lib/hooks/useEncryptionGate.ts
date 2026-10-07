@@ -36,19 +36,39 @@ function resolveStatus(
   return "unlocked";
 }
 
+// Re-reads the keyring so a key this device saved meanwhile (a rotation) is not overwritten.
+async function dropRetiredKeysNotIn(
+  userId: string,
+  keyId: string,
+  serverRetired: Record<string, unknown>,
+): Promise<void> {
+  const ring = await keyStore.loadKeyring(userId);
+  if (!ring || ring.keyId !== keyId) return;
+  const kept = Object.entries(ring.retired).filter(
+    ([id]) => id in serverRetired,
+  );
+  if (kept.length < Object.keys(ring.retired).length) {
+    await keyStore.save(userId, ring.key, keyId, Object.fromEntries(kept));
+  }
+}
+
 export function useEncryptionGate(): {
   status: EncryptionGateStatus;
   recheck: () => void;
   lock: () => Promise<void>;
   resealDue: boolean;
-  finishReseal: () => void;
+  // Changes when a new Re-seal must replace a running one, as after a rotation.
+  resealRun: number;
+  // Takes the run it finishes, so a run a rotation replaced cannot end the new one.
+  finishReseal: (run: number) => void;
   beginReseal: () => void;
 } {
   const { user, loading: authLoading, isGuestMode } = useAuth();
   const queryClient = useQueryClient();
   const [asyncStatus, setAsyncStatus] = useState<AsyncStatus>("loading");
   const [version, setVersion] = useState(0);
-  const [resealRequested, setResealRequested] = useState(false);
+  // 0 while no Re-seal is due.
+  const [resealRun, setResealRun] = useState(0);
   const autoLockEnabled = useUiStore((s) => s.autoLockEnabled);
   const autoLockMinutes = useUiStore((s) => s.autoLockMinutes);
   // Avoid re-running the status effect on settings changes.
@@ -74,9 +94,22 @@ export function useEncryptionGate(): {
         ]);
         if (cancelled) return;
 
-        // A key rotated on another device cannot read or write here until unlocked again.
+        const rowKeyId = currentKeyIdOf(row);
+        // A key rotated on another device cannot read or write here until unlocked again,
+        // and is the leaked one, so it goes with everything it decrypted.
+        if (row && keyring && Number(keyring.keyId) < Number(rowKeyId)) {
+          await purgeDeviceContent(queryClient);
+          if (!cancelled) setAsyncStatus("needs-unlock");
+          return;
+        }
         const cachedKey =
-          keyring && keyring.keyId === currentKeyIdOf(row) ? keyring.key : null;
+          keyring && keyring.keyId === rowKeyId ? keyring.key : null;
+
+        // Another device's Re-seal deleted these server-side. A row cached before the
+        // column existed says nothing about them.
+        if (row?.retired_keys && cachedKey) {
+          await dropRetiredKeysNotIn(user.id, rowKeyId, row.retired_keys);
+        }
 
         const wouldUnlock =
           !!row &&
@@ -98,11 +131,11 @@ export function useEncryptionGate(): {
         }
 
         const status = resolveStatus(row, cachedKey);
-        setResealRequested(
+        const resealDue =
           status === "unlocked" &&
-            (row?.sealed_v2_at === null ||
-              Object.keys(row?.retired_keys ?? {}).length > 0),
-        );
+          (row?.sealed_v2_at === null ||
+            Object.keys(row?.retired_keys ?? {}).length > 0);
+        setResealRun((run) => (resealDue ? run || 1 : 0));
         setAsyncStatus(status);
       } catch {
         if (!cancelled) setAsyncStatus("unavailable");
@@ -131,8 +164,11 @@ export function useEncryptionGate(): {
     lock,
   );
 
-  const finishReseal = useCallback(() => setResealRequested(false), []);
-  const beginReseal = useCallback(() => setResealRequested(true), []);
+  const finishReseal = useCallback(
+    (run: number) => setResealRun((current) => (current === run ? 0 : current)),
+    [],
+  );
+  const beginReseal = useCallback(() => setResealRun((run) => run + 1), []);
 
   const status: EncryptionGateStatus = authLoading
     ? "loading"
@@ -144,7 +180,8 @@ export function useEncryptionGate(): {
     status,
     recheck,
     lock,
-    resealDue: resealRequested && status === "unlocked",
+    resealDue: resealRun > 0 && status === "unlocked",
+    resealRun,
     finishReseal,
     beginReseal,
   };

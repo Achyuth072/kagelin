@@ -18,14 +18,19 @@ vi.mock("@/lib/crypto/keyManager", () => ({
 }));
 
 const keyStoreLoadMock = vi.fn();
+const keyStoreSaveMock = vi.fn();
 let keyStoreKeyId = "1";
+let keyStoreRetired: Record<string, Uint8Array> = {};
 vi.mock("@/lib/crypto/keyStore", () => ({
   keyStore: {
     load: (...args: unknown[]) => keyStoreLoadMock(...args),
     loadKeyring: async (...args: unknown[]) => {
       const key = await keyStoreLoadMock(...args);
-      return key ? { keyId: keyStoreKeyId, key, retired: {} } : null;
+      return key
+        ? { keyId: keyStoreKeyId, key, retired: keyStoreRetired }
+        : null;
     },
+    save: (...args: unknown[]) => keyStoreSaveMock(...args),
   },
 }));
 
@@ -69,6 +74,7 @@ function withQueryClient(children: React.ReactNode) {
 describe("useEncryptionGate", () => {
   beforeEach(() => {
     keyStoreKeyId = "1";
+    keyStoreRetired = {};
     vi.clearAllMocks();
     authState.user = { id: "user-1" };
     authState.loading = false;
@@ -127,6 +133,78 @@ describe("useEncryptionGate", () => {
       wrapper: ({ children }) => withQueryClient(children),
     });
     await waitFor(() => expect(result.current.status).toBe("needs-unlock"));
+    expect(purgeDeviceContentMock).toHaveBeenCalled();
+  });
+
+  it("keeps a key newer than a key row cached while offline", async () => {
+    getEncryptionKeyRowMock.mockResolvedValue({
+      migrated_at: "2026-09-04T00:00:00Z",
+      current_key_id: 1,
+    });
+    keyStoreLoadMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+    keyStoreKeyId = "2";
+
+    const { result } = renderHook(() => useEncryptionGate(), {
+      wrapper: ({ children }) => withQueryClient(children),
+    });
+    await waitFor(() => expect(result.current.status).toBe("needs-unlock"));
+    expect(purgeDeviceContentMock).not.toHaveBeenCalled();
+  });
+
+  it("drops local copies of retired keys another device's Re-seal deleted", async () => {
+    const key = new Uint8Array([1, 2, 3]);
+    getEncryptionKeyRowMock.mockResolvedValue({
+      migrated_at: "2026-09-04T00:00:00Z",
+      sealed_v2_at: "2026-10-07T00:00:00Z",
+      current_key_id: 2,
+      retired_keys: {},
+    });
+    keyStoreLoadMock.mockResolvedValue(key);
+    keyStoreKeyId = "2";
+    keyStoreRetired = { "1": new Uint8Array([9]) };
+
+    const { result } = renderHook(() => useEncryptionGate(), {
+      wrapper: ({ children }) => withQueryClient(children),
+    });
+    await waitFor(() => expect(result.current.status).toBe("unlocked"));
+    expect(keyStoreSaveMock).toHaveBeenCalledWith("user-1", key, "2", {});
+  });
+
+  it("restarts a running Re-seal when a rotation begins another", async () => {
+    getEncryptionKeyRowMock.mockResolvedValue({
+      migrated_at: "2026-09-04T00:00:00Z",
+      sealed_v2_at: null,
+    });
+    keyStoreLoadMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+
+    const { result } = renderHook(() => useEncryptionGate(), {
+      wrapper: ({ children }) => withQueryClient(children),
+    });
+    await waitFor(() => expect(result.current.resealDue).toBe(true));
+    const before = result.current.resealRun;
+
+    act(() => result.current.beginReseal());
+    expect(result.current.resealDue).toBe(true);
+    expect(result.current.resealRun).not.toBe(before);
+
+    act(() => result.current.finishReseal(before));
+    expect(result.current.resealDue).toBe(true);
+  });
+
+  it("keeps retired keys when the key row was cached before the column existed", async () => {
+    getEncryptionKeyRowMock.mockResolvedValue({
+      migrated_at: "2026-09-04T00:00:00Z",
+      current_key_id: 2,
+    });
+    keyStoreLoadMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+    keyStoreKeyId = "2";
+    keyStoreRetired = { "1": new Uint8Array([9]) };
+
+    const { result } = renderHook(() => useEncryptionGate(), {
+      wrapper: ({ children }) => withQueryClient(children),
+    });
+    await waitFor(() => expect(result.current.status).toBe("unlocked"));
+    expect(keyStoreSaveMock).not.toHaveBeenCalled();
   });
 
   it("starts a Re-seal on demand once unlocked, as after a rotation", async () => {
@@ -206,7 +284,7 @@ describe("useEncryptionGate", () => {
     await waitFor(() => expect(result.current.status).toBe("unlocked"));
     expect(result.current.resealDue).toBe(true);
 
-    act(() => result.current.finishReseal());
+    act(() => result.current.finishReseal(result.current.resealRun));
     expect(result.current.resealDue).toBe(false);
   });
 

@@ -29,7 +29,7 @@ export function EncryptionMigrationScreen({
     (async () => {
       try {
         setError(null);
-        const unreadable = await runReseal(userId, (p) => {
+        const { unreadable } = await runReseal(userId, (p) => {
           if (!cancelled) setProgress(p);
         });
         if (unreadable.length > 0) throw new UnreadableContentError(unreadable);

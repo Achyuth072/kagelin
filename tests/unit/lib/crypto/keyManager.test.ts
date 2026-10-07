@@ -641,6 +641,41 @@ describe("keyManager", () => {
       expect(result.recoveryCode).toMatch(/^[0-9A-Z-]+$/);
       expect(captureExceptionMock).toHaveBeenCalledWith(saveError);
       expect(signOutMock).toHaveBeenCalledWith({ scope: "others" });
+      expect(result.keySavedOnDevice).toBe(false);
+    }, 60000);
+
+    it("refuses a stale device's key-row writes after a rotation on another device", async () => {
+      const { oldKey } = await setupAndRotate();
+      const after = structuredClone(rows.get(USER_ID));
+      keyStoreState.key = oldKey;
+      keyStoreState.keyId = "1";
+      keyStoreState.retired = {};
+
+      await expect(reissueRecoveryCode(USER_ID)).rejects.toBeInstanceOf(
+        UnlockError,
+      );
+      await expect(
+        setPassphraseAfterRecovery(USER_ID, "stale passphrase"),
+      ).rejects.toBeInstanceOf(UnlockError);
+      expect(rows.get(USER_ID)).toEqual(after);
+    }, 60000);
+
+    it("refuses a passphrase change that a rotation overtook", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      const fetched = structuredClone(rows.get(USER_ID));
+      await rotateContentKey(USER_ID, "old passphrase", "new passphrase");
+      const after = structuredClone(rows.get(USER_ID));
+      // The change read the key row before the rotation committed.
+      rows.set(USER_ID, fetched!);
+      const readBeforeRotation = changePassphrase(
+        USER_ID,
+        "old passphrase",
+        "changed passphrase",
+      );
+      rows.set(USER_ID, after!);
+
+      await expect(readBeforeRotation).rejects.toBeInstanceOf(UnlockError);
+      expect(rows.get(USER_ID)).toEqual(after);
     }, 60000);
 
     it("refuses to rotate without the current passphrase, leaving the key row untouched", async () => {
@@ -665,10 +700,10 @@ describe("keyManager", () => {
 
     it("markResealComplete drops retired keys, but not after a newer rotation", async () => {
       await setupAndRotate();
-      await markResealComplete(USER_ID, "1");
+      expect(await markResealComplete(USER_ID, "1")).toBe(false);
       expect(rows.get(USER_ID)?.retired_keys).toHaveProperty("1");
 
-      await markResealComplete(USER_ID, "2");
+      expect(await markResealComplete(USER_ID, "2")).toBe(true);
       expect(rows.get(USER_ID)?.retired_keys).toEqual({});
       expect(keyStoreState.retired).toEqual({});
       expect(rows.get(USER_ID)?.sealed_v2_at).toEqual(expect.any(String));

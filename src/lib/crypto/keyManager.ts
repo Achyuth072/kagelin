@@ -52,8 +52,11 @@ async function unwrapOrThrow(
   }
 }
 
+// Guarded on the key the caller holds: a device that missed a rotation must not write a
+// wrapper of the retired key into a row that now names the new one.
 async function updateEncryptionKeyRow(
   userId: string,
+  keyId: string,
   patch: Record<string, unknown>,
 ): Promise<EncryptionKeyRow> {
   const supabase = createClient();
@@ -61,9 +64,15 @@ async function updateEncryptionKeyRow(
     .from("encryption_keys")
     .update(patch)
     .eq("user_id", userId)
+    .eq("current_key_id", Number(keyId))
     .select()
-    .single();
+    .maybeSingle();
   if (error) throw error;
+  if (!data) {
+    throw new UnlockError(
+      "Your content key was changed on another device. Unlock again with your new passphrase.",
+    );
+  }
 
   const row = data as EncryptionKeyRow;
   await encryptionKeyRowCache.save(userId, row);
@@ -104,15 +113,21 @@ export async function getEncryptionKeyRow(
 // The blocking pass seals every value row-bound, so it completes both markers.
 export async function markMigrationComplete(userId: string): Promise<void> {
   const now = new Date().toISOString();
-  await updateEncryptionKeyRow(userId, { migrated_at: now, sealed_v2_at: now });
+  const ring = await keyStore.loadKeyring(userId);
+  if (!ring) throw new UnlockError("Unlock before finishing encryption.");
+  await updateEncryptionKeyRow(userId, ring.keyId, {
+    migrated_at: now,
+    sealed_v2_at: now,
+  });
 }
 
 // After this the server rejects `-v1` writes for the Account, and retired keys are gone.
-// Guarded on the key id the pass ran under: a rotation since then still needs those keys.
+// Guarded on the key id the pass ran under: a rotation since then still needs those keys,
+// so false means nothing was marked.
 export async function markResealComplete(
   userId: string,
   keyId: string,
-): Promise<void> {
+): Promise<boolean> {
   const { data, error } = await createClient()
     .from("encryption_keys")
     .update({ sealed_v2_at: new Date().toISOString(), retired_keys: {} })
@@ -121,11 +136,12 @@ export async function markResealComplete(
     .select()
     .maybeSingle();
   if (error) throw error;
-  if (!data) return;
+  if (!data) return false;
   await encryptionKeyRowCache.save(userId, data as EncryptionKeyRow);
   // The retired keys are gone server-side; drop the local copies too.
   const ring = await keyStore.loadKeyring(userId);
   if (ring?.keyId === keyId) await keyStore.save(userId, ring.key, keyId, {});
+  return true;
 }
 
 export interface SetupEncryptionResult {
@@ -225,7 +241,9 @@ export async function unlockWithRecoveryCode(
   );
 
   // Must persist reset requirement before caching to avoid failing open on network error.
-  await updateEncryptionKeyRow(userId, { passphrase_reset_required: true });
+  await updateEncryptionKeyRow(userId, currentKeyIdOf(row), {
+    passphrase_reset_required: true,
+  });
   await cacheMasterKey(userId, masterKey, row);
   return masterKey;
 }
@@ -233,13 +251,14 @@ export async function unlockWithRecoveryCode(
 async function rewrapPassphrase(
   userId: string,
   masterKey: Uint8Array,
+  keyId: string,
   newPassphrase: string,
 ): Promise<void> {
   const newSalt = await generateSalt();
   const newDerivedKey = await deriveKeyFromPassphrase(newPassphrase, newSalt);
   const newWrapped = await wrapMasterKey(masterKey, newDerivedKey);
 
-  const row = await updateEncryptionKeyRow(userId, {
+  const row = await updateEncryptionKeyRow(userId, keyId, {
     passphrase_salt: await bytesToBase64(newSalt),
     passphrase_kdf_params: DEFAULT_ARGON2_PARAMS,
     wrapped_key_passphrase: newWrapped,
@@ -271,24 +290,24 @@ export async function changePassphrase(
     "That passphrase isn't right.",
   );
 
-  await rewrapPassphrase(userId, masterKey, newPassphrase);
+  await rewrapPassphrase(userId, masterKey, currentKeyIdOf(row), newPassphrase);
 }
 
 export async function setPassphraseAfterRecovery(
   userId: string,
   newPassphrase: string,
 ): Promise<void> {
-  const masterKey = await keyStore.load(userId);
-  if (!masterKey) {
+  const ring = await keyStore.loadKeyring(userId);
+  if (!ring) {
     throw new UnlockError("Unlock before setting a new passphrase.");
   }
 
-  await rewrapPassphrase(userId, masterKey, newPassphrase);
+  await rewrapPassphrase(userId, ring.key, ring.keyId, newPassphrase);
 }
 
 export async function reissueRecoveryCode(userId: string): Promise<string> {
-  const masterKey = await keyStore.load(userId);
-  if (!masterKey) {
+  const ring = await keyStore.loadKeyring(userId);
+  if (!ring) {
     throw new UnlockError("Unlock before generating a new recovery code.");
   }
 
@@ -298,9 +317,9 @@ export async function reissueRecoveryCode(userId: string): Promise<string> {
     recoveryCode.raw,
     recoverySalt,
   );
-  const wrapped = await wrapMasterKey(masterKey, recoveryKey);
+  const wrapped = await wrapMasterKey(ring.key, recoveryKey);
 
-  await updateEncryptionKeyRow(userId, {
+  await updateEncryptionKeyRow(userId, ring.keyId, {
     recovery_salt: await bytesToBase64(recoverySalt),
     recovery_kdf_params: DEFAULT_ARGON2_PARAMS,
     wrapped_key_recovery: wrapped,
@@ -313,6 +332,8 @@ export interface RotateContentKeyResult {
   recoveryCode: string;
   // The rotation is committed either way; false means the user must sign out other devices themselves.
   otherSessionsSignedOut: boolean;
+  // False means this device still holds only the retired key and must unlock again.
+  keySavedOnDevice: boolean;
 }
 
 // Every wrapper is prepared before the single RPC, so a failure leaves the key row untouched
@@ -388,7 +409,8 @@ export async function rotateContentKey(
   if (error) throw error;
 
   // The rotation is committed, so the recovery code must reach the user even if this device
-  // can't store the new key; it then asks to unlock again with the new passphrase.
+  // can't store the new key.
+  let keySavedOnDevice = true;
   try {
     await encryptionKeyRowCache.save(userId, {
       ...row,
@@ -400,6 +422,7 @@ export async function rotateContentKey(
     await keyStore.save(userId, newKey, String(newKeyId), retired);
     recordActivity();
   } catch (err) {
+    keySavedOnDevice = false;
     Sentry.captureException(err);
   }
 
@@ -409,5 +432,6 @@ export async function rotateContentKey(
   return {
     recoveryCode: recoveryCode.formatted,
     otherSessionsSignedOut: !signOutError,
+    keySavedOnDevice,
   };
 }

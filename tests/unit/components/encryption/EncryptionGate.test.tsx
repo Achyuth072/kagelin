@@ -28,9 +28,16 @@ vi.mock("@/components/encryption/EncryptionMigrationScreen", () => ({
   EncryptionMigrationScreen: () => <div>migration-screen</div>,
 }));
 
-vi.mock("@/components/encryption/ResealIndicator", () => ({
-  ResealIndicator: () => <div>reseal-indicator</div>,
-}));
+const resealIndicatorMounts = vi.fn();
+vi.mock("@/components/encryption/ResealIndicator", async () => {
+  const { useEffect } = await import("react");
+  return {
+    ResealIndicator: () => {
+      useEffect(() => resealIndicatorMounts(), []);
+      return <div>reseal-indicator</div>;
+    },
+  };
+});
 
 vi.mock("@/components/encryption/NewPassphraseStep", () => ({
   NewPassphraseStep: () => <div>new-passphrase-step</div>,
@@ -40,12 +47,14 @@ function mockGate(
   status: EncryptionGateStatus,
   lock = vi.fn(),
   resealDue = false,
+  resealRun = resealDue ? 1 : 0,
 ) {
   vi.mocked(useEncryptionGate).mockReturnValue({
     status,
     recheck: vi.fn(),
     lock,
     resealDue,
+    resealRun,
     finishReseal: vi.fn(),
     beginReseal: vi.fn(),
   });
@@ -144,6 +153,23 @@ describe("EncryptionGate", () => {
     expect(screen.queryByText("app-content")).not.toBeInTheDocument();
   });
 
+  it("restarts the Re-seal indicator when a new run begins", () => {
+    mockGate("unlocked", vi.fn(), true, 1);
+    const { rerender } = render(
+      <EncryptionGate>
+        <div>app-content</div>
+      </EncryptionGate>,
+    );
+    mockGate("unlocked", vi.fn(), true, 2);
+    rerender(
+      <EncryptionGate>
+        <div>app-content</div>
+      </EncryptionGate>,
+    );
+
+    expect(resealIndicatorMounts).toHaveBeenCalledTimes(2);
+  });
+
   it("offers a retry instead of an endless spinner when the status check fails", () => {
     const recheck = vi.fn();
     vi.mocked(useEncryptionGate).mockReturnValue({
@@ -151,6 +177,7 @@ describe("EncryptionGate", () => {
       recheck,
       lock: vi.fn(),
       resealDue: false,
+      resealRun: 0,
       finishReseal: vi.fn(),
       beginReseal: vi.fn(),
     });

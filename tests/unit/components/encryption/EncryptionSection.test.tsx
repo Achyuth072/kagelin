@@ -189,6 +189,7 @@ describe("EncryptionSection", () => {
       vi.mocked(rotateContentKey).mockResolvedValue({
         recoveryCode: "ROTA-TEDC-ODE0-0000-0000-0000-0000-0000",
         otherSessionsSignedOut: true,
+        keySavedOnDevice: true,
       });
       const dialog = await reachPassphraseStep();
       expect(screen.queryByText(/ROTA-TEDC/)).not.toBeInTheDocument();
@@ -206,6 +207,32 @@ describe("EncryptionSection", () => {
         NEW_PASSPHRASE,
       );
       expect(beginReseal).toHaveBeenCalledTimes(1);
+    });
+
+    it("locks this device once the code is saved if it could not store the new key", async () => {
+      const lock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(useEncryptionGateActions).mockReturnValue({
+        lock,
+        beginReseal,
+      });
+      vi.mocked(rotateContentKey).mockResolvedValue({
+        recoveryCode: "ROTA-TEDC-ODE0-0000-0000-0000-0000-0000",
+        otherSessionsSignedOut: true,
+        keySavedOnDevice: false,
+      });
+      const dialog = await reachPassphraseStep();
+
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Rotate key" }),
+      );
+      await screen.findByText("ROTA-TEDC-ODE0-0000-0000-0000-0000-0000");
+      expect(beginReseal).not.toHaveBeenCalled();
+      expect(lock).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("checkbox"));
+      fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+      await waitFor(() => expect(lock).toHaveBeenCalledTimes(1));
     });
 
     it("shows the error and no recovery code when the rotation fails", async () => {
@@ -229,6 +256,7 @@ describe("EncryptionSection", () => {
       vi.mocked(rotateContentKey).mockResolvedValue({
         recoveryCode: "ROTA-TEDC-ODE0-0000-0000-0000-0000-0000",
         otherSessionsSignedOut: false,
+        keySavedOnDevice: true,
       });
       const dialog = await reachPassphraseStep();
 

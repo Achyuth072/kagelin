@@ -1,15 +1,15 @@
 import {
-  findPendingQueueRows,
-  findPendingRows,
   runReseal,
   type ResealProgress,
+  type ResealResult,
   type UnreadableValue,
 } from "@/lib/crypto/reseal";
 import { markResealComplete } from "@/lib/crypto/keyManager";
 import { keyStore } from "@/lib/crypto/keyStore";
 
-// A concurrent edit on another device fails one pass; the next pass picks it up.
-const MAX_PASSES = 3;
+// Only a pass that finds nothing to write proves the Account clean, so a pass that
+// writes needs one more; the rest absorb concurrent edits from another device.
+const MAX_PASSES = 4;
 
 // Retrying cannot open these, so the retired key stays until each one is fixed or deleted.
 export class UnreadableContentError extends Error {
@@ -30,21 +30,21 @@ export async function resealUntilClean(
   if (!ring) throw new Error("The content key is unavailable.");
   let lastError: unknown;
   for (let pass = 0; pass < MAX_PASSES; pass++) {
-    let unreadable: UnreadableValue[];
+    let result: ResealResult;
     try {
-      unreadable = await runReseal(userId, onProgress);
+      result = await runReseal(userId, onProgress);
     } catch (err) {
       lastError = err;
       continue;
     }
-    const isUnreadable = (row: { table: string; id: string }) =>
-      unreadable.some((v) => v.table === row.table && v.id === row.id);
-    const pending =
-      (await findPendingRows(userId)).filter((row) => !isUnreadable(row))
-        .length + (await findPendingQueueRows(userId, ring.keyId)).length;
-    if (pending > 0) continue;
-    if (unreadable.length > 0) throw new UnreadableContentError(unreadable);
-    await markResealComplete(userId, ring.keyId);
+    lastError = undefined;
+    if (result.sealed > 0) continue;
+    if (result.unreadable.length > 0) {
+      throw new UnreadableContentError(result.unreadable);
+    }
+    if (!(await markResealComplete(userId, ring.keyId))) {
+      throw new Error("The content key changed during the Re-seal.");
+    }
     return;
   }
   throw lastError ?? new Error("Some content still needs upgrading.");
