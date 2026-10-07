@@ -13,8 +13,8 @@ export interface Binding {
   rowId: string;
 }
 
-// Reserved for key rotation.
-export const CURRENT_KEY_ID = "1";
+// The key id of an Account that has never rotated.
+export const INITIAL_KEY_ID = "1";
 
 // Copies input into the current realm to satisfy libsodium's instanceof check across realms (e.g. jsdom).
 export function toUint8Array(input: Uint8Array): Uint8Array {
@@ -52,11 +52,15 @@ export function isTamperError(error: unknown): error is TamperError {
 }
 
 // True for plaintext, `-v1` and retired-key values: anything a Re-seal still has to rewrite.
-export function needsReseal(value: unknown): boolean {
+export function needsReseal(value: unknown, currentKeyId: string): boolean {
   return (
     typeof value !== "string" ||
-    !value.startsWith(`${SCHEME_V2}:${CURRENT_KEY_ID}:`)
+    !value.startsWith(`${SCHEME_V2}:${currentKeyId}:`)
   );
+}
+
+export function envelopeKeyId(envelope: string): string | undefined {
+  return envelope.split(":")[1] || undefined;
 }
 
 export function isEnvelope(value: unknown): value is string {
@@ -92,7 +96,7 @@ function bindingAad(binding: Binding): Uint8Array {
 export async function sealEnvelope(
   key: Uint8Array,
   plaintext: Uint8Array,
-  keyId: string = CURRENT_KEY_ID,
+  keyId: string = INITIAL_KEY_ID,
   binding?: Binding,
 ): Promise<string> {
   const sodium = await getSodium();

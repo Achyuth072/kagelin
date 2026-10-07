@@ -1,17 +1,34 @@
 import { get, set, del } from "idb-keyval";
 import { hasUserId } from "@/lib/storage/userScoped";
+import { INITIAL_KEY_ID } from "@/lib/crypto/envelope";
 
 const MASTER_KEY_STORAGE_KEY = "kagelin-master-key";
+
+// Reads select a key by the envelope's key id; writes always use the current one.
+export interface Keyring {
+  keyId: string;
+  key: Uint8Array;
+  retired: Record<string, Uint8Array>;
+}
 
 interface StoredMasterKey {
   userId: string;
   key: Uint8Array;
+  // Absent on records saved before rotation existed.
+  keyId?: string;
+  retired?: Record<string, Uint8Array>;
 }
 
 export interface KeyStore {
   load(userId?: string): Promise<Uint8Array | null>;
+  loadKeyring(userId?: string): Promise<Keyring | null>;
   loadUserId(): Promise<string | null>;
-  save(userId: string, key: Uint8Array): Promise<void>;
+  save(
+    userId: string,
+    key: Uint8Array,
+    keyId?: string,
+    retired?: Record<string, Uint8Array>,
+  ): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -47,12 +64,22 @@ export const keyStore: KeyStore = {
     }
     return record.key;
   },
+  async loadKeyring(userId) {
+    const key = await keyStore.load(userId);
+    const record = cached;
+    if (!key || !record) return null;
+    return {
+      keyId: record.keyId ?? INITIAL_KEY_ID,
+      key,
+      retired: record.retired ?? {},
+    };
+  },
   // The service worker has no session; the key's owner is the user its notifications were sealed for.
   async loadUserId() {
     return (await loadRecord())?.userId ?? null;
   },
-  async save(userId, key) {
-    const record: StoredMasterKey = { userId, key };
+  async save(userId, key, keyId = INITIAL_KEY_ID, retired = {}) {
+    const record: StoredMasterKey = { userId, key, keyId, retired };
     await set(MASTER_KEY_STORAGE_KEY, record);
     cached = record;
   },

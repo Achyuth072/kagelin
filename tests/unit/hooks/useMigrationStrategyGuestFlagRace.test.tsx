@@ -26,6 +26,7 @@ vi.mock("@/lib/telemetry/client", () => ({
 vi.mock("@/lib/crypto/keyStore", () => ({
   keyStore: {
     load: vi.fn(async () => null),
+    loadKeyring: vi.fn(async () => null),
     save: vi.fn(async () => {}),
     clear: vi.fn(async () => {}),
   },

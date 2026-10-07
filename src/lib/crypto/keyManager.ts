@@ -18,14 +18,29 @@ import {
 } from "@/lib/crypto/encryptionKeyRowCache";
 import { findPendingRows } from "@/lib/crypto/backfillMigration";
 import { recordActivity } from "@/lib/crypto/autoLock";
+import { INITIAL_KEY_ID } from "@/lib/crypto/envelope";
 
 export class UnlockError extends Error {}
 
 async function cacheMasterKey(
   userId: string,
   masterKey: Uint8Array,
+  row: Pick<EncryptionKeyRow, "current_key_id" | "retired_keys">,
 ): Promise<void> {
-  await keyStore.save(userId, masterKey);
+  const retired = Object.fromEntries(
+    await Promise.all(
+      Object.entries(row.retired_keys ?? {}).map(
+        async ([id, wrapped]) =>
+          [id, await unwrapMasterKey(wrapped, masterKey)] as const,
+      ),
+    ),
+  );
+  await keyStore.save(
+    userId,
+    masterKey,
+    String(row.current_key_id ?? INITIAL_KEY_ID),
+    retired,
+  );
   recordActivity();
 }
 
@@ -96,11 +111,25 @@ export async function markMigrationComplete(userId: string): Promise<void> {
   await updateEncryptionKeyRow(userId, { migrated_at: now, sealed_v2_at: now });
 }
 
-// After this the server rejects `-v1` writes for the Account.
-export async function markResealComplete(userId: string): Promise<void> {
-  await updateEncryptionKeyRow(userId, {
-    sealed_v2_at: new Date().toISOString(),
-  });
+// After this the server rejects `-v1` writes for the Account, and retired keys are gone.
+// Guarded on the key id the pass ran under: a rotation since then still needs those keys.
+export async function markResealComplete(
+  userId: string,
+  keyId: string,
+): Promise<void> {
+  const { data, error } = await createClient()
+    .from("encryption_keys")
+    .update({ sealed_v2_at: new Date().toISOString(), retired_keys: {} })
+    .eq("user_id", userId)
+    .eq("current_key_id", Number(keyId))
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return;
+  await encryptionKeyRowCache.save(userId, data as EncryptionKeyRow);
+  // The retired keys are gone server-side; drop the local copies too.
+  const ring = await keyStore.loadKeyring(userId);
+  if (ring?.keyId === keyId) await keyStore.save(userId, ring.key, keyId, {});
 }
 
 export interface SetupEncryptionResult {
@@ -146,7 +175,7 @@ export async function setupEncryption(
   });
   if (error) throw error;
 
-  await cacheMasterKey(userId, masterKey);
+  await cacheMasterKey(userId, masterKey, {});
 
   return { recoveryCode: recoveryCode.formatted };
 }
@@ -173,7 +202,7 @@ export async function unlockWithPassphrase(
     "That passphrase isn't right.",
   );
 
-  await cacheMasterKey(userId, masterKey);
+  await cacheMasterKey(userId, masterKey, row);
   return masterKey;
 }
 
@@ -201,7 +230,7 @@ export async function unlockWithRecoveryCode(
 
   // Must persist reset requirement before caching to avoid failing open on network error.
   await updateEncryptionKeyRow(userId, { passphrase_reset_required: true });
-  await cacheMasterKey(userId, masterKey);
+  await cacheMasterKey(userId, masterKey, row);
   return masterKey;
 }
 
@@ -214,13 +243,13 @@ async function rewrapPassphrase(
   const newDerivedKey = await deriveKeyFromPassphrase(newPassphrase, newSalt);
   const newWrapped = await wrapMasterKey(masterKey, newDerivedKey);
 
-  await updateEncryptionKeyRow(userId, {
+  const row = await updateEncryptionKeyRow(userId, {
     passphrase_salt: await bytesToBase64(newSalt),
     passphrase_kdf_params: DEFAULT_ARGON2_PARAMS,
     wrapped_key_passphrase: newWrapped,
     passphrase_reset_required: false,
   });
-  await cacheMasterKey(userId, masterKey);
+  await cacheMasterKey(userId, masterKey, row);
 }
 
 export async function changePassphrase(
@@ -282,4 +311,102 @@ export async function reissueRecoveryCode(userId: string): Promise<string> {
   });
 
   return recoveryCode.formatted;
+}
+
+export interface RotateContentKeyResult {
+  recoveryCode: string;
+  // The rotation is committed either way; false means the user must sign out other devices themselves.
+  otherSessionsSignedOut: boolean;
+}
+
+// Every wrapper is prepared before the single RPC, so a failure leaves the key row untouched
+// and no recovery code exists to show.
+export async function rotateContentKey(
+  userId: string,
+  currentPassphrase: string,
+  newPassphrase: string,
+): Promise<RotateContentKeyResult> {
+  const ring = await keyStore.loadKeyring(userId);
+  if (!ring) {
+    throw new UnlockError("Unlock before rotating your content key.");
+  }
+  const row = await fetchEncryptionKeyRow(userId);
+  if (!row) {
+    throw new UnlockError("Encryption isn't set up for this account yet.");
+  }
+
+  // An unlocked device alone must not be able to replace the passphrase and lock the owner out.
+  await unwrapOrThrow(
+    row.wrapped_key_passphrase,
+    await deriveKeyFromPassphrase(
+      currentPassphrase,
+      await base64ToBytes(row.passphrase_salt),
+      row.passphrase_kdf_params,
+    ),
+    "That passphrase isn't right.",
+  );
+
+  const newKey = await generateMasterKey();
+  const [passphraseSalt, recoveryCode, recoverySalt] = await Promise.all([
+    generateSalt(),
+    generateRecoveryCode(),
+    generateSalt(),
+  ]);
+  const [wrappedByPassphrase, wrappedByRecovery] = await Promise.all([
+    deriveKeyFromPassphrase(newPassphrase, passphraseSalt).then((key) =>
+      wrapMasterKey(newKey, key),
+    ),
+    deriveKeyFromPassphrase(recoveryCode.raw, recoverySalt).then((key) =>
+      wrapMasterKey(newKey, key),
+    ),
+  ]);
+
+  const retired = { [ring.keyId]: ring.key, ...ring.retired };
+  const wrappedRetired = Object.fromEntries(
+    await Promise.all(
+      Object.entries(retired).map(
+        async ([id, key]) => [id, await wrapMasterKey(key, newKey)] as const,
+      ),
+    ),
+  );
+
+  const patch = {
+    passphrase_salt: await bytesToBase64(passphraseSalt),
+    passphrase_kdf_params: DEFAULT_ARGON2_PARAMS,
+    wrapped_key_passphrase: wrappedByPassphrase,
+    recovery_salt: await bytesToBase64(recoverySalt),
+    recovery_kdf_params: DEFAULT_ARGON2_PARAMS,
+    wrapped_key_recovery: wrappedByRecovery,
+  };
+  const supabase = createClient();
+  const { data: newKeyId, error } = await supabase.rpc("rotate_content_key", {
+    p_expected_key_id: Number(ring.keyId),
+    p_passphrase_salt: patch.passphrase_salt,
+    p_passphrase_kdf_params: patch.passphrase_kdf_params,
+    p_wrapped_key_passphrase: patch.wrapped_key_passphrase,
+    p_recovery_salt: patch.recovery_salt,
+    p_recovery_kdf_params: patch.recovery_kdf_params,
+    p_wrapped_key_recovery: patch.wrapped_key_recovery,
+    p_retired_keys: wrappedRetired,
+  });
+  if (error) throw error;
+
+  await encryptionKeyRowCache.save(userId, {
+    ...row,
+    ...patch,
+    current_key_id: newKeyId as number,
+    retired_keys: wrappedRetired,
+    sealed_v2_at: null,
+    passphrase_reset_required: false,
+  });
+  await keyStore.save(userId, newKey, String(newKeyId), retired);
+  recordActivity();
+
+  const { error: signOutError } = await supabase.auth.signOut({
+    scope: "others",
+  });
+  return {
+    recoveryCode: recoveryCode.formatted,
+    otherSessionsSignedOut: !signOutError,
+  };
 }

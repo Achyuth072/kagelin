@@ -5,7 +5,7 @@ import {
   type NotificationDisplayOptions,
 } from "@/lib/notifications";
 import { encryptField } from "@/lib/crypto/contentCipher";
-import { sealEnvelope, CURRENT_KEY_ID } from "@/lib/crypto/envelope";
+import { sealEnvelope, INITIAL_KEY_ID } from "@/lib/crypto/envelope";
 
 const { loadKey } = vi.hoisted(() => ({
   loadKey: vi.fn<() => Promise<Uint8Array | null>>(),
@@ -14,6 +14,10 @@ const { loadKey } = vi.hoisted(() => ({
 vi.mock("@/lib/crypto/keyStore", () => ({
   keyStore: {
     load: loadKey,
+    loadKeyring: async () => {
+      const key = await loadKey();
+      return key ? { keyId: "1", key, retired: {} } : null;
+    },
     loadUserId: vi.fn(async () => "user-1"),
     save: vi.fn(),
     clear: vi.fn(),
@@ -515,7 +519,7 @@ describe("displayNotification with row-bound (-v2) ciphertext", () => {
     rowId: string,
     text: string,
   ) =>
-    sealEnvelope(key, new TextEncoder().encode(text), CURRENT_KEY_ID, {
+    sealEnvelope(key, new TextEncoder().encode(text), INITIAL_KEY_ID, {
       userId: "user-1",
       table,
       column,

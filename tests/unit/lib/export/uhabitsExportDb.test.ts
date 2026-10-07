@@ -789,8 +789,8 @@ describe("collectUhabitsExportData - wrapped client & guest mode", () => {
     const key = await generateMasterKey();
     const keyStoreMod = await import("@/lib/crypto/keyStore");
     const loadSpy = vi
-      .spyOn(keyStoreMod.keyStore, "load")
-      .mockResolvedValue(key);
+      .spyOn(keyStoreMod.keyStore, "loadKeyring")
+      .mockResolvedValue({ keyId: "1", key, retired: {} });
 
     await wrapped.from("habits").insert({
       id: "enc-h1",

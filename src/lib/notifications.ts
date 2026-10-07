@@ -1,4 +1,5 @@
-import { keyStore } from "@/lib/crypto/keyStore";
+import { keyStore, type Keyring } from "@/lib/crypto/keyStore";
+import { keyForEnvelope } from "@/lib/crypto/keyring";
 import { decryptField } from "@/lib/crypto/contentCipher";
 import type { Binding } from "@/lib/crypto/envelope";
 import type { HabitType } from "@/lib/types/habit";
@@ -95,7 +96,7 @@ function reminderActions(type: ReminderType, recurring?: boolean) {
 }
 
 // Notification copies are bound to the source row, not the queue row, so a copy lifted from another row fails.
-function sourceBinding(
+export function sourceBinding(
   userId: string | null,
   data: unknown,
   role: "title" | "body",
@@ -120,9 +121,9 @@ function sourceBinding(
   return undefined;
 }
 
-async function loadKeyOrNull(): Promise<Uint8Array | null> {
+async function loadKeyOrNull(): Promise<Keyring | null> {
   try {
-    return await keyStore.load();
+    return await keyStore.loadKeyring();
   } catch (err) {
     console.warn("[notifications] Could not load the content key", err);
     return null;
@@ -131,14 +132,19 @@ async function loadKeyOrNull(): Promise<Uint8Array | null> {
 
 // Returns null when the field cannot be shown decrypted.
 async function resolveEncryptedField(
-  key: Uint8Array | null,
+  key: Keyring | null,
   encrypted: EncryptedNotificationBody,
   fieldName: string,
   binding: Binding | undefined,
 ): Promise<string | null> {
-  if (!key) return null;
+  const openingKey = key && keyForEnvelope(key, encrypted.ciphertext);
+  if (!openingKey) return null;
   try {
-    const plaintext = await decryptField(key, encrypted.ciphertext, binding);
+    const plaintext = await decryptField(
+      openingKey,
+      encrypted.ciphertext,
+      binding,
+    );
     // Function replacer avoids interpreting "$" in plaintext as special replacement patterns.
     return encrypted.template.replace(PLACEHOLDER, () => plaintext);
   } catch (err) {

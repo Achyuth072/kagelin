@@ -18,8 +18,15 @@ vi.mock("@/lib/crypto/keyManager", () => ({
 }));
 
 const keyStoreLoadMock = vi.fn();
+let keyStoreKeyId = "1";
 vi.mock("@/lib/crypto/keyStore", () => ({
-  keyStore: { load: (...args: unknown[]) => keyStoreLoadMock(...args) },
+  keyStore: {
+    load: (...args: unknown[]) => keyStoreLoadMock(...args),
+    loadKeyring: async (...args: unknown[]) => {
+      const key = await keyStoreLoadMock(...args);
+      return key ? { keyId: keyStoreKeyId, key, retired: {} } : null;
+    },
+  },
 }));
 
 const purgeDeviceContentMock = vi.fn();
@@ -61,6 +68,7 @@ function withQueryClient(children: React.ReactNode) {
 
 describe("useEncryptionGate", () => {
   beforeEach(() => {
+    keyStoreKeyId = "1";
     vi.clearAllMocks();
     authState.user = { id: "user-1" };
     authState.loading = false;
@@ -105,6 +113,37 @@ describe("useEncryptionGate", () => {
       wrapper: ({ children }) => withQueryClient(children),
     });
     await waitFor(() => expect(result.current.status).toBe("needs-unlock"));
+  });
+
+  it("resolves to needs-unlock when the key was rotated on another device", async () => {
+    getEncryptionKeyRowMock.mockResolvedValue({
+      migrated_at: "2026-09-04T00:00:00Z",
+      current_key_id: 2,
+    });
+    keyStoreLoadMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+    keyStoreKeyId = "1";
+
+    const { result } = renderHook(() => useEncryptionGate(), {
+      wrapper: ({ children }) => withQueryClient(children),
+    });
+    await waitFor(() => expect(result.current.status).toBe("needs-unlock"));
+  });
+
+  it("starts a Re-seal on demand once unlocked, as after a rotation", async () => {
+    getEncryptionKeyRowMock.mockResolvedValue({
+      migrated_at: "2026-09-04T00:00:00Z",
+      sealed_v2_at: "2026-09-04T00:00:00Z",
+    });
+    keyStoreLoadMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+
+    const { result } = renderHook(() => useEncryptionGate(), {
+      wrapper: ({ children }) => withQueryClient(children),
+    });
+    await waitFor(() => expect(result.current.status).toBe("unlocked"));
+    expect(result.current.needsReseal).toBe(false);
+
+    act(() => result.current.beginReseal());
+    expect(result.current.needsReseal).toBe(true);
   });
 
   it("resolves to needs-migration when unlocked but the backfill hasn't completed", async () => {

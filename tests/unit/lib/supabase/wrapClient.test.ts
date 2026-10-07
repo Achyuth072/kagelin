@@ -9,7 +9,7 @@ import { generateMasterKey } from "@/lib/crypto/masterKey";
 import { isCiphertext, encryptField } from "@/lib/crypto/contentCipher";
 import {
   sealEnvelope,
-  CURRENT_KEY_ID,
+  INITIAL_KEY_ID,
   isTamperError,
 } from "@/lib/crypto/envelope";
 import {
@@ -17,10 +17,23 @@ import {
   type Row,
 } from "../../support/fakeSupabaseClient";
 
-const keyStoreState: { key: Uint8Array | null } = { key: null };
+const keyStoreState: {
+  key: Uint8Array | null;
+  keyId: string;
+  retired: Record<string, Uint8Array>;
+} = { key: null, keyId: "1", retired: {} };
 vi.mock("@/lib/crypto/keyStore", () => ({
   keyStore: {
     load: vi.fn(async () => keyStoreState.key),
+    loadKeyring: vi.fn(async () =>
+      keyStoreState.key
+        ? {
+            keyId: keyStoreState.keyId,
+            key: keyStoreState.key,
+            retired: keyStoreState.retired,
+          }
+        : null,
+    ),
     save: vi.fn(async () => {}),
     clear: vi.fn(async () => {}),
   },
@@ -28,6 +41,8 @@ vi.mock("@/lib/crypto/keyStore", () => ({
 
 beforeEach(async () => {
   keyStoreState.key = await generateMasterKey();
+  keyStoreState.keyId = "1";
+  keyStoreState.retired = {};
 });
 
 describe("wrapSupabaseClient — with a populated field map", () => {
@@ -452,7 +467,7 @@ describe("wrapSupabaseClient — row-bound (-v2) values", () => {
     sealEnvelope(
       keyStoreState.key!,
       new TextEncoder().encode(text),
-      CURRENT_KEY_ID,
+      INITIAL_KEY_ID,
       { userId: owner, table, column, rowId },
     );
 
@@ -706,5 +721,84 @@ describe("wrapSupabaseClient — sealing writes row-bound", () => {
       .insert({ id: "t1", content: "x" });
 
     expect(isAppUpdateRequiredError(error)).toBe(true);
+  });
+});
+
+describe("wrapSupabaseClient — during a rotation's Re-seal", () => {
+  const userId = "user-1";
+  const seal = (key: Uint8Array, keyId: string, rowId: string, text: string) =>
+    encryptField(
+      key,
+      text,
+      { userId, table: "tasks", column: "content", rowId },
+      keyId,
+    );
+
+  async function rotatedClient(rows: (oldKey: Uint8Array) => Promise<Row[]>) {
+    const oldKey = keyStoreState.key!;
+    const newKey = await generateMasterKey();
+    const seeded = await rows(oldKey);
+    keyStoreState.key = newKey;
+    keyStoreState.keyId = "2";
+    keyStoreState.retired = { "1": oldKey };
+    const raw = createFakeSupabaseClient({ tasks: seeded }, { userId });
+    return { raw, client: wrapSupabaseClient(raw, FIELD_MAP), newKey };
+  }
+
+  it("reads rows under the retired key and rows under the current key in one query", async () => {
+    const { client } = await rotatedClient(async (oldKey) => [
+      { id: "t1", content: await seal(oldKey, "1", "t1", "Sealed before") },
+    ]);
+    await client
+      .from("tasks")
+      .insert({ id: "t2", content: "Written after" })
+      .select()
+      .single();
+
+    const { data } = await client.from("tasks").select().order("id").limit(10);
+
+    expect(data.map((r: Row) => r.content)).toEqual([
+      "Sealed before",
+      "Written after",
+    ]);
+  });
+
+  it("writes under the current key id", async () => {
+    const { raw } = await rotatedClient(async () => []);
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    await client.from("tasks").insert({ id: "t9", content: "New" });
+
+    expect(raw.rawRows("tasks")[0].content).toMatch(/^xchacha20poly1305-v2:2:/);
+  });
+
+  it("asks to unlock again for a value under a key this device does not hold", async () => {
+    const { client } = await rotatedClient(async (oldKey) => [
+      { id: "t1", content: await seal(oldKey, "7", "t1", "From a later key") },
+    ]);
+
+    await expect(client.from("tasks").select().single()).rejects.toMatchObject({
+      code: "content_key_unavailable",
+    });
+  });
+
+  it("maps the server's retired-key rejection to the unlock-again error", async () => {
+    const raw = createFakeSupabaseClient(
+      {},
+      {
+        userId,
+        failWrite: () => ({
+          message: "must be sealed with the current content key",
+          hint: "content_key_retired",
+        }),
+      },
+    );
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    const { error } = await client
+      .from("tasks")
+      .insert({ id: "t1", content: "Stale write" });
+
+    expect(error?.code).toBe("content_key_unavailable");
   });
 });

@@ -2,14 +2,23 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ResealIndicator } from "@/components/encryption/ResealIndicator";
 import {
+  findPendingQueueRows,
   findPendingRows,
   runBackfillMigration,
 } from "@/lib/crypto/backfillMigration";
+import { keyStore } from "@/lib/crypto/keyStore";
 import { markResealComplete } from "@/lib/crypto/keyManager";
 
 vi.mock("@/lib/crypto/backfillMigration", () => ({
   runBackfillMigration: vi.fn(),
   findPendingRows: vi.fn(),
+  findPendingQueueRows: vi.fn(),
+}));
+
+vi.mock("@/lib/crypto/keyStore", () => ({
+  keyStore: {
+    loadKeyring: vi.fn(),
+  },
 }));
 
 vi.mock("@/lib/crypto/keyManager", () => ({
@@ -20,6 +29,12 @@ describe("ResealIndicator", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(markResealComplete).mockResolvedValue(undefined);
+    vi.mocked(findPendingQueueRows).mockResolvedValue([]);
+    vi.mocked(keyStore.loadKeyring).mockResolvedValue({
+      keyId: "2",
+      key: new Uint8Array(32),
+      retired: {},
+    });
   });
 
   it("shows progress, sets the marker once nothing is left, then reports completion", async () => {
@@ -37,7 +52,7 @@ describe("ResealIndicator", () => {
       /Upgrading encryption/,
     );
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
-    expect(markResealComplete).toHaveBeenCalledWith("user-1");
+    expect(markResealComplete).toHaveBeenCalledWith("user-1", "2");
   });
 
   it("does not set the marker while an unupgraded value remains", async () => {

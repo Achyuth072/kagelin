@@ -12,9 +12,10 @@ export async function encryptField(
   key: Uint8Array,
   plaintext: string,
   binding?: Binding,
+  keyId?: string,
 ): Promise<string> {
   const sodium = await getSodium();
-  return sealEnvelope(key, sodium.from_string(plaintext), undefined, binding);
+  return sealEnvelope(key, sodium.from_string(plaintext), keyId, binding);
 }
 
 export async function decryptField(

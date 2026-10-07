@@ -3,11 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  findPendingQueueRows,
   findPendingRows,
   runBackfillMigration,
   type MigrationProgress,
 } from "@/lib/crypto/backfillMigration";
 import { markResealComplete } from "@/lib/crypto/keyManager";
+import { keyStore } from "@/lib/crypto/keyStore";
 
 // A concurrent edit on another device fails one pass; the next pass picks it up.
 const MAX_PASSES = 3;
@@ -16,6 +18,8 @@ async function resealUntilClean(
   userId: string,
   onProgress: (progress: MigrationProgress) => void,
 ): Promise<void> {
+  const ring = await keyStore.loadKeyring(userId);
+  if (!ring) throw new Error("The content key is unavailable.");
   let lastError: unknown;
   for (let pass = 0; pass < MAX_PASSES; pass++) {
     try {
@@ -24,8 +28,11 @@ async function resealUntilClean(
       lastError = err;
       continue;
     }
-    if ((await findPendingRows(userId)).length === 0) {
-      await markResealComplete(userId);
+    const pending =
+      (await findPendingRows(userId)).length +
+      (await findPendingQueueRows(userId)).length;
+    if (pending === 0) {
+      await markResealComplete(userId, ring.keyId);
       return;
     }
   }

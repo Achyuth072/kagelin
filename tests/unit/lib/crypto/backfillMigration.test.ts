@@ -1,21 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
+  findPendingQueueRows,
   findPendingRows,
   runBackfillMigration,
 } from "@/lib/crypto/backfillMigration";
 import { wrapSupabaseClient } from "@/lib/supabase/wrapClient";
 import { FIELD_MAP } from "@/lib/supabase/fieldMap";
-import { isCiphertext, encryptField } from "@/lib/crypto/contentCipher";
+import {
+  isCiphertext,
+  encryptField,
+  decryptField,
+} from "@/lib/crypto/contentCipher";
 import { generateMasterKey } from "@/lib/crypto/masterKey";
 import {
   createFakeSupabaseClient,
   type Row,
 } from "../../support/fakeSupabaseClient";
 
-const keyStoreState: { key: Uint8Array | null } = { key: null };
+const keyStoreState: {
+  key: Uint8Array | null;
+  keyId: string;
+  retired: Record<string, Uint8Array>;
+} = { key: null, keyId: "1", retired: {} };
 vi.mock("@/lib/crypto/keyStore", () => ({
   keyStore: {
     load: vi.fn(async () => keyStoreState.key),
+    loadKeyring: vi.fn(async () =>
+      keyStoreState.key
+        ? {
+            keyId: keyStoreState.keyId,
+            key: keyStoreState.key,
+            retired: keyStoreState.retired,
+          }
+        : null,
+    ),
     save: vi.fn(async () => {}),
     clear: vi.fn(async () => {}),
   },
@@ -72,6 +90,8 @@ function withEditAfterRead(
 
 beforeEach(async () => {
   keyStoreState.key = await generateMasterKey();
+  keyStoreState.keyId = "1";
+  keyStoreState.retired = {};
 });
 
 describe("runBackfillMigration", () => {
@@ -640,6 +660,300 @@ describe("runBackfillMigration", () => {
       expect(base.rawRows("tasks")[0].content).toMatch(
         /^xchacha20poly1305-v2:/,
       );
+    });
+  });
+
+  describe("after a rotation", () => {
+    let oldKey: Uint8Array;
+
+    const sealedUnder = (
+      key: Uint8Array,
+      keyId: string,
+      table: string,
+      column: string,
+      rowId: string,
+      text: string,
+    ) =>
+      encryptField(key, text, { userId: USER_ID, table, column, rowId }, keyId);
+
+    beforeEach(async () => {
+      oldKey = keyStoreState.key!;
+      keyStoreState.key = await generateMasterKey();
+      keyStoreState.keyId = "2";
+      keyStoreState.retired = { "1": oldKey };
+    });
+
+    it("re-seals rows under the retired key to the new key id and leaves nothing pending", async () => {
+      fakeClient = createFakeSupabaseClient({
+        tasks: [
+          {
+            id: "t1",
+            user_id: USER_ID,
+            content: await sealedUnder(
+              oldKey,
+              "1",
+              "tasks",
+              "content",
+              "t1",
+              "Old",
+            ),
+            updated_at: "t0",
+          },
+          {
+            id: "t2",
+            user_id: USER_ID,
+            content: await sealedUnder(
+              keyStoreState.key!,
+              "2",
+              "tasks",
+              "content",
+              "t2",
+              "Already new",
+            ),
+            updated_at: "t0",
+          },
+        ],
+      });
+      expect(await findPendingRows(USER_ID)).toHaveLength(1);
+
+      await runBackfillMigration(USER_ID);
+
+      for (const row of fakeClient.rawRows("tasks")) {
+        expect(row.content).toMatch(/^xchacha20poly1305-v2:2:/);
+      }
+      expect(await findPendingRows(USER_ID)).toEqual([]);
+      const wrapped = wrapSupabaseClient(fakeClient, FIELD_MAP);
+      const { data } = await wrapped
+        .from("tasks")
+        .select()
+        .order("id")
+        .limit(10);
+      expect(data.map((r: Row) => r.content)).toEqual(["Old", "Already new"]);
+    });
+
+    it("finishes an unfinished -v1 upgrade in the same pass, leaving every value -v2 under the new key", async () => {
+      fakeClient = createFakeSupabaseClient({
+        tasks: [
+          {
+            id: "t1",
+            user_id: USER_ID,
+            content: await encryptField(oldKey, "Legacy v1"),
+            updated_at: "t0",
+          },
+          {
+            id: "t2",
+            user_id: USER_ID,
+            content: await sealedUnder(
+              oldKey,
+              "1",
+              "tasks",
+              "content",
+              "t2",
+              "v2 old key",
+            ),
+            updated_at: "t0",
+          },
+        ],
+        habits: [
+          {
+            id: "h1",
+            user_id: USER_ID,
+            name: "Plain, never backfilled",
+            updated_at: "t0",
+          },
+        ],
+      });
+
+      await runBackfillMigration(USER_ID);
+
+      const values = [
+        ...fakeClient.rawRows("tasks").map((r: Row) => r.content),
+        fakeClient.rawRows("habits")[0].name,
+      ];
+      for (const value of values) {
+        expect(value).toMatch(/^xchacha20poly1305-v2:2:/);
+      }
+    });
+
+    it("fails rather than skipping a value whose key this device does not hold", async () => {
+      fakeClient = createFakeSupabaseClient({
+        tasks: [
+          {
+            id: "t1",
+            user_id: USER_ID,
+            content: await sealedUnder(
+              oldKey,
+              "9",
+              "tasks",
+              "content",
+              "t1",
+              "?",
+            ),
+            updated_at: "t0",
+          },
+        ],
+      });
+
+      await expect(runBackfillMigration(USER_ID)).rejects.toThrow(
+        /key is unavailable/,
+      );
+    });
+
+    describe("notification queue", () => {
+      const copy = (ciphertext: string) => ({
+        template: 'Your task "{}" is due now.',
+        ciphertext,
+      });
+      const queueRow = (
+        id: string,
+        status: string,
+        ciphertext: string,
+        taskId = "t1",
+      ) => ({
+        id,
+        user_id: USER_ID,
+        type: "due_date",
+        status,
+        payload: {
+          body: "You have a task due now.",
+          encrypted: copy(ciphertext),
+          data: { taskId, reminderType: "due_date" },
+        },
+      });
+
+      it("re-seals a pending copy under the new key, bound to its source task", async () => {
+        const old = await sealedUnder(
+          oldKey,
+          "1",
+          "tasks",
+          "content",
+          "t1",
+          "Buy milk",
+        );
+        fakeClient = createFakeSupabaseClient({
+          notification_queue: [queueRow("n1", "pending", old)],
+        });
+
+        await runBackfillMigration(USER_ID);
+
+        const { encrypted } =
+          fakeClient.rawRows("notification_queue")[0].payload;
+        expect(encrypted.template).toBe('Your task "{}" is due now.');
+        expect(encrypted.ciphertext).toMatch(/^xchacha20poly1305-v2:2:/);
+        expect(
+          await decryptField(keyStoreState.key!, encrypted.ciphertext, {
+            userId: USER_ID,
+            table: "tasks",
+            column: "content",
+            rowId: "t1",
+          }),
+        ).toBe("Buy milk");
+        expect(await findPendingQueueRows(USER_ID)).toEqual([]);
+      });
+
+      it("re-seals a pending habit reminder's title and question against the habit row", async () => {
+        const seal = (column: string, text: string) =>
+          sealedUnder(oldKey, "1", "habits", column, "h1", text);
+        fakeClient = createFakeSupabaseClient({
+          notification_queue: [
+            {
+              id: "n1",
+              user_id: USER_ID,
+              type: "habit_reminder",
+              status: "pending",
+              payload: {
+                encryptedTitle: copy(await seal("name", "Run")),
+                encrypted: copy(await seal("question", "Did you run?")),
+                data: { habitId: "h1" },
+              },
+            },
+          ],
+        });
+
+        await runBackfillMigration(USER_ID);
+
+        const { payload } = fakeClient.rawRows("notification_queue")[0];
+        const open = (column: string, ciphertext: string) =>
+          decryptField(keyStoreState.key!, ciphertext, {
+            userId: USER_ID,
+            table: "habits",
+            column,
+            rowId: "h1",
+          });
+        expect(await open("name", payload.encryptedTitle.ciphertext)).toBe(
+          "Run",
+        );
+        expect(await open("question", payload.encrypted.ciphertext)).toBe(
+          "Did you run?",
+        );
+      });
+
+      it("strips ciphertext from delivered and cancelled rows", async () => {
+        const old = await sealedUnder(
+          oldKey,
+          "1",
+          "tasks",
+          "content",
+          "t1",
+          "Secret",
+        );
+        fakeClient = createFakeSupabaseClient({
+          notification_queue: [
+            queueRow("n1", "sent", old),
+            queueRow("n2", "cancelled", old),
+            queueRow("n3", "failed", old),
+          ],
+        });
+
+        await runBackfillMigration(USER_ID);
+
+        for (const row of fakeClient.rawRows("notification_queue")) {
+          expect(row.payload.encrypted).toBeUndefined();
+          expect(row.payload.body).toBe("You have a task due now.");
+          expect(row.payload.data.taskId).toBe("t1");
+        }
+      });
+
+      it("drops a pending copy lifted from another task instead of re-sealing it", async () => {
+        const fromOtherTask = await sealedUnder(
+          oldKey,
+          "1",
+          "tasks",
+          "content",
+          "t2",
+          "Not mine",
+        );
+        fakeClient = createFakeSupabaseClient({
+          notification_queue: [queueRow("n1", "pending", fromOtherTask, "t1")],
+        });
+
+        await runBackfillMigration(USER_ID);
+
+        expect(
+          fakeClient.rawRows("notification_queue")[0].payload.encrypted,
+        ).toBeUndefined();
+      });
+
+      it("leaves a pending copy already under the current key alone", async () => {
+        const current = await sealedUnder(
+          keyStoreState.key!,
+          "2",
+          "tasks",
+          "content",
+          "t1",
+          "Fresh",
+        );
+        fakeClient = createFakeSupabaseClient({
+          notification_queue: [queueRow("n1", "pending", current)],
+        });
+
+        await runBackfillMigration(USER_ID);
+
+        expect(
+          fakeClient.rawRows("notification_queue")[0].payload.encrypted
+            .ciphertext,
+        ).toBe(current);
+      });
     });
   });
 });

@@ -6,6 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { getEncryptionKeyRow } from "@/lib/crypto/keyManager";
 import type { EncryptionKeyRow } from "@/lib/crypto/encryptionKeyRowCache";
 import { keyStore } from "@/lib/crypto/keyStore";
+import { INITIAL_KEY_ID } from "@/lib/crypto/envelope";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
 import { recordActivity, shouldAutoLockNow } from "@/lib/crypto/autoLock";
 import { useAutoLockTimer } from "@/lib/hooks/useAutoLockTimer";
@@ -41,6 +42,7 @@ export function useEncryptionGate(): {
   lock: () => Promise<void>;
   needsReseal: boolean;
   finishReseal: () => void;
+  beginReseal: () => void;
 } {
   const { user, loading: authLoading, isGuestMode } = useAuth();
   const queryClient = useQueryClient();
@@ -66,11 +68,18 @@ export function useEncryptionGate(): {
 
     (async () => {
       try {
-        const [row, cachedKey] = await Promise.all([
+        const [row, keyring] = await Promise.all([
           getEncryptionKeyRow(user.id),
-          keyStore.load(user.id),
+          keyStore.loadKeyring(user.id),
         ]);
         if (cancelled) return;
+
+        // A key rotated on another device cannot read or write here until unlocked again.
+        const cachedKey =
+          keyring &&
+          keyring.keyId === String(row?.current_key_id ?? INITIAL_KEY_ID)
+            ? keyring.key
+            : null;
 
         const wouldUnlock =
           !!row &&
@@ -122,6 +131,7 @@ export function useEncryptionGate(): {
   );
 
   const finishReseal = useCallback(() => setResealDue(false), []);
+  const beginReseal = useCallback(() => setResealDue(true), []);
 
   const status: EncryptionGateStatus = authLoading
     ? "loading"
@@ -135,5 +145,6 @@ export function useEncryptionGate(): {
     lock,
     needsReseal: resealDue && status === "unlocked",
     finishReseal,
+    beginReseal,
   };
 }
