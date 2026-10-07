@@ -96,6 +96,13 @@ export function isContentKeyUnavailableError(error: unknown): boolean {
   return hasErrorCode(error, CONTENT_KEY_UNAVAILABLE_CODE);
 }
 
+export function isContentKeyRetiredError(error: unknown): boolean {
+  return (
+    isContentKeyUnavailableError(error) &&
+    (error as { hint?: unknown }).hint === "content_key_retired"
+  );
+}
+
 function contentKeyUnavailableError(
   action: "write to" | "read",
   table: string,
@@ -131,18 +138,38 @@ function rowNeedsEncryption(
 
 // Server rejection hints mapped to the client error each one is thrown as. Thrown, like a
 // locked key, because most call sites rethrow only error.message and would drop the code.
-const SERVER_HINT_ERRORS: Record<string, { code: string; message: string }> = {
+const SERVER_HINT_ERRORS: Record<
+  string,
+  { code: string; message: string; signal: ServerKeySignal }
+> = {
   // The server's marker of a finished upgrade rejects `-v1` writes from a stale app.
   sealing_scheme_outdated: {
     code: "app_update_required",
     message: "Kagelin has been updated. Reload the app to keep saving.",
+    signal: "app_update_required",
   },
   // The server's rejection of a write sealed with a key the Account has rotated away from.
   content_key_retired: {
     code: CONTENT_KEY_UNAVAILABLE_CODE,
     message: "Your content key changed. Unlock again to keep saving.",
+    signal: "content_key_retired",
   },
 };
+
+export type ServerKeySignal = "content_key_retired" | "app_update_required";
+
+const serverKeyListeners = new Set<(signal: ServerKeySignal) => void>();
+
+// Every server write goes through this client, so the app reacts to a rejected key here
+// instead of each caller forwarding the error.
+export function onServerKeySignal(
+  listener: (signal: ServerKeySignal) => void,
+): () => void {
+  serverKeyListeners.add(listener);
+  return () => {
+    serverKeyListeners.delete(listener);
+  };
+}
 
 interface SealContext {
   key: Uint8Array;
@@ -298,6 +325,7 @@ async function decryptResult(
         ? SERVER_HINT_ERRORS[result.error.hint]
         : undefined;
     if (mapped) {
+      serverKeyListeners.forEach((listener) => listener(mapped.signal));
       throw Object.assign(new Error(mapped.message), result.error, mapped);
     }
     return result;

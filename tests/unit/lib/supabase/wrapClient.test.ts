@@ -3,6 +3,8 @@ import {
   wrapSupabaseClient,
   MISSING_ROW_ID_CODE,
   isContentKeyUnavailableError,
+  isContentKeyRetiredError,
+  onServerKeySignal,
 } from "@/lib/supabase/wrapClient";
 import { FIELD_MAP, type FieldMap } from "@/lib/supabase/fieldMap";
 import { generateMasterKey } from "@/lib/crypto/masterKey";
@@ -807,5 +809,83 @@ describe("wrapSupabaseClient — during a rotation's Re-seal", () => {
     await expect(
       client.from("tasks").insert({ id: "t1", content: "Stale write" }),
     ).rejects.toSatisfy(isContentKeyUnavailableError);
+  });
+
+  it("tells the server's retired-key rejection apart from a missing local key", async () => {
+    const retired = createFakeSupabaseClient(
+      {},
+      {
+        userId,
+        failWrite: () => ({
+          message: "must be sealed with the current content key",
+          hint: "content_key_retired",
+        }),
+      },
+    );
+    const retiredError = await wrapSupabaseClient(retired, FIELD_MAP)
+      .from("tasks")
+      .insert({ id: "t1", content: "Stale write" })
+      .then(
+        () => null,
+        (e: unknown) => e,
+      );
+    expect(isContentKeyRetiredError(retiredError)).toBe(true);
+
+    keyStoreState.key = null;
+    const noKeyError = await wrapSupabaseClient(
+      createFakeSupabaseClient({}, { userId }),
+      FIELD_MAP,
+    )
+      .from("tasks")
+      .insert({ id: "t2", content: "No key" })
+      .then(
+        () => null,
+        (e: unknown) => e,
+      );
+    expect(isContentKeyUnavailableError(noKeyError)).toBe(true);
+    expect(isContentKeyRetiredError(noKeyError)).toBe(false);
+  });
+});
+
+describe("onServerKeySignal", () => {
+  const userId = "user-1";
+  const rejectWith = (hint?: string) =>
+    wrapSupabaseClient(
+      createFakeSupabaseClient(
+        {},
+        { userId, failWrite: () => ({ message: "rejected", hint }) },
+      ),
+      FIELD_MAP,
+    )
+      .from("tasks")
+      .insert({ id: "t1", content: "x" })
+      .then(
+        () => null,
+        (e: unknown) => e,
+      );
+
+  it("announces a server key rejection once, with the hint that caused it", async () => {
+    const listener = vi.fn();
+    const off = onServerKeySignal(listener);
+
+    await rejectWith("content_key_retired");
+    await rejectWith("sealing_scheme_outdated");
+    off();
+
+    expect(listener.mock.calls).toEqual([
+      ["content_key_retired"],
+      ["app_update_required"],
+    ]);
+  });
+
+  it("stays silent for other failures and after unsubscribing", async () => {
+    const listener = vi.fn();
+    const off = onServerKeySignal(listener);
+
+    await rejectWith(undefined);
+    off();
+    await rejectWith("content_key_retired");
+
+    expect(listener).not.toHaveBeenCalled();
   });
 });
