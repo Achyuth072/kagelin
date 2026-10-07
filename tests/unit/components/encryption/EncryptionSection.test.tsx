@@ -43,6 +43,7 @@ describe("EncryptionSection", () => {
     vi.mocked(useEncryptionGateActions).mockReturnValue({
       lock: vi.fn().mockResolvedValue(undefined),
       beginReseal: vi.fn(),
+      holdForRecoveryCode: vi.fn(),
     });
   });
 
@@ -127,6 +128,7 @@ describe("EncryptionSection", () => {
     vi.mocked(useEncryptionGateActions).mockReturnValue({
       lock,
       beginReseal: vi.fn(),
+      holdForRecoveryCode: vi.fn(),
     });
     render(<EncryptionSection />);
 
@@ -140,6 +142,7 @@ describe("EncryptionSection", () => {
     vi.mocked(useEncryptionGateActions).mockReturnValue({
       lock,
       beginReseal: vi.fn(),
+      holdForRecoveryCode: vi.fn(),
     });
     render(<EncryptionSection />);
 
@@ -160,6 +163,7 @@ describe("EncryptionSection", () => {
       vi.mocked(useEncryptionGateActions).mockReturnValue({
         lock: vi.fn(),
         beginReseal,
+        holdForRecoveryCode: vi.fn(),
       });
     });
 
@@ -214,6 +218,7 @@ describe("EncryptionSection", () => {
       vi.mocked(useEncryptionGateActions).mockReturnValue({
         lock,
         beginReseal,
+        holdForRecoveryCode: vi.fn(),
       });
       vi.mocked(rotateContentKey).mockResolvedValue({
         recoveryCode: "ROTA-TEDC-ODE0-0000-0000-0000-0000-0000",

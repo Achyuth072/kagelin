@@ -16,6 +16,7 @@ import { ResealIndicator } from "@/components/encryption/ResealIndicator";
 interface EncryptionGateActions {
   lock: () => Promise<void>;
   beginReseal: () => void;
+  holdForRecoveryCode: (held: boolean) => void;
 }
 
 const EncryptionGateContext = createContext<EncryptionGateActions | undefined>(
@@ -42,6 +43,8 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
     resealRun,
     finishReseal,
     beginReseal,
+    lockReason,
+    holdForRecoveryCode,
   } = useEncryptionGate();
 
   if (!user || isGuestMode || status === "not-applicable") {
@@ -86,7 +89,9 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
   }
 
   if (status === "needs-unlock") {
-    return <UnlockScreen userId={user.id} onUnlocked={recheck} />;
+    return (
+      <UnlockScreen userId={user.id} onUnlocked={recheck} reason={lockReason} />
+    );
   }
 
   if (status === "needs-migration") {
@@ -98,7 +103,9 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <EncryptionGateContext.Provider value={{ lock, beginReseal }}>
+    <EncryptionGateContext.Provider
+      value={{ lock, beginReseal, holdForRecoveryCode }}
+    >
       {children}
       {resealDue && (
         <ResealIndicator

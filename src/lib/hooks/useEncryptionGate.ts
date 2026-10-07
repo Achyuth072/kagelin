@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import * as Sentry from "@sentry/nextjs";
 import { useAuth } from "@/components/AuthProvider";
+import { onServerKeySignal } from "@/lib/supabase/wrapClient";
 import { getEncryptionKeyRow } from "@/lib/crypto/keyManager";
 import type { EncryptionKeyRow } from "@/lib/crypto/encryptionKeyRowCache";
 import { keyStore } from "@/lib/crypto/keyStore";
@@ -23,6 +25,17 @@ export type EncryptionGateStatus =
   | "unavailable";
 
 type AsyncStatus = Exclude<EncryptionGateStatus, "not-applicable">;
+
+export type LockReason = "key-changed";
+
+function isKeyRetired(
+  row: EncryptionKeyRow | null,
+  keyring: { keyId: string } | null,
+): boolean {
+  return (
+    !!row && !!keyring && Number(keyring.keyId) < Number(currentKeyIdOf(row))
+  );
+}
 
 function resolveStatus(
   row: EncryptionKeyRow | null,
@@ -62,6 +75,9 @@ export function useEncryptionGate(): {
   // Takes the run it finishes, so a run a rotation replaced cannot end the new one.
   finishReseal: (run: number) => void;
   beginReseal: () => void;
+  lockReason: LockReason | null;
+  // While true, a rejected key does not lock the device, so the recovery code survives.
+  holdForRecoveryCode: (held: boolean) => void;
 } {
   const { user, loading: authLoading, isGuestMode } = useAuth();
   const queryClient = useQueryClient();
@@ -69,6 +85,12 @@ export function useEncryptionGate(): {
   const [version, setVersion] = useState(0);
   // 0 while no Re-seal is due.
   const [resealRun, setResealRun] = useState(0);
+  const [lockReason, setLockReason] = useState<LockReason | null>(null);
+  const recoveryCodeHeldRef = useRef(false);
+  const asyncStatusRef = useRef(asyncStatus);
+  useEffect(() => {
+    asyncStatusRef.current = asyncStatus;
+  }, [asyncStatus]);
   const autoLockEnabled = useUiStore((s) => s.autoLockEnabled);
   const autoLockMinutes = useUiStore((s) => s.autoLockMinutes);
   // Avoid re-running the status effect on settings changes.
@@ -95,9 +117,8 @@ export function useEncryptionGate(): {
         if (cancelled) return;
 
         const rowKeyId = currentKeyIdOf(row);
-        // A key rotated on another device cannot read or write here until unlocked again,
-        // and is the leaked one, so it goes with everything it decrypted.
-        if (row && keyring && Number(keyring.keyId) < Number(rowKeyId)) {
+        // The retired key is the leaked one, so it goes with everything it decrypted.
+        if (isKeyRetired(row, keyring)) {
           await purgeDeviceContent(queryClient);
           if (!cancelled) setAsyncStatus("needs-unlock");
           return;
@@ -147,7 +168,39 @@ export function useEncryptionGate(): {
     };
   }, [user, authLoading, notApplicable, version, queryClient]);
 
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId) return;
+    return onServerKeySignal(async (signal) => {
+      if (
+        signal !== "content_key_retired" ||
+        recoveryCodeHeldRef.current ||
+        asyncStatusRef.current !== "unlocked"
+      ) {
+        return;
+      }
+      try {
+        const [row, keyring] = await Promise.all([
+          getEncryptionKeyRow(userId),
+          keyStore.loadKeyring(userId),
+        ]);
+        // The check awaits the network; a hold set meanwhile still applies.
+        if (recoveryCodeHeldRef.current || !isKeyRetired(row, keyring)) return;
+        await purgeDeviceContent(queryClient);
+        setLockReason("key-changed");
+        setAsyncStatus("needs-unlock");
+      } catch (err) {
+        Sentry.captureException(err);
+      }
+    });
+  }, [userId, queryClient]);
+
+  const holdForRecoveryCode = useCallback((held: boolean) => {
+    recoveryCodeHeldRef.current = held;
+  }, []);
+
   const recheck = useCallback(() => {
+    setLockReason(null);
     recordActivity();
     setAsyncStatus("loading");
     setVersion((v) => v + 1);
@@ -184,5 +237,7 @@ export function useEncryptionGate(): {
     resealRun,
     finishReseal,
     beginReseal,
+    lockReason,
+    holdForRecoveryCode,
   };
 }

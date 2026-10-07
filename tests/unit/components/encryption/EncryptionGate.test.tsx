@@ -57,6 +57,8 @@ function mockGate(
     resealRun,
     finishReseal: vi.fn(),
     beginReseal: vi.fn(),
+    lockReason: null,
+    holdForRecoveryCode: vi.fn(),
   });
 }
 
@@ -180,6 +182,8 @@ describe("EncryptionGate", () => {
       resealRun: 0,
       finishReseal: vi.fn(),
       beginReseal: vi.fn(),
+      lockReason: null,
+      holdForRecoveryCode: vi.fn(),
     });
 
     render(

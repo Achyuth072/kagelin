@@ -386,7 +386,7 @@ function RotateKeyCard({ onRotate }: { onRotate: () => void }) {
 
 export function EncryptionSection() {
   const { user, isGuestMode } = useAuth();
-  const { lock, beginReseal } = useEncryptionGateActions();
+  const { lock, beginReseal, holdForRecoveryCode } = useEncryptionGateActions();
   const [rotateOpen, setRotateOpen] = useState(false);
 
   if (isGuestMode || !user) return null;
@@ -407,6 +407,7 @@ export function EncryptionSection() {
         onOpenChange={setRotateOpen}
         onCommitted={beginReseal}
         onKeyNotSaved={lock}
+        onHoldRecoveryCode={holdForRecoveryCode}
       />
     </div>
   );

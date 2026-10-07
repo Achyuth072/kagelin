@@ -63,6 +63,10 @@ vi.mock("@/lib/hooks/useAutoLockTimer", () => ({
 }));
 
 import { useEncryptionGate } from "@/lib/hooks/useEncryptionGate";
+import { wrapSupabaseClient } from "@/lib/supabase/wrapClient";
+import { FIELD_MAP } from "@/lib/supabase/fieldMap";
+import { generateMasterKey } from "@/lib/crypto/masterKey";
+import { createFakeSupabaseClient } from "../support/fakeSupabaseClient";
 
 function withQueryClient(children: React.ReactNode) {
   const queryClient = new QueryClient();
@@ -421,5 +425,93 @@ describe("useEncryptionGate", () => {
     act(() => result.current.recheck());
 
     await waitFor(() => expect(result.current.status).toBe("unlocked"));
+  });
+
+  describe("when the server refuses a write sealed with a retired key", () => {
+    const rejectedWrite = () =>
+      wrapSupabaseClient(
+        createFakeSupabaseClient(
+          {},
+          {
+            userId: "user-1",
+            failWrite: () => ({
+              message: "must be sealed with the current content key",
+              hint: "content_key_retired",
+            }),
+          },
+        ),
+        FIELD_MAP,
+      )
+        .from("tasks")
+        .insert({ id: "t1", content: "x" })
+        .then(
+          () => null,
+          (e: unknown) => e,
+        );
+
+    async function unlockedGate(serverKeyId: number) {
+      getEncryptionKeyRowMock.mockResolvedValue({
+        migrated_at: "2026-09-04T00:00:00Z",
+        current_key_id: serverKeyId,
+      });
+      keyStoreLoadMock.mockResolvedValue(await generateMasterKey());
+      keyStoreKeyId = "1";
+      const statuses: string[] = [];
+      const hook = renderHook(
+        () => {
+          const gate = useEncryptionGate();
+          statuses.push(gate.status);
+          return gate;
+        },
+        { wrapper: ({ children }) => withQueryClient(children) },
+      );
+      await waitFor(() => expect(hook.result.current.status).toBe("unlocked"));
+      statuses.length = 0;
+      return { ...hook, statuses };
+    }
+
+    it("locks the device without showing the loading screen once the server key is newer", async () => {
+      const { result, statuses } = await unlockedGate(1);
+      getEncryptionKeyRowMock.mockResolvedValue({
+        migrated_at: "2026-09-04T00:00:00Z",
+        current_key_id: 2,
+      });
+
+      await act(async () => {
+        await rejectedWrite();
+      });
+
+      await waitFor(() => expect(result.current.status).toBe("needs-unlock"));
+      expect(purgeDeviceContentMock).toHaveBeenCalledTimes(1);
+      expect(result.current.lockReason).toBe("key-changed");
+      expect(statuses).not.toContain("loading");
+    });
+
+    it("stays unlocked when the server still has this device's key", async () => {
+      const { result } = await unlockedGate(1);
+
+      await act(async () => {
+        await rejectedWrite();
+      });
+
+      expect(result.current.status).toBe("unlocked");
+      expect(purgeDeviceContentMock).not.toHaveBeenCalled();
+    });
+
+    it("ignores the rejection while the recovery code is on screen", async () => {
+      const { result } = await unlockedGate(1);
+      getEncryptionKeyRowMock.mockResolvedValue({
+        migrated_at: "2026-09-04T00:00:00Z",
+        current_key_id: 2,
+      });
+
+      act(() => result.current.holdForRecoveryCode(true));
+      await act(async () => {
+        await rejectedWrite();
+      });
+
+      expect(result.current.status).toBe("unlocked");
+      expect(purgeDeviceContentMock).not.toHaveBeenCalled();
+    });
   });
 });

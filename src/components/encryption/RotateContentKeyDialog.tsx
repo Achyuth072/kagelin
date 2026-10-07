@@ -25,6 +25,7 @@ export function RotateContentKeyDialog({
   onOpenChange,
   onCommitted,
   onKeyNotSaved,
+  onHoldRecoveryCode,
 }: {
   userId: string;
   open: boolean;
@@ -34,6 +35,9 @@ export function RotateContentKeyDialog({
   onCommitted: () => void;
   // Fires once the user has saved the recovery code, so the device can unlock again.
   onKeyNotSaved: () => void;
+  // True from the moment the key is replaced until the recovery code is dismissed, so a write
+  // rejected meanwhile cannot lock the device and unmount the code.
+  onHoldRecoveryCode: (held: boolean) => void;
 }) {
   const [step, setStep] = useState<"explain" | "passphrase" | "done">(
     "explain",
@@ -55,6 +59,7 @@ export function RotateContentKeyDialog({
   } = useNewPassphraseForm();
 
   const close = () => {
+    onHoldRecoveryCode(false);
     if (result && !result.keySavedOnDevice) onKeyNotSaved();
     onOpenChange(false);
     setStep("explain");
@@ -70,6 +75,7 @@ export function RotateContentKeyDialog({
 
     setSubmitting(true);
     setError(null);
+    onHoldRecoveryCode(true);
     try {
       const rotated = await rotateContentKey(
         userId,
@@ -80,6 +86,7 @@ export function RotateContentKeyDialog({
       setStep("done");
       if (rotated.keySavedOnDevice) onCommitted();
     } catch (err) {
+      onHoldRecoveryCode(false);
       setError(
         err instanceof Error ? err.message : "Couldn't rotate your key.",
       );
