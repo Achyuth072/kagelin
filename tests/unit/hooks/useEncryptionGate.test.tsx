@@ -140,10 +140,10 @@ describe("useEncryptionGate", () => {
       wrapper: ({ children }) => withQueryClient(children),
     });
     await waitFor(() => expect(result.current.status).toBe("unlocked"));
-    expect(result.current.needsReseal).toBe(false);
+    expect(result.current.resealDue).toBe(false);
 
     act(() => result.current.beginReseal());
-    expect(result.current.needsReseal).toBe(true);
+    expect(result.current.resealDue).toBe(true);
   });
 
   it("resolves to needs-migration when unlocked but the backfill hasn't completed", async () => {
@@ -204,10 +204,25 @@ describe("useEncryptionGate", () => {
       wrapper: ({ children }) => withQueryClient(children),
     });
     await waitFor(() => expect(result.current.status).toBe("unlocked"));
-    expect(result.current.needsReseal).toBe(true);
+    expect(result.current.resealDue).toBe(true);
 
     act(() => result.current.finishReseal());
-    expect(result.current.needsReseal).toBe(false);
+    expect(result.current.resealDue).toBe(false);
+  });
+
+  it("flags a due Re-seal while retired keys remain, even with the -v2 marker set", async () => {
+    getEncryptionKeyRowMock.mockResolvedValue({
+      migrated_at: "2026-09-04T00:00:00Z",
+      sealed_v2_at: "2026-10-07T00:00:00Z",
+      retired_keys: { "1": "wrapped" },
+    });
+    keyStoreLoadMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+
+    const { result } = renderHook(() => useEncryptionGate(), {
+      wrapper: ({ children }) => withQueryClient(children),
+    });
+    await waitFor(() => expect(result.current.status).toBe("unlocked"));
+    expect(result.current.resealDue).toBe(true);
   });
 
   it("does not flag a Re-seal for a row cached before the marker existed, or once it is set", async () => {
@@ -224,7 +239,7 @@ describe("useEncryptionGate", () => {
         wrapper: ({ children }) => withQueryClient(children),
       });
       await waitFor(() => expect(result.current.status).toBe("unlocked"));
-      expect(result.current.needsReseal).toBe(false);
+      expect(result.current.resealDue).toBe(false);
     }
   });
 

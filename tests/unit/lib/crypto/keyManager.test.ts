@@ -87,7 +87,6 @@ const rpcMock = vi.fn(async (_name: string, args: Row) => {
     wrapped_key_recovery: args.p_wrapped_key_recovery,
     retired_keys: args.p_retired_keys,
     current_key_id: keyId + 1,
-    sealed_v2_at: null,
   });
   return { data: keyId + 1, error: null };
 });
@@ -171,6 +170,11 @@ vi.mock("@/lib/crypto/encryptionKeyRowCache", () => ({
       rowCache.set(userId, row);
     }),
   },
+}));
+
+const captureExceptionMock = vi.fn();
+vi.mock("@sentry/nextjs", () => ({
+  captureException: (err: unknown) => captureExceptionMock(err),
 }));
 
 import { keyStore } from "@/lib/crypto/keyStore";
@@ -614,6 +618,29 @@ describe("keyManager", () => {
 
       expect(result.recoveryCode).toMatch(/^[0-9A-Z-]+$/);
       expect(result.otherSessionsSignedOut).toBe(false);
+    }, 60000);
+
+    it("keeps the -v2 marker through a rotation, so -v1 writes stay rejected", async () => {
+      await setupAndRotate();
+      expect(rows.get(USER_ID)?.sealed_v2_at).toEqual(expect.any(String));
+      expect(rowCache.get(USER_ID)?.sealed_v2_at).toEqual(expect.any(String));
+    }, 60000);
+
+    it("still returns the committed recovery code if saving the new key on this device fails", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      const saveError = new Error("IndexedDB quota exceeded");
+      vi.mocked(keyStore.save).mockRejectedValueOnce(saveError);
+
+      const result = await rotateContentKey(
+        USER_ID,
+        "old passphrase",
+        "new passphrase",
+      );
+
+      expect(rows.get(USER_ID)?.current_key_id).toBe(2);
+      expect(result.recoveryCode).toMatch(/^[0-9A-Z-]+$/);
+      expect(captureExceptionMock).toHaveBeenCalledWith(saveError);
+      expect(signOutMock).toHaveBeenCalledWith({ scope: "others" });
     }, 60000);
 
     it("refuses to rotate without the current passphrase, leaving the key row untouched", async () => {

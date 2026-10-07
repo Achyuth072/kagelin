@@ -2,8 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   findPendingQueueRows,
   findPendingRows,
-  runBackfillMigration,
-} from "@/lib/crypto/backfillMigration";
+  runReseal,
+} from "@/lib/crypto/reseal";
 import { wrapSupabaseClient } from "@/lib/supabase/wrapClient";
 import { FIELD_MAP } from "@/lib/supabase/fieldMap";
 import {
@@ -94,7 +94,7 @@ beforeEach(async () => {
   keyStoreState.retired = {};
 });
 
-describe("runBackfillMigration", () => {
+describe("runReseal", () => {
   it("encrypts every mapped field, across every field-map table, for the owning user", async () => {
     fakeClient = createFakeSupabaseClient({
       tasks: [
@@ -112,7 +112,7 @@ describe("runBackfillMigration", () => {
     });
 
     const progressCalls: Array<{ done: number; total: number }> = [];
-    await runBackfillMigration(USER_ID, (p) =>
+    await runReseal(USER_ID, (p) =>
       progressCalls.push({ done: p.done, total: p.total }),
     );
 
@@ -138,7 +138,7 @@ describe("runBackfillMigration", () => {
       ],
     });
 
-    await runBackfillMigration(USER_ID);
+    await runReseal(USER_ID);
 
     const rows = fakeClient.rawRows("tasks");
     expect(rows.find((r: Row) => r.id === "t1").content).toBe("Not mine");
@@ -170,7 +170,7 @@ describe("runBackfillMigration", () => {
       ],
     });
 
-    await runBackfillMigration(USER_ID);
+    await runReseal(USER_ID);
 
     const event = fakeClient.rawRows("calendar_events")[0];
     expect(isCiphertext(event.title)).toBe(true);
@@ -200,7 +200,7 @@ describe("runBackfillMigration", () => {
       ],
     });
 
-    await runBackfillMigration(USER_ID);
+    await runReseal(USER_ID);
 
     const entries = fakeClient.rawRows("habit_entries");
     expect(isCiphertext(entries.find((r: Row) => r.id === "e1").notes)).toBe(
@@ -230,7 +230,7 @@ describe("runBackfillMigration", () => {
       },
     );
 
-    await expect(runBackfillMigration(USER_ID)).rejects.toBeTruthy();
+    await expect(runReseal(USER_ID)).rejects.toBeTruthy();
 
     const midway = fakeClient.rawRows("tasks");
     const encryptedCount = midway.filter((r: Row) =>
@@ -239,7 +239,7 @@ describe("runBackfillMigration", () => {
     expect(encryptedCount).toBe(1);
 
     fakeClient = createFakeSupabaseClient({ tasks: midway });
-    await runBackfillMigration(USER_ID);
+    await runReseal(USER_ID);
 
     const final = fakeClient.rawRows("tasks");
     expect(final.every((r: Row) => isCiphertext(r.content))).toBe(true);
@@ -257,7 +257,7 @@ describe("runBackfillMigration", () => {
       tasks: [{ id: "t1", user_id: USER_ID, content: alreadyEncrypted }],
     });
 
-    await runBackfillMigration(USER_ID);
+    await runReseal(USER_ID);
 
     expect(fakeClient.rawRows("tasks")[0].content).toBe(alreadyEncrypted);
   });
@@ -268,7 +268,7 @@ describe("runBackfillMigration", () => {
       tasks: [{ id: "t1", user_id: USER_ID, content: "plaintext" }],
     });
 
-    await expect(runBackfillMigration(USER_ID)).rejects.toThrow();
+    await expect(runReseal(USER_ID)).rejects.toThrow();
     expect(fakeClient.rawRows("tasks")[0].content).toBe("plaintext");
   });
 
@@ -278,7 +278,7 @@ describe("runBackfillMigration", () => {
       profiles: [{ id: USER_ID, is_premium: true, display_name: "Ada" }],
     });
 
-    await runBackfillMigration(USER_ID);
+    await runReseal(USER_ID);
 
     expect(FIELD_MAP.profiles).toBeUndefined();
     expect(fakeClient.rawRows("profiles")[0]).toEqual({
@@ -327,7 +327,7 @@ describe("runBackfillMigration", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
-    await runBackfillMigration(USER_ID);
+    await runReseal(USER_ID);
 
     const stored = fakeClient.rawRows("tasks")[0];
     expect(stored.content).toBe(concurrentContent);
@@ -351,9 +351,7 @@ describe("runBackfillMigration", () => {
       notes: concurrentNotes,
     }));
 
-    await expect(runBackfillMigration(USER_ID)).rejects.toThrow(
-      /Migration conflict/,
-    );
+    await expect(runReseal(USER_ID)).rejects.toThrow(/Re-seal conflict/);
 
     expect(base.rawRows("habit_entries")[0].notes).toBe(concurrentNotes);
   });
@@ -369,9 +367,7 @@ describe("runBackfillMigration", () => {
       name: concurrentName,
     }));
 
-    await expect(runBackfillMigration(USER_ID)).rejects.toThrow(
-      /Migration conflict/,
-    );
+    await expect(runReseal(USER_ID)).rejects.toThrow(/Re-seal conflict/);
 
     expect(base.rawRows("labels")[0].name).toBe(concurrentName);
   });
@@ -385,7 +381,7 @@ describe("runBackfillMigration", () => {
     });
 
     const calls: number[] = [];
-    await runBackfillMigration(USER_ID, (p) => calls.push(p.done));
+    await runReseal(USER_ID, (p) => calls.push(p.done));
 
     expect(calls).toContain(1);
     expect(calls).toContain(2);
@@ -424,7 +420,7 @@ describe("runBackfillMigration", () => {
       ],
     });
 
-    await runBackfillMigration(USER_ID);
+    await runReseal(USER_ID);
 
     const rows = fakeClient.rawRows("notification_queue");
     expect(rows.find((r: Row) => r.id === "n1").status).toBe("cancelled");
@@ -467,7 +463,7 @@ describe("runBackfillMigration", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any;
 
-    await runBackfillMigration(USER_ID);
+    await runReseal(USER_ID);
 
     expect(fakeClient.rawRows("notification_queue")[0].status).toBe("sent");
   });
@@ -489,7 +485,7 @@ describe("runBackfillMigration", () => {
       ],
     });
 
-    await runBackfillMigration(USER_ID);
+    await runReseal(USER_ID);
 
     expect(fakeClient.rawRows("external_calendars")[0].sync_error).toBeNull();
     expect(
@@ -569,7 +565,7 @@ describe("runBackfillMigration", () => {
     it("turns -v1 values on every field-map table into row-bound -v2 that read back the same", async () => {
       fakeClient = createFakeSupabaseClient(await seedLegacyEveryTable());
 
-      await runBackfillMigration(USER_ID);
+      await runReseal(USER_ID);
 
       for (const [table, fields] of Object.entries(FIELD_MAP)) {
         const row = fakeClient.rawRows(table)[0];
@@ -596,7 +592,7 @@ describe("runBackfillMigration", () => {
     it("after a full pass finds nothing left to upgrade", async () => {
       fakeClient = createFakeSupabaseClient(await seedLegacyEveryTable());
 
-      await runBackfillMigration(USER_ID);
+      await runReseal(USER_ID);
 
       expect(await findPendingRows(USER_ID)).toEqual([]);
     });
@@ -621,7 +617,7 @@ describe("runBackfillMigration", () => {
       const finished = fakeClient.rawRows("tasks")[0].content;
 
       const progress: Array<{ done: number; total: number }> = [];
-      await runBackfillMigration(USER_ID, (p) =>
+      await runReseal(USER_ID, (p) =>
         progress.push({ done: p.done, total: p.total }),
       );
 
@@ -650,13 +646,11 @@ describe("runBackfillMigration", () => {
         updated_at: "t1",
       }));
 
-      await expect(runBackfillMigration(USER_ID)).rejects.toThrow(
-        /Migration conflict/,
-      );
+      await expect(runReseal(USER_ID)).rejects.toThrow(/Re-seal conflict/);
       expect(base.rawRows("tasks")[0].content).toBe(edited);
 
       fakeClient = base;
-      await runBackfillMigration(USER_ID);
+      await runReseal(USER_ID);
       expect(base.rawRows("tasks")[0].content).toMatch(
         /^xchacha20poly1305-v2:/,
       );
@@ -716,7 +710,7 @@ describe("runBackfillMigration", () => {
       });
       expect(await findPendingRows(USER_ID)).toHaveLength(1);
 
-      await runBackfillMigration(USER_ID);
+      await runReseal(USER_ID);
 
       for (const row of fakeClient.rawRows("tasks")) {
         expect(row.content).toMatch(/^xchacha20poly1305-v2:2:/);
@@ -764,7 +758,7 @@ describe("runBackfillMigration", () => {
         ],
       });
 
-      await runBackfillMigration(USER_ID);
+      await runReseal(USER_ID);
 
       const values = [
         ...fakeClient.rawRows("tasks").map((r: Row) => r.content),
@@ -794,9 +788,65 @@ describe("runBackfillMigration", () => {
         ],
       });
 
-      await expect(runBackfillMigration(USER_ID)).rejects.toThrow(
-        /key is unavailable/,
+      await expect(runReseal(USER_ID)).rejects.toThrow(/key is unavailable/);
+    });
+
+    it("reports a corrupted -v1 value the same way instead of failing the pass", async () => {
+      const valid = await encryptField(oldKey, "Legacy");
+      const corrupted = `${valid.slice(0, -4)}AAAA`;
+      fakeClient = createFakeSupabaseClient({
+        tasks: [
+          { id: "t1", user_id: USER_ID, content: corrupted, updated_at: "t0" },
+        ],
+      });
+
+      expect(await runReseal(USER_ID)).toEqual([
+        { table: "tasks", id: "t1", column: "content" },
+      ]);
+      expect(fakeClient.rawRows("tasks")[0].content).toBe(corrupted);
+    });
+
+    it("re-seals the rest and reports a value that fails to open, leaving it untouched", async () => {
+      const movedFromT2 = await sealedUnder(
+        oldKey,
+        "1",
+        "tasks",
+        "content",
+        "t2",
+        "Not mine",
       );
+      fakeClient = createFakeSupabaseClient({
+        tasks: [
+          {
+            id: "t1",
+            user_id: USER_ID,
+            content: movedFromT2,
+            updated_at: "t0",
+          },
+          {
+            id: "t2",
+            user_id: USER_ID,
+            content: await sealedUnder(
+              oldKey,
+              "1",
+              "tasks",
+              "content",
+              "t2",
+              "Mine",
+            ),
+            updated_at: "t0",
+          },
+        ],
+      });
+
+      const unreadable = await runReseal(USER_ID);
+
+      expect(unreadable).toEqual([
+        { table: "tasks", id: "t1", column: "content" },
+      ]);
+      const [t1, t2] = fakeClient.rawRows("tasks");
+      expect(t1.content).toBe(movedFromT2);
+      expect(t2.content).toMatch(/^xchacha20poly1305-v2:2:/);
     });
 
     describe("notification queue", () => {
@@ -834,7 +884,7 @@ describe("runBackfillMigration", () => {
           notification_queue: [queueRow("n1", "pending", old)],
         });
 
-        await runBackfillMigration(USER_ID);
+        await runReseal(USER_ID);
 
         const { encrypted } =
           fakeClient.rawRows("notification_queue")[0].payload;
@@ -848,7 +898,7 @@ describe("runBackfillMigration", () => {
             rowId: "t1",
           }),
         ).toBe("Buy milk");
-        expect(await findPendingQueueRows(USER_ID)).toEqual([]);
+        expect(await findPendingQueueRows(USER_ID, "2")).toEqual([]);
       });
 
       it("re-seals a pending habit reminder's title and question against the habit row", async () => {
@@ -870,7 +920,7 @@ describe("runBackfillMigration", () => {
           ],
         });
 
-        await runBackfillMigration(USER_ID);
+        await runReseal(USER_ID);
 
         const { payload } = fakeClient.rawRows("notification_queue")[0];
         const open = (column: string, ciphertext: string) =>
@@ -905,7 +955,7 @@ describe("runBackfillMigration", () => {
           ],
         });
 
-        await runBackfillMigration(USER_ID);
+        await runReseal(USER_ID);
 
         for (const row of fakeClient.rawRows("notification_queue")) {
           expect(row.payload.encrypted).toBeUndefined();
@@ -927,7 +977,7 @@ describe("runBackfillMigration", () => {
           notification_queue: [queueRow("n1", "pending", fromOtherTask, "t1")],
         });
 
-        await runBackfillMigration(USER_ID);
+        await runReseal(USER_ID);
 
         expect(
           fakeClient.rawRows("notification_queue")[0].payload.encrypted,
@@ -947,7 +997,7 @@ describe("runBackfillMigration", () => {
           notification_queue: [queueRow("n1", "pending", current)],
         });
 
-        await runBackfillMigration(USER_ID);
+        await runReseal(USER_ID);
 
         expect(
           fakeClient.rawRows("notification_queue")[0].payload.encrypted

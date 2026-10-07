@@ -11,9 +11,12 @@ import {
 import { INITIAL_KEY_ID, needsReseal } from "@/lib/crypto/envelope";
 import { keyStore, type Keyring } from "@/lib/crypto/keyStore";
 import { keyForEnvelope } from "@/lib/crypto/keyring";
-import { sourceBinding } from "@/lib/notifications";
+import {
+  sourceBinding,
+  type EncryptedNotificationBody,
+} from "@/lib/notifications";
 
-export interface MigrationProgress {
+export interface ResealProgress {
   done: number;
   total: number;
   table: string;
@@ -214,29 +217,33 @@ const SEALED_PAYLOAD_FIELDS = [
   ["encrypted", "body"],
 ] as const;
 
+type SealedPayloadKey = (typeof SEALED_PAYLOAD_FIELDS)[number][0];
+
 interface QueueRow {
   id: string;
   status: string;
-  payload: Record<string, any>;
+  payload: Partial<Record<SealedPayloadKey, EncryptedNotificationBody>> & {
+    data?: unknown;
+  };
 }
 
 const isLive = (status: string) =>
   status === "pending" || status === "processing";
 
 function sealedCopies(row: QueueRow) {
-  return SEALED_PAYLOAD_FIELDS.filter(
-    ([key]) => typeof row.payload?.[key]?.ciphertext === "string",
-  );
+  return SEALED_PAYLOAD_FIELDS.flatMap(([key, role]) => {
+    const copy = row.payload?.[key];
+    return typeof copy?.ciphertext === "string" ? [{ key, role, copy }] : [];
+  });
 }
 
 function queueRowNeedsWork(row: QueueRow, keyId: string): boolean {
   return sealedCopies(row).some(
-    ([key]) =>
-      !isLive(row.status) || needsReseal(row.payload[key].ciphertext, keyId),
+    ({ copy }) => !isLive(row.status) || needsReseal(copy.ciphertext, keyId),
   );
 }
 
-async function fetchQueueRowsNeedingWork(
+export async function findPendingQueueRows(
   userId: string,
   keyId: string,
 ): Promise<QueueRow[]> {
@@ -251,10 +258,6 @@ async function fetchQueueRowsNeedingWork(
   return rows.filter((row) => queueRowNeedsWork(row, keyId));
 }
 
-export async function findPendingQueueRows(userId: string) {
-  return fetchQueueRowsNeedingWork(userId, await currentKeyId(userId));
-}
-
 // Pending copies are re-sealed bound to their source row; the rest are stripped so a retired
 // key cannot open them. A copy that cannot be opened is dropped too: the notification falls
 // back to its generic copy instead of blocking the whole Re-seal.
@@ -263,10 +266,10 @@ async function resealNotificationQueue(
   ring: Keyring,
 ): Promise<void> {
   const raw = createRawClient();
-  for (const row of await fetchQueueRowsNeedingWork(userId, ring.keyId)) {
+  for (const row of await findPendingQueueRows(userId, ring.keyId)) {
     const payload = { ...row.payload };
-    for (const [key, role] of sealedCopies(row)) {
-      const { ciphertext, template } = row.payload[key];
+    for (const { key, role, copy } of sealedCopies(row)) {
+      const { ciphertext, template } = copy;
       const binding = sourceBinding(userId, row.payload.data, role);
       const openingKey = keyForEnvelope(ring, ciphertext);
       if (!isLive(row.status) || !binding || !openingKey) {
@@ -297,21 +300,29 @@ async function resealNotificationQueue(
     if (error) throw error;
     if (!data || data.length === 0) {
       throw new Error(
-        `Migration conflict: notification ${row.id} changed during migration. Retrying will pick it up.`,
+        `Re-seal conflict: notification ${row.id} changed during the Re-seal. Retrying will pick it up.`,
       );
     }
   }
 }
 
+export interface UnreadableValue {
+  table: string;
+  id: string;
+  column: string;
+}
+
 // Re-seals every value not yet in the current scheme under the current key,
 // bound to its row; plaintext is the special case with nothing to open first.
-export async function runBackfillMigration(
+// A value that cannot be opened (tampered, moved or corrupted) is left as it is and
+// returned, so the pass still finishes every other row.
+export async function runReseal(
   userId: string,
-  onProgress?: (progress: MigrationProgress) => void,
-): Promise<void> {
+  onProgress?: (progress: ResealProgress) => void,
+): Promise<UnreadableValue[]> {
   const ring = await keyStore.loadKeyring(userId);
   if (!ring) {
-    throw new Error("Cannot migrate: the content key is unavailable.");
+    throw new Error("Cannot re-seal: the content key is unavailable.");
   }
 
   await redactLegacyPlaintextNotifications(userId);
@@ -324,6 +335,7 @@ export async function runBackfillMigration(
 
   const CONCURRENCY = 10;
   let done = 0;
+  const unreadable: UnreadableValue[] = [];
 
   const migrateRow = async ({ table, id, updatedAt, row }: PendingRow) => {
     const fields = FIELD_MAP[table];
@@ -341,7 +353,12 @@ export async function runBackfillMigration(
               `Cannot re-seal ${table}.${field} of row ${id}: its key is unavailable.`,
             );
           }
-          plaintext = await decryptField(openingKey, value, binding);
+          try {
+            plaintext = await decryptField(openingKey, value, binding);
+          } catch {
+            unreadable.push({ table, id, column: field });
+            return;
+          }
         } else {
           plaintext = isJsonField(table, field)
             ? JSON.stringify(value)
@@ -355,6 +372,7 @@ export async function runBackfillMigration(
         );
       }),
     );
+    if (Object.keys(patch).length === 0) return;
 
     // Avoid overwriting concurrent writes with stale ciphertext.
     let query = (raw.from(table) as any)
@@ -373,7 +391,7 @@ export async function runBackfillMigration(
     if (error) throw error;
     if (!data || data.length === 0) {
       throw new Error(
-        `Migration conflict: ${table} row ${id} changed during migration. Retrying will pick it up.`,
+        `Re-seal conflict: ${table} row ${id} changed during the Re-seal. Retrying will pick it up.`,
       );
     }
 
@@ -387,4 +405,5 @@ export async function runBackfillMigration(
   }
 
   await resealNotificationQueue(userId, ring);
+  return unreadable;
 }

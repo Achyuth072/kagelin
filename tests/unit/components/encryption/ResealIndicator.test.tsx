@@ -1,49 +1,31 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as Sentry from "@sentry/nextjs";
 import { ResealIndicator } from "@/components/encryption/ResealIndicator";
 import {
-  findPendingQueueRows,
-  findPendingRows,
-  runBackfillMigration,
-} from "@/lib/crypto/backfillMigration";
-import { keyStore } from "@/lib/crypto/keyStore";
-import { markResealComplete } from "@/lib/crypto/keyManager";
+  resealUntilClean,
+  UnreadableContentError,
+} from "@/lib/crypto/resealUntilClean";
 
-vi.mock("@/lib/crypto/backfillMigration", () => ({
-  runBackfillMigration: vi.fn(),
-  findPendingRows: vi.fn(),
-  findPendingQueueRows: vi.fn(),
+vi.mock("@/lib/crypto/resealUntilClean", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/crypto/resealUntilClean")>()),
+  resealUntilClean: vi.fn(),
 }));
 
-vi.mock("@/lib/crypto/keyStore", () => ({
-  keyStore: {
-    loadKeyring: vi.fn(),
-  },
-}));
-
-vi.mock("@/lib/crypto/keyManager", () => ({
-  markResealComplete: vi.fn(),
-}));
+vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
 describe("ResealIndicator", () => {
   beforeEach(() => {
-    vi.resetAllMocks();
-    vi.mocked(markResealComplete).mockResolvedValue(undefined);
-    vi.mocked(findPendingQueueRows).mockResolvedValue([]);
-    vi.mocked(keyStore.loadKeyring).mockResolvedValue({
-      keyId: "2",
-      key: new Uint8Array(32),
-      retired: {},
-    });
+    vi.mocked(resealUntilClean).mockReset();
+    vi.mocked(Sentry.captureException).mockReset();
   });
 
-  it("shows progress, sets the marker once nothing is left, then reports completion", async () => {
-    vi.mocked(runBackfillMigration).mockImplementation(
+  it("shows progress, then reports completion", async () => {
+    vi.mocked(resealUntilClean).mockImplementation(
       async (_userId, onProgress) => {
-        onProgress?.({ done: 2, total: 5, table: "tasks" });
+        onProgress({ done: 2, total: 5, table: "tasks" });
       },
     );
-    vi.mocked(findPendingRows).mockResolvedValue([]);
     const onComplete = vi.fn();
 
     render(<ResealIndicator userId="user-1" onComplete={onComplete} />);
@@ -52,47 +34,35 @@ describe("ResealIndicator", () => {
       /Upgrading encryption/,
     );
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
-    expect(markResealComplete).toHaveBeenCalledWith("user-1", "2");
   });
 
-  it("does not set the marker while an unupgraded value remains", async () => {
-    vi.mocked(runBackfillMigration).mockResolvedValue(undefined);
-    vi.mocked(findPendingRows).mockResolvedValue([
-      { table: "tasks", id: "t1", updatedAt: null, row: {} },
-    ]);
+  it("reports a failed pass and offers a retry", async () => {
+    const error = new Error("offline");
+    vi.mocked(resealUntilClean).mockRejectedValueOnce(error);
     const onComplete = vi.fn();
 
     render(<ResealIndicator userId="user-1" onComplete={onComplete} />);
 
-    await screen.findByRole("button", { name: "Retry" });
-    expect(markResealComplete).not.toHaveBeenCalled();
+    const retry = await screen.findByRole("button", { name: "Retry" });
+    expect(Sentry.captureException).toHaveBeenCalledWith(error);
     expect(onComplete).not.toHaveBeenCalled();
-  });
 
-  it("picks up a conflicting edit on a second pass without surfacing an error", async () => {
-    vi.mocked(runBackfillMigration)
-      .mockRejectedValueOnce(new Error("Migration conflict: tasks row t1"))
-      .mockResolvedValue(undefined);
-    vi.mocked(findPendingRows).mockResolvedValue([]);
-    const onComplete = vi.fn();
-
-    render(<ResealIndicator userId="user-1" onComplete={onComplete} />);
-
+    vi.mocked(resealUntilClean).mockResolvedValue(undefined);
+    fireEvent.click(retry);
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
-    expect(runBackfillMigration).toHaveBeenCalledTimes(2);
   });
 
-  it("offers a retry when the pass keeps failing", async () => {
-    vi.mocked(runBackfillMigration).mockRejectedValue(new Error("offline"));
+  it("names the place of each value it can't read", async () => {
+    vi.mocked(resealUntilClean).mockRejectedValue(
+      new UnreadableContentError([
+        { table: "tasks", id: "t1", column: "content" },
+      ]),
+    );
 
     render(<ResealIndicator userId="user-1" onComplete={vi.fn()} />);
 
-    const retry = await screen.findByRole("button", { name: "Retry" });
-    expect(markResealComplete).not.toHaveBeenCalled();
-
-    vi.mocked(runBackfillMigration).mockResolvedValue(undefined);
-    vi.mocked(findPendingRows).mockResolvedValue([]);
-    fireEvent.click(retry);
-    await waitFor(() => expect(markResealComplete).toHaveBeenCalled());
+    expect(
+      await screen.findByText(/1 item can't be read \(tasks\.content\)/),
+    ).toBeInTheDocument();
   });
 });

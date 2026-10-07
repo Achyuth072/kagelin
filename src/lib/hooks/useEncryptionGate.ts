@@ -6,7 +6,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { getEncryptionKeyRow } from "@/lib/crypto/keyManager";
 import type { EncryptionKeyRow } from "@/lib/crypto/encryptionKeyRowCache";
 import { keyStore } from "@/lib/crypto/keyStore";
-import { INITIAL_KEY_ID } from "@/lib/crypto/envelope";
+import { currentKeyIdOf } from "@/lib/crypto/keyring";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
 import { recordActivity, shouldAutoLockNow } from "@/lib/crypto/autoLock";
 import { useAutoLockTimer } from "@/lib/hooks/useAutoLockTimer";
@@ -40,7 +40,7 @@ export function useEncryptionGate(): {
   status: EncryptionGateStatus;
   recheck: () => void;
   lock: () => Promise<void>;
-  needsReseal: boolean;
+  resealDue: boolean;
   finishReseal: () => void;
   beginReseal: () => void;
 } {
@@ -48,7 +48,7 @@ export function useEncryptionGate(): {
   const queryClient = useQueryClient();
   const [asyncStatus, setAsyncStatus] = useState<AsyncStatus>("loading");
   const [version, setVersion] = useState(0);
-  const [resealDue, setResealDue] = useState(false);
+  const [resealRequested, setResealRequested] = useState(false);
   const autoLockEnabled = useUiStore((s) => s.autoLockEnabled);
   const autoLockMinutes = useUiStore((s) => s.autoLockMinutes);
   // Avoid re-running the status effect on settings changes.
@@ -76,10 +76,7 @@ export function useEncryptionGate(): {
 
         // A key rotated on another device cannot read or write here until unlocked again.
         const cachedKey =
-          keyring &&
-          keyring.keyId === String(row?.current_key_id ?? INITIAL_KEY_ID)
-            ? keyring.key
-            : null;
+          keyring && keyring.keyId === currentKeyIdOf(row) ? keyring.key : null;
 
         const wouldUnlock =
           !!row &&
@@ -101,7 +98,11 @@ export function useEncryptionGate(): {
         }
 
         const status = resolveStatus(row, cachedKey);
-        setResealDue(status === "unlocked" && row?.sealed_v2_at === null);
+        setResealRequested(
+          status === "unlocked" &&
+            (row?.sealed_v2_at === null ||
+              Object.keys(row?.retired_keys ?? {}).length > 0),
+        );
         setAsyncStatus(status);
       } catch {
         if (!cancelled) setAsyncStatus("unavailable");
@@ -130,8 +131,8 @@ export function useEncryptionGate(): {
     lock,
   );
 
-  const finishReseal = useCallback(() => setResealDue(false), []);
-  const beginReseal = useCallback(() => setResealDue(true), []);
+  const finishReseal = useCallback(() => setResealRequested(false), []);
+  const beginReseal = useCallback(() => setResealRequested(true), []);
 
   const status: EncryptionGateStatus = authLoading
     ? "loading"
@@ -143,7 +144,7 @@ export function useEncryptionGate(): {
     status,
     recheck,
     lock,
-    needsReseal: resealDue && status === "unlocked",
+    resealDue: resealRequested && status === "unlocked",
     finishReseal,
     beginReseal,
   };

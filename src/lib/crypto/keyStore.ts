@@ -53,24 +53,29 @@ async function loadRecord(): Promise<StoredMasterKey | null> {
   return cached;
 }
 
+async function loadOwnedRecord(
+  userId?: string,
+): Promise<StoredMasterKey | null> {
+  const record = await loadRecord();
+  if (!record) return null;
+  // Evict cached key on user mismatch to prevent cross-account exposure.
+  if (userId !== undefined && record.userId !== userId) {
+    await keyStore.clear();
+    return null;
+  }
+  return record;
+}
+
 export const keyStore: KeyStore = {
   async load(userId) {
-    const record = await loadRecord();
-    if (!record) return null;
-    // Evict cached key on user mismatch to prevent cross-account exposure.
-    if (userId !== undefined && record.userId !== userId) {
-      await keyStore.clear();
-      return null;
-    }
-    return record.key;
+    return (await loadOwnedRecord(userId))?.key ?? null;
   },
   async loadKeyring(userId) {
-    const key = await keyStore.load(userId);
-    const record = cached;
-    if (!key || !record) return null;
+    const record = await loadOwnedRecord(userId);
+    if (!record) return null;
     return {
       keyId: record.keyId ?? INITIAL_KEY_ID,
-      key,
+      key: record.key,
       retired: record.retired ?? {},
     };
   },

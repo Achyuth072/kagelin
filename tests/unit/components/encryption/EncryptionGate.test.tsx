@@ -39,13 +39,13 @@ vi.mock("@/components/encryption/NewPassphraseStep", () => ({
 function mockGate(
   status: EncryptionGateStatus,
   lock = vi.fn(),
-  needsReseal = false,
+  resealDue = false,
 ) {
   vi.mocked(useEncryptionGate).mockReturnValue({
     status,
     recheck: vi.fn(),
     lock,
-    needsReseal,
+    resealDue,
     finishReseal: vi.fn(),
     beginReseal: vi.fn(),
   });
@@ -150,7 +150,7 @@ describe("EncryptionGate", () => {
       status: "unavailable",
       recheck,
       lock: vi.fn(),
-      needsReseal: false,
+      resealDue: false,
       finishReseal: vi.fn(),
       beginReseal: vi.fn(),
     });

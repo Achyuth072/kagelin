@@ -32,7 +32,7 @@ export async function base64ToBytes(base64: string): Promise<Uint8Array> {
 }
 
 // A row-bound value failed authentication: it was moved, altered or sealed under another key.
-export const CIPHERTEXT_TAMPERED_CODE = "ciphertext_tampered";
+const CIPHERTEXT_TAMPERED_CODE = "ciphertext_tampered";
 
 export class TamperError extends Error {
   readonly code = CIPHERTEXT_TAMPERED_CODE;

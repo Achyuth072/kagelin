@@ -270,12 +270,13 @@ export const habitMutations = {
     }
 
     // An upsert that hits the conflict key rewrites id, so reuse the stored one.
-    const { data: existing } = await supabase
+    const { data: existing, error: lookupError } = await supabase
       .from("habit_entries")
       .select("id")
       .eq("habit_id", habitId)
       .eq("date", date)
       .maybeSingle();
+    if (lookupError) throw new Error(lookupError.message);
 
     const payload: {
       id: string;

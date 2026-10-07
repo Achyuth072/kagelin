@@ -112,7 +112,41 @@ describe("server-side backstop for a rotated content key", () => {
     expect(rpc).toBeDefined();
     expect(rpc).toMatch(/current_key_id = current_key_id \+ 1/);
     expect(rpc).toMatch(/current_key_id = p_expected_key_id/);
-    expect(rpc).toMatch(/sealed_v2_at = NULL/);
     expect(rpc).toMatch(/retired_keys = p_retired_keys/);
+    expect(rpc).toMatch(/SECURITY DEFINER/);
+  });
+
+  it("keeps the -v1 rejection on through a rotation", () => {
+    const rpc = schemaSql.match(
+      /CREATE OR REPLACE FUNCTION public\.rotate_content_key\([\s\S]*?\n\$\$;/,
+    )?.[0];
+    expect(rpc).not.toMatch(/sealed_v2_at/);
+  });
+});
+
+describe("the key row's markers cannot be rolled back by a direct UPDATE", () => {
+  const guard = schemaSql.match(
+    /CREATE OR REPLACE FUNCTION public\.guard_encryption_key_markers\(\)[\s\S]*?\n\$\$;/,
+  )?.[0];
+
+  it("runs before every update of encryption_keys", () => {
+    expect(schemaSql).toMatch(
+      /CREATE TRIGGER encryption_keys_guard_markers\s+BEFORE UPDATE ON public\.encryption_keys\s+FOR EACH ROW EXECUTE FUNCTION public\.guard_encryption_key_markers\(\)/,
+    );
+  });
+
+  it("lets only the rotation RPC move the key chain, and never clears a marker", () => {
+    expect(guard).toBeDefined();
+    expect(guard).toMatch(/current_user IN \('authenticated', 'anon'\)/);
+    expect(guard).toMatch(
+      /NEW\.current_key_id IS DISTINCT FROM OLD\.current_key_id/,
+    );
+    expect(guard).toMatch(/NEW\.retired_keys <> '\{\}'::jsonb/);
+    expect(guard).toMatch(
+      /OLD\.migrated_at IS NOT NULL AND NEW\.migrated_at IS NULL/,
+    );
+    expect(guard).toMatch(
+      /OLD\.sealed_v2_at IS NOT NULL AND NEW\.sealed_v2_at IS NULL/,
+    );
   });
 });

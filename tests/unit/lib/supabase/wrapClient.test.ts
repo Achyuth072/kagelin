@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   wrapSupabaseClient,
   MISSING_ROW_ID_CODE,
-  isAppUpdateRequiredError,
 } from "@/lib/supabase/wrapClient";
 import { FIELD_MAP, type FieldMap } from "@/lib/supabase/fieldMap";
 import { generateMasterKey } from "@/lib/crypto/masterKey";
@@ -720,7 +719,10 @@ describe("wrapSupabaseClient — sealing writes row-bound", () => {
       .from("tasks")
       .insert({ id: "t1", content: "x" });
 
-    expect(isAppUpdateRequiredError(error)).toBe(true);
+    expect(error).toMatchObject({
+      code: "app_update_required",
+      message: "Kagelin has been updated. Reload the app to keep saving.",
+    });
   });
 });
 

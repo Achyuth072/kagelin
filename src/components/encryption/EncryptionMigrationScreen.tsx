@@ -5,11 +5,9 @@ import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { AuthShell } from "@/components/auth/AuthShell";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import {
-  runBackfillMigration,
-  type MigrationProgress,
-} from "@/lib/crypto/backfillMigration";
+import { runReseal, type ResealProgress } from "@/lib/crypto/reseal";
 import { markMigrationComplete } from "@/lib/crypto/keyManager";
+import { UnreadableContentError } from "@/lib/crypto/resealUntilClean";
 
 export function EncryptionMigrationScreen({
   userId,
@@ -18,7 +16,7 @@ export function EncryptionMigrationScreen({
   userId: string;
   onComplete: () => void;
 }) {
-  const [progress, setProgress] = useState<MigrationProgress | null>(null);
+  const [progress, setProgress] = useState<ResealProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const running = useRef(false);
@@ -31,9 +29,10 @@ export function EncryptionMigrationScreen({
     (async () => {
       try {
         setError(null);
-        await runBackfillMigration(userId, (p) => {
+        const unreadable = await runReseal(userId, (p) => {
           if (!cancelled) setProgress(p);
         });
+        if (unreadable.length > 0) throw new UnreadableContentError(unreadable);
         await markMigrationComplete(userId);
         // Notify parent even if cancelled so StrictMode remounts do not drop completion.
         onComplete();

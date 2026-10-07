@@ -84,12 +84,16 @@ export function isJsonField(table: string, field: string): boolean {
 // Thrown on missing or locked content key, unlike PostgREST's resolved { data, error }.
 export const CONTENT_KEY_UNAVAILABLE_CODE = "content_key_unavailable";
 
-export function isContentKeyUnavailableError(error: unknown): boolean {
+function hasErrorCode(error: unknown, code: string): boolean {
   return (
     typeof error === "object" &&
     error !== null &&
-    (error as { code?: unknown }).code === CONTENT_KEY_UNAVAILABLE_CODE
+    (error as { code?: unknown }).code === code
   );
+}
+
+export function isContentKeyUnavailableError(error: unknown): boolean {
+  return hasErrorCode(error, CONTENT_KEY_UNAVAILABLE_CODE);
 }
 
 function contentKeyUnavailableError(
@@ -125,20 +129,19 @@ function rowNeedsEncryption(
   );
 }
 
-export const APP_UPDATE_REQUIRED_CODE = "app_update_required";
-
-// The server's marker of a finished upgrade rejects `-v1` writes from a stale app.
-const SEALING_SCHEME_OUTDATED_HINT = "sealing_scheme_outdated";
-// The server's rejection of a write sealed with a key the Account has rotated away from.
-const CONTENT_KEY_RETIRED_HINT = "content_key_retired";
-
-export function isAppUpdateRequiredError(error: unknown): boolean {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    (error as { code?: unknown }).code === APP_UPDATE_REQUIRED_CODE
-  );
-}
+// Server rejection hints mapped to the client error each one surfaces as.
+const SERVER_HINT_ERRORS: Record<string, { code: string; message: string }> = {
+  // The server's marker of a finished upgrade rejects `-v1` writes from a stale app.
+  sealing_scheme_outdated: {
+    code: "app_update_required",
+    message: "Kagelin has been updated. Reload the app to keep saving.",
+  },
+  // The server's rejection of a write sealed with a key the Account has rotated away from.
+  content_key_retired: {
+    code: CONTENT_KEY_UNAVAILABLE_CODE,
+    message: "Your content key changed. Unlock again to keep saving.",
+  },
+};
 
 interface SealContext {
   key: Uint8Array;
@@ -289,27 +292,13 @@ async function decryptResult(
   result: any,
 ): Promise<any> {
   if (isPlainObject(result) && isPlainObject(result.error)) {
-    if (result.error.hint === SEALING_SCHEME_OUTDATED_HINT) {
-      return {
-        ...result,
-        error: {
-          ...result.error,
-          code: APP_UPDATE_REQUIRED_CODE,
-          message: "Kagelin has been updated. Reload the app to keep saving.",
-        },
-      };
-    }
-    if (result.error.hint === CONTENT_KEY_RETIRED_HINT) {
-      return {
-        ...result,
-        error: {
-          ...result.error,
-          code: CONTENT_KEY_UNAVAILABLE_CODE,
-          message: "Your content key changed. Unlock again to keep saving.",
-        },
-      };
-    }
-    return result;
+    const mapped =
+      typeof result.error.hint === "string"
+        ? SERVER_HINT_ERRORS[result.error.hint]
+        : undefined;
+    return mapped
+      ? { ...result, error: { ...result.error, ...mapped } }
+      : result;
   }
   if (!isPlainObject(result) || result.error || result.data == null) {
     return result;

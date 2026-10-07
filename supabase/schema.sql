@@ -2044,6 +2044,32 @@ CREATE TRIGGER encryption_keys_updated_at
   BEFORE UPDATE ON public.encryption_keys
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- The owner's UPDATE policy covers every column, so without this a session could roll
+-- current_key_id back or clear a marker and reopen writes the backstop rejects. Only
+-- rotate_content_key, running as its owner, may move the key chain.
+CREATE OR REPLACE FUNCTION public.guard_encryption_key_markers()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF current_user IN ('authenticated', 'anon') AND (
+       NEW.current_key_id IS DISTINCT FROM OLD.current_key_id
+    OR (NEW.retired_keys IS DISTINCT FROM OLD.retired_keys AND NEW.retired_keys <> '{}'::jsonb)
+    OR (OLD.migrated_at IS NOT NULL AND NEW.migrated_at IS NULL)
+    OR (OLD.sealed_v2_at IS NOT NULL AND NEW.sealed_v2_at IS NULL)
+  ) THEN
+    RAISE EXCEPTION 'The content key chain changes only through a rotation'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER encryption_keys_guard_markers
+  BEFORE UPDATE ON public.encryption_keys
+  FOR EACH ROW EXECUTE FUNCTION public.guard_encryption_key_markers();
+
 -- =============================================================================
 -- 22. SERVER-SIDE PLAINTEXT BACKSTOP (post-migration)
 -- =============================================================================
@@ -2172,7 +2198,8 @@ CREATE TRIGGER habit_entries_reject_unmigrated_plaintext
   FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext_habit_entry();
 
 -- Commits every new wrapper, the retired-key chain and the key id advance in one statement, or
--- none of them. Clearing sealed_v2_at makes the next unlock on any device resume the Re-seal.
+-- none of them. It leaves sealed_v2_at alone: the retired keys alone mark the Re-seal as due,
+-- so the -v1 rejection stays on through a rotation.
 CREATE OR REPLACE FUNCTION public.rotate_content_key(
   p_expected_key_id INTEGER,
   p_passphrase_salt TEXT,
@@ -2185,7 +2212,8 @@ CREATE OR REPLACE FUNCTION public.rotate_content_key(
 )
 RETURNS INTEGER
 LANGUAGE plpgsql
-SET search_path = public
+SECURITY DEFINER
+SET search_path = ''
 AS $$
 DECLARE
   new_key_id INTEGER;
@@ -2199,7 +2227,6 @@ BEGIN
       wrapped_key_recovery = p_wrapped_key_recovery,
       retired_keys = p_retired_keys,
       current_key_id = current_key_id + 1,
-      sealed_v2_at = NULL,
       passphrase_reset_required = false
   WHERE user_id = auth.uid()
     AND current_key_id = p_expected_key_id
@@ -2213,3 +2240,6 @@ BEGIN
   RETURN new_key_id;
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.rotate_content_key(INTEGER, TEXT, JSONB, TEXT, TEXT, JSONB, TEXT, JSONB) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.rotate_content_key(INTEGER, TEXT, JSONB, TEXT, TEXT, JSONB, TEXT, JSONB) TO authenticated;

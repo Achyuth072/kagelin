@@ -76,7 +76,7 @@ export function useUhabitsImport() {
         // eslint-disable-next-line local/no-unbounded-supabase-select -- habit definitions, not entries
         const { data: existing } = await supabase
           .from("habits")
-          .select("name, sort_order, source_uuid");
+          .select("id, name, sort_order, source_uuid");
         if (existing && existing.length > 0) {
           ({ toImport: habitsToImport, skippedNames } =
             partitionAgainstExisting(habits, existing));

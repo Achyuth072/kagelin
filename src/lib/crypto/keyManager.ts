@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/client";
 import {
   DEFAULT_ARGON2_PARAMS,
@@ -16,9 +17,9 @@ import {
   encryptionKeyRowCache,
   type EncryptionKeyRow,
 } from "@/lib/crypto/encryptionKeyRowCache";
-import { findPendingRows } from "@/lib/crypto/backfillMigration";
+import { findPendingRows } from "@/lib/crypto/reseal";
 import { recordActivity } from "@/lib/crypto/autoLock";
-import { INITIAL_KEY_ID } from "@/lib/crypto/envelope";
+import { currentKeyIdOf } from "@/lib/crypto/keyring";
 
 export class UnlockError extends Error {}
 
@@ -35,12 +36,7 @@ async function cacheMasterKey(
       ),
     ),
   );
-  await keyStore.save(
-    userId,
-    masterKey,
-    String(row.current_key_id ?? INITIAL_KEY_ID),
-    retired,
-  );
+  await keyStore.save(userId, masterKey, currentKeyIdOf(row), retired);
   recordActivity();
 }
 
@@ -391,16 +387,21 @@ export async function rotateContentKey(
   });
   if (error) throw error;
 
-  await encryptionKeyRowCache.save(userId, {
-    ...row,
-    ...patch,
-    current_key_id: newKeyId as number,
-    retired_keys: wrappedRetired,
-    sealed_v2_at: null,
-    passphrase_reset_required: false,
-  });
-  await keyStore.save(userId, newKey, String(newKeyId), retired);
-  recordActivity();
+  // The rotation is committed, so the recovery code must reach the user even if this device
+  // can't store the new key; it then asks to unlock again with the new passphrase.
+  try {
+    await encryptionKeyRowCache.save(userId, {
+      ...row,
+      ...patch,
+      current_key_id: newKeyId as number,
+      retired_keys: wrappedRetired,
+      passphrase_reset_required: false,
+    });
+    await keyStore.save(userId, newKey, String(newKeyId), retired);
+    recordActivity();
+  } catch (err) {
+    Sentry.captureException(err);
+  }
 
   const { error: signOutError } = await supabase.auth.signOut({
     scope: "others",
