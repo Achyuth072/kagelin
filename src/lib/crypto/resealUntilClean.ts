@@ -22,9 +22,29 @@ export class UnreadableContentError extends Error {
   }
 }
 
-// The signal stops a run a newer one replaced (a rotation) between batches; rows already in
-// flight still finish, and any conflict they cause is retried by the newer run. Once aborted,
-// the abort is what the caller gets, since the newer run reports the real outcome.
+export async function resealUntilNothingWritten(
+  userId: string,
+  onProgress: (progress: ResealProgress) => void,
+  signal?: AbortSignal,
+): Promise<UnreadableValue[]> {
+  let lastError: unknown;
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    signal?.throwIfAborted();
+    let result: ResealResult;
+    try {
+      result = await runReseal(userId, onProgress, signal);
+    } catch (err) {
+      signal?.throwIfAborted();
+      lastError = err;
+      continue;
+    }
+    signal?.throwIfAborted();
+    lastError = undefined;
+    if (result.sealed === 0) return result.unreadable;
+  }
+  throw lastError ?? new Error("Some content still needs upgrading.");
+}
+
 export async function resealUntilClean(
   userId: string,
   onProgress: (progress: ResealProgress) => void,
@@ -32,27 +52,13 @@ export async function resealUntilClean(
 ): Promise<void> {
   const ring = await keyStore.loadKeyring(userId);
   if (!ring) throw new Error("The content key is unavailable.");
-  let lastError: unknown;
-  for (let pass = 0; pass < MAX_PASSES; pass++) {
-    signal.throwIfAborted();
-    let result: ResealResult;
-    try {
-      result = await runReseal(userId, onProgress, signal);
-    } catch (err) {
-      signal.throwIfAborted();
-      lastError = err;
-      continue;
-    }
-    signal.throwIfAborted();
-    lastError = undefined;
-    if (result.sealed > 0) continue;
-    if (result.unreadable.length > 0) {
-      throw new UnreadableContentError(result.unreadable);
-    }
-    if (!(await markResealComplete(userId, ring.keyId))) {
-      throw new Error("The content key changed during the Re-seal.");
-    }
-    return;
+  const unreadable = await resealUntilNothingWritten(
+    userId,
+    onProgress,
+    signal,
+  );
+  if (unreadable.length > 0) throw new UnreadableContentError(unreadable);
+  if (!(await markResealComplete(userId, ring.keyId))) {
+    throw new Error("The content key changed during the Re-seal.");
   }
-  throw lastError ?? new Error("Some content still needs upgrading.");
 }

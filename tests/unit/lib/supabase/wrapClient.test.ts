@@ -1170,3 +1170,18 @@ describe("wrapSupabaseClient — after this device has seen a finished Re-seal",
     expect(data.content).toBe("Guest task");
   });
 });
+
+describe("writes that seal nothing", () => {
+  it("do not read the session, so they never wait on the auth lock", async () => {
+    const raw = createFakeSupabaseClient({
+      tasks: [{ id: "t1", user_id: "user-1", day_order: 0 }],
+    });
+    const getSession = vi.spyOn(raw.auth, "getSession");
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    await client.from("tasks").update({ day_order: 3 }).eq("id", "t1");
+    await client.from("focus_logs").insert({ id: "f1", duration: 25 });
+
+    expect(getSession).not.toHaveBeenCalled();
+  });
+});

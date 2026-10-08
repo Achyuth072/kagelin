@@ -140,14 +140,17 @@ export async function getEncryptionKeyRow(
   return fetchEncryptionKeyRow(userId);
 }
 
-// The blocking pass seals every value row-bound, so it completes both markers.
-export async function markMigrationComplete(userId: string): Promise<void> {
+// Leaves sealed_v2_at unset so re-sealing keeps reporting unopenable values.
+export async function markMigrationComplete(
+  userId: string,
+  allSealed: boolean,
+): Promise<void> {
   const now = new Date().toISOString();
   const ring = await keyStore.loadKeyring(userId);
   if (!ring) throw new UnlockError("Unlock before finishing encryption.");
   await updateEncryptionKeyRow(userId, ring.keyId, {
     migrated_at: now,
-    sealed_v2_at: now,
+    ...(allSealed && { sealed_v2_at: now }),
   });
 }
 

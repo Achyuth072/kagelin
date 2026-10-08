@@ -877,6 +877,35 @@ describe("runReseal", () => {
       expect(fakeClient.rawRows("tasks")[0].content).toBe(corrupted);
     });
 
+    it("marks each write as a Re-seal, so the server keeps updated_at and sync's last-write-wins is unaffected", async () => {
+      fakeClient = createFakeSupabaseClient({
+        calendar_events: [
+          {
+            id: "e1",
+            user_id: USER_ID,
+            title: await sealedUnder(
+              oldKey,
+              "1",
+              "calendar_events",
+              "title",
+              "e1",
+              "Standup",
+            ),
+            updated_at: "t0",
+          },
+        ],
+      });
+
+      await runReseal(USER_ID);
+
+      expect(fakeClient.sentHeaders).toContainEqual({
+        table: "calendar_events",
+        kind: "update",
+        name: "x-kagelin-reseal",
+        value: "1",
+      });
+    });
+
     it("re-seals the rest and reports a value that fails to open, leaving it untouched", async () => {
       const movedFromT2 = await sealedUnder(
         oldKey,

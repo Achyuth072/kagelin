@@ -231,6 +231,8 @@ async function encryptRow(
 
 export interface EncryptPayloadOptions {
   userId?: string;
+  // Called only once something needs sealing, so plain writes skip the session read.
+  getUserId?: () => Promise<string | null>;
   rowId?: string;
 }
 
@@ -254,7 +256,10 @@ export async function encryptPayload(
   }
 
   const keyring = await keyStore.loadKeyring();
-  const userId = options.userId ?? (await keyStore.loadUserId());
+  const userId =
+    options.userId ??
+    (await options.getUserId?.()) ??
+    (await keyStore.loadUserId());
   if (!keyring || !userId) {
     throw contentKeyUnavailableError("write to", table);
   }
@@ -500,7 +505,7 @@ function wrapQueryBuilder(builder: any, table: string, ctx: WrapContext): any {
               values,
               ctx.fieldMap,
               {
-                userId: (await ctx.getUserId()) ?? undefined,
+                getUserId: ctx.getUserId,
                 rowId: method === "update" ? idFilter(ops) : undefined,
               },
             );

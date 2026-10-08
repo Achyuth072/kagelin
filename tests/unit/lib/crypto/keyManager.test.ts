@@ -489,11 +489,24 @@ describe("keyManager", () => {
     });
     await setupEncryption(USER_ID, "first passphrase");
 
-    await markMigrationComplete(USER_ID);
+    await markMigrationComplete(USER_ID, true);
 
     const row = await getEncryptionKeyRow(USER_ID);
     expect(row?.migrated_at).toEqual(expect.any(String));
     expect(row?.sealed_v2_at).toEqual(expect.any(String));
+  }, 20000);
+
+  it("markMigrationComplete leaves sealed_v2_at unset while a value could not be opened", async () => {
+    rawClient = createFakeSupabaseClient({
+      tasks: [{ id: "t1", user_id: USER_ID, content: "Buy milk" }],
+    });
+    await setupEncryption(USER_ID, "first passphrase");
+
+    await markMigrationComplete(USER_ID, false);
+
+    const row = await getEncryptionKeyRow(USER_ID);
+    expect(row?.migrated_at).toEqual(expect.any(String));
+    expect(row?.sealed_v2_at).toBeNull();
   }, 20000);
 
   it("setupEncryption leaves migrated_at null for an account with pre-existing plaintext, so the backfill migration still runs", async () => {
@@ -509,7 +522,7 @@ describe("keyManager", () => {
   it("markMigrationComplete refreshes the offline cache, so a later offline check sees migration as done", async () => {
     await setupEncryption(USER_ID, "first passphrase");
     await hasEncryptionKey(USER_ID);
-    await markMigrationComplete(USER_ID);
+    await markMigrationComplete(USER_ID, true);
 
     offline = true;
     expect((await getEncryptionKeyRow(USER_ID))?.migrated_at).toEqual(
@@ -537,7 +550,6 @@ describe("keyManager", () => {
     await expect(
       unlockWithPassphrase(USER_ID, "wrong passphrase"),
     ).rejects.toThrow(UnlockError);
-
     expect(recordActivityMock).not.toHaveBeenCalled();
   }, 20000);
 

@@ -150,3 +150,20 @@ describe("the key row's markers cannot be rolled back by a direct UPDATE", () =>
     );
   });
 });
+
+describe("a Re-seal write keeps updated_at", () => {
+  it("in the schema and its migration, keyed on the header the Re-seal sends", () => {
+    const migration = readFileSync(
+      path.resolve(
+        __dirname,
+        "../../../../supabase/migrations/20261008120600_reseal_keeps_updated_at.sql",
+      ),
+      "utf-8",
+    );
+    for (const sql of [schemaSql, migration]) {
+      expect(sql).toContain(
+        "IF NULLIF(current_setting('request.headers', true), '')::json->>'x-kagelin-reseal' = '1' THEN\n    NEW.updated_at = OLD.updated_at;",
+      );
+    }
+  });
+});

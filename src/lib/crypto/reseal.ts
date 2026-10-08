@@ -12,7 +12,12 @@ import {
   encryptField,
   isCiphertext,
 } from "@/lib/crypto/contentCipher";
-import { INITIAL_KEY_ID, isRowBound, needsReseal } from "@/lib/crypto/envelope";
+import {
+  INITIAL_KEY_ID,
+  isRowBound,
+  isUnopenableValueError,
+  needsReseal,
+} from "@/lib/crypto/envelope";
 import { keyChainMark } from "@/lib/crypto/keyChainMark";
 import { keyStore, type Keyring } from "@/lib/crypto/keyStore";
 import { keyForEnvelope } from "@/lib/crypto/keyring";
@@ -41,6 +46,8 @@ const TABLES_WITH_UPDATED_AT = new Set([
   "calendar_events",
   "external_calendars",
 ]);
+
+const CONCURRENCY = 10;
 
 // Keeps the habit_id list in each request URL well under PostgREST's limit.
 const HABIT_ID_CHUNK = 100;
@@ -172,14 +179,13 @@ async function redactLegacyPlaintextNotifications(
       .select("id,type,status,payload")
       .eq("user_id", userId)
       .in("type", CONTENT_NOTIFICATION_TYPES)
+      .is("payload->>encrypted", null)
       .order("id", { ascending: true })
       .range(from, to),
   );
 
   const stale = rows.filter(
-    (row) =>
-      !row.payload?.encrypted &&
-      !CONTENT_FREE_NOTIFICATION_BODIES.has(row.payload?.body),
+    (row) => !CONTENT_FREE_NOTIFICATION_BODIES.has(row.payload?.body),
   );
   if (stale.length === 0) return;
 
@@ -257,6 +263,9 @@ export async function findPendingQueueRows(
     (raw.from("notification_queue") as any)
       .select("id,status,payload")
       .eq("user_id", userId)
+      .or(
+        "payload->>encrypted.not.is.null,payload->>encryptedTitle.not.is.null",
+      )
       .order("id", { ascending: true })
       .range(from, to),
   );
@@ -271,7 +280,7 @@ async function resealNotificationQueue(
 ): Promise<number> {
   const raw = createRawClient();
   const rows = await findPendingQueueRows(userId, ring.keyId);
-  for (const row of rows) {
+  const resealRow = async (row: QueueRow) => {
     const payload = { ...row.payload };
     for (const { key, role, copy } of sealedCopies(row)) {
       const { ciphertext, template } = copy;
@@ -297,7 +306,8 @@ async function resealNotificationQueue(
             ring.keyId,
           ),
         };
-      } catch {
+      } catch (err) {
+        if (!isUnopenableValueError(err)) throw err;
         delete payload[key];
       }
     }
@@ -313,6 +323,9 @@ async function resealNotificationQueue(
         `Re-seal conflict: notification ${row.id} changed during the Re-seal. Retrying will pick it up.`,
       );
     }
+  };
+  for (let i = 0; i < rows.length; i += CONCURRENCY) {
+    await Promise.all(rows.slice(i, i + CONCURRENCY).map(resealRow));
   }
   return rows.length;
 }
@@ -354,7 +367,6 @@ export async function runReseal(
   const total = pending.length;
   onProgress?.({ done: 0, total, table: pending[0]?.table ?? "" });
 
-  const CONCURRENCY = 10;
   let done = 0;
   const unreadable: UnreadableValue[] = [];
 
@@ -374,7 +386,10 @@ export async function runReseal(
         if (isCiphertext(value)) {
           const openingKey = keyForEnvelope(ring, value);
           const opened = openingKey
-            ? await decryptField(openingKey, value, binding).catch(() => null)
+            ? await decryptField(openingKey, value, binding).catch((err) => {
+                if (!isUnopenableValueError(err)) throw err;
+                return null;
+              })
             : null;
           if (opened === null) {
             unreadable.push({ table, id, column: field });
@@ -399,6 +414,8 @@ export async function runReseal(
     // Avoid overwriting concurrent writes with stale ciphertext.
     let query = (raw.from(table) as any)
       .update(patch)
+      // Preserves updated_at since plaintext did not change.
+      .setHeader("x-kagelin-reseal", "1")
       .eq("id", id)
       .select("id");
     if (updatedAt !== null) {

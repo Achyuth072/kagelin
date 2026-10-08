@@ -15,14 +15,14 @@ vi.mock("@/lib/crypto/keyManager", () => ({
 
 describe("EncryptionMigrationScreen", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it("runs the backfill, marks it complete, and calls onComplete", async () => {
     vi.mocked(runReseal).mockImplementation(async (_userId, onProgress) => {
       onProgress?.({ done: 1, total: 2, table: "tasks" });
       onProgress?.({ done: 2, total: 2, table: "tasks" });
-      return { unreadable: [], sealed: 2 };
+      return { unreadable: [], sealed: 0 };
     });
     vi.mocked(markMigrationComplete).mockResolvedValue(undefined);
     const onComplete = vi.fn();
@@ -32,8 +32,29 @@ describe("EncryptionMigrationScreen", () => {
     );
 
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
-    expect(runReseal).toHaveBeenCalledWith("user-1", expect.any(Function));
-    expect(markMigrationComplete).toHaveBeenCalledWith("user-1");
+    expect(runReseal).toHaveBeenCalledWith(
+      "user-1",
+      expect.any(Function),
+      undefined,
+    );
+    expect(markMigrationComplete).toHaveBeenCalledWith("user-1", true);
+  });
+
+  it("marks the account only after a pass that writes nothing, so rows added meanwhile are sealed too", async () => {
+    vi.mocked(runReseal)
+      .mockResolvedValueOnce({ unreadable: [], sealed: 5 })
+      .mockResolvedValueOnce({ unreadable: [], sealed: 1 })
+      .mockResolvedValue({ unreadable: [], sealed: 0 });
+    vi.mocked(markMigrationComplete).mockResolvedValue(undefined);
+    const onComplete = vi.fn();
+
+    render(
+      <EncryptionMigrationScreen userId="user-1" onComplete={onComplete} />,
+    );
+
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    expect(runReseal).toHaveBeenCalledTimes(3);
+    expect(markMigrationComplete).toHaveBeenCalledTimes(1);
   });
 
   it("shows progress while the pass is running, so a slow pass doesn't look like a hang", async () => {
@@ -77,20 +98,20 @@ describe("EncryptionMigrationScreen", () => {
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
   });
 
-  it("does not mark migration complete while a value can't be opened", async () => {
+  it("lets the user in while a value can't be opened, leaving the Re-seal to report it", async () => {
     vi.mocked(runReseal).mockResolvedValue({
       unreadable: [{ table: "tasks", id: "t1", column: "content" }],
       sealed: 0,
     });
+    vi.mocked(markMigrationComplete).mockResolvedValue(undefined);
     const onComplete = vi.fn();
 
     render(
       <EncryptionMigrationScreen userId="user-1" onComplete={onComplete} />,
     );
 
-    await screen.findByText(/tasks\.content of row t1/);
-    expect(markMigrationComplete).not.toHaveBeenCalled();
-    expect(onComplete).not.toHaveBeenCalled();
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    expect(markMigrationComplete).toHaveBeenCalledWith("user-1", false);
   });
 
   it("still calls onComplete under React StrictMode's dev-only double effect invocation", async () => {
