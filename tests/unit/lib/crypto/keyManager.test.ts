@@ -172,6 +172,23 @@ vi.mock("@/lib/crypto/encryptionKeyRowCache", () => ({
   },
 }));
 
+const marks = new Map<string, { keyId: number; sealedV2: boolean }>();
+vi.mock("@/lib/crypto/keyChainMark", () => ({
+  keyChainMark: {
+    load: vi.fn(
+      async (userId: string) =>
+        marks.get(userId) ?? { keyId: 0, sealedV2: false },
+    ),
+    raise: vi.fn(async (userId: string, row: Row) => {
+      const seen = marks.get(userId) ?? { keyId: 0, sealedV2: false };
+      marks.set(userId, {
+        keyId: Math.max(seen.keyId, row.current_key_id ?? 1),
+        sealedV2: seen.sealedV2 || !!row.sealed_v2_at,
+      });
+    }),
+  },
+}));
+
 const captureExceptionMock = vi.fn();
 vi.mock("@sentry/nextjs", () => ({
   captureException: (err: unknown) => captureExceptionMock(err),
@@ -199,6 +216,7 @@ describe("keyManager", () => {
   beforeEach(() => {
     rows.clear();
     rowCache.clear();
+    marks.clear();
     lastUpdatePayload = null;
     updateError = null;
     rpcError = null;
@@ -581,6 +599,35 @@ describe("keyManager", () => {
       expect(keyStoreState.retired["1"]).toEqual(oldKey);
       expect(keyStoreState.retired["2"]).toEqual(secondKey);
     }, 90000);
+
+    it("refuses to unlock with a key row older than one this device has seen", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      await getEncryptionKeyRow(USER_ID);
+      const beforeRotation = { ...rows.get(USER_ID) };
+      await rotateContentKey(USER_ID, "old passphrase", "new passphrase");
+      const rotatedKey = keyStoreState.key!;
+
+      rows.set(USER_ID, beforeRotation);
+
+      await expect(
+        unlockWithPassphrase(USER_ID, "old passphrase"),
+      ).rejects.toBeInstanceOf(UnlockError);
+      expect(keyStoreState.key).toEqual(rotatedKey);
+      expect(keyStoreState.keyId).toBe("2");
+    }, 60000);
+
+    it("does not let a key row the user never unlocked raise the key id it requires", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      const honest = { ...rows.get(USER_ID) };
+      rows.set(USER_ID, { ...honest, current_key_id: 99 });
+      await getEncryptionKeyRow(USER_ID);
+
+      rows.set(USER_ID, honest);
+
+      await expect(
+        unlockWithPassphrase(USER_ID, "old passphrase"),
+      ).resolves.toBeInstanceOf(Uint8Array);
+    }, 60000);
 
     it("leaves the key row untouched and returns no recovery code when the RPC fails", async () => {
       await setupEncryption(USER_ID, "old passphrase");

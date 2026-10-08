@@ -791,6 +791,10 @@ describe("collectUhabitsExportData - wrapped client & guest mode", () => {
     const loadSpy = vi
       .spyOn(keyStoreMod.keyStore, "loadKeyring")
       .mockResolvedValue({ keyId: "1", key, retired: {} });
+    const { keyChainMark } = await import("@/lib/crypto/keyChainMark");
+    const markSpy = vi
+      .spyOn(keyChainMark, "load")
+      .mockResolvedValue({ keyId: 0, sealedV2: false });
 
     await wrapped.from("habits").insert({
       id: "enc-h1",
@@ -859,6 +863,7 @@ describe("collectUhabitsExportData - wrapped client & guest mode", () => {
     expect(firstRawSource.habits[0].name).toBe("Original Raw");
 
     loadSpy.mockRestore();
+    markSpy.mockRestore();
   });
 });
 

@@ -20,14 +20,30 @@ import {
 import { findPendingRows } from "@/lib/crypto/reseal";
 import { recordActivity } from "@/lib/crypto/autoLock";
 import { currentKeyIdOf } from "@/lib/crypto/keyring";
+import { keyChainMark } from "@/lib/crypto/keyChainMark";
 
 export class UnlockError extends Error {}
+
+async function rememberKeyRow(
+  userId: string,
+  row: EncryptionKeyRow,
+): Promise<void> {
+  await encryptionKeyRowCache.save(userId, row);
+  // Only raised once unlocked so an untrusted row cannot lock out the device.
+  await keyChainMark.raise(userId, { sealed_v2_at: row.sealed_v2_at });
+}
 
 async function cacheMasterKey(
   userId: string,
   masterKey: Uint8Array,
   row: Pick<EncryptionKeyRow, "current_key_id" | "retired_keys">,
 ): Promise<void> {
+  // Rejects a lower key id to prevent server rollback to a retired key.
+  if (Number(currentKeyIdOf(row)) < (await keyChainMark.load(userId)).keyId) {
+    throw new UnlockError(
+      "This device has seen a newer content key than the server sent. Try again later.",
+    );
+  }
   const retired = Object.fromEntries(
     await Promise.all(
       Object.entries(row.retired_keys ?? {}).map(
@@ -36,6 +52,7 @@ async function cacheMasterKey(
       ),
     ),
   );
+  await keyChainMark.raise(userId, { current_key_id: row.current_key_id });
   await keyStore.save(userId, masterKey, currentKeyIdOf(row), retired);
   recordActivity();
 }
@@ -75,7 +92,7 @@ async function updateEncryptionKeyRow(
   }
 
   const row = data as EncryptionKeyRow;
-  await encryptionKeyRowCache.save(userId, row);
+  await rememberKeyRow(userId, row);
   return row;
 }
 
@@ -91,7 +108,7 @@ async function fetchEncryptionKeyRow(
       .maybeSingle();
     if (error) throw error;
     const row = (data as EncryptionKeyRow | null) ?? null;
-    if (row) await encryptionKeyRowCache.save(userId, row);
+    if (row) await rememberKeyRow(userId, row);
     return row;
   } catch (err) {
     const cached = await encryptionKeyRowCache.load(userId);
@@ -137,7 +154,7 @@ export async function markResealComplete(
     .maybeSingle();
   if (error) throw error;
   if (!data) return false;
-  await encryptionKeyRowCache.save(userId, data as EncryptionKeyRow);
+  await rememberKeyRow(userId, data as EncryptionKeyRow);
   // The retired keys are gone server-side; drop the local copies too.
   const ring = await keyStore.loadKeyring(userId);
   if (ring?.keyId === keyId) await keyStore.save(userId, ring.key, keyId, {});
@@ -429,6 +446,14 @@ export async function rotateContentKey(
       await keyStore.clear();
     } catch (clearErr) {
       Sentry.captureException(clearErr);
+    }
+  }
+  if (keySavedOnDevice) {
+    // Failure only defers rollback protection to next unlock; the new key is already saved.
+    try {
+      await keyChainMark.raise(userId, { current_key_id: newKeyId as number });
+    } catch (err) {
+      Sentry.captureException(err);
     }
   }
 

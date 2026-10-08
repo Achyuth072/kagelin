@@ -42,6 +42,14 @@ vi.mock("@/lib/crypto/keyStore", () => ({
   },
 }));
 
+const markState = { sealedV2: false };
+vi.mock("@/lib/crypto/keyChainMark", () => ({
+  keyChainMark: {
+    load: vi.fn(async () => ({ keyId: 0, sealedV2: markState.sealedV2 })),
+    raise: vi.fn(async () => {}),
+  },
+}));
+
 const { trackTelemetry } = vi.hoisted(() => ({ trackTelemetry: vi.fn() }));
 vi.mock("@/lib/telemetry/client", () => ({ trackTelemetry }));
 
@@ -50,6 +58,7 @@ beforeEach(async () => {
   keyStoreState.key = await generateMasterKey();
   keyStoreState.keyId = "1";
   keyStoreState.retired = {};
+  markState.sealedV2 = false;
 });
 
 describe("wrapSupabaseClient — with a populated field map", () => {
@@ -1077,5 +1086,87 @@ describe("wrapSupabaseClient — unreadable values", () => {
     expect(data.content).toBe("Fixed");
     expect(data.unreadable).toBeUndefined();
     expect(needsReseal(raw.rawRows("tasks")[0].content, "1")).toBe(false);
+  });
+});
+
+describe("wrapSupabaseClient — after this device has seen a finished Re-seal", () => {
+  const userId = "user-1";
+
+  beforeEach(() => {
+    markState.sealedV2 = true;
+  });
+
+  it("shows a -v1 value as unreadable instead of opening it unbound", async () => {
+    const raw = createFakeSupabaseClient(
+      {
+        tasks: [
+          {
+            id: "t1",
+            content: await encryptField(keyStoreState.key!, "moved"),
+          },
+        ],
+      },
+      { userId },
+    );
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    const { data } = await client.from("tasks").select().single();
+
+    expect(data.content).toBeNull();
+    expect(data.unreadable).toEqual(["content"]);
+  });
+
+  it("shows a plaintext value as unreadable", async () => {
+    const raw = createFakeSupabaseClient(
+      { calendar_events: [{ id: "e1", title: "Planted", metadata: { a: 1 } }] },
+      { userId },
+    );
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    const { data } = await client.from("calendar_events").select().single();
+
+    expect(data.title).toBeNull();
+    expect(data.metadata).toBeNull();
+    expect(data.unreadable).toEqual(["title", "metadata"]);
+  });
+
+  it("still reads -v2 values and leaves empty columns alone", async () => {
+    const raw = createFakeSupabaseClient({}, { userId });
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+    await client
+      .from("tasks")
+      .insert({ id: "t1", content: "Buy milk", description: null });
+
+    const { data } = await client.from("tasks").select().single();
+
+    expect(data.content).toBe("Buy milk");
+    expect(data.description).toBeNull();
+    expect(data.unreadable).toBeUndefined();
+  });
+
+  it("reads a decrypted JSON value verbatim, not as nested rows", async () => {
+    const raw = createFakeSupabaseClient({}, { userId });
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+    const blob = { habits: [{ name: "Run" }], tasks: [{ content: "x" }] };
+    await client
+      .from("habit_imports")
+      .insert({ id: "i1", raw: blob, file_name: "loop.db" });
+
+    const { data } = await client.from("habit_imports").select().single();
+
+    expect(data.raw).toEqual(blob);
+    expect(data.unreadable).toBeUndefined();
+  });
+
+  it("still reads plaintext for a signed-out guest", async () => {
+    const raw = createFakeSupabaseClient(
+      { tasks: [{ id: "t1", content: "Guest task" }] },
+      { userId: null },
+    );
+    const client = wrapSupabaseClient(raw, FIELD_MAP);
+
+    const { data } = await client.from("tasks").select().single();
+
+    expect(data.content).toBe("Guest task");
   });
 });

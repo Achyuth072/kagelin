@@ -79,6 +79,10 @@ export function envelopeKeyId(envelope: string): string | undefined {
   return envelope.split(":")[1] || undefined;
 }
 
+export function isRowBound(envelope: string): boolean {
+  return envelope.startsWith(`${SCHEME_V2}:`);
+}
+
 export function isEnvelope(value: unknown): value is string {
   return (
     typeof value === "string" &&

@@ -1,7 +1,8 @@
 import { keyStore, type Keyring } from "@/lib/crypto/keyStore";
 import { keyForEnvelope } from "@/lib/crypto/keyring";
 import { decryptField } from "@/lib/crypto/contentCipher";
-import type { Binding } from "@/lib/crypto/envelope";
+import { isRowBound, type Binding } from "@/lib/crypto/envelope";
+import { keyChainMark } from "@/lib/crypto/keyChainMark";
 import type { HabitType } from "@/lib/types/habit";
 import type { ReminderType } from "@/lib/types/notification";
 
@@ -50,16 +51,19 @@ export async function displayNotification(
 
   const key = encrypted || encryptedTitle ? await loadKeyOrNull() : null;
   const userId = key ? await keyStore.loadUserId() : null;
-  const bindingFor = (role: "title" | "body") =>
-    sourceBinding(userId, displayable.data, role);
+  const legacyRefused = !!userId && (await keyChainMark.load(userId)).sealedV2;
+  const resolve = (copy: EncryptedNotificationBody, role: "title" | "body") =>
+    resolveEncryptedField(
+      key,
+      copy,
+      role,
+      sourceBinding(userId, displayable.data, role),
+      legacyRefused,
+    );
 
   const [decryptedTitle, decryptedBody] = await Promise.all([
-    encryptedTitle
-      ? resolveEncryptedField(key, encryptedTitle, "title", bindingFor("title"))
-      : title,
-    encrypted
-      ? resolveEncryptedField(key, encrypted, "body", bindingFor("body"))
-      : displayable.body,
+    encryptedTitle ? resolve(encryptedTitle, "title") : title,
+    encrypted ? resolve(encrypted, "body") : displayable.body,
   ]);
 
   // Only a device that decrypted the item's name is unlocked enough to act blindly.
@@ -136,7 +140,9 @@ async function resolveEncryptedField(
   encrypted: EncryptedNotificationBody,
   fieldName: string,
   binding: Binding | undefined,
+  legacyRefused: boolean,
 ): Promise<string | null> {
+  if (legacyRefused && !isRowBound(encrypted.ciphertext)) return null;
   const openingKey = key && keyForEnvelope(key, encrypted.ciphertext);
   if (!openingKey) return null;
   try {

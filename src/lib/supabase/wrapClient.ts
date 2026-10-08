@@ -8,11 +8,12 @@ import {
   isCiphertext,
 } from "@/lib/crypto/contentCipher";
 import {
-  SCHEME_V2,
   envelopeKeyId,
+  isRowBound,
   isUnopenableValueError,
   type Binding,
 } from "@/lib/crypto/envelope";
+import { keyChainMark } from "@/lib/crypto/keyChainMark";
 import { FIELD_MAP, JSON_FIELDS, type FieldMap } from "@/lib/supabase/fieldMap";
 import { trackTelemetry } from "@/lib/telemetry/client";
 import { assertReadable } from "@/lib/crypto/unreadable";
@@ -52,15 +53,22 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 interface ReadLoaders {
   keyring: () => Promise<Keyring | null>;
   userId: () => Promise<string | null>;
+  sealedV2: () => Promise<boolean>;
 }
 
 function createReadLoaders(ctx: WrapContext): ReadLoaders {
   let keyring: Promise<Keyring | null> | null = null;
   let userId: Promise<string | null> | null = null;
-  return {
+  let sealedV2: Promise<boolean> | null = null;
+  const loaders: ReadLoaders = {
     keyring: () => (keyring ??= keyStore.loadKeyring()),
     userId: () => (userId ??= ctx.getUserId()),
+    sealedV2: () =>
+      (sealedV2 ??= loaders
+        .userId()
+        .then(async (id) => !!id && (await keyChainMark.load(id)).sealedV2)),
   };
+  return loaders;
 }
 
 export const MISSING_ROW_ID_CODE = "missing_row_id";
@@ -130,6 +138,16 @@ export function needsEncryption(
 ): boolean {
   if (isCiphertext(value)) return false;
   return isJsonField(table, field) ? value != null : typeof value === "string";
+}
+
+export function isLegacyValue(
+  table: string,
+  field: string,
+  value: unknown,
+): boolean {
+  return isCiphertext(value)
+    ? !isRowBound(value)
+    : needsEncryption(table, field, value);
 }
 
 function rowNeedsEncryption(
@@ -261,7 +279,7 @@ async function bindingFor(
   row: Record<string, unknown>,
   loaders: ReadLoaders,
 ): Promise<Binding | undefined> {
-  if (!(row[field] as string).startsWith(`${SCHEME_V2}:`)) return undefined;
+  if (!isRowBound(row[field] as string)) return undefined;
   const userId = await loaders.userId();
   if (!userId || typeof row.id !== "string") return undefined;
   return { userId, table, column: field, rowId: row.id };
@@ -278,6 +296,20 @@ function reportUnreadable(table: string, column: string, rowId: unknown) {
 
 const UNREADABLE = Symbol("unreadable");
 
+// Opening legacy values after Re-seal would bypass row binding.
+async function refusedLegacyFields(
+  table: string,
+  fields: readonly string[],
+  row: Record<string, unknown>,
+  loaders: ReadLoaders,
+): Promise<string[]> {
+  const legacy = fields.filter((field) =>
+    isLegacyValue(table, field, row[field]),
+  );
+  if (!legacy.length || !(await loaders.sealedV2())) return [];
+  return legacy;
+}
+
 async function decryptRow(
   table: string,
   ctx: WrapContext,
@@ -289,12 +321,11 @@ async function decryptRow(
   let out: Record<string, unknown> = row;
   const fields = ctx.fieldMap[table];
   if (fields?.length) {
-    const encryptedFields = fields.filter((field) => isCiphertext(out[field]));
+    const refused = await refusedLegacyFields(table, fields, row, loaders);
+    const encryptedFields = fields.filter(
+      (field) => isCiphertext(out[field]) || refused.includes(field),
+    );
     if (encryptedFields.length) {
-      const keyring = await loaders.keyring();
-      if (!keyring) {
-        throw contentKeyUnavailableError("read", table);
-      }
       const decrypted = await Promise.all(
         encryptedFields.map(async (field) => {
           const envelope = out[field] as string;
@@ -302,6 +333,11 @@ async function decryptRow(
             reportUnreadable(table, field, row.id);
             return [field, UNREADABLE] as const;
           };
+          if (refused.includes(field)) return unreadable();
+          const keyring = await loaders.keyring();
+          if (!keyring) {
+            throw contentKeyUnavailableError("read", table);
+          }
           // No key id at all is a damaged value, not a key this device lacks.
           if (envelopeKeyId(envelope) === undefined) return unreadable();
           const key = keyForEnvelope(keyring, envelope);
@@ -337,6 +373,8 @@ async function decryptRow(
   }
 
   for (const [column, value] of Object.entries(out)) {
+    // A decrypted JSON value is content, not embedded rows, even where its keys name a table.
+    if (isJsonField(table, column)) continue;
     if (Array.isArray(value)) {
       if (!value.some(isPlainObject)) continue;
       const nested = await Promise.all(

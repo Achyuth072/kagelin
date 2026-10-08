@@ -39,6 +39,14 @@ vi.mock("@/lib/crypto/keyStore", () => ({
   },
 }));
 
+const markState = { sealedV2: false };
+vi.mock("@/lib/crypto/keyChainMark", () => ({
+  keyChainMark: {
+    load: vi.fn(async () => ({ keyId: 0, sealedV2: markState.sealedV2 })),
+    raise: vi.fn(async () => {}),
+  },
+}));
+
 let fakeClient: ReturnType<typeof createFakeSupabaseClient>;
 vi.mock("@/lib/supabase/client", () => ({
   createRawClient: () => fakeClient,
@@ -92,9 +100,40 @@ beforeEach(async () => {
   keyStoreState.key = await generateMasterKey();
   keyStoreState.keyId = "1";
   keyStoreState.retired = {};
+  markState.sealedV2 = false;
 });
 
 describe("runReseal", () => {
+  it("after a finished Re-seal, reports a -v1 or plaintext value instead of re-sealing it", async () => {
+    markState.sealedV2 = true;
+    const planted = await encryptField(keyStoreState.key!, "Planted");
+    fakeClient = createFakeSupabaseClient({
+      tasks: [
+        {
+          id: "t1",
+          user_id: USER_ID,
+          content: planted,
+          description: "Also planted",
+          updated_at: "t0",
+        },
+      ],
+    });
+
+    const result = await runReseal(USER_ID);
+
+    expect(result).toEqual({
+      sealed: 0,
+      unreadable: [
+        { table: "tasks", id: "t1", column: "content" },
+        { table: "tasks", id: "t1", column: "description" },
+      ],
+    });
+    expect(fakeClient.rawRows("tasks")[0]).toMatchObject({
+      content: planted,
+      description: "Also planted",
+    });
+  });
+
   it("encrypts every mapped field, across every field-map table, for the owning user", async () => {
     fakeClient = createFakeSupabaseClient({
       tasks: [
@@ -1007,6 +1046,20 @@ describe("runReseal", () => {
         );
         fakeClient = createFakeSupabaseClient({
           notification_queue: [queueRow("n1", "pending", fromOtherTask, "t1")],
+        });
+
+        await runReseal(USER_ID);
+
+        expect(
+          fakeClient.rawRows("notification_queue")[0].payload.encrypted,
+        ).toBeUndefined();
+      });
+
+      it("after a finished Re-seal, drops a pending -v1 copy instead of re-sealing it", async () => {
+        markState.sealedV2 = true;
+        const planted = await encryptField(oldKey, "Planted", undefined, "1");
+        fakeClient = createFakeSupabaseClient({
+          notification_queue: [queueRow("n1", "pending", planted)],
         });
 
         await runReseal(USER_ID);

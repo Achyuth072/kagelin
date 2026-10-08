@@ -40,6 +40,15 @@ then **Rotation**.
   **every encrypted table generates its ids on the client, before encryption**.
   Notification-queue copies are bound to their _source_ row, and the service
   worker rebuilds that binding from `taskId`/`habitId`.
+- **A device does not trust the server to go backwards.** It keeps the highest
+  key id and whether it has seen `sealed_v2_at`, and neither ever drops. After
+  the marker, a `-v1` or plaintext value can only have been planted, so it
+  shows as Can't be read (a notification copy falls back to generic copy), and
+  the Re-seal reports or drops it instead of sealing it. An unlock against a
+  key row with a lower key id than one this device has unlocked under is
+  refused, so a rolled-back row cannot make a retired key current again. The
+  cost: restoring the key row from a backup taken before a rotation locks out
+  every device that has unlocked under the newer key.
 - **Existing users move to `-v2` automatically**, through a Re-seal on unlock.
   The app stays usable during a Re-seal: reads use the keyring, writes use the
   current key, and any unlocked device resumes an unfinished pass. A Rotation

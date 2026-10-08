@@ -19,6 +19,13 @@ import { createClient } from "@/lib/supabase/client";
 const mockCreateClient = vi.mocked(createClient);
 
 const keyStoreState: { key: Uint8Array | null } = { key: null };
+vi.mock("@/lib/crypto/keyChainMark", () => ({
+  keyChainMark: {
+    load: vi.fn(async () => ({ keyId: 0, sealedV2: false })),
+    raise: vi.fn(async () => {}),
+  },
+}));
+
 vi.mock("@/lib/crypto/keyStore", () => ({
   keyStore: {
     load: vi.fn(async () => keyStoreState.key),

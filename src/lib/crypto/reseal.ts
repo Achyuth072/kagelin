@@ -2,13 +2,18 @@
 import { createRawClient } from "@/lib/supabase/client";
 import { fetchAllRows } from "@/lib/supabase/paginate";
 import { FIELD_MAP } from "@/lib/supabase/fieldMap";
-import { needsEncryption, isJsonField } from "@/lib/supabase/wrapClient";
+import {
+  needsEncryption,
+  isJsonField,
+  isLegacyValue,
+} from "@/lib/supabase/wrapClient";
 import {
   decryptField,
   encryptField,
   isCiphertext,
 } from "@/lib/crypto/contentCipher";
-import { INITIAL_KEY_ID, needsReseal } from "@/lib/crypto/envelope";
+import { INITIAL_KEY_ID, isRowBound, needsReseal } from "@/lib/crypto/envelope";
+import { keyChainMark } from "@/lib/crypto/keyChainMark";
 import { keyStore, type Keyring } from "@/lib/crypto/keyStore";
 import { keyForEnvelope } from "@/lib/crypto/keyring";
 import {
@@ -258,12 +263,11 @@ export async function findPendingQueueRows(
   return rows.filter((row) => queueRowNeedsWork(row, keyId));
 }
 
-// Pending copies are re-sealed bound to their source row; the rest are stripped so a retired
-// key cannot open them. A copy that cannot be opened is dropped too: the notification falls
-// back to its generic copy instead of blocking the whole Re-seal.
+// Drops copies that cannot be row-bound so generic text is used instead of failing Re-seal.
 async function resealNotificationQueue(
   userId: string,
   ring: Keyring,
+  legacyRefused: boolean,
 ): Promise<number> {
   const raw = createRawClient();
   const rows = await findPendingQueueRows(userId, ring.keyId);
@@ -273,7 +277,12 @@ async function resealNotificationQueue(
       const { ciphertext, template } = copy;
       const binding = sourceBinding(userId, row.payload.data, role);
       const openingKey = keyForEnvelope(ring, ciphertext);
-      if (!isLive(row.status) || !binding || !openingKey) {
+      if (
+        !isLive(row.status) ||
+        !binding ||
+        !openingKey ||
+        (legacyRefused && !isRowBound(ciphertext))
+      ) {
         delete payload[key];
         continue;
       }
@@ -339,6 +348,8 @@ export async function runReseal(
   await scrubLegacyDiagnosticText(userId);
 
   const raw = createRawClient();
+  // Re-sealing legacy values after Re-seal would legitimize planted rows.
+  const legacyRefused = (await keyChainMark.load(userId)).sealedV2;
   const pending = await findPendingRows(userId);
   const total = pending.length;
   onProgress?.({ done: 0, total, table: pending[0]?.table ?? "" });
@@ -354,6 +365,10 @@ export async function runReseal(
       fields.map(async (field) => {
         const value = row[field];
         if (!valueNeedsSealing(table, field, value, ring.keyId)) return;
+        if (legacyRefused && isLegacyValue(table, field, value)) {
+          unreadable.push({ table, id, column: field });
+          return;
+        }
         const binding = { userId, table, column: field, rowId: id };
         let plaintext: string;
         if (isCiphertext(value)) {
@@ -413,6 +428,10 @@ export async function runReseal(
   }
 
   signal?.throwIfAborted();
-  const queueSealed = await resealNotificationQueue(userId, ring);
+  const queueSealed = await resealNotificationQueue(
+    userId,
+    ring,
+    legacyRefused,
+  );
   return { unreadable, sealed: done + queueSealed };
 }

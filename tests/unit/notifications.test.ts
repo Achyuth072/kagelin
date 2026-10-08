@@ -24,6 +24,13 @@ vi.mock("@/lib/crypto/keyStore", () => ({
   },
 }));
 
+const markState = { sealedV2: false };
+vi.mock("@/lib/crypto/keyChainMark", () => ({
+  keyChainMark: {
+    load: vi.fn(async () => ({ keyId: 0, sealedV2: markState.sealedV2 })),
+  },
+}));
+
 function registrationWith(
   notifications: { close: () => void }[] | { rejects: Error },
 ) {
@@ -38,6 +45,7 @@ function registrationWith(
 }
 
 beforeEach(() => {
+  markState.sealedV2 = false;
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
@@ -633,6 +641,22 @@ describe("displayNotification with row-bound (-v2) ciphertext", () => {
           "task-1",
           "Renew passport",
         ),
+      },
+    });
+
+    expect(shown(registration)[1].body).toBe("You have a task due now.");
+  });
+
+  it("after a finished Re-seal, falls back to generic copy for a -v1 payload", async () => {
+    markState.sealedV2 = true;
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Task Due Soon", {
+      body: "You have a task due now.",
+      data: { taskId: "task-1" },
+      encrypted: {
+        template: 'Your task "{}" is due now.',
+        ciphertext: await encryptField(key, "Planted"),
       },
     });
 
