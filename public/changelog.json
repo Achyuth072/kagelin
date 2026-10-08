@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.47.0-preview.5",
+    "date": "2026-10-08",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Head an unreadable project's group with Can't be read and a short id",
+        "Show Can't be read for unreadable notes, location and habit card",
+        "Skip pushing a calendar event whose content can't be read",
+        "Show an unreadable value as Can't be read in its row instead of failing the whole list"
+      ]
+    }
+  },
+  {
     "version": "1.47.0-preview.4",
     "date": "2026-10-07",
     "channel": "preview",
@@ -689,19 +702,6 @@
       "Fixed": [
         "Resolve iOS PWA safe-area gaps and shrink mobile nav to a leaner size",
         "Noindex the app so search engines stop indexing authenticated routes"
-      ]
-    }
-  },
-  {
-    "version": "1.41.0",
-    "date": "2026-08-27",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Fix stats, tasks, and calendar sync silently truncating past 1000 rows",
-        "Fix WebDAV backup failures on Node's Happy Eyeballs and null-body responses",
-        "Speed up subtask expand/collapse into a single, faster toggle",
-        "Improve accessibility labels, input semantics, and low-contrast text"
       ]
     }
   }
