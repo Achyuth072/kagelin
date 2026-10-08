@@ -1,6 +1,7 @@
 "use client";
 
 import { compareReadable } from "@/lib/crypto/unreadable";
+import { projectGroupTitle } from "@/lib/utils/task-dnd";
 import { useMemo } from "react";
 import {
   compareAsc,
@@ -154,8 +155,7 @@ export function useTaskViewData({
       } else if (groupBy === "project") {
         const projectId = task.project_id || "inbox";
         const project = projectsMap.get(projectId);
-        const title =
-          project?.name || (projectId === "inbox" ? "Inbox" : projectId);
+        const title = projectGroupTitle(project, projectId);
 
         if (!groupMap[title]) {
           groupMap[title] = [];

@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { getTaskUpdatesForGroup } from "@/lib/utils/task-dnd";
+import {
+  getTaskUpdatesForGroup,
+  projectGroupTitle,
+} from "@/lib/utils/task-dnd";
 import { format, addDays } from "date-fns";
 import type { Project } from "@/lib/types/task";
 
@@ -38,6 +41,21 @@ describe("getTaskUpdatesForGroup", () => {
     const updates = getTaskUpdatesForGroup("High", projectsMap);
     expect(updates.priority).toBe(2);
     expect(updates.is_evening).toBeUndefined();
+  });
+
+  it("moves a task into the right one of two projects whose names can't be read", () => {
+    const first = { id: "aaaaaa11-x", name: null } as unknown as Project;
+    const second = { id: "bbbbbb22-x", name: null } as unknown as Project;
+    projectsMap.set(first.id, first);
+    projectsMap.set(second.id, second);
+
+    const title = projectGroupTitle(second, second.id);
+
+    expect(title).toBe("Can't be read · bbbbbb");
+    expect(projectGroupTitle(first, first.id)).not.toBe(title);
+    expect(getTaskUpdatesForGroup(title, projectsMap, "project")).toEqual({
+      project_id: second.id,
+    });
   });
 
   it("should update project_id for project name", () => {

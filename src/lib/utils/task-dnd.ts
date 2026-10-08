@@ -2,6 +2,7 @@ import { addDays, format } from "date-fns";
 import type { Task, Project } from "@/lib/types/task";
 import type { GroupOption } from "@/lib/types/sorting";
 import { computeMoveOrders, computeReorderOrders } from "@/lib/utils/reorder";
+import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
 
 export type TaskPlacement = Partial<
   Pick<Task, "due_date" | "do_date" | "is_evening" | "priority" | "project_id">
@@ -46,13 +47,24 @@ const priorityBucketUpdates = (groupKey: string): TaskPlacement | null => {
   return groupKey in priorities ? { priority: priorities[groupKey] } : null;
 };
 
+// The short id keeps two unreadable projects apart, since the title is also the group's key and drop target.
+export function projectGroupTitle(
+  project: Project | undefined,
+  projectId: string,
+): string {
+  if (project?.name) return project.name;
+  if (projectId === "inbox") return "Inbox";
+  if (project) return `${UNREADABLE_LABEL} · ${projectId.slice(0, 6)}`;
+  return projectId;
+}
+
 const projectBucketUpdates = (
   groupKey: string,
   projectsMap: Map<string, Project>,
 ): TaskPlacement | null => {
   if (groupKey === "inbox") return { project_id: null };
   for (const p of projectsMap.values()) {
-    if (p.name?.toLowerCase() === groupKey) {
+    if (projectGroupTitle(p, p.id).toLowerCase() === groupKey) {
       return { project_id: p.id };
     }
   }
