@@ -40,7 +40,7 @@ Full feature list for [Kagelin](../README.md).
 
 - **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed.
 - **Accounts & Auth**: Google, GitHub, or breach-checked email/password sign-in with multi-provider identity linking and password reset. Sign out of just this device or all devices.
-- **Zero-knowledge encryption**: tasks, habits, projects, labels, and calendar content are encrypted on your device under a passphrase Kagelin never sees. We can't read what you wrote — only that an item exists and when it's due. A recovery code is your backup, and you can lock your content manually or after inactivity without signing out.
+- **Zero-knowledge encryption**: tasks, habits, projects, labels, and calendar content are encrypted on your device under a passphrase Kagelin never sees. We can't read what you wrote — only that an item exists and when it's due. A recovery code is your backup, and you can lock your content manually or after inactivity without signing out. If you think your key leaked, rotate it: everything is re-encrypted under a new key, other devices are signed out, and only a device that holds the current key can change your passphrase, recovery code, or key. Anything that can't be decrypted shows as "Can't be read" in place, instead of breaking the whole list.
 - **Diagnostic export**: a content-free bundle you can review and attach to bug reports.
 - **WebDAV backup**: keep a copy of everything on a server you own (Nextcloud, Synology). Available at every tier, account or not. It is a backup, not a sync: each upload replaces the last.
 - **Backups & Portability**: encrypted `.zip` export/import, guest backup reminders, and instant cloud data wipe.

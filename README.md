@@ -59,7 +59,7 @@ Most productivity apps want your email before you've written a single task, and 
 - **Focus & habits**: a Pomodoro timer that follows you across devices, habits with flexible frequencies and reminders, and Loop Habit Tracker import and export.
 - **Calendar**: month, week, and multi-day views, Google and Outlook sync, event reminders, and `.ics` import and export.
 - **Reminders**: push notifications for tasks, events, and habits, plus a morning brief and an evening plan.
-- **Data ownership**: guest mode, zero-knowledge encryption, WebDAV backup, and full export.
+- **Data ownership**: guest mode, zero-knowledge encryption with key rotation, WebDAV backup, and full export.
 - **Stats & insights**: period breakdowns, per-habit insights, and goal tracking.
 
 See the [full feature list](docs/features.md).
