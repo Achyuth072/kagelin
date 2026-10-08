@@ -682,8 +682,17 @@ BEGIN
      AND OLD.is_completed IS NOT DISTINCT FROM NEW.is_completed
      AND OLD.due_date IS NOT DISTINCT FROM NEW.due_date
      AND OLD.do_date IS NOT DISTINCT FROM NEW.do_date
-     AND OLD.content IS NOT DISTINCT FROM NEW.content
      AND OLD.recurrence IS NOT DISTINCT FROM NEW.recurrence THEN
+    -- Preserve pending reminders across text changes and re-seals by refreshing ciphertext.
+    IF OLD.content IS DISTINCT FROM NEW.content AND NEW.content ~ '^xchacha20poly1305-v[12]:' THEN
+      UPDATE public.notification_queue
+      SET payload = jsonb_set(payload, '{encrypted,ciphertext}', to_jsonb(NEW.content))
+      WHERE reference_id = NEW.id
+        AND status = 'pending'
+        AND type IN ('due_date', 'do_date')
+        AND scheduled_at > now()
+        AND payload ? 'encrypted';
+    END IF;
     RETURN NEW;
   END IF;
 
@@ -976,6 +985,25 @@ CREATE TABLE IF NOT EXISTS public.habit_entries (
 -- Index for performance
 CREATE INDEX IF NOT EXISTS habit_entries_habit_id_idx ON public.habit_entries (habit_id);
 
+-- Notes are sealed for the row id; upserts on (habit_id, date) must not change it.
+CREATE OR REPLACE FUNCTION public.keep_habit_entry_id()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.id IS DISTINCT FROM OLD.id THEN
+    RAISE EXCEPTION 'habit_entries.id cannot change'
+      USING ERRCODE = 'check_violation', HINT = 'habit_entry_id_changed';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER habit_entries_keep_id
+  BEFORE UPDATE ON public.habit_entries
+  FOR EACH ROW EXECUTE FUNCTION public.keep_habit_entry_id();
+
 CREATE OR REPLACE FUNCTION public.habit_window_unsatisfied(p_habit public.habits, p_date DATE)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -1183,8 +1211,17 @@ BEGIN
      AND OLD.is_archived IS NOT DISTINCT FROM NEW.is_archived
      AND OLD.sync_state IS NOT DISTINCT FROM NEW.sync_state
      AND OLD.all_day IS NOT DISTINCT FROM NEW.all_day
-     AND OLD.recurrence_rule IS NOT DISTINCT FROM NEW.recurrence_rule
-     AND OLD.title IS NOT DISTINCT FROM NEW.title THEN
+     AND OLD.recurrence_rule IS NOT DISTINCT FROM NEW.recurrence_rule THEN
+    -- Preserve pending reminders across text changes and re-seals by refreshing ciphertext.
+    IF OLD.title IS DISTINCT FROM NEW.title AND NEW.title ~ '^xchacha20poly1305-v[12]:' THEN
+      UPDATE public.notification_queue
+      SET payload = jsonb_set(payload, '{encrypted,ciphertext}', to_jsonb(NEW.title))
+      WHERE reference_id = NEW.id
+        AND status = 'pending'
+        AND type = 'event_reminder'
+        AND scheduled_at > now()
+        AND payload ? 'encrypted';
+    END IF;
     RETURN NEW;
   END IF;
 
@@ -1261,7 +1298,7 @@ AFTER INSERT OR UPDATE OR DELETE ON public.calendar_events
 FOR EACH ROW EXECUTE FUNCTION public.handle_event_notification_sync();
 
 -- Snooze: re-queue a sent task or event reminder 10 minutes out. The item's own
--- dates are untouched; a task or event edit later cancels the snooze like any
+-- dates are untouched; a date or completion change later cancels the snooze like any
 -- pending reminder (the sync triggers).
 CREATE OR REPLACE FUNCTION public.snooze_reminder(p_type TEXT, p_reference_id UUID)
 RETURNS TEXT
@@ -1273,6 +1310,7 @@ DECLARE
   snooze_until TIMESTAMPTZ := now() + interval '10 minutes';
   sent_row public.notification_queue;
   event_row public.calendar_events;
+  task_content TEXT;
   user_settings JSONB;
   tz TEXT;
   snooze_day DATE;
@@ -1338,14 +1376,28 @@ BEGIN
                ELSE '"{}" starts in ' || hours || ' hours'
           END,
           event_row.title)));
+    ELSE
+      sent_row.payload := jsonb_strip_nulls(sent_row.payload || jsonb_build_object(
+        'encrypted', public.encrypted_notification_body(
+          CASE WHEN event_row.reminder_minutes >= 1440
+            THEN '"{}" is tomorrow' ELSE '"{}" is today' END,
+          event_row.title)));
     END IF;
-  ELSIF NOT EXISTS (
-    SELECT 1 FROM public.tasks t
+  ELSE
+    SELECT t.content INTO task_content FROM public.tasks t
     WHERE t.id = p_reference_id
       AND t.user_id = auth.uid()
-      AND NOT t.is_completed
-  ) THEN
-    RETURN 'dropped';
+      AND NOT t.is_completed;
+
+    IF NOT FOUND THEN
+      RETURN 'dropped';
+    END IF;
+
+    -- Re-seals strip delivered ciphertext; rebuild from the task.
+    sent_row.payload := jsonb_strip_nulls(sent_row.payload || jsonb_build_object(
+      'encrypted', public.encrypted_notification_body(
+        CASE p_type WHEN 'due_date' THEN 'Your task "{}" is due now.' ELSE 'Scheduled: {}' END,
+        task_content)));
   END IF;
 
   -- A double tap, or a second device, must not queue a second snooze.

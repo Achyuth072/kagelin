@@ -101,3 +101,70 @@ describe("task mutations on a task with unreadable content", () => {
     expect(backend.raw.rawRows("tasks")[0].is_completed).toBe(true);
   });
 });
+
+async function seal(rowId: string, text: string, sealedFor = rowId) {
+  return sealEnvelope(
+    keyStoreState.key!,
+    new TextEncoder().encode(text),
+    INITIAL_KEY_ID,
+    { userId: "user-1", table: "tasks", column: "content", rowId: sealedFor },
+  );
+}
+
+async function seedTreeWithUnreadableSubtask() {
+  backend.raw = createFakeSupabaseClient({
+    tasks: [
+      { id: "p1", user_id: "user-1", content: await seal("p1", "Parent") },
+      {
+        id: "a1",
+        user_id: "user-1",
+        parent_id: "p1",
+        content: await seal("a1", "Readable"),
+      },
+      {
+        id: "b1",
+        user_id: "user-1",
+        parent_id: "p1",
+        content: await seal("b1", "Moved", "t9"),
+      },
+    ],
+  });
+  const client = createClient();
+  const { data: parent } = await client
+    .from("tasks")
+    .select()
+    .eq("id", "p1")
+    .single();
+  const { data: subtasks } = await client
+    .from("tasks")
+    .select()
+    .eq("parent_id", "p1")
+    .limit(10);
+  return { parent: parent as Task, subtasks: subtasks as Task[] };
+}
+
+describe("task mutations on a task with an unreadable subtask", () => {
+  it("restores the parent and its readable subtasks, and reports the one left out", async () => {
+    const { parent, subtasks } = await seedTreeWithUnreadableSubtask();
+    backend.raw = createFakeSupabaseClient();
+
+    const skipped = await taskMutations.restore(parent, subtasks);
+
+    expect(skipped).toBe(1);
+    expect(
+      backend.raw
+        .rawRows("tasks")
+        .map((row: { id: string }) => row.id)
+        .sort(),
+    ).toEqual(["a1", "p1"]);
+  });
+
+  it("refuses to duplicate it before writing any copy", async () => {
+    const { parent } = await seedTreeWithUnreadableSubtask();
+
+    await expect(taskMutations.duplicate(parent)).rejects.toMatchObject({
+      code: UNREADABLE_CONTENT_CODE,
+    });
+    expect(backend.raw.rawRows("tasks")).toHaveLength(3);
+  });
+});

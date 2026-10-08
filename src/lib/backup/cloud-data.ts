@@ -83,18 +83,52 @@ async function fetchExistingIds(
   return rows.map((row) => row.id);
 }
 
+export function unrestorableRowIds(data: BackupData): Set<string> {
+  const ids = new Set<string>();
+  const skip = (rows: { id: string }[] | undefined) =>
+    rows?.forEach((row) => {
+      if ("unreadable" in row) ids.add(row.id);
+    });
+  skip(data.projects);
+  skip(data.habits);
+  skip(data.tasks);
+  skip(data.habit_entries);
+  skip(data.events);
+  for (const entry of data.habit_entries ?? []) {
+    if (ids.has(entry.habit_id)) ids.add(entry.id);
+  }
+  // Subtasks may appear before their parent in the backup array.
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const task of data.tasks ?? []) {
+      if (ids.has(task.id)) continue;
+      const parentSkipped =
+        (task.project_id !== null && ids.has(task.project_id)) ||
+        (task.parent_id != null && ids.has(task.parent_id));
+      if (parentSkipped) {
+        ids.add(task.id);
+        grew = true;
+      }
+    }
+  }
+  return ids;
+}
+
 // Upsert before pruning so a partial failure leaves data recoverable rather than wiped.
 // Preserves row IDs so cross-device restores converge instead of duplicating.
 export async function replaceCloudBackup(
   supabase: SupabaseClient,
   userId: string,
   data: BackupData,
-): Promise<void> {
+): Promise<number> {
   const rowsFor = (table: RestoreTable) =>
     (table === "calendar_events" ? data.events : data[table]) ?? [];
+  const unrestorable = unrestorableRowIds(data);
 
   for (const table of RESTORE_ORDER) {
-    const rows = rowsFor(table).map((row) =>
+    const readable = rowsFor(table).filter((row) => !unrestorable.has(row.id));
+    const rows = readable.map((row) =>
       // habit_entries is scoped through habit_id and has no user_id column.
       table === "habit_entries" ? { ...row } : { ...row, user_id: userId },
     );
@@ -130,4 +164,5 @@ export async function replaceCloudBackup(
       if (error) throw error;
     }
   }
+  return unrestorable.size;
 }

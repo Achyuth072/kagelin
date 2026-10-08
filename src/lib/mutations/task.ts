@@ -412,21 +412,23 @@ export const taskMutations = {
     return (subtasks as Task[]) ?? [];
   },
 
-  // Parent is inserted before subtasks to satisfy foreign key constraints.
-  restore: async (task: Task, subtasks: Task[] = []): Promise<void> => {
+  // Insert parent first for foreign key constraints.
+  // Cascade deleted all subtasks; restore readable siblings even if some cannot be read.
+  restore: async (task: Task, subtasks: Task[] = []): Promise<number> => {
+    const parent = toRestorePayload(task);
+    const readable = subtasks.filter((subtask) => !("unreadable" in subtask));
     const supabase = createClient();
 
-    const { error } = await supabase
-      .from("tasks")
-      .insert(toRestorePayload(task));
+    const { error } = await supabase.from("tasks").insert(parent);
     if (error) throw new Error(error.message);
 
-    if (subtasks.length > 0) {
+    if (readable.length > 0) {
       const { error: subtasksError } = await supabase
         .from("tasks")
-        .insert(subtasks.map(toRestorePayload));
+        .insert(readable.map(toRestorePayload));
       if (subtasksError) throw new Error(subtasksError.message);
     }
+    return subtasks.length - readable.length;
   },
 
   // Accepts slot-swapped day_orders (not sequential indices) to preserve sort order across groups.
@@ -520,6 +522,30 @@ export const taskMutations = {
     const user = session?.user;
     if (!user) throw new Error("Not authenticated");
 
+    // Validate the tree before inserting to avoid partial copies if a subtask is unreadable.
+    interface SubtaskTree {
+      subtask: Task;
+      children: SubtaskTree[];
+    }
+    const readSubtaskTrees = async (
+      parentId: string,
+    ): Promise<SubtaskTree[]> => {
+      // eslint-disable-next-line local/no-unbounded-supabase-select -- subtasks of one parent
+      const { data: subtasks, error: subtasksError } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("parent_id", parentId);
+      if (subtasksError) throw new Error(subtasksError.message);
+
+      return Promise.all(
+        ((subtasks as Task[] | null) ?? []).map(async (subtask) => {
+          assertReadable(subtask);
+          return { subtask, children: await readSubtaskTrees(subtask.id) };
+        }),
+      );
+    };
+    const subtaskTrees = await readSubtaskTrees(sourceTask.id);
+
     const { data: lastTask } = await supabase
       .from("tasks")
       .select("day_order")
@@ -543,20 +569,11 @@ export const taskMutations = {
 
     if (error) throw new Error(error.message);
 
-    const duplicateSubtasksRecursively = async (
-      originalParentId: string,
+    const insertSubtaskTrees = async (
+      trees: SubtaskTree[],
       newParentId: string,
     ) => {
-      // eslint-disable-next-line local/no-unbounded-supabase-select -- subtasks of one parent
-      const { data: subtasks, error: subtasksError } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("parent_id", originalParentId);
-
-      if (subtasksError) throw new Error(subtasksError.message);
-      if (!subtasks || subtasks.length === 0) return;
-
-      for (const subtask of subtasks) {
+      for (const { subtask, children } of trees) {
         const { data: newSubtask, error: insertError } = await supabase
           .from("tasks")
           .insert({
@@ -569,11 +586,11 @@ export const taskMutations = {
           .single();
 
         if (insertError) throw new Error(insertError.message);
-        await duplicateSubtasksRecursively(subtask.id, newSubtask.id);
+        await insertSubtaskTrees(children, newSubtask.id);
       }
     };
 
-    await duplicateSubtasksRecursively(sourceTask.id, duplicatedTask.id);
+    await insertSubtaskTrees(subtaskTrees, duplicatedTask.id);
 
     return duplicatedTask as Task;
   },

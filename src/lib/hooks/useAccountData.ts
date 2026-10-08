@@ -7,7 +7,10 @@ import {
   parseBackupZip,
   downloadBackup,
 } from "@/lib/backup/export-import";
-import { collectCloudBackup } from "@/lib/backup/cloud-data";
+import {
+  collectCloudBackup,
+  unrestorableRowIds,
+} from "@/lib/backup/cloud-data";
 import { notify } from "@/lib/notify";
 
 export function useAccountData() {
@@ -51,41 +54,47 @@ export function useAccountData() {
 
       // Remap IDs to attach imported rows to current user and preserve relationships without collisions.
       const idMap = new Map<string, string>();
+      const unrestorable = unrestorableRowIds(data);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const remapAndPrepare = (items: any[], type: string) => {
-        return items.map((item) => {
-          const newId = crypto.randomUUID();
-          idMap.set(item.id, newId);
+        return items
+          .filter((item) => !unrestorable.has(item.id))
+          .map((item) => {
+            const newId = crypto.randomUUID();
+            idMap.set(item.id, newId);
 
-          const newItem = { ...item, id: newId };
+            const newItem = { ...item, id: newId };
 
-          // habit_entries is scoped through habit_id and has no user_id column.
-          if (type !== "habit_entries") {
-            newItem.user_id = user.id;
-          }
+            // habit_entries is scoped through habit_id and has no user_id column.
+            if (type !== "habit_entries") {
+              newItem.user_id = user.id;
+            }
 
-          if (type === "tasks" && item.project_id) {
-            newItem.project_id = idMap.get(item.project_id) || item.project_id;
-          }
-          if (type === "habit_entries" && item.habit_id) {
-            newItem.habit_id = idMap.get(item.habit_id) || item.habit_id;
-          }
+            if (type === "tasks" && item.project_id) {
+              newItem.project_id =
+                idMap.get(item.project_id) || item.project_id;
+            }
+            if (type === "habit_entries" && item.habit_id) {
+              newItem.habit_id = idMap.get(item.habit_id) || item.habit_id;
+            }
 
-          return newItem;
-        });
+            return newItem;
+          });
       };
 
       // Insert parents first to satisfy foreign key constraints.
-      if (data.projects && data.projects.length > 0) {
-        const prepared = remapAndPrepare(data.projects, "projects");
-        const { error } = await supabase.from("projects").insert(prepared);
+      const projectsPrepared = remapAndPrepare(data.projects ?? [], "projects");
+      if (projectsPrepared.length > 0) {
+        const { error } = await supabase
+          .from("projects")
+          .insert(projectsPrepared);
         if (error) throw error;
       }
 
-      if (data.habits && data.habits.length > 0) {
-        const prepared = remapAndPrepare(data.habits, "habits");
-        const { error } = await supabase.from("habits").insert(prepared);
+      const habitsPrepared = remapAndPrepare(data.habits ?? [], "habits");
+      if (habitsPrepared.length > 0) {
+        const { error } = await supabase.from("habits").insert(habitsPrepared);
         if (error) throw error;
       }
 
@@ -100,6 +109,7 @@ export function useAccountData() {
         if (items && items.length > 0) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const prepared = remapAndPrepare(items as any[], table);
+          if (prepared.length === 0) continue;
           const { error } = await supabase.from(table).insert(prepared);
           if (error) {
             // Retry row-by-row on ics_uid conflict so one duplicate does not abort the restore.
@@ -117,12 +127,15 @@ export function useAccountData() {
         }
       }
 
-      return data;
+      return unrestorable.size;
     };
 
     return notify.promise(promise(), {
       loading: "Importing your cloud data...",
-      success: "Data imported successfully. Please refresh to see changes.",
+      success: (skipped) =>
+        skipped === 0
+          ? "Data imported successfully. Please refresh to see changes."
+          : `Data imported, except ${skipped === 1 ? "1 item" : `${skipped} items`} that can't be read. Please refresh to see changes.`,
       error: (err) => `Import failed: ${err.message}`,
     });
   };

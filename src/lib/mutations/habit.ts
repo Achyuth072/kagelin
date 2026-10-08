@@ -269,38 +269,41 @@ export const habitMutations = {
       return null;
     }
 
-    // An upsert that hits the conflict key rewrites id, so reuse the stored one.
-    const { data: existing, error: lookupError } = await supabase
-      .from("habit_entries")
-      .select("id")
-      .eq("habit_id", habitId)
-      .eq("date", date)
-      .maybeSingle();
-    if (lookupError) throw new Error(lookupError.message);
+    // Notes are sealed for the row id; the server rejects moving it on conflict.
+    for (let attempt = 0; ; attempt++) {
+      const { data: existing, error: lookupError } = await supabase
+        .from("habit_entries")
+        .select("id")
+        .eq("habit_id", habitId)
+        .eq("date", date)
+        .maybeSingle();
+      if (lookupError) throw new Error(lookupError.message);
 
-    const payload: {
-      id: string;
-      habit_id: string;
-      date: string;
-      value: number;
-      notes?: string | null;
-    } = {
-      id: existing?.id ?? crypto.randomUUID(),
-      habit_id: habitId,
-      date,
-      value,
-    };
-    if (notes !== undefined) {
-      payload.notes = notes;
+      const payload: {
+        id: string;
+        habit_id: string;
+        date: string;
+        value: number;
+        notes?: string | null;
+      } = {
+        id: existing?.id ?? crypto.randomUUID(),
+        habit_id: habitId,
+        date,
+        value,
+      };
+      if (notes !== undefined) {
+        payload.notes = notes;
+      }
+
+      const { data, error } = await supabase
+        .from("habit_entries")
+        .upsert(payload, { onConflict: "habit_id,date" })
+        .select()
+        .single();
+
+      if (error?.hint === "habit_entry_id_changed" && attempt === 0) continue;
+      if (error) throw new Error(error.message);
+      return data as HabitEntry;
     }
-
-    const { data, error } = await supabase
-      .from("habit_entries")
-      .upsert(payload, { onConflict: "habit_id,date" })
-      .select()
-      .single();
-
-    if (error) throw new Error(error.message);
-    return data as HabitEntry;
   },
 };

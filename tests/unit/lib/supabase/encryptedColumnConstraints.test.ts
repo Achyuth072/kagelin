@@ -64,9 +64,9 @@ CREATE TABLE IF NOT EXISTS public.notes (
 
 describe("server-side scheme checks accept the row-bound -v2 envelope", () => {
   it("recognises -v1 and -v2 in every sealed-value check", () => {
-    // encrypted_notification_body, the plaintext backstop, and the habit-notes trigger.
+    // Checks: encrypted_notification_body, plaintext backstop, habit notes trigger, task and event reminder triggers.
     const checks = schemaSql.match(/'\^?xchacha20poly1305-v\[12\]:'/g) ?? [];
-    expect(checks).toHaveLength(3);
+    expect(checks).toHaveLength(5);
   });
 
   it("names -v1 alone only where the backstop rejects it after the Re-seal marker", () => {

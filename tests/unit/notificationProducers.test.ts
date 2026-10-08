@@ -32,6 +32,14 @@ describe("handle_task_notification_sync", () => {
     expect(body).toContain("'You have a task due now.'");
     expect(body).toContain("'You have a task scheduled now.'");
   });
+
+  it("keeps pending reminders, snoozes included, when only the text changes", () => {
+    const textOnly = body.slice(0, body.indexOf("SET status = 'cancelled'"));
+    expect(textOnly).not.toContain("OLD.content IS NOT DISTINCT FROM");
+    expect(textOnly).toContain(
+      "jsonb_set(payload, '{encrypted,ciphertext}', to_jsonb(NEW.content))",
+    );
+  });
 });
 
 describe("handle_event_notification_sync", () => {
@@ -57,6 +65,14 @@ describe("handle_event_notification_sync", () => {
   it("deep-links to the calendar and carries the event id", () => {
     expect(body).toContain("'url', '/calendar'");
     expect(body).toContain("'eventId', NEW.id");
+  });
+
+  it("keeps pending reminders, snoozes included, when only the title changes", () => {
+    const textOnly = body.slice(0, body.indexOf("SET status = 'cancelled'"));
+    expect(textOnly).not.toContain("OLD.title IS NOT DISTINCT FROM");
+    expect(textOnly).toContain(
+      "jsonb_set(payload, '{encrypted,ciphertext}', to_jsonb(NEW.title))",
+    );
   });
 
   it("cancels only future pending event reminders on update and delete", () => {
@@ -136,10 +152,10 @@ describe("task and event notification actions migrations", () => {
     "supabase/migrations/20261006130000_task_event_notification_actions.sql",
   );
   const second = read(
-    "supabase/migrations/20261006140000_reminder_triggers_skip_unrelated_updates.sql",
+    "supabase/migrations/20261008120300_reminders_keep_snoozes_on_text_change.sql",
   );
   const third = read(
-    "supabase/migrations/20261006150000_snooze_honors_switch_and_fresh_lead_time.sql",
+    "supabase/migrations/20261008120700_snooze_rebuilds_text.sql",
   );
 
   it("matches the schema's complete_task_from_notification", () => {
@@ -384,6 +400,19 @@ describe("snooze_reminder", () => {
     expect(body).toContain("IF NOT event_row.all_day");
   });
 
+  it("rebuilds a task snooze's text from the task, since a Re-seal strips the delivered copy", () => {
+    expect(body).toContain("SELECT t.content INTO task_content");
+    expect(body).toMatch(
+      /encrypted_notification_body\([\s\S]*'Your task "\{\}" is due now\.'[\s\S]*'Scheduled: \{\}'[\s\S]*task_content\)/,
+    );
+  });
+
+  it("rebuilds an all-day event snooze's text from the event", () => {
+    expect(body).toMatch(
+      /'"\{\}" is tomorrow' ELSE '"\{\}" is today' END,\s*event_row\.title\)/,
+    );
+  });
+
   it("does not queue a second snooze while one is already pending", () => {
     expect(body).toMatch(/IF EXISTS \([^;]*status = 'pending'/);
   });
@@ -450,7 +479,7 @@ describe("reminder triggers ignore updates that change nothing a reminder shows"
   it.each([
     [
       "handle_task_notification_sync",
-      ["is_completed", "due_date", "do_date", "content", "recurrence"],
+      ["is_completed", "due_date", "do_date", "recurrence"],
     ],
     [
       "public.handle_event_notification_sync",
@@ -461,7 +490,6 @@ describe("reminder triggers ignore updates that change nothing a reminder shows"
         "sync_state",
         "all_day",
         "recurrence_rule",
-        "title",
       ],
     ],
   ])(

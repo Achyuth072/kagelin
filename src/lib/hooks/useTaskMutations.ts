@@ -473,9 +473,16 @@ export function useDeleteTask() {
 
         // Hard delete, so undo re-inserts rather than updates.
         try {
-          await taskMutations.restore(taskToRestore, subtasksToRestore);
+          const leftOut = await taskMutations.restore(
+            taskToRestore,
+            subtasksToRestore,
+          );
           trigger("success");
-          notify("Task restored");
+          notify(
+            leftOut === 0
+              ? "Task restored"
+              : `Task restored. ${leftOut === 1 ? "1 subtask" : `${leftOut} subtasks`} that can't be read stayed deleted.`,
+          );
         } catch (err) {
           console.error("Failed to restore task:", err);
           trigger("thud");

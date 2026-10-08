@@ -151,7 +151,7 @@ function runReplace(
   supabase: unknown,
   data: BackupData,
   userId = "user-1",
-): Promise<void> {
+): Promise<number> {
   return replaceCloudBackup(
     supabase as Parameters<typeof replaceCloudBackup>[0],
     userId,
@@ -199,6 +199,66 @@ describe("replaceCloudBackup", () => {
 
     // The user's rows are still there: nothing was deleted on the way out.
     expect(ops.filter((o) => o.op === "delete")).toHaveLength(0);
+  });
+
+  it("skips rows the backup could not read, keeps the server's copy, and counts them", async () => {
+    const { supabase, ops } = createWriteStub({
+      existingIds: { tasks: ["task-2", "stale"] },
+    });
+
+    const skipped = await runReplace(
+      supabase,
+      backupWith({
+        tasks: [
+          { id: "task-1", content: "Readable" },
+          { id: "task-2", content: null, unreadable: ["content"] },
+        ],
+      } as unknown as Partial<BackupData>),
+    );
+
+    expect(skipped).toBe(1);
+    const taskUpserts = ops.filter(
+      (o) => o.op === "upsert" && o.table === "tasks",
+    );
+    expect(taskUpserts.flatMap((o) => o.rows!.map((r) => r.id))).toEqual([
+      "task-1",
+    ]);
+    const taskDelete = ops.find(
+      (o) => o.op === "delete" && o.table === "tasks",
+    );
+    expect(taskDelete?.ids).toEqual(["stale"]);
+  });
+
+  it("also skips the rows under an unreadable one, which could not be written without it", async () => {
+    const { supabase, ops } = createWriteStub({
+      existingIds: {
+        habits: ["h1"],
+        habit_entries: ["e1"],
+        tasks: ["sub", "child"],
+      },
+    });
+
+    const skipped = await runReplace(
+      supabase,
+      backupWith({
+        projects: [{ id: "p1", name: null, unreadable: ["name"] }],
+        habits: [{ id: "h1", name: null, unreadable: ["name"] }],
+        habit_entries: [{ id: "e1", habit_id: "h1" }],
+        // Subtask precedes parent to verify multi-pass resolution.
+        tasks: [
+          { id: "sub", parent_id: "child", project_id: null },
+          { id: "child", parent_id: null, project_id: "p1" },
+          { id: "free", parent_id: null, project_id: null },
+        ],
+      } as unknown as Partial<BackupData>),
+    );
+
+    expect(skipped).toBe(5);
+    const upserted = ops
+      .filter((o) => o.op === "upsert")
+      .flatMap((o) => o.rows!.map((r) => r.id));
+    expect(upserted).toEqual(["free"]);
+    expect(ops.filter((o) => o.op === "delete")).toEqual([]);
   });
 
   it("removes rows the backup no longer contains", async () => {
