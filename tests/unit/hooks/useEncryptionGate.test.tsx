@@ -20,15 +20,16 @@ vi.mock("@/lib/crypto/keyManager", () => ({
 const keyStoreLoadMock = vi.fn();
 const keyStoreSaveMock = vi.fn();
 let keyStoreKeyId = "1";
+let keyStoreFreshKeyId: string | null = null;
 let keyStoreRetired: Record<string, Uint8Array> = {};
 vi.mock("@/lib/crypto/keyStore", () => ({
   keyStore: {
     load: (...args: unknown[]) => keyStoreLoadMock(...args),
     loadKeyring: async (...args: unknown[]) => {
       const key = await keyStoreLoadMock(...args);
-      return key
-        ? { keyId: keyStoreKeyId, key, retired: keyStoreRetired }
-        : null;
+      const fresh = (args[1] as { fresh?: boolean } | undefined)?.fresh;
+      const keyId = (fresh && keyStoreFreshKeyId) || keyStoreKeyId;
+      return key ? { keyId, key, retired: keyStoreRetired } : null;
     },
     save: (...args: unknown[]) => keyStoreSaveMock(...args),
   },
@@ -83,6 +84,7 @@ function withQueryClient(children: React.ReactNode) {
 describe("useEncryptionGate", () => {
   beforeEach(() => {
     keyStoreKeyId = "1";
+    keyStoreFreshKeyId = null;
     keyStoreRetired = {};
     vi.clearAllMocks();
     authState.user = { id: "user-1" };
@@ -144,6 +146,46 @@ describe("useEncryptionGate", () => {
     await waitFor(() => expect(result.current.status).toBe("needs-unlock"));
     expect(purgeDeviceContentMock).toHaveBeenCalled();
     expect(result.current.lockReason).toBe("key-changed");
+  });
+
+  it("keeps the new key when another tab on this device did the rotation", async () => {
+    getEncryptionKeyRowMock.mockResolvedValue({
+      migrated_at: "2026-09-04T00:00:00Z",
+      current_key_id: 2,
+    });
+    keyStoreLoadMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+    keyStoreFreshKeyId = "2";
+
+    const { result } = renderHook(() => useEncryptionGate(), {
+      wrapper: ({ children }) => withQueryClient(children),
+    });
+    await waitFor(() => expect(result.current.status).toBe("unlocked"));
+    expect(purgeDeviceContentMock).not.toHaveBeenCalled();
+  });
+
+  it("does not check again when a token refresh replaces the user object", async () => {
+    getEncryptionKeyRowMock.mockResolvedValue({
+      migrated_at: "2026-09-04T00:00:00Z",
+      current_key_id: 1,
+    });
+    keyStoreLoadMock.mockResolvedValue(new Uint8Array([1, 2, 3]));
+    const queryClient = new QueryClient();
+    const { result, rerender } = renderHook(() => useEncryptionGate(), {
+      wrapper: ({ children }) => (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      ),
+    });
+    await waitFor(() => expect(result.current.status).toBe("unlocked"));
+
+    keyStoreLoadMock.mockResolvedValue(null);
+    authState.user = { id: "user-1" };
+    rerender();
+
+    await act(async () => {});
+    expect(result.current.status).toBe("unlocked");
+    expect(getEncryptionKeyRowMock).toHaveBeenCalledTimes(1);
   });
 
   it("keeps a key newer than a key row cached while offline", async () => {
@@ -491,6 +533,22 @@ describe("useEncryptionGate", () => {
       expect(purgeDeviceContentMock).toHaveBeenCalledTimes(1);
       expect(result.current.lockReason).toBe("key-changed");
       expect(statuses).not.toContain("loading");
+    });
+
+    it("stays unlocked when another tab on this device already saved the new key", async () => {
+      const { result } = await unlockedGate(1);
+      getEncryptionKeyRowMock.mockResolvedValue({
+        migrated_at: "2026-09-04T00:00:00Z",
+        current_key_id: 2,
+      });
+      keyStoreFreshKeyId = "2";
+
+      await act(async () => {
+        await rejectedWrite();
+      });
+
+      expect(result.current.status).toBe("unlocked");
+      expect(purgeDeviceContentMock).not.toHaveBeenCalled();
     });
 
     it("purges once when several writes are refused at the same time", async () => {

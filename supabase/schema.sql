@@ -2035,6 +2035,8 @@ CREATE TABLE IF NOT EXISTS public.encryption_keys (
   current_key_id INTEGER NOT NULL DEFAULT 1,
   retired_keys JSONB NOT NULL DEFAULT '{}',
   passphrase_reset_required BOOLEAN NOT NULL DEFAULT false,
+  -- SHA-256 proof required to rotate the content key.
+  rotation_verifier TEXT,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
@@ -2067,6 +2069,8 @@ BEGIN
     OR (NEW.retired_keys IS DISTINCT FROM OLD.retired_keys AND NEW.retired_keys <> '{}'::jsonb)
     OR (OLD.migrated_at IS NOT NULL AND NEW.migrated_at IS NULL)
     OR (OLD.sealed_v2_at IS NOT NULL AND NEW.sealed_v2_at IS NULL)
+    -- Set once by a device holding the key; after that only a rotation replaces it.
+    OR (OLD.rotation_verifier IS NOT NULL AND NEW.rotation_verifier IS DISTINCT FROM OLD.rotation_verifier)
   ) THEN
     RAISE EXCEPTION 'The content key chain changes only through a rotation'
       USING ERRCODE = 'insufficient_privilege';
@@ -2217,7 +2221,9 @@ CREATE OR REPLACE FUNCTION public.rotate_content_key(
   p_recovery_salt TEXT,
   p_recovery_kdf_params JSONB,
   p_wrapped_key_recovery TEXT,
-  p_retired_keys JSONB
+  p_retired_keys JSONB,
+  p_rotation_token TEXT,
+  p_rotation_verifier TEXT
 )
 RETURNS INTEGER
 LANGUAGE plpgsql
@@ -2225,8 +2231,19 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
+  stored_verifier TEXT;
   new_key_id INTEGER;
 BEGIN
+  SELECT rotation_verifier INTO stored_verifier
+  FROM public.encryption_keys
+  WHERE user_id = auth.uid();
+
+  IF stored_verifier IS NULL
+     OR stored_verifier IS DISTINCT FROM encode(sha256(decode(p_rotation_token, 'base64')), 'base64') THEN
+    RAISE EXCEPTION 'Only a device holding the current content key can rotate it.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
   UPDATE public.encryption_keys
   SET passphrase_salt = p_passphrase_salt,
       passphrase_kdf_params = p_passphrase_kdf_params,
@@ -2235,10 +2252,12 @@ BEGIN
       recovery_kdf_params = p_recovery_kdf_params,
       wrapped_key_recovery = p_wrapped_key_recovery,
       retired_keys = p_retired_keys,
+      rotation_verifier = p_rotation_verifier,
       current_key_id = current_key_id + 1,
       passphrase_reset_required = false
   WHERE user_id = auth.uid()
     AND current_key_id = p_expected_key_id
+    AND rotation_verifier = stored_verifier
   RETURNING current_key_id INTO new_key_id;
 
   IF new_key_id IS NULL THEN
@@ -2250,5 +2269,5 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.rotate_content_key(INTEGER, TEXT, JSONB, TEXT, TEXT, JSONB, TEXT, JSONB) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.rotate_content_key(INTEGER, TEXT, JSONB, TEXT, TEXT, JSONB, TEXT, JSONB) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.rotate_content_key(INTEGER, TEXT, JSONB, TEXT, TEXT, JSONB, TEXT, JSONB, TEXT, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.rotate_content_key(INTEGER, TEXT, JSONB, TEXT, TEXT, JSONB, TEXT, JSONB, TEXT, TEXT) TO authenticated;

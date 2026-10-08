@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createHash } from "crypto";
 import { createFakeSupabaseClient } from "../../support/fakeSupabaseClient";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,6 +26,7 @@ function createEncryptionKeysTable() {
     update: (payload: Row) => ({
       eq: (_col: string, userId: string) => {
         let guardKeyId: number | null = null;
+        let nullGuard: string | null = null;
         const apply = () => {
           const current = rows.get(userId);
           if (
@@ -32,6 +34,7 @@ function createEncryptionKeysTable() {
             (current?.current_key_id ?? 1) !== guardKeyId
           )
             return null;
+          if (nullGuard !== null && current?.[nullGuard] != null) return null;
           lastUpdatePayload = payload;
           rows.set(userId, { ...current, ...payload });
           return rows.get(userId) ?? null;
@@ -39,6 +42,10 @@ function createEncryptionKeysTable() {
         const builder = {
           eq: (_c: string, value: number) => {
             guardKeyId = value;
+            return builder;
+          },
+          is: (column: string, _value: null) => {
+            nullGuard = column;
             return builder;
           },
           then: (onFulfilled: (v: { data: null; error: null }) => unknown) => {
@@ -74,6 +81,12 @@ const rpcMock = vi.fn(async (_name: string, args: Row) => {
   const userId = [...rows.keys()][0];
   const current = rows.get(userId)!;
   const keyId = current.current_key_id ?? 1;
+  const proof = createHash("sha256")
+    .update(Buffer.from(args.p_rotation_token ?? "", "base64"))
+    .digest("base64");
+  if (!current.rotation_verifier || current.rotation_verifier !== proof) {
+    return { data: null, error: new Error("no proof of the current key") };
+  }
   if (keyId !== args.p_expected_key_id) {
     return { data: null, error: new Error("content key changed") };
   }
@@ -86,6 +99,7 @@ const rpcMock = vi.fn(async (_name: string, args: Row) => {
     recovery_kdf_params: args.p_recovery_kdf_params,
     wrapped_key_recovery: args.p_wrapped_key_recovery,
     retired_keys: args.p_retired_keys,
+    rotation_verifier: args.p_rotation_verifier,
     current_key_id: keyId + 1,
   });
   return { data: keyId + 1, error: null };
@@ -483,6 +497,32 @@ describe("keyManager", () => {
     expect(row?.migrated_at).toBeNull();
   }, 20000);
 
+  it("stores proof of the content key at setup, without the key itself", async () => {
+    await setupEncryption(USER_ID, "first passphrase");
+
+    const verifier = rows.get(USER_ID)!.rotation_verifier;
+    expect(verifier).toEqual(expect.any(String));
+    expect(verifier).not.toContain(
+      Buffer.from(keyStoreState.key!).toString("base64"),
+    );
+  }, 20000);
+
+  it("adds the proof on unlock for an account set up before it existed, but never replaces one", async () => {
+    await setupEncryption(USER_ID, "first passphrase");
+    const verifier = rows.get(USER_ID)!.rotation_verifier;
+    delete rows.get(USER_ID)!.rotation_verifier;
+
+    await unlockWithPassphrase(USER_ID, "first passphrase");
+    await vi.waitFor(() =>
+      expect(rows.get(USER_ID)!.rotation_verifier).toBe(verifier),
+    );
+
+    rows.get(USER_ID)!.rotation_verifier = "set elsewhere";
+    await unlockWithPassphrase(USER_ID, "first passphrase");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(rows.get(USER_ID)!.rotation_verifier).toBe("set elsewhere");
+  }, 20000);
+
   it("markMigrationComplete sets both markers", async () => {
     rawClient = createFakeSupabaseClient({
       tasks: [{ id: "t1", user_id: USER_ID, content: "Buy milk" }],
@@ -550,6 +590,7 @@ describe("keyManager", () => {
     await expect(
       unlockWithPassphrase(USER_ID, "wrong passphrase"),
     ).rejects.toThrow(UnlockError);
+
     expect(recordActivityMock).not.toHaveBeenCalled();
   }, 20000);
 
@@ -615,6 +656,25 @@ describe("keyManager", () => {
       expect(keyStoreState.retired["1"]).toEqual(oldKey);
       expect(keyStoreState.retired["2"]).toEqual(secondKey);
     }, 90000);
+
+    it("rotates an account set up before rotation needed proof of the key", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      delete rows.get(USER_ID)!.rotation_verifier;
+
+      await rotateContentKey(USER_ID, "old passphrase", "new passphrase");
+
+      expect(keyStoreState.keyId).toBe("2");
+    }, 60000);
+
+    it("cannot rotate when the stored proof belongs to another key", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      rows.get(USER_ID)!.rotation_verifier = "planted";
+
+      await expect(
+        rotateContentKey(USER_ID, "old passphrase", "new passphrase"),
+      ).rejects.toThrow("no proof of the current key");
+      expect(rows.get(USER_ID)!.current_key_id ?? 1).toBe(1);
+    }, 60000);
 
     it("refuses to unlock with a key row older than one this device has seen", async () => {
       await setupEncryption(USER_ID, "old passphrase");
@@ -777,6 +837,21 @@ describe("keyManager", () => {
 
       expect(rpcMock).not.toHaveBeenCalled();
       expect(rows.get(USER_ID)).toEqual(before);
+    }, 60000);
+
+    it("refuses to rotate from a retired key, without writing its proof onto the newer key's row", async () => {
+      await setupEncryption(USER_ID, "old passphrase");
+      const row = rows.get(USER_ID)!;
+      rows.set(USER_ID, {
+        ...row,
+        current_key_id: 2,
+        rotation_verifier: null,
+      });
+
+      await expect(
+        rotateContentKey(USER_ID, "old passphrase", "new passphrase"),
+      ).rejects.toBeInstanceOf(UnlockError);
+      expect(rows.get(USER_ID)!.rotation_verifier).toBeNull();
     }, 60000);
 
     it("refuses to rotate while locked", async () => {

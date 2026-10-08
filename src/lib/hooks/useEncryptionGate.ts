@@ -113,17 +113,20 @@ export function useEncryptionGate(): {
   }, [autoLockEnabled, autoLockMinutes]);
 
   const notApplicable = !authLoading && (!user || isGuestMode);
+  // Key on user ID so auth token refreshes do not re-run the gate effect.
+  const userId = user?.id;
 
   useEffect(() => {
-    if (authLoading || notApplicable || !user) return;
+    if (authLoading || notApplicable || !userId) return;
 
     let cancelled = false;
 
     (async () => {
       try {
+        // Read fresh to avoid purging if another tab rotated the key.
         const [row, keyring] = await Promise.all([
-          getEncryptionKeyRow(user.id),
-          keyStore.loadKeyring(user.id),
+          getEncryptionKeyRow(userId),
+          keyStore.loadKeyring(userId, { fresh: true }),
         ]);
         if (cancelled) return;
 
@@ -143,7 +146,7 @@ export function useEncryptionGate(): {
         // Another device's Re-seal deleted these server-side. A row cached before the
         // column existed says nothing about them.
         if (row?.retired_keys && cachedKey) {
-          await dropRetiredKeysNotIn(user.id, rowKeyId, row.retired_keys);
+          await dropRetiredKeysNotIn(userId, rowKeyId, row.retired_keys);
         }
 
         const wouldUnlock =
@@ -180,9 +183,8 @@ export function useEncryptionGate(): {
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading, notApplicable, version, queryClient]);
+  }, [userId, authLoading, notApplicable, version, queryClient]);
 
-  const userId = user?.id;
   useEffect(() => {
     if (!userId) return;
     return onServerKeySignal(async (signal) => {
@@ -202,7 +204,7 @@ export function useEncryptionGate(): {
       try {
         const [row, keyring] = await Promise.all([
           getEncryptionKeyRow(userId),
-          keyStore.loadKeyring(userId),
+          keyStore.loadKeyring(userId, { fresh: true }),
         ]);
         // The check awaits the network; a hold set meanwhile still applies.
         if (recoveryCodeHeldRef.current || !isKeyRetired(row, keyring)) {

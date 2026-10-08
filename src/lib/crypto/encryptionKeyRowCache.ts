@@ -15,6 +15,7 @@ export interface EncryptionKeyRow {
   // Absent on rows cached before rotation existed: key id 1, nothing retired.
   current_key_id?: number;
   retired_keys?: Record<string, string>;
+  rotation_verifier?: string | null;
   passphrase_reset_required: boolean;
 }
 

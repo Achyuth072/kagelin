@@ -116,6 +116,28 @@ describe("server-side backstop for a rotated content key", () => {
     expect(rpc).toMatch(/SECURITY DEFINER/);
   });
 
+  it("rotates only for a caller that proves it holds the current key, in schema and migration", () => {
+    const migration = readFileSync(
+      path.resolve(
+        __dirname,
+        "../../../../supabase/migrations/20261008120500_rotation_requires_key_proof.sql",
+      ),
+      "utf-8",
+    );
+    for (const sql of [schemaSql, migration]) {
+      const rpc = sql.match(
+        /CREATE OR REPLACE FUNCTION public\.rotate_content_key\([\s\S]*?\n\$\$;/,
+      )?.[0];
+      expect(rpc).toContain(
+        "stored_verifier IS DISTINCT FROM encode(sha256(decode(p_rotation_token, 'base64')), 'base64')",
+      );
+      expect(rpc).toContain("rotation_verifier = p_rotation_verifier");
+    }
+    expect(migration).toContain(
+      "DROP FUNCTION IF EXISTS public.rotate_content_key(INTEGER, TEXT, JSONB, TEXT, TEXT, JSONB, TEXT, JSONB);",
+    );
+  });
+
   it("keeps the -v1 rejection on through a rotation", () => {
     const rpc = schemaSql.match(
       /CREATE OR REPLACE FUNCTION public\.rotate_content_key\([\s\S]*?\n\$\$;/,
@@ -132,6 +154,12 @@ describe("the key row's markers cannot be rolled back by a direct UPDATE", () =>
   it("runs before every update of encryption_keys", () => {
     expect(schemaSql).toMatch(
       /CREATE TRIGGER encryption_keys_guard_markers\s+BEFORE UPDATE ON public\.encryption_keys\s+FOR EACH ROW EXECUTE FUNCTION public\.guard_encryption_key_markers\(\)/,
+    );
+  });
+
+  it("lets a device set the rotation verifier once, and only a rotation replace it", () => {
+    expect(guard).toContain(
+      "OLD.rotation_verifier IS NOT NULL AND NEW.rotation_verifier IS DISTINCT FROM OLD.rotation_verifier",
     );
   });
 

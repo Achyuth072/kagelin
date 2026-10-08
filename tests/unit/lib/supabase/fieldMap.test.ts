@@ -52,6 +52,7 @@ const NON_CONTENT: Record<string, string[]> = {
     "recovery_kdf_params",
     "wrapped_key_recovery",
     "retired_keys",
+    "rotation_verifier",
   ],
 };
 

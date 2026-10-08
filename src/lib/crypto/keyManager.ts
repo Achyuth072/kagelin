@@ -9,6 +9,8 @@ import {
   generateRecoveryCode,
   generateSalt,
   normalizeRecoveryCode,
+  rotationToken,
+  rotationVerifier,
   unwrapMasterKey,
   wrapMasterKey,
 } from "@/lib/crypto/masterKey";
@@ -68,6 +70,32 @@ async function cacheMasterKey(
   });
   await keyStore.save(userId, masterKey, currentKeyIdOf(row), retired);
   recordActivity();
+}
+
+// Backfill verifier for accounts created before rotation proof existed.
+async function ensureRotationVerifier(
+  userId: string,
+  masterKey: Uint8Array,
+  row: EncryptionKeyRow,
+): Promise<void> {
+  if (row.rotation_verifier) return;
+  const { error } = await createClient()
+    .from("encryption_keys")
+    .update({ rotation_verifier: await rotationVerifier(masterKey) })
+    .eq("user_id", userId)
+    .eq("current_key_id", Number(currentKeyIdOf(row)))
+    .is("rotation_verifier", null);
+  if (error) throw error;
+}
+
+function ensureRotationVerifierInBackground(
+  userId: string,
+  masterKey: Uint8Array,
+  row: EncryptionKeyRow,
+): void {
+  ensureRotationVerifier(userId, masterKey, row).catch((err) =>
+    Sentry.captureException(err),
+  );
 }
 
 async function unwrapOrThrow(
@@ -218,6 +246,7 @@ export async function setupEncryption(
     wrapped_key_recovery: wrappedByRecovery,
     migrated_at: migratedAt,
     sealed_v2_at: migratedAt,
+    rotation_verifier: await rotationVerifier(masterKey),
   });
   if (error) throw error;
 
@@ -249,6 +278,7 @@ export async function unlockWithPassphrase(
   );
 
   await cacheMasterKey(userId, masterKey, row);
+  ensureRotationVerifierInBackground(userId, masterKey, row);
   return masterKey;
 }
 
@@ -279,6 +309,7 @@ export async function unlockWithRecoveryCode(
     passphrase_reset_required: true,
   });
   await cacheMasterKey(userId, masterKey, row);
+  ensureRotationVerifierInBackground(userId, masterKey, row);
   return masterKey;
 }
 
@@ -385,6 +416,11 @@ export async function rotateContentKey(
   if (!row) {
     throw new UnlockError("Encryption isn't set up for this account yet.");
   }
+  if (ring.keyId !== currentKeyIdOf(row)) {
+    throw new UnlockError(
+      "Your content key was changed on another device. Unlock again with your new passphrase.",
+    );
+  }
 
   // An unlocked device alone must not be able to replace the passphrase and lock the owner out.
   await unwrapOrThrow(
@@ -429,6 +465,8 @@ export async function rotateContentKey(
     recovery_kdf_params: DEFAULT_ARGON2_PARAMS,
     wrapped_key_recovery: wrappedByRecovery,
   };
+  const newVerifier = await rotationVerifier(newKey);
+  await ensureRotationVerifier(userId, ring.key, row);
   const supabase = createClient();
   const { data: newKeyId, error } = await supabase.rpc("rotate_content_key", {
     p_expected_key_id: Number(ring.keyId),
@@ -439,6 +477,8 @@ export async function rotateContentKey(
     p_recovery_kdf_params: patch.recovery_kdf_params,
     p_wrapped_key_recovery: patch.wrapped_key_recovery,
     p_retired_keys: wrappedRetired,
+    p_rotation_token: await rotationToken(ring.key),
+    p_rotation_verifier: newVerifier,
   });
   if (error) throw error;
 
@@ -451,6 +491,7 @@ export async function rotateContentKey(
       ...patch,
       current_key_id: newKeyId as number,
       retired_keys: wrappedRetired,
+      rotation_verifier: newVerifier,
       passphrase_reset_required: false,
     });
     await keyStore.save(userId, newKey, String(newKeyId), retired);

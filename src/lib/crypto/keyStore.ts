@@ -21,7 +21,11 @@ interface StoredMasterKey {
 
 export interface KeyStore {
   load(userId?: string): Promise<Uint8Array | null>;
-  loadKeyring(userId?: string): Promise<Keyring | null>;
+  // fresh: bypass in-memory cache to see updates from other tabs.
+  loadKeyring(
+    userId?: string,
+    options?: { fresh?: boolean },
+  ): Promise<Keyring | null>;
   loadUserId(): Promise<string | null>;
   save(
     userId: string,
@@ -41,8 +45,8 @@ function isStoredMasterKey(value: unknown): value is StoredMasterKey {
   );
 }
 
-async function loadRecord(): Promise<StoredMasterKey | null> {
-  if (cached === undefined) {
+async function loadRecord(fresh = false): Promise<StoredMasterKey | null> {
+  if (cached === undefined || fresh) {
     const stored = await get<unknown>(MASTER_KEY_STORAGE_KEY);
     // Discard legacy unowned keys.
     cached = isStoredMasterKey(stored) ? stored : null;
@@ -55,8 +59,9 @@ async function loadRecord(): Promise<StoredMasterKey | null> {
 
 async function loadOwnedRecord(
   userId?: string,
+  fresh = false,
 ): Promise<StoredMasterKey | null> {
-  const record = await loadRecord();
+  const record = await loadRecord(fresh);
   if (!record) return null;
   // Evict cached key on user mismatch to prevent cross-account exposure.
   if (userId !== undefined && record.userId !== userId) {
@@ -70,8 +75,8 @@ export const keyStore: KeyStore = {
   async load(userId) {
     return (await loadOwnedRecord(userId))?.key ?? null;
   },
-  async loadKeyring(userId) {
-    const record = await loadOwnedRecord(userId);
+  async loadKeyring(userId, options) {
+    const record = await loadOwnedRecord(userId, options?.fresh);
     if (!record) return null;
     return {
       keyId: record.keyId ?? INITIAL_KEY_ID,

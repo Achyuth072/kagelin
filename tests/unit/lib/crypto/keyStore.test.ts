@@ -63,3 +63,24 @@ describe("keyStore", () => {
     expect(idbStore.has("kagelin-master-key")).toBe(false);
   });
 });
+
+describe("keyStore across tabs", () => {
+  beforeEach(() => {
+    idbStore.clear();
+  });
+
+  it("returns a key another tab saved since only when asked to read fresh", async () => {
+    await keyStore.save("user-a", new Uint8Array([1]), "1");
+    idbStore.set("kagelin-master-key", {
+      userId: "user-a",
+      key: new Uint8Array([2]),
+      keyId: "2",
+      retired: { "1": new Uint8Array([1]) },
+    });
+
+    expect((await keyStore.loadKeyring("user-a"))?.keyId).toBe("1");
+    expect((await keyStore.loadKeyring("user-a", { fresh: true }))?.keyId).toBe(
+      "2",
+    );
+  });
+});
