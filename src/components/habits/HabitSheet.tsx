@@ -26,6 +26,7 @@ import { HabitInsightsPanel } from "./HabitInsightsPanel";
 import { SheetTabToggle, type SheetTab } from "@/components/ui/SheetTabToggle";
 import { cn } from "@/lib/utils";
 import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
+import { omitUntouchedUnreadable } from "@/lib/crypto/unreadable";
 
 interface HabitSheetProps {
   open: boolean;
@@ -186,12 +187,14 @@ export function HabitSheet({
       };
 
       if (initialHabit) {
-        updateMutation.mutate({
-          ...formattedData,
-          // undefined would leave the stored target untouched.
-          target_value: data.target_value ?? null,
-          id: initialHabit.id,
-        });
+        updateMutation.mutate(
+          omitUntouchedUnreadable(initialHabit, {
+            ...formattedData,
+            // undefined would leave the stored target untouched.
+            target_value: data.target_value ?? null,
+            id: initialHabit.id,
+          }),
+        );
       } else {
         createMutation.mutate(formattedData);
       }

@@ -75,4 +75,19 @@ describe("EventOverflowPopover", () => {
     // Then
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("shows Can't be read in place of an unreadable location", () => {
+    render(
+      <EventOverflowPopover
+        remainingEvents={[
+          { ...mockEvents[0], location: null, unreadable: ["location"] },
+        ]}
+        day={new Date("2024-01-01")}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("+1 more"));
+
+    expect(screen.getByTestId("unreadable-text")).toBeInTheDocument();
+  });
 });

@@ -16,7 +16,7 @@ import { taskMutations } from "@/lib/mutations/task";
 import { mockStore } from "@/lib/mock/mock-store";
 import { useUiStore } from "@/lib/store/uiStore";
 import { trackTelemetry } from "@/lib/telemetry/client";
-import { requireReadable } from "@/lib/crypto/unreadable";
+import { applyReadableUpdate, requireReadable } from "@/lib/crypto/unreadable";
 
 // Matches the Undo toast duration — keyboard undo shouldn't outlive it.
 const UNDO_TOAST_DURATION_MS = 5000;
@@ -340,7 +340,7 @@ export function useUpdateTask() {
       snapshot.tasks.forEach(([key]) => {
         queryClient.setQueryData<Task[]>(key, (old) =>
           old?.map((task) => {
-            if (task.id === id) return { ...task, ...rest };
+            if (task.id === id) return applyReadableUpdate(task, rest);
             if (task.subtasks?.some((st) => st.id === id)) {
               return {
                 ...task,
@@ -363,13 +363,15 @@ export function useUpdateTask() {
 
       snapshot.subtasks.forEach(([key]) => {
         queryClient.setQueryData<Task[]>(key, (old) =>
-          old?.map((task) => (task.id === id ? { ...task, ...rest } : task)),
+          old?.map((task) =>
+            task.id === id ? applyReadableUpdate(task, rest) : task,
+          ),
         );
       });
 
       snapshot.singleTasks.forEach(([key]) => {
         queryClient.setQueryData<Task | null>(key, (old) =>
-          old && old.id === id ? { ...old, ...rest } : old,
+          old && old.id === id ? applyReadableUpdate(old, rest) : old,
         );
       });
 

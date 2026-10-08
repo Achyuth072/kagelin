@@ -54,7 +54,7 @@ export interface UpdateCalendarEventInput {
   metadata?: Record<string, unknown>;
 }
 
-export interface CalendarEventUI {
+export interface CalendarEventUI extends MaybeUnreadable {
   id: string;
   title: string | null;
   start: Date;
@@ -83,5 +83,6 @@ export function toCalendarEventUI(event: CalendarEvent): CalendarEventUI {
     isArchived: event.is_archived,
     reminderMinutes: event.reminder_minutes,
     metadata: event.metadata ?? undefined,
+    ...(event.unreadable && { unreadable: event.unreadable }),
   };
 }

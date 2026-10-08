@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { handleMutationError } from "@/lib/utils/mutation-error";
+import { applyReadableUpdate } from "@/lib/crypto/unreadable";
 import type { HabitEntry, HabitWithEntries } from "@/lib/types/habit";
 import { REMINDER_EVERY_DAY } from "@/lib/types/habit";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
@@ -100,7 +101,7 @@ export function useUpdateHabit() {
       const { id, ...updates } = input;
       snapshot.forEach(([key]) => {
         queryClient.setQueryData<HabitWithEntries[]>(key, (old) =>
-          old?.map((h) => (h.id === id ? { ...h, ...updates } : h)),
+          old?.map((h) => (h.id === id ? applyReadableUpdate(h, updates) : h)),
         );
       });
 

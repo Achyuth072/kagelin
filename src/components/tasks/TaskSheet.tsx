@@ -1,5 +1,7 @@
 "use client";
 
+import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
+import { omitUntouchedUnreadable } from "@/lib/crypto/unreadable";
 import {
   useState,
   useEffect,
@@ -182,18 +184,20 @@ export default function TaskSheet({
       const stepToFlush = pendingStep.trim();
 
       if (initialTask) {
-        updateMutation.mutate({
-          ...data,
-          id: initialTask.id,
-          due_date:
-            data.due_date instanceof Date
-              ? data.due_date.toISOString()
-              : data.due_date || null,
-          do_date:
-            data.do_date instanceof Date
-              ? data.do_date.toISOString()
-              : data.do_date || null,
-        });
+        updateMutation.mutate(
+          omitUntouchedUnreadable(initialTask, {
+            ...data,
+            id: initialTask.id,
+            due_date:
+              data.due_date instanceof Date
+                ? data.due_date.toISOString()
+                : data.due_date || null,
+            do_date:
+              data.do_date instanceof Date
+                ? data.do_date.toISOString()
+                : data.do_date || null,
+          }),
+        );
 
         if (stepToFlush) {
           const targetProjectId =
@@ -442,7 +446,7 @@ export default function TaskSheet({
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleConfirmDelete}
         title="Delete Task"
-        description={`Are you sure you want to delete "${effectiveTask?.content}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${effectiveTask?.content ?? UNREADABLE_LABEL}"? This action cannot be undone.`}
       />
     </ResponsiveDialog>
   );

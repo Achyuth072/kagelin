@@ -26,6 +26,7 @@ import {
 } from "@/lib/utils/habit-frequency-progress";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { ReadableText } from "@/components/encryption/ReadableText";
+import { isUnreadable } from "@/lib/crypto/unreadable";
 
 interface HabitCardProps {
   habit: HabitWithEntries;
@@ -168,9 +169,9 @@ export function HabitCard({
                   <ReadableText text={habit.name} />
                 </span>
               </h3>
-              {habit.description && (
+              {(habit.description || isUnreadable(habit, "description")) && (
                 <p className="text-[13px] text-foreground/60 mt-1 truncate leading-relaxed font-medium">
-                  {habit.description}
+                  <ReadableText text={habit.description} />
                 </p>
               )}
             </div>

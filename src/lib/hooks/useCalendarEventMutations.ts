@@ -6,6 +6,7 @@ import { calendarEventMutations } from "@/lib/mutations/calendar-event";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { notifyLocalEdit } from "@/lib/sync/sync-scheduler";
 import { handleMutationError } from "@/lib/utils/mutation-error";
+import { applyReadableUpdate } from "@/lib/crypto/unreadable";
 import { toCalendarEventUI } from "@/lib/types/calendar-event";
 import type {
   CreateCalendarEventInput,
@@ -131,7 +132,7 @@ export function useUpdateCalendarEvent() {
 
       context.snapshot.forEach(([key]) => {
         queryClient.setQueryData<CalendarEvent[]>(key, (old) =>
-          old?.map((e) => (e.id === id ? { ...e, ...updates } : e)),
+          old?.map((e) => (e.id === id ? applyReadableUpdate(e, updates) : e)),
         );
       });
       useCalendarStore

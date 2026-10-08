@@ -18,6 +18,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import dynamic from "next/dynamic";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
+import { omitUntouchedUnreadable } from "@/lib/crypto/unreadable";
 
 const TaskView = dynamic(
   () => import("./TaskView").then((mod) => mod.TaskView),
@@ -123,18 +124,20 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
 
       trigger("success");
 
-      updateMutation.mutate({
-        ...data,
-        id: task.id,
-        due_date:
-          data.due_date instanceof Date
-            ? data.due_date.toISOString()
-            : data.due_date || null,
-        do_date:
-          data.do_date instanceof Date
-            ? data.do_date.toISOString()
-            : data.do_date || null,
-      });
+      updateMutation.mutate(
+        omitUntouchedUnreadable(task, {
+          ...data,
+          id: task.id,
+          due_date:
+            data.due_date instanceof Date
+              ? data.due_date.toISOString()
+              : data.due_date || null,
+          do_date:
+            data.do_date instanceof Date
+              ? data.do_date.toISOString()
+              : data.do_date || null,
+        }),
+      );
 
       const stepToFlush = pendingStep.trim();
       if (stepToFlush) {

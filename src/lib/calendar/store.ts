@@ -9,6 +9,7 @@ import {
   subMonths,
   subYears,
 } from "date-fns";
+import { applyReadableUpdate } from "@/lib/crypto/unreadable";
 import type { CalendarView, CalendarEventUI } from "./types";
 
 interface CalendarStore {
@@ -123,7 +124,7 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
   updateEvent: (id, updates) =>
     set((state) => ({
       events: state.events.map((event) =>
-        event.id === id ? { ...event, ...updates } : event,
+        event.id === id ? applyReadableUpdate(event, updates) : event,
       ),
     })),
 

@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { AlignLeft } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { IconCell } from "@/components/ui/IconCell";
+import { ReadableText } from "@/components/encryption/ReadableText";
 import { TaskNotesEditor } from "./TaskNotesEditor";
 
 interface TaskNotesRowProps {
@@ -14,6 +15,7 @@ interface TaskNotesRowProps {
   isPreviewMode: boolean;
   setIsPreviewMode: Dispatch<SetStateAction<boolean>>;
   defaultPreviewOnOpen: boolean;
+  unreadable: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -49,6 +51,7 @@ export function TaskNotesRow({
   isPreviewMode,
   setIsPreviewMode,
   defaultPreviewOnOpen,
+  unreadable,
   open: notesEditorOpen,
   onOpenChange: setNotesEditorOpen,
 }: TaskNotesRowProps) {
@@ -92,6 +95,10 @@ export function TaskNotesRow({
                 {description}
               </ReactMarkdown>
             </div>
+          ) : unreadable ? (
+            <span className="text-sm flex-1 min-w-0">
+              <ReadableText text={null} />
+            </span>
           ) : (
             <span className="text-sm flex-1 min-w-0 text-muted-foreground">
               Add details... (Markdown supported)
