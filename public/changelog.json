@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.47.0-preview.6",
+    "date": "2026-10-08",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Ignore retired keys written back after the Re-seal cleared them",
+        "Refuse a rolled-back key row and -v1 or plaintext values after Re-seal"
+      ]
+    }
+  },
+  {
     "version": "1.47.0-preview.5",
     "date": "2026-10-08",
     "channel": "preview",
@@ -691,17 +702,6 @@
     "sections": {
       "Fixed": [
         "Resolve iOS PWA safe-area gaps and shrink mobile nav to a leaner size"
-      ]
-    }
-  },
-  {
-    "version": "1.41.1-preview.0",
-    "date": "2026-08-31",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Resolve iOS PWA safe-area gaps and shrink mobile nav to a leaner size",
-        "Noindex the app so search engines stop indexing authenticated routes"
       ]
     }
   }
