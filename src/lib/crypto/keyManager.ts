@@ -38,21 +38,34 @@ async function cacheMasterKey(
   masterKey: Uint8Array,
   row: Pick<EncryptionKeyRow, "current_key_id" | "retired_keys">,
 ): Promise<void> {
-  // Rejects a lower key id to prevent server rollback to a retired key.
-  if (Number(currentKeyIdOf(row)) < (await keyChainMark.load(userId)).keyId) {
+  const keyId = Number(currentKeyIdOf(row));
+  const mark = await keyChainMark.load(userId);
+  // Prevent server rollback to a retired key.
+  if (keyId < mark.keyId) {
     throw new UnlockError(
       "This device has seen a newer content key than the server sent. Try again later.",
     );
   }
+  let retiredKeys = row.retired_keys ?? {};
+  // Dropped rather than rejected to prevent lockouts; resealed data needs no retired keys.
+  if (keyId <= mark.retiredClearedAt && Object.keys(retiredKeys).length > 0) {
+    Sentry.captureException(
+      new Error("Ignored retired keys written back after they were cleared"),
+    );
+    retiredKeys = {};
+  }
   const retired = Object.fromEntries(
     await Promise.all(
-      Object.entries(row.retired_keys ?? {}).map(
+      Object.entries(retiredKeys).map(
         async ([id, wrapped]) =>
           [id, await unwrapMasterKey(wrapped, masterKey)] as const,
       ),
     ),
   );
-  await keyChainMark.raise(userId, { current_key_id: row.current_key_id });
+  await keyChainMark.raise(userId, {
+    current_key_id: row.current_key_id,
+    retired_keys: retiredKeys,
+  });
   await keyStore.save(userId, masterKey, currentKeyIdOf(row), retired);
   recordActivity();
 }
@@ -155,7 +168,8 @@ export async function markResealComplete(
   if (error) throw error;
   if (!data) return false;
   await rememberKeyRow(userId, data as EncryptionKeyRow);
-  // The retired keys are gone server-side; drop the local copies too.
+  // Guarded update ensures the row is safe to advance the mark.
+  await keyChainMark.raise(userId, data as EncryptionKeyRow);
   const ring = await keyStore.loadKeyring(userId);
   if (ring?.keyId === keyId) await keyStore.save(userId, ring.key, keyId, {});
   return true;

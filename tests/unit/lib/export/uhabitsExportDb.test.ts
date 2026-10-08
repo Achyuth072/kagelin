@@ -794,7 +794,7 @@ describe("collectUhabitsExportData - wrapped client & guest mode", () => {
     const { keyChainMark } = await import("@/lib/crypto/keyChainMark");
     const markSpy = vi
       .spyOn(keyChainMark, "load")
-      .mockResolvedValue({ keyId: 0, sealedV2: false });
+      .mockResolvedValue({ keyId: 0, sealedV2: false, retiredClearedAt: 0 });
 
     await wrapped.from("habits").insert({
       id: "enc-h1",

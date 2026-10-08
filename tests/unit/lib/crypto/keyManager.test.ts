@@ -172,18 +172,22 @@ vi.mock("@/lib/crypto/encryptionKeyRowCache", () => ({
   },
 }));
 
-const marks = new Map<string, { keyId: number; sealedV2: boolean }>();
+const NOTHING_SEEN = { keyId: 0, sealedV2: false, retiredClearedAt: 0 };
+const marks = new Map<string, typeof NOTHING_SEEN>();
 vi.mock("@/lib/crypto/keyChainMark", () => ({
   keyChainMark: {
-    load: vi.fn(
-      async (userId: string) =>
-        marks.get(userId) ?? { keyId: 0, sealedV2: false },
-    ),
+    load: vi.fn(async (userId: string) => marks.get(userId) ?? NOTHING_SEEN),
     raise: vi.fn(async (userId: string, row: Row) => {
-      const seen = marks.get(userId) ?? { keyId: 0, sealedV2: false };
+      const seen = marks.get(userId) ?? NOTHING_SEEN;
+      const keyId = row.current_key_id ?? 1;
+      const cleared =
+        !!row.retired_keys && Object.keys(row.retired_keys).length === 0;
       marks.set(userId, {
-        keyId: Math.max(seen.keyId, row.current_key_id ?? 1),
+        keyId: Math.max(seen.keyId, keyId),
         sealedV2: seen.sealedV2 || !!row.sealed_v2_at,
+        retiredClearedAt: cleared
+          ? Math.max(seen.retiredClearedAt, keyId)
+          : seen.retiredClearedAt,
       });
     }),
   },
@@ -781,5 +785,34 @@ describe("keyManager", () => {
       expect(keyStoreState.retired).toEqual({});
       expect(rows.get(USER_ID)?.sealed_v2_at).toEqual(expect.any(String));
     }, 60000);
+
+    it("ignores retired keys written back after this device saw them cleared, and reports it", async () => {
+      await setupAndRotate();
+      const replayed = structuredClone(rows.get(USER_ID)!.retired_keys);
+      await markResealComplete(USER_ID, "2");
+      vi.clearAllMocks();
+
+      rows.set(USER_ID, { ...rows.get(USER_ID)!, retired_keys: replayed });
+      await keyStore.clear();
+      await unlockWithPassphrase(USER_ID, "new passphrase");
+
+      expect(keyStoreState.keyId).toBe("2");
+      expect(keyStoreState.retired).toEqual({});
+      expect(captureExceptionMock).toHaveBeenCalledTimes(1);
+    }, 60000);
+
+    it("still loads the retired keys of a rotation after an earlier clear", async () => {
+      await setupAndRotate();
+      const secondKey = keyStoreState.key!;
+      await markResealComplete(USER_ID, "2");
+      await rotateContentKey(USER_ID, "new passphrase", "third passphrase");
+
+      await keyStore.clear();
+      await unlockWithPassphrase(USER_ID, "third passphrase");
+
+      expect(keyStoreState.keyId).toBe("3");
+      expect(keyStoreState.retired).toEqual({ "2": secondKey });
+      expect(captureExceptionMock).not.toHaveBeenCalled();
+    }, 90000);
   });
 });

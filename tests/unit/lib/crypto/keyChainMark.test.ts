@@ -19,7 +19,34 @@ describe("keyChainMark", () => {
     expect(await keyChainMark.load("user-1")).toEqual({
       keyId: 0,
       sealedV2: false,
+      retiredClearedAt: 0,
     });
+  });
+
+  it("records the key id at which the retired keys were seen cleared, and never lowers it", async () => {
+    await keyChainMark.raise("user-1", { current_key_id: 2, retired_keys: {} });
+    await keyChainMark.raise("user-1", {
+      current_key_id: 3,
+      retired_keys: { "2": "wrapped" },
+    });
+    await keyChainMark.raise("user-1", { current_key_id: 1, retired_keys: {} });
+
+    expect((await keyChainMark.load("user-1")).retiredClearedAt).toBe(2);
+  });
+
+  it("does not treat a row without retired_keys as cleared", async () => {
+    await keyChainMark.raise("user-1", { current_key_id: 2 });
+    expect((await keyChainMark.load("user-1")).retiredClearedAt).toBe(0);
+  });
+
+  it("reads a mark stored before retiredClearedAt existed as nothing cleared", async () => {
+    idbStore.set("kagelin-key-chain-mark:user-1", {
+      keyId: 2,
+      sealedV2: true,
+    });
+    expect((await keyChainMark.load("user-1")).retiredClearedAt).toBe(0);
+    await keyChainMark.raise("user-1", { current_key_id: 2 });
+    expect((await keyChainMark.load("user-1")).retiredClearedAt).toBe(0);
   });
 
   it("never lowers the key id or clears the Re-seal marker", async () => {
@@ -32,7 +59,7 @@ describe("keyChainMark", () => {
       sealed_v2_at: null,
     });
 
-    expect(await keyChainMark.load("user-1")).toEqual({
+    expect(await keyChainMark.load("user-1")).toMatchObject({
       keyId: 2,
       sealedV2: true,
     });
