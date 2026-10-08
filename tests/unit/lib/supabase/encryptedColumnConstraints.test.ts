@@ -146,7 +146,7 @@ describe("server-side backstop for a rotated content key", () => {
   });
 });
 
-describe("the key row's markers cannot be rolled back by a direct UPDATE", () => {
+describe("a direct UPDATE cannot change the key row without proof of the key", () => {
   const guard = schemaSql.match(
     /CREATE OR REPLACE FUNCTION public\.guard_encryption_key_markers\(\)[\s\S]*?\n\$\$;/,
   )?.[0];
@@ -163,18 +163,28 @@ describe("the key row's markers cannot be rolled back by a direct UPDATE", () =>
     );
   });
 
-  it("lets only the rotation RPC move the key chain, and never clears a marker", () => {
+  it("refuses every other direct change, so only the proof-checking RPCs edit the row", () => {
     expect(guard).toBeDefined();
     expect(guard).toMatch(/current_user IN \('authenticated', 'anon'\)/);
-    expect(guard).toMatch(
-      /NEW\.current_key_id IS DISTINCT FROM OLD\.current_key_id/,
+    expect(guard).toContain(
+      "(to_jsonb(NEW) - 'rotation_verifier' - 'passphrase_reset_required' - 'updated_at')\n         IS DISTINCT FROM (to_jsonb(OLD) - 'rotation_verifier' - 'passphrase_reset_required' - 'updated_at')",
     );
-    expect(guard).toMatch(/NEW\.retired_keys <> '\{\}'::jsonb/);
-    expect(guard).toMatch(
-      /OLD\.migrated_at IS NOT NULL AND NEW\.migrated_at IS NULL/,
+    expect(guard).toContain(
+      "OLD.passphrase_reset_required AND NOT NEW.passphrase_reset_required",
     );
-    expect(guard).toMatch(
-      /OLD\.sealed_v2_at IS NOT NULL AND NEW\.sealed_v2_at IS NULL/,
+  });
+
+  it("checks proof of the content key in the RPC that makes those changes", () => {
+    const rpc = schemaSql.match(
+      /CREATE OR REPLACE FUNCTION public\.update_encryption_key_row\([\s\S]*?\n\$\$;/,
+    )?.[0];
+    expect(rpc).toMatch(/SECURITY DEFINER\s+SET search_path = ''/);
+    expect(rpc).toContain(
+      "encode(sha256(decode(p_rotation_token, 'base64')), 'base64')",
+    );
+    expect(rpc).toContain("WHERE user_id = auth.uid()");
+    expect(schemaSql).toContain(
+      "REVOKE EXECUTE ON FUNCTION public.update_encryption_key_row(INTEGER, TEXT, JSONB) FROM PUBLIC, anon;",
     );
   });
 });

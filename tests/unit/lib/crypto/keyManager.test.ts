@@ -35,9 +35,20 @@ function createEncryptionKeysTable() {
           )
             return null;
           if (nullGuard !== null && current?.[nullGuard] != null) return null;
+          // The trigger fires only on rows the filters matched.
+          if (sessionMayNotWrite(current, payload))
+            throw new Error(GUARD_MESSAGE);
           lastUpdatePayload = payload;
           rows.set(userId, { ...current, ...payload });
           return rows.get(userId) ?? null;
+        };
+        const applyGuarded = () => {
+          if (updateError) return { data: null, error: updateError };
+          try {
+            return { data: apply(), error: null };
+          } catch (err) {
+            return { data: null, error: err as Error };
+          }
         };
         const builder = {
           eq: (_c: string, value: number) => {
@@ -48,21 +59,13 @@ function createEncryptionKeysTable() {
             nullGuard = column;
             return builder;
           },
-          then: (onFulfilled: (v: { data: null; error: null }) => unknown) => {
-            apply();
-            return Promise.resolve({ data: null, error: null }).then(
-              onFulfilled,
-            );
-          },
+          then: (onFulfilled: (v: { data: null; error: unknown }) => unknown) =>
+            Promise.resolve(applyGuarded()).then(({ error }) =>
+              onFulfilled({ data: null, error }),
+            ),
           select: () => ({
-            single: async () => {
-              if (updateError) return { data: null, error: updateError };
-              return { data: apply(), error: null };
-            },
-            maybeSingle: async () => {
-              if (updateError) return { data: null, error: updateError };
-              return { data: apply(), error: null };
-            },
+            single: async () => applyGuarded(),
+            maybeSingle: async () => applyGuarded(),
           }),
         };
         return builder;
@@ -71,19 +74,54 @@ function createEncryptionKeysTable() {
   };
 }
 
+// Mirrors guard_encryption_key_markers: without proof of the key, a session may only
+// backfill a missing verifier or flag a passphrase reset.
+const GUARD_MESSAGE =
+  "Only a device holding the content key can change the key row";
+function sessionMayNotWrite(current: Row | undefined, payload: Row): boolean {
+  return Object.entries(payload).some(([column, value]) => {
+    if (column === "rotation_verifier")
+      return current?.rotation_verifier != null;
+    if (column === "passphrase_reset_required") return value !== true;
+    return true;
+  });
+}
+
+function proofOf(token: string | undefined): string {
+  return createHash("sha256")
+    .update(Buffer.from(token ?? "", "base64"))
+    .digest("base64");
+}
+
+// Mirrors update_encryption_key_row.
+function updateKeyRowRpc(args: Row) {
+  const userId = [...rows.keys()][0];
+  const current = rows.get(userId)!;
+  if ((current.current_key_id ?? 1) !== args.p_expected_key_id)
+    return { data: [], error: null };
+  const proof = proofOf(args.p_rotation_token);
+  if (current.rotation_verifier !== proof)
+    return { data: null, error: new Error("could not prove the content key") };
+  const patch = Object.fromEntries(
+    Object.entries(args.p_patch as Row).filter(([, value]) => value !== null),
+  );
+  lastUpdatePayload = patch;
+  rows.set(userId, { ...current, ...patch });
+  return { data: [rows.get(userId)], error: null };
+}
+
 let rpcError: Error | null = null;
 let signOutError: Error | null = null;
 const signOutMock = vi.fn(async (_options: unknown) => ({
   error: signOutError,
 }));
-const rpcMock = vi.fn(async (_name: string, args: Row) => {
+const rpcMock = vi.fn(async (name: string, args: Row) => {
   if (rpcError) return { data: null, error: rpcError };
+  if (name === "update_encryption_key_row") return updateKeyRowRpc(args);
   const userId = [...rows.keys()][0];
   const current = rows.get(userId)!;
   const keyId = current.current_key_id ?? 1;
-  const proof = createHash("sha256")
-    .update(Buffer.from(args.p_rotation_token ?? "", "base64"))
-    .digest("base64");
+  const proof = proofOf(args.p_rotation_token);
   if (!current.rotation_verifier || current.rotation_verifier !== proof) {
     return { data: null, error: new Error("no proof of the current key") };
   }
@@ -523,6 +561,56 @@ describe("keyManager", () => {
     expect(rows.get(USER_ID)!.rotation_verifier).toBe("set elsewhere");
   }, 20000);
 
+  it("reports a stored proof that belongs to another key, without failing the unlock", async () => {
+    await setupEncryption(USER_ID, "first passphrase");
+    rows.get(USER_ID)!.rotation_verifier = "planted";
+
+    await expect(
+      unlockWithPassphrase(USER_ID, "first passphrase"),
+    ).resolves.toBeInstanceOf(Uint8Array);
+
+    await vi.waitFor(() =>
+      expect(captureExceptionMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringMatching(
+            /proof of the content key doesn't match/,
+          ),
+        }),
+      ),
+    );
+    expect(rows.get(USER_ID)!.rotation_verifier).toBe("planted");
+  }, 20000);
+
+  it("changes the key row only with proof of the content key", async () => {
+    await setupEncryption(USER_ID, "old passphrase");
+    rows.get(USER_ID)!.rotation_verifier = "planted";
+    const before = { ...rows.get(USER_ID) };
+
+    await expect(
+      changePassphrase(USER_ID, "old passphrase", "new passphrase"),
+    ).rejects.toThrow("could not prove the content key");
+    await expect(reissueRecoveryCode(USER_ID)).rejects.toThrow(
+      "could not prove the content key",
+    );
+    await expect(markResealComplete(USER_ID, "1")).rejects.toThrow(
+      "could not prove the content key",
+    );
+    expect(rows.get(USER_ID)).toEqual(before);
+  }, 20000);
+
+  it("backfills the proof before changing the key row of an account set up before it existed", async () => {
+    await setupEncryption(USER_ID, "old passphrase");
+    const verifier = rows.get(USER_ID)!.rotation_verifier;
+    delete rows.get(USER_ID)!.rotation_verifier;
+
+    await changePassphrase(USER_ID, "old passphrase", "new passphrase");
+
+    expect(rows.get(USER_ID)!.rotation_verifier).toBe(verifier);
+    await expect(
+      unlockWithPassphrase(USER_ID, "new passphrase"),
+    ).resolves.toBeInstanceOf(Uint8Array);
+  }, 20000);
+
   it("markMigrationComplete sets both markers", async () => {
     rawClient = createFakeSupabaseClient({
       tasks: [{ id: "t1", user_id: USER_ID, content: "Buy milk" }],
@@ -672,7 +760,7 @@ describe("keyManager", () => {
 
       await expect(
         rotateContentKey(USER_ID, "old passphrase", "new passphrase"),
-      ).rejects.toThrow("no proof of the current key");
+      ).rejects.toThrow("proof of the content key doesn't match");
       expect(rows.get(USER_ID)!.current_key_id ?? 1).toBe(1);
     }, 60000);
 

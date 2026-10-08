@@ -49,6 +49,14 @@ then **Rotation**.
   refused, so a rolled-back row cannot make a retired key current again. The
   cost: restoring the key row from a backup taken before a rotation locks out
   every device that has unlocked under the newer key.
+- **Every change to the key row needs proof of the content key.** A Rewrap,
+  the migration and Re-seal markers, and clearing retired keys go through
+  `update_encryption_key_row`, which checks the same `rotation_verifier` as a
+  Rotation. Without it, a stolen session could replace the wrappers and lock
+  the owner out. A session may still backfill a missing verifier (trust on
+  first use, for Accounts set up before it existed), and flag a passphrase
+  reset, so the recovery-code unlock itself never depends on the proof. A device that
+  unlocks against a verifier that belongs to another key reports it.
 - **Existing users move to `-v2` automatically**, through a Re-seal on unlock.
   The app stays usable during a Re-seal: reads use the keyring, writes use the
   current key, and any unlocked device resumes an unfinished pass. A Rotation

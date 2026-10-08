@@ -106,7 +106,7 @@ test("rotation keeps the -v2 marker, re-seals under the new key and drops the re
   expect(await inboxName()).toMatch(/^xchacha20poly1305-v2:2:/);
 });
 
-test("a direct UPDATE cannot roll the key chain back or clear a marker", async ({
+test("a direct UPDATE cannot change the wrappers, the key chain or a marker", async ({
   page,
 }) => {
   await signInWithPasswordUI(page, account);
@@ -125,15 +125,25 @@ test("a direct UPDATE cannot roll the key chain back or clear a marker", async (
     { sealed_v2_at: null },
     { migrated_at: null },
     { retired_keys: { "9": "planted" } },
+    { sealed_v2_at: new Date().toISOString() },
+    { wrapped_key_passphrase: "planted" },
+    { wrapped_key_recovery: "planted" },
+    { rotation_verifier: "planted" },
   ]) {
     const { error } = await user
       .from("encryption_keys")
       .update(patch)
       .eq("user_id", account.id);
     expect(error?.message, JSON.stringify(patch)).toMatch(
-      /changes only through a rotation/,
+      /Only a device holding the content key/,
     );
   }
+  const { error: forgedProof } = await user.rpc("update_encryption_key_row", {
+    p_expected_key_id: 1,
+    p_rotation_token: btoa("forged"),
+    p_patch: { wrapped_key_passphrase: "planted" },
+  });
+  expect(forgedProof?.message).toMatch(/could not prove/);
   expect((await keyRow())?.current_key_id).toBe(1);
 });
 

@@ -26,6 +26,9 @@ import { keyChainMark } from "@/lib/crypto/keyChainMark";
 
 export class UnlockError extends Error {}
 
+const KEY_CHANGED_ELSEWHERE =
+  "Your content key was changed on another device. Unlock again with your new passphrase.";
+
 async function rememberKeyRow(
   userId: string,
   row: EncryptionKeyRow,
@@ -78,12 +81,28 @@ async function ensureRotationVerifier(
   masterKey: Uint8Array,
   row: EncryptionKeyRow,
 ): Promise<void> {
-  if (row.rotation_verifier) return;
+  if (!row.rotation_verifier) {
+    return backfillRotationVerifier(userId, masterKey, currentKeyIdOf(row));
+  }
+  // Only a session without the key could have set it; key-row changes now fail until support clears it.
+  if (row.rotation_verifier !== (await rotationVerifier(masterKey))) {
+    throw new Error(
+      "Your account's proof of the content key doesn't match this key. Contact support.",
+    );
+  }
+}
+
+// A no-op once any verifier is stored, and on a row under another key.
+async function backfillRotationVerifier(
+  userId: string,
+  masterKey: Uint8Array,
+  keyId: string,
+): Promise<void> {
   const { error } = await createClient()
     .from("encryption_keys")
     .update({ rotation_verifier: await rotationVerifier(masterKey) })
     .eq("user_id", userId)
-    .eq("current_key_id", Number(currentKeyIdOf(row)))
+    .eq("current_key_id", Number(keyId))
     .is("rotation_verifier", null);
   if (error) throw error;
 }
@@ -110,31 +129,59 @@ async function unwrapOrThrow(
   }
 }
 
-// Guarded on the key the caller holds: a device that missed a rotation must not write a
-// wrapper of the retired key into a row that now names the new one.
+// Proof of the key keeps a session without it from replacing the wrappers. Guarded on the
+// key the caller holds: a device that missed a rotation must not write a wrapper of the
+// retired key into a row that now names the new one, so null means a rotation overtook it.
+async function proveAndUpdateKeyRow(
+  userId: string,
+  masterKey: Uint8Array,
+  keyId: string,
+  patch: Record<string, unknown>,
+): Promise<EncryptionKeyRow | null> {
+  await backfillRotationVerifier(userId, masterKey, keyId);
+  const { data, error } = await createClient().rpc(
+    "update_encryption_key_row",
+    {
+      p_expected_key_id: Number(keyId),
+      p_rotation_token: await rotationToken(masterKey),
+      p_patch: patch,
+    },
+  );
+  if (error) throw error;
+  const row = (data as EncryptionKeyRow[] | null)?.[0] ?? null;
+  if (row) await rememberKeyRow(userId, row);
+  return row;
+}
+
 async function updateEncryptionKeyRow(
   userId: string,
+  masterKey: Uint8Array,
   keyId: string,
   patch: Record<string, unknown>,
 ): Promise<EncryptionKeyRow> {
-  const supabase = createClient();
-  const { data, error } = await supabase
+  const row = await proveAndUpdateKeyRow(userId, masterKey, keyId, patch);
+  if (!row) {
+    throw new UnlockError(KEY_CHANGED_ELSEWHERE);
+  }
+  return row;
+}
+
+async function flagPassphraseReset(
+  userId: string,
+  keyId: string,
+): Promise<void> {
+  const { data, error } = await createClient()
     .from("encryption_keys")
-    .update(patch)
+    .update({ passphrase_reset_required: true })
     .eq("user_id", userId)
     .eq("current_key_id", Number(keyId))
     .select()
     .maybeSingle();
   if (error) throw error;
   if (!data) {
-    throw new UnlockError(
-      "Your content key was changed on another device. Unlock again with your new passphrase.",
-    );
+    throw new UnlockError(KEY_CHANGED_ELSEWHERE);
   }
-
-  const row = data as EncryptionKeyRow;
-  await rememberKeyRow(userId, row);
-  return row;
+  await rememberKeyRow(userId, data as EncryptionKeyRow);
 }
 
 async function fetchEncryptionKeyRow(
@@ -176,7 +223,7 @@ export async function markMigrationComplete(
   const now = new Date().toISOString();
   const ring = await keyStore.loadKeyring(userId);
   if (!ring) throw new UnlockError("Unlock before finishing encryption.");
-  await updateEncryptionKeyRow(userId, ring.keyId, {
+  await updateEncryptionKeyRow(userId, ring.key, ring.keyId, {
     migrated_at: now,
     ...(allSealed && { sealed_v2_at: now }),
   });
@@ -189,20 +236,17 @@ export async function markResealComplete(
   userId: string,
   keyId: string,
 ): Promise<boolean> {
-  const { data, error } = await createClient()
-    .from("encryption_keys")
-    .update({ sealed_v2_at: new Date().toISOString(), retired_keys: {} })
-    .eq("user_id", userId)
-    .eq("current_key_id", Number(keyId))
-    .select()
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) return false;
-  await rememberKeyRow(userId, data as EncryptionKeyRow);
-  // Guarded update ensures the row is safe to advance the mark.
-  await keyChainMark.raise(userId, data as EncryptionKeyRow);
   const ring = await keyStore.loadKeyring(userId);
-  if (ring?.keyId === keyId) await keyStore.save(userId, ring.key, keyId, {});
+  if (!ring) throw new UnlockError("Unlock before finishing the Re-seal.");
+  if (ring.keyId !== keyId) return false;
+  const row = await proveAndUpdateKeyRow(userId, ring.key, keyId, {
+    sealed_v2_at: new Date().toISOString(),
+    retired_keys: {},
+  });
+  if (!row) return false;
+  // Guarded update ensures the row is safe to advance the mark.
+  await keyChainMark.raise(userId, row);
+  await keyStore.save(userId, ring.key, keyId, {});
   return true;
 }
 
@@ -305,9 +349,8 @@ export async function unlockWithRecoveryCode(
   );
 
   // Must persist reset requirement before caching to avoid failing open on network error.
-  await updateEncryptionKeyRow(userId, currentKeyIdOf(row), {
-    passphrase_reset_required: true,
-  });
+  // A direct write, unlike the others, so a mismatched proof cannot block the unlock itself.
+  await flagPassphraseReset(userId, currentKeyIdOf(row));
   await cacheMasterKey(userId, masterKey, row);
   ensureRotationVerifierInBackground(userId, masterKey, row);
   return masterKey;
@@ -323,7 +366,7 @@ async function rewrapPassphrase(
   const newDerivedKey = await deriveKeyFromPassphrase(newPassphrase, newSalt);
   const newWrapped = await wrapMasterKey(masterKey, newDerivedKey);
 
-  const row = await updateEncryptionKeyRow(userId, keyId, {
+  const row = await updateEncryptionKeyRow(userId, masterKey, keyId, {
     passphrase_salt: await bytesToBase64(newSalt),
     passphrase_kdf_params: DEFAULT_ARGON2_PARAMS,
     wrapped_key_passphrase: newWrapped,
@@ -384,7 +427,7 @@ export async function reissueRecoveryCode(userId: string): Promise<string> {
   );
   const wrapped = await wrapMasterKey(ring.key, recoveryKey);
 
-  await updateEncryptionKeyRow(userId, ring.keyId, {
+  await updateEncryptionKeyRow(userId, ring.key, ring.keyId, {
     recovery_salt: await bytesToBase64(recoverySalt),
     recovery_kdf_params: DEFAULT_ARGON2_PARAMS,
     wrapped_key_recovery: wrapped,
@@ -417,9 +460,7 @@ export async function rotateContentKey(
     throw new UnlockError("Encryption isn't set up for this account yet.");
   }
   if (ring.keyId !== currentKeyIdOf(row)) {
-    throw new UnlockError(
-      "Your content key was changed on another device. Unlock again with your new passphrase.",
-    );
+    throw new UnlockError(KEY_CHANGED_ELSEWHERE);
   }
 
   // An unlocked device alone must not be able to replace the passphrase and lock the owner out.
