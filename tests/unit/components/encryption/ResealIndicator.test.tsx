@@ -1,7 +1,8 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as Sentry from "@sentry/nextjs";
 import { ResealIndicator } from "@/components/encryption/ResealIndicator";
+import { notify } from "@/lib/notify";
 import {
   resealUntilClean,
   UnreadableContentError,
@@ -14,10 +15,17 @@ vi.mock("@/lib/crypto/resealUntilClean", async (importOriginal) => ({
 
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
 
+vi.mock("@/lib/notify", () => ({
+  notify: Object.assign(vi.fn(), { loading: vi.fn(), dismiss: vi.fn() }),
+}));
+
 describe("ResealIndicator", () => {
   beforeEach(() => {
     vi.mocked(resealUntilClean).mockReset();
     vi.mocked(Sentry.captureException).mockReset();
+    vi.mocked(notify).mockReset();
+    vi.mocked(notify.loading).mockReset();
+    vi.mocked(notify.dismiss).mockReset();
   });
 
   it("shows progress, then reports completion", async () => {
@@ -30,10 +38,12 @@ describe("ResealIndicator", () => {
 
     render(<ResealIndicator userId="user-1" onComplete={onComplete} />);
 
-    expect(screen.getByRole("status")).toHaveTextContent(
-      /Upgrading encryption/,
+    expect(notify.loading).toHaveBeenCalledWith(
+      "Upgrading encryption — 2 of 5",
+      { id: "reseal", dismissible: false },
     );
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
+    expect(notify.dismiss).toHaveBeenCalledWith("reseal");
   });
 
   it("reports a failed pass and offers a retry", async () => {
@@ -43,12 +53,14 @@ describe("ResealIndicator", () => {
 
     render(<ResealIndicator userId="user-1" onComplete={onComplete} />);
 
-    const retry = await screen.findByRole("button", { name: "Retry" });
+    await waitFor(() => expect(notify).toHaveBeenCalled());
+    const [, options] = vi.mocked(notify).mock.lastCall ?? [];
     expect(Sentry.captureException).toHaveBeenCalledWith(error);
     expect(onComplete).not.toHaveBeenCalled();
+    expect(options?.action?.label).toBe("Retry");
 
     vi.mocked(resealUntilClean).mockResolvedValue(undefined);
-    fireEvent.click(retry);
+    act(() => void options?.action?.onClick());
     await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1));
   });
 
@@ -73,6 +85,7 @@ describe("ResealIndicator", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(onComplete).not.toHaveBeenCalled();
     expect(Sentry.captureException).not.toHaveBeenCalled();
+    expect(notify.dismiss).toHaveBeenCalledWith("reseal");
   });
 
   it("names the place of each value it can't read", async () => {
@@ -84,8 +97,9 @@ describe("ResealIndicator", () => {
 
     render(<ResealIndicator userId="user-1" onComplete={vi.fn()} />);
 
-    expect(
-      await screen.findByText(/1 item can't be read \(tasks\.content\)/),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(notify).toHaveBeenCalled());
+    expect(vi.mocked(notify).mock.lastCall?.[0]).toMatch(
+      /1 item can't be read \(tasks\.content\)/,
+    );
   });
 });
