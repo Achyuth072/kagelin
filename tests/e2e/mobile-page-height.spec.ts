@@ -13,17 +13,29 @@ const EMPTY_GUEST_DATA = {
   seed_ids: [],
 };
 
-async function pageBottomVsNavTop(page: Page) {
-  return page.evaluate(() => {
-    const root = document.querySelector(
-      '[data-testid="scroll-container"]',
-    )!.firstElementChild!;
-    const nav = document.querySelector("nav.fixed.bottom-0")!;
-    return {
-      pageBottom: root.getBoundingClientRect().bottom,
-      navTop: nav.getBoundingClientRect().top,
-    };
-  });
+function pageRootHeight(page: Page) {
+  return page.evaluate(
+    () =>
+      document
+        .querySelector('[data-testid="scroll-container"]')!
+        .firstElementChild!.getBoundingClientRect().height,
+  );
+}
+
+async function expectPageToEndAtNav(page: Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const root = document.querySelector(
+          '[data-testid="scroll-container"]',
+        )!.firstElementChild!;
+        const nav = document.querySelector("nav.fixed.bottom-0")!;
+        return Math.abs(
+          nav.getBoundingClientRect().top - root.getBoundingClientRect().bottom,
+        );
+      }),
+    )
+    .toBeLessThanOrEqual(1);
 }
 
 for (const withDemoBar of [false, true]) {
@@ -42,16 +54,50 @@ for (const withDemoBar of [false, true]) {
     for (const path of ["/", "/habits"]) {
       test(`${path} ends at the nav`, async ({ page }) => {
         await seedGuestMode(page, `http://localhost:3000${path}`);
-        const m = await pageBottomVsNavTop(page);
-        expect(Math.abs(m.navTop - m.pageBottom)).toBeLessThanOrEqual(1);
+        await expectPageToEndAtNav(page);
       });
     }
 
     test("/calendar month view ends at the nav", async ({ page }) => {
       await seedGuestMode(page);
       await page.locator('[style*="grid-template-rows"]').waitFor();
-      const m = await pageBottomVsNavTop(page);
-      expect(Math.abs(m.navTop - m.pageBottom)).toBeLessThanOrEqual(1);
+      await expectPageToEndAtNav(page);
     });
   });
 }
+
+// overflow:hidden containers still scroll via keyboard focus or scrollIntoView.
+test.describe("fixed-height routes have no hidden overflow", () => {
+  for (const path of ["/", "/habits", "/calendar"]) {
+    test(path, async ({ page }) => {
+      await seedGuestMode(page, `http://localhost:3000${path}`);
+      await expect.poll(() => pageRootHeight(page)).toBeGreaterThan(400);
+      await expect
+        .poll(() =>
+          page.evaluate(() => {
+            const el = document.querySelector(
+              '[data-testid="scroll-container"]',
+            )!;
+            return el.scrollHeight - el.clientHeight;
+          }),
+        )
+        .toBeLessThanOrEqual(1);
+    });
+  }
+});
+
+test("a scrolling route's last content clears the nav", async ({ page }) => {
+  await seedGuestMode(page, "http://localhost:3000/stats");
+  const m = await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="scroll-container"]')!;
+    el.scrollTop = el.scrollHeight;
+    const nav = document.querySelector("nav.fixed.bottom-0")!;
+    return {
+      scrolls: el.scrollHeight > el.clientHeight,
+      contentBottom: el.firstElementChild!.getBoundingClientRect().bottom,
+      navTop: nav.getBoundingClientRect().top,
+    };
+  });
+  expect(m.scrolls).toBe(true);
+  expect(m.contentBottom).toBeLessThanOrEqual(m.navTop);
+});
