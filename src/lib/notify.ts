@@ -10,10 +10,13 @@ interface NotifyIdOption {
   id?: string | number;
 }
 
-type NotifyBaseOptions = { duration?: number; icon?: ReactNode | null } & (
-  | { description?: string; action?: never }
-  | { description?: never; action?: NotifyAction }
-);
+type NotifyBaseOptions = NotifyIdOption & {
+  duration?: number;
+  icon?: ReactNode | null;
+} & (
+    | { description?: string; action?: never }
+    | { description?: never; action?: NotifyAction }
+  );
 
 function base(message: string, opts?: NotifyBaseOptions) {
   return toast(message, opts);
@@ -38,7 +41,10 @@ function info(message: string, opts?: NotifyIdOption) {
   return toast.info(message, opts);
 }
 
-function loading(message: string, opts?: NotifyIdOption) {
+function loading(
+  message: string,
+  opts?: NotifyIdOption & { dismissible?: boolean },
+) {
   return toast.loading(message, opts);
 }
 

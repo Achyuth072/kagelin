@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useState } from "react";
 import * as Sentry from "@sentry/nextjs";
-import { Button } from "@/components/ui/button";
+import { notify } from "@/lib/notify";
 import type { ResealProgress } from "@/lib/crypto/reseal";
 import {
   resealUntilClean,
@@ -20,6 +20,14 @@ function failureMessage(error: unknown): string {
   return `${count} ${count === 1 ? "item" : "items"} can't be read (${places}), so your old key is kept.`;
 }
 
+const TOAST_ID = "reseal";
+
+function progressMessage(progress: ResealProgress | null): string {
+  return progress && progress.total > 0
+    ? `Upgrading encryption — ${progress.done} of ${progress.total}`
+    : "Upgrading encryption…";
+}
+
 // Non-blocking: the app stays usable while existing content is upgraded to row-bound sealing.
 export function ResealIndicator({
   userId,
@@ -28,8 +36,6 @@ export function ResealIndicator({
   userId: string;
   onComplete: () => void;
 }) {
-  const [progress, setProgress] = useState<ResealProgress | null>(null);
-  const [failure, setFailure] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   // A new callback identity must not restart a running Re-seal.
   const complete = useEffectEvent(onComplete);
@@ -38,51 +44,37 @@ export function ResealIndicator({
     const controller = new AbortController();
     const { signal } = controller;
     // Rows already in flight still report after an abort.
-    const report = (p: ResealProgress) => {
-      if (!signal.aborted) setProgress(p);
+    const report = (p: ResealProgress | null) => {
+      if (!signal.aborted) {
+        notify.loading(progressMessage(p), {
+          id: TOAST_ID,
+          dismissible: false,
+        });
+      }
     };
 
+    report(null);
     resealUntilClean(userId, report, signal)
       .then(() => {
-        if (!signal.aborted) complete();
+        if (signal.aborted) return;
+        notify.dismiss(TOAST_ID);
+        complete();
       })
       .catch((err) => {
         if (signal.aborted) return;
         Sentry.captureException(err);
-        setFailure(failureMessage(err));
+        notify(failureMessage(err), {
+          id: TOAST_ID,
+          duration: Infinity,
+          action: { label: "Retry", onClick: () => setAttempt((n) => n + 1) },
+        });
       });
 
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      notify.dismiss(TOAST_ID);
+    };
   }, [userId, attempt]);
 
-  return (
-    <div
-      role="status"
-      className="fixed bottom-4 left-4 z-50 flex items-center gap-3 rounded-lg border bg-background px-3 py-2 text-xs text-muted-foreground shadow-md"
-    >
-      {failure ? (
-        <>
-          <span>{failure}</span>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setFailure(null);
-              setAttempt((n) => n + 1);
-            }}
-          >
-            Retry
-          </Button>
-        </>
-      ) : (
-        <span>
-          Upgrading encryption
-          {progress && progress.total > 0
-            ? ` — ${progress.done} of ${progress.total}`
-            : "…"}
-        </span>
-      )}
-    </div>
-  );
+  return null;
 }
