@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.48.0-preview.0",
+    "date": "2026-10-09",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Give empty pages a purpose line, one action and its key",
+        "Show search and shortcut keys in the desktop sidebar"
+      ],
+      "Fixed": [
+        "Open the shortcuts list with ? and label it ? in the dialog and command menu",
+        "Drop clipped nav spacers that left hidden scroll overflow on fixed-height mobile pages",
+        "Size mobile calendar, habits and home to the real header, banner and nav heights",
+        "Save, edit and delete calendar events in guest mode"
+      ]
+    }
+  },
+  {
     "version": "1.47.1",
     "date": "2026-10-09",
     "channel": "stable",
@@ -698,21 +715,6 @@
         "Give telemetry and diagnostics their own settings section",
         "Point Sync to Account at signup instead of the sign-in form",
         "Swap amber alerts for terracotta tokens that pass AA contrast in dark mode"
-      ]
-    }
-  },
-  {
-    "version": "1.42.0",
-    "date": "2026-09-01",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Add and edit task steps (subtasks) in the edit sheet, with keyboard shortcuts and drag-to-reorder",
-        "Step progress badge on list and board task cards",
-        "Focus mode subtask checklist with live completion tracking"
-      ],
-      "Fixed": [
-        "Fixed title double-submit, step badge cache staleness, and step haptic double-firing"
       ]
     }
   }
