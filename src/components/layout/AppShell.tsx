@@ -283,6 +283,12 @@ function AppShellContent({ children }: AppShellProps) {
   const pathname = usePathname();
   const isFocus = pathname === "/focus";
   const hideMobileNav = pathname === "/focus" || pathname === "/settings";
+  // Sized by --mobile-page-height; nav spacers cause hidden scroll overflow.
+  const isFixedHeight =
+    hideMobileNav ||
+    pathname === "/" ||
+    pathname === "/calendar" ||
+    pathname === "/habits";
   const hasTopBanner = useActiveBanner() !== null;
 
   // Must run inside EncryptionGate so converting guests set a passphrase
@@ -354,6 +360,7 @@ function AppShellContent({ children }: AppShellProps) {
               "--offline-banner-top": hideMobileNav
                 ? "env(safe-area-inset-top, 0px)"
                 : "var(--mobile-header-height)",
+              "--mobile-page-height": `calc(100dvh - var(--mobile-header-height) - ${hasTopBanner ? "var(--offline-banner-height)" : "0px"} - var(--mobile-nav-height))`,
             } as React.CSSProperties
           }
         >
@@ -362,11 +369,7 @@ function AppShellContent({ children }: AppShellProps) {
             data-testid="scroll-container"
             className={cn(
               "flex-1 w-full min-w-0 md:pt-0 md:pb-0",
-              pathname === "/calendar" ||
-                isFocus ||
-                pathname === "/" ||
-                pathname === "/habits" ||
-                pathname === "/settings"
+              isFixedHeight
                 ? "overflow-hidden"
                 : "overflow-y-auto overflow-x-hidden scrollbar-hide",
               !hideMobileNav &&
@@ -381,13 +384,7 @@ function AppShellContent({ children }: AppShellProps) {
             )}
           >
             {children}
-            {!hideMobileNav && pathname === "/" && (
-              <div
-                className="h-[calc(var(--mobile-nav-height)+3.5rem)] w-full flex-none md:hidden"
-                aria-hidden="true"
-              />
-            )}
-            {!hideMobileNav && pathname !== "/" && pathname !== "/calendar" && (
+            {!isFixedHeight && (
               <div
                 className="h-[calc(var(--mobile-nav-height)+0.5rem)] w-full flex-none md:hidden"
                 aria-hidden="true"

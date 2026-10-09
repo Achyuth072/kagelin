@@ -75,7 +75,7 @@ export function HomeClient() {
   const greeting = getGreeting();
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-124px)] md:h-[calc(100dvh-16px)] overflow-hidden">
+    <div className="flex flex-col h-[var(--mobile-page-height)] md:h-[calc(100dvh-16px)] overflow-hidden">
       <PwaInstallHint />
 
       <div className="px-4 md:px-6 pt-4 pb-4 flex flex-col md:flex-row md:items-start justify-between gap-4 md:gap-0">
