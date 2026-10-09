@@ -104,16 +104,13 @@ function TaskListBase({
   const { data: projectsData } = useProjects();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
-  // Snapshotted at drag start to avoid O(N) lookup on each drag-over.
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   // Bridges local drag state until optimistic cache update lands.
   const [lockLocal, setLockLocal] = useState(false);
   const [keyboardSelectedId, setKeyboardSelectedId] = useState<string | null>(
     null,
   );
-  // Virtual focus via aria-activedescendant to avoid focusing cards and triggering dnd-kit keys.
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  // Tracks most recent candidate so interleaved keys do not trigger double-press.
   const pendingDoublePressRef = useRef<{
     key: "g" | "y";
     timestamp: number;
@@ -197,7 +194,6 @@ function TaskListBase({
 
   const preDragFlatTasksRef = useRef<Task[]>([]);
 
-  // Freezes pre-switch order into day_order before first paint when switching to custom sort.
   const prevSortByRef = useRef(sortBy);
   const prevDisplayedFlatRef = useRef<Task[]>([]);
   useLayoutEffect(() => {
@@ -248,8 +244,7 @@ function TaskListBase({
     [onTaskSelect],
   );
 
-  // Opens the edit sheet for a task picked in the command menu. Clears the id
-  // only once found — the list may still be loading on first navigation.
+  // Clear id only once found; the list may still be loading on initial navigation.
   useEffect(() => {
     if (!selectedTaskId) return;
     const task = tasks.find((t) => t.id === selectedTaskId);
@@ -329,7 +324,6 @@ function TaskListBase({
             setLocalGroups(newGroups);
           }
         } else {
-          // "Overdue" is derived with no settable property; block drops.
           if (isDropBlockedGroup(localGroups[overGroupIndex].title, groupBy)) {
             return;
           }
@@ -425,8 +419,7 @@ function TaskListBase({
     (event: DragEndEvent) => {
       const { active, over } = event;
 
-      // Dropped outside any droppable — reset and exit. lockLocal(false) must
-      // precede setActiveId(null) to avoid a render with stale localActive.
+      // lockLocal(false) must precede setActiveId(null) to avoid a render with stale localActive.
       if (!over) {
         setLockLocal(false);
         setLocalActive(processedTasks.active);
@@ -569,8 +562,8 @@ function TaskListBase({
           );
         }
 
-        // In non-custom sort, freeze the full order so untouched sections don't jump.
         triggerHaptic("thud");
+        // In non-custom sort, freeze the full order so untouched sections don't jump.
         let pairs: { id: string; day_order: number }[];
         if (sortBy === "custom") {
           const currentList = isInEveningNow ? localEvening : localActive;
@@ -714,8 +707,6 @@ function TaskListBase({
     pendingDoublePressRef.current = null;
   };
 
-  // Shared "press the same key twice within the timeout" detection behind
-  // `gg` and `yy`.
   const handleDoublePress = (key: "g" | "y", onDouble: () => void) => {
     const pending = pendingDoublePressRef.current;
     const now = Date.now();
@@ -776,7 +767,7 @@ function TaskListBase({
 
   const hasSelection = !!keyboardSelectedId;
 
-  // Focus owning container so aria-activedescendant takes effect.
+  // Container holds DOM focus for aria-activedescendant without triggering dnd-kit on cards.
   useEffect(() => {
     if (hasSelection) {
       scrollContainerRef.current?.focus({ preventScroll: true });
@@ -919,7 +910,6 @@ function TaskListBase({
         notify.error("Can't duplicate a task whose text can't be read");
         return;
       }
-      // Scopes paste to current view/column rather than the yanked task's source project.
       const targetColumn =
         viewMode === "board"
           ? boardColumns.find((c) =>
@@ -999,15 +989,15 @@ function TaskListBase({
       <div className="px-4 md:px-6">
         <EmptyState
           icon={CheckSquare}
-          title="No tasks yet"
-          description="Focus on what matters. Create your first task to start your journey."
+          description="Write down what you need to do. Add a date or a project when it helps."
           action={{
-            label: "Create Task",
+            label: "Add task",
             onClick: () => {
               triggerHaptic("toggle");
               openAddTask();
             },
             icon: Plus,
+            shortcut: "N",
           }}
         />
       </div>
@@ -1060,7 +1050,6 @@ function TaskListBase({
               isDesktop={isDesktop}
               triggerHaptic={triggerHaptic}
               setActiveTaskId={setActiveTaskId}
-              // Preserves groupBy mode so a project named "Today" is not treated as a date.
               groupBy={groupBy}
               keyboardSelectedId={keyboardSelectedId}
             />

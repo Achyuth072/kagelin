@@ -1,7 +1,17 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Target, CheckCircle2, Flame, Clock, Zap, Repeat } from "lucide-react";
+import { useRouter } from "next/navigation";
+import {
+  Target,
+  CheckCircle2,
+  Flame,
+  Clock,
+  Zap,
+  Repeat,
+  BarChart3,
+  Play,
+} from "lucide-react";
 import { MetricCard } from "@/components/stats/MetricCard";
 import { PeriodSelector } from "@/components/stats/PeriodSelector";
 import { StatsExportMenu } from "@/components/stats/StatsExportMenu";
@@ -11,6 +21,10 @@ import { ProjectBreakdownCard } from "@/components/stats/breakdowns/ProjectBreak
 import { PriorityBreakdownCard } from "@/components/stats/breakdowns/PriorityBreakdownCard";
 import { useStats } from "@/lib/hooks/useStats";
 import { useProjects } from "@/lib/hooks/useProjects";
+import { useTasks } from "@/lib/hooks/useTasks";
+import { useHabits } from "@/lib/hooks/useHabits";
+import { useHeatmapData } from "@/lib/hooks/useHeatmapData";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useUiStore } from "@/lib/store/uiStore";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { StatsPeriod } from "@/lib/types/stats";
@@ -74,8 +88,12 @@ export function StatsClient() {
 
   const { data: stats, isLoading, isFetching } = useStats(statsPeriod);
   const { data: projects } = useProjects();
+  const router = useRouter();
+  const { data: openTasks, isLoading: tasksLoading } = useTasks();
+  const { data: habits, isLoading: habitsLoading } = useHabits();
+  const { activeDays, isLoading: heatmapLoading } = useHeatmapData();
 
-  if (isLoading) {
+  if (isLoading || tasksLoading || habitsLoading || heatmapLoading) {
     return (
       <div className="px-4 md:px-6 py-6">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -94,6 +112,24 @@ export function StatsClient() {
           <Skeleton className="h-48 w-full rounded-xl" />
           <Skeleton className="h-48 w-full rounded-xl" />
         </div>
+      </div>
+    );
+  }
+
+  if (!openTasks?.length && !habits?.length && activeDays === 0) {
+    return (
+      <div className="px-4 md:px-6 py-6">
+        <h1 className="type-h1 text-2xl md:text-3xl">Statistics</h1>
+        <EmptyState
+          icon={BarChart3}
+          description="Your focus time, finished tasks and habit scores show up here as you use Kagelin."
+          action={{
+            label: "Start a focus session",
+            onClick: () => router.push("/focus"),
+            icon: Play,
+            shortcut: "F",
+          }}
+        />
       </div>
     );
   }

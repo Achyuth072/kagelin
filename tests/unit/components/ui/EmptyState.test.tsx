@@ -34,4 +34,17 @@ describe("EmptyState", () => {
     const button = screen.getByRole("button", { name: "Create Habit" });
     expect(button).toBeInTheDocument();
   });
+
+  it("names the action's key when a shortcut is given", () => {
+    render(
+      <EmptyState
+        icon={Layers}
+        description="Track the things you want to do again and again."
+        action={{ label: "Add habit", onClick: vi.fn(), shortcut: "H" }}
+      />,
+    );
+
+    expect(screen.getByText("H").tagName).toBe("KBD");
+    expect(screen.getByText(/or press/)).toBeInTheDocument();
+  });
 });
