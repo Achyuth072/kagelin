@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.47.1",
+    "date": "2026-10-09",
+    "channel": "stable",
+    "sections": {
+      "Fixed": [
+        "Show encryption upgrade progress as a themed toast"
+      ]
+    }
+  },
+  {
     "version": "1.47.0",
     "date": "2026-10-09",
     "channel": "stable",
@@ -705,11 +715,5 @@
         "Fixed title double-submit, step badge cache staleness, and step haptic double-firing"
       ]
     }
-  },
-  {
-    "version": "1.42.0-preview.1",
-    "date": "2026-09-01",
-    "channel": "preview",
-    "sections": {}
   }
 ]
