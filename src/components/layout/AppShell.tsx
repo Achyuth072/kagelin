@@ -351,7 +351,7 @@ function AppShellContent({ children }: AppShellProps) {
         />
         {!hideMobileNav && <Header setCommandOpen={setCommandOpen} />}
 
-        {!isFocus && <AppSidebar />}
+        {!isFocus && <AppSidebar onOpenSearch={() => setCommandOpen(true)} />}
 
         <SidebarInset
           className="relative"

@@ -103,15 +103,17 @@ export function GlobalHotkeys({
     options,
   );
 
+  const toggleHelp = (event: KeyboardEvent) => {
+    if (event.repeat) return;
+    setHelpOpen((prev) => !prev);
+  };
+
   // Shortcuts Help (Shift+H)
-  useHotkeys(
-    ["shift+h", "shift+/", "?"],
-    (event) => {
-      if (event.repeat) return;
-      setHelpOpen((prev) => !prev);
-    },
-    options,
-  );
+  useHotkeys("shift+h", toggleHelp, options);
+
+  // "?" sits on a different physical key per layout, so match the produced
+  // character; by default the hook matches event.code, where "?" never fires.
+  useHotkeys("shift+?", toggleHelp, { ...options, useKey: true });
 
   // Focus Mode (f)
   useHotkeys("f", () => router.push("/focus"), options);

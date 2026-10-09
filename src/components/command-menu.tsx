@@ -60,7 +60,7 @@ import { getHabitIcon } from "@/components/habits/shared/HabitIconPicker";
 import type { Habit } from "@/lib/types/habit";
 import { useQueryClient } from "@tanstack/react-query";
 import { notify } from "@/lib/notify";
-import { getPlatformKey } from "@/lib/utils/platform";
+import { formatModChord } from "@/lib/utils/platform";
 import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface CommandMenuProps {
@@ -298,7 +298,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             <CommandItem onSelect={() => runCommand(() => toggleSidebar())}>
               <Columns className="mr-2 h-5 w-5" />
               <span>Toggle Sidebar</span>
-              <CommandShortcut>{getPlatformKey()}+B</CommandShortcut>
+              <CommandShortcut>{formatModChord("B")}</CommandShortcut>
             </CommandItem>
           </CommandGroup>
 
@@ -451,7 +451,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             >
               <Keyboard className="mr-2 h-5 w-5" />
               <span>Keyboard Shortcuts</span>
-              <CommandShortcut>Shift+H</CommandShortcut>
+              <CommandShortcut>?</CommandShortcut>
             </CommandItem>
             {user && (
               <CommandItem

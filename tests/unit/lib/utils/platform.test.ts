@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from "vitest";
 import {
+  formatModChord,
   isAndroidChrome,
   isIOS,
   isStandalone,
@@ -222,5 +223,26 @@ describe("supportsInstallPrompt", () => {
   it("is false when the browser doesn't expose it (Firefox/Safari)", () => {
     Reflect.deleteProperty(window, "onbeforeinstallprompt");
     expect(supportsInstallPrompt()).toBe(false);
+  });
+});
+
+describe("formatModChord", () => {
+  const setPlatform = (platform: string) => {
+    Object.defineProperty(window.navigator, "platform", {
+      value: platform,
+      configurable: true,
+    });
+  };
+
+  afterEach(() => setPlatform("Linux x86_64"));
+
+  it("joins Mac modifier symbols with no separator", () => {
+    setPlatform("MacIntel");
+    expect(formatModChord("K")).toBe("⌘K");
+  });
+
+  it("joins Ctrl with a plus elsewhere", () => {
+    setPlatform("Win32");
+    expect(formatModChord("K")).toBe("Ctrl+K");
   });
 });

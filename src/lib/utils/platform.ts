@@ -4,6 +4,12 @@ export const getPlatformKey = () => {
   return isMac ? "⌘" : "Ctrl";
 };
 
+// Mac writes modifier symbols with no joiner (⌘K); elsewhere Ctrl+K.
+export const formatModChord = (key: string) => {
+  const mod = getPlatformKey();
+  return mod === "⌘" ? `${mod}${key}` : `${mod}+${key}`;
+};
+
 interface UserAgentDataBrand {
   brand: string;
   version: string;
