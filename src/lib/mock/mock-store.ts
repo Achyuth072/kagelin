@@ -995,12 +995,19 @@ class MockStore {
   }
 
   addEvent(
-    event: Omit<CalendarEvent, "id" | "user_id" | "created_at" | "updated_at">,
+    event: Omit<
+      CalendarEvent,
+      "id" | "user_id" | "created_at" | "updated_at"
+    > & {
+      id?: string;
+    },
   ): CalendarEvent {
     const now = new Date().toISOString();
     const newEvent: CalendarEvent = {
       ...event,
-      id: `guest-event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id:
+        event.id ??
+        `guest-event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       user_id: "guest",
       created_at: now,
       updated_at: now,

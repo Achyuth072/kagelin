@@ -5,6 +5,7 @@ import type {
   UpdateCalendarEventInput,
 } from "@/lib/types/calendar-event";
 import { applyCrudTransition } from "@/lib/sync/crud-state";
+import { mockStore } from "@/lib/mock/mock-store";
 
 export const calendarEventMutations = {
   create: async (
@@ -15,9 +16,8 @@ export const calendarEventMutations = {
       localStorage.getItem("kanso_guest_mode") === "true";
 
     if (isGuest) {
-      const event: CalendarEvent = {
-        id: input._clientId || crypto.randomUUID(),
-        user_id: "guest",
+      return mockStore.addEvent({
+        id: input._clientId,
         title: input.title,
         description: input.description || null,
         location: input.location || null,
@@ -35,10 +35,7 @@ export const calendarEventMutations = {
         is_archived: false,
         reminder_minutes: null,
         metadata: input.metadata || {},
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      return event;
+      });
     }
 
     const supabase = createClient();
@@ -105,7 +102,9 @@ export const calendarEventMutations = {
     const { id, ...updates } = input;
 
     if (isGuest) {
-      throw new Error("Guest mode calendar event updates not yet implemented");
+      const updated = mockStore.updateEvent(id, updates);
+      if (!updated) throw new Error(`Calendar event ${id} not found`);
+      return updated;
     }
 
     const supabase = createClient();
@@ -137,6 +136,7 @@ export const calendarEventMutations = {
       localStorage.getItem("kanso_guest_mode") === "true";
 
     if (isGuest) {
+      mockStore.deleteEvent(id);
       return;
     }
 
