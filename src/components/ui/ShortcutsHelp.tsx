@@ -11,7 +11,8 @@ import { Keyboard } from "lucide-react";
 import { getPlatformKey } from "@/lib/utils/platform";
 
 interface Shortcut {
-  keys: string[];
+  // A nested array is a chord inside an "alt" row, e.g. ? / Shift+h.
+  keys: (string | string[])[];
   description: string;
   // How the keys combine. Omit for a chord (press together, e.g. ⌘+B).
   // "alt": either key works (e.g. j/↓). "sequence": pressed one after another (e.g. g g).
@@ -67,7 +68,11 @@ const getShortcuts = (
       { keys: [platformKey, "K"], description: "Search / Command Menu" },
       { keys: ["T"], description: "Switch Theme" },
       { keys: ["f"], description: "Focus Mode" },
-      { keys: ["Shift", "h"], description: "Show Shortcuts" },
+      {
+        keys: ["?", ["Shift", "h"]],
+        description: "Show Shortcuts",
+        keyRelation: "alt",
+      },
     ],
   },
   {
@@ -129,6 +134,34 @@ const getShortcuts = (
   },
 ];
 
+function KeyGroup({
+  keys,
+  relation,
+}: {
+  keys: Shortcut["keys"];
+  relation: keyof typeof keyConnector;
+}) {
+  return keys.map((key, i) => (
+    <div key={i} className="flex items-center gap-1.5">
+      {i > 0 && (
+        <span
+          aria-hidden="true"
+          className="text-[11px] font-normal tracking-[0.02em] text-muted-foreground"
+        >
+          {keyConnector[relation]}
+        </span>
+      )}
+      {Array.isArray(key) ? (
+        <KeyGroup keys={key} relation="chord" />
+      ) : (
+        <kbd className="pointer-events-none h-6.5 min-w-[28px] select-none items-center justify-center rounded border border-border bg-sidebar px-2 font-mono text-[13px] font-medium tracking-[0.01em] text-foreground shadow-none flex">
+          {key}
+        </kbd>
+      )}
+    </div>
+  ));
+}
+
 interface ShortcutsHelpProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -173,21 +206,10 @@ export function ShortcutsHelp({
                         {shortcut.description}
                       </span>
                       <div className="flex items-center gap-1.5">
-                        {shortcut.keys.map((key, i) => (
-                          <div key={i} className="flex items-center gap-1.5">
-                            {i > 0 && (
-                              <span
-                                aria-hidden="true"
-                                className="text-[11px] font-normal tracking-[0.02em] text-muted-foreground"
-                              >
-                                {keyConnector[shortcut.keyRelation ?? "chord"]}
-                              </span>
-                            )}
-                            <kbd className="pointer-events-none h-6.5 min-w-[28px] select-none items-center justify-center rounded border border-border bg-sidebar px-2 font-mono text-[13px] font-medium tracking-[0.01em] text-foreground shadow-none flex">
-                              {key}
-                            </kbd>
-                          </div>
-                        ))}
+                        <KeyGroup
+                          keys={shortcut.keys}
+                          relation={shortcut.keyRelation ?? "chord"}
+                        />
                       </div>
                     </div>
                   ))}

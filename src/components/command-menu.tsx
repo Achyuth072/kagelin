@@ -451,7 +451,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             >
               <Keyboard className="mr-2 h-5 w-5" />
               <span>Keyboard Shortcuts</span>
-              <CommandShortcut>Shift+H</CommandShortcut>
+              <CommandShortcut>?</CommandShortcut>
             </CommandItem>
             {user && (
               <CommandItem
