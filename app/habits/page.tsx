@@ -107,12 +107,12 @@ export default function HabitsPage() {
         {!hasHabits ? (
           <EmptyState
             icon={Layers}
-            title="No habits yet"
-            description="Small changes lead to big results. Create your first habit to start tracking."
+            description="Track the things you want to do again and again. Check one off each day to build a streak."
             action={{
-              label: "Create Habit",
+              label: "Add habit",
               onClick: handleOpenCreate,
               icon: Plus,
+              shortcut: "H",
             }}
           />
         ) : habitViewMode === "compact" ? (
