@@ -154,7 +154,7 @@ function KeyGroup({
       {Array.isArray(key) ? (
         <KeyGroup keys={key} relation="chord" />
       ) : (
-        <kbd className="pointer-events-none h-6.5 min-w-[28px] select-none items-center justify-center rounded border border-border bg-sidebar px-2 font-mono text-[13px] font-medium tracking-[0.01em] text-foreground shadow-none flex">
+        <kbd className="pointer-events-none h-6.5 min-w-[28px] select-none items-center justify-center rounded border border-border bg-transparent px-2 font-mono text-[13px] tracking-[0.01em] text-foreground shadow-none flex">
           {key}
         </kbd>
       )}
@@ -178,7 +178,7 @@ export function ShortcutsHelp({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-[550px] border-border/80 shadow-none p-0">
+      <ResponsiveDialogContent className="sm:max-w-[720px] border-border/80 shadow-none p-0">
         <ResponsiveDialogHeader className="p-6 pb-2 border-b border-border/80">
           <ResponsiveDialogTitle className="flex items-center gap-2.5 text-[24px] font-semibold tracking-[-0.02em] text-foreground">
             <Keyboard className="h-5 w-5 text-muted-foreground/70" />
@@ -200,12 +200,12 @@ export function ShortcutsHelp({
                   {group.shortcuts.map((shortcut, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between text-[15px] font-medium tracking-[0.01em]"
+                      className="flex items-center justify-between gap-4 text-[15px] font-medium tracking-[0.01em]"
                     >
                       <span className="text-foreground/90 font-medium">
                         {shortcut.description}
                       </span>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex shrink-0 items-center gap-1.5">
                         <KeyGroup
                           keys={shortcut.keys}
                           relation={shortcut.keyRelation ?? "chord"}

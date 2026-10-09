@@ -6,6 +6,7 @@ import { Command as CommandPrimitive } from "cmdk";
 import { Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { KeyHint } from "@/components/ui/key-hint";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -162,14 +163,13 @@ CommandItem.displayName = CommandPrimitive.Item.displayName;
 const CommandShortcut = ({
   className,
   ...props
-}: React.HTMLAttributes<HTMLSpanElement>) => {
+}: React.ComponentProps<typeof KeyHint>) => {
   return (
-    <span
+    <KeyHint
       className={cn(
-        "ml-auto text-[13px] font-medium tracking-widest text-muted-foreground/60",
         // Keyboard hints are meaningless without a physical keyboard — hide on
         // non-desktop (the menu also drops to a drawer at this size).
-        "max-md:hidden",
+        "max-md:hidden in-data-[selected=true]:text-brand-foreground",
         className,
       )}
       {...props}
