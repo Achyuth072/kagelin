@@ -354,6 +354,7 @@ function AppShellContent({ children }: AppShellProps) {
               "--offline-banner-top": hideMobileNav
                 ? "env(safe-area-inset-top, 0px)"
                 : "var(--mobile-header-height)",
+              "--mobile-page-height": `calc(100dvh - var(--mobile-header-height) - ${hasTopBanner ? "var(--offline-banner-height)" : "0px"} - var(--mobile-nav-height))`,
             } as React.CSSProperties
           }
         >

@@ -84,7 +84,7 @@ export default function HabitsPage() {
   const hasHabits = !!habits && habits.length > 0;
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-124px)] md:h-dvh overflow-hidden">
+    <div className="flex flex-col h-[var(--mobile-page-height)] md:h-dvh overflow-hidden">
       <Suspense fallback={null}>
         <HabitDeepLink habits={habits ?? []} />
       </Suspense>
