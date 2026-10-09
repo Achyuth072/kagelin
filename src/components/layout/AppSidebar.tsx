@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import packageJson from "../../../package.json";
 const { version } = packageJson;
 import type { Project } from "@/lib/types/task";
@@ -41,7 +41,11 @@ import {
   EllipsisVertical,
   Pencil,
   Sparkles,
+  Search,
+  Keyboard,
 } from "lucide-react";
+import { formatModChord } from "@/lib/utils/platform";
+import { KeyHint } from "@/components/ui/key-hint";
 import { useCompletedTasks } from "@/components/CompletedTasksProvider";
 import { useProjects } from "@/lib/hooks/useProjects";
 import { useProjectActions } from "@/components/ProjectActionsProvider";
@@ -70,18 +74,77 @@ import {
 } from "@/components/encryption/ReadableText";
 
 const mainNavItems = [
-  { label: "All Tasks", icon: CheckSquare, path: "/", isAction: false },
-  { label: "Habits", icon: Layers, path: "/habits", isAction: false },
-  { label: "Calendar", icon: Calendar, path: "/calendar", isAction: false },
-  { label: "Stats", icon: BarChart3, path: "/stats", isAction: false },
+  {
+    label: "All Tasks",
+    icon: CheckSquare,
+    path: "/",
+    isAction: false,
+    shortcut: "1",
+  },
+  {
+    label: "Habits",
+    icon: Layers,
+    path: "/habits",
+    isAction: false,
+    shortcut: "2",
+  },
+  {
+    label: "Calendar",
+    icon: Calendar,
+    path: "/calendar",
+    isAction: false,
+    shortcut: "3",
+  },
+  {
+    label: "Stats",
+    icon: BarChart3,
+    path: "/stats",
+    isAction: false,
+    shortcut: "4",
+  },
 ];
 
 const secondaryNavItems = [
-  { label: "Focus", icon: Timer, path: "/focus", isAction: false },
-  { label: "Settings", icon: Settings, path: "/settings", isAction: false },
+  {
+    label: "Focus",
+    icon: Timer,
+    path: "/focus",
+    isAction: false,
+    shortcut: "5",
+  },
+  {
+    label: "Settings",
+    icon: Settings,
+    path: "/settings",
+    isAction: false,
+    shortcut: "6",
+  },
 ];
 
-export function AppSidebar() {
+const subscribeNever = () => () => {};
+
+// Nav keys stay hidden until hover so six digits don't crowd the sidebar;
+// Search and Shortcuts pass `always` because their key is the point.
+function NavKey({ keys, always }: { keys: string; always?: boolean }) {
+  return (
+    <KeyHint
+      aria-hidden="true"
+      className={cn(
+        "pl-2 transition-opacity duration-150 ease-seijaku motion-reduce:transition-none",
+        !always &&
+          "opacity-0 group-hover/menu-item:opacity-100 group-has-[:focus-visible]/menu-item:opacity-100",
+      )}
+    >
+      {keys}
+    </KeyHint>
+  );
+}
+
+interface AppSidebarProps {
+  onOpenSearch: () => void;
+}
+
+export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -94,7 +157,15 @@ export function AppSidebar() {
   const toggleProjectsOpen = useUiStore((state) => state.toggleProjectsOpen);
   const hasChangelogUpdate = useUiStore((state) => state.hasChangelogUpdate);
   const setChangelogOpen = useUiStore((state) => state.setChangelogOpen);
+  const setShortcutsHelpOpen = useUiStore(
+    (state) => state.setShortcutsHelpOpen,
+  );
   const { trigger } = useHaptic();
+  const searchKey = useSyncExternalStore(
+    subscribeNever,
+    () => formatModChord("K"),
+    () => "Ctrl+K",
+  );
 
   const [mobileActionProject, setMobileActionProject] =
     useState<Project | null>(null);
@@ -147,6 +218,26 @@ export function AppSidebar() {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>
+                {!isMobile && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => {
+                        trigger("toggle");
+                        onOpenSearch();
+                      }}
+                      tooltip={`Search · ${searchKey}`}
+                      aria-keyshortcuts="Control+K Meta+K"
+                    >
+                      <div className="flex items-center justify-center w-5 h-5 shrink-0">
+                        <Search className="h-4 w-4" strokeWidth={2.25} />
+                      </div>
+                      <span className="flex flex-1 items-center">
+                        Search
+                        <NavKey keys={searchKey} always />
+                      </span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
                 {mainNavItems
                   .filter((item) => {
                     if (isMobile) {
@@ -168,9 +259,10 @@ export function AppSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={isActive}
-                          tooltip={item.label}
+                          tooltip={`${item.label} · ${item.shortcut}`}
                         >
                           <Link
+                            aria-keyshortcuts={item.shortcut}
                             href={
                               item.label === "All Tasks"
                                 ? "/?project=all"
@@ -190,7 +282,10 @@ export function AppSidebar() {
                             <div className="flex items-center justify-center w-5 h-5 shrink-0">
                               <Icon className="h-4 w-4" strokeWidth={2.25} />
                             </div>
-                            <span>{item.label}</span>
+                            <span className="flex flex-1 items-center">
+                              {item.label}
+                              {!isMobile && <NavKey keys={item.shortcut} />}
+                            </span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -388,9 +483,10 @@ export function AppSidebar() {
                         <SidebarMenuButton
                           asChild
                           isActive={isActive}
-                          tooltip={item.label}
+                          tooltip={`${item.label} · ${item.shortcut}`}
                         >
                           <Link
+                            aria-keyshortcuts={item.shortcut}
                             href={item.path}
                             onClick={() => {
                               trigger("toggle");
@@ -399,7 +495,10 @@ export function AppSidebar() {
                             <div className="flex items-center justify-center w-5 h-5 shrink-0">
                               <Icon className="h-4 w-4" strokeWidth={2.25} />
                             </div>
-                            <span>{item.label}</span>
+                            <span className="flex flex-1 items-center">
+                              {item.label}
+                              <NavKey keys={item.shortcut} />
+                            </span>
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -450,6 +549,31 @@ export function AppSidebar() {
                     </div>
                     <span>Settings</span>
                   </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          )}
+
+          {!isMobile && (
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => {
+                    trigger("toggle");
+                    setShortcutsHelpOpen(true);
+                  }}
+                  tooltip="Keyboard shortcuts · ?"
+                  aria-label="Keyboard shortcuts"
+                  aria-keyshortcuts="?"
+                  className="text-foreground/70"
+                >
+                  <div className="flex items-center justify-center w-5 h-5 shrink-0">
+                    <Keyboard className="h-4 w-4" strokeWidth={2.25} />
+                  </div>
+                  <span className="flex flex-1 items-center">
+                    Shortcuts
+                    <NavKey keys="?" always />
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
