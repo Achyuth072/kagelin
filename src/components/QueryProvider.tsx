@@ -12,7 +12,10 @@ import { focusMutations } from "@/lib/mutations/focus";
 import { asyncStoragePersister } from "@/lib/query-cache-purge";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
 import { HABIT_ENTRY_UPDATED } from "@/lib/habit-links";
-import { onServerKeySignal } from "@/lib/supabase/wrapClient";
+import {
+  isContentKeyUnavailableError,
+  onServerKeySignal,
+} from "@/lib/supabase/wrapClient";
 import { handleServerKeySignal } from "@/lib/utils/mutation-error";
 import { TASKS_UPDATED } from "@/lib/sw/notificationClickHandler";
 
@@ -32,7 +35,9 @@ export default function QueryProvider({
           networkMode: "offlineFirst",
         },
         mutations: {
-          retry: 1,
+          // A purge does not stop a pending retry, which would reseal a discarded change after unlock.
+          retry: (failureCount, error) =>
+            failureCount < 1 && !isContentKeyUnavailableError(error),
         },
       },
     });

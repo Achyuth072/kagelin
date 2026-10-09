@@ -87,6 +87,36 @@ async function rotate(page: Page) {
   await dialog.getByRole("button", { name: "Done" }).click();
 }
 
+async function unlock(page: Page, passphrase: string) {
+  await expect(
+    page.getByRole("heading", { name: "Unlock your content" }),
+  ).toBeVisible({ timeout: 30_000 });
+  await page.getByLabel("Passphrase", { exact: true }).fill(passphrase);
+  await page.getByRole("button", { name: "Unlock" }).click();
+  await expect(page.getByRole("heading", { name: /^Good / })).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+async function submitTask(page: Page, content: string) {
+  await expect(async () => {
+    await page.keyboard.press("n");
+    await expect(page.getByRole("heading", { name: "New Task" })).toBeVisible({
+      timeout: 1000,
+    });
+  }).toPass({ timeout: 10_000 });
+  await page.getByPlaceholder("What needs to be done?").fill(content);
+  await page.getByRole("button", { name: /create task/i }).click();
+}
+
+async function taskCount() {
+  const { count } = await admin
+    .from("tasks")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", account.id);
+  return count;
+}
+
 test("rotation keeps the -v2 marker, re-seals under the new key and drops the retired key", async ({
   page,
 }) => {
@@ -104,6 +134,37 @@ test("rotation keeps the -v2 marker, re-seals under the new key and drops the re
     .poll(async () => (await keyRow())?.retired_keys, { timeout: 30_000 })
     .toEqual({});
   expect(await inboxName()).toMatch(/^xchacha20poly1305-v2:2:/);
+});
+
+test("a device left on the retired key locks on its next save and unlocks with the new passphrase", async ({
+  page,
+  browser,
+}) => {
+  await signInWithPasswordUI(page, account);
+  await completePassphraseSetup(page);
+
+  const staleContext = await browser.newContext();
+  const stale = await staleContext.newPage();
+  await signInWithPasswordUI(stale, account);
+  await unlock(stale, OLD_PASSPHRASE);
+
+  await rotate(page);
+  const tasksBefore = await taskCount();
+
+  // The stale device's access token outlives the rotation's sign-out of other devices.
+  const unsynced = `Sealed with the retired key ${Date.now()}`;
+  await submitTask(stale, unsynced);
+  await expect(
+    stale.getByText(/Your content key changed on another device/),
+  ).toBeVisible({ timeout: 30_000 });
+  await unlock(stale, NEW_PASSPHRASE);
+
+  // A discarded save that came back would land before this one.
+  await submitTask(stale, `Saved after unlock ${Date.now()}`);
+  await expect.poll(taskCount, { timeout: 15_000 }).toBe(tasksBefore! + 1);
+  await expect(stale.getByText(unsynced)).toHaveCount(0);
+  expect(await taskCount()).toBe(tasksBefore! + 1);
+  await staleContext.close();
 });
 
 test("a direct UPDATE cannot change the wrappers, the key chain or a marker", async ({
