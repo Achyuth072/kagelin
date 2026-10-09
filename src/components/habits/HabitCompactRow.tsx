@@ -23,6 +23,7 @@ import type { HabitWithEntries } from "@/lib/hooks/useHabits";
 import { DragHandle } from "@/components/tasks/DragHandle";
 import { HabitStripCell } from "./HabitStripCell";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface HabitCompactRowProps {
   habit: HabitWithEntries;
@@ -100,7 +101,7 @@ export function HabitCompactRow({
           />
         )}
         <span className="truncate text-[15px] font-semibold tracking-tight text-foreground">
-          {habit.name}
+          <ReadableText text={habit.name} />
         </span>
         <div className="ml-auto flex shrink-0 items-center gap-2 pl-2 lg:ml-0">
           {lastDoneNext ? (

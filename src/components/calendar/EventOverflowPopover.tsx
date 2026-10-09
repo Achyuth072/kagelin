@@ -13,6 +13,8 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { cn } from "@/lib/utils";
+import { ReadableText } from "@/components/encryption/ReadableText";
+import { isUnreadable } from "@/lib/crypto/unreadable";
 
 interface EventOverflowPopoverProps {
   remainingEvents: CalendarEvent[];
@@ -83,7 +85,7 @@ export const EventOverflowPopover = memo(
                         isTask ? "text-foreground" : "text-white",
                       )}
                     >
-                      {event.title}
+                      <ReadableText text={event.title} />
                     </span>
                     <div className="flex items-center justify-between gap-2 overflow-hidden">
                       <span
@@ -94,7 +96,7 @@ export const EventOverflowPopover = memo(
                       >
                         {formatTime(event.start)}
                       </span>
-                      {event.location && (
+                      {(event.location || isUnreadable(event, "location")) && (
                         <span
                           className={cn(
                             "text-[9px] truncate flex items-center gap-0.5",
@@ -104,7 +106,7 @@ export const EventOverflowPopover = memo(
                           )}
                         >
                           <MapPin className="h-2.5 w-2.5 shrink-0" />
-                          {event.location}
+                          <ReadableText text={event.location ?? null} />
                         </span>
                       )}
                     </div>

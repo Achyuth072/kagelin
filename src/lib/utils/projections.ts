@@ -33,13 +33,7 @@ export interface PaceProjection {
   daysInMonth: number;
 }
 
-/**
- * Pace-based projection of a daily metric to the end of the current
- * calendar month: what's logged so far this month, plus the trailing
- * PACE_WINDOW_DAYS average carried over the remaining days. Deliberately
- * calendar-month framed (not tied to the stats page's period selector) to
- * match "on track for N this month."
- */
+// Projects daily metric to month end using trailing PACE_WINDOW_DAYS average.
 function projectMetricThisMonth<T extends { date: string }>(
   dailyTrend: T[],
   getValue: (day: T) => number,
@@ -77,7 +71,6 @@ function projectMetricThisMonth<T extends { date: string }>(
   };
 }
 
-/** Tasks-completed variant of {@link projectMetricThisMonth}. */
 export function projectTasksThisMonth(
   dailyTrend: { date: string; tasksCompleted: number }[],
   now: Date = new Date(),
@@ -85,7 +78,6 @@ export function projectTasksThisMonth(
   return projectMetricThisMonth(dailyTrend, (d) => d.tasksCompleted, now);
 }
 
-/** Focus-hours variant of {@link projectMetricThisMonth}. */
 export function projectFocusHoursThisMonth(
   dailyTrend: { date: string; hours: number }[],
   now: Date = new Date(),
@@ -95,7 +87,7 @@ export function projectFocusHoursThisMonth(
 
 export interface StreakAtRisk {
   habitId: string;
-  name: string;
+  name: string | null;
   color: string;
   currentStreak: number;
 }

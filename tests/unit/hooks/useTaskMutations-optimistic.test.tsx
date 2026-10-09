@@ -475,6 +475,47 @@ describe("useTaskMutations - optimistic updates", () => {
         "Original",
       );
     });
+
+    it("TC-OPT-13: a saved field leaves the unreadable marker in the cached row", async () => {
+      let resolveMutation!: (value: Task) => void;
+      vi.mocked(taskMutations.update).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveMutation = resolve;
+          }),
+      );
+
+      const tasksKey = ["tasks", { projectId: "proj-1" }];
+      const singleKey = ["task", "task-unread-1", false];
+      const unreadable = makeTask("task-unread-1", {
+        content: null,
+        unreadable: ["content"],
+      });
+
+      queryClient.setQueryData(tasksKey, [unreadable]);
+      queryClient.setQueryData(singleKey, unreadable);
+
+      const { result } = renderHook(() => useUpdateTask(), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      act(() => {
+        result.current.mutate({ id: "task-unread-1", content: "Retyped" });
+      });
+
+      await waitFor(() => {
+        const cached = queryClient.getQueryData<Task>(singleKey)!;
+        expect(cached.content).toBe("Retyped");
+        expect(cached).not.toHaveProperty("unreadable");
+      });
+      expect(queryClient.getQueryData<Task[]>(tasksKey)![0]).not.toHaveProperty(
+        "unreadable",
+      );
+
+      await act(async () => {
+        resolveMutation(makeTask("task-unread-1", { content: "Retyped" }));
+      });
+    });
   });
 
   describe("useDeleteTask", () => {

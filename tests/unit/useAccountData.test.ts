@@ -113,6 +113,53 @@ describe("useAccountData", () => {
     expect(insertCall[0].id).not.toBe("task-1");
   });
 
+  it("importData leaves out rows the backup could not read and counts them", async () => {
+    const { parseBackupZip } = await import("@/lib/backup/export-import");
+    vi.mocked(parseBackupZip).mockResolvedValueOnce({
+      metadata: { version: 1, exportedAt: "2024-01-01", appVersion: "1.0.0" },
+      tasks: [
+        { id: "task-1", content: "Task 1" },
+        { id: "task-2", content: null, unreadable: ["content"] },
+      ],
+      projects: [],
+      habits: [],
+      habit_entries: [],
+      focus_logs: [],
+      events: [],
+    } as unknown as Awaited<ReturnType<typeof parseBackupZip>>);
+    const { result } = renderHook(() => useAccountData());
+
+    const skipped = await result.current.importData(
+      new File(["test"], "backup.zip", { type: "application/zip" }),
+    );
+
+    expect(skipped).toBe(1);
+    const inserted = mockQuery.insert.mock.calls[0][0];
+    expect(inserted).toHaveLength(1);
+    expect(inserted[0].content).toBe("Task 1");
+  });
+
+  it("importData leaves out the entries of a habit it could not read", async () => {
+    const { parseBackupZip } = await import("@/lib/backup/export-import");
+    vi.mocked(parseBackupZip).mockResolvedValueOnce({
+      metadata: { version: 1, exportedAt: "2024-01-01", appVersion: "1.0.0" },
+      tasks: [],
+      projects: [],
+      habits: [{ id: "h1", name: null, unreadable: ["name"] }],
+      habit_entries: [{ id: "e1", habit_id: "h1", date: "2024-01-01" }],
+      focus_logs: [],
+      events: [],
+    } as unknown as Awaited<ReturnType<typeof parseBackupZip>>);
+    const { result } = renderHook(() => useAccountData());
+
+    const skipped = await result.current.importData(
+      new File(["test"], "backup.zip", { type: "application/zip" }),
+    );
+
+    expect(skipped).toBe(2);
+    expect(mockQuery.insert).not.toHaveBeenCalled();
+  });
+
   it("clearCloudData deletes all user data", async () => {
     const { result } = renderHook(() => useAccountData());
 

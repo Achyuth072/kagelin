@@ -35,6 +35,8 @@ import type { RecurrenceRule } from "@/lib/utils/recurrence";
 
 import { FieldErrors } from "react-hook-form";
 import type { CreateTaskInput } from "@/lib/schemas/task";
+import { ReadableText } from "@/components/encryption/ReadableText";
+import { isUnreadable } from "@/lib/crypto/unreadable";
 
 interface TaskViewBaseProps {
   content: string;
@@ -291,6 +293,10 @@ export function TaskView(props: TaskViewProps) {
           isPreviewMode={isPreviewMode}
           setIsPreviewMode={setIsPreviewMode}
           defaultPreviewOnOpen={mode === "edit"}
+          unreadable={
+            props.mode === "edit" &&
+            isUnreadable(props.initialTask, "description")
+          }
           open={notesEditorOpen}
           onOpenChange={setNotesEditorOpen}
         />
@@ -390,7 +396,9 @@ export function TaskView(props: TaskViewProps) {
                       className="h-3 w-3 rounded-full shrink-0"
                       style={{ backgroundColor: project.color }}
                     />
-                    <span className="truncate font-medium">{project.name}</span>
+                    <span className="truncate font-medium">
+                      <ReadableText text={project.name} />
+                    </span>
                   </div>
                 </SelectItem>
               ))}

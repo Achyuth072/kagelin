@@ -1,5 +1,8 @@
-import { keyStore } from "@/lib/crypto/keyStore";
+import { keyStore, type Keyring } from "@/lib/crypto/keyStore";
+import { keyForEnvelope } from "@/lib/crypto/keyring";
 import { decryptField } from "@/lib/crypto/contentCipher";
+import { isRowBound, type Binding } from "@/lib/crypto/envelope";
+import { keyChainMark } from "@/lib/crypto/keyChainMark";
 import type { HabitType } from "@/lib/types/habit";
 import type { ReminderType } from "@/lib/types/notification";
 
@@ -47,14 +50,20 @@ export async function displayNotification(
   } = options ?? {};
 
   const key = encrypted || encryptedTitle ? await loadKeyOrNull() : null;
+  const userId = key ? await keyStore.loadUserId() : null;
+  const legacyRefused = !!userId && (await keyChainMark.load(userId)).sealedV2;
+  const resolve = (copy: EncryptedNotificationBody, role: "title" | "body") =>
+    resolveEncryptedField(
+      key,
+      copy,
+      role,
+      sourceBinding(userId, displayable.data, role),
+      legacyRefused,
+    );
 
   const [decryptedTitle, decryptedBody] = await Promise.all([
-    encryptedTitle
-      ? resolveEncryptedField(key, encryptedTitle, "title")
-      : title,
-    encrypted
-      ? resolveEncryptedField(key, encrypted, "body")
-      : displayable.body,
+    encryptedTitle ? resolve(encryptedTitle, "title") : title,
+    encrypted ? resolve(encrypted, "body") : displayable.body,
   ]);
 
   // Only a device that decrypted the item's name is unlocked enough to act blindly.
@@ -90,9 +99,35 @@ function reminderActions(type: ReminderType, recurring?: boolean) {
   return [{ action: "done", title: "Done" }, SNOOZE_ACTION];
 }
 
-async function loadKeyOrNull(): Promise<Uint8Array | null> {
+// Notification copies are bound to the source row, not the queue row, so a copy lifted from another row fails.
+export function sourceBinding(
+  userId: string | null,
+  data: unknown,
+  role: "title" | "body",
+): Binding | undefined {
+  if (!userId || typeof data !== "object" || data === null) return undefined;
+  const { habitId, taskId, eventId } = data as Record<string, unknown>;
+  if (typeof habitId === "string") {
+    const column = role === "title" ? "name" : "question";
+    return { userId, table: "habits", column, rowId: habitId };
+  }
+  if (typeof taskId === "string") {
+    return { userId, table: "tasks", column: "content", rowId: taskId };
+  }
+  if (typeof eventId === "string") {
+    return {
+      userId,
+      table: "calendar_events",
+      column: "title",
+      rowId: eventId,
+    };
+  }
+  return undefined;
+}
+
+async function loadKeyOrNull(): Promise<Keyring | null> {
   try {
-    return await keyStore.load();
+    return await keyStore.loadKeyring();
   } catch (err) {
     console.warn("[notifications] Could not load the content key", err);
     return null;
@@ -101,13 +136,21 @@ async function loadKeyOrNull(): Promise<Uint8Array | null> {
 
 // Returns null when the field cannot be shown decrypted.
 async function resolveEncryptedField(
-  key: Uint8Array | null,
+  key: Keyring | null,
   encrypted: EncryptedNotificationBody,
   fieldName: string,
+  binding: Binding | undefined,
+  legacyRefused: boolean,
 ): Promise<string | null> {
-  if (!key) return null;
+  if (legacyRefused && !isRowBound(encrypted.ciphertext)) return null;
+  const openingKey = key && keyForEnvelope(key, encrypted.ciphertext);
+  if (!openingKey) return null;
   try {
-    const plaintext = await decryptField(key, encrypted.ciphertext);
+    const plaintext = await decryptField(
+      openingKey,
+      encrypted.ciphertext,
+      binding,
+    );
     // Function replacer avoids interpreting "$" in plaintext as special replacement patterns.
     return encrypted.template.replace(PLACEHOLDER, () => plaintext);
   } catch (err) {

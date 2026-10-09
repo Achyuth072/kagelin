@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/core";
 import { DragHandle } from "./DragHandle";
 import { KanbanBoardCardButton } from "@/components/kanban";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface ListTaskCardProps {
   task: Task;
@@ -28,7 +29,7 @@ interface ListTaskCardProps {
   handleComplete: (checked: boolean) => void;
   handlePlayFocus: (e: React.MouseEvent) => void;
   onDeleteRequest: (e: React.MouseEvent) => void;
-  project: { color: string; name: string } | undefined;
+  project: { color: string; name: string | null } | undefined;
   dragListeners?: DraggableSyntheticListeners;
   dragAttributes?: DraggableAttributes;
   onHandlePointerDown?: () => void;
@@ -110,7 +111,7 @@ export function ListTaskCard({
               className={cn(task.is_completed && "task-ink-completed-text")}
               data-animate={shouldAnimate}
             >
-              {task.content}
+              <ReadableText text={task.content} />
             </span>
           </p>
 

@@ -18,6 +18,10 @@ import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useSwipe } from "@/lib/hooks/useSwipe";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
+import {
+  ReadableText,
+  UNREADABLE_LABEL,
+} from "@/components/encryption/ReadableText";
 
 interface MonthViewProps {
   currentDate: Date;
@@ -120,12 +124,12 @@ const MonthDayCell = memo(
                       borderLeftWidth: "3px",
                     }),
                   }}
-                  title={event.title}
+                  title={event.title ?? UNREADABLE_LABEL}
                 >
                   <span className="hidden md:inline">
                     {formatTime(event.start)}{" "}
                   </span>
-                  {event.title}
+                  <ReadableText text={event.title} />
                 </div>
               );
             })}

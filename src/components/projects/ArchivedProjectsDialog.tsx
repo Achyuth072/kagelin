@@ -12,6 +12,7 @@ import { useUnarchiveProject } from "@/lib/hooks/useProjectMutations";
 import { Button } from "@/components/ui/button";
 import { Archive, ArchiveRestore, Loader2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface ArchivedProjectsDialogProps {
   open: boolean;
@@ -54,7 +55,9 @@ export function ArchivedProjectsDialog({
                       className="h-3 w-3 rounded-full"
                       style={{ backgroundColor: project.color }}
                     />
-                    <span className="font-medium">{project.name}</span>
+                    <span className="font-medium">
+                      <ReadableText text={project.name} />
+                    </span>
                   </div>
                   <Button
                     variant="ghost"

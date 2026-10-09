@@ -61,6 +61,7 @@ import type { Habit } from "@/lib/types/habit";
 import { useQueryClient } from "@tanstack/react-query";
 import { notify } from "@/lib/notify";
 import { getPlatformKey } from "@/lib/utils/platform";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface CommandMenuProps {
   open: boolean;
@@ -75,11 +76,7 @@ interface CommandSearchResultsProps {
   setDate: (date: Date) => void;
 }
 
-/**
- * Content-search groups (Tasks, Habits, Events) for the command menu.
- * Rendered only while the dialog is open so the data hooks fetch on open,
- * not on every cold page load; returns null until the user types.
- */
+// Rendered on open so data hooks fetch on demand rather than on page load.
 function CommandSearchResults({
   search,
   runCommand,
@@ -92,17 +89,15 @@ function CommandSearchResults({
   const { data: habits = [] } = useHabits();
   const events = useCalendarEventsList();
 
-  // Mapped independently of `search` — cmdk filters these items client-side,
-  // so re-deriving them on every keystroke would be wasted work.
+  // cmdk filters client-side; memoized independently of search query.
   const taskItems = useMemo(
     () =>
       tasks.map((task) => (
         <CommandItem
           key={task.id}
-          // cmdk keys filtering/selection by `value`; ids keep duplicate
-          // contents (e.g. two "Buy groceries") individually navigable.
+          // Ids in value keep duplicate names individually navigable in cmdk.
           value={`task-${task.id}`}
-          keywords={[task.content]}
+          keywords={task.content === null ? [] : [task.content]}
           onSelect={() =>
             runCommand(() => {
               setSelectedTaskId(task.id);
@@ -111,7 +106,9 @@ function CommandSearchResults({
           }
         >
           <CheckCircle2 className="mr-2 h-5 w-5" />
-          <span>{task.content}</span>
+          <span>
+            <ReadableText text={task.content} />
+          </span>
         </CommandItem>
       )),
     [tasks, runCommand, setSelectedTaskId, router],
@@ -125,11 +122,13 @@ function CommandSearchResults({
           <CommandItem
             key={habit.id}
             value={`habit-${habit.id}`}
-            keywords={[habit.name]}
+            keywords={habit.name === null ? [] : [habit.name]}
             onSelect={() => runCommand(() => openEditHabit(habit))}
           >
             <Icon className="mr-2 h-5 w-5" />
-            <span>{habit.name}</span>
+            <span>
+              <ReadableText text={habit.name} />
+            </span>
           </CommandItem>
         );
       }),
@@ -142,19 +141,19 @@ function CommandSearchResults({
         <CommandItem
           key={event.id}
           value={`event-${event.id}`}
-          keywords={[event.title]}
+          keywords={event.title === null ? [] : [event.title]}
           onSelect={() =>
             runCommand(() => {
-              // Parse the date-only portion in local time so an all-day event
-              // stored as ...T00:00:00Z doesn't land on the prior day in
-              // negative-UTC offsets.
+              // Local-time parse avoids timezone shift on UTC-stored all-day dates.
               setDate(parseISO(event.date.slice(0, 10)));
               router.push("/calendar");
             })
           }
         >
           <CalendarIcon className="mr-2 h-5 w-5" />
-          <span>{event.title}</span>
+          <span>
+            <ReadableText text={event.title} />
+          </span>
         </CommandItem>
       )),
     [events, runCommand, setDate, router],
@@ -196,7 +195,6 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const [copied, setCopied] = React.useState(false);
   const [search, setSearch] = React.useState("");
 
-  // Handle back navigation to close command menu instead of navigating away
   useBackNavigation(open, () => onOpenChange(false));
 
   const runCommand = React.useCallback(

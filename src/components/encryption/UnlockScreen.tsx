@@ -14,6 +14,7 @@ import {
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog";
 import { RecoveryCodeDisplay } from "@/components/encryption/RecoveryCodeDisplay";
+import type { LockReason } from "@/lib/hooks/useEncryptionGate";
 import {
   reissueRecoveryCode,
   unlockWithPassphrase,
@@ -23,9 +24,11 @@ import {
 export function UnlockScreen({
   userId,
   onUnlocked,
+  reason = null,
 }: {
   userId: string;
   onUnlocked: () => void;
+  reason?: LockReason | null;
 }) {
   const [mode, setMode] = useState<"passphrase" | "recovery-code">(
     "passphrase",
@@ -67,9 +70,11 @@ export function UnlockScreen({
             Unlock your content
           </h1>
           <p className="text-sm text-muted-foreground">
-            This device doesn&apos;t have your key yet. Enter your{" "}
-            {mode === "passphrase" ? "passphrase" : "recovery code"} to
-            continue.
+            {reason === "key-changed"
+              ? "Your content key changed on another device, and changes not yet synced from this one were discarded."
+              : "This device doesn't have your key yet."}{" "}
+            Enter your {mode === "passphrase" ? "passphrase" : "recovery code"}{" "}
+            to continue.
           </p>
           <p className="text-xs text-muted-foreground/80">
             Reminders can only say something is due, not what, until you unlock.

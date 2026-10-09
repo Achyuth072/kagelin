@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 interface SortableBoardTaskCardProps {
   task: Task;
-  project: { color: string; name: string } | undefined;
+  project: { color: string; name: string | null } | undefined;
   isDesktop: boolean;
   onSelect?: (task: Task) => void;
   triggerHaptic?: (signature?: "tick" | "toggle" | "thud" | "success") => void;
@@ -42,8 +42,7 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
     transform: transform
       ? `translate3d(${Math.round(transform.x)}px, ${Math.round(transform.y)}px, 0)`
       : undefined,
-    // Gate transition on transform != null, or the post-drop reset to
-    // translate3d(0,0,0) animates as a visible snap-back.
+    // Gated on transform to avoid post-drop snap-back animation.
     transition: transform ? transition : undefined,
     opacity: isDragging ? 0.3 : 1,
     zIndex: isDragging ? 20 : 1,
@@ -64,8 +63,7 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
         className="w-full h-full"
         onClick={() => onSelect?.(task)}
       >
-        {/* attributes/listeners stay on the wrapper div, not TaskItem —
-            forwarding them busts its memo on every drag-over. */}
+        {/* Kept on wrapper to avoid busting TaskItem memo on drag-over. */}
         <TaskItem
           task={task}
           project={project}

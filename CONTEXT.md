@@ -157,7 +157,61 @@ deliberate action, and may additionally be set to happen after a period of
 inactivity — off by default, because while Locked, reminders can no longer say
 _what_ is due, only that something is.
 
+One exception is automatic: a **Stale device** is Locked when the server next
+refuses its write. Its key has been replaced, so staying unlocked would only make
+every save fail.
+
 _Avoid_: "log out to lock", which implies one is a way of doing the other.
+
+### Content key
+
+The key that seals an Account's **content**. An Account has exactly one
+**current** content key; any earlier ones are **retired**, kept only so content
+they sealed stays readable until it is re-sealed. The passphrase and the
+recovery code do not encrypt content themselves — each only unlocks the content
+key.
+
+_Avoid_: "master key" in anything user-facing (it is an implementation name),
+"encryption key", "password" for the key itself.
+
+### Stale device
+
+A device that holds only a **retired** content key, because a **Rotation**
+happened on another device. It can still read what it has cached, but the
+server refuses every write it seals. When that happens, the device is
+**Locked**, and its unsynced changes are discarded. It is not signed out:
+unlocking with the new passphrase is enough.
+
+_Avoid_: "outdated key", "old device", "expired key".
+
+### Rewrap
+
+Changing what unlocks the **content key** without changing the key — a
+passphrase change or a recovery-code reissue. Instant, and protects nothing
+already exposed: whoever already holds the content key still does.
+
+_Avoid_: calling a passphrase change "rotating".
+
+### Rotation
+
+Replacing the **content key** with a new one and **re-sealing** all content
+under it, so that a leaked key stops opening anything. Always started
+deliberately by the user, and always signs every other session out. A
+passphrase change is a **Rewrap**, never a Rotation.
+
+### Re-seal
+
+Re-encrypting every piece of an Account's content in one resumable pass. The
+same pass serves **Rotation** (new key) and a change of sealing scheme (same
+key, stronger format).
+
+### Unreadable value
+
+One sealed value that cannot be opened even though the content key is present:
+it was moved, tampered with or damaged. It is shown in place as "Can't be
+read", never as content, and the user can delete it or type a new value. A
+missing or locked key is not an unreadable value. See
+`docs/adr/0023-unreadable-values-render-in-place.md`.
 
 ---
 

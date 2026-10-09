@@ -222,11 +222,7 @@ export function CreateEventDialog({
   );
   const { errors } = useFormState({ control });
 
-  // Derive form validity from useWatch values instead of formState.isValid
-  // or useFormState().isValid. Both formState and useFormState use RHF's Proxy
-  // for property-access subscriptions, which React Compiler memoizes away —
-  // isValid never triggers a re-render. useWatch is an explicit hook subscription
-  // that React Compiler tracks correctly.
+  // React Compiler memoizes away formState.isValid proxy access; useWatch subscribes explicitly.
   const isFormValid =
     !!title && title.trim().length >= 1 && title.length <= 200;
 
@@ -250,11 +246,7 @@ export function CreateEventDialog({
 
   useScrollIsolation(locationListRef, locationOpen);
 
-  // In the mobile drawer, the back gesture must close an open in-dialog popover
-  // first — not the whole drawer. Register each popover with the shared back-nav
-  // stack (matching ResponsiveDialog's `max-width: 640px` drawer breakpoint) so
-  // the topmost open one handles back. Without this, back falls through to the
-  // drawer and tears down the entire create/edit sheet.
+  // On mobile, back gesture closes an open popover before dismissing the drawer.
   const isDrawer = useMediaQuery("(max-width: 640px)");
   useBackNavigation(isDrawer && locationOpen, () => setLocationOpen(false));
   useBackNavigation(isDrawer && showStartPicker, () =>
@@ -272,7 +264,7 @@ export function CreateEventDialog({
               getDefaultEndDate(normalizedEventStart ?? initialStartDate),
           );
           reset({
-            title: event.title,
+            title: event.title ?? "",
             description: event.description || "",
             location: event.location || "",
             all_day: event.allDay || false,
@@ -371,7 +363,6 @@ export function CreateEventDialog({
           onKeyDown={handleKeyDown}
           className="flex flex-col h-auto max-h-[85dvh]"
         >
-          {/* a11y title — hidden visually; the native input is the visual title */}
           <ResponsiveDialogHeader className="sr-only">
             <ResponsiveDialogTitle>
               {event ? "Edit Event" : "Create Event"}
@@ -403,9 +394,7 @@ export function CreateEventDialog({
             )}
           </div>
 
-          {/* Portal target for location dropdown. Sits inside the Dialog DOM so
-              react-remove-scroll allows wheel events, but outside overflow-y-auto
-              so the fixed-position popup never clips at the scroll container edge. */}
+          {/* Portal target inside Dialog for wheel events, outside overflow-y-auto to avoid clipping. */}
           <div ref={setLocationPortalEl} />
 
           <div className="flex-1 overflow-y-auto min-h-0 py-2">

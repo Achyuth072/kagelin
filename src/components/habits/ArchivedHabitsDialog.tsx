@@ -19,6 +19,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { getHabitIcon } from "@/components/habits/shared/HabitIconPicker";
 import type { HabitWithEntries } from "@/lib/types/habit";
+import {
+  ReadableText,
+  UNREADABLE_LABEL,
+} from "@/components/encryption/ReadableText";
 
 interface ArchivedHabitsDialogProps {
   open: boolean;
@@ -69,7 +73,7 @@ export function ArchivedHabitsDialog({
                           style={{ color: habit.color }}
                         />
                         <span className="font-medium truncate">
-                          {habit.name}
+                          <ReadableText text={habit.name} />
                         </span>
                       </div>
                       <div className="flex items-center shrink-0">
@@ -88,7 +92,7 @@ export function ArchivedHabitsDialog({
                           size="icon"
                           className="h-8 w-8 text-destructive hover:bg-destructive/10"
                           onClick={() => setHabitToDelete(habit)}
-                          aria-label={`Delete ${habit.name}`}
+                          aria-label={`Delete ${habit.name ?? UNREADABLE_LABEL}`}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -117,7 +121,7 @@ export function ArchivedHabitsDialog({
           setHabitToDelete(null);
         }}
         title="Delete Habit"
-        description={`Are you sure you want to delete "${habitToDelete?.name}"? This will also delete all completion history.`}
+        description={`Are you sure you want to delete "${habitToDelete?.name ?? UNREADABLE_LABEL}"? This will also delete all completion history.`}
       />
     </>
   );

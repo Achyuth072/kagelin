@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
 import { useState } from "react";
 import { Loader2, Archive, Inbox, Trash2 } from "lucide-react";
+import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
 
 interface DeleteProjectDialogProps {
   project: Project | null;
@@ -114,7 +115,7 @@ export function DeleteProjectDialog({
     trigger("success");
   };
 
-  const description = `Are you sure you want to delete "${project.name}"? Choose what happens to its tasks.`;
+  const description = `Are you sure you want to delete "${project.name ?? UNREADABLE_LABEL}"? Choose what happens to its tasks.`;
 
   if (isDesktop) {
     return (

@@ -1,9 +1,19 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { EncryptionSection } from "@/components/settings/EncryptionSection";
 import { useAuth } from "@/components/AuthProvider";
 import { useEncryptionGateActions } from "@/components/encryption/EncryptionGate";
-import { changePassphrase, reissueRecoveryCode } from "@/lib/crypto/keyManager";
+import {
+  changePassphrase,
+  reissueRecoveryCode,
+  rotateContentKey,
+} from "@/lib/crypto/keyManager";
 
 vi.mock("@/components/AuthProvider", () => ({
   useAuth: vi.fn(),
@@ -16,6 +26,7 @@ vi.mock("@/components/encryption/EncryptionGate", () => ({
 vi.mock("@/lib/crypto/keyManager", () => ({
   changePassphrase: vi.fn(),
   reissueRecoveryCode: vi.fn(),
+  rotateContentKey: vi.fn(),
 }));
 
 vi.mock("@/lib/notify", () => ({
@@ -31,6 +42,8 @@ describe("EncryptionSection", () => {
     } as unknown as ReturnType<typeof useAuth>);
     vi.mocked(useEncryptionGateActions).mockReturnValue({
       lock: vi.fn().mockResolvedValue(undefined),
+      beginReseal: vi.fn(),
+      holdForRecoveryCode: vi.fn(),
     });
   });
 
@@ -112,7 +125,11 @@ describe("EncryptionSection", () => {
 
   it("calls the gate's lock action when Lock Now is clicked", async () => {
     const lock = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(useEncryptionGateActions).mockReturnValue({ lock });
+    vi.mocked(useEncryptionGateActions).mockReturnValue({
+      lock,
+      beginReseal: vi.fn(),
+      holdForRecoveryCode: vi.fn(),
+    });
     render(<EncryptionSection />);
 
     fireEvent.click(screen.getByRole("button", { name: "Lock now" }));
@@ -122,7 +139,11 @@ describe("EncryptionSection", () => {
 
   it("shows an error and re-enables the button if locking fails", async () => {
     const lock = vi.fn().mockRejectedValue(new Error("IndexedDB blocked"));
-    vi.mocked(useEncryptionGateActions).mockReturnValue({ lock });
+    vi.mocked(useEncryptionGateActions).mockReturnValue({
+      lock,
+      beginReseal: vi.fn(),
+      holdForRecoveryCode: vi.fn(),
+    });
     render(<EncryptionSection />);
 
     fireEvent.click(screen.getByRole("button", { name: "Lock now" }));
@@ -132,5 +153,135 @@ describe("EncryptionSection", () => {
         screen.getByRole("button", { name: "Lock now" }),
       ).not.toBeDisabled(),
     );
+  });
+
+  describe("rotating the content key", () => {
+    const NEW_PASSPHRASE = "a sufficiently long rotated passphrase";
+    const beginReseal = vi.fn();
+
+    beforeEach(() => {
+      vi.mocked(useEncryptionGateActions).mockReturnValue({
+        lock: vi.fn(),
+        beginReseal,
+        holdForRecoveryCode: vi.fn(),
+      });
+    });
+
+    async function reachPassphraseStep() {
+      render(<EncryptionSection />);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Rotate content key" }),
+      );
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).toHaveTextContent(/signed out/);
+      expect(dialog).toHaveTextContent(/30 days/);
+      fireEvent.click(within(dialog).getByRole("button", { name: "Continue" }));
+      fireEvent.change(within(dialog).getByLabelText("Current Passphrase"), {
+        target: { value: "the current passphrase" },
+      });
+      fireEvent.change(within(dialog).getByLabelText("New Passphrase"), {
+        target: { value: NEW_PASSPHRASE },
+      });
+      fireEvent.change(
+        within(dialog).getByLabelText("Confirm New Passphrase"),
+        { target: { value: NEW_PASSPHRASE } },
+      );
+      return dialog;
+    }
+
+    it("shows the new recovery code only after the rotation commits, then starts the Re-seal", async () => {
+      vi.mocked(rotateContentKey).mockResolvedValue({
+        recoveryCode: "ROTA-TEDC-ODE0-0000-0000-0000-0000-0000",
+        otherSessionsSignedOut: true,
+        keySavedOnDevice: true,
+      });
+      const dialog = await reachPassphraseStep();
+      expect(screen.queryByText(/ROTA-TEDC/)).not.toBeInTheDocument();
+
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Rotate key" }),
+      );
+
+      expect(
+        await screen.findByText("ROTA-TEDC-ODE0-0000-0000-0000-0000-0000"),
+      ).toBeInTheDocument();
+      expect(rotateContentKey).toHaveBeenCalledWith(
+        "user-1",
+        "the current passphrase",
+        NEW_PASSPHRASE,
+      );
+      expect(beginReseal).toHaveBeenCalledTimes(1);
+    });
+
+    it("locks this device once the code is saved if it could not store the new key", async () => {
+      const lock = vi.fn().mockResolvedValue(undefined);
+      vi.mocked(useEncryptionGateActions).mockReturnValue({
+        lock,
+        beginReseal,
+        holdForRecoveryCode: vi.fn(),
+      });
+      vi.mocked(rotateContentKey).mockResolvedValue({
+        recoveryCode: "ROTA-TEDC-ODE0-0000-0000-0000-0000-0000",
+        otherSessionsSignedOut: true,
+        keySavedOnDevice: false,
+      });
+      const dialog = await reachPassphraseStep();
+
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Rotate key" }),
+      );
+      await screen.findByText("ROTA-TEDC-ODE0-0000-0000-0000-0000-0000");
+      expect(beginReseal).not.toHaveBeenCalled();
+      expect(lock).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("checkbox"));
+      fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+      await waitFor(() => expect(lock).toHaveBeenCalledTimes(1));
+    });
+
+    it("shows the error and no recovery code when the rotation fails", async () => {
+      vi.mocked(rotateContentKey).mockRejectedValue(
+        new Error("network dropped"),
+      );
+      const dialog = await reachPassphraseStep();
+
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Rotate key" }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "network dropped",
+      );
+      expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+      expect(beginReseal).not.toHaveBeenCalled();
+    });
+
+    it("warns when other sessions could not be signed out", async () => {
+      vi.mocked(rotateContentKey).mockResolvedValue({
+        recoveryCode: "ROTA-TEDC-ODE0-0000-0000-0000-0000-0000",
+        otherSessionsSignedOut: false,
+        keySavedOnDevice: true,
+      });
+      const dialog = await reachPassphraseStep();
+
+      fireEvent.click(
+        within(dialog).getByRole("button", { name: "Rotate key" }),
+      );
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /sign out of them yourself/i,
+      );
+    });
+
+    it("opens the same flow from the change-passphrase card", async () => {
+      render(<EncryptionSection />);
+      fireEvent.click(
+        screen.getByRole("button", { name: "Also rotate my key" }),
+      );
+      expect(await screen.findByRole("dialog")).toHaveTextContent(
+        /Rotate content key/,
+      );
+    });
   });
 });

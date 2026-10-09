@@ -114,7 +114,8 @@ function prepareLoopHabit(
     freq_den,
     freq_num,
     highlight,
-    name: habit.name,
+    // Exported empty, never as placeholder text that a re-import would keep as the name.
+    name: habit.name ?? "",
     position,
     reminder_hour,
     reminder_min,

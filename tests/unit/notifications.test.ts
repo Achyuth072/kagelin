@@ -5,13 +5,30 @@ import {
   type NotificationDisplayOptions,
 } from "@/lib/notifications";
 import { encryptField } from "@/lib/crypto/contentCipher";
+import { sealEnvelope, INITIAL_KEY_ID } from "@/lib/crypto/envelope";
 
 const { loadKey } = vi.hoisted(() => ({
   loadKey: vi.fn<() => Promise<Uint8Array | null>>(),
 }));
 
 vi.mock("@/lib/crypto/keyStore", () => ({
-  keyStore: { load: loadKey, save: vi.fn(), clear: vi.fn() },
+  keyStore: {
+    load: loadKey,
+    loadKeyring: async () => {
+      const key = await loadKey();
+      return key ? { keyId: "1", key, retired: {} } : null;
+    },
+    loadUserId: vi.fn(async () => "user-1"),
+    save: vi.fn(),
+    clear: vi.fn(),
+  },
+}));
+
+const markState = { sealedV2: false };
+vi.mock("@/lib/crypto/keyChainMark", () => ({
+  keyChainMark: {
+    load: vi.fn(async () => ({ keyId: 0, sealedV2: markState.sealedV2 })),
+  },
 }));
 
 function registrationWith(
@@ -28,6 +45,7 @@ function registrationWith(
 }
 
 beforeEach(() => {
+  markState.sealedV2 = false;
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
@@ -497,5 +515,151 @@ describe("displayNotification task and event actions", () => {
         recurring: expect.anything(),
       }),
     );
+  });
+});
+
+describe("displayNotification with row-bound (-v2) ciphertext", () => {
+  const key = new Uint8Array(32).fill(7);
+
+  const sealFor = (
+    table: string,
+    column: string,
+    rowId: string,
+    text: string,
+  ) =>
+    sealEnvelope(key, new TextEncoder().encode(text), INITIAL_KEY_ID, {
+      userId: "user-1",
+      table,
+      column,
+      rowId,
+    });
+
+  function shown(registration: ServiceWorkerRegistration) {
+    const showNotification = registration.showNotification as unknown as {
+      mock: { calls: [string, { body?: string }][] };
+    };
+    return showNotification.mock.calls[0];
+  }
+
+  beforeEach(() => {
+    loadKey.mockResolvedValue(key);
+  });
+
+  it("decrypts a task payload using the source-row binding", async () => {
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Task Due Soon", {
+      body: "You have a task due now.",
+      data: { taskId: "task-1" },
+      encrypted: {
+        template: 'Your task "{}" is due now.',
+        ciphertext: await sealFor(
+          "tasks",
+          "content",
+          "task-1",
+          "Renew passport",
+        ),
+      },
+    });
+
+    expect(shown(registration)[1].body).toBe(
+      'Your task "Renew passport" is due now.',
+    );
+  });
+
+  it("decrypts a habit payload's name and question with their own columns", async () => {
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "You have a habit scheduled now.",
+      data: { habitId: "habit-1" },
+      encryptedTitle: {
+        template: "{}",
+        ciphertext: await sealFor("habits", "name", "habit-1", "Meditate"),
+      },
+      encrypted: {
+        template: "{}",
+        ciphertext: await sealFor(
+          "habits",
+          "question",
+          "habit-1",
+          "Did you sit?",
+        ),
+      },
+    });
+
+    const [title, options] = shown(registration);
+    expect(title).toBe("Meditate");
+    expect(options.body).toBe("Did you sit?");
+  });
+
+  it("falls back to generic copy for a task payload lifted from another row", async () => {
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Task Due Soon", {
+      body: "You have a task due now.",
+      data: { taskId: "task-2" },
+      encrypted: {
+        template: 'Your task "{}" is due now.',
+        ciphertext: await sealFor(
+          "tasks",
+          "content",
+          "task-1",
+          "Renew passport",
+        ),
+      },
+    });
+
+    expect(shown(registration)[1].body).toBe("You have a task due now.");
+  });
+
+  it("falls back to generic copy for a habit payload lifted from another row", async () => {
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Habit reminder", {
+      body: "Time to check in.",
+      data: { habitId: "habit-2" },
+      encryptedTitle: {
+        template: "{}",
+        ciphertext: await sealFor("habits", "name", "habit-1", "Meditate"),
+      },
+    });
+
+    expect(shown(registration)[0]).toBe("Habit reminder");
+  });
+
+  it("falls back to generic copy when the payload names no source row", async () => {
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Task Due Soon", {
+      body: "You have a task due now.",
+      encrypted: {
+        template: "{}",
+        ciphertext: await sealFor(
+          "tasks",
+          "content",
+          "task-1",
+          "Renew passport",
+        ),
+      },
+    });
+
+    expect(shown(registration)[1].body).toBe("You have a task due now.");
+  });
+
+  it("after a finished Re-seal, falls back to generic copy for a -v1 payload", async () => {
+    markState.sealedV2 = true;
+    const registration = registrationWith([]);
+
+    await displayNotification(registration, "Task Due Soon", {
+      body: "You have a task due now.",
+      data: { taskId: "task-1" },
+      encrypted: {
+        template: 'Your task "{}" is due now.',
+        ciphertext: await encryptField(key, "Planted"),
+      },
+    });
+
+    expect(shown(registration)[1].body).toBe("You have a task due now.");
   });
 });

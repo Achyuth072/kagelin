@@ -55,55 +55,14 @@ Most productivity apps want your email before you've written a single task, and 
 
 ## Features
 
-### Tasks & Organization
+- **Tasks**: Board and List views, projects, recurring tasks, steps, and Vim-style keyboard navigation.
+- **Focus & habits**: a Pomodoro timer that follows you across devices, habits with flexible frequencies and reminders, and Loop Habit Tracker import and export.
+- **Calendar**: month, week, and multi-day views, Google and Outlook sync, event reminders, and `.ics` import and export.
+- **Reminders**: push notifications for tasks, events, and habits, plus a morning brief and an evening plan.
+- **Data ownership**: guest mode, zero-knowledge encryption with key rotation, WebDAV backup, and full export.
+- **Stats & insights**: period breakdowns, per-habit insights, and goal tracking.
 
-- **Search** (`Ctrl/Cmd+K`): instant search across tasks, habits, and events, plus navigation and actions.
-- **Task views**: Board and List view with 2D keyboard navigation.
-- **Vim navigation & task controls**: `gg`/`G` navigation, `yy` yank, `p` paste, and `u` undo.
-- **Split View**: Desktop List opens a master-detail panel automatically.
-- **Projects**: multi-level project structure with archiving and mobile drawers.
-- **Group & Filter**: group by project, priority, or due date with drag-and-drop across groups.
-- **Recurring tasks**: per-task Strict (anchors to due date) or Flexible (anchors to completion) recurrence.
-- **Notes editor**: markdown formatting toolbar with live preview for task notes.
-
-### Focus & Habits
-
-- **Focus Timer**: PiP-enabled Pomodoro engine that hands off between your devices, so pausing on one pauses on all of them.
-- **Push notifications**: server-derived Web Push notifications for timer completions and task reminders (supporting desktop, Android, and iOS standalone PWA).
-- **Habit tracking**: Yes/No and Measurable habits with frequency-aware streaks, targets, and reminders.
-- **Compact habit view**: collapsible drawer with a tappable rolling-7 day strip, drag-and-drop reordering, and per-day logging.
-- **uhabits portability**: full-fidelity Loop Habit Tracker `.db` import and export, with provenance-preserving round-trips.
-- **Activity heatmap**: visualize focus minutes and habit completions over time.
-
-### Calendar
-
-- **Flexible views**: Month, desktop 4-day, mobile week view with edge-gated paging, and rolling 3-day view.
-- **Event creation**: quick event creation with natural language time parsing.
-- **Multi-provider sync**: Google Calendar and Microsoft Outlook.
-- **ICS portability**: universal `.ics` (RFC 5545) import and export.
-
-### Data Ownership
-
-- **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed.
-- **Accounts & Auth**: Google, GitHub, or breach-checked email/password sign-in with multi-provider identity linking and password reset.
-- **Zero-knowledge encryption**: tasks, habits, projects, labels, and calendar content are encrypted on your device under a passphrase Kagelin never sees. We can't read what you wrote — only that an item exists and when it's due.
-- **WebDAV backup**: keep a copy of everything on a server you own (Nextcloud, Synology). Available at every tier, account or not. It is a backup, not a sync: each upload replaces the last.
-- **Backups & Portability**: encrypted `.zip` export/import, guest backup reminders, and instant cloud data wipe.
-- **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
-- **Telemetry**: off by default for everyone, Guest Mode included. If you opt in, we collect anonymous product-usage counts (no task titles, habit names, or other content) tied to a random device ID, never your account.
-
-### Stats & Insights
-
-- **Stats page**: period selector, breakdowns by project and priority, time-of-day heatmap.
-- **Item insights**: per-habit and per-recurring-task stats — score history, streaks, frequency, on-time rate.
-- **Goal tracking**: progress rings on habit cards, global focus and task goals.
-- **Export**: analytics CSV and JSON from stats and insights panels.
-
-### Preferences
-
-- **Time format**: system-wide 12h/24h toggle across all time displays.
-- **Keyboard accessible**: Esc closes all modals, full focus-trap and `aria-modal` compliance.
-- **Haptic feedback**: standardized haptic palette for precise mobile feedback.
+See the [full feature list](docs/features.md).
 
 ## Shortcuts
 

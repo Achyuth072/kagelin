@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { wrapSupabaseClient } from "@/lib/supabase/wrapClient";
+import {
+  wrapSupabaseClient,
+  isContentKeyUnavailableError,
+} from "@/lib/supabase/wrapClient";
 import { FIELD_MAP } from "@/lib/supabase/fieldMap";
 import { generateMasterKey } from "@/lib/crypto/masterKey";
 import { isCiphertext } from "@/lib/crypto/contentCipher";
@@ -14,6 +17,11 @@ const keyStoreState: { key: Uint8Array | null } = { key: null };
 vi.mock("@/lib/crypto/keyStore", () => ({
   keyStore: {
     load: vi.fn(async () => keyStoreState.key),
+    loadKeyring: vi.fn(async () =>
+      keyStoreState.key
+        ? { keyId: "1", key: keyStoreState.key, retired: {} }
+        : null,
+    ),
     save: vi.fn(async () => {}),
     clear: vi.fn(async () => {}),
   },
@@ -90,6 +98,43 @@ describe("on-demand calendar sync through the encrypting client", () => {
     expect(locals).toHaveLength(1);
     expect(locals[0].title).toBe("Oncology follow-up");
     expect(locals[0].metadata).toEqual(metadata);
+  });
+
+  // Every sealed write would fail the same way, so the pull stops rather than recording a
+  // failure per event.
+  it("stops the pull when the server says this device's key was retired", async () => {
+    backend.raw = createFakeSupabaseClient(
+      {},
+      {
+        userId: "user-1",
+        failWrite: () => ({
+          message: "must be sealed with the current content key",
+          hint: "content_key_retired",
+        }),
+      },
+    );
+
+    await expect(
+      applyPullMutations(
+        {
+          toCreate: [
+            {
+              title: "Standup",
+              start_time: "2026-09-03T09:00:00Z",
+              end_time: "2026-09-03T09:15:00Z",
+              remote_id: "google-event-2",
+              etag: "etag-2",
+            },
+          ],
+          toUpdate: [],
+          toArchive: [],
+          toHardDelete: [],
+          toAdopt: [],
+        },
+        calendar,
+      ),
+    ).rejects.toSatisfy(isContentKeyUnavailableError);
+    expect(backend.raw.rawRows("calendar_events")).toEqual([]);
   });
 
   it("re-encrypts on update and still matches the row by its readable remote_id", async () => {

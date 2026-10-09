@@ -1,7 +1,8 @@
-export interface CalendarEvent {
+import type { MaybeUnreadable } from "@/lib/crypto/unreadable";
+export interface CalendarEvent extends MaybeUnreadable {
   id: string;
   user_id: string;
-  title: string;
+  title: string | null;
   description: string | null;
   location: string | null;
   start_time: string;
@@ -17,7 +18,7 @@ export interface CalendarEvent {
   sync_state: "pending_create" | "pending_update" | "pending_delete" | null;
   is_archived: boolean;
   reminder_minutes?: number | null;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -53,9 +54,9 @@ export interface UpdateCalendarEventInput {
   metadata?: Record<string, unknown>;
 }
 
-export interface CalendarEventUI {
+export interface CalendarEventUI extends MaybeUnreadable {
   id: string;
-  title: string;
+  title: string | null;
   start: Date;
   end: Date;
   allDay: boolean;
@@ -81,6 +82,7 @@ export function toCalendarEventUI(event: CalendarEvent): CalendarEventUI {
     category: event.category,
     isArchived: event.is_archived,
     reminderMinutes: event.reminder_minutes,
-    metadata: event.metadata,
+    metadata: event.metadata ?? undefined,
+    ...(event.unreadable && { unreadable: event.unreadable }),
   };
 }

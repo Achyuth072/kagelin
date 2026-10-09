@@ -17,6 +17,8 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import dynamic from "next/dynamic";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
+import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
+import { omitUntouchedUnreadable } from "@/lib/crypto/unreadable";
 
 const TaskView = dynamic(
   () => import("./TaskView").then((mod) => mod.TaskView),
@@ -104,7 +106,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   useEffect(() => {
     if (task) {
       reset({
-        content: task.content,
+        content: task.content ?? "",
         description: task.description || "",
         due_date: task.due_date ?? undefined,
         do_date: task.do_date ?? undefined,
@@ -122,18 +124,20 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
 
       trigger("success");
 
-      updateMutation.mutate({
-        ...data,
-        id: task.id,
-        due_date:
-          data.due_date instanceof Date
-            ? data.due_date.toISOString()
-            : data.due_date || null,
-        do_date:
-          data.do_date instanceof Date
-            ? data.do_date.toISOString()
-            : data.do_date || null,
-      });
+      updateMutation.mutate(
+        omitUntouchedUnreadable(task, {
+          ...data,
+          id: task.id,
+          due_date:
+            data.due_date instanceof Date
+              ? data.due_date.toISOString()
+              : data.due_date || null,
+          do_date:
+            data.do_date instanceof Date
+              ? data.do_date.toISOString()
+              : data.do_date || null,
+        }),
+      );
 
       const stepToFlush = pendingStep.trim();
       if (stepToFlush) {
@@ -290,7 +294,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={handleConfirmDelete}
         title="Delete Task"
-        description={`Are you sure you want to delete "${task.content}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${task.content ?? UNREADABLE_LABEL}"? This action cannot be undone.`}
       />
     </>
   );

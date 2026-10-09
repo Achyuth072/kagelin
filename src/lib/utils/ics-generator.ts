@@ -27,7 +27,7 @@ export function generateICS(
       id: event.id,
       start: event.start,
       end: event.end,
-      summary: event.title,
+      summary: event.title ?? undefined,
       description: event.description || undefined,
       location: event.location || undefined,
       allDay: event.allDay,

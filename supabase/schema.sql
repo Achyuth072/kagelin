@@ -146,13 +146,19 @@ CREATE INDEX IF NOT EXISTS notification_queue_user_id_idx ON public.notification
 -- =============================================================================
 -- 8. TRIGGERS: Auto-update updated_at
 -- =============================================================================
+-- A Re-seal rewrites only the ciphertext of unchanged text, so it keeps updated_at: a bump
+-- would make a stale pending calendar edit win last-write-wins over a newer remote one.
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SET search_path = ''
 AS $$
 BEGIN
-  NEW.updated_at = now();
+  IF NULLIF(current_setting('request.headers', true), '')::json->>'x-kagelin-reseal' = '1' THEN
+    NEW.updated_at = OLD.updated_at;
+  ELSE
+    NEW.updated_at = now();
+  END IF;
   RETURN NEW;
 END;
 $$;
@@ -393,7 +399,7 @@ SELECT cron.schedule(
 );
 
 -- Returns encrypted payload envelope for valid ciphertext, or NULL to omit via jsonb_strip_nulls.
--- Scheme literal below must match SCHEME in src/lib/crypto/envelope.ts.
+-- Scheme literals below must match SCHEME and SCHEME_V2 in src/lib/crypto/envelope.ts.
 CREATE OR REPLACE FUNCTION public.encrypted_notification_body(
   template TEXT,
   ciphertext TEXT
@@ -404,7 +410,7 @@ IMMUTABLE
 SET search_path = public
 AS $$
   SELECT CASE
-    WHEN ciphertext LIKE 'xchacha20poly1305-v1:%'
+    WHEN ciphertext ~ '^xchacha20poly1305-v[12]:'
     THEN jsonb_build_object('template', template, 'ciphertext', ciphertext)
   END;
 $$;
@@ -619,6 +625,7 @@ BEGIN
   -- All-day events have no start time to announce.
   SELECT jsonb_build_object(
     'ciphertext', (public.encrypted_notification_body('{}', ev.title))->>'ciphertext',
+    'eventId', ev.id,
     'time', to_char(ev.start_time AT TIME ZONE tz, 'HH24:MI')
   )
   INTO next_up
@@ -633,7 +640,8 @@ BEGIN
 
   IF next_up IS NULL THEN
     SELECT jsonb_build_object(
-      'ciphertext', (public.encrypted_notification_body('{}', t.content))->>'ciphertext'
+      'ciphertext', (public.encrypted_notification_body('{}', t.content))->>'ciphertext',
+      'taskId', t.id
     )
     INTO next_up
     FROM public.tasks t
@@ -674,8 +682,17 @@ BEGIN
      AND OLD.is_completed IS NOT DISTINCT FROM NEW.is_completed
      AND OLD.due_date IS NOT DISTINCT FROM NEW.due_date
      AND OLD.do_date IS NOT DISTINCT FROM NEW.do_date
-     AND OLD.content IS NOT DISTINCT FROM NEW.content
      AND OLD.recurrence IS NOT DISTINCT FROM NEW.recurrence THEN
+    -- Preserve pending reminders across text changes and re-seals by refreshing ciphertext.
+    IF OLD.content IS DISTINCT FROM NEW.content AND NEW.content ~ '^xchacha20poly1305-v[12]:' THEN
+      UPDATE public.notification_queue
+      SET payload = jsonb_set(payload, '{encrypted,ciphertext}', to_jsonb(NEW.content))
+      WHERE reference_id = NEW.id
+        AND status = 'pending'
+        AND type IN ('due_date', 'do_date')
+        AND scheduled_at > now()
+        AND payload ? 'encrypted';
+    END IF;
     RETURN NEW;
   END IF;
 
@@ -968,6 +985,25 @@ CREATE TABLE IF NOT EXISTS public.habit_entries (
 -- Index for performance
 CREATE INDEX IF NOT EXISTS habit_entries_habit_id_idx ON public.habit_entries (habit_id);
 
+-- Notes are sealed for the row id; upserts on (habit_id, date) must not change it.
+CREATE OR REPLACE FUNCTION public.keep_habit_entry_id()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF NEW.id IS DISTINCT FROM OLD.id THEN
+    RAISE EXCEPTION 'habit_entries.id cannot change'
+      USING ERRCODE = 'check_violation', HINT = 'habit_entry_id_changed';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER habit_entries_keep_id
+  BEFORE UPDATE ON public.habit_entries
+  FOR EACH ROW EXECUTE FUNCTION public.keep_habit_entry_id();
+
 CREATE OR REPLACE FUNCTION public.habit_window_unsatisfied(p_habit public.habits, p_date DATE)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -1089,6 +1125,9 @@ CREATE POLICY "Users can view own habit_imports" ON public.habit_imports
   FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own habit_imports" ON public.habit_imports
   FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- Only the Re-seal updates a row, to rewrite its sealing; the content stays as imported.
+CREATE POLICY "Users can update own habit_imports" ON public.habit_imports
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can delete own habit_imports" ON public.habit_imports
   FOR DELETE USING (auth.uid() = user_id);
 
@@ -1172,8 +1211,17 @@ BEGIN
      AND OLD.is_archived IS NOT DISTINCT FROM NEW.is_archived
      AND OLD.sync_state IS NOT DISTINCT FROM NEW.sync_state
      AND OLD.all_day IS NOT DISTINCT FROM NEW.all_day
-     AND OLD.recurrence_rule IS NOT DISTINCT FROM NEW.recurrence_rule
-     AND OLD.title IS NOT DISTINCT FROM NEW.title THEN
+     AND OLD.recurrence_rule IS NOT DISTINCT FROM NEW.recurrence_rule THEN
+    -- Preserve pending reminders across text changes and re-seals by refreshing ciphertext.
+    IF OLD.title IS DISTINCT FROM NEW.title AND NEW.title ~ '^xchacha20poly1305-v[12]:' THEN
+      UPDATE public.notification_queue
+      SET payload = jsonb_set(payload, '{encrypted,ciphertext}', to_jsonb(NEW.title))
+      WHERE reference_id = NEW.id
+        AND status = 'pending'
+        AND type = 'event_reminder'
+        AND scheduled_at > now()
+        AND payload ? 'encrypted';
+    END IF;
     RETURN NEW;
   END IF;
 
@@ -1250,7 +1298,7 @@ AFTER INSERT OR UPDATE OR DELETE ON public.calendar_events
 FOR EACH ROW EXECUTE FUNCTION public.handle_event_notification_sync();
 
 -- Snooze: re-queue a sent task or event reminder 10 minutes out. The item's own
--- dates are untouched; a task or event edit later cancels the snooze like any
+-- dates are untouched; a date or completion change later cancels the snooze like any
 -- pending reminder (the sync triggers).
 CREATE OR REPLACE FUNCTION public.snooze_reminder(p_type TEXT, p_reference_id UUID)
 RETURNS TEXT
@@ -1262,6 +1310,7 @@ DECLARE
   snooze_until TIMESTAMPTZ := now() + interval '10 minutes';
   sent_row public.notification_queue;
   event_row public.calendar_events;
+  task_content TEXT;
   user_settings JSONB;
   tz TEXT;
   snooze_day DATE;
@@ -1327,14 +1376,28 @@ BEGIN
                ELSE '"{}" starts in ' || hours || ' hours'
           END,
           event_row.title)));
+    ELSE
+      sent_row.payload := jsonb_strip_nulls(sent_row.payload || jsonb_build_object(
+        'encrypted', public.encrypted_notification_body(
+          CASE WHEN event_row.reminder_minutes >= 1440
+            THEN '"{}" is tomorrow' ELSE '"{}" is today' END,
+          event_row.title)));
     END IF;
-  ELSIF NOT EXISTS (
-    SELECT 1 FROM public.tasks t
+  ELSE
+    SELECT t.content INTO task_content FROM public.tasks t
     WHERE t.id = p_reference_id
       AND t.user_id = auth.uid()
-      AND NOT t.is_completed
-  ) THEN
-    RETURN 'dropped';
+      AND NOT t.is_completed;
+
+    IF NOT FOUND THEN
+      RETURN 'dropped';
+    END IF;
+
+    -- Re-seals strip delivered ciphertext; rebuild from the task.
+    sent_row.payload := jsonb_strip_nulls(sent_row.payload || jsonb_build_object(
+      'encrypted', public.encrypted_notification_body(
+        CASE p_type WHEN 'due_date' THEN 'Your task "{}" is due now.' ELSE 'Scheduled: {}' END,
+        task_content)));
   END IF;
 
   -- A double tap, or a second device, must not queue a second snooze.
@@ -2018,7 +2081,14 @@ CREATE TABLE IF NOT EXISTS public.encryption_keys (
   recovery_kdf_params JSONB NOT NULL,
   wrapped_key_recovery TEXT NOT NULL,
   migrated_at TIMESTAMPTZ,
+  sealed_v2_at TIMESTAMPTZ,
+  -- Advances on every rotation; retired_keys maps a retired key id to that key wrapped
+  -- under the current content key, and is emptied when the Re-seal completes.
+  current_key_id INTEGER NOT NULL DEFAULT 1,
+  retired_keys JSONB NOT NULL DEFAULT '{}',
   passphrase_reset_required BOOLEAN NOT NULL DEFAULT false,
+  -- SHA-256 proof required to rotate the content key.
+  rotation_verifier TEXT,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT now() NOT NULL
 );
@@ -2037,11 +2107,39 @@ CREATE TRIGGER encryption_keys_updated_at
   BEFORE UPDATE ON public.encryption_keys
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
+-- The owner's UPDATE policy covers every column, so a session without the content key could
+-- overwrite the wrappers, roll the key chain back or move a marker. Only the definer RPCs,
+-- which demand proof of the key, change the row. A session may still backfill a missing
+-- verifier, and flag a passphrase reset so the recovery-code unlock itself never needs the proof.
+CREATE OR REPLACE FUNCTION public.guard_encryption_key_markers()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF current_user IN ('authenticated', 'anon') AND (
+       (to_jsonb(NEW) - 'rotation_verifier' - 'passphrase_reset_required' - 'updated_at')
+         IS DISTINCT FROM (to_jsonb(OLD) - 'rotation_verifier' - 'passphrase_reset_required' - 'updated_at')
+    OR (OLD.rotation_verifier IS NOT NULL AND NEW.rotation_verifier IS DISTINCT FROM OLD.rotation_verifier)
+    OR (OLD.passphrase_reset_required AND NOT NEW.passphrase_reset_required)
+  ) THEN
+    RAISE EXCEPTION 'Only a device holding the content key can change the key row'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER encryption_keys_guard_markers
+  BEFORE UPDATE ON public.encryption_keys
+  FOR EACH ROW EXECUTE FUNCTION public.guard_encryption_key_markers();
+
 -- =============================================================================
 -- 22. SERVER-SIDE PLAINTEXT BACKSTOP (post-migration)
 -- =============================================================================
 -- Rejects plaintext writes once encryption backfill completes (migrated_at set)
--- to prevent stale clients from silently storing unencrypted content.
+-- to prevent stale clients from silently storing unencrypted content, and `-v1`
+-- writes once the Re-seal completes (sealed_v2_at set).
 
 CREATE OR REPLACE FUNCTION public.reject_unmigrated_plaintext()
 RETURNS TRIGGER
@@ -2050,10 +2148,13 @@ SET search_path = public
 AS $$
 DECLARE
   is_migrated BOOLEAN;
+  is_sealed_v2 BOOLEAN;
+  current_key TEXT;
   col TEXT;
   val TEXT;
 BEGIN
-  SELECT migrated_at IS NOT NULL INTO is_migrated
+  SELECT migrated_at IS NOT NULL, sealed_v2_at IS NOT NULL, current_key_id::text
+  INTO is_migrated, is_sealed_v2, current_key
   FROM public.encryption_keys
   WHERE user_id = NEW.user_id;
 
@@ -2063,9 +2164,23 @@ BEGIN
 
   FOREACH col IN ARRAY TG_ARGV LOOP
     val := (to_jsonb(NEW) -> col) #>> '{}';
-    IF val IS NOT NULL AND val NOT LIKE 'xchacha20poly1305-v1:%' THEN
+    IF val IS NOT NULL AND val !~ '^xchacha20poly1305-v[12]:' THEN
       RAISE EXCEPTION 'Column %.% must be encrypted once a user has completed content-key setup', TG_TABLE_NAME, col
         USING ERRCODE = 'check_violation';
+    END IF;
+    -- An untouched legacy value must not block edits to the row's other columns.
+    IF COALESCE(is_sealed_v2, FALSE)
+       AND val ~ '^xchacha20poly1305-v1:'
+       AND NOT (TG_OP = 'UPDATE' AND val IS NOT DISTINCT FROM (to_jsonb(OLD) -> col) #>> '{}') THEN
+      RAISE EXCEPTION 'Column %.% must be sealed with the current scheme', TG_TABLE_NAME, col
+        USING ERRCODE = 'check_violation', HINT = 'sealing_scheme_outdated';
+    END IF;
+    -- Same for a value still under a retired key while the Re-seal runs.
+    IF val IS NOT NULL
+       AND split_part(val, ':', 2) <> current_key
+       AND NOT (TG_OP = 'UPDATE' AND val IS NOT DISTINCT FROM (to_jsonb(OLD) -> col) #>> '{}') THEN
+      RAISE EXCEPTION 'Column %.% must be sealed with the current content key', TG_TABLE_NAME, col
+        USING ERRCODE = 'check_violation', HINT = 'content_key_retired';
     END IF;
   END LOOP;
 
@@ -2109,19 +2224,33 @@ SET search_path = public
 AS $$
 DECLARE
   is_migrated BOOLEAN;
+  is_sealed_v2 BOOLEAN;
+  current_key TEXT;
 BEGIN
-  IF NEW.notes IS NULL OR NEW.notes LIKE 'xchacha20poly1305-v1:%' THEN
+  IF NEW.notes IS NULL THEN
     RETURN NEW;
   END IF;
 
-  SELECT k.migrated_at IS NOT NULL INTO is_migrated
+  SELECT k.migrated_at IS NOT NULL, k.sealed_v2_at IS NOT NULL, k.current_key_id::text
+  INTO is_migrated, is_sealed_v2, current_key
   FROM public.habits h
   JOIN public.encryption_keys k ON k.user_id = h.user_id
   WHERE h.id = NEW.habit_id;
 
-  IF COALESCE(is_migrated, FALSE) THEN
-    RAISE EXCEPTION 'Column habit_entries.notes must be encrypted once a user has completed content-key setup'
-      USING ERRCODE = 'check_violation';
+  IF NEW.notes !~ '^xchacha20poly1305-v[12]:' THEN
+    IF COALESCE(is_migrated, FALSE) THEN
+      RAISE EXCEPTION 'Column habit_entries.notes must be encrypted once a user has completed content-key setup'
+        USING ERRCODE = 'check_violation';
+    END IF;
+  ELSIF COALESCE(is_sealed_v2, FALSE)
+        AND NEW.notes ~ '^xchacha20poly1305-v1:'
+        AND NOT (TG_OP = 'UPDATE' AND NEW.notes IS NOT DISTINCT FROM OLD.notes) THEN
+    RAISE EXCEPTION 'Column habit_entries.notes must be sealed with the current scheme'
+      USING ERRCODE = 'check_violation', HINT = 'sealing_scheme_outdated';
+  ELSIF split_part(NEW.notes, ':', 2) <> current_key
+        AND NOT (TG_OP = 'UPDATE' AND NEW.notes IS NOT DISTINCT FROM OLD.notes) THEN
+    RAISE EXCEPTION 'Column habit_entries.notes must be sealed with the current content key'
+      USING ERRCODE = 'check_violation', HINT = 'content_key_retired';
   END IF;
 
   RETURN NEW;
@@ -2131,3 +2260,130 @@ $$;
 CREATE TRIGGER habit_entries_reject_unmigrated_plaintext
   BEFORE INSERT OR UPDATE ON public.habit_entries
   FOR EACH ROW EXECUTE FUNCTION public.reject_unmigrated_plaintext_habit_entry();
+
+-- Commits every new wrapper, the retired-key chain and the key id advance in one statement, or
+-- none of them. It leaves sealed_v2_at alone: the retired keys alone mark the Re-seal as due,
+-- so the -v1 rejection stays on through a rotation.
+CREATE OR REPLACE FUNCTION public.rotate_content_key(
+  p_expected_key_id INTEGER,
+  p_passphrase_salt TEXT,
+  p_passphrase_kdf_params JSONB,
+  p_wrapped_key_passphrase TEXT,
+  p_recovery_salt TEXT,
+  p_recovery_kdf_params JSONB,
+  p_wrapped_key_recovery TEXT,
+  p_retired_keys JSONB,
+  p_rotation_token TEXT,
+  p_rotation_verifier TEXT
+)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  stored_verifier TEXT;
+  new_key_id INTEGER;
+BEGIN
+  SELECT rotation_verifier INTO stored_verifier
+  FROM public.encryption_keys
+  WHERE user_id = auth.uid();
+
+  IF stored_verifier IS NULL
+     OR stored_verifier IS DISTINCT FROM encode(sha256(decode(p_rotation_token, 'base64')), 'base64') THEN
+    RAISE EXCEPTION 'Only a device holding the current content key can rotate it.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  UPDATE public.encryption_keys
+  SET passphrase_salt = p_passphrase_salt,
+      passphrase_kdf_params = p_passphrase_kdf_params,
+      wrapped_key_passphrase = p_wrapped_key_passphrase,
+      recovery_salt = p_recovery_salt,
+      recovery_kdf_params = p_recovery_kdf_params,
+      wrapped_key_recovery = p_wrapped_key_recovery,
+      retired_keys = p_retired_keys,
+      rotation_verifier = p_rotation_verifier,
+      current_key_id = current_key_id + 1,
+      passphrase_reset_required = false
+  WHERE user_id = auth.uid()
+    AND current_key_id = p_expected_key_id
+    AND rotation_verifier = stored_verifier
+  RETURNING current_key_id INTO new_key_id;
+
+  IF new_key_id IS NULL THEN
+    RAISE EXCEPTION 'The content key changed on another device. Unlock again and retry.'
+      USING ERRCODE = 'check_violation', HINT = 'content_key_retired';
+  END IF;
+
+  RETURN new_key_id;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.rotate_content_key(INTEGER, TEXT, JSONB, TEXT, TEXT, JSONB, TEXT, JSONB, TEXT, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.rotate_content_key(INTEGER, TEXT, JSONB, TEXT, TEXT, JSONB, TEXT, JSONB, TEXT, TEXT) TO authenticated;
+
+-- Returns no row when the key id moved on, so a stale device learns it must unlock again.
+-- Retired keys can only be cleared here; only a rotation adds them.
+CREATE OR REPLACE FUNCTION public.update_encryption_key_row(
+  p_expected_key_id INTEGER,
+  p_rotation_token TEXT,
+  p_patch JSONB
+)
+RETURNS SETOF public.encryption_keys
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  stored_key_id INTEGER;
+  stored_verifier TEXT;
+  proof TEXT := encode(sha256(decode(p_rotation_token, 'base64')), 'base64');
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM jsonb_object_keys(p_patch) AS k
+    WHERE k NOT IN (
+      'passphrase_salt', 'passphrase_kdf_params', 'wrapped_key_passphrase',
+      'recovery_salt', 'recovery_kdf_params', 'wrapped_key_recovery',
+      'passphrase_reset_required', 'migrated_at', 'sealed_v2_at', 'retired_keys'
+    )
+  ) OR (p_patch ? 'retired_keys' AND p_patch -> 'retired_keys' <> '{}'::jsonb) THEN
+    RAISE EXCEPTION 'Only a rotation changes the content key chain'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  SELECT current_key_id, rotation_verifier INTO stored_key_id, stored_verifier
+  FROM public.encryption_keys
+  WHERE user_id = auth.uid()
+  FOR UPDATE;
+
+  IF stored_key_id IS DISTINCT FROM p_expected_key_id THEN
+    RETURN;
+  END IF;
+
+  -- A missing verifier is backfilled by a direct UPDATE first, so trust on first use has one path.
+  IF stored_verifier IS NULL OR stored_verifier IS DISTINCT FROM proof THEN
+    RAISE EXCEPTION 'This device could not prove it holds your content key. Contact support.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  -- COALESCE keeps a marker that is absent or null in the patch, so neither can be cleared.
+  RETURN QUERY
+  UPDATE public.encryption_keys
+  SET passphrase_salt = COALESCE(p_patch ->> 'passphrase_salt', passphrase_salt),
+      passphrase_kdf_params = COALESCE(NULLIF(p_patch -> 'passphrase_kdf_params', 'null'::jsonb), passphrase_kdf_params),
+      wrapped_key_passphrase = COALESCE(p_patch ->> 'wrapped_key_passphrase', wrapped_key_passphrase),
+      recovery_salt = COALESCE(p_patch ->> 'recovery_salt', recovery_salt),
+      recovery_kdf_params = COALESCE(NULLIF(p_patch -> 'recovery_kdf_params', 'null'::jsonb), recovery_kdf_params),
+      wrapped_key_recovery = COALESCE(p_patch ->> 'wrapped_key_recovery', wrapped_key_recovery),
+      passphrase_reset_required = COALESCE((p_patch ->> 'passphrase_reset_required')::BOOLEAN, passphrase_reset_required),
+      migrated_at = COALESCE((p_patch ->> 'migrated_at')::TIMESTAMPTZ, migrated_at),
+      sealed_v2_at = COALESCE((p_patch ->> 'sealed_v2_at')::TIMESTAMPTZ, sealed_v2_at),
+      retired_keys = CASE WHEN p_patch ? 'retired_keys' THEN '{}'::jsonb ELSE retired_keys END
+  WHERE user_id = auth.uid()
+  RETURNING *;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.update_encryption_key_row(INTEGER, TEXT, JSONB) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.update_encryption_key_row(INTEGER, TEXT, JSONB) TO authenticated;

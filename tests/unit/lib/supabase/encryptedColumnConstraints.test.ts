@@ -61,3 +61,147 @@ CREATE TABLE IF NOT EXISTS public.notes (
     expect(envelope.length).toBeGreaterThan(500);
   });
 });
+
+describe("server-side scheme checks accept the row-bound -v2 envelope", () => {
+  it("recognises -v1 and -v2 in every sealed-value check", () => {
+    // Checks: encrypted_notification_body, plaintext backstop, habit notes trigger, task and event reminder triggers.
+    const checks = schemaSql.match(/'\^?xchacha20poly1305-v\[12\]:'/g) ?? [];
+    expect(checks).toHaveLength(5);
+  });
+
+  it("names -v1 alone only where the backstop rejects it after the Re-seal marker", () => {
+    const v1Only = schemaSql.match(/'\^xchacha20poly1305-v1:'/g) ?? [];
+    expect(v1Only).toHaveLength(2);
+
+    const backstops = schemaSql.match(
+      /CREATE OR REPLACE FUNCTION public\.reject_unmigrated_plaintext(?:_habit_entry)?\(\)[\s\S]*?\n\$\$;/g,
+    );
+    expect(backstops).toHaveLength(2);
+    for (const fn of backstops!) {
+      expect(fn).toMatch(/sealed_v2_at IS NOT NULL/);
+      expect(fn).toMatch(/xchacha20poly1305-v1:/);
+      expect(fn).toMatch(/HINT = 'sealing_scheme_outdated'/);
+    }
+  });
+
+  it("stores the markers and key chain on the key row", () => {
+    expect(schemaSql).toMatch(/current_key_id INTEGER NOT NULL DEFAULT 1/);
+    expect(schemaSql).toMatch(/retired_keys JSONB NOT NULL DEFAULT/);
+    expect(schemaSql).toMatch(/sealed_v2_at TIMESTAMPTZ/);
+  });
+});
+
+describe("server-side backstop for a rotated content key", () => {
+  const backstops = schemaSql.match(
+    /CREATE OR REPLACE FUNCTION public\.reject_unmigrated_plaintext(?:_habit_entry)?\(\)[\s\S]*?\n\$\$;/g,
+  );
+
+  it("rejects an envelope whose key id is not the current one, in both triggers", () => {
+    expect(backstops).toHaveLength(2);
+    for (const fn of backstops!) {
+      expect(fn).toMatch(/current_key_id::text/);
+      expect(fn).toMatch(/split_part\([^)]*':', 2\) <> current_key/);
+      expect(fn).toMatch(/HINT = 'content_key_retired'/);
+    }
+  });
+
+  it("commits a rotation through one RPC that bumps current_key_id only from the expected id", () => {
+    const rpc = schemaSql.match(
+      /CREATE OR REPLACE FUNCTION public\.rotate_content_key\([\s\S]*?\n\$\$;/,
+    )?.[0];
+    expect(rpc).toBeDefined();
+    expect(rpc).toMatch(/current_key_id = current_key_id \+ 1/);
+    expect(rpc).toMatch(/current_key_id = p_expected_key_id/);
+    expect(rpc).toMatch(/retired_keys = p_retired_keys/);
+    expect(rpc).toMatch(/SECURITY DEFINER/);
+  });
+
+  it("rotates only for a caller that proves it holds the current key, in schema and migration", () => {
+    const migration = readFileSync(
+      path.resolve(
+        __dirname,
+        "../../../../supabase/migrations/20261008120500_rotation_requires_key_proof.sql",
+      ),
+      "utf-8",
+    );
+    for (const sql of [schemaSql, migration]) {
+      const rpc = sql.match(
+        /CREATE OR REPLACE FUNCTION public\.rotate_content_key\([\s\S]*?\n\$\$;/,
+      )?.[0];
+      expect(rpc).toContain(
+        "stored_verifier IS DISTINCT FROM encode(sha256(decode(p_rotation_token, 'base64')), 'base64')",
+      );
+      expect(rpc).toContain("rotation_verifier = p_rotation_verifier");
+    }
+    expect(migration).toContain(
+      "DROP FUNCTION IF EXISTS public.rotate_content_key(INTEGER, TEXT, JSONB, TEXT, TEXT, JSONB, TEXT, JSONB);",
+    );
+  });
+
+  it("keeps the -v1 rejection on through a rotation", () => {
+    const rpc = schemaSql.match(
+      /CREATE OR REPLACE FUNCTION public\.rotate_content_key\([\s\S]*?\n\$\$;/,
+    )?.[0];
+    expect(rpc).not.toMatch(/sealed_v2_at/);
+  });
+});
+
+describe("a direct UPDATE cannot change the key row without proof of the key", () => {
+  const guard = schemaSql.match(
+    /CREATE OR REPLACE FUNCTION public\.guard_encryption_key_markers\(\)[\s\S]*?\n\$\$;/,
+  )?.[0];
+
+  it("runs before every update of encryption_keys", () => {
+    expect(schemaSql).toMatch(
+      /CREATE TRIGGER encryption_keys_guard_markers\s+BEFORE UPDATE ON public\.encryption_keys\s+FOR EACH ROW EXECUTE FUNCTION public\.guard_encryption_key_markers\(\)/,
+    );
+  });
+
+  it("lets a device set the rotation verifier once, and only a rotation replace it", () => {
+    expect(guard).toContain(
+      "OLD.rotation_verifier IS NOT NULL AND NEW.rotation_verifier IS DISTINCT FROM OLD.rotation_verifier",
+    );
+  });
+
+  it("refuses every other direct change, so only the proof-checking RPCs edit the row", () => {
+    expect(guard).toBeDefined();
+    expect(guard).toMatch(/current_user IN \('authenticated', 'anon'\)/);
+    expect(guard).toContain(
+      "(to_jsonb(NEW) - 'rotation_verifier' - 'passphrase_reset_required' - 'updated_at')\n         IS DISTINCT FROM (to_jsonb(OLD) - 'rotation_verifier' - 'passphrase_reset_required' - 'updated_at')",
+    );
+    expect(guard).toContain(
+      "OLD.passphrase_reset_required AND NOT NEW.passphrase_reset_required",
+    );
+  });
+
+  it("checks proof of the content key in the RPC that makes those changes", () => {
+    const rpc = schemaSql.match(
+      /CREATE OR REPLACE FUNCTION public\.update_encryption_key_row\([\s\S]*?\n\$\$;/,
+    )?.[0];
+    expect(rpc).toMatch(/SECURITY DEFINER\s+SET search_path = ''/);
+    expect(rpc).toContain(
+      "encode(sha256(decode(p_rotation_token, 'base64')), 'base64')",
+    );
+    expect(rpc).toContain("WHERE user_id = auth.uid()");
+    expect(schemaSql).toContain(
+      "REVOKE EXECUTE ON FUNCTION public.update_encryption_key_row(INTEGER, TEXT, JSONB) FROM PUBLIC, anon;",
+    );
+  });
+});
+
+describe("a Re-seal write keeps updated_at", () => {
+  it("in the schema and its migration, keyed on the header the Re-seal sends", () => {
+    const migration = readFileSync(
+      path.resolve(
+        __dirname,
+        "../../../../supabase/migrations/20261008120600_reseal_keeps_updated_at.sql",
+      ),
+      "utf-8",
+    );
+    for (const sql of [schemaSql, migration]) {
+      expect(sql).toContain(
+        "IF NULLIF(current_setting('request.headers', true), '')::json->>'x-kagelin-reseal' = '1' THEN\n    NEW.updated_at = OLD.updated_at;",
+      );
+    }
+  });
+});

@@ -175,6 +175,8 @@ export async function pushPendingEvents(
         result.pushed++;
         continue;
       }
+      // Pushing would blank the remote copy; the event stays pending until it is fixed (ADR 0023).
+      if (event.unreadable) continue;
 
       let remoteId = event.remote_id;
       let etag: string;
@@ -273,6 +275,7 @@ export async function applyPullMutations(
       if (!match) {
         rows.push({
           ...item,
+          id: crypto.randomUUID(),
           user_id: calendar.user_id,
           remote_calendar_id: calendar.id,
         });

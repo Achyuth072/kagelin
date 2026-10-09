@@ -1,5 +1,6 @@
 "use client";
 
+import { compareReadable } from "@/lib/crypto/unreadable";
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
@@ -15,7 +16,7 @@ export function useProjects() {
       if (isGuestMode) {
         return mockStore
           .getProjects()
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .sort((a, b) => compareReadable(a.name, b.name));
       }
 
       const supabase = createClient();
@@ -34,7 +35,7 @@ export function useProjects() {
       const inbox = projects.filter((p) => p.is_inbox);
       const rest = projects
         .filter((p) => !p.is_inbox)
-        .sort((a, b) => a.name.localeCompare(b.name));
+        .sort((a, b) => compareReadable(a.name, b.name));
       return [...inbox, ...rest];
     },
   });
@@ -79,7 +80,7 @@ export function useArchivedProjects() {
         return mockStore
           .getProjects()
           .filter((p) => p.is_archived)
-          .sort((a, b) => a.name.localeCompare(b.name));
+          .sort((a, b) => compareReadable(a.name, b.name));
       }
 
       const supabase = createClient();
@@ -94,7 +95,9 @@ export function useArchivedProjects() {
       }
 
       // Name is encrypted at rest; sorted client-side.
-      return (data as Project[]).sort((a, b) => a.name.localeCompare(b.name));
+      return (data as Project[]).sort((a, b) =>
+        compareReadable(a.name, b.name),
+      );
     },
   });
 }

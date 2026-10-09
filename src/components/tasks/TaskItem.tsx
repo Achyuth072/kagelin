@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { BoardTaskCard } from "./BoardTaskCard";
 import { ListTaskCard } from "./ListTaskCard";
 import { SwipeableTaskContent } from "./SwipeableTaskContent";
+import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
 
 interface TaskItemProps {
   task: Task;
@@ -35,7 +36,7 @@ interface TaskItemProps {
   viewMode?: TaskViewMode;
   dragActivatorRef?: (element: HTMLElement | null) => void;
   isDndActive?: boolean;
-  project?: { color: string; name: string };
+  project?: { color: string; name: string | null };
   isDesktop?: boolean;
   triggerHaptic?: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   setActiveTaskId?: (taskId: string) => void;
@@ -241,7 +242,7 @@ function TaskItemBase({
         onClose={handleCancelDelete}
         onConfirm={handleConfirmDelete}
         title="Delete Task"
-        description={`Are you sure you want to delete "${task.content}"? This action cannot be undone.`}
+        description={`Are you sure you want to delete "${task.content ?? UNREADABLE_LABEL}"? This action cannot be undone.`}
       />
     </div>
   );

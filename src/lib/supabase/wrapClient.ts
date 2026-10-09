@@ -1,27 +1,44 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { keyStore } from "@/lib/crypto/keyStore";
+import { keyStore, type Keyring } from "@/lib/crypto/keyStore";
+import { keyForEnvelope } from "@/lib/crypto/keyring";
 import {
   encryptField,
   decryptField,
   isCiphertext,
 } from "@/lib/crypto/contentCipher";
+import {
+  envelopeKeyId,
+  isRowBound,
+  isUnopenableValueError,
+  type Binding,
+} from "@/lib/crypto/envelope";
+import { keyChainMark } from "@/lib/crypto/keyChainMark";
 import { FIELD_MAP, JSON_FIELDS, type FieldMap } from "@/lib/supabase/fieldMap";
+import { trackTelemetry } from "@/lib/telemetry/client";
+import { assertReadable } from "@/lib/crypto/unreadable";
+
+interface WrapContext {
+  fieldMap: FieldMap;
+  // Row-bound ciphertext is bound to the session's user, not to a row column (habit_entries has none).
+  getUserId: () => Promise<string | null>;
+}
 
 // Intercepts `.from(...)` queries only; `.channel` and `.rpc` bypass encryption.
 export function wrapSupabaseClient<T extends SupabaseClient>(
   client: T,
   fieldMap: FieldMap = FIELD_MAP,
 ): T {
+  const ctx: WrapContext = {
+    fieldMap,
+    getUserId: async () =>
+      (await client.auth.getSession()).data.session?.user.id ?? null,
+  };
   return new Proxy(client, {
     get(target, prop, _receiver) {
       if (prop === "from") {
         return (table: string) =>
-          wrapQueryBuilder(
-            (target as any).from(table),
-            String(table),
-            fieldMap,
-          );
+          wrapQueryBuilder((target as any).from(table), String(table), ctx);
       }
       const value = Reflect.get(target, prop, target);
       return typeof value === "function" ? value.bind(target) : value;
@@ -33,13 +50,46 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-async function getContentKey(): Promise<Uint8Array | null> {
-  return keyStore.load();
+interface ReadLoaders {
+  keyring: () => Promise<Keyring | null>;
+  userId: () => Promise<string | null>;
+  sealedV2: () => Promise<boolean>;
 }
 
-function createKeyLoader(): () => Promise<Uint8Array | null> {
-  let pending: Promise<Uint8Array | null> | null = null;
-  return () => (pending ??= getContentKey());
+function createReadLoaders(ctx: WrapContext): ReadLoaders {
+  let keyring: Promise<Keyring | null> | null = null;
+  let userId: Promise<string | null> | null = null;
+  let sealedV2: Promise<boolean> | null = null;
+  const loaders: ReadLoaders = {
+    keyring: () => (keyring ??= keyStore.loadKeyring()),
+    userId: () => (userId ??= ctx.getUserId()),
+    sealedV2: () =>
+      (sealedV2 ??= loaders
+        .userId()
+        .then(async (id) => !!id && (await keyChainMark.load(id)).sealedV2)),
+  };
+  return loaders;
+}
+
+export const MISSING_ROW_ID_CODE = "missing_row_id";
+
+// Row-bound ciphertext needs the row id before encryption, so the database default cannot supply it.
+function missingRowIdError(table: string) {
+  return Object.assign(
+    new Error(
+      `Cannot write to "${table}" without a client-generated id on every row.`,
+    ),
+    { code: MISSING_ROW_ID_CODE },
+  );
+}
+
+function assertRowIds(table: string, fieldMap: FieldMap, values: unknown) {
+  if (!fieldMap[table]?.length) return;
+  const rows = Array.isArray(values) ? values : [values];
+  const idless = rows.some(
+    (row) => !isPlainObject(row) || typeof row.id !== "string" || !row.id,
+  );
+  if (idless) throw missingRowIdError(table);
 }
 
 export function isJsonField(table: string, field: string): boolean {
@@ -49,11 +99,22 @@ export function isJsonField(table: string, field: string): boolean {
 // Thrown on missing or locked content key, unlike PostgREST's resolved { data, error }.
 export const CONTENT_KEY_UNAVAILABLE_CODE = "content_key_unavailable";
 
-export function isContentKeyUnavailableError(error: unknown): boolean {
+function hasErrorCode(error: unknown, code: string): boolean {
   return (
     typeof error === "object" &&
     error !== null &&
-    (error as { code?: unknown }).code === CONTENT_KEY_UNAVAILABLE_CODE
+    (error as { code?: unknown }).code === code
+  );
+}
+
+export function isContentKeyUnavailableError(error: unknown): boolean {
+  return hasErrorCode(error, CONTENT_KEY_UNAVAILABLE_CODE);
+}
+
+export function isContentKeyRetiredError(error: unknown): boolean {
+  return (
+    isContentKeyUnavailableError(error) &&
+    (error as { hint?: unknown }).hint === "content_key_retired"
   );
 }
 
@@ -79,6 +140,16 @@ export function needsEncryption(
   return isJsonField(table, field) ? value != null : typeof value === "string";
 }
 
+export function isLegacyValue(
+  table: string,
+  field: string,
+  value: unknown,
+): boolean {
+  return isCiphertext(value)
+    ? !isRowBound(value)
+    : needsEncryption(table, field, value);
+}
+
 function rowNeedsEncryption(
   table: string,
   row: unknown,
@@ -90,25 +161,79 @@ function rowNeedsEncryption(
   );
 }
 
+// Server rejection hints mapped to the client error each one is thrown as. Thrown, like a
+// locked key, because most call sites rethrow only error.message and would drop the code.
+const SERVER_HINT_ERRORS: Record<
+  string,
+  { code: string; message: string; signal: ServerKeySignal }
+> = {
+  // The server's marker of a finished upgrade rejects `-v1` writes from a stale app.
+  sealing_scheme_outdated: {
+    code: "app_update_required",
+    message: "Kagelin has been updated. Reload the app to keep saving.",
+    signal: "app_update_required",
+  },
+  // The server's rejection of a write sealed with a key the Account has rotated away from.
+  content_key_retired: {
+    code: CONTENT_KEY_UNAVAILABLE_CODE,
+    message: "Your content key changed. Unlock again to keep saving.",
+    signal: "content_key_retired",
+  },
+};
+
+export type ServerKeySignal = "content_key_retired" | "app_update_required";
+
+const serverKeyListeners = new Set<(signal: ServerKeySignal) => void>();
+
+// Every server write goes through this client, so the app reacts to a rejected key here
+// instead of each caller forwarding the error.
+export function onServerKeySignal(
+  listener: (signal: ServerKeySignal) => void,
+): () => void {
+  serverKeyListeners.add(listener);
+  return () => {
+    serverKeyListeners.delete(listener);
+  };
+}
+
+interface SealContext {
+  key: Uint8Array;
+  keyId: string;
+  userId: string;
+  // Updates carry no id in their payload; it comes from the `.eq("id", ...)` filter.
+  fallbackRowId?: string;
+}
+
 async function encryptRow(
   table: string,
   fields: readonly string[],
   row: unknown,
-  key: Uint8Array,
+  seal: SealContext,
 ): Promise<unknown> {
   if (!isPlainObject(row)) return row;
 
   const out = { ...row };
+  const rowId = typeof row.id === "string" ? row.id : seal.fallbackRowId;
   for (const field of fields) {
     const value = row[field];
     if (needsEncryption(table, field, value)) {
+      if (!rowId) throw missingRowIdError(table);
       out[field] = await encryptField(
-        key,
+        seal.key,
         isJsonField(table, field) ? JSON.stringify(value) : (value as string),
+        { userId: seal.userId, table, column: field, rowId },
+        seal.keyId,
       );
     }
   }
   return out;
+}
+
+export interface EncryptPayloadOptions {
+  userId?: string;
+  // Called only once something needs sealing, so plain writes skip the session read.
+  getUserId?: () => Promise<string | null>;
+  rowId?: string;
 }
 
 // Shared with call sites that write via the service-role client, which
@@ -117,7 +242,11 @@ export async function encryptPayload(
   table: string,
   values: unknown,
   fieldMap: FieldMap = FIELD_MAP,
+  options: EncryptPayloadOptions = {},
 ): Promise<unknown> {
+  for (const row of Array.isArray(values) ? values : [values]) {
+    if (isPlainObject(row)) assertReadable(row);
+  }
   const fields = fieldMap[table];
   if (!fields?.length) return values;
 
@@ -126,60 +255,140 @@ export async function encryptPayload(
     return values;
   }
 
-  const key = await getContentKey();
-  if (!key) {
+  const keyring = await keyStore.loadKeyring();
+  const userId =
+    options.userId ??
+    (await options.getUserId?.()) ??
+    (await keyStore.loadUserId());
+  if (!keyring || !userId) {
     throw contentKeyUnavailableError("write to", table);
   }
 
+  const seal: SealContext = {
+    key: keyring.key,
+    keyId: keyring.keyId,
+    userId,
+    fallbackRowId: options.rowId,
+  };
   if (Array.isArray(values)) {
     return Promise.all(
-      values.map((row) => encryptRow(table, fields, row, key)),
+      values.map((row) => encryptRow(table, fields, row, seal)),
     );
   }
-  return encryptRow(table, fields, values, key);
+  return encryptRow(table, fields, values, seal);
+}
+
+async function bindingFor(
+  table: string,
+  field: string,
+  row: Record<string, unknown>,
+  loaders: ReadLoaders,
+): Promise<Binding | undefined> {
+  if (!isRowBound(row[field] as string)) return undefined;
+  const userId = await loaders.userId();
+  if (!userId || typeof row.id !== "string") return undefined;
+  return { userId, table, column: field, rowId: row.id };
+}
+
+const reportedUnreadable = new Set<string>();
+
+function reportUnreadable(table: string, column: string, rowId: unknown) {
+  const key = `${table}.${column}.${String(rowId)}`;
+  if (reportedUnreadable.has(key)) return;
+  reportedUnreadable.add(key);
+  trackTelemetry("content_unreadable", { table, column });
+}
+
+const UNREADABLE = Symbol("unreadable");
+
+// Opening legacy values after Re-seal would bypass row binding.
+async function refusedLegacyFields(
+  table: string,
+  fields: readonly string[],
+  row: Record<string, unknown>,
+  loaders: ReadLoaders,
+): Promise<string[]> {
+  const legacy = fields.filter((field) =>
+    isLegacyValue(table, field, row[field]),
+  );
+  if (!legacy.length || !(await loaders.sealedV2())) return [];
+  return legacy;
 }
 
 async function decryptRow(
   table: string,
-  fieldMap: FieldMap,
+  ctx: WrapContext,
   row: unknown,
-  loadKey: () => Promise<Uint8Array | null>,
+  loaders: ReadLoaders,
 ): Promise<unknown> {
   if (!isPlainObject(row)) return row;
 
   let out: Record<string, unknown> = row;
-  const fields = fieldMap[table];
+  const fields = ctx.fieldMap[table];
   if (fields?.length) {
-    const encryptedFields = fields.filter((field) => isCiphertext(out[field]));
+    const refused = await refusedLegacyFields(table, fields, row, loaders);
+    const encryptedFields = fields.filter(
+      (field) => isCiphertext(out[field]) || refused.includes(field),
+    );
     if (encryptedFields.length) {
-      const key = await loadKey();
-      if (!key) {
-        throw contentKeyUnavailableError("read", table);
-      }
       const decrypted = await Promise.all(
         encryptedFields.map(async (field) => {
-          const plaintext = await decryptField(key, out[field] as string);
-          return [
-            field,
-            isJsonField(table, field) ? JSON.parse(plaintext) : plaintext,
-          ] as const;
+          const envelope = out[field] as string;
+          const unreadable = () => {
+            reportUnreadable(table, field, row.id);
+            return [field, UNREADABLE] as const;
+          };
+          if (refused.includes(field)) return unreadable();
+          const keyring = await loaders.keyring();
+          if (!keyring) {
+            throw contentKeyUnavailableError("read", table);
+          }
+          // No key id at all is a damaged value, not a key this device lacks.
+          if (envelopeKeyId(envelope) === undefined) return unreadable();
+          const key = keyForEnvelope(keyring, envelope);
+          if (!key) throw contentKeyUnavailableError("read", table);
+          const binding = await bindingFor(table, field, row, loaders);
+          let plaintext: string;
+          try {
+            plaintext = await decryptField(key, envelope, binding);
+          } catch (error) {
+            if (!isUnopenableValueError(error)) throw error;
+            return unreadable();
+          }
+          if (!isJsonField(table, field)) return [field, plaintext] as const;
+          try {
+            return [field, JSON.parse(plaintext)] as const;
+          } catch {
+            return unreadable();
+          }
         }),
       );
       out = { ...row };
-      for (const [field, value] of decrypted) out[field] = value;
+      const unreadable: string[] = [];
+      for (const [field, value] of decrypted) {
+        if (value === UNREADABLE) {
+          out[field] = null;
+          unreadable.push(field);
+        } else {
+          out[field] = value;
+        }
+      }
+      if (unreadable.length) out.unreadable = unreadable;
     }
   }
 
   for (const [column, value] of Object.entries(out)) {
+    // A decrypted JSON value is content, not embedded rows, even where its keys name a table.
+    if (isJsonField(table, column)) continue;
     if (Array.isArray(value)) {
       if (!value.some(isPlainObject)) continue;
       const nested = await Promise.all(
-        value.map((item) => decryptRow(column, fieldMap, item, loadKey)),
+        value.map((item) => decryptRow(column, ctx, item, loaders)),
       );
       if (out === row) out = { ...row };
       out[column] = nested;
     } else if (isPlainObject(value)) {
-      const nested = await decryptRow(column, fieldMap, value, loadKey);
+      const nested = await decryptRow(column, ctx, value, loaders);
       if (nested !== value) {
         if (out === row) out = { ...row };
         out[column] = nested;
@@ -192,34 +401,39 @@ async function decryptRow(
 
 async function decryptResult(
   table: string,
-  fieldMap: FieldMap,
+  ctx: WrapContext,
   result: any,
 ): Promise<any> {
+  if (isPlainObject(result) && isPlainObject(result.error)) {
+    const mapped =
+      typeof result.error.hint === "string"
+        ? SERVER_HINT_ERRORS[result.error.hint]
+        : undefined;
+    if (mapped) {
+      serverKeyListeners.forEach((listener) => listener(mapped.signal));
+      throw Object.assign(new Error(mapped.message), result.error, mapped);
+    }
+    return result;
+  }
   if (!isPlainObject(result) || result.error || result.data == null) {
     return result;
   }
-  const loadKey = createKeyLoader();
+  const loaders = createReadLoaders(ctx);
   const data = Array.isArray(result.data)
     ? await Promise.all(
-        result.data.map((row: unknown) =>
-          decryptRow(table, fieldMap, row, loadKey),
-        ),
+        result.data.map((row: unknown) => decryptRow(table, ctx, row, loaders)),
       )
-    : await decryptRow(table, fieldMap, result.data, loadKey);
+    : await decryptRow(table, ctx, result.data, loaders);
   return { ...result, data };
 }
 
-function wrapFilterBuilder(
-  builder: any,
-  table: string,
-  fieldMap: FieldMap,
-): any {
+function wrapFilterBuilder(builder: any, table: string, ctx: WrapContext): any {
   const proxy: any = new Proxy(builder, {
     get(target, prop, _receiver) {
       if (prop === "then") {
         return (onFulfilled?: any, onRejected?: any) =>
           Promise.resolve(target)
-            .then((result: any) => decryptResult(table, fieldMap, result))
+            .then((result: any) => decryptResult(table, ctx, result))
             .then(onFulfilled, onRejected);
       }
       const value = Reflect.get(target, prop, target);
@@ -228,32 +442,42 @@ function wrapFilterBuilder(
         const result = value.apply(target, args);
         return result === target
           ? proxy
-          : wrapFilterBuilder(result, table, fieldMap);
+          : wrapFilterBuilder(result, table, ctx);
       };
     },
   });
   return proxy;
 }
 
+interface PendingOp {
+  prop: string;
+  args: unknown[];
+}
+
+function idFilter(ops: PendingOp[]): string | undefined {
+  const op = ops.find((o) => o.prop === "eq" && o.args[0] === "id");
+  return typeof op?.args[1] === "string" ? op.args[1] : undefined;
+}
+
 // PostgREST chaining is synchronous, but payload encryption is async.
 function wrapPendingBuilder(
   table: string,
-  fieldMap: FieldMap,
+  ctx: WrapContext,
   // Boxed in an object so Promise resolution does not auto-await the PostgREST thenable.
-  resolveReal: () => Promise<{ builder: any }>,
+  resolveReal: (ops: PendingOp[]) => Promise<{ builder: any }>,
 ): any {
-  const ops: Array<{ prop: string; args: unknown[] }> = [];
+  const ops: PendingOp[] = [];
   const proxy: any = new Proxy(
     {},
     {
       get(_target, prop) {
         if (prop === "then") {
           return (onFulfilled?: any, onRejected?: any) =>
-            resolveReal()
+            resolveReal(ops)
               .then(({ builder }) =>
                 ops.reduce((acc, op) => acc[op.prop](...op.args), builder),
               )
-              .then((result: any) => decryptResult(table, fieldMap, result))
+              .then((result: any) => decryptResult(table, ctx, result))
               .then(onFulfilled, onRejected);
         }
         return (...args: unknown[]) => {
@@ -266,18 +490,25 @@ function wrapPendingBuilder(
   return proxy;
 }
 
-function wrapQueryBuilder(
-  builder: any,
-  table: string,
-  fieldMap: FieldMap,
-): any {
+function wrapQueryBuilder(builder: any, table: string, ctx: WrapContext): any {
   return new Proxy(builder, {
     get(target, prop, _receiver) {
       if (prop === "insert" || prop === "update" || prop === "upsert") {
         const method = prop;
         return (values: unknown, options?: unknown) =>
-          wrapPendingBuilder(table, fieldMap, async () => {
-            const encrypted = await encryptPayload(table, values, fieldMap);
+          wrapPendingBuilder(table, ctx, async (ops) => {
+            if (method !== "update") {
+              assertRowIds(table, ctx.fieldMap, values);
+            }
+            const encrypted = await encryptPayload(
+              table,
+              values,
+              ctx.fieldMap,
+              {
+                getUserId: ctx.getUserId,
+                rowId: method === "update" ? idFilter(ops) : undefined,
+              },
+            );
             return { builder: target[method](encrypted, options) };
           });
       }
@@ -286,7 +517,7 @@ function wrapQueryBuilder(
       const bound = value.bind(target);
       if (prop === "select" || prop === "delete") {
         return (...args: unknown[]) =>
-          wrapFilterBuilder(bound(...args), table, fieldMap);
+          wrapFilterBuilder(bound(...args), table, ctx);
       }
       return bound;
     },

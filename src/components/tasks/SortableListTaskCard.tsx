@@ -13,8 +13,7 @@ interface SortableListTaskCardProps {
   isKeyboardSelected?: boolean;
   viewMode?: TaskViewMode;
   isDndActive?: boolean;
-  // Shared props
-  project?: { color: string; name: string };
+  project?: { color: string; name: string | null };
   isDesktop?: boolean;
   triggerHaptic?: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   setActiveTaskId?: (taskId: string) => void;

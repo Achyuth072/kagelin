@@ -71,7 +71,7 @@ export function EditProjectDialog({
   useEffect(() => {
     if (project && open) {
       reset({
-        name: project.name,
+        name: project.name ?? "",
         color: project.color,
       });
     }

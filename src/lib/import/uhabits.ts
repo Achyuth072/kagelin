@@ -28,11 +28,14 @@ export function loadSqlJs(wasmPath = "/sql-wasm.wasm") {
   return sqlJsPromise;
 }
 
+// A parsed habit always has its name; only one read back from storage can be unreadable.
+export type ImportedHabit = Habit & { name: string };
+
 export async function parseUhabitsFile(
   file: Blob,
   wasmPath?: string,
 ): Promise<{
-  habits: Habit[];
+  habits: ImportedHabit[];
   entries: HabitEntry[];
   source: UhabitsRawSource;
 }> {
@@ -200,7 +203,7 @@ export function parseRepetitionValue(
   return null;
 }
 
-export function toCreateHabitInput(habit: Habit): CreateHabitInput {
+export function toCreateHabitInput(habit: ImportedHabit): CreateHabitInput {
   return {
     name: habit.name,
     description: habit.description || undefined,
@@ -226,14 +229,14 @@ export function toCreateHabitInput(habit: Habit): CreateHabitInput {
 // A matched habit is skipped whole, so a re-import can never resurrect an
 // archived habit or duplicate a renamed one. Loop identity beats name.
 export function partitionAgainstExisting(
-  incoming: Habit[],
+  incoming: ImportedHabit[],
   existing: Pick<Habit, "name" | "source_uuid">[],
 ) {
   const uuids = new Set(
     existing.map((h) => h.source_uuid).filter((u): u is string => !!u),
   );
-  const names = new Set(existing.map((h) => h.name.toLowerCase()));
-  const toImport: Habit[] = [];
+  const names = new Set(existing.map((h) => h.name?.toLowerCase()));
+  const toImport: ImportedHabit[] = [];
   const skippedNames: string[] = [];
   for (const habit of incoming) {
     const exists =
@@ -278,7 +281,7 @@ export function mapUhabitsToKanso(
     if (!prev || date < prev) earliestDate.set(loopId, date);
   });
 
-  const habits: Habit[] = [];
+  const habits: ImportedHabit[] = [];
   const rawEntries: HabitEntry[] = [];
   const idMap = new Map<number, string>();
 

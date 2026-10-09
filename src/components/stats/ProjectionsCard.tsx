@@ -13,17 +13,13 @@ import {
   getStreaksAtRisk,
 } from "@/lib/utils/projections";
 import { cn } from "@/lib/utils";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface ProjectionsCardProps {
   className?: string;
 }
 
-/**
- * Self-fetches a fixed 30-day trend (like GoalsCard's independent
- * useGoalProgress fetch) rather than reusing the page's dailyTrend prop —
- * projections are month-to-date, a different scope than the page's
- * user-selectable period (which can be as short as 7d).
- */
+// Fetches 30d trend independently: projections are month-to-date, unlike the page's period.
 export function ProjectionsCard({ className }: ProjectionsCardProps) {
   const { data: habits, isLoading: habitsLoading } = useHabits();
   const { data: stats, isLoading: statsLoading } = useStats("30d");
@@ -93,7 +89,9 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
                         className="h-3.5 w-3.5 text-destructive shrink-0"
                         strokeWidth={2.25}
                       />
-                      <span className="truncate">{risk.name}</span>
+                      <span className="truncate">
+                        <ReadableText text={risk.name} />
+                      </span>
                       <span className="text-muted-foreground shrink-0">
                         {risk.currentStreak}d streak — log today to keep it
                       </span>
@@ -111,18 +109,12 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
 
 interface ProjectionMetricProps {
   label: string;
-  /** Preformatted projected headline, e.g. "~38" or "~30.3h". */
   projected: string;
   soFar: number;
   projectedValue: number;
   caption: string;
 }
 
-/**
- * One projection: label + projected headline on a row, a month-to-date pace
- * bar (so-far ÷ projected) beneath, and a caption. The bar is the "contextual
- * visual" that lets the metric fill its column instead of leaving a void.
- */
 function ProjectionMetric({
   label,
   projected,

@@ -1,5 +1,106 @@
 [
   {
+    "version": "1.47.0-preview.7",
+    "date": "2026-10-09",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Drop a refused save instead of retrying it after the device unlocks",
+        "Require proof of the content key for every key-row change and report a mismatched proof",
+        "Keep reminders, undo, habit entries and backup restores intact around unreadable content",
+        "Require proof of the content key to rotate it, and keep a key another tab saved",
+        "Finish Re-seal reliably and keep migrations in order"
+      ]
+    }
+  },
+  {
+    "version": "1.47.0-preview.6",
+    "date": "2026-10-08",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Ignore retired keys written back after the Re-seal cleared them",
+        "Refuse a rolled-back key row and -v1 or plaintext values after Re-seal"
+      ]
+    }
+  },
+  {
+    "version": "1.47.0-preview.5",
+    "date": "2026-10-08",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Head an unreadable project's group with Can't be read and a short id",
+        "Show Can't be read for unreadable notes, location and habit card",
+        "Skip pushing a calendar event whose content can't be read",
+        "Show an unreadable value as Can't be read in its row instead of failing the whole list"
+      ]
+    }
+  },
+  {
+    "version": "1.47.0-preview.4",
+    "date": "2026-10-07",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Drop the retired key from a device that could not save the rotated one",
+        "Stop toasting retired keys and show one Reload toast for an outdated app",
+        "Lock a stale device without a loading flash when the server refuses its key",
+        "Announce server key rejections from the supabase wrapper"
+      ],
+      "Fixed": [
+        "Toast a refused save when the gate does not lock the device",
+        "Purge once for a burst of refused writes and explain a key change on load"
+      ]
+    }
+  },
+  {
+    "version": "1.47.0-preview.3",
+    "date": "2026-10-07",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Disclose passphrase and recovery code change in rotation"
+      ],
+      "Fixed": [
+        "Cancel a replaced Re-seal run and cover the retired-key calendar pull",
+        "Finish Re-seal for imports, block stale key-row writes, purge rotated-out devices",
+        "Guard key-row markers, keep -v1 rejection through rotation, report unreadable values in Re-seal"
+      ]
+    }
+  },
+  {
+    "version": "1.47.0-preview.2",
+    "date": "2026-10-07",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Rotate content key with keyring reads, atomic RPC and queue re-seal"
+      ]
+    }
+  },
+  {
+    "version": "1.47.0-preview.1",
+    "date": "2026-10-07",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Seal row-bound -v2, re-seal existing content and reject -v1 after upgrade"
+      ]
+    }
+  },
+  {
+    "version": "1.47.0-preview.0",
+    "date": "2026-10-07",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Bind daily-briefing next-up copy to its source row",
+        "Client-generated ids and row-bound v2 readers for encrypted tables"
+      ]
+    }
+  },
+  {
     "version": "1.46.0",
     "date": "2026-10-07",
     "channel": "stable",

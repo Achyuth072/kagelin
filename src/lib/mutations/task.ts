@@ -1,10 +1,13 @@
 import { createClient } from "@/lib/supabase/client";
+import type { TaskPlacement } from "@/lib/utils/task-dnd";
 import { mockStore } from "@/lib/mock/mock-store";
 import { calculateNextDueDate } from "@/lib/utils/recurrence";
 import { isCiphertext } from "@/lib/crypto/contentCipher";
 import type { Task, CreateTaskInput, UpdateTaskInput } from "@/lib/types/task";
+import { assertReadable, requireReadable } from "@/lib/crypto/unreadable";
 
 function toRestorePayload(task: Task) {
+  assertReadable(task);
   return {
     id: task.id,
     user_id: task.user_id,
@@ -27,8 +30,9 @@ function toRestorePayload(task: Task) {
 
 // Duplicated tasks strip recurrence so occurrences cannot rejoin a source series.
 function toDuplicatePayload(task: Task, parentId: string | null) {
+  assertReadable(task);
   return {
-    content: task.content,
+    content: requireReadable(task.content),
     description: task.description || null,
     priority: task.priority || 4,
     due_date: task.due_date || null,
@@ -193,7 +197,7 @@ export const taskMutations = {
         if (!alreadyExists) {
           newRecurringTask = mockStore.addTask({
             project_id: updatedTask.project_id,
-            content: updatedTask.content,
+            content: requireReadable(updatedTask.content),
             description: updatedTask.description,
             priority: updatedTask.priority,
             due_date: nextDueDateIso,
@@ -206,7 +210,7 @@ export const taskMutations = {
             google_event_id: null,
             google_etag: null,
             parent_id: null,
-          } as Task);
+          });
         }
       }
 
@@ -221,6 +225,8 @@ export const taskMutations = {
       .single();
 
     if (fetchError) throw new Error(fetchError.message);
+    // Checked before completing, so a series is never closed without its next Occurrence.
+    if (is_completed && currentTask.recurrence) assertReadable(currentTask);
 
     const { data, error } = await supabase
       .from("tasks")
@@ -306,6 +312,7 @@ export const taskMutations = {
         const { data: newTask, error: createError } = await supabase
           .from("tasks")
           .insert({
+            id: crypto.randomUUID(),
             user_id: currentTask.user_id,
             project_id: currentTask.project_id,
             content: currentTask.content,
@@ -405,21 +412,23 @@ export const taskMutations = {
     return (subtasks as Task[]) ?? [];
   },
 
-  // Parent is inserted before subtasks to satisfy foreign key constraints.
-  restore: async (task: Task, subtasks: Task[] = []): Promise<void> => {
+  // Insert parent first for foreign key constraints.
+  // Cascade deleted all subtasks; restore readable siblings even if some cannot be read.
+  restore: async (task: Task, subtasks: Task[] = []): Promise<number> => {
+    const parent = toRestorePayload(task);
+    const readable = subtasks.filter((subtask) => !("unreadable" in subtask));
     const supabase = createClient();
 
-    const { error } = await supabase
-      .from("tasks")
-      .insert(toRestorePayload(task));
+    const { error } = await supabase.from("tasks").insert(parent);
     if (error) throw new Error(error.message);
 
-    if (subtasks.length > 0) {
+    if (readable.length > 0) {
       const { error: subtasksError } = await supabase
         .from("tasks")
-        .insert(subtasks.map(toRestorePayload));
+        .insert(readable.map(toRestorePayload));
       if (subtasksError) throw new Error(subtasksError.message);
     }
+    return subtasks.length - readable.length;
   },
 
   // Accepts slot-swapped day_orders (not sequential indices) to preserve sort order across groups.
@@ -477,7 +486,7 @@ export const taskMutations = {
 
   duplicate: async (
     sourceTask: Task,
-    overrides?: Partial<Task>,
+    overrides?: TaskPlacement,
   ): Promise<Task> => {
     const isGuest =
       typeof window !== "undefined" &&
@@ -513,6 +522,30 @@ export const taskMutations = {
     const user = session?.user;
     if (!user) throw new Error("Not authenticated");
 
+    // Validate the tree before inserting to avoid partial copies if a subtask is unreadable.
+    interface SubtaskTree {
+      subtask: Task;
+      children: SubtaskTree[];
+    }
+    const readSubtaskTrees = async (
+      parentId: string,
+    ): Promise<SubtaskTree[]> => {
+      // eslint-disable-next-line local/no-unbounded-supabase-select -- subtasks of one parent
+      const { data: subtasks, error: subtasksError } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("parent_id", parentId);
+      if (subtasksError) throw new Error(subtasksError.message);
+
+      return Promise.all(
+        ((subtasks as Task[] | null) ?? []).map(async (subtask) => {
+          assertReadable(subtask);
+          return { subtask, children: await readSubtaskTrees(subtask.id) };
+        }),
+      );
+    };
+    const subtaskTrees = await readSubtaskTrees(sourceTask.id);
+
     const { data: lastTask } = await supabase
       .from("tasks")
       .select("day_order")
@@ -525,6 +558,7 @@ export const taskMutations = {
     const { data: duplicatedTask, error } = await supabase
       .from("tasks")
       .insert({
+        id: crypto.randomUUID(),
         user_id: user.id,
         ...toDuplicatePayload(sourceTask, sourceTask.parent_id || null),
         ...overrides,
@@ -535,23 +569,15 @@ export const taskMutations = {
 
     if (error) throw new Error(error.message);
 
-    const duplicateSubtasksRecursively = async (
-      originalParentId: string,
+    const insertSubtaskTrees = async (
+      trees: SubtaskTree[],
       newParentId: string,
     ) => {
-      // eslint-disable-next-line local/no-unbounded-supabase-select -- subtasks of one parent
-      const { data: subtasks, error: subtasksError } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("parent_id", originalParentId);
-
-      if (subtasksError) throw new Error(subtasksError.message);
-      if (!subtasks || subtasks.length === 0) return;
-
-      for (const subtask of subtasks) {
+      for (const { subtask, children } of trees) {
         const { data: newSubtask, error: insertError } = await supabase
           .from("tasks")
           .insert({
+            id: crypto.randomUUID(),
             user_id: user.id,
             ...toDuplicatePayload(subtask, newParentId),
             day_order: subtask.day_order ?? 0,
@@ -560,11 +586,11 @@ export const taskMutations = {
           .single();
 
         if (insertError) throw new Error(insertError.message);
-        await duplicateSubtasksRecursively(subtask.id, newSubtask.id);
+        await insertSubtaskTrees(children, newSubtask.id);
       }
     };
 
-    await duplicateSubtasksRecursively(sourceTask.id, duplicatedTask.id);
+    await insertSubtaskTrees(subtaskTrees, duplicatedTask.id);
 
     return duplicatedTask as Task;
   },

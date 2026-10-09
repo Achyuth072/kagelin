@@ -1,17 +1,18 @@
+import type { MaybeUnreadable } from "@/lib/crypto/unreadable";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 
-/** Just enough of a child task to render step progress on a parent's card. */
+// Child task subset for parent card step progress.
 export interface SubtaskSummary {
   id: string;
   is_completed: boolean;
 }
 
-export interface Task {
+export interface Task extends MaybeUnreadable {
   id: string;
   user_id: string;
   project_id: string | null;
   parent_id: string | null;
-  content: string;
+  content: string | null;
   description: string | null;
   priority: 1 | 2 | 3 | 4;
   due_date: string | null;
@@ -29,10 +30,10 @@ export interface Task {
   subtasks?: SubtaskSummary[];
 }
 
-export interface Project {
+export interface Project extends MaybeUnreadable {
   id: string;
   user_id: string;
-  name: string;
+  name: string | null;
   color: string;
   view_style: "list" | "board";
   is_inbox: boolean;

@@ -1,5 +1,6 @@
 "use client";
 
+import type { TaskPlacement } from "@/lib/utils/task-dnd";
 import {
   useMutation,
   useQueryClient,
@@ -15,6 +16,7 @@ import { taskMutations } from "@/lib/mutations/task";
 import { mockStore } from "@/lib/mock/mock-store";
 import { useUiStore } from "@/lib/store/uiStore";
 import { trackTelemetry } from "@/lib/telemetry/client";
+import { applyReadableUpdate, requireReadable } from "@/lib/crypto/unreadable";
 
 // Matches the Undo toast duration — keyboard undo shouldn't outlive it.
 const UNDO_TOAST_DURATION_MS = 5000;
@@ -338,7 +340,7 @@ export function useUpdateTask() {
       snapshot.tasks.forEach(([key]) => {
         queryClient.setQueryData<Task[]>(key, (old) =>
           old?.map((task) => {
-            if (task.id === id) return { ...task, ...rest };
+            if (task.id === id) return applyReadableUpdate(task, rest);
             if (task.subtasks?.some((st) => st.id === id)) {
               return {
                 ...task,
@@ -361,13 +363,15 @@ export function useUpdateTask() {
 
       snapshot.subtasks.forEach(([key]) => {
         queryClient.setQueryData<Task[]>(key, (old) =>
-          old?.map((task) => (task.id === id ? { ...task, ...rest } : task)),
+          old?.map((task) =>
+            task.id === id ? applyReadableUpdate(task, rest) : task,
+          ),
         );
       });
 
       snapshot.singleTasks.forEach(([key]) => {
         queryClient.setQueryData<Task | null>(key, (old) =>
-          old && old.id === id ? { ...old, ...rest } : old,
+          old && old.id === id ? applyReadableUpdate(old, rest) : old,
         );
       });
 
@@ -457,7 +461,10 @@ export function useDeleteTask() {
       const undoAction = async () => {
         useUiStore.getState().setLastUndoAction(null);
         if (isGuestMode) {
-          mockStore.addTask(taskToRestore);
+          mockStore.addTask({
+            ...taskToRestore,
+            content: requireReadable(taskToRestore.content),
+          });
           queryClient.invalidateQueries({ queryKey: ["tasks"] });
           trigger("success");
           notify("Task restored");
@@ -466,9 +473,16 @@ export function useDeleteTask() {
 
         // Hard delete, so undo re-inserts rather than updates.
         try {
-          await taskMutations.restore(taskToRestore, subtasksToRestore);
+          const leftOut = await taskMutations.restore(
+            taskToRestore,
+            subtasksToRestore,
+          );
           trigger("success");
-          notify("Task restored");
+          notify(
+            leftOut === 0
+              ? "Task restored"
+              : `Task restored. ${leftOut === 1 ? "1 subtask" : `${leftOut} subtasks`} that can't be read stayed deleted.`,
+          );
         } catch (err) {
           console.error("Failed to restore task:", err);
           trigger("thud");
@@ -594,7 +608,7 @@ export function useDuplicateTask() {
       overrides,
     }: {
       sourceTask: Task;
-      overrides?: Partial<Task>;
+      overrides?: TaskPlacement;
     }) => taskMutations.duplicate(sourceTask, overrides),
     onMutate: async ({ sourceTask, overrides }) => {
       const snapshot = await prepareTasksSnapshot(queryClient);

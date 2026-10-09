@@ -112,6 +112,7 @@ describe("useHabitMutations", () => {
         });
 
         expect(mockInsert).toHaveBeenCalledWith({
+          id: expect.any(String),
           user_id: "user-1",
           name: "Morning Workout",
           description: "Daily exercise",
@@ -532,6 +533,13 @@ describe("useHabitMutations", () => {
         mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
         mockCreateClient.mockReturnValue({
           from: vi.fn(() => ({
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: () => Promise.resolve({ data: null }),
+                }),
+              }),
+            }),
             upsert: vi.fn(() => ({
               select: vi.fn(() => ({
                 single: vi
@@ -560,6 +568,42 @@ describe("useHabitMutations", () => {
         ]);
         expect(cacheData[0].entries).toHaveLength(2);
       });
+
+      it("fails instead of upserting with a fresh id when the existing entry's id can't be read", async () => {
+        const upsert = vi.fn();
+        mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
+        mockCreateClient.mockReturnValue({
+          from: vi.fn(() => ({
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: () =>
+                    Promise.resolve({
+                      data: null,
+                      error: { message: "Failed to fetch" },
+                    }),
+                }),
+              }),
+            }),
+            upsert,
+          })),
+        } as any);
+
+        const { result } = renderHook(() => useMarkHabitComplete(), {
+          wrapper,
+        });
+
+        await act(async () => {
+          await expect(
+            result.current.mutateAsync({
+              habitId: "habit-1",
+              date: "2024-01-15",
+              value: 1,
+            }),
+          ).rejects.toThrow("Failed to fetch");
+        });
+        expect(upsert).not.toHaveBeenCalled();
+      });
     });
 
     describe("TC-E-03: Mark complete with rollback on error", () => {
@@ -580,6 +624,13 @@ describe("useHabitMutations", () => {
         mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
         mockCreateClient.mockReturnValue({
           from: vi.fn(() => ({
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: () => Promise.resolve({ data: null }),
+                }),
+              }),
+            }),
             upsert: vi.fn(() => ({
               select: vi.fn(() => ({
                 single: vi.fn().mockResolvedValue({
@@ -693,6 +744,13 @@ describe("useHabitMutations", () => {
         mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
         mockCreateClient.mockReturnValue({
           from: vi.fn(() => ({
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: () => Promise.resolve({ data: null }),
+                }),
+              }),
+            }),
             upsert: vi.fn(() => ({
               select: vi.fn(() => ({
                 single: vi.fn().mockResolvedValue({
@@ -736,6 +794,13 @@ describe("useHabitMutations", () => {
         mockUseAuth.mockReturnValue({ isGuestMode: false } as any);
         mockCreateClient.mockReturnValue({
           from: vi.fn(() => ({
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  maybeSingle: () => Promise.resolve({ data: null }),
+                }),
+              }),
+            }),
             upsert: vi.fn(() => ({
               select: vi.fn(() => ({
                 single: vi.fn().mockResolvedValue({

@@ -1,8 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useTaskViewData } from "@/lib/hooks/useTaskViewData";
-import type { Task } from "@/lib/types/task";
-import { startOfDay } from "date-fns";
+import type { Project, Task } from "@/lib/types/task";
 
 // Mock tasks for testing
 const mockTasks: Task[] = [
@@ -207,6 +206,22 @@ describe("useTaskViewData", () => {
     expect(todayGroup?.tasks.map((t) => t.id)).toContain("4");
     expect(tomorrowGroup?.tasks.map((t) => t.id)).toEqual(["5"]);
     expect(overdueGroup?.tasks.map((t) => t.id)).toEqual(["2"]); // 2026-04-20 is before 2026-04-21
+  });
+
+  it("headings a project whose name can't be read with the label and a short id", () => {
+    const project = { id: "abcdef12-3456", name: null } as unknown as Project;
+    const { result } = renderHook(() =>
+      useTaskViewData({
+        tasks: [{ ...mockTasks[0], project_id: project.id }],
+        sortBy: "custom",
+        groupBy: "project",
+        projects: [project],
+      }),
+    );
+
+    expect(result.current.groups?.map((g) => g.title)).toEqual([
+      "Can't be read · abcdef",
+    ]);
   });
 
   it("returns empty structure when tasks are undefined", () => {

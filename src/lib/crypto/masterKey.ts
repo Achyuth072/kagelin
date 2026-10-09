@@ -3,6 +3,7 @@ import {
   sealEnvelope,
   openEnvelope,
   toUint8Array,
+  bytesToBase64,
 } from "@/lib/crypto/envelope";
 
 export { bytesToBase64, base64ToBytes } from "@/lib/crypto/envelope";
@@ -25,6 +26,23 @@ export const MASTER_KEY_BYTES = 32;
 export async function generateMasterKey(): Promise<Uint8Array> {
   const sodium = await getSodium();
   return sodium.randombytes_buf(MASTER_KEY_BYTES);
+}
+
+// Derive a rotation token so the server can verify key possession without learning the master key.
+async function rotationTokenBytes(masterKey: Uint8Array): Promise<Uint8Array> {
+  const sodium = await getSodium();
+  return sodium.crypto_kdf_derive_from_key(32, 1, "rotation", masterKey);
+}
+
+export async function rotationToken(masterKey: Uint8Array): Promise<string> {
+  return bytesToBase64(await rotationTokenBytes(masterKey));
+}
+
+export async function rotationVerifier(masterKey: Uint8Array): Promise<string> {
+  const sodium = await getSodium();
+  return bytesToBase64(
+    sodium.crypto_hash_sha256(await rotationTokenBytes(masterKey)),
+  );
 }
 
 export async function generateSalt(): Promise<Uint8Array> {

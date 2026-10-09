@@ -1,16 +1,38 @@
 import { get, set, del } from "idb-keyval";
 import { hasUserId } from "@/lib/storage/userScoped";
+import { INITIAL_KEY_ID } from "@/lib/crypto/envelope";
 
 const MASTER_KEY_STORAGE_KEY = "kagelin-master-key";
+
+// Reads select a key by the envelope's key id; writes always use the current one.
+export interface Keyring {
+  keyId: string;
+  key: Uint8Array;
+  retired: Record<string, Uint8Array>;
+}
 
 interface StoredMasterKey {
   userId: string;
   key: Uint8Array;
+  // Absent on records saved before rotation existed.
+  keyId?: string;
+  retired?: Record<string, Uint8Array>;
 }
 
 export interface KeyStore {
   load(userId?: string): Promise<Uint8Array | null>;
-  save(userId: string, key: Uint8Array): Promise<void>;
+  // fresh: bypass in-memory cache to see updates from other tabs.
+  loadKeyring(
+    userId?: string,
+    options?: { fresh?: boolean },
+  ): Promise<Keyring | null>;
+  loadUserId(): Promise<string | null>;
+  save(
+    userId: string,
+    key: Uint8Array,
+    keyId?: string,
+    retired?: Record<string, Uint8Array>,
+  ): Promise<void>;
   clear(): Promise<void>;
 }
 
@@ -23,26 +45,51 @@ function isStoredMasterKey(value: unknown): value is StoredMasterKey {
   );
 }
 
+async function loadRecord(fresh = false): Promise<StoredMasterKey | null> {
+  if (cached === undefined || fresh) {
+    const stored = await get<unknown>(MASTER_KEY_STORAGE_KEY);
+    // Discard legacy unowned keys.
+    cached = isStoredMasterKey(stored) ? stored : null;
+    if (stored !== undefined && cached === null) {
+      await del(MASTER_KEY_STORAGE_KEY);
+    }
+  }
+  return cached;
+}
+
+async function loadOwnedRecord(
+  userId?: string,
+  fresh = false,
+): Promise<StoredMasterKey | null> {
+  const record = await loadRecord(fresh);
+  if (!record) return null;
+  // Evict cached key on user mismatch to prevent cross-account exposure.
+  if (userId !== undefined && record.userId !== userId) {
+    await keyStore.clear();
+    return null;
+  }
+  return record;
+}
+
 export const keyStore: KeyStore = {
   async load(userId) {
-    if (cached === undefined) {
-      const stored = await get<unknown>(MASTER_KEY_STORAGE_KEY);
-      // Discard legacy unowned keys.
-      cached = isStoredMasterKey(stored) ? stored : null;
-      if (stored !== undefined && cached === null) {
-        await del(MASTER_KEY_STORAGE_KEY);
-      }
-    }
-    if (!cached) return null;
-    // Evict cached key on user mismatch to prevent cross-account exposure.
-    if (userId !== undefined && cached.userId !== userId) {
-      await keyStore.clear();
-      return null;
-    }
-    return cached.key;
+    return (await loadOwnedRecord(userId))?.key ?? null;
   },
-  async save(userId, key) {
-    const record: StoredMasterKey = { userId, key };
+  async loadKeyring(userId, options) {
+    const record = await loadOwnedRecord(userId, options?.fresh);
+    if (!record) return null;
+    return {
+      keyId: record.keyId ?? INITIAL_KEY_ID,
+      key: record.key,
+      retired: record.retired ?? {},
+    };
+  },
+  // The service worker has no session; the key's owner is the user its notifications were sealed for.
+  async loadUserId() {
+    return (await loadRecord())?.userId ?? null;
+  },
+  async save(userId, key, keyId = INITIAL_KEY_ID, retired = {}) {
+    const record: StoredMasterKey = { userId, key, keyId, retired };
     await set(MASTER_KEY_STORAGE_KEY, record);
     cached = record;
   },

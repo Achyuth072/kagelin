@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/api/require-user";
 import { fetchAllRows } from "@/lib/supabase/paginate";
 
 interface PickedCalendar {
+  id: string;
   remote_calendar_id: string;
   name: string;
   color?: string;
@@ -34,9 +35,9 @@ export async function POST(request: Request) {
   const provider = body.provider as string;
   const picks = (body.calendars ?? []) as PickedCalendar[];
 
-  if (!provider || picks.length === 0) {
+  if (!provider || picks.length === 0 || picks.some((c) => !c.id)) {
     return NextResponse.json(
-      { error: "provider and calendars required" },
+      { error: "provider and calendars (with ids) required" },
       { status: 400 },
     );
   }
@@ -59,6 +60,7 @@ export async function POST(request: Request) {
   const rows = picks
     .filter((c) => !existingIds.has(c.remote_calendar_id))
     .map((c) => ({
+      id: c.id,
       user_id: user.id,
       provider,
       // Already encrypted by connectCalendars — service-role writes skip the wrapper.

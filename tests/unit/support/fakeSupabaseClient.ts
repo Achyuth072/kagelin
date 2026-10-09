@@ -7,11 +7,19 @@ export type FailWrite = (ctx: {
   payload: unknown;
 }) => Row | null | undefined;
 
+export interface SentHeader {
+  table: string;
+  kind: string;
+  name: string;
+  value: string;
+}
+
 function createFakeTable(
   table: string,
   getRows: () => Row[],
   setRows: (rows: Row[]) => void,
   failWrite: FailWrite | undefined,
+  sentHeaders: SentHeader[],
 ) {
   function builder(
     kind: "select" | "insert" | "update" | "upsert" | "delete",
@@ -48,6 +56,23 @@ function createFakeTable(
       // Only the `.not(col, "is", null)` form the sync paths use.
       not(col: string, _op: string, _val: unknown) {
         state.filters.push((row) => row[col] != null);
+        return api;
+      },
+      is(path: string, _val: null) {
+        state.filters.push((row) => readPath(row, path) == null);
+        return api;
+      },
+      or(clauses: string) {
+        const paths = clauses
+          .split(",")
+          .map((clause) => clause.replace(/\.not\.is\.null$/, ""));
+        state.filters.push((row) =>
+          paths.some((path) => readPath(row, path) != null),
+        );
+        return api;
+      },
+      setHeader(name: string, value: string) {
+        sentHeaders.push({ table, kind, name, value });
         return api;
       },
       order() {
@@ -157,22 +182,41 @@ function createFakeTable(
   };
 }
 
+function readPath(row: Row, path: string): unknown {
+  const [column, key] = path.split("->>");
+  const value = row[column];
+  return key === undefined ? value : (value as Row | null)?.[key];
+}
+
 export function createFakeSupabaseClient(
   seed: Record<string, Row[]> = {},
-  opts: { failWrite?: FailWrite } = {},
+  opts: { failWrite?: FailWrite; userId?: string | null } = {},
 ) {
   const store = new Map<string, Row[]>(
     Object.entries(seed).map(([table, rows]) => [table, [...rows]]),
   );
+  const sentHeaders: SentHeader[] = [];
   return {
+    auth: {
+      getSession: async () => ({
+        data: {
+          session:
+            opts.userId === null
+              ? null
+              : { user: { id: opts.userId ?? "user-1" } },
+        },
+      }),
+    },
     from(table: string) {
       return createFakeTable(
         table,
         () => store.get(table) ?? [],
         (rows) => store.set(table, rows),
         opts.failWrite,
+        sentHeaders,
       );
     },
+    sentHeaders,
     rawRows: (table: string) => {
       if (!store.has(table)) store.set(table, []);
       return store.get(table)!;

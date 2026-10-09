@@ -606,11 +606,12 @@ export function BackupSyncSettings() {
     setIsSyncing(true);
 
     try {
+      let skipped = 0;
       if (isGuestMode) {
         mockStore.restoreBackup(data);
       } else {
         if (!user) return;
-        await replaceCloudBackup(supabase, user.id, data);
+        skipped = await replaceCloudBackup(supabase, user.id, data);
       }
       useLocationHistoryStore.setState({
         locations: data.location_history ?? [],
@@ -618,7 +619,11 @@ export function BackupSyncSettings() {
 
       await invalidateDataQueries();
 
-      notify.success("Data restored from server");
+      notify.success(
+        skipped === 0
+          ? "Data restored from server"
+          : `Data restored from server. ${skipped === 1 ? "1 item" : `${skipped} items`} that can't be read kept the version already in your account.`,
+      );
       trigger("success");
     } catch {
       notify.error("Restore failed");

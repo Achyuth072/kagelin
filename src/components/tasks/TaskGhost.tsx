@@ -7,11 +7,12 @@ import { DragHandle } from "./DragHandle";
 import { Checkbox } from "@/components/ui/checkbox";
 import { priorityCheckboxClasses, priorityTextClasses } from "./task-utils";
 import { Calendar, Flag, Moon } from "lucide-react";
+import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface TaskGhostProps {
   task: Task;
   isDesktop: boolean;
-  project?: { color: string; name: string };
+  project?: { color: string; name: string | null };
   viewMode?: TaskViewMode;
 }
 
@@ -85,7 +86,7 @@ export const TaskGhost = React.memo(
                 className={cn(task.is_completed && "task-ink-completed-text")}
                 data-animate="false"
               >
-                {task.content}
+                <ReadableText text={task.content} />
               </span>
             </p>
           </div>
