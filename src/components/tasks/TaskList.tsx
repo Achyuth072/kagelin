@@ -986,8 +986,9 @@ function TaskListBase({
     processedTasks.completed.length === 0
   ) {
     return (
-      <div className="px-4 md:px-6">
+      <div className="px-4 md:px-6 max-md:flex max-md:h-full max-md:flex-col max-md:justify-center">
         <EmptyState
+          className="max-md:py-8"
           icon={CheckSquare}
           description="Write down what you need to do. Add a date or a project when it helps."
           action={{
