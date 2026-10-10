@@ -17,6 +17,7 @@ import { useTimerSync } from "@/lib/hooks/useTimerSync";
 import { getDeviceId } from "@/lib/store/deviceId";
 import { TimerState } from "@/lib/types/timer";
 import { trackTelemetry } from "@/lib/telemetry/client";
+import { markFirstAction } from "@/lib/telemetry/store";
 import {
   FOCUS_DURATION_MINUTES_MIN,
   FOCUS_DURATION_MINUTES_MAX,
@@ -235,6 +236,7 @@ export function useFocusTimer() {
   const start = useCallback(
     async (taskId?: string) => {
       play("focusStart");
+      markFirstAction();
       storeStart(taskId);
       syncToServer();
     },

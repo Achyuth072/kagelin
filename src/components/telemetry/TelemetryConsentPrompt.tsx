@@ -12,11 +12,9 @@ import { cn } from "@/lib/utils";
 import { NOTIFICATION_LINK_BUTTON_CLASS } from "@/components/ui/notification-link-button";
 
 export function TelemetryConsentPrompt() {
-  const { consent, setConsent } = useTelemetryConsent();
+  const { shouldPrompt: isVisible, setConsent } = useTelemetryConsent();
   const prefersReducedMotion = usePrefersReducedMotion();
   const { trigger } = useHaptic();
-
-  const isVisible = consent === "unprompted";
 
   // Height feeds --telemetry-prompt-offset (read by Toaster) so toasts don't overlap this banner.
   const bannerRef = useRef<HTMLDivElement>(null);

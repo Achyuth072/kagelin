@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import {
   getTelemetryConsent,
+  hasTakenFirstAction,
   setTelemetryConsent as setStoreConsent,
   TELEMETRY_CONSENT_EVENT,
   type TelemetryConsent,
@@ -14,8 +15,7 @@ function subscribe(callback: () => void): () => void {
     return () => {};
   }
 
-  // store.ts's own "storage" listener re-dispatches this event for cross-tab
-  // changes too, so it's the only signal this hook needs to listen for.
+  // store.ts re-dispatches storage events as TELEMETRY_CONSENT_EVENT for cross-tab sync.
   window.addEventListener(TELEMETRY_CONSENT_EVENT, callback);
 
   return () => {
@@ -37,6 +37,11 @@ export function useTelemetryConsent() {
     getSnapshot,
     getServerSnapshot,
   );
+  const firstActionTaken = useSyncExternalStore(
+    subscribe,
+    hasTakenFirstAction,
+    () => false,
+  );
 
   const setConsent = (status: "granted" | "denied") => {
     setStoreConsent(status);
@@ -49,6 +54,7 @@ export function useTelemetryConsent() {
 
   return {
     consent,
+    shouldPrompt: consent === "unprompted" && firstActionTaken,
     setConsent,
   };
 }

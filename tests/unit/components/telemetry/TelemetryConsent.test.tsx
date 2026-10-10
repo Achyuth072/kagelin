@@ -1,4 +1,10 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import React from "react";
@@ -7,7 +13,9 @@ import { PrivacySection } from "@/components/settings/PrivacySection";
 import {
   TELEMETRY_CONSENT_KEY,
   TELEMETRY_DEVICE_ID_KEY,
+  TELEMETRY_FIRST_ACTION_KEY,
   getTelemetryConsent,
+  markFirstAction,
   setTelemetryConsent,
   resetTelemetryConsentCache,
 } from "@/lib/telemetry/store";
@@ -29,8 +37,60 @@ describe("Telemetry Consent UI and Privacy Settings", () => {
     telemetryClient.clearTelemetryQueue();
   });
 
+  describe("TelemetryConsentPrompt before a first first action", () => {
+    const promptText = /Kagelin is open source & privacy-first/i;
+
+    it("stays hidden on a fresh visit until the first first action", async () => {
+      render(<TelemetryConsentPrompt />);
+      expect(screen.queryByText(promptText)).not.toBeInTheDocument();
+
+      act(() => {
+        markFirstAction();
+      });
+
+      expect(await screen.findByText(promptText)).toBeInTheDocument();
+    });
+
+    it("stays shown after a reload once a first action was taken", async () => {
+      markFirstAction();
+      resetTelemetryConsentCache();
+      render(<TelemetryConsentPrompt />);
+
+      expect(await screen.findByText(promptText)).toBeInTheDocument();
+    });
+
+    it("shows when a first first action happens in another tab", async () => {
+      render(<TelemetryConsentPrompt />);
+
+      act(() => {
+        localStorage.setItem(TELEMETRY_FIRST_ACTION_KEY, "true");
+        window.dispatchEvent(
+          new StorageEvent("storage", {
+            key: TELEMETRY_FIRST_ACTION_KEY,
+            newValue: "true",
+          }),
+        );
+      });
+
+      expect(await screen.findByText(promptText)).toBeInTheDocument();
+    });
+
+    it("does not ask again after a dismiss, even after more actions", () => {
+      markFirstAction();
+      setTelemetryConsent("denied");
+      markFirstAction();
+      render(<TelemetryConsentPrompt />);
+
+      expect(screen.queryByText(promptText)).not.toBeInTheDocument();
+    });
+  });
+
   describe("TelemetryConsentPrompt", () => {
-    it("renders prompt when telemetry consent is unprompted", async () => {
+    beforeEach(() => {
+      markFirstAction();
+    });
+
+    it("renders prompt when telemetry consent is unprompted after a first action", async () => {
       render(<TelemetryConsentPrompt />);
 
       await waitFor(() => {

@@ -5,6 +5,7 @@ export type TelemetryConsent = "granted" | "denied" | "unprompted";
 export const TELEMETRY_CONSENT_KEY = "telemetry_consent";
 export const TELEMETRY_DEVICE_ID_KEY = "telemetry_device_id";
 export const TELEMETRY_CONSENT_EVENT = "kagelin:telemetry-consent";
+export const TELEMETRY_FIRST_ACTION_KEY = "telemetry_first_action";
 
 function isLocalStorageAvailable(): boolean {
   return (
@@ -16,15 +17,22 @@ function parseTelemetryConsent(raw: string | null): TelemetryConsent {
   return raw === "granted" || raw === "denied" ? raw : "unprompted";
 }
 
-// In-memory mirror of the two localStorage keys above. trackTelemetry() calls
-// getOrCreateDeviceId() on every tracked action (task/habit/focus events), so
-// without this cache a guest who never opts in still pays a localStorage.getItem
-// on every action. null means "not read this session yet"; kept in sync by the
-// write path below and by the cross-tab storage listener attached at module load.
+// In-memory cache to avoid repeated synchronous localStorage reads on frequent actions.
 let cachedConsent: TelemetryConsent | null = null;
 let cachedDeviceId: string | null = null;
+let cachedFirstAction: boolean | null = null;
 
 function onStorageEvent(event: StorageEvent): void {
+  if (event.key === TELEMETRY_FIRST_ACTION_KEY) {
+    cachedFirstAction = event.newValue === "true";
+    window.dispatchEvent(
+      new CustomEvent(TELEMETRY_CONSENT_EVENT, {
+        detail: getTelemetryConsent(),
+      }),
+    );
+    return;
+  }
+
   if (event.key !== TELEMETRY_CONSENT_KEY) {
     return;
   }
@@ -34,9 +42,7 @@ function onStorageEvent(event: StorageEvent): void {
   cachedDeviceId =
     status === "granted" ? localStorage.getItem(TELEMETRY_DEVICE_ID_KEY) : null;
 
-  // Re-dispatch the same event setTelemetryConsent() uses, so consumers (e.g.
-  // useTelemetryConsent) only need to listen for one signal, not a second
-  // raw "storage" listener duplicating this key filter.
+  // Normalize cross-tab storage events into TELEMETRY_CONSENT_EVENT for single-signal consumers.
   window.dispatchEvent(
     new CustomEvent(TELEMETRY_CONSENT_EVENT, { detail: status }),
   );
@@ -46,15 +52,11 @@ if (typeof window !== "undefined") {
   window.addEventListener("storage", onStorageEvent);
 }
 
-/**
- * Reset the in-memory consent/device-id cache. Test-only — the module-level
- * cache otherwise has no path back to "unread," and tests that write to
- * localStorage directly (bypassing setTelemetryConsent) or call
- * localStorage.clear() need a way to force a fresh read.
- */
+// Test-only: resets module-level cache so tests can force fresh localStorage reads.
 export function resetTelemetryConsentCache(): void {
   cachedConsent = null;
   cachedDeviceId = null;
+  cachedFirstAction = null;
 }
 
 export function getTelemetryConsent(): TelemetryConsent {
@@ -75,6 +77,45 @@ export function getTelemetryConsent(): TelemetryConsent {
   }
 
   return cachedConsent;
+}
+
+export function hasTakenFirstAction(): boolean {
+  if (cachedFirstAction !== null) {
+    return cachedFirstAction;
+  }
+
+  if (!isLocalStorageAvailable()) {
+    return false;
+  }
+
+  try {
+    cachedFirstAction =
+      localStorage.getItem(TELEMETRY_FIRST_ACTION_KEY) === "true";
+  } catch {
+    cachedFirstAction = false;
+  }
+
+  return cachedFirstAction;
+}
+
+export function markFirstAction(): void {
+  if (hasTakenFirstAction()) {
+    return;
+  }
+  cachedFirstAction = true;
+
+  try {
+    localStorage.setItem(TELEMETRY_FIRST_ACTION_KEY, "true");
+  } catch (error) {
+    Sentry.captureException(error);
+  }
+
+  // Reuses consent event so prompt subscribers re-evaluate without a separate channel.
+  window.dispatchEvent(
+    new CustomEvent(TELEMETRY_CONSENT_EVENT, {
+      detail: getTelemetryConsent(),
+    }),
+  );
 }
 
 export function setTelemetryConsent(status: "granted" | "denied"): void {
@@ -106,8 +147,7 @@ export function setTelemetryConsent(status: "granted" | "denied"): void {
       );
     }
   } catch (error) {
-    // Don't throw over a storage write failing — telemetry consent isn't
-    // critical to app function — but report it rather than swallow it.
+    // Non-critical: report storage write failure without throwing.
     Sentry.captureException(error);
   }
 }
