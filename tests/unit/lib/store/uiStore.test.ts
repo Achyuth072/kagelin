@@ -3,7 +3,6 @@ import { useUiStore } from "@/lib/store/uiStore";
 
 describe("useUiStore", () => {
   beforeEach(() => {
-    // Reset state before each test
     useUiStore.setState({
       isProjectsOpen: true,
       sortBy: "date",
@@ -12,6 +11,32 @@ describe("useUiStore", () => {
       hapticsEnabled: true,
       isShortcutsHelpOpen: false,
     });
+  });
+
+  it("does not persist open dialogs, so none reopens on the next launch", () => {
+    const { partialize } = useUiStore.persist.getOptions();
+    const persisted = partialize!({
+      ...useUiStore.getState(),
+      isShortcutsHelpOpen: true,
+      isArchivedProjectsOpen: true,
+      isChangelogOpen: true,
+    }) as Record<string, unknown>;
+
+    expect(persisted).not.toHaveProperty("isShortcutsHelpOpen");
+    expect(persisted).not.toHaveProperty("isArchivedProjectsOpen");
+    expect(persisted).not.toHaveProperty("isChangelogOpen");
+  });
+
+  it("ignores an open dialog saved by an older build", () => {
+    const { merge } = useUiStore.persist.getOptions();
+    const merged = merge!(
+      { isShortcutsHelpOpen: true, isChangelogOpen: true, sortBy: "priority" },
+      useUiStore.getState(),
+    );
+
+    expect(merged.isShortcutsHelpOpen).toBe(false);
+    expect(merged.isChangelogOpen).toBe(false);
+    expect(merged.sortBy).toBe("priority");
   });
 
   it("should have correct initial values", () => {
@@ -48,7 +73,6 @@ describe("useUiStore", () => {
     useUiStore.getState().setShortcutsHelpOpen(true);
     expect(useUiStore.getState().isShortcutsHelpOpen).toBe(true);
 
-    // Test functional update
     useUiStore.getState().setShortcutsHelpOpen((prev) => !prev);
     expect(useUiStore.getState().isShortcutsHelpOpen).toBe(false);
   });

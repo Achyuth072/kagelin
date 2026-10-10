@@ -231,6 +231,12 @@ export const useUiStore = create<UiState>()(
           triggerLastUndoAction: _triggerLastUndoAction,
           yankedTaskId: _yankedTaskId,
           setYankedTaskId: _setYankedTaskId,
+          isShortcutsHelpOpen: _isShortcutsHelpOpen,
+          setShortcutsHelpOpen: _setShortcutsHelpOpen,
+          isArchivedProjectsOpen: _isArchivedProjectsOpen,
+          setArchivedProjectsOpen: _setArchivedProjectsOpen,
+          isChangelogOpen: _isChangelogOpen,
+          setChangelogOpen: _setChangelogOpen,
           ...rest
         } = state;
         return rest;
@@ -242,6 +248,16 @@ export const useUiStore = create<UiState>()(
           return { ...state, viewMode: "list" };
         }
         return state;
+      },
+      // Older builds persisted these; an open dialog must not survive a reload.
+      merge: (persisted, current) => {
+        const {
+          isShortcutsHelpOpen: _isShortcutsHelpOpen,
+          isArchivedProjectsOpen: _isArchivedProjectsOpen,
+          isChangelogOpen: _isChangelogOpen,
+          ...rest
+        } = (persisted ?? {}) as Partial<UiState>;
+        return { ...current, ...rest };
       },
     },
   ),
