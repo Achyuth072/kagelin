@@ -13,6 +13,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { SplitViewLayout } from "@/components/tasks/SplitViewLayout";
 import { PwaInstallHint } from "@/components/home/PwaInstallHint";
+import { StartHereCard } from "@/components/home/StartHereCard";
 import type { SortOption, GroupOption } from "@/lib/types/sorting";
 
 function getGreeting(): string {
@@ -117,6 +118,8 @@ export function HomeClient() {
           />
         </div>
       </div>
+
+      <StartHereCard />
 
       <div
         className="flex-1 min-h-0 transition-opacity duration-150"

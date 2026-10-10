@@ -4,8 +4,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { mockStore } from "@/lib/mock/mock-store";
 import { notify } from "@/lib/notify";
 
-// Shared so Clear Data, Start fresh and Reset Demo can't drift on which
-// caches they clear.
 const GUEST_QUERY_KEYS = [
   "tasks",
   "projects",
@@ -14,6 +12,7 @@ const GUEST_QUERY_KEYS = [
   "calendar-events",
   "calendar-tasks",
   "demo-mode",
+  "has-focus-log",
 ];
 
 function useGuestStoreAction(action: () => void, message: string) {
@@ -21,7 +20,8 @@ function useGuestStoreAction(action: () => void, message: string) {
 
   return () => {
     action();
-    queryClient.removeQueries({
+    // resetQueries notifies mounted observers; removeQueries leaves stale UI.
+    queryClient.resetQueries({
       predicate: (query) =>
         GUEST_QUERY_KEYS.includes(query.queryKey[0] as string),
     });
@@ -33,7 +33,6 @@ export function useClearGuestData() {
   return useGuestStoreAction(() => mockStore.clearData(), "All data cleared");
 }
 
-// Settings' "Reset Demo" — repopulates seed data, so Demo mode goes back on.
 export function useResetDemoData() {
   return useGuestStoreAction(
     () => mockStore.reset(),

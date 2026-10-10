@@ -82,6 +82,7 @@ export function useFocusTimer() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["stats-dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["today-focus-count"] });
+      queryClient.invalidateQueries({ queryKey: ["has-focus-log"] });
     },
   });
 
