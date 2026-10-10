@@ -12,6 +12,7 @@ import {
 import type { FocusLog } from "@/lib/types/focus";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
 import type { BackupData } from "@/lib/backup/types";
+import { formatModChord } from "@/lib/utils/platform";
 
 export const STORAGE_KEY = "kanso_guest_data_v11";
 
@@ -176,26 +177,34 @@ class MockStore {
     const createTask = (
       content: string,
       dayOffset: number,
-      projectId: string,
+      projectId: string | null,
       options: {
         priority?: 1 | 2 | 3 | 4;
         isEvening?: boolean;
         parentId?: string | null;
-        // Only consulted for past days; future tasks are always pending.
         completionRate?: number;
+        description?: string;
+        // Keeps the task off the Calendar.
+        doDateMinute?: number;
       } = {},
-    ) => {
+    ): string | null => {
       const {
         priority = 4,
         isEvening = false,
         parentId = null,
         completionRate = 0,
+        description = null,
+        doDateMinute,
       } = options;
       const date = dayAt(dayOffset);
 
-      const randomHour = isEvening ? 18 + rng() * 4 : 8 + rng() * 6;
-      const randomMinute = Math.floor(rng() * 60);
-      date.setHours(Math.floor(randomHour), randomMinute, 0, 0);
+      if (doDateMinute !== undefined) {
+        date.setHours(0, doDateMinute, 0, 0);
+      } else {
+        const randomHour = isEvening ? 18 + rng() * 4 : 8 + rng() * 6;
+        const randomMinute = Math.floor(rng() * 60);
+        date.setHours(Math.floor(randomHour), randomMinute, 0, 0);
+      }
 
       const dueDate = date.toISOString();
       const isPast = dayOffset < 0;
@@ -203,11 +212,14 @@ class MockStore {
 
       const taskId = `task-${generateId()}`;
 
+      // A year of misses would sit as overdue above the tutorial on Home.
+      if (isPast && !isCompleted && dayOffset < -3) return null;
+
       tasks.push({
         id: taskId,
         user_id: "guest",
         content,
-        description: null,
+        description,
         is_completed: isCompleted,
         completed_at: isCompleted ? dueDate : null,
         priority,
@@ -215,8 +227,8 @@ class MockStore {
         day_order: tasks.length,
         created_at: new Date(date.getTime() - 86400000).toISOString(),
         updated_at: dueDate,
-        due_date: dueDate,
-        do_date: null,
+        due_date: doDateMinute === undefined ? dueDate : null,
+        do_date: doDateMinute === undefined ? null : dueDate,
         is_evening: isEvening,
         parent_id: parentId,
         recurrence: null,
@@ -289,6 +301,23 @@ class MockStore {
         });
       }
     }
+
+    const tutorialTasks: [content: string, description?: string][] = [
+      ["Add a task (N or +)", "Press N on a keyboard, or tap + on a phone."],
+      [
+        `Open Search (${formatModChord("K")})`,
+        "On a phone, tap ⋮ → Search. It runs any command, too.",
+      ],
+      ["See shortcuts (?)", "Press ? on a keyboard."],
+      ["Focus on this task", "Tap the play button on this task's row."],
+      [
+        "Import Loop habits",
+        "Settings → Account → Loop Habit Tracker → Import (.db).",
+      ],
+    ];
+    tutorialTasks.forEach(([content, description], i) =>
+      createTask(content, 0, null, { description, doDateMinute: i }),
+    );
 
     for (let i = 0; i <= 30; i++) {
       if (i === 0) {
@@ -370,7 +399,7 @@ class MockStore {
       dueDate.setHours(9, 0, 0, 0);
 
       const isActiveOccurrence = w === 0;
-      const isCompleted = !isActiveOccurrence && rng() > 0.2;
+      const isCompleted = !isActiveOccurrence;
 
       let completedAt: string | null = null;
       if (isCompleted) {

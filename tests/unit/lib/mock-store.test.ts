@@ -131,6 +131,66 @@ describe("MockStore (Guest Mode Data)", () => {
     );
   });
 
+  it("seeds tutorial tasks planned first thing today, off the Calendar, as demo items", () => {
+    seededReset();
+
+    const tasks = mockStore.getTasks();
+    const tutorial = tasks
+      .filter((t) => t.do_date && !t.due_date)
+      .sort((a, b) => a.do_date!.localeCompare(b.do_date!));
+
+    expect(tutorial.map((t) => t.content)).toEqual([
+      "Add a task (N or +)",
+      "Open Search (Ctrl+K)",
+      "See shortcuts (?)",
+      "Focus on this task",
+      "Import Loop habits",
+    ]);
+    const today = new Date().toDateString();
+    const otherToday = tasks.filter(
+      (t) => t.due_date && new Date(t.due_date).toDateString() === today,
+    );
+    for (const task of tutorial) {
+      expect(new Date(task.do_date!).toDateString()).toBe(today);
+      for (const other of otherToday) {
+        expect(task.do_date! < other.due_date!).toBe(true);
+      }
+      expect(task.is_completed).toBe(false);
+      expect(task.project_id).toBeNull();
+      expect(mockStore.isSeedId(task.id)).toBe(true);
+    }
+  });
+
+  it("keeps the overdue backlog to the last few days, so the tutorial isn't buried", () => {
+    seededReset();
+
+    const cutoff = new Date();
+    cutoff.setHours(0, 0, 0, 0);
+    cutoff.setDate(cutoff.getDate() - 4);
+    const oldMisses = mockStore
+      .getTasks()
+      .filter(
+        (t) => !t.is_completed && t.due_date && new Date(t.due_date) < cutoff,
+      );
+
+    expect(oldMisses).toEqual([]);
+  });
+
+  it("names ⌘K in the Search tutorial task on a Mac", () => {
+    const platform = vi
+      .spyOn(navigator, "platform", "get")
+      .mockReturnValue("MacIntel");
+    try {
+      seededReset();
+    } finally {
+      platform.mockRestore();
+    }
+
+    expect(
+      mockStore.getTasks().some((t) => t.content === "Open Search (⌘K)"),
+    ).toBe(true);
+  });
+
   it("seeds skipped days across several demo habits", () => {
     seededReset();
 

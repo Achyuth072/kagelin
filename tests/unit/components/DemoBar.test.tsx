@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/components/AuthProvider";
 import { DemoBar } from "@/components/DemoBar";
 import { mockStore } from "@/lib/mock/mock-store";
+import { useUiStore } from "@/lib/store/uiStore";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
@@ -21,8 +22,7 @@ vi.mock("@/lib/notify", () => ({
   notify: { success: vi.fn(), error: vi.fn() },
 }));
 
-// Forces the AlertDialog (desktop) branch of the shared confirm dialog rather
-// than the Drawer (mobile) branch — either renders the same confirm flow.
+// Force desktop AlertDialog branch of the confirm dialog.
 vi.mock("@/lib/hooks/useMediaQuery", () => ({
   useMediaQuery: vi.fn(() => true),
 }));
@@ -44,6 +44,7 @@ describe("DemoBar", () => {
   beforeEach(() => {
     localStorage.clear();
     mockStore.clearData();
+    useUiStore.getState().setShortcutsHelpOpen(false);
     Object.defineProperty(navigator, "onLine", {
       value: true,
       configurable: true,
@@ -51,7 +52,7 @@ describe("DemoBar", () => {
   });
 
   it("renders nothing outside guest mode", async () => {
-    mockStore.reset(); // seeds Demo data, but there's no guest session to own it
+    mockStore.reset();
     renderDemoBar();
 
     await waitFor(() =>
@@ -79,6 +80,16 @@ describe("DemoBar", () => {
     ).toBeInTheDocument();
   });
 
+  it("offers the shortcuts list as the next step", async () => {
+    localStorage.setItem("kanso_guest_mode", "true");
+    mockStore.reset();
+    renderDemoBar();
+
+    fireEvent.click(await screen.findByRole("button", { name: /shortcuts/i }));
+
+    expect(useUiStore.getState().isShortcutsHelpOpen).toBe(true);
+  });
+
   it("is a pill centred in the content column on desktop, like OfflineIndicator", async () => {
     localStorage.setItem("kanso_guest_mode", "true");
     mockStore.reset();
@@ -87,9 +98,6 @@ describe("DemoBar", () => {
     const wrapper = await screen.findByTestId("demo-bar");
     const card = wrapper.firstElementChild as HTMLElement;
 
-    // The mobile header is md:hidden, so the top-banner offset this wrapper
-    // otherwise uses has nothing to pin to on desktop — it must switch to a
-    // pill instead, not stay a full-width strip floating mid-viewport.
     expect(wrapper.className).toContain("md:absolute");
     expect(wrapper.className).toContain("md:top-auto");
     expect(wrapper.className).toContain("md:bottom-6");
@@ -123,7 +131,7 @@ describe("DemoBar", () => {
     const dialogConfirm = await screen.findByRole("button", {
       name: /delete account data/i,
     });
-    expect(dialogConfirm).toBeDisabled(); // guarded until "delete" is typed
+    expect(dialogConfirm).toBeDisabled();
 
     fireEvent.change(screen.getByPlaceholderText(/type 'delete'/i), {
       target: { value: "delete" },
