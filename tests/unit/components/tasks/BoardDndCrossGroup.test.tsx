@@ -302,6 +302,13 @@ describe("TaskBoard — cross-group snap-back regression", () => {
         triggerLastUndoAction: vi.fn(),
         yankedTaskId: null,
         setYankedTaskId: vi.fn(),
+        shortcutTipsEnabled: true,
+        setShortcutTipsEnabled: vi.fn(),
+        shownShortcutTips: {},
+        shortcutMouseCounts: {},
+        incrementShortcutMouseCount: vi.fn(() => false),
+        setShortcutMouseCount: vi.fn(),
+        markShortcutTipShown: vi.fn(),
       }),
     );
   });

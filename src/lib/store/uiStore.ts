@@ -14,6 +14,9 @@ export interface GoalsState {
   weeklyTasksCompleted: number | null;
 }
 
+export type ShortcutTipAction =
+  "newTask" | "newHabit" | "newEvent" | "newProject" | "logbook";
+
 interface UiState {
   isProjectsOpen: boolean;
   toggleProjectsOpen: () => void;
@@ -47,6 +50,17 @@ interface UiState {
   setAutoLockEnabled: (enabled: boolean) => void;
   autoLockMinutes: number;
   setAutoLockMinutes: (minutes: number) => void;
+
+  shortcutTipsEnabled: boolean;
+  setShortcutTipsEnabled: (enabled: boolean) => void;
+  shownShortcutTips: Partial<Record<ShortcutTipAction, boolean>>;
+  shortcutMouseCounts: Partial<Record<ShortcutTipAction, number>>;
+  incrementShortcutMouseCount: (
+    action: ShortcutTipAction,
+    threshold: number,
+  ) => boolean;
+  setShortcutMouseCount: (action: ShortcutTipAction, count: number) => void;
+  markShortcutTipShown: (action: ShortcutTipAction) => void;
 
   // Aggregate targets, not per-item (see CONTEXT.md "Goals").
   goals: GoalsState;
@@ -138,6 +152,51 @@ export const useUiStore = create<UiState>()(
       // Clamp to prevent corrupted/stale values (<= 0) from continuously auto-locking.
       setAutoLockMinutes: (minutes) =>
         set({ autoLockMinutes: Math.max(1, minutes) }),
+
+      shortcutTipsEnabled: true,
+      setShortcutTipsEnabled: (enabled) =>
+        set({ shortcutTipsEnabled: enabled }),
+      shownShortcutTips: {},
+      shortcutMouseCounts: {},
+      incrementShortcutMouseCount: (action, threshold) => {
+        let reached = false;
+        set((state) => {
+          if (state.shownShortcutTips[action]) return state;
+          const currentCount = state.shortcutMouseCounts[action] ?? 0;
+          const nextCount = currentCount + 1;
+          if (nextCount >= threshold) {
+            reached = true;
+            return {
+              shortcutMouseCounts: {
+                ...state.shortcutMouseCounts,
+                [action]: nextCount,
+              },
+              shownShortcutTips: {
+                ...state.shownShortcutTips,
+                [action]: true,
+              },
+            };
+          }
+          return {
+            shortcutMouseCounts: {
+              ...state.shortcutMouseCounts,
+              [action]: nextCount,
+            },
+          };
+        });
+        return reached;
+      },
+      setShortcutMouseCount: (action, count) =>
+        set((state) => ({
+          shortcutMouseCounts: {
+            ...state.shortcutMouseCounts,
+            [action]: count,
+          },
+        })),
+      markShortcutTipShown: (action) =>
+        set((state) => ({
+          shownShortcutTips: { ...state.shownShortcutTips, [action]: true },
+        })),
 
       goals: {
         dailyFocusHours: null,
@@ -237,6 +296,7 @@ export const useUiStore = create<UiState>()(
           setArchivedProjectsOpen: _setArchivedProjectsOpen,
           isChangelogOpen: _isChangelogOpen,
           setChangelogOpen: _setChangelogOpen,
+          shortcutMouseCounts: _shortcutMouseCounts,
           ...rest
         } = state;
         return rest;

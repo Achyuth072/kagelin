@@ -69,6 +69,61 @@ describe("useUiStore", () => {
     expect(useUiStore.getState().hapticsEnabled).toBe(false);
   });
 
+  it("should handle shortcutTipsEnabled toggle", () => {
+    expect(useUiStore.getState().shortcutTipsEnabled).toBe(true);
+    useUiStore.getState().setShortcutTipsEnabled(false);
+    expect(useUiStore.getState().shortcutTipsEnabled).toBe(false);
+  });
+
+  it("persists shortcutTipsEnabled and shownShortcutTips but excludes ephemeral shortcutMouseCounts", () => {
+    const { partialize } = useUiStore.persist.getOptions();
+    useUiStore.setState({
+      shortcutTipsEnabled: false,
+      shownShortcutTips: { newTask: true },
+      shortcutMouseCounts: { newTask: 2 },
+    });
+    const persisted = partialize!(useUiStore.getState()) as Record<
+      string,
+      unknown
+    >;
+    expect(persisted.shortcutTipsEnabled).toBe(false);
+    expect(persisted.shownShortcutTips).toEqual({ newTask: true });
+    expect(persisted.shortcutMouseCounts).toBeUndefined();
+  });
+
+  it("handles incrementShortcutMouseCount atomically up to threshold", () => {
+    useUiStore.setState({
+      shownShortcutTips: {},
+      shortcutMouseCounts: {},
+    });
+
+    const first = useUiStore
+      .getState()
+      .incrementShortcutMouseCount("newTask", 3);
+    expect(first).toBe(false);
+    expect(useUiStore.getState().shortcutMouseCounts.newTask).toBe(1);
+    expect(useUiStore.getState().shownShortcutTips.newTask).toBeUndefined();
+
+    const second = useUiStore
+      .getState()
+      .incrementShortcutMouseCount("newTask", 3);
+    expect(second).toBe(false);
+    expect(useUiStore.getState().shortcutMouseCounts.newTask).toBe(2);
+
+    const third = useUiStore
+      .getState()
+      .incrementShortcutMouseCount("newTask", 3);
+    expect(third).toBe(true);
+    expect(useUiStore.getState().shortcutMouseCounts.newTask).toBe(3);
+    expect(useUiStore.getState().shownShortcutTips.newTask).toBe(true);
+
+    // Once marked shown, subsequent increments return false and do not re-trigger
+    const fourth = useUiStore
+      .getState()
+      .incrementShortcutMouseCount("newTask", 3);
+    expect(fourth).toBe(false);
+  });
+
   it("should handle shortcuts help dialog toggle", () => {
     useUiStore.getState().setShortcutsHelpOpen(true);
     expect(useUiStore.getState().isShortcutsHelpOpen).toBe(true);
