@@ -1,4 +1,10 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  renderHook,
+} from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import {
   HabitActionsProvider,
@@ -89,5 +95,20 @@ describe("HabitActionsProvider — openHabitInsights", () => {
     fireEvent.click(screen.getByText("add"));
 
     expect(mockRecordMouseAction).toHaveBeenCalledWith("newHabit");
+  });
+
+  it("does not record mouse action when openAddHabit is called with keyboard source", () => {
+    mockRecordMouseAction.mockClear();
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <HabitActionsProvider>{children}</HabitActionsProvider>
+    );
+
+    const { result } = renderHook(() => useHabitActions(), { wrapper });
+
+    act(() => {
+      result.current.openAddHabit({ source: "keyboard" });
+    });
+
+    expect(mockRecordMouseAction).not.toHaveBeenCalled();
   });
 });

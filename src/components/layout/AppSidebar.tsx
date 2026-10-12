@@ -51,7 +51,6 @@ import { useProjects } from "@/lib/hooks/useProjects";
 import { useProjectActions } from "@/components/ProjectActionsProvider";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 import { ArchivedProjectsDialog } from "@/components/projects/ArchivedProjectsDialog";
 import {
   Drawer,
@@ -162,7 +161,6 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
     (state) => state.setShortcutsHelpOpen,
   );
   const { trigger } = useHaptic();
-  const { recordMouseAction } = useShortcutTips();
   const searchKey = useSyncExternalStore(
     subscribeNever,
     () => formatModChord("K"),
@@ -322,7 +320,6 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                 onClick={(e) => {
                   e.stopPropagation();
                   trigger("toggle");
-                  recordMouseAction("newProject");
                   openCreateProject();
                 }}
               >

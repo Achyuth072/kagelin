@@ -25,14 +25,6 @@ vi.mock("@/components/habits/HabitActionsProvider", () => ({
   useHabitActions: () => ({ openAddHabit: mockOpenAddHabit }),
 }));
 
-const mockRecordMouseAction = vi.fn();
-vi.mock("@/lib/hooks/useShortcutTips", () => ({
-  useShortcutTips: () => ({
-    recordMouseAction: mockRecordMouseAction,
-    recordKeyAction: vi.fn(),
-  }),
-}));
-
 vi.mock("@/lib/hooks/useIsBoardViewOnTasks", () => ({
   useIsBoardViewOnTasks: () => false,
 }));
@@ -53,29 +45,27 @@ vi.mock("@/lib/hooks/useAddMeetKagelin", () => ({
   useAddMeetKagelin: () => ({ isPending: false, addAndOpen: vi.fn() }),
 }));
 
-describe("StartHereCard — shortcut tip mouse recording", () => {
+describe("StartHereCard — actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
   });
 
-  it("records mouse action for newTask when Add a task is clicked", () => {
+  it("calls openAddTask when Add a task is clicked", () => {
     render(<StartHereCard />);
 
     const addTaskButton = screen.getAllByText("Add a task")[0];
     fireEvent.click(addTaskButton);
 
-    expect(mockRecordMouseAction).toHaveBeenCalledWith("newTask");
     expect(mockOpenAddTask).toHaveBeenCalledTimes(1);
   });
 
-  it("records mouse action for newHabit when Create a habit is clicked", () => {
+  it("calls openAddHabit when Create a habit is clicked", () => {
     render(<StartHereCard />);
 
     const addHabitButton = screen.getAllByText("Create a habit")[0];
     fireEvent.click(addHabitButton);
 
-    expect(mockRecordMouseAction).toHaveBeenCalledWith("newHabit");
     expect(mockOpenAddHabit).toHaveBeenCalledTimes(1);
   });
 });

@@ -8,7 +8,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, Plus, Layers } from "lucide-react";
 import { format } from "date-fns";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 import { useUiStore } from "@/lib/store/uiStore";
 import { getHabitIcon } from "@/components/habits/shared/HabitIconPicker";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -21,13 +20,11 @@ export default function HabitsPage() {
   const { data: habits, isLoading, error } = useHabits();
   const { openAddHabit, openEditHabit, openHabitInsights } = useHabitActions();
   const { trigger } = useHaptic();
-  const { recordMouseAction } = useShortcutTips();
   const habitViewMode = useUiStore((s) => s.habitViewMode);
   const setHabitViewMode = useUiStore((s) => s.setHabitViewMode);
 
   const handleOpenCreate = () => {
     trigger("toggle");
-    recordMouseAction("newHabit");
     openAddHabit();
   };
 

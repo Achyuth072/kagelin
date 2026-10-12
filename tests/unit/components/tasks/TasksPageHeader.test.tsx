@@ -40,13 +40,8 @@ describe("TasksPageHeader", () => {
     expect(screen.getByRole("tab", { name: /board/i })).toBeInTheDocument();
   });
 
-  it("records mouse action for newTask when New Task is clicked", () => {
+  it("calls onNewTask when New Task is clicked", () => {
     const onNewTask = vi.fn();
-    const mockRecordMouseAction = vi.fn();
-    vi.mocked(useShortcutTips).mockReturnValue({
-      recordMouseAction: mockRecordMouseAction,
-      recordKeyAction: vi.fn(),
-    });
 
     render(
       <TasksPageHeader
@@ -63,7 +58,6 @@ describe("TasksPageHeader", () => {
     const newTaskBtn = screen.getByRole("button", { name: /new task/i });
     newTaskBtn.click();
 
-    expect(mockRecordMouseAction).toHaveBeenCalledWith("newTask");
     expect(onNewTask).toHaveBeenCalledTimes(1);
   });
 

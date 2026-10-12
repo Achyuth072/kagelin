@@ -54,7 +54,6 @@ import {
 import { useUiStore } from "@/lib/store/uiStore";
 import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTaskViewData, getBoardColumns } from "@/lib/hooks/useTaskViewData";
@@ -137,7 +136,6 @@ function TaskListBase({
   const hasYankedTask = useUiStore((state) => !!state.yankedTaskId);
   const { openAddTask } = useTaskActions();
   const { trigger: triggerHaptic } = useHaptic();
-  const { recordMouseAction } = useShortcutTips();
   const setActiveTaskId = useTimerStore((state) => state.setActiveTaskId);
 
   const mouseSensor = useSensor(MouseSensor, {
@@ -997,7 +995,6 @@ function TaskListBase({
             label: "Add task",
             onClick: () => {
               triggerHaptic("toggle");
-              recordMouseAction("newTask");
               openAddTask();
             },
             icon: Plus,

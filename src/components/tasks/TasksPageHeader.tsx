@@ -258,7 +258,6 @@ function TasksPageHeaderBase({
       <Button
         size="sm"
         onClick={() => {
-          recordMouseAction("newTask");
           onNewTask?.();
         }}
         className="hidden md:flex h-9 items-center gap-2 rounded-lg bg-brand text-brand-foreground hover:bg-brand/90 border-none shadow-sm shadow-brand/10 transition-seijaku shrink-0 px-2.5 lg:px-4 text-[13px] font-semibold"

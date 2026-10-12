@@ -9,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import { KeyHint } from "@/components/ui/key-hint";
 import { useAddMeetKagelin } from "@/lib/hooks/useAddMeetKagelin";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
-import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 import { useStartHereCard } from "@/lib/hooks/useStartHereCard";
 import type { StepId, StartHereState } from "@/lib/store/uiStore";
 import { cn } from "@/lib/utils";
@@ -48,7 +47,6 @@ function StartHereSteps({
   const addMeetKagelin = useAddMeetKagelin();
   const { openAddTask } = useTaskActions();
   const { openAddHabit } = useHabitActions();
-  const { recordMouseAction } = useShortcutTips();
   const isBoardViewOnTasks = useIsBoardViewOnTasks();
 
   const steps: Step[] = [
@@ -58,7 +56,6 @@ function StartHereSteps({
       done: done("task"),
       shortcut: "N",
       onClick: () => {
-        recordMouseAction("newTask");
         openAddTask();
       },
     },
@@ -69,7 +66,6 @@ function StartHereSteps({
       // Board view claims `h` for column navigation.
       shortcut: isBoardViewOnTasks ? undefined : "H",
       onClick: () => {
-        recordMouseAction("newHabit");
         openAddHabit();
       },
     },
