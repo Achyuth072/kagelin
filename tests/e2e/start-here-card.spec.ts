@@ -141,6 +141,56 @@ test.describe("Start here card", () => {
     await expect(card.getByRole("button", { name: /^Done:/ })).toHaveCount(0);
   });
 
+  test("adds the Meet Kagelin project on request, without ticking the user's own first task", async ({
+    page,
+  }) => {
+    await seedGuest(page);
+    const card = page.getByRole("region", { name: "Start here" });
+    await expect(card).toBeVisible({ timeout: 25_000 });
+
+    await card.getByRole("button", { name: "Add Meet Kagelin" }).click();
+
+    await expect(page).toHaveURL(/\?project=/);
+    await expect(
+      page
+        .locator('[id^="task-item-"]')
+        .filter({ hasText: "Break into steps" }),
+    ).toBeVisible();
+    await page.goto("http://localhost:3000/", {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(
+      card.getByRole("button", { name: "Add Meet Kagelin" }),
+    ).toBeHidden();
+    await expect(card.getByRole("button", { name: /^Done:/ })).toHaveCount(0);
+  });
+
+  test("Search adds the Meet Kagelin project when the user looks for a tutorial", async ({
+    page,
+  }) => {
+    await seedGuest(page);
+
+    await expect(async () => {
+      await page.keyboard.press("Control+k");
+      await expect(page.getByPlaceholder(/search|type a command/i)).toBeVisible(
+        {
+          timeout: 1000,
+        },
+      );
+    }).toPass({ timeout: 10_000 });
+    await page.keyboard.type("tutorial");
+    await page
+      .getByRole("option", { name: "Add Meet Kagelin Project" })
+      .click();
+
+    await expect(page).toHaveURL(/\?project=/);
+    await expect(
+      page
+        .locator('[id^="task-item-"]')
+        .filter({ hasText: "Break into steps" }),
+    ).toBeVisible();
+  });
+
   test("is hidden while the guest demo data is loaded", async ({ page }) => {
     await openHome(page);
     await expect(page.getByTestId("demo-bar")).toBeVisible({ timeout: 25_000 });

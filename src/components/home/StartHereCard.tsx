@@ -12,6 +12,7 @@ import { useDemoMode } from "@/lib/hooks/useDemoMode";
 import { useTasks } from "@/lib/hooks/useTasks";
 import { useHabits } from "@/lib/hooks/useHabits";
 import { useHasFocusLog } from "@/lib/hooks/useHasFocusLog";
+import { useAddMeetKagelin } from "@/lib/hooks/useAddMeetKagelin";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ interface StartHereState {
   eligible: boolean;
   dismissed: boolean;
   done: StepId[];
+  tutorialProjectId?: string;
 }
 
 const storageKey = (userId: string) => `startHere:${userId}`;
@@ -83,6 +85,7 @@ function StartHereSteps({
   onChange: (next: StartHereState) => void;
 }) {
   const router = useRouter();
+  const addMeetKagelin = useAddMeetKagelin();
   const { openAddTask } = useTaskActions();
   const { openAddHabit } = useHabitActions();
   const isBoardViewOnTasks = useIsBoardViewOnTasks();
@@ -101,14 +104,15 @@ function StartHereSteps({
     !habitsQuery.isFetching &&
     !focusQuery.isFetching;
   const seen: Record<StepId, boolean> = {
-    task: !!tasks?.length,
+    // The tutorial's own tasks aren't the user adding one.
+    task: !!tasks?.some((t) => t.project_id !== state?.tutorialProjectId),
     habit: !!habits?.length,
     focus: !!hasFocusLog,
     import: !!habits?.some((h) => !!h.source_uuid),
   };
-  const done = (id: StepId) => seen[id] || !!state?.done.includes(id);
+  const done = (id: StepId) => seen[id] || !!state?.done?.includes(id);
   const newlyDone = (Object.keys(seen) as StepId[]).filter(
-    (id) => seen[id] && !state?.done.includes(id),
+    (id) => seen[id] && !state?.done?.includes(id),
   );
 
   useEffect(() => {
@@ -165,16 +169,31 @@ function StartHereSteps({
 
   const dismiss = () => onChange({ ...state, dismissed: true });
 
-  return <StartHereGrid steps={steps} onDismiss={dismiss} />;
+  const addTutorial = state.tutorialProjectId
+    ? undefined
+    : {
+        pending: addMeetKagelin.isPending,
+        onClick: async () => {
+          const project = await addMeetKagelin.addAndOpen();
+          if (project) onChange({ ...state, tutorialProjectId: project.id });
+        },
+      };
+
+  return (
+    <StartHereGrid
+      steps={steps}
+      onDismiss={dismiss}
+      addTutorial={addTutorial}
+    />
+  );
 }
+
+const HEADER_BUTTON_CLASS =
+  "type-ui h-11 md:h-9 shrink-0 rounded-lg px-3 text-muted-foreground hover:bg-sidebar hover:text-foreground transition-seijaku-fast disabled:opacity-50";
 
 function DismissButton({ onDismiss }: { onDismiss: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={onDismiss}
-      className="type-ui h-11 md:h-9 shrink-0 rounded-lg px-3 text-muted-foreground hover:bg-sidebar hover:text-foreground transition-seijaku-fast"
-    >
+    <button type="button" onClick={onDismiss} className={HEADER_BUTTON_CLASS}>
       Dismiss
     </button>
   );
@@ -198,9 +217,11 @@ function StepMarker({ done, index }: { done: boolean; index: number }) {
 function StartHereGrid({
   steps,
   onDismiss,
+  addTutorial,
 }: {
   steps: Step[];
   onDismiss: () => void;
+  addTutorial?: { pending: boolean; onClick: () => void };
 }) {
   return (
     <Card
@@ -210,7 +231,19 @@ function StartHereGrid({
     >
       <div className="flex items-center justify-between pl-4 pr-1 pt-1">
         <h2 className="type-ui text-muted-foreground">Start here</h2>
-        <DismissButton onDismiss={onDismiss} />
+        <div className="flex items-center">
+          {addTutorial && (
+            <button
+              type="button"
+              onClick={addTutorial.onClick}
+              disabled={addTutorial.pending}
+              className={cn(HEADER_BUTTON_CLASS, "text-brand")}
+            >
+              Add Meet Kagelin
+            </button>
+          )}
+          <DismissButton onDismiss={onDismiss} />
+        </div>
       </div>
       <ol className="grid grid-cols-2 md:grid-cols-4 border-t border-border/40 md:divide-x divide-border/40">
         {steps.map((step, i) => (

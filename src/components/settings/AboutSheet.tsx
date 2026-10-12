@@ -19,11 +19,13 @@ import {
   FileText,
   Package,
   ExternalLink,
+  GraduationCap,
 } from "lucide-react";
 import { GitHubIcon } from "@/components/auth/ProviderIcons";
 import { REPO_URL, PRIVACY_URL, TERMS_URL } from "@/lib/links";
 import { ICON_LED_ROW_CLASS } from "@/components/settings/iconLedRowClass";
 import { cn } from "@/lib/utils";
+import { useAddMeetKagelin } from "@/lib/hooks/useAddMeetKagelin";
 
 interface AboutSheetProps {
   open: boolean;
@@ -88,6 +90,9 @@ export function AboutSheet({
   version,
   onOpenChangelog,
 }: AboutSheetProps) {
+  const { addAndOpen } = useAddMeetKagelin();
+  const addTutorial = () => addAndOpen(() => onOpenChange(false));
+
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
       <ResponsiveDialogContent className="sm:max-w-110 border-border/80 shadow-none p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
@@ -108,6 +113,12 @@ export function AboutSheet({
             label="What's New"
             detail="Recent changes and releases"
             onClick={onOpenChangelog}
+          />
+          <AboutRow
+            icon={GraduationCap}
+            label="Meet Kagelin"
+            detail="Add the tutorial project"
+            onClick={addTutorial}
           />
           {/* AGPL-3.0 §13: must offer the source of the exact running version, not HEAD. */}
           <AboutRow
