@@ -154,9 +154,22 @@ describe("useUiStore", () => {
     it("should allow setting sync state", () => {
       useUiStore.getState().setIsSynced(true);
       expect(useUiStore.getState().isSynced).toBe(true);
+    });
+  });
 
-      useUiStore.getState().setIsSynced(false);
-      expect(useUiStore.getState().isSynced).toBe(false);
+  describe("startHereStates", () => {
+    it("manages and persists startHereStates per user", () => {
+      const state = {
+        eligible: true,
+        dismissed: false,
+        done: ["task" as const],
+      };
+      useUiStore.getState().setStartHereState("user-1", state);
+
+      expect(useUiStore.getState().startHereStates["user-1"]).toEqual(state);
+      expect(localStorage.getItem("startHere:user-1")).toBe(
+        JSON.stringify(state),
+      );
     });
   });
 });

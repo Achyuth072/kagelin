@@ -150,7 +150,8 @@ export function GlobalHotkeys({
 
   // "?" sits on a different physical key per layout, so match the produced
   // character; by default the hook matches event.code, where "?" never fires.
-  useHotkeys("shift+?", toggleHelp, { ...options, useKey: true });
+  // Match both shifted and unshifted ? so layouts without Shift (or AltGr) work.
+  useHotkeys(["?", "shift+?"], toggleHelp, { ...options, useKey: true });
 
   // Focus Mode (f)
   useHotkeys("f", () => router.push("/focus"), options);

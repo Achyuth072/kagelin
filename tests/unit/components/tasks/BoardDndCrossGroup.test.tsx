@@ -309,6 +309,8 @@ describe("TaskBoard — cross-group snap-back regression", () => {
         incrementShortcutMouseCount: vi.fn(() => false),
         setShortcutMouseCount: vi.fn(),
         markShortcutTipShown: vi.fn(),
+        startHereStates: {},
+        setStartHereState: vi.fn(),
       }),
     );
   });

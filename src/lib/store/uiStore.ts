@@ -17,6 +17,34 @@ export interface GoalsState {
 export type ShortcutTipAction =
   "newTask" | "newHabit" | "newEvent" | "newProject" | "logbook";
 
+export type StepId = "task" | "habit" | "focus" | "import";
+
+export interface StartHereState {
+  eligible?: boolean;
+  dismissed: boolean;
+  done: StepId[];
+  tutorialProjectId?: string;
+}
+
+export function getStartHereState(
+  userId: string,
+  startHereStates: Record<string, StartHereState>,
+): StartHereState | null {
+  if (!userId) return null;
+  if (startHereStates[userId] !== undefined) {
+    return startHereStates[userId];
+  }
+  try {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem(`startHere:${userId}`);
+      if (raw) return JSON.parse(raw) as StartHereState;
+    }
+  } catch {
+    // Ignore parse error
+  }
+  return null;
+}
+
 interface UiState {
   isProjectsOpen: boolean;
   toggleProjectsOpen: () => void;
@@ -105,6 +133,9 @@ interface UiState {
   // Yanked task ID resolved against cache at paste time to avoid stale data.
   yankedTaskId: string | null;
   setYankedTaskId: (id: string | null) => void;
+
+  startHereStates: Record<string, StartHereState>;
+  setStartHereState: (userId: string, state: StartHereState) => void;
 
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
@@ -257,6 +288,23 @@ export const useUiStore = create<UiState>()(
 
       yankedTaskId: null,
       setYankedTaskId: (id) => set({ yankedTaskId: id }),
+
+      startHereStates: {},
+      setStartHereState: (userId, state) => {
+        try {
+          if (typeof window !== "undefined") {
+            localStorage.setItem(`startHere:${userId}`, JSON.stringify(state));
+          }
+        } catch {
+          // Component state still holds for this page view.
+        }
+        set((prev) => ({
+          startHereStates: {
+            ...prev.startHereStates,
+            [userId]: state,
+          },
+        }));
+      },
 
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),

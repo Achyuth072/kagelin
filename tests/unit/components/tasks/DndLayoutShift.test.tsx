@@ -249,6 +249,8 @@ describe("TaskList DnD layout shift protection", () => {
         incrementShortcutMouseCount: vi.fn(() => false),
         setShortcutMouseCount: vi.fn(),
         markShortcutTipShown: vi.fn(),
+        startHereStates: {},
+        setStartHereState: vi.fn(),
       }),
     );
   });

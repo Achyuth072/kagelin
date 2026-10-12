@@ -52,7 +52,10 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { SignOutConfirmation } from "@/components/auth/SignOutConfirmation";
 import { useDocumentPiP } from "@/lib/hooks/useDocumentPiP";
 import { useUiStore } from "@/lib/store/uiStore";
-import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
+import {
+  useBackNavigation,
+  runAfterModalBack,
+} from "@/lib/hooks/useBackNavigation";
 import { useAddMeetKagelin } from "@/lib/hooks/useAddMeetKagelin";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useTasks } from "@/lib/hooks/useTasks";
@@ -203,19 +206,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const runCommand = React.useCallback(
     (command: () => void) => {
       onOpenChange(false);
-      // Closing a modal with useBackNavigation invokes history.back(). If a
-      // command opens another modal or navigates immediately, the pending
-      // popstate event cancels or dismisses it.
-      if (
-        typeof window !== "undefined" &&
-        window.history.state?.modalId !== undefined
-      ) {
-        window.addEventListener("popstate", () => setTimeout(command), {
-          once: true,
-        });
-      } else {
-        command();
-      }
+      runAfterModalBack(command);
     },
     [onOpenChange],
   );

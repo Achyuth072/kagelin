@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useTasks } from "@/lib/hooks/useTasks";
 import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { CheckCircle2, Clock, Trash2, Search, X } from "lucide-react";
@@ -53,19 +53,14 @@ const CompletedTaskItem = React.memo(({ task }: { task: Task }) => {
 
   const { formatTime } = useTimeFormat();
 
-  const completedDate = useMemo(
-    () => (task.completed_at ? parseISO(task.completed_at) : null),
-    [task.completed_at],
-  );
+  const completedDate = task.completed_at ? parseISO(task.completed_at) : null;
 
   // Older rows need the day, not just the time.
-  const formattedDate = useMemo(() => {
-    if (!completedDate) return "";
-    const time = formatTime(completedDate);
-    return isToday(completedDate) || isYesterday(completedDate)
-      ? time
-      : `${format(completedDate, "MMM d")} · ${time}`;
-  }, [completedDate, formatTime]);
+  const formattedDate = !completedDate
+    ? ""
+    : isToday(completedDate) || isYesterday(completedDate)
+      ? formatTime(completedDate)
+      : `${format(completedDate, "MMM d")} · ${formatTime(completedDate)}`;
 
   return (
     <div className="flex items-start gap-3 py-2 md:py-2 px-4 border-b border-border/40 hover:bg-secondary/30 transition-colors group min-h-[44px]">
@@ -107,33 +102,21 @@ export function CompletedTasksSheet({
 
   useBackNavigation(open && !isDesktop, () => onOpenChange(false));
 
-  const completedTasks = useMemo(
-    () =>
-      tasks.filter(
-        (task) =>
-          task.is_completed &&
-          task.completed_at &&
-          !isToday(parseISO(task.completed_at)),
-      ),
-    [tasks],
+  const completedTasks = tasks.filter(
+    (task) =>
+      task.is_completed &&
+      task.completed_at &&
+      !isToday(parseISO(task.completed_at)),
   );
 
-  const filteredCompletedTasks = useMemo(
-    () =>
-      completedTasks.filter((task) =>
-        (task.content ?? "").toLowerCase().includes(searchQuery.toLowerCase()),
-      ),
-    [completedTasks, searchQuery],
+  const filteredCompletedTasks = completedTasks.filter((task) =>
+    (task.content ?? "").toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const isSearching = searchQuery.length > 0;
-  const flattenedItems = useMemo(
-    () =>
-      buildLogbookItems(filteredCompletedTasks, {
-        showOlder: showOlder || isSearching,
-      }),
-    [filteredCompletedTasks, showOlder, isSearching],
-  );
+  const flattenedItems = buildLogbookItems(filteredCompletedTasks, {
+    showOlder: showOlder || isSearching,
+  });
 
   const hasResults = flattenedItems.length > 0;
 

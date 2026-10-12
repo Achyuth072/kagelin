@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
@@ -8,42 +7,12 @@ import { useTaskActions } from "@/components/TaskActionsProvider";
 import { useHabitActions } from "@/components/habits/HabitActionsProvider";
 import { Card } from "@/components/ui/card";
 import { KeyHint } from "@/components/ui/key-hint";
-import { useDemoMode } from "@/lib/hooks/useDemoMode";
-import { useTasks } from "@/lib/hooks/useTasks";
-import { useHabits } from "@/lib/hooks/useHabits";
-import { useHasFocusLog } from "@/lib/hooks/useHasFocusLog";
 import { useAddMeetKagelin } from "@/lib/hooks/useAddMeetKagelin";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
 import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
+import { useStartHereCard } from "@/lib/hooks/useStartHereCard";
+import type { StepId, StartHereState } from "@/lib/store/uiStore";
 import { cn } from "@/lib/utils";
-
-type StepId = "task" | "habit" | "focus" | "import";
-
-interface StartHereState {
-  eligible: boolean;
-  dismissed: boolean;
-  done: StepId[];
-  tutorialProjectId?: string;
-}
-
-const storageKey = (userId: string) => `startHere:${userId}`;
-
-function readState(userId: string): StartHereState | null {
-  try {
-    const raw = localStorage.getItem(storageKey(userId));
-    return raw ? (JSON.parse(raw) as StartHereState) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeState(userId: string, state: StartHereState): void {
-  try {
-    localStorage.setItem(storageKey(userId), JSON.stringify(state));
-  } catch {
-    // Component state still holds for this page view.
-  }
-}
 
 interface Step {
   id: StepId;
@@ -57,33 +26,23 @@ interface Step {
 export function StartHereCard() {
   const { user } = useAuth();
   const userId = user?.id ?? "";
-  const [state, setState] = useState(() => readState(userId));
-  // Wait for demo check to settle: deciding while loading risks misclassifying demo accounts.
-  const isDemoMode = useDemoMode();
+  const { state, save, isVisible, done } = useStartHereCard(userId);
 
-  if (
-    !userId ||
-    isDemoMode !== false ||
-    state?.dismissed ||
-    state?.eligible === false
-  ) {
+  if (!isVisible || !state) {
     return null;
   }
 
-  const save = (next: StartHereState) => {
-    writeState(userId, next);
-    setState(next);
-  };
-
-  return <StartHereSteps state={state} onChange={save} />;
+  return <StartHereSteps state={state} onChange={save} done={done} />;
 }
 
 function StartHereSteps({
   state,
   onChange,
+  done,
 }: {
-  state: StartHereState | null;
+  state: StartHereState;
   onChange: (next: StartHereState) => void;
+  done: (id: StepId) => boolean;
 }) {
   const router = useRouter();
   const addMeetKagelin = useAddMeetKagelin();
@@ -91,47 +50,6 @@ function StartHereSteps({
   const { openAddHabit } = useHabitActions();
   const { recordMouseAction } = useShortcutTips();
   const isBoardViewOnTasks = useIsBoardViewOnTasks();
-  const tasksQuery = useTasks({ projectId: "all" });
-  const habitsQuery = useHabits();
-  const focusQuery = useHasFocusLog();
-  const tasks = tasksQuery.data;
-  const habits = habitsQuery.data;
-  const hasFocusLog = focusQuery.data;
-
-  const loaded = !!tasks && !!habits && hasFocusLog !== undefined;
-  // Wait for background refetch so persisted cache isn't evaluated as fresh data.
-  const settled =
-    loaded &&
-    !tasksQuery.isFetching &&
-    !habitsQuery.isFetching &&
-    !focusQuery.isFetching;
-  const seen: Record<StepId, boolean> = {
-    // The tutorial's own tasks aren't the user adding one.
-    task: !!tasks?.some((t) => t.project_id !== state?.tutorialProjectId),
-    habit: !!habits?.length,
-    focus: !!hasFocusLog,
-    import: !!habits?.some((h) => !!h.source_uuid),
-  };
-  const done = (id: StepId) => seen[id] || !!state?.done?.includes(id);
-  const newlyDone = (Object.keys(seen) as StepId[]).filter(
-    (id) => seen[id] && !state?.done?.includes(id),
-  );
-
-  useEffect(() => {
-    if (!loaded) return;
-    if (!state) {
-      if (!settled) return;
-      onChange({
-        eligible: !seen.task && !seen.habit && !seen.focus,
-        dismissed: false,
-        done: newlyDone,
-      });
-    } else if (newlyDone.length > 0) {
-      onChange({ ...state, done: [...state.done, ...newlyDone] });
-    }
-  });
-
-  if (!loaded || !state) return null;
 
   const steps: Step[] = [
     {

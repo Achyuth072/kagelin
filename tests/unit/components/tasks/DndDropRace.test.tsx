@@ -325,6 +325,8 @@ describe("TaskList drop race condition (residual snap-back)", () => {
         incrementShortcutMouseCount: vi.fn(() => false),
         setShortcutMouseCount: vi.fn(),
         markShortcutTipShown: vi.fn(),
+        startHereStates: {},
+        setStartHereState: vi.fn(),
       }),
     );
   });

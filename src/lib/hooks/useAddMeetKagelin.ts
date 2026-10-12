@@ -10,6 +10,7 @@ import {
   stepDates,
 } from "@/lib/meet-kagelin";
 import { handleMutationError } from "@/lib/utils/mutation-error";
+import { runAfterModalBack } from "@/lib/hooks/useBackNavigation";
 import type { Project } from "@/lib/types/task";
 
 // Normal rows through the normal save path, so sync and encryption apply.
@@ -63,17 +64,8 @@ export function useAddMeetKagelin() {
     const project = await mutation.mutateAsync().catch(() => null);
     if (!project) return null;
 
-    const open = () => router.push(`/?project=${project.id}`);
-    // Closing a phone sheet goes back in history (useBackNavigation); a
-    // navigation started before that back lands is cancelled by it.
-    if (window.history.state?.modalId === undefined) {
-      open();
-    } else {
-      window.addEventListener("popstate", () => setTimeout(open), {
-        once: true,
-      });
-    }
     closeSheet?.();
+    runAfterModalBack(() => router.push(`/?project=${project.id}`));
     return project;
   };
 
