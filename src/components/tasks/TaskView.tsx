@@ -264,7 +264,7 @@ export function TaskView(props: TaskViewProps) {
                 priority={priority}
                 setPriority={setPriority}
                 variant="icon"
-                {...(mode === "create" ? { isMobile } : {})}
+                isMobile={isMobile}
               />
             </div>
 
@@ -273,7 +273,7 @@ export function TaskView(props: TaskViewProps) {
                 value={recurrence}
                 onChange={setRecurrence}
                 variant="icon"
-                {...(mode === "create" ? { isMobile } : {})}
+                isMobile={isMobile}
               />
             </div>
           </div>

@@ -19,6 +19,11 @@ import dynamic from "next/dynamic";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
 import { omitUntouchedUnreadable } from "@/lib/crypto/unreadable";
+import {
+  taskToFormValues,
+  defaultTaskFormValues,
+  type TaskFormValues,
+} from "./task-utils";
 
 const TaskView = dynamic(
   () => import("./TaskView").then((mod) => mod.TaskView),
@@ -40,10 +45,6 @@ interface TaskDetailPanelProps {
 export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   const { trigger } = useHaptic();
 
-  type TaskFormValues = CreateTaskInput & {
-    recurrence?: RecurrenceRule | null;
-  };
-
   const {
     handleSubmit,
     setValue,
@@ -54,12 +55,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   } = useForm<TaskFormValues>({
     resolver: zodResolver(CreateTaskSchema),
     mode: "onChange",
-    defaultValues: {
-      content: "",
-      description: "",
-      priority: 4,
-      is_evening: false,
-    },
+    defaultValues: defaultTaskFormValues(),
   });
 
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -105,15 +101,7 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
 
   useEffect(() => {
     if (task) {
-      reset({
-        content: task.content ?? "",
-        description: task.description || "",
-        due_date: task.due_date ?? undefined,
-        do_date: task.do_date ?? undefined,
-        is_evening: task.is_evening || false,
-        priority: task.priority,
-        project_id: task.project_id ?? undefined,
-      });
+      reset(taskToFormValues(task));
       void triggerValidation();
     }
   }, [task, reset, triggerValidation]);

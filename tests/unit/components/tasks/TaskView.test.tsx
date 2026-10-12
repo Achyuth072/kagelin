@@ -24,7 +24,19 @@ vi.mock("@/components/tasks/shared/TaskPrioritySelect", () => ({
 }));
 
 vi.mock("@/components/tasks/TaskSheet/RecurrencePicker", () => ({
-  default: () => <div data-testid="recurrence-picker" />,
+  default: ({
+    value,
+    isMobile,
+  }: {
+    value?: { freq?: string } | null;
+    isMobile?: boolean;
+  }) => (
+    <div
+      data-testid="recurrence-picker"
+      data-recurrence={value?.freq ?? "none"}
+      data-mobile={String(isMobile)}
+    />
+  ),
 }));
 
 vi.mock("@/components/tasks/SubtaskList", () => ({
@@ -324,5 +336,20 @@ describe("TaskView - edit mode", () => {
     fireEvent.click(collapseBtn);
     expect(setShowSubtasks).toHaveBeenCalledWith(false);
     expect(document.activeElement).toBe(titleInput);
+  });
+
+  it("forwards recurrence and isMobile props to RecurrencePicker in edit mode", () => {
+    render(
+      <TaskView
+        {...editProps}
+        mode="edit"
+        recurrence={{ freq: "WEEKLY", interval: 1 }}
+        isMobile={true}
+      />,
+    );
+
+    const picker = screen.getByTestId("recurrence-picker");
+    expect(picker.getAttribute("data-recurrence")).toBe("WEEKLY");
+    expect(picker.getAttribute("data-mobile")).toBe("true");
   });
 });

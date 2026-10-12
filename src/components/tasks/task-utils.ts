@@ -6,6 +6,8 @@ import {
   isBefore,
   startOfDay,
 } from "date-fns";
+import type { Task } from "@/lib/types/task";
+import type { CreateTaskInput } from "@/lib/schemas/task";
 
 export const priorityTextClasses: Record<1 | 2 | 3 | 4, string> = {
   1: "text-foreground font-bold",
@@ -42,4 +44,35 @@ export function isOverdue(dateString: string | null | undefined): boolean {
  */
 export function taskDomId(taskId: string): string {
   return `task-item-${taskId}`;
+}
+
+export type TaskFormValues = CreateTaskInput;
+
+export function taskToFormValues(task: Task): TaskFormValues {
+  return {
+    content: task.content ?? "",
+    description: task.description || "",
+    due_date: task.due_date ?? undefined,
+    do_date: task.do_date ?? undefined,
+    is_evening: task.is_evening || false,
+    priority: task.priority,
+    project_id: task.project_id ?? undefined,
+    recurrence: task.recurrence ?? null,
+  };
+}
+
+export function defaultTaskFormValues(initial?: {
+  content?: string;
+  dueDate?: Date | null;
+}): TaskFormValues {
+  return {
+    content: initial?.content || "",
+    description: "",
+    due_date: initial?.dueDate?.toISOString() ?? undefined,
+    do_date: undefined,
+    is_evening: false,
+    priority: 4,
+    project_id: undefined,
+    recurrence: null,
+  };
 }

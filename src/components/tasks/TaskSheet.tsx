@@ -33,6 +33,11 @@ import { TaskInsightsPanel } from "./TaskInsightsPanel";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { SheetTabToggle, type SheetTab } from "@/components/ui/SheetTabToggle";
 import { cn } from "@/lib/utils";
+import {
+  taskToFormValues,
+  defaultTaskFormValues,
+  type TaskFormValues,
+} from "./task-utils";
 
 interface TaskSheetProps {
   open: boolean;
@@ -66,10 +71,6 @@ export default function TaskSheet({
 
   const effectiveTask = open ? initialTask : preservedTask;
 
-  type TaskFormValues = CreateTaskInput & {
-    recurrence?: RecurrenceRule | null;
-  };
-
   const {
     handleSubmit,
     setValue,
@@ -80,12 +81,7 @@ export default function TaskSheet({
   } = useForm<TaskFormValues>({
     resolver: zodResolver(CreateTaskSchema),
     mode: "onChange",
-    defaultValues: {
-      content: "",
-      description: "",
-      priority: 4,
-      is_evening: false,
-    },
+    defaultValues: defaultTaskFormValues(),
   });
 
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -146,27 +142,16 @@ export default function TaskSheet({
   useEffect(() => {
     if (open) {
       if (initialTask) {
-        reset({
-          content: initialTask.content ?? "",
-          description: initialTask.description || "",
-          due_date: initialTask.due_date ?? undefined,
-          do_date: initialTask.do_date ?? undefined,
-          is_evening: initialTask.is_evening || false,
-          priority: initialTask.priority,
-          project_id: initialTask.project_id ?? undefined,
-        });
-        void triggerValidation();
+        reset(taskToFormValues(initialTask));
       } else {
-        reset({
-          content: initialContent || "",
-          description: "",
-          due_date: initialDate?.toISOString() ?? undefined,
-          do_date: undefined,
-          is_evening: false,
-          priority: 4,
-          project_id: undefined,
-        });
+        reset(
+          defaultTaskFormValues({
+            content: initialContent,
+            dueDate: initialDate,
+          }),
+        );
       }
+      void triggerValidation();
     }
   }, [
     open,
