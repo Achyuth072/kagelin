@@ -1,17 +1,24 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { CompletedTasksSheet } from "@/components/tasks/CompletedTasksSheet";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 import React from "react";
+import { format } from "date-fns";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 // Mock react-virtuoso
 vi.mock("react-virtuoso", () => ({
-  Virtuoso: ({ data, itemContent }: any) => (
+  Virtuoso: ({
+    data,
+    itemContent,
+  }: {
+    data: Array<{ id?: string }>;
+    itemContent: (index: number, item: unknown) => React.ReactNode;
+  }) => (
     <div>
-      {data.map((item: any, index: number) => (
-        <div key={item.id || index}>{itemContent(index, item)}</div>
+      {data.map((item, index) => (
+        <div key={item.id ?? index}>{itemContent(index, item)}</div>
       ))}
     </div>
   ),
@@ -103,5 +110,38 @@ describe("CompletedTasksSheet (Logbook)", () => {
     // The today task should be filtered out
     const todayTask = screen.queryByText("Completed Today Task");
     expect(todayTask).toBeNull();
+  });
+
+  it("keeps tasks older than 30 days behind Show older, with their date", async () => {
+    const daysAgo = (n: number) =>
+      new Date(Date.now() - n * 86400000).toISOString();
+    mockStore.addTask({
+      id: "recent",
+      content: "Recent Task",
+      is_completed: true,
+      completed_at: daysAgo(10),
+    });
+    mockStore.addTask({
+      id: "old",
+      content: "Old Task",
+      is_completed: true,
+      completed_at: daysAgo(90),
+    });
+
+    render(
+      <Wrapper>
+        <CompletedTasksSheet open={true} onOpenChange={() => {}} />
+      </Wrapper>,
+    );
+
+    await screen.findByText("Recent Task");
+    expect(screen.queryByText("Old Task")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show older (1)" }));
+
+    expect(await screen.findByText("Old Task")).toBeDefined();
+    expect(
+      screen.getByText(new RegExp(format(new Date(daysAgo(90)), "MMM d"))),
+    ).toBeDefined();
   });
 });

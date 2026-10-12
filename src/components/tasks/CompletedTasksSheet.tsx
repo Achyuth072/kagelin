@@ -2,11 +2,12 @@
 
 import React, { useState, useMemo } from "react";
 import { useTasks } from "@/lib/hooks/useTasks";
-import { isToday, isYesterday, parseISO, startOfWeek, isAfter } from "date-fns";
+import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { CheckCircle2, Clock, Trash2, Search, X } from "lucide-react";
 import { Virtuoso } from "react-virtuoso";
 
 import type { Task } from "@/lib/types/task";
+import { buildLogbookItems, type LogbookItem } from "./logbookItems";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import {
   useUpdateTask,
@@ -57,10 +58,14 @@ const CompletedTaskItem = React.memo(({ task }: { task: Task }) => {
     [task.completed_at],
   );
 
-  const formattedDate = useMemo(
-    () => (completedDate ? formatTime(completedDate) : ""),
-    [completedDate, formatTime],
-  );
+  // Older rows need the day, not just the time.
+  const formattedDate = useMemo(() => {
+    if (!completedDate) return "";
+    const time = formatTime(completedDate);
+    return isToday(completedDate) || isYesterday(completedDate)
+      ? time
+      : `${format(completedDate, "MMM d")} · ${time}`;
+  }, [completedDate, formatTime]);
 
   return (
     <div className="flex items-start gap-3 py-2 md:py-2 px-4 border-b border-border/40 hover:bg-secondary/30 transition-colors group min-h-[44px]">
@@ -88,41 +93,6 @@ const CompletedTaskItem = React.memo(({ task }: { task: Task }) => {
 
 CompletedTaskItem.displayName = "CompletedTaskItem";
 
-function groupTasksByDate(tasks: Task[]) {
-  const today: Task[] = [];
-  const yesterday: Task[] = [];
-  const thisWeek: Task[] = [];
-  const older: Task[] = [];
-
-  const now = new Date();
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
-
-  tasks.forEach((task) => {
-    if (!task.completed_at) {
-      older.push(task);
-      return;
-    }
-
-    const completedDate = parseISO(task.completed_at);
-
-    if (isToday(completedDate)) {
-      today.push(task);
-    } else if (isYesterday(completedDate)) {
-      yesterday.push(task);
-    } else if (isAfter(completedDate, weekStart)) {
-      thisWeek.push(task);
-    } else {
-      older.push(task);
-    }
-  });
-
-  return { today, yesterday, thisWeek, older };
-}
-
-type FlattenedItem =
-  | { type: "header"; title: string; id: string }
-  | { type: "task"; task: Task; id: string };
-
 export function CompletedTasksSheet({
   open,
   onOpenChange,
@@ -132,6 +102,7 @@ export function CompletedTasksSheet({
   const clearMutation = useClearCompletedTasks();
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showOlder, setShowOlder] = useState(false);
   const { trigger } = useHaptic();
 
   useBackNavigation(open && !isDesktop, () => onOpenChange(false));
@@ -155,41 +126,15 @@ export function CompletedTasksSheet({
     [completedTasks, searchQuery],
   );
 
-  const flattenedItems = useMemo(() => {
-    const { today, yesterday, thisWeek, older } = groupTasksByDate(
-      filteredCompletedTasks,
-    );
-    const items: FlattenedItem[] = [];
-
-    if (today.length > 0) {
-      items.push({ type: "header", title: "Today", id: "header-today" });
-      today.forEach((task) => items.push({ type: "task", task, id: task.id }));
-    }
-    if (yesterday.length > 0) {
-      items.push({
-        type: "header",
-        title: "Yesterday",
-        id: "header-yesterday",
-      });
-      yesterday.forEach((task) =>
-        items.push({ type: "task", task, id: task.id }),
-      );
-    }
-    if (thisWeek.length > 0) {
-      items.push({ type: "header", title: "This Week", id: "header-week" });
-      thisWeek.forEach((task) =>
-        items.push({ type: "task", task, id: task.id }),
-      );
-    }
-    if (older.length > 0) {
-      items.push({ type: "header", title: "Older", id: "header-older" });
-      older.forEach((task) => items.push({ type: "task", task, id: task.id }));
-    }
-
-    return items;
-  }, [filteredCompletedTasks]);
-
   const isSearching = searchQuery.length > 0;
+  const flattenedItems = useMemo(
+    () =>
+      buildLogbookItems(filteredCompletedTasks, {
+        showOlder: showOlder || isSearching,
+      }),
+    [filteredCompletedTasks, showOlder, isSearching],
+  );
+
   const hasResults = flattenedItems.length > 0;
 
   const handleClearHistory = () => {
@@ -198,7 +143,18 @@ export function CompletedTasksSheet({
     clearMutation.mutate();
   };
 
-  const renderItem = (index: number, item: FlattenedItem) => {
+  const renderItem = (_index: number, item: LogbookItem) => {
+    if (item.type === "more") {
+      return (
+        <button
+          type="button"
+          onClick={() => setShowOlder(true)}
+          className="type-ui w-full px-6 py-4 text-muted-foreground hover:bg-secondary/30 hover:text-foreground transition-seijaku-fast"
+        >
+          Show older ({item.count})
+        </button>
+      );
+    }
     if (item.type === "header") {
       return (
         <h3 className="type-micro font-semibold uppercase px-6 py-3 border-b border-border/40 bg-background/95 backdrop-blur-sm sticky top-0 z-10">
@@ -238,7 +194,7 @@ export function CompletedTasksSheet({
           data={flattenedItems}
           itemContent={renderItem}
           className="scrollbar-hide"
-          computeItemKey={(index, item) => item.id}
+          computeItemKey={(_index, item) => item.id}
           initialTopMostItemIndex={0}
           overscan={200}
         />
