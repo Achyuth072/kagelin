@@ -40,6 +40,7 @@ import {
 } from "@/lib/hooks/useGuestStoreActions";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { PwaInstallRow } from "@/components/settings/PwaInstallRow";
+import { ShortcutTipsRow } from "@/components/settings/ShortcutTipsRow";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
 import { BackupSyncSettings } from "@/components/settings/BackupSyncSettings";
 import { AccountSection } from "@/components/settings/AccountSection";
@@ -396,6 +397,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
                     </div>
 
                     <NotificationSettings />
+
+                    <ShortcutTipsRow />
 
                     <PwaInstallRow />
                   </div>
