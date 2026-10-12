@@ -8,6 +8,7 @@ import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { ReadableText } from "@/components/encryption/ReadableText";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useCalendarStore } from "@/lib/calendar/store";
+import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 import { CalendarDays, Plus } from "lucide-react";
 
 interface ScheduleViewProps {
@@ -21,6 +22,7 @@ const ScheduleView = memo(
   ({ events, startDate, daysToShow = 30, className }: ScheduleViewProps) => {
     const { formatTime } = useTimeFormat();
     const openCreateEvent = useCalendarStore((s) => s.openCreateEvent);
+    const { recordMouseAction } = useShortcutTips();
     const startOfToday = startOfDay(startDate);
 
     // Memoize date range generation
@@ -59,7 +61,10 @@ const ScheduleView = memo(
             description="See your events and dated tasks together, day by day."
             action={{
               label: "Add event",
-              onClick: () => openCreateEvent(),
+              onClick: () => {
+                recordMouseAction("newEvent");
+                openCreateEvent();
+              },
               icon: Plus,
               shortcut: "E",
             }}

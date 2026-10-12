@@ -14,6 +14,7 @@ import { useHabits } from "@/lib/hooks/useHabits";
 import { useHasFocusLog } from "@/lib/hooks/useHasFocusLog";
 import { useAddMeetKagelin } from "@/lib/hooks/useAddMeetKagelin";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
+import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 import { cn } from "@/lib/utils";
 
 type StepId = "task" | "habit" | "focus" | "import";
@@ -88,6 +89,7 @@ function StartHereSteps({
   const addMeetKagelin = useAddMeetKagelin();
   const { openAddTask } = useTaskActions();
   const { openAddHabit } = useHabitActions();
+  const { recordMouseAction } = useShortcutTips();
   const isBoardViewOnTasks = useIsBoardViewOnTasks();
   const tasksQuery = useTasks({ projectId: "all" });
   const habitsQuery = useHabits();
@@ -137,7 +139,10 @@ function StartHereSteps({
       label: "Add a task",
       done: done("task"),
       shortcut: "N",
-      onClick: openAddTask,
+      onClick: () => {
+        recordMouseAction("newTask");
+        openAddTask();
+      },
     },
     {
       id: "habit",
@@ -145,7 +150,10 @@ function StartHereSteps({
       done: done("habit"),
       // Board view claims `h` for column navigation.
       shortcut: isBoardViewOnTasks ? undefined : "H",
-      onClick: openAddHabit,
+      onClick: () => {
+        recordMouseAction("newHabit");
+        openAddHabit();
+      },
     },
     {
       id: "focus",

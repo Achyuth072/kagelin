@@ -12,6 +12,7 @@ import { useCalendarStore } from "@/lib/calendar/store";
 import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
 import { useIsTasksPage } from "@/lib/hooks/useIsTasksPage";
+import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 
 interface GlobalHotkeysProps {
   setCommandOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
@@ -36,6 +37,7 @@ export function GlobalHotkeys({
   const setArchivedProjectsOpen = useUiStore(
     (state) => state.setArchivedProjectsOpen,
   );
+  const { recordKeyAction } = useShortcutTips();
 
   const isOtherModalOpen = useIsAnyModalOpen();
   const isAnyModalOpen = isOtherModalOpen || !!commandOpen;
@@ -66,22 +68,57 @@ export function GlobalHotkeys({
   // --- ACTIONS ---
 
   // New Task (n)
-  useHotkeys("n", () => openAddTask(), options);
+  useHotkeys(
+    "n",
+    () => {
+      recordKeyAction("newTask");
+      openAddTask();
+    },
+    options,
+  );
 
   // New Habit (h)
-  useHotkeys("h", () => openAddHabit(), habitHotkeyOptions);
+  useHotkeys(
+    "h",
+    () => {
+      recordKeyAction("newHabit");
+      openAddHabit();
+    },
+    habitHotkeyOptions,
+  );
 
   // New Event (e)
-  useHotkeys("e", () => openCreateEvent(), options);
+  useHotkeys(
+    "e",
+    () => {
+      recordKeyAction("newEvent");
+      openCreateEvent();
+    },
+    options,
+  );
 
   // New Project (p)
-  useHotkeys("p", () => openCreateProject(), newProjectHotkeyOptions);
+  useHotkeys(
+    "p",
+    () => {
+      recordKeyAction("newProject");
+      openCreateProject();
+    },
+    newProjectHotkeyOptions,
+  );
 
   // Archived Projects (a)
   useHotkeys("a", () => setArchivedProjectsOpen(true), options);
 
   // Toggle Logbook (c)
-  useHotkeys("c", () => openCompletedSheet(), options);
+  useHotkeys(
+    "c",
+    () => {
+      recordKeyAction("logbook");
+      openCompletedSheet();
+    },
+    options,
+  );
 
   useHotkeys(
     ["mod+k"],
