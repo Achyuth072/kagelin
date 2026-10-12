@@ -10,12 +10,15 @@ test.describe("Guest demo tutorial", () => {
     "Desktop layout; WebKit needs Docker on this machine",
   );
 
-  test("a fresh guest sees the tutorial tasks and completes one like any task", async ({
+  test("a fresh guest opens Meet Kagelin from the Demo bar and completes a step like any task", async ({
     page,
   }) => {
     await seedGuestMode(page, "http://localhost:3000/");
     // Demo data loads slowly when workers share the dev server.
-    await expect(page.getByTestId("demo-bar")).toBeVisible({ timeout: 25_000 });
+    const demoBar = page.getByTestId("demo-bar");
+    await expect(demoBar).toBeVisible({ timeout: 25_000 });
+    await demoBar.getByRole("link", { name: "Meet Kagelin" }).click();
+    await expect(page).toHaveURL(/project=demo-project-meet-kagelin/);
 
     const step = page
       .locator('[id^="task-item-"]')
@@ -40,19 +43,5 @@ test.describe("Guest demo tutorial", () => {
         ),
       )
       .toBe(true);
-  });
-
-  test("the Demo bar opens the shortcuts list", async ({ page }) => {
-    await seedGuestMode(page, "http://localhost:3000/");
-    const demoBar = page.getByTestId("demo-bar");
-    await expect(demoBar).toBeVisible({ timeout: 25_000 });
-
-    const heading = page.getByRole("heading", { name: "Keyboard Shortcuts" });
-    await expect(async () => {
-      if (!(await heading.isVisible())) {
-        await demoBar.getByRole("button", { name: "Shortcuts" }).click();
-      }
-      await expect(heading).toBeVisible({ timeout: 1000 });
-    }).toPass({ timeout: 10_000 });
   });
 });

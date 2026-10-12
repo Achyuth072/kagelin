@@ -1,7 +1,6 @@
 import { isWeekend } from "date-fns";
 import * as Sentry from "@sentry/nextjs";
 import type { Task, Project } from "@/lib/types/task";
-import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import {
   ENTRY_VALUE_DONE,
   ENTRY_VALUE_SKIPPED,
@@ -12,9 +11,11 @@ import {
 import type { FocusLog } from "@/lib/types/focus";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
 import type { BackupData } from "@/lib/backup/types";
-import { formatModChord } from "@/lib/utils/platform";
+import { MEET_KAGELIN_PROJECT, meetKagelinSteps } from "@/lib/meet-kagelin";
+import { periodForFrequencyDays } from "@/lib/utils/habit-frequency";
 
 export const STORAGE_KEY = "kanso_guest_data_v11";
+export const DEMO_TUTORIAL_PROJECT_ID = "demo-project-meet-kagelin";
 
 export interface GuestData {
   tasks: Task[];
@@ -68,6 +69,16 @@ class MockStore {
 
     const projects: Project[] = [
       {
+        id: DEMO_TUTORIAL_PROJECT_ID,
+        user_id: "guest",
+        ...MEET_KAGELIN_PROJECT,
+        view_style: "list",
+        is_inbox: false,
+        is_archived: false,
+        created_at: nowIso,
+        updated_at: nowIso,
+      },
+      {
         id: pWork,
         user_id: "guest",
         name: "Work",
@@ -92,7 +103,7 @@ class MockStore {
       {
         id: pSide,
         user_id: "guest",
-        name: "Side Project",
+        name: "Home",
         color: "#8B6B80",
         view_style: "board",
         is_inbox: false,
@@ -117,61 +128,49 @@ class MockStore {
       (min + Math.floor(rng() * (max - min + 1))) as 1 | 2 | 3 | 4;
 
     const deepWork = [
-      "Deep work: checkout refactor",
-      "Deep work: search indexing",
-      "Deep work: API rate limiting",
-      "Ship feature flag rollout",
-      "Trace latency regression",
-      "Fix flaky integration test",
-      "Write RFC for caching layer",
-      "Break down the sync epic",
+      "Finish the quarterly report",
+      "Prepare the client deck",
+      "Write the project brief",
+      "Review the budget",
+      "Draft the proposal",
+      "Update the roadmap",
+      "Plan the team offsite",
+      "Clear the inbox",
     ] as const;
 
     const collabWork = [
-      "Daily standup",
-      "Review pull requests",
-      "Pair on onboarding bug",
-      "Sprint planning",
-      "Backlog grooming",
-      "1:1 with manager",
-      "Update the design doc",
-      "Triage incoming bugs",
-      "Team retro",
+      "Team meeting",
+      "Reply to client emails",
+      "Review a colleague's draft",
+      "Weekly check-in",
+      "Call the supplier",
+      "Send the invoice",
+      "Interview a candidate",
+      "Share meeting notes",
     ] as const;
 
     const eveningLife = [
-      "Side project: an hour on the sync engine",
-      "Read through a library's source",
-      "Sketch practice",
-      "Figure drawing study",
-      "Ink a page",
-      "Co-op session with friends",
-      "Ranked matches",
-      "Finish the campaign chapter",
-      "Call parents",
-      "Cook dinner together",
-      "Board game night",
+      "Cook dinner",
+      "Pay the electricity bill",
+      "Call Mum",
       "Read a chapter",
-    ] as const;
-
-    const sideProject = [
-      "Draft the next blog post",
-      "Refactor the plugin API",
-      "Fix the issue a user filed",
-      "Redraw the app icon",
-      "Write release notes",
-      "Cut a release",
+      "Plan the weekend",
+      "Water the plants",
+      "Do the laundry",
+      "Book a haircut",
+      "Order a birthday gift",
+      "Watch a film",
     ] as const;
 
     const weekendLife = [
-      "Long walk with family",
+      "Grocery shopping",
+      "Clean the flat",
       "Brunch with friends",
-      "Sketch at the park",
-      "Side project: ship a small feature",
-      "Game night",
+      "Long walk in the park",
       "Farmers market run",
-      "Tidy the flat",
+      "Fix the bike",
       "Family video call",
+      "Meal prep for the week",
     ] as const;
 
     const createTask = (
@@ -184,8 +183,10 @@ class MockStore {
         parentId?: string | null;
         completionRate?: number;
         description?: string;
-        // Keeps the task off the Calendar.
-        doDateMinute?: number;
+        hour?: number;
+        // Finished demo work is undated so the Calendar shows only the
+        // tutorial and events; Stats reads completed_at instead.
+        dateField?: "due_date" | "do_date" | null;
       } = {},
     ): string | null => {
       const {
@@ -194,12 +195,13 @@ class MockStore {
         parentId = null,
         completionRate = 0,
         description = null,
-        doDateMinute,
+        hour,
+        dateField = null,
       } = options;
       const date = dayAt(dayOffset);
 
-      if (doDateMinute !== undefined) {
-        date.setHours(0, doDateMinute, 0, 0);
+      if (hour !== undefined) {
+        date.setHours(hour, 0, 0, 0);
       } else {
         const randomHour = isEvening ? 18 + rng() * 4 : 8 + rng() * 6;
         const randomMinute = Math.floor(rng() * 60);
@@ -212,8 +214,8 @@ class MockStore {
 
       const taskId = `task-${generateId()}`;
 
-      // A year of misses would sit as overdue above the tutorial on Home.
-      if (isPast && !isCompleted && dayOffset < -3) return null;
+      // Open demo work would bury the Meet Kagelin steps on Home.
+      if (!isCompleted && projectId !== DEMO_TUTORIAL_PROJECT_ID) return null;
 
       tasks.push({
         id: taskId,
@@ -227,8 +229,8 @@ class MockStore {
         day_order: tasks.length,
         created_at: new Date(date.getTime() - 86400000).toISOString(),
         updated_at: dueDate,
-        due_date: doDateMinute === undefined ? dueDate : null,
-        do_date: doDateMinute === undefined ? null : dueDate,
+        due_date: dateField === "due_date" ? dueDate : null,
+        do_date: dateField === "do_date" ? dueDate : null,
         is_evening: isEvening,
         parent_id: parentId,
         recurrence: null,
@@ -302,101 +304,39 @@ class MockStore {
       }
     }
 
-    const tutorialTasks: [content: string, description?: string][] = [
-      ["Add a task (N or +)", "Press N on a keyboard, or tap + on a phone."],
-      [
-        `Open Search (${formatModChord("K")})`,
-        "On a phone, tap ⋮ → Search. It runs any command, too.",
-      ],
-      ["See shortcuts (?)", "Press ? on a keyboard."],
-      ["Focus on this task", "Tap the play button on this task's row."],
-      [
-        "Import Loop habits",
-        "Settings → Account → Loop Habit Tracker → Import (.db).",
-      ],
-    ];
-    tutorialTasks.forEach(([content, description], i) =>
-      createTask(content, 0, null, { description, doDateMinute: i }),
-    );
-
-    for (let i = 0; i <= 30; i++) {
-      if (i === 0) {
-        const parentId = createTask(
-          "Ship search filters to staging",
-          0,
-          pWork,
-          {
-            priority: 1,
-          },
-        );
-        createTask("Wire up the query params", 0, pWork, {
-          priority: 2,
-          parentId,
+    // Meet Kagelin is the only open work, so Home opens on the tutorial.
+    const steps = meetKagelinSteps();
+    for (const step of steps) {
+      // Seeded below with a history of past weeks.
+      if (step.recurrence) continue;
+      const stepOptions = {
+        description: step.description,
+        hour: step.schedule?.hour,
+        dateField: step.schedule?.field ?? null,
+      };
+      const stepId = createTask(
+        step.content,
+        0,
+        DEMO_TUTORIAL_PROJECT_ID,
+        stepOptions,
+      );
+      for (const subtask of step.subtasks ?? []) {
+        createTask(subtask, 0, DEMO_TUTORIAL_PROJECT_ID, {
+          ...stepOptions,
+          description: undefined,
+          parentId: stepId,
         });
-        const subtaskId = createTask("Polish the empty state", 0, pWork, {
-          priority: 3,
-          parentId,
-        });
-        createTask("Copy review", 0, pWork, {
-          priority: 3,
-          parentId: subtaskId,
-        });
-        createTask("Loading skeleton", 0, pWork, {
-          priority: 4,
-          parentId: subtaskId,
-        });
-        createTask("Cross-browser check", 0, pWork, { priority: 2, parentId });
-
-        createTask("Review pull requests", 0, pWork, { priority: 1 });
-        createTask("Daily standup", 0, pWork, { priority: 2 });
-        createTask("Call parents", 0, pPersonal, {
-          priority: 3,
-          isEvening: true,
-        });
-        createTask("Gym session", 0, pPersonal, { priority: 2 });
-        createTask("Grocery run", 0, pPersonal, { priority: 4 });
-        createTask("Sketch practice", 0, pPersonal, {
-          priority: 4,
-          isEvening: true,
-        });
-        continue;
       }
-
-      if (isWeekend(dayAt(i))) {
-        const count = rng() > 0.5 ? 2 : 1;
-        for (let t = 0; t < count; t++) {
-          createTask(pick(weekendLife), i, pPersonal, {
-            isEvening: rng() > 0.5,
-          });
-        }
-      } else {
-        const isHighDensity = rng() > 0.8;
-        const count = isHighDensity ? 4 : rng() > 0.4 ? 2 : 0;
-
-        for (let t = 0; t < count; t++) {
-          createTask(t === 0 ? pick(deepWork) : pick(collabWork), i, pWork, {
-            priority: randomPriority(1, 3),
-          });
-        }
-
-        if (rng() < 0.7) {
-          createTask(pick(eveningLife), i, pPersonal, { isEvening: true });
-        }
-      }
-
-      if (i % 3 === 0) createTask(pick(sideProject), i, pSide, { priority: 2 });
-      if (i % 7 === 0)
-        createTask("Weekly planning", i, pPersonal, { priority: 1 });
     }
 
     // Seed historical occurrences so Task Insights has data to chart.
+    const weeklyStep = steps.find((step) => step.recurrence)!;
     const seriesId = `series-${generateId()}`;
-    const weeklyRecurrence: RecurrenceRule = { freq: "WEEKLY", interval: 1 };
     const seriesWeeks = 16;
 
     for (let w = seriesWeeks; w >= 0; w--) {
       const dueDate = new Date(now.getTime() - w * 7 * oneDay);
-      dueDate.setHours(9, 0, 0, 0);
+      dueDate.setHours(weeklyStep.schedule!.hour, 0, 0, 0);
 
       const isActiveOccurrence = w === 0;
       const isCompleted = !isActiveOccurrence;
@@ -410,12 +350,12 @@ class MockStore {
       tasks.push({
         id: `task-${generateId()}`,
         user_id: "guest",
-        content: "Weekly Review",
-        description: null,
+        content: weeklyStep.content,
+        description: isActiveOccurrence ? weeklyStep.description : null,
         is_completed: isCompleted,
         completed_at: completedAt,
-        priority: 2,
-        project_id: pWork,
+        priority: 4,
+        project_id: DEMO_TUTORIAL_PROJECT_ID,
         day_order: tasks.length,
         created_at: new Date(dueDate.getTime() - oneDay).toISOString(),
         updated_at: completedAt ?? dueDate.toISOString(),
@@ -423,154 +363,98 @@ class MockStore {
         do_date: null,
         is_evening: false,
         parent_id: null,
-        recurrence: weeklyRecurrence,
+        recurrence: weeklyStep.recurrence!,
         recurring_series_id: seriesId,
         google_event_id: null,
         google_etag: null,
       });
     }
 
-    const hWater = "habit-water";
-    const hExercise = "habit-exercise";
-    const hRead = "habit-read";
-    const hSketch = "habit-sketch";
-    const hSideCode = "habit-side-code";
-    const hLogOff = "habit-log-off";
+    // Like the Meet Kagelin steps, each habit shows one habit feature.
+    const habit = (
+      id: string,
+      name: string,
+      description: string,
+      icon: string,
+      color: string,
+      frequency: { count: number; days: number },
+      measurable?: { target: number; unit: string },
+    ): Habit => ({
+      id,
+      user_id: "guest",
+      name,
+      description,
+      color,
+      icon,
+      created_at: nowIso,
+      updated_at: nowIso,
+      archived_at: null,
+      start_date: startOfHistory,
+      sort_order: habits.length,
+      habit_type: measurable ? "measurable" : "boolean",
+      frequency_count: frequency.count,
+      frequency_days: frequency.days,
+      frequency_period: periodForFrequencyDays(frequency.days),
+      target_type: "at_least",
+      target_value: measurable?.target ?? null,
+      unit: measurable?.unit ?? null,
+      question: null,
+      reminder_time: null,
+      reminder_days: REMINDER_EVERY_DAY,
+    });
 
-    habits.push(
-      {
-        id: hWater,
-        user_id: "guest",
-        name: "Drink Water",
-        description: "8 glasses a day",
-        color: "#5B7C99",
-        icon: "Droplet",
-        created_at: nowIso,
-        updated_at: nowIso,
-        archived_at: null,
-        start_date: startOfHistory,
-        sort_order: 0,
-        habit_type: "measurable",
-        frequency_count: 1,
-        frequency_period: "day",
-        target_type: "at_least",
-        target_value: 8,
-        unit: "glasses",
-        question: null,
-        reminder_time: null,
-        reminder_days: REMINDER_EVERY_DAY,
-      },
-      {
-        id: hExercise,
-        user_id: "guest",
-        name: "Morning Exercise",
-        description: "30 mins activity",
-        color: "#A3B18A",
-        icon: "Dumbbell",
-        created_at: nowIso,
-        updated_at: nowIso,
-        archived_at: null,
-        start_date: startOfHistory,
-        sort_order: 1,
-        habit_type: "boolean",
-        frequency_count: 5,
-        frequency_period: "week",
-        target_type: "at_least",
-        target_value: null,
-        unit: null,
-        question: null,
-        reminder_time: null,
-        reminder_days: REMINDER_EVERY_DAY,
-      },
-      {
-        id: hRead,
-        user_id: "guest",
-        name: "Read",
-        description: "20 pages",
-        color: "#9F8189",
-        icon: "Book",
-        created_at: nowIso,
-        updated_at: nowIso,
-        archived_at: null,
-        start_date: startOfHistory,
-        sort_order: 2,
-        habit_type: "boolean",
-        frequency_count: 7,
-        frequency_period: "week",
-        target_type: "at_least",
-        target_value: null,
-        unit: null,
-        question: null,
-        reminder_time: null,
-        reminder_days: REMINDER_EVERY_DAY,
-      },
-      {
-        id: hSketch,
-        user_id: "guest",
-        name: "Sketch",
-        description: "Fill a page",
-        color: "#8B6B80",
-        icon: "Pencil",
-        created_at: nowIso,
-        updated_at: nowIso,
-        archived_at: null,
-        start_date: startOfHistory,
-        sort_order: 3,
-        habit_type: "boolean",
-        frequency_count: 3,
-        frequency_period: "week",
-        target_type: "at_least",
-        target_value: null,
-        unit: null,
-        question: null,
-        reminder_time: null,
-        reminder_days: REMINDER_EVERY_DAY,
-      },
-      {
-        id: hSideCode,
-        user_id: "guest",
-        name: "Code for Fun",
-        description: "Commit something small",
-        color: "#6B8E8A",
-        icon: "Code",
-        created_at: nowIso,
-        updated_at: nowIso,
-        archived_at: null,
-        start_date: startOfHistory,
-        sort_order: 4,
-        habit_type: "boolean",
-        frequency_count: 3,
-        frequency_period: "week",
-        target_type: "at_least",
-        target_value: null,
-        unit: null,
-        question: null,
-        reminder_time: null,
-        reminder_days: REMINDER_EVERY_DAY,
-      },
-      {
-        id: hLogOff,
-        user_id: "guest",
-        name: "Log Off by 18:00",
-        description: "Close the laptop, start the evening",
-        color: "#A48C7A",
-        icon: "Moon",
-        created_at: nowIso,
-        updated_at: nowIso,
-        archived_at: null,
-        start_date: startOfHistory,
-        sort_order: 5,
-        habit_type: "boolean",
-        frequency_count: 4,
-        frequency_period: "week",
-        target_type: "at_least",
-        target_value: null,
-        unit: null,
-        question: null,
-        reminder_time: null,
-        reminder_days: REMINDER_EVERY_DAY,
-      },
-    );
+    const hWater = "habit-water";
+    const hRead = "habit-read";
+    const hWalk = "habit-walk";
+    const hStretch = "habit-stretch";
+    const hCallFamily = "habit-call-family";
+    const hSleep = "habit-sleep";
+
+    for (const h of [
+      habit(
+        hWater,
+        "Drink Water",
+        "Measured: log each glass, 8 a day",
+        "Droplet",
+        "#5B7C99",
+        { count: 1, days: 1 },
+        { target: 8, unit: "glasses" },
+      ),
+      habit(
+        hRead,
+        "Read",
+        "Every day, so it builds a streak",
+        "Book",
+        "#9F8189",
+        { count: 1, days: 1 },
+      ),
+      habit(
+        hWalk,
+        "Walk",
+        "5 times a week: any 5 days count",
+        "Trees",
+        "#A3B18A",
+        { count: 5, days: 7 },
+      ),
+      habit(hStretch, "Stretch", "Every 2 days", "Leaf", "#6B8E8A", {
+        count: 1,
+        days: 2,
+      }),
+      habit(hCallFamily, "Call Family", "Once a week", "Heart", "#B56C5A", {
+        count: 1,
+        days: 7,
+      }),
+      habit(
+        hSleep,
+        "Sleep by 23:00",
+        "Skip nights away: a skip keeps the streak",
+        "Moon",
+        "#A48C7A",
+        { count: 1, days: 1 },
+      ),
+    ]) {
+      habits.push(h);
+    }
 
     // Frequent enough to build real streaks, but patchy day to day.
     const habitPatterns: {
@@ -578,31 +462,39 @@ class MockStore {
       weekday: number;
       weekend: number;
       value?: () => number;
+      target?: number;
       /** Chance an unmarked day is a rest day. */
       skip?: number;
+      /** Days before today that are all done, so a streak shows. */
+      streak?: number;
     }[] = [
       {
         habitId: hWater,
         weekday: 0.9,
         weekend: 0.8,
         value: () => 4 + Math.floor(rng() * 7),
+        target: 8,
         skip: 0.1,
+        streak: 9,
       },
-      { habitId: hExercise, weekday: 0.85, weekend: 0.45, skip: 0.3 },
-      { habitId: hRead, weekday: 0.6, weekend: 0.7, skip: 0.15 },
-      { habitId: hSketch, weekday: 0.4, weekend: 0.6, skip: 0.1 },
-      { habitId: hSideCode, weekday: 0.4, weekend: 0.65 },
-      { habitId: hLogOff, weekday: 0.85, weekend: 0 },
+      { habitId: hRead, weekday: 0.75, weekend: 0.8, skip: 0.15, streak: 23 },
+      { habitId: hWalk, weekday: 0.75, weekend: 0.6, skip: 0.2 },
+      { habitId: hStretch, weekday: 0.5, weekend: 0.5 },
+      { habitId: hCallFamily, weekday: 0.1, weekend: 0.35 },
+      { habitId: hSleep, weekday: 0.75, weekend: 0.4, skip: 0.3 },
     ];
 
-    for (let i = -365; i <= 0; i++) {
+    // Today stays open for the "Tick off a habit" step.
+    for (let i = -365; i < 0; i++) {
       const date = dayAt(i);
       const dateStr = date.toISOString().split("T")[0];
 
       for (const pattern of habitPatterns) {
         const probability = isWeekend(date) ? pattern.weekend : pattern.weekday;
         let value: number;
-        if (rng() < probability) {
+        if (pattern.streak && -i <= pattern.streak) {
+          value = pattern.target ?? ENTRY_VALUE_DONE;
+        } else if (rng() < probability) {
           value = pattern.value ? pattern.value() : ENTRY_VALUE_DONE;
         } else if (pattern.skip && rng() < pattern.skip) {
           value = ENTRY_VALUE_SKIPPED;
@@ -620,25 +512,52 @@ class MockStore {
       }
     }
 
-    const mockLocations = ["Coffee Shop", "Office", "Zoom", "Gym", "Home"];
+    const mockLocations = ["Café Rosa", "Office", "Zoom", "Park", "Home"];
     const workdayEvents = [
-      "Design review",
-      "Sprint planning",
-      "1:1 with manager",
-      "Team retro",
-      "Architecture sync",
-      "Product demo",
-      "Incident postmortem",
+      "Client call",
+      "Team lunch",
+      "Doctor's appointment",
+      "Project kickoff",
+      "Yoga class",
     ] as const;
     const weekendEvents = [
-      "Coffee with a friend",
+      "Coffee with Alex",
       "Family lunch",
-      "Life drawing class",
-      "Raid night",
-      "Football with the team",
+      "Cinema",
+      "Football in the park",
     ] as const;
 
-    for (let i = -7; i <= 14; i++) {
+    const pushEvent = (
+      title: string,
+      startTime: Date,
+      location: string | null,
+      description: string | null = null,
+    ) =>
+      events.push({
+        id: `event-${generateId()}`,
+        user_id: "guest",
+        title,
+        description,
+        location,
+        start_time: startTime.toISOString(),
+        end_time: new Date(startTime.getTime() + 3600000).toISOString(),
+        all_day: false,
+        color: "#4B6CB7",
+        category: "event",
+        recurrence_rule: null,
+        remote_id: null,
+        remote_calendar_id: null,
+        etag: null,
+        ics_uid: null,
+        sync_state: null,
+        is_archived: false,
+        reminder_minutes: null,
+        metadata: {},
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+
+    for (let i = -7; i < 0; i++) {
       const date = dayAt(i);
       const weekend = isWeekend(date);
 
@@ -648,35 +567,19 @@ class MockStore {
           : 9 + Math.floor(rng() * 8);
         const startTime = new Date(date);
         startTime.setHours(randomHour, 0, 0, 0);
-        const endTime = new Date(startTime.getTime() + 3600000);
-
-        const id = `event-${generateId()}`;
         const title = weekend ? pick(weekendEvents) : pick(workdayEvents);
-        events.push({
-          id,
-          user_id: "guest",
-          title: i === 0 && !weekend ? "Team catch up" : title,
-          description: null,
-          location: rng() > 0.5 ? pick(mockLocations) : null,
-          start_time: startTime.toISOString(),
-          end_time: endTime.toISOString(),
-          all_day: false,
-          color: "#4B6CB7",
-          category: "event",
-          recurrence_rule: null,
-          remote_id: null,
-          remote_calendar_id: null,
-          etag: null,
-          ics_uid: null,
-          sync_state: null,
-          is_archived: false,
-          reminder_minutes: null,
-          metadata: {},
-          created_at: nowIso,
-          updated_at: nowIso,
-        });
+        pushEvent(title, startTime, rng() > 0.5 ? pick(mockLocations) : null);
       }
     }
+
+    const lunch = dayAt(0);
+    lunch.setHours(12, 30, 0, 0);
+    pushEvent(
+      "Lunch with Sam",
+      lunch,
+      "Café Rosa",
+      "An event, not a task: it lives on the Calendar.",
+    );
 
     return {
       tasks,

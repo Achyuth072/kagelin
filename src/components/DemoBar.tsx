@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { useClearGuestData } from "@/lib/hooks/useGuestStoreActions";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
@@ -10,17 +11,13 @@ import {
   useActiveBanner,
 } from "@/components/bannerSlot";
 import { cn } from "@/lib/utils";
-import { useUiStore } from "@/lib/store/uiStore";
-import { KeyHint } from "@/components/ui/key-hint";
+import { DEMO_TUTORIAL_PROJECT_ID } from "@/lib/mock/mock-store";
 import { NOTIFICATION_LINK_BUTTON_CLASS } from "@/components/ui/notification-link-button";
 
 export function DemoBar() {
   const activeBanner = useActiveBanner();
   const clearGuestData = useClearGuestData();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const setShortcutsHelpOpen = useUiStore(
-    (state) => state.setShortcutsHelpOpen,
-  );
 
   if (activeBanner !== "demo") return null;
 
@@ -37,20 +34,12 @@ export function DemoBar() {
           <span className="text-[13px] font-medium tracking-[0.01em]">
             You&apos;re exploring with demo data
           </span>
-          <button
-            type="button"
-            onClick={() => setShortcutsHelpOpen(true)}
-            aria-keyshortcuts="?"
-            className={cn(
-              NOTIFICATION_LINK_BUTTON_CLASS,
-              "hidden md:pointer-fine:inline-flex items-center gap-1.5",
-            )}
+          <Link
+            href={`/?project=${DEMO_TUTORIAL_PROJECT_ID}`}
+            className={NOTIFICATION_LINK_BUTTON_CLASS}
           >
-            Shortcuts
-            <KeyHint aria-hidden="true" className="ml-0">
-              ?
-            </KeyHint>
-          </button>
+            Meet Kagelin
+          </Link>
           <button
             type="button"
             onClick={() => setConfirmOpen(true)}

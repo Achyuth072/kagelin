@@ -2,8 +2,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/components/AuthProvider";
 import { DemoBar } from "@/components/DemoBar";
-import { mockStore } from "@/lib/mock/mock-store";
-import { useUiStore } from "@/lib/store/uiStore";
+import { mockStore, DEMO_TUTORIAL_PROJECT_ID } from "@/lib/mock/mock-store";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
@@ -20,6 +19,16 @@ vi.mock("@/lib/supabase/client", () => ({
 
 vi.mock("@/lib/notify", () => ({
   notify: { success: vi.fn(), error: vi.fn() },
+}));
+
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+  }: {
+    href: string;
+    children: React.ReactNode;
+  }) => <a href={href}>{children}</a>,
 }));
 
 // Force desktop AlertDialog branch of the confirm dialog.
@@ -44,7 +53,6 @@ describe("DemoBar", () => {
   beforeEach(() => {
     localStorage.clear();
     mockStore.clearData();
-    useUiStore.getState().setShortcutsHelpOpen(false);
     Object.defineProperty(navigator, "onLine", {
       value: true,
       configurable: true,
@@ -80,14 +88,14 @@ describe("DemoBar", () => {
     ).toBeInTheDocument();
   });
 
-  it("offers the shortcuts list as the next step", async () => {
+  it("links to the Meet Kagelin project as the next step", async () => {
     localStorage.setItem("kanso_guest_mode", "true");
     mockStore.reset();
     renderDemoBar();
 
-    fireEvent.click(await screen.findByRole("button", { name: /shortcuts/i }));
-
-    expect(useUiStore.getState().isShortcutsHelpOpen).toBe(true);
+    expect(
+      await screen.findByRole("link", { name: /meet kagelin/i }),
+    ).toHaveAttribute("href", `/?project=${DEMO_TUTORIAL_PROJECT_ID}`);
   });
 
   it("is a pill centred in the content column on desktop, like OfflineIndicator", async () => {
