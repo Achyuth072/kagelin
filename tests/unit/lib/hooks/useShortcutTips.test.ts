@@ -132,6 +132,32 @@ describe("useShortcutTips", () => {
     expect(toastMock).not.toHaveBeenCalled();
   });
 
+  it("fires on device with any-pointer: fine even if primary pointer is coarse", () => {
+    vi.mocked(window.matchMedia).mockImplementation((query) => ({
+      matches: query.includes("any-pointer: fine"),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    const { result } = renderHook(() => useShortcutTips());
+
+    act(() => {
+      result.current.recordMouseAction("newTask");
+      result.current.recordMouseAction("newTask");
+      result.current.recordMouseAction("newTask");
+    });
+    expect(toastMock).toHaveBeenCalledTimes(1);
+    expect(toastMock).toHaveBeenCalledWith(
+      "Tip: press N to do this from anywhere",
+      undefined,
+    );
+  });
+
   it("suppresses tip if user already triggered action via keyboard shortcut", () => {
     const { result } = renderHook(() => useShortcutTips());
 

@@ -3,12 +3,17 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import type { Habit } from "@/lib/types/habit";
 import type { SheetTab } from "@/components/ui/SheetTabToggle";
+import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
+
+export interface OpenHabitOptions {
+  source?: "mouse" | "keyboard";
+}
 
 interface HabitActionsContextValue {
   isHabitSheetOpen: boolean;
   editingHabit: Habit | null;
   initialTab: SheetTab;
-  openAddHabit: () => void;
+  openAddHabit: (options?: OpenHabitOptions) => void;
   openEditHabit: (habit: Habit) => void;
   openHabitInsights: (habit: Habit) => void;
   closeHabitSheet: () => void;
@@ -22,12 +27,19 @@ export function HabitActionsProvider({ children }: { children: ReactNode }) {
   const [isHabitSheetOpen, setIsHabitSheetOpen] = useState(false);
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
   const [initialTab, setInitialTab] = useState<SheetTab>("edit");
+  const { recordMouseAction } = useShortcutTips();
 
-  const openAddHabit = React.useCallback(() => {
-    setEditingHabit(null);
-    setInitialTab("edit");
-    setIsHabitSheetOpen(true);
-  }, []);
+  const openAddHabit = React.useCallback(
+    (options?: OpenHabitOptions) => {
+      if (options?.source !== "keyboard") {
+        recordMouseAction("newHabit");
+      }
+      setEditingHabit(null);
+      setInitialTab("edit");
+      setIsHabitSheetOpen(true);
+    },
+    [recordMouseAction],
+  );
 
   const openEditHabit = React.useCallback((habit: Habit) => {
     setEditingHabit(habit);

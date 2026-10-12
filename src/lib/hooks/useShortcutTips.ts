@@ -37,7 +37,10 @@ export const MOUSE_ACTION_THRESHOLD = 3;
 
 function isFinePointerDevice(): boolean {
   if (typeof window === "undefined" || !window.matchMedia) return false;
-  return window.matchMedia("(pointer: fine)").matches;
+  return (
+    window.matchMedia("(pointer: fine)").matches ||
+    window.matchMedia("(any-pointer: fine)").matches
+  );
 }
 
 export function useShortcutTips() {

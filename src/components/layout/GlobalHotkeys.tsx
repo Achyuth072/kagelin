@@ -72,7 +72,7 @@ export function GlobalHotkeys({
     "n",
     () => {
       recordKeyAction("newTask");
-      openAddTask();
+      openAddTask({ source: "keyboard" });
     },
     options,
   );
@@ -82,7 +82,7 @@ export function GlobalHotkeys({
     "h",
     () => {
       recordKeyAction("newHabit");
-      openAddHabit();
+      openAddHabit({ source: "keyboard" });
     },
     habitHotkeyOptions,
   );
@@ -102,7 +102,7 @@ export function GlobalHotkeys({
     "p",
     () => {
       recordKeyAction("newProject");
-      openCreateProject();
+      openCreateProject({ source: "keyboard" });
     },
     newProjectHotkeyOptions,
   );

@@ -2,10 +2,15 @@
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
 import type { Project } from "@/lib/types/task";
+import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
+
+export interface OpenProjectOptions {
+  source?: "mouse" | "keyboard";
+}
 
 interface ProjectActionsContextValue {
   isCreateProjectOpen: boolean;
-  openCreateProject: () => void;
+  openCreateProject: (options?: OpenProjectOptions) => void;
   closeCreateProject: () => void;
   // New edit/delete actions
   activeProject: Project | null;
@@ -23,10 +28,16 @@ export function ProjectActionsProvider({ children }: { children: ReactNode }) {
   const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [actionType, setActionType] = useState<"edit" | "delete" | null>(null);
+  const { recordMouseAction } = useShortcutTips();
 
   const openCreateProject = React.useCallback(
-    () => setIsCreateProjectOpen(true),
-    [],
+    (options?: OpenProjectOptions) => {
+      if (options?.source !== "keyboard") {
+        recordMouseAction("newProject");
+      }
+      setIsCreateProjectOpen(true);
+    },
+    [recordMouseAction],
   );
   const closeCreateProject = React.useCallback(
     () => setIsCreateProjectOpen(false),

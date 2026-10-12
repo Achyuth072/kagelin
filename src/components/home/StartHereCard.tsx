@@ -153,7 +153,7 @@ function StartHereGrid({
     <Card
       role="region"
       aria-label="Start here"
-      className="mx-4 md:mx-6 mb-4 md:mb-6"
+      className="mx-4 md:mx-6 mb-4 md:mb-6 overflow-hidden"
     >
       <div className="flex items-center justify-between pl-4 pr-1 pt-1">
         <h2 className="type-ui text-muted-foreground">Start here</h2>

@@ -1,10 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
+import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
+
+export interface OpenTaskOptions {
+  source?: "mouse" | "keyboard";
+}
 
 interface TaskActionsContextValue {
   isAddTaskOpen: boolean;
-  openAddTask: () => void;
+  openAddTask: (options?: OpenTaskOptions) => void;
   closeAddTask: () => void;
 }
 
@@ -12,8 +17,17 @@ const TaskActionsContext = createContext<TaskActionsContextValue | null>(null);
 
 export function TaskActionsProvider({ children }: { children: ReactNode }) {
   const [isAddTaskOpen, setIsAddTaskOpen] = useState(false);
+  const { recordMouseAction } = useShortcutTips();
 
-  const openAddTask = React.useCallback(() => setIsAddTaskOpen(true), []);
+  const openAddTask = React.useCallback(
+    (options?: OpenTaskOptions) => {
+      if (options?.source !== "keyboard") {
+        recordMouseAction("newTask");
+      }
+      setIsAddTaskOpen(true);
+    },
+    [recordMouseAction],
+  );
   const closeAddTask = React.useCallback(() => setIsAddTaskOpen(false), []);
 
   const value = React.useMemo(

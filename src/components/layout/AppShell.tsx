@@ -393,7 +393,6 @@ function AppShellContent({ children }: AppShellProps) {
           </div>
           <OfflineIndicator />
           <DemoBar />
-          <Toaster />
         </SidebarInset>
 
         {!hideMobileNav && <MobileNav />}
@@ -405,6 +404,7 @@ function AppShellContent({ children }: AppShellProps) {
           commandOpen={commandOpen}
           onCommandOpenChange={setCommandOpen}
         />
+        <Toaster />
       </SidebarProvider>
     </CompletedTasksProvider>
   );
