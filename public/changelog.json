@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.48.0-preview.2",
+    "date": "2026-10-12",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Trigger shortcut tips on mouse use and suppress on hotkeys",
+        "Add shortcut tips toggle to preferences settings",
+        "Add shortcut tips state and useShortcutTips hook"
+      ],
+      "Fixed": [
+        "Restore and preserve recurrence state in edit views"
+      ]
+    }
+  },
+  {
     "version": "1.48.0-preview.1",
     "date": "2026-10-12",
     "channel": "preview",
@@ -677,20 +692,6 @@
         "Settings scrolls its content pane, not the whole document",
         "Replace amber/raw-blue colors with palette tokens in alerts",
         "Report or rethrow console-only catch blocks in push/timer/sw code"
-      ]
-    }
-  },
-  {
-    "version": "1.43.0-preview.1",
-    "date": "2026-09-09",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Parallelize serial encryption work"
-      ],
-      "Fixed": [
-        "Encryption correctness follow-ups",
-        "Unify wrapped-client locked-key error contract across call sites"
       ]
     }
   }
