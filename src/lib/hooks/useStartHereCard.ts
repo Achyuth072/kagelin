@@ -60,7 +60,7 @@ export function useStartHereCard(userId: string) {
   );
 
   useEffect(() => {
-    if (!userId || !loaded) return;
+    if (!userId || !loaded || isDemoMode !== false) return;
     const pendingDone: StepId[] = [];
     if (seenTask && !state?.done?.includes("task")) pendingDone.push("task");
     if (seenHabit && !state?.done?.includes("habit")) pendingDone.push("habit");
@@ -82,6 +82,7 @@ export function useStartHereCard(userId: string) {
     userId,
     loaded,
     settled,
+    isDemoMode,
     state,
     seenTask,
     seenHabit,

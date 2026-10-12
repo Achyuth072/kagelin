@@ -15,7 +15,7 @@ const mockFocusData: { data: boolean; isFetching: boolean } = {
   data: false,
   isFetching: false,
 };
-let mockDemoMode = false;
+let mockDemoMode: boolean | undefined = false;
 
 vi.mock("@/lib/hooks/useDemoMode", () => ({
   useDemoMode: () => mockDemoMode,
@@ -82,5 +82,43 @@ describe("useStartHereCard", () => {
     const { result } = renderHook(() => useStartHereCard("user-1"));
 
     expect(result.current.isVisible).toBe(false);
+  });
+
+  it("does not evaluate or disqualify while in demo mode, and shows after demo data is cleared", () => {
+    mockDemoMode = true;
+    mockTasksData.data = [{ id: "t1", project_id: "demo-p1" }];
+    mockHabitsData.data = [{ id: "h1" }];
+    mockFocusData.data = true;
+
+    const { result, rerender } = renderHook(() => useStartHereCard("guest"));
+
+    expect(result.current.isVisible).toBe(false);
+    expect(result.current.state).toBeNull();
+
+    // User clicks "Start fresh" -> demo mode ends and demo data is cleared
+    mockDemoMode = false;
+    mockTasksData.data = [];
+    mockHabitsData.data = [];
+    mockFocusData.data = false;
+    rerender();
+
+    expect(result.current.isVisible).toBe(true);
+    expect(result.current.state?.eligible).toBe(true);
+    expect(result.current.done("task")).toBe(false);
+  });
+
+  it("waits to evaluate until demo mode check settles", () => {
+    mockDemoMode = undefined;
+    mockTasksData.data = [{ id: "t1", project_id: "p1" }];
+
+    const { result, rerender } = renderHook(() => useStartHereCard("guest"));
+
+    expect(result.current.isVisible).toBe(false);
+    expect(result.current.state).toBeNull();
+
+    mockDemoMode = false;
+    rerender();
+
+    expect(result.current.state).not.toBeNull();
   });
 });
