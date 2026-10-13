@@ -143,6 +143,7 @@ export default function TaskSheet({
     if (open) {
       if (initialTask) {
         reset(taskToFormValues(initialTask));
+        void triggerValidation();
       } else {
         reset(
           defaultTaskFormValues({
@@ -151,7 +152,6 @@ export default function TaskSheet({
           }),
         );
       }
-      void triggerValidation();
     }
   }, [
     open,
