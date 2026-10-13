@@ -75,7 +75,7 @@ See the [full feature list](docs/features.md).
 | `Ctrl/Cmd+K`    | Open Command Palette                                              |
 | `Ctrl/Cmd+B`    | Toggle Sidebar                                                    |
 | `N / H / E / P` | Create new (Task, Habit, Event, Project)                          |
-| `Shift+H`       | View all shortcuts                                                |
+| `? / Shift+H`   | View all shortcuts                                                |
 
 <details>
 <summary><strong>Stack</strong></summary>
