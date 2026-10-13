@@ -1,5 +1,31 @@
 [
   {
+    "version": "1.48.0",
+    "date": "2026-10-13",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "\"Meet Kagelin\" interactive tutorial project and a dismissible \"Start Here\" card on Home for new accounts and guest mode",
+        "Logbook groups and paginates completed tasks by completion date",
+        "Contextual shortcut tips suggest keyboard shortcuts when actions are performed with the mouse",
+        "Shortcut tips toggle in Preferences to enable or disable suggestions",
+        "Search and shortcut key indicators in the desktop sidebar",
+        "Empty pages feature a clear purpose line, a primary action button, and its keyboard shortcut"
+      ],
+      "Improved": [
+        "Telemetry prompt is deferred until after your first real action instead of greeting you immediately",
+        "Shortcut list opens with \"?\" (alongside Shift+H) and is labeled with \"?\" across menus and dialogs"
+      ],
+      "Fixed": [
+        "Save, edit, and delete calendar events in guest mode",
+        "Task and event edit views preserve recurrence settings",
+        "Task creation view no longer triggers eager validation before typing",
+        "Mobile calendar, habits, and home screens correctly size to header, banner, and navigation heights without overflow",
+        "Dialogs stay closed across reloads, and first visits skip the guest backup reminder"
+      ]
+    }
+  },
+  {
     "version": "1.48.0-preview.3",
     "date": "2026-10-13",
     "channel": "preview",
@@ -680,16 +706,6 @@
     "sections": {
       "Fixed": [
         "Resume guest migration after partial failure instead of losing data"
-      ]
-    }
-  },
-  {
-    "version": "1.43.0-preview.3",
-    "date": "2026-09-10",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Prevent migration reload loop on demo-only guest data"
       ]
     }
   }
