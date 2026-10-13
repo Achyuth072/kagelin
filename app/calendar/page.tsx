@@ -163,7 +163,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-124px)] md:h-dvh">
+    <div className="flex flex-col h-[var(--mobile-page-height)] md:h-dvh">
       <CalendarReconnectBanner />
       <CalendarToolbar
         events={events}

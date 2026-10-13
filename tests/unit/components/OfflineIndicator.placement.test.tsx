@@ -110,13 +110,13 @@ describe("offline layout wiring", () => {
     }
   });
 
-  it("derives the scroll container's bottom spacers from --mobile-nav-height", () => {
+  it("derives the scroll container's bottom spacer from --mobile-nav-height", () => {
     const shell = source("src/components/layout/AppShell.tsx");
 
     const spacers = shell.match(
       /className="h-\[[^"]*\] w-full flex-none md:hidden"/g,
     );
-    expect(spacers).toHaveLength(2);
+    expect(spacers).toHaveLength(1);
     for (const spacer of spacers ?? []) {
       expect(spacer).toContain("var(--mobile-nav-height)");
     }

@@ -11,14 +11,21 @@ interface MockQueryOptions {
 
 // ===== Hoisted mocks =====
 
-const { mockPause, mockCancel, mockNotify, mockUseQuery, mockCreateClient } =
-  vi.hoisted(() => ({
-    mockPause: vi.fn(),
-    mockCancel: vi.fn(),
-    mockNotify: vi.fn(),
-    mockUseQuery: vi.fn(),
-    mockCreateClient: vi.fn(),
-  }));
+const {
+  mockPause,
+  mockCancel,
+  mockNotify,
+  mockUseQuery,
+  mockCreateClient,
+  mockOpenAddTask,
+} = vi.hoisted(() => ({
+  mockPause: vi.fn(),
+  mockCancel: vi.fn(),
+  mockNotify: vi.fn(),
+  mockUseQuery: vi.fn(),
+  mockCreateClient: vi.fn(),
+  mockOpenAddTask: vi.fn(),
+}));
 
 // ===== Mock state control =====
 
@@ -131,7 +138,14 @@ vi.mock("@/lib/supabase/client", () => ({
   createClient: () => mockCreateClient(),
 }));
 
+vi.mock("@/components/TaskActionsProvider", () => ({
+  useTaskActions: () => ({ openAddTask: mockOpenAddTask }),
+}));
+
 vi.mock("lucide-react", () => ({
+  Plus: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg data-testid="plus-icon" {...props} />
+  ),
   Target: (props: React.SVGProps<SVGSVGElement>) => (
     <svg data-testid="target-icon" {...props} />
   ),
@@ -501,8 +515,7 @@ describe("FocusTaskPicker", () => {
     expect(parentRow).toBeInTheDocument();
   });
 
-  // Test 8: Empty state shows "Nothing due today"
-  it("shows empty state message when no tasks", () => {
+  it("shows the empty state with an Add task action when no tasks", () => {
     mockActiveTaskId = null;
 
     mockUseQuery.mockImplementation((options: MockQueryOptions) => {
@@ -520,10 +533,15 @@ describe("FocusTaskPicker", () => {
     const chip = screen.getByRole("button", { name: "Select focus task" });
     fireEvent.click(chip);
 
-    expect(screen.getByText("Nothing due today")).toBeInTheDocument();
     expect(
-      screen.getByText("Tasks scheduled for today will appear here."),
+      screen.getByText(
+        "Pick one task, start the timer, and work only on that. Tasks due today show up here.",
+      ),
     ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add task" }));
+    expect(mockOpenAddTask).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("drawer")).not.toBeInTheDocument();
   });
 
   // ===================================================================
@@ -622,7 +640,9 @@ describe("FocusTaskPicker", () => {
     render(<FocusTaskPicker />);
     const chip = screen.getByRole("button", { name: "Select focus task" });
     fireEvent.click(chip);
-    expect(screen.getByText("Nothing due today")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add task" }),
+    ).toBeInTheDocument();
   });
 
   it("[T4] has enabled=true for picker regardless of guest mode when open", () => {

@@ -105,6 +105,28 @@ describe("TaskSheet", () => {
     expect(await screen.findByText("New Task")).toBeInTheDocument();
   });
 
+  it("does not show validation error when opened in creation mode", async () => {
+    await act(async () => {
+      renderWithQuery(<TaskSheet open={true} onClose={() => {}} />);
+    });
+    expect(
+      screen.queryByText("Task content is required"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows validation error if submitted while empty in creation mode", async () => {
+    await act(async () => {
+      renderWithQuery(<TaskSheet open={true} onClose={() => {}} />);
+    });
+    const input = await screen.findByPlaceholderText("What needs to be done?");
+    await act(async () => {
+      fireEvent.keyDown(input, { key: "Enter" });
+    });
+    expect(
+      await screen.findByText("Task content is required"),
+    ).toBeInTheDocument();
+  });
+
   it('renders "Edit Task" header in edit mode', async () => {
     const mockTask = {
       id: "1",

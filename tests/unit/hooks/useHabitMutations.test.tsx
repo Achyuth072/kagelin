@@ -26,6 +26,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { trackTelemetry } from "@/lib/telemetry/client";
 import { mockStore } from "@/lib/mock/mock-store";
+import {
+  hasTakenFirstAction,
+  resetTelemetryConsentCache,
+} from "@/lib/telemetry/store";
 
 const mockCreateClient = vi.mocked(createClient);
 const mockUseAuth = vi.mocked(useAuth);
@@ -36,6 +40,7 @@ describe("useHabitMutations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    resetTelemetryConsentCache();
     queryClient = new QueryClient({
       defaultOptions: {
         mutations: { retry: false },
@@ -157,6 +162,7 @@ describe("useHabitMutations", () => {
         expect(createdHabit).toBeDefined();
         expect(createdHabit.name).toBe("Guest Habit");
         expect(createdHabit.id).toContain("guest-habit");
+        expect(hasTakenFirstAction()).toBe(true);
         expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["habits"] });
       });
     });
@@ -851,6 +857,8 @@ describe("useHabitMutations", () => {
         });
 
         expect(trackTelemetry).not.toHaveBeenCalled();
+        // Demo data is the guest tutorial, so using it still counts.
+        expect(hasTakenFirstAction()).toBe(true);
       });
 
       it("still fires habit_logged for a habit the guest created themselves", async () => {

@@ -242,6 +242,15 @@ describe("TaskList DnD layout shift protection", () => {
         triggerLastUndoAction: vi.fn(),
         yankedTaskId: null,
         setYankedTaskId: vi.fn(),
+        shortcutTipsEnabled: true,
+        setShortcutTipsEnabled: vi.fn(),
+        shownShortcutTips: {},
+        shortcutMouseCounts: {},
+        incrementShortcutMouseCount: vi.fn(() => false),
+        setShortcutMouseCount: vi.fn(),
+        markShortcutTipShown: vi.fn(),
+        startHereStates: {},
+        setStartHereState: vi.fn(),
       }),
     );
   });

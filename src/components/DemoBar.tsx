@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { useClearGuestData } from "@/lib/hooks/useGuestStoreActions";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
@@ -10,6 +11,7 @@ import {
   useActiveBanner,
 } from "@/components/bannerSlot";
 import { cn } from "@/lib/utils";
+import { DEMO_TUTORIAL_PROJECT_ID } from "@/lib/mock/mock-store";
 import { NOTIFICATION_LINK_BUTTON_CLASS } from "@/components/ui/notification-link-button";
 
 export function DemoBar() {
@@ -32,6 +34,12 @@ export function DemoBar() {
           <span className="text-[13px] font-medium tracking-[0.01em]">
             You&apos;re exploring with demo data
           </span>
+          <Link
+            href={`/?project=${DEMO_TUTORIAL_PROJECT_ID}`}
+            className={NOTIFICATION_LINK_BUTTON_CLASS}
+          >
+            Meet Kagelin
+          </Link>
           <button
             type="button"
             onClick={() => setConfirmOpen(true)}

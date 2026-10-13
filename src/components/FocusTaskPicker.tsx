@@ -27,12 +27,14 @@ import { notify } from "@/lib/notify";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
 import { isBefore, isToday, parseISO, startOfDay } from "date-fns";
-import { Target, Check, Repeat } from "lucide-react";
+import { Target, Check, Repeat, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 import { useProjects } from "@/lib/hooks/useProjects";
 import { ReadableText } from "@/components/encryption/ReadableText";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { useTaskActions } from "@/components/TaskActionsProvider";
 
 function getEndOfToday(): Date {
   const d = new Date();
@@ -47,6 +49,7 @@ export function FocusTaskPicker() {
   const { isGuestMode } = useAuth();
   const supabase = createClient();
   const { data: projectsData } = useProjects();
+  const { openAddTask } = useTaskActions();
 
   const activeTaskId = useTimerStore((s) => s.state.activeTaskId);
   const taskSwitchBehavior = useTimerStore(
@@ -178,12 +181,19 @@ export function FocusTaskPicker() {
 
     if (total === 0) {
       return (
-        <div className="py-8 text-center">
-          <p className="text-[13px] text-muted-foreground">Nothing due today</p>
-          <p className="text-[13px] text-muted-foreground mt-1">
-            Tasks scheduled for today will appear here.
-          </p>
-        </div>
+        <EmptyState
+          icon={Target}
+          description="Pick one task, start the timer, and work only on that. Tasks due today show up here."
+          action={{
+            label: "Add task",
+            onClick: () => {
+              setOpen(false);
+              openAddTask();
+            },
+            icon: Plus,
+          }}
+          className="py-8 gap-4"
+        />
       );
     }
 

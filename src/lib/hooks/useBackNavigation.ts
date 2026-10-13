@@ -78,3 +78,22 @@ export function useBackNavigation(isOpen: boolean, onClose: () => void) {
     }
   }, [isOpen, handlePopState]);
 }
+
+/**
+ * Closing a modal tracked by useBackNavigation invokes history.back().
+ * If an action opens another modal or navigates immediately, the pending
+ * popstate event cancels or dismisses it. This helper defers the action until
+ * after the popstate has landed if a modal history entry is active.
+ */
+export function runAfterModalBack(action: () => void): void {
+  if (
+    typeof window !== "undefined" &&
+    window.history.state?.modalId !== undefined
+  ) {
+    window.addEventListener("popstate", () => setTimeout(action), {
+      once: true,
+    });
+  } else {
+    action();
+  }
+}

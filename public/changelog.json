@@ -1,5 +1,71 @@
 [
   {
+    "version": "1.48.0-preview.3",
+    "date": "2026-10-13",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Address review findings in ui store, memoization, hotkeys and navigation"
+      ],
+      "Fixed": [
+        "Prevent eager validation on task creation view open",
+        "Avoid evaluating onboarding card eligibility during demo mode",
+        "Remove redundant mouse action recordings from caller views",
+        "Centralize shortcut tip recording in action providers and fix clipping"
+      ]
+    }
+  },
+  {
+    "version": "1.48.0-preview.2",
+    "date": "2026-10-12",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Trigger shortcut tips on mouse use and suppress on hotkeys",
+        "Add shortcut tips toggle to preferences settings",
+        "Add shortcut tips state and useShortcutTips hook"
+      ],
+      "Fixed": [
+        "Restore and preserve recurrence state in edit views"
+      ]
+    }
+  },
+  {
+    "version": "1.48.0-preview.1",
+    "date": "2026-10-12",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Group and paginate completed tasks in Logbook with dates",
+        "Add Meet Kagelin to Start Here card, About, and Search",
+        "Shape guest demo data around Meet Kagelin tutorial project",
+        "Turn guest demo data into a tutorial",
+        "Show the telemetry prompt only after the first real action",
+        "Add a Start here card to Home for new accounts"
+      ],
+      "Fixed": [
+        "Keep dialogs closed after reload and skip the backup reminder on a first visit"
+      ]
+    }
+  },
+  {
+    "version": "1.48.0-preview.0",
+    "date": "2026-10-09",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Give empty pages a purpose line, one action and its key",
+        "Show search and shortcut keys in the desktop sidebar"
+      ],
+      "Fixed": [
+        "Open the shortcuts list with ? and label it ? in the dialog and command menu",
+        "Drop clipped nav spacers that left hidden scroll overflow on fixed-height mobile pages",
+        "Size mobile calendar, habits and home to the real header, banner and nav heights",
+        "Save, edit and delete calendar events in guest mode"
+      ]
+    }
+  },
+  {
     "version": "1.47.1",
     "date": "2026-10-09",
     "channel": "stable",
@@ -624,95 +690,6 @@
     "sections": {
       "Fixed": [
         "Prevent migration reload loop on demo-only guest data"
-      ]
-    }
-  },
-  {
-    "version": "1.43.0-preview.2",
-    "date": "2026-09-10",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Confirm large ics imports, batch invalidation, race-proof dedup"
-      ],
-      "Fixed": [
-        "Seed guest demo data with an injectable RNG for deterministic tests",
-        "Make caldav-adapter honour pastDays/futureDays sync window",
-        "Key guest migration off guest data, not the cleared flag",
-        "Settings scrolls its content pane, not the whole document",
-        "Replace amber/raw-blue colors with palette tokens in alerts",
-        "Report or rethrow console-only catch blocks in push/timer/sw code"
-      ]
-    }
-  },
-  {
-    "version": "1.43.0-preview.1",
-    "date": "2026-09-09",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Parallelize serial encryption work"
-      ],
-      "Fixed": [
-        "Encryption correctness follow-ups",
-        "Unify wrapped-client locked-key error contract across call sites"
-      ]
-    }
-  },
-  {
-    "version": "1.43.0-preview.0",
-    "date": "2026-09-08",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "End-to-end encryption for task, habit, and calendar content",
-        "Content passphrase setup, unlock, recovery, and rewrap",
-        "Locked state and manual lock, distinct from sign-out",
-        "Auto-lock after inactivity, off by default",
-        "Diagnostic export for bug reports",
-        "Warn that Backup exports leave the encrypted envelope"
-      ],
-      "Improved": [
-        "Consolidate the ciphertext envelope format into one module",
-        "Contain egress with content security policy",
-        "Scrub user content from error reports before send",
-        "Queue and display notifications without readable content"
-      ],
-      "Fixed": [
-        "Clamp auto-lock minutes against a corrupted zero value",
-        "Cancel in-flight queries before purging device content",
-        "Update the offline key-row cache directly after passphrase/recovery rotation",
-        "Surface an actionable message when sync hits a locked content key",
-        "Canonicalize visually-ambiguous chars in recovery codes",
-        "Fail migration loudly on a stale concurrent write",
-        "Guard backfill migration against concurrent edits and stale offline state",
-        "Gate migrated_at on pre-existing plaintext so backfill isn't skipped",
-        "DecryptRow throws instead of leaking ciphertext when key is unavailable",
-        "Backfill cancels legacy plaintext notifications and scrubs stale diagnostic text",
-        "Guest conversion sets a passphrase and encrypts before upload",
-        "Restart the idle clock when caching the master key so unlock sticks",
-        "Purge persisted query cache on sign-out",
-        "Dedupe ICS imports on ics_uid so re-importing a file adds nothing",
-        "Pad drawer bodies that inherit no padding on mobile",
-        "Restructure the diagnostic bundle dialog for mobile and warn before sharing",
-        "Give telemetry and diagnostics their own settings section",
-        "Point Sync to Account at signup instead of the sign-in form",
-        "Swap amber alerts for terracotta tokens that pass AA contrast in dark mode"
-      ]
-    }
-  },
-  {
-    "version": "1.42.0",
-    "date": "2026-09-01",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Add and edit task steps (subtasks) in the edit sheet, with keyboard shortcuts and drag-to-reorder",
-        "Step progress badge on list and board task cards",
-        "Focus mode subtask checklist with live completion tracking"
-      ],
-      "Fixed": [
-        "Fixed title double-submit, step badge cache staleness, and step haptic double-firing"
       ]
     }
   }

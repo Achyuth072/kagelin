@@ -29,6 +29,7 @@ import {
   SORT_LABELS,
 } from "@/lib/types/sorting";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 import { cn } from "@/lib/utils";
 import { SyncIndicator } from "@/components/ui/SyncIndicator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -54,6 +55,7 @@ function TasksPageHeaderBase({
 }: TasksPageHeaderProps) {
   const { openSheet } = useCompletedTasks();
   const { trigger } = useHaptic();
+  const { recordMouseAction } = useShortcutTips();
 
   // O(1) zustand writes — useTransition would only add scheduler latency here.
   const handleSortChange = (sort: SortOption) => {
@@ -240,7 +242,10 @@ function TasksPageHeaderBase({
       <Button
         variant="ghost"
         size="sm"
-        onClick={openSheet}
+        onClick={() => {
+          recordMouseAction("logbook");
+          openSheet();
+        }}
         className="hidden md:flex h-9 items-center gap-2 rounded-lg bg-secondary hover:bg-secondary/80 border border-border px-2 lg:px-3 text-[13px] font-medium"
       >
         <CheckCircle2
@@ -252,7 +257,9 @@ function TasksPageHeaderBase({
 
       <Button
         size="sm"
-        onClick={onNewTask}
+        onClick={() => {
+          onNewTask?.();
+        }}
         className="hidden md:flex h-9 items-center gap-2 rounded-lg bg-brand text-brand-foreground hover:bg-brand/90 border-none shadow-sm shadow-brand/10 transition-seijaku shrink-0 px-2.5 lg:px-4 text-[13px] font-semibold"
       >
         <Plus className="h-4 w-4" strokeWidth={2.5} />

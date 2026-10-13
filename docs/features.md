@@ -6,6 +6,7 @@ Full feature list for [Kagelin](../README.md).
 
 - **Search** (`Ctrl/Cmd+K`): instant search across tasks, habits, and events, plus navigation and actions.
 - **Task views**: Board and List view with 2D keyboard navigation.
+- **Logbook**: completed tasks grouped and paginated by completion date.
 - **Vim navigation & task controls**: `gg`/`G` navigation, `yy` yank, `p` paste, and `u` undo.
 - **Split View**: Desktop List opens a master-detail panel automatically.
 - **Projects**: multi-level project structure with archiving and mobile drawers.
@@ -38,14 +39,14 @@ Full feature list for [Kagelin](../README.md).
 
 ## Data Ownership
 
-- **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed.
+- **Guest Mode**: full-featured, zero-footprint experience in `localStorage` — no account needed. Includes a guided "Meet Kagelin" tutorial project and a dismissible "Start Here" card on Home (resettable at any time from Settings).
 - **Accounts & Auth**: Google, GitHub, or breach-checked email/password sign-in with multi-provider identity linking and password reset. Sign out of just this device or all devices.
 - **Zero-knowledge encryption**: tasks, habits, projects, labels, and calendar content are encrypted on your device under a passphrase Kagelin never sees. We can't read what you wrote — only that an item exists and when it's due. A recovery code is your backup, and you can lock your content manually or after inactivity without signing out. If you think your key leaked, rotate it: everything is re-encrypted under a new key, other devices are signed out, and only a device that holds the current key can change your passphrase, recovery code, or key. Anything that can't be decrypted shows as "Can't be read" in place, instead of breaking the whole list.
 - **Diagnostic export**: a content-free bundle you can review and attach to bug reports.
 - **WebDAV backup**: keep a copy of everything on a server you own (Nextcloud, Synology). Available at every tier, account or not. It is a backup, not a sync: each upload replaces the last.
-- **Backups & Portability**: encrypted `.zip` export/import, guest backup reminders, and instant cloud data wipe.
+- **Backups & Portability**: encrypted `.zip` export/import, guest backup reminders (skipped on the first visit), and instant cloud data wipe.
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
-- **Telemetry**: off by default for everyone, Guest Mode included. If you opt in, we collect anonymous product-usage counts (no task titles, habit names, or other content) tied to a random device ID, never your account.
+- **Telemetry**: off by default for everyone, Guest Mode included. If you opt in, we collect anonymous product-usage counts (no task titles, habit names, or other content) tied to a random device ID, never your account. The prompt is deferred until after your first real action.
 
 ## Stats & Insights
 
@@ -57,5 +58,6 @@ Full feature list for [Kagelin](../README.md).
 ## Preferences
 
 - **Time format**: system-wide 12h/24h toggle across all time displays.
+- **Shortcut tips**: contextual keyboard shortcut suggestions when actions are triggered with the mouse, with an on/off toggle in Preferences.
 - **Keyboard accessible**: Esc closes all modals, full focus-trap and `aria-modal` compliance.
 - **Haptic feedback**: standardized haptic palette for precise mobile feedback.

@@ -14,6 +14,37 @@ export interface GoalsState {
   weeklyTasksCompleted: number | null;
 }
 
+export type ShortcutTipAction =
+  "newTask" | "newHabit" | "newEvent" | "newProject" | "logbook";
+
+export type StepId = "task" | "habit" | "focus" | "import";
+
+export interface StartHereState {
+  eligible?: boolean;
+  dismissed: boolean;
+  done: StepId[];
+  tutorialProjectId?: string;
+}
+
+export function getStartHereState(
+  userId: string,
+  startHereStates: Record<string, StartHereState>,
+): StartHereState | null {
+  if (!userId) return null;
+  if (startHereStates[userId] !== undefined) {
+    return startHereStates[userId];
+  }
+  try {
+    if (typeof window !== "undefined") {
+      const raw = localStorage.getItem(`startHere:${userId}`);
+      if (raw) return JSON.parse(raw) as StartHereState;
+    }
+  } catch {
+    // Ignore parse error
+  }
+  return null;
+}
+
 interface UiState {
   isProjectsOpen: boolean;
   toggleProjectsOpen: () => void;
@@ -47,6 +78,17 @@ interface UiState {
   setAutoLockEnabled: (enabled: boolean) => void;
   autoLockMinutes: number;
   setAutoLockMinutes: (minutes: number) => void;
+
+  shortcutTipsEnabled: boolean;
+  setShortcutTipsEnabled: (enabled: boolean) => void;
+  shownShortcutTips: Partial<Record<ShortcutTipAction, boolean>>;
+  shortcutMouseCounts: Partial<Record<ShortcutTipAction, number>>;
+  incrementShortcutMouseCount: (
+    action: ShortcutTipAction,
+    threshold: number,
+  ) => boolean;
+  setShortcutMouseCount: (action: ShortcutTipAction, count: number) => void;
+  markShortcutTipShown: (action: ShortcutTipAction) => void;
 
   // Aggregate targets, not per-item (see CONTEXT.md "Goals").
   goals: GoalsState;
@@ -91,6 +133,9 @@ interface UiState {
   // Yanked task ID resolved against cache at paste time to avoid stale data.
   yankedTaskId: string | null;
   setYankedTaskId: (id: string | null) => void;
+
+  startHereStates: Record<string, StartHereState>;
+  setStartHereState: (userId: string, state: StartHereState) => void;
 
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
@@ -138,6 +183,51 @@ export const useUiStore = create<UiState>()(
       // Clamp to prevent corrupted/stale values (<= 0) from continuously auto-locking.
       setAutoLockMinutes: (minutes) =>
         set({ autoLockMinutes: Math.max(1, minutes) }),
+
+      shortcutTipsEnabled: true,
+      setShortcutTipsEnabled: (enabled) =>
+        set({ shortcutTipsEnabled: enabled }),
+      shownShortcutTips: {},
+      shortcutMouseCounts: {},
+      incrementShortcutMouseCount: (action, threshold) => {
+        let reached = false;
+        set((state) => {
+          if (state.shownShortcutTips[action]) return state;
+          const currentCount = state.shortcutMouseCounts[action] ?? 0;
+          const nextCount = currentCount + 1;
+          if (nextCount >= threshold) {
+            reached = true;
+            return {
+              shortcutMouseCounts: {
+                ...state.shortcutMouseCounts,
+                [action]: nextCount,
+              },
+              shownShortcutTips: {
+                ...state.shownShortcutTips,
+                [action]: true,
+              },
+            };
+          }
+          return {
+            shortcutMouseCounts: {
+              ...state.shortcutMouseCounts,
+              [action]: nextCount,
+            },
+          };
+        });
+        return reached;
+      },
+      setShortcutMouseCount: (action, count) =>
+        set((state) => ({
+          shortcutMouseCounts: {
+            ...state.shortcutMouseCounts,
+            [action]: count,
+          },
+        })),
+      markShortcutTipShown: (action) =>
+        set((state) => ({
+          shownShortcutTips: { ...state.shownShortcutTips, [action]: true },
+        })),
 
       goals: {
         dailyFocusHours: null,
@@ -199,6 +289,23 @@ export const useUiStore = create<UiState>()(
       yankedTaskId: null,
       setYankedTaskId: (id) => set({ yankedTaskId: id }),
 
+      startHereStates: {},
+      setStartHereState: (userId, state) => {
+        try {
+          if (typeof window !== "undefined") {
+            localStorage.setItem(`startHere:${userId}`, JSON.stringify(state));
+          }
+        } catch {
+          // Component state still holds for this page view.
+        }
+        set((prev) => ({
+          startHereStates: {
+            ...prev.startHereStates,
+            [userId]: state,
+          },
+        }));
+      },
+
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
@@ -231,6 +338,13 @@ export const useUiStore = create<UiState>()(
           triggerLastUndoAction: _triggerLastUndoAction,
           yankedTaskId: _yankedTaskId,
           setYankedTaskId: _setYankedTaskId,
+          isShortcutsHelpOpen: _isShortcutsHelpOpen,
+          setShortcutsHelpOpen: _setShortcutsHelpOpen,
+          isArchivedProjectsOpen: _isArchivedProjectsOpen,
+          setArchivedProjectsOpen: _setArchivedProjectsOpen,
+          isChangelogOpen: _isChangelogOpen,
+          setChangelogOpen: _setChangelogOpen,
+          shortcutMouseCounts: _shortcutMouseCounts,
           ...rest
         } = state;
         return rest;
@@ -242,6 +356,16 @@ export const useUiStore = create<UiState>()(
           return { ...state, viewMode: "list" };
         }
         return state;
+      },
+      // Older builds persisted these; an open dialog must not survive a reload.
+      merge: (persisted, current) => {
+        const {
+          isShortcutsHelpOpen: _isShortcutsHelpOpen,
+          isArchivedProjectsOpen: _isArchivedProjectsOpen,
+          isChangelogOpen: _isChangelogOpen,
+          ...rest
+        } = (persisted ?? {}) as Partial<UiState>;
+        return { ...current, ...rest };
       },
     },
   ),

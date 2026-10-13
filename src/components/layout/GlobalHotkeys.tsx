@@ -12,6 +12,7 @@ import { useCalendarStore } from "@/lib/calendar/store";
 import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 import { useIsBoardViewOnTasks } from "@/lib/hooks/useIsBoardViewOnTasks";
 import { useIsTasksPage } from "@/lib/hooks/useIsTasksPage";
+import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 
 interface GlobalHotkeysProps {
   setCommandOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
@@ -36,6 +37,7 @@ export function GlobalHotkeys({
   const setArchivedProjectsOpen = useUiStore(
     (state) => state.setArchivedProjectsOpen,
   );
+  const { recordKeyAction } = useShortcutTips();
 
   const isOtherModalOpen = useIsAnyModalOpen();
   const isAnyModalOpen = isOtherModalOpen || !!commandOpen;
@@ -66,22 +68,57 @@ export function GlobalHotkeys({
   // --- ACTIONS ---
 
   // New Task (n)
-  useHotkeys("n", () => openAddTask(), options);
+  useHotkeys(
+    "n",
+    () => {
+      recordKeyAction("newTask");
+      openAddTask({ source: "keyboard" });
+    },
+    options,
+  );
 
   // New Habit (h)
-  useHotkeys("h", () => openAddHabit(), habitHotkeyOptions);
+  useHotkeys(
+    "h",
+    () => {
+      recordKeyAction("newHabit");
+      openAddHabit({ source: "keyboard" });
+    },
+    habitHotkeyOptions,
+  );
 
   // New Event (e)
-  useHotkeys("e", () => openCreateEvent(), options);
+  useHotkeys(
+    "e",
+    () => {
+      recordKeyAction("newEvent");
+      openCreateEvent();
+    },
+    options,
+  );
 
   // New Project (p)
-  useHotkeys("p", () => openCreateProject(), newProjectHotkeyOptions);
+  useHotkeys(
+    "p",
+    () => {
+      recordKeyAction("newProject");
+      openCreateProject({ source: "keyboard" });
+    },
+    newProjectHotkeyOptions,
+  );
 
   // Archived Projects (a)
   useHotkeys("a", () => setArchivedProjectsOpen(true), options);
 
   // Toggle Logbook (c)
-  useHotkeys("c", () => openCompletedSheet(), options);
+  useHotkeys(
+    "c",
+    () => {
+      recordKeyAction("logbook");
+      openCompletedSheet();
+    },
+    options,
+  );
 
   useHotkeys(
     ["mod+k"],
@@ -103,15 +140,18 @@ export function GlobalHotkeys({
     options,
   );
 
+  const toggleHelp = (event: KeyboardEvent) => {
+    if (event.repeat) return;
+    setHelpOpen((prev) => !prev);
+  };
+
   // Shortcuts Help (Shift+H)
-  useHotkeys(
-    ["shift+h", "shift+/", "?"],
-    (event) => {
-      if (event.repeat) return;
-      setHelpOpen((prev) => !prev);
-    },
-    options,
-  );
+  useHotkeys("shift+h", toggleHelp, options);
+
+  // "?" sits on a different physical key per layout, so match the produced
+  // character; by default the hook matches event.code, where "?" never fires.
+  // Match both shifted and unshifted ? so layouts without Shift (or AltGr) work.
+  useHotkeys(["?", "shift+?"], toggleHelp, { ...options, useKey: true });
 
   // Focus Mode (f)
   useHotkeys("f", () => router.push("/focus"), options);

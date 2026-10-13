@@ -22,6 +22,7 @@ import { useCalendarStore } from "@/lib/calendar/store";
 import type { CalendarView } from "@/lib/calendar/types";
 import { cn } from "@/lib/utils";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 import { ImportExportMenu } from "./ImportExportMenu";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
 import { runCalendarSync, formatSyncSummary } from "@/lib/sync/run-sync";
@@ -42,6 +43,7 @@ export function CalendarToolbar({
   const { currentDate, view, setView, goToToday, next, prev } =
     useCalendarStore();
   const { trigger } = useHaptic();
+  const { recordMouseAction } = useShortcutTips();
   const queryClient = useQueryClient();
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -260,6 +262,7 @@ export function CalendarToolbar({
             size="sm"
             onClick={() => {
               trigger("tick");
+              recordMouseAction("newEvent");
               onCreateEvent();
             }}
             className="h-9 items-center gap-2 px-4 rounded-lg bg-brand text-brand-foreground hover:bg-brand/90 border-none shadow-sm shadow-brand/10 transition-seijaku shrink-0 text-[13px] font-semibold"

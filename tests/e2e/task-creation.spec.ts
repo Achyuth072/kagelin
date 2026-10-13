@@ -103,4 +103,46 @@ test.describe("Task Creation (Guest Mode)", () => {
     await page.getByRole("button", { name: /subtasks/i }).click();
     await expect(page.getByText("Auto-flushed step")).toBeVisible();
   });
+
+  test("should display recurrence UI in edit view when task repeats", async ({
+    page,
+  }) => {
+    const taskContent = `Recurring Task ${Date.now()}`;
+    await openNewTaskViaShortcut(page);
+    await page.getByPlaceholder("What needs to be done?").fill(taskContent);
+
+    // Set recurrence to Daily
+    await page.getByTitle("Does not repeat").click();
+    await page.getByRole("button", { name: "Daily", exact: true }).click();
+    await expect(page.getByTitle("Daily")).toBeVisible();
+
+    // Create task
+    await page.getByRole("button", { name: /create task/i }).click();
+
+    // Reopen task from list to edit it
+    const taskRow = page
+      .getByTestId("task-list-container")
+      .getByText(taskContent);
+    await expect(taskRow).toBeVisible();
+    await taskRow.click();
+
+    // Recurrence UI in edit view must show Daily with badge D
+    const recurrenceBtn = page.getByTitle("Daily");
+    await expect(recurrenceBtn).toBeVisible();
+    await expect(recurrenceBtn).toContainText("D");
+
+    // Change recurrence to Weekly inside the edit view
+    await recurrenceBtn.click();
+    await page.getByRole("button", { name: "Weekly", exact: true }).click();
+    await expect(page.getByTitle("Weekly")).toBeVisible();
+
+    // Save changes
+    await page.getByRole("button", { name: /save changes/i }).click();
+
+    // Reopen task again to verify updated recurrence was persisted
+    await taskRow.click();
+    const weeklyBtn = page.getByTitle("Weekly");
+    await expect(weeklyBtn).toBeVisible();
+    await expect(weeklyBtn).toContainText("W");
+  });
 });

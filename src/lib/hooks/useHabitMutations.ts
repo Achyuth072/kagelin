@@ -8,6 +8,7 @@ import type { HabitEntry, HabitWithEntries } from "@/lib/types/habit";
 import { REMINDER_EVERY_DAY } from "@/lib/types/habit";
 import { getCurrentStreak } from "@/lib/utils/habit-streak";
 import { trackTelemetry } from "@/lib/telemetry/client";
+import { markFirstAction } from "@/lib/telemetry/store";
 import { mockStore } from "@/lib/mock/mock-store";
 
 import { habitMutations } from "@/lib/mutations/habit";
@@ -74,6 +75,9 @@ export function useCreateHabit() {
       });
 
       return { snapshot, tempId };
+    },
+    onSuccess: () => {
+      markFirstAction();
     },
     onError: (err, _input, context) => {
       rollBack(queryClient, context?.snapshot);
@@ -313,6 +317,8 @@ export function useMarkHabitComplete() {
       return { previousHabits };
     },
     onSuccess: (_data, variables) => {
+      markFirstAction();
+
       // Guests get a year of pre-seeded demo habits; interacting with them
       // shouldn't inflate the "Habit Consistency" telemetry KPI.
       if (isGuestMode && mockStore.isSeedId(variables.habitId)) return;

@@ -9,6 +9,8 @@ import type { BackupData } from "@/lib/backup/types";
 
 const STORAGE_KEY = "kanso_last_backup_date";
 const SESSION_KEY = "kanso_backup_prompted";
+// Separate from STORAGE_KEY so a first visit is never recorded as a backup.
+const SINCE_KEY = "kanso_backup_reminder_since";
 
 /** Prompts guest users to back up weekly via a dismissible toast, not a modal. */
 export function useWeeklyBackup() {
@@ -68,9 +70,19 @@ export function useWeeklyBackup() {
     if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_KEY))
       return;
 
+    // Start reminder clock on first visit for guests with no prior backup.
+    let since = lastBackupDate;
+    if (!since) {
+      const stored = localStorage.getItem(SINCE_KEY);
+      if (!stored) {
+        localStorage.setItem(SINCE_KEY, new Date().toISOString());
+        return;
+      }
+      since = new Date(stored);
+    }
+
     const frequencyMs = backupReminderFrequencyDays * 24 * 60 * 60 * 1000;
-    const isStale =
-      !lastBackupDate || Date.now() - lastBackupDate.getTime() > frequencyMs;
+    const isStale = Date.now() - since.getTime() > frequencyMs;
 
     if (isStale) {
       // Delay so this doesn't interrupt initial page load.

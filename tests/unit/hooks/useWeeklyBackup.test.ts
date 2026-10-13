@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 
-// Mock dependencies
 vi.mock("@/lib/notify", () => ({
   notify: vi.fn(),
 }));
@@ -51,13 +50,11 @@ describe("useWeeklyBackup", () => {
   it("does not show toast if backup is recent", async () => {
     localStorage.setItem(STORAGE_KEY, new Date().toISOString());
 
-    // Dynamic import to ensure mocks are applied
     const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
     const { notify } = await import("@/lib/notify");
 
     renderHook(() => useWeeklyBackup());
 
-    // Fast-forward to account for 3s delay in hook
     act(() => {
       vi.advanceTimersByTime(4000);
     });
@@ -74,7 +71,6 @@ describe("useWeeklyBackup", () => {
 
     renderHook(() => useWeeklyBackup());
 
-    // Fast-forward to account for 3s delay in hook
     act(() => {
       vi.advanceTimersByTime(4000);
     });
@@ -87,6 +83,35 @@ describe("useWeeklyBackup", () => {
         }),
       }),
     );
+  });
+
+  it("does not call a first-time guest overdue: the clock starts at the first visit", async () => {
+    const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
+    const { notify } = await import("@/lib/notify");
+
+    renderHook(() => useWeeklyBackup());
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+
+    expect(notify).not.toHaveBeenCalled();
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it("reminds a guest who never backed up once the period has passed since their first visit", async () => {
+    localStorage.setItem(
+      "kanso_backup_reminder_since",
+      new Date(Date.now() - SEVEN_DAYS_MS - 1000).toISOString(),
+    );
+    const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
+    const { notify } = await import("@/lib/notify");
+
+    renderHook(() => useWeeklyBackup());
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+
+    expect(notify).toHaveBeenCalled();
   });
 
   it("does not show toast twice in same session", async () => {
@@ -142,13 +167,11 @@ describe("useWeeklyBackup", () => {
       vi.advanceTimersByTime(4000);
     });
 
-    // 10 days elapsed is stale against the old hardcoded 7-day window but
-    // not against the configured 14-day cadence.
+    // 10 days elapsed is within the configured 14-day cadence.
     expect(notify).not.toHaveBeenCalled();
   });
 });
 
-// Helper for act
 function act(callback: () => void) {
   callback();
 }

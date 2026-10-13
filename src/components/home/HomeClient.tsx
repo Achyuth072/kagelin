@@ -13,6 +13,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { SplitViewLayout } from "@/components/tasks/SplitViewLayout";
 import { PwaInstallHint } from "@/components/home/PwaInstallHint";
+import { StartHereCard } from "@/components/home/StartHereCard";
 import type { SortOption, GroupOption } from "@/lib/types/sorting";
 
 function getGreeting(): string {
@@ -75,7 +76,7 @@ export function HomeClient() {
   const greeting = getGreeting();
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-124px)] md:h-[calc(100dvh-16px)] overflow-hidden">
+    <div className="flex flex-col h-[var(--mobile-page-height)] md:h-[calc(100dvh-16px)] overflow-hidden">
       <PwaInstallHint />
 
       <div className="px-4 md:px-6 pt-4 pb-4 flex flex-col md:flex-row md:items-start justify-between gap-4 md:gap-0">
@@ -117,6 +118,8 @@ export function HomeClient() {
           />
         </div>
       </div>
+
+      <StartHereCard />
 
       <div
         className="flex-1 min-h-0 transition-opacity duration-150"

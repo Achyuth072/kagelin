@@ -16,6 +16,7 @@ import { taskMutations } from "@/lib/mutations/task";
 import { mockStore } from "@/lib/mock/mock-store";
 import { useUiStore } from "@/lib/store/uiStore";
 import { trackTelemetry } from "@/lib/telemetry/client";
+import { markFirstAction } from "@/lib/telemetry/store";
 import { applyReadableUpdate, requireReadable } from "@/lib/crypto/unreadable";
 
 // Matches the Undo toast duration — keyboard undo shouldn't outlive it.
@@ -237,6 +238,7 @@ export function useCreateTask() {
       return { snapshot, clientId, tempId: clientId };
     },
     onSuccess: (createdTask, _variables, context) => {
+      markFirstAction();
       trackTelemetry("task_action", { action: "created" });
 
       reconcileTempTaskId(
@@ -310,6 +312,8 @@ export function useToggleTask() {
       return { snapshot };
     },
     onSuccess: (_data, variables) => {
+      markFirstAction();
+
       // Guests get a year of pre-seeded demo tasks; interacting with them
       // shouldn't inflate the "Engagement & Throughput" telemetry KPI.
       if (isGuestMode && mockStore.isSeedId(variables.id)) return;

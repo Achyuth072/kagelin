@@ -84,7 +84,7 @@ export default function HabitsPage() {
   const hasHabits = !!habits && habits.length > 0;
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-124px)] md:h-dvh overflow-hidden">
+    <div className="flex flex-col h-[var(--mobile-page-height)] md:h-dvh overflow-hidden">
       <Suspense fallback={null}>
         <HabitDeepLink habits={habits ?? []} />
       </Suspense>
@@ -107,12 +107,12 @@ export default function HabitsPage() {
         {!hasHabits ? (
           <EmptyState
             icon={Layers}
-            title="No habits yet"
-            description="Small changes lead to big results. Create your first habit to start tracking."
+            description="Track the things you want to do again and again. Check one off each day to build a streak."
             action={{
-              label: "Create Habit",
+              label: "Add habit",
               onClick: handleOpenCreate,
               icon: Plus,
+              shortcut: "H",
             }}
           />
         ) : habitViewMode === "compact" ? (

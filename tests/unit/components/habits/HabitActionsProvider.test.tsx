@@ -1,10 +1,24 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  renderHook,
+} from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
 import {
   HabitActionsProvider,
   useHabitActions,
 } from "@/components/habits/HabitActionsProvider";
 import type { Habit } from "@/lib/types/habit";
+
+const mockRecordMouseAction = vi.fn();
+vi.mock("@/lib/hooks/useShortcutTips", () => ({
+  useShortcutTips: () => ({
+    recordMouseAction: mockRecordMouseAction,
+    recordKeyAction: vi.fn(),
+  }),
+}));
 
 const mockHabit = { id: "1", name: "Exercise" } as unknown as Habit;
 
@@ -68,5 +82,33 @@ describe("HabitActionsProvider — openHabitInsights", () => {
     fireEvent.click(screen.getByText("add"));
 
     expect(screen.getByTestId("tab")).toHaveTextContent("edit");
+  });
+
+  it("records mouse action for newHabit when openAddHabit is called without keyboard source", () => {
+    mockRecordMouseAction.mockClear();
+    render(
+      <HabitActionsProvider>
+        <Probe />
+      </HabitActionsProvider>,
+    );
+
+    fireEvent.click(screen.getByText("add"));
+
+    expect(mockRecordMouseAction).toHaveBeenCalledWith("newHabit");
+  });
+
+  it("does not record mouse action when openAddHabit is called with keyboard source", () => {
+    mockRecordMouseAction.mockClear();
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <HabitActionsProvider>{children}</HabitActionsProvider>
+    );
+
+    const { result } = renderHook(() => useHabitActions(), { wrapper });
+
+    act(() => {
+      result.current.openAddHabit({ source: "keyboard" });
+    });
+
+    expect(mockRecordMouseAction).not.toHaveBeenCalled();
   });
 });

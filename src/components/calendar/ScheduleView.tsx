@@ -6,6 +6,10 @@ import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { ReadableText } from "@/components/encryption/ReadableText";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { useCalendarStore } from "@/lib/calendar/store";
+import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
+import { CalendarDays, Plus } from "lucide-react";
 
 interface ScheduleViewProps {
   events: CalendarEvent[];
@@ -17,6 +21,8 @@ interface ScheduleViewProps {
 const ScheduleView = memo(
   ({ events, startDate, daysToShow = 30, className }: ScheduleViewProps) => {
     const { formatTime } = useTimeFormat();
+    const openCreateEvent = useCalendarStore((s) => s.openCreateEvent);
+    const { recordMouseAction } = useShortcutTips();
     const startOfToday = startOfDay(startDate);
 
     // Memoize date range generation
@@ -46,6 +52,26 @@ const ScheduleView = memo(
     }, [events, startOfToday]);
 
     const todayStr = format(new Date(), "yyyy-MM-dd");
+
+    if (eventsByDay.size === 0) {
+      return (
+        <div className={cn("h-full overflow-auto p-6", className)}>
+          <EmptyState
+            icon={CalendarDays}
+            description="See your events and dated tasks together, day by day."
+            action={{
+              label: "Add event",
+              onClick: () => {
+                recordMouseAction("newEvent");
+                openCreateEvent();
+              },
+              icon: Plus,
+              shortcut: "E",
+            }}
+          />
+        </div>
+      );
+    }
 
     return (
       <div className={cn("h-full overflow-auto p-6", className)}>

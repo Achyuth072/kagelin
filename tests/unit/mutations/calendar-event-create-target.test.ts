@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { CreateCalendarEventInput } from "@/lib/types/calendar-event";
+import { calendarEventMutations } from "@/lib/mutations/calendar-event";
 
 // ── Hoisted mock state ────────────────────────────────────────────────────────
 
@@ -67,8 +68,6 @@ describe("calendarEventMutations.create — default sync target", () => {
 
   it("stamps remote_calendar_id + pending_create when a bidirectional calendar exists", async () => {
     bidiCalendarsRef.value = [{ id: "bidi-cal-1" }];
-    const { calendarEventMutations } =
-      await import("@/lib/mutations/calendar-event");
 
     await calendarEventMutations.create(makeInput());
 
@@ -80,8 +79,6 @@ describe("calendarEventMutations.create — default sync target", () => {
 
   it("leaves sync fields null when no bidirectional calendar is connected", async () => {
     bidiCalendarsRef.value = [];
-    const { calendarEventMutations } =
-      await import("@/lib/mutations/calendar-event");
 
     await calendarEventMutations.create(makeInput());
 
@@ -91,8 +88,6 @@ describe("calendarEventMutations.create — default sync target", () => {
 
   it("keeps a recurring authored event local-only (never queued for push)", async () => {
     bidiCalendarsRef.value = [{ id: "bidi-cal-1" }];
-    const { calendarEventMutations } =
-      await import("@/lib/mutations/calendar-event");
 
     await calendarEventMutations.create(
       makeInput({ recurrence_rule: "FREQ=WEEKLY;BYDAY=MO" }),

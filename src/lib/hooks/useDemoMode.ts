@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 
-// Demo mode is a Guest-only concept — see CONTEXT.md → Guest showcase content.
+// Demo mode is a Guest-only concept (see CONTEXT.md).
 export function useDemoMode() {
   const { isGuestMode } = useAuth();
 
@@ -14,5 +14,5 @@ export function useDemoMode() {
     queryFn: () => (isGuestMode ? mockStore.isInDemoMode() : false),
   });
 
-  return data ?? false;
+  return data;
 }

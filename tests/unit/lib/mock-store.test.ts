@@ -5,7 +5,10 @@ import {
   STORAGE_KEY,
   stripDemoData,
   createSeededRandom,
+  DEMO_TUTORIAL_PROJECT_ID,
 } from "@/lib/mock/mock-store";
+import { REPO_URL } from "@/lib/links";
+import type { Task } from "@/lib/types/task";
 import { ENTRY_VALUE_SKIPPED, type HabitEntry } from "@/lib/types/habit";
 
 vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
@@ -129,6 +132,167 @@ describe("MockStore (Guest Mode Data)", () => {
     expect(stored.seed_ids).toEqual(
       expect.arrayContaining([seedHabitId, seedTaskId]),
     );
+  });
+
+  it("seeds Meet Kagelin as the only open tasks, in the order Home lists them", () => {
+    seededReset();
+
+    const open = mockStore
+      .getTasks()
+      .filter((t) => !t.is_completed && !t.parent_id);
+    for (const task of open) {
+      expect(task.project_id).toBe(DEMO_TUTORIAL_PROJECT_ID);
+      expect(mockStore.isSeedId(task.id)).toBe(true);
+    }
+    expect(
+      mockStore.getProjects().find((p) => p.id === DEMO_TUTORIAL_PROJECT_ID)
+        ?.name,
+    ).toBe("Meet Kagelin");
+
+    // Home's default date sort: do_date || due_date ascending, undated last.
+    const when = (t: Task) => {
+      const date = t.do_date || t.due_date;
+      return date ? Date.parse(date) : Infinity;
+    };
+    const homeOrder = [...open]
+      .sort((a, b) => when(a) - when(b))
+      .map((t) => t.content);
+    expect(homeOrder).toEqual([
+      "Add a task (N or +)",
+      "Open Search (Ctrl+K)",
+      "See shortcuts (?)",
+      "Break into steps",
+      "Focus on this task",
+      "Tick off a habit",
+      "Plan your week",
+      "Call the dentist",
+      "See all features",
+    ]);
+  });
+
+  it("shows a feature in each Meet Kagelin step that needs one", () => {
+    seededReset();
+    const tasks = mockStore.getTasks();
+    const open = (content: string) =>
+      tasks.find((t) => t.content === content && !t.is_completed)!;
+    const today = new Date().toDateString();
+
+    const steps = open("Break into steps");
+    expect(tasks.filter((t) => t.parent_id === steps.id)).toHaveLength(2);
+
+    const weekly = open("Plan your week");
+    expect(weekly.recurrence).toEqual({ freq: "WEEKLY", interval: 1 });
+    expect(
+      tasks.some(
+        (t) =>
+          t.recurring_series_id === weekly.recurring_series_id &&
+          t.is_completed,
+      ),
+    ).toBe(true);
+
+    // A due time puts it on the Calendar; the other steps stay off it.
+    const timed = open("Call the dentist");
+    expect(new Date(timed.due_date!).toDateString()).toBe(today);
+    expect(new Date(timed.due_date!).getHours()).toBe(15);
+    expect(open("Add a task (N or +)").due_date).toBeNull();
+
+    const features = open("See all features");
+    expect(features.due_date).toBeNull();
+    expect(features.do_date).toBeNull();
+    expect(features.description).toContain(
+      `${REPO_URL}/blob/main/docs/features.md`,
+    );
+  });
+
+  it("seeds one upcoming event, with a location, next to the tutorial", () => {
+    seededReset();
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const upcoming = mockStore
+      .getEvents()
+      .filter((e) => new Date(e.start_time) >= startOfToday);
+
+    expect(upcoming.map((e) => e.title)).toEqual(["Lunch with Sam"]);
+    expect(new Date(upcoming[0].start_time).toDateString()).toBe(
+      new Date().toDateString(),
+    );
+    expect(upcoming[0].location).toBeTruthy();
+  });
+
+  it("keeps finished demo work off the Calendar, which shows only Meet Kagelin and events", () => {
+    seededReset();
+
+    const dated = mockStore
+      .getTasks()
+      .filter((t) => t.due_date && t.project_id !== DEMO_TUTORIAL_PROJECT_ID);
+
+    expect(dated).toEqual([]);
+  });
+
+  it("seeds habits that each show a habit feature, with today left to tick", () => {
+    seededReset();
+
+    const habits = mockStore.getHabits();
+    expect(habits.map((h) => h.name)).toEqual([
+      "Drink Water",
+      "Read",
+      "Walk",
+      "Stretch",
+      "Call Family",
+      "Sleep by 23:00",
+    ]);
+    const byName = (name: string) => habits.find((h) => h.name === name)!;
+    expect(byName("Drink Water").habit_type).toBe("measurable");
+    expect(byName("Walk").frequency_count).toBe(5);
+    expect(byName("Walk").frequency_days).toBe(7);
+    expect(byName("Stretch").frequency_days).toBe(2);
+    expect(byName("Call Family").frequency_days).toBe(7);
+
+    // Daily habits show a streak, which today's empty box would otherwise hide.
+    const readDays = new Set(
+      mockStore.getHabitEntries(byName("Read").id).map((e) => e.date),
+    );
+    for (let d = 1; d <= 7; d++) {
+      const day = new Date();
+      day.setDate(day.getDate() - d);
+      expect(readDays.has(day.toISOString().split("T")[0])).toBe(true);
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+    for (const habit of habits) {
+      expect(
+        mockStore.getHabitEntries(habit.id).map((e) => e.date),
+      ).not.toContain(today);
+    }
+  });
+
+  it("keeps a year of completed history for Stats and the heatmap", () => {
+    seededReset();
+
+    const yearAgo = new Date();
+    yearAgo.setDate(yearAgo.getDate() - 300);
+    const completed = mockStore.getTasks().filter((t) => t.is_completed);
+
+    expect(completed.length).toBeGreaterThan(400);
+    expect(completed.some((t) => new Date(t.completed_at!) < yearAgo)).toBe(
+      true,
+    );
+  });
+
+  it("names ⌘K in the Search tutorial task on a Mac", () => {
+    const platform = vi
+      .spyOn(navigator, "platform", "get")
+      .mockReturnValue("MacIntel");
+    try {
+      seededReset();
+    } finally {
+      platform.mockRestore();
+    }
+
+    expect(
+      mockStore.getTasks().some((t) => t.content === "Open Search (⌘K)"),
+    ).toBe(true);
   });
 
   it("seeds skipped days across several demo habits", () => {

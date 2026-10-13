@@ -23,6 +23,7 @@ import { useTimer } from "@/components/TimerProvider";
 import { useCompletedTasks } from "@/components/CompletedTasksProvider";
 import { useActiveTask } from "@/lib/hooks/useActiveTask";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 import {
   prefetchChangelog,
   isNewerThan,
@@ -89,6 +90,7 @@ export const Header = React.memo(function Header({
   const pathname = usePathname();
   const { openSheet } = useCompletedTasks();
   const { trigger } = useHaptic();
+  const { recordMouseAction } = useShortcutTips();
   const lastDismissedVersion = useUiStore((s) => s.lastDismissedVersion);
   const setChangelogOpen = useUiStore((s) => s.setChangelogOpen);
   const [serverVersion, setServerVersion] = useState<string | null>(null);
@@ -173,6 +175,7 @@ export const Header = React.memo(function Header({
                   <DropdownMenuItem
                     onClick={() => {
                       trigger("toggle");
+                      recordMouseAction("logbook");
                       openSheet();
                     }}
                   >
