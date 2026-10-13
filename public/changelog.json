@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.48.0-preview.3",
+    "date": "2026-10-13",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Address review findings in ui store, memoization, hotkeys and navigation"
+      ],
+      "Fixed": [
+        "Prevent eager validation on task creation view open",
+        "Avoid evaluating onboarding card eligibility during demo mode",
+        "Remove redundant mouse action recordings from caller views",
+        "Centralize shortcut tip recording in action providers and fix clipping"
+      ]
+    }
+  },
+  {
     "version": "1.48.0-preview.2",
     "date": "2026-10-12",
     "channel": "preview",
@@ -674,24 +690,6 @@
     "sections": {
       "Fixed": [
         "Prevent migration reload loop on demo-only guest data"
-      ]
-    }
-  },
-  {
-    "version": "1.43.0-preview.2",
-    "date": "2026-09-10",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Confirm large ics imports, batch invalidation, race-proof dedup"
-      ],
-      "Fixed": [
-        "Seed guest demo data with an injectable RNG for deterministic tests",
-        "Make caldav-adapter honour pastDays/futureDays sync window",
-        "Key guest migration off guest data, not the cleared flag",
-        "Settings scrolls its content pane, not the whole document",
-        "Replace amber/raw-blue colors with palette tokens in alerts",
-        "Report or rethrow console-only catch blocks in push/timer/sw code"
       ]
     }
   }
