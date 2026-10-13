@@ -398,7 +398,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
 
                     <NotificationSettings />
 
-                    <ShortcutTipsRow />
+                    {isDesktop && <ShortcutTipsRow />}
 
                     <PwaInstallRow />
                   </div>

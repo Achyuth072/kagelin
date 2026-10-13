@@ -76,4 +76,18 @@ test.describe("Settings page (Guest Mode)", () => {
       .toBeGreaterThan(0);
     expect(await page.evaluate(() => window.scrollY)).toBe(0);
   });
+
+  test("shows shortcut tips setting on desktop but hides it on mobile", async ({
+    page,
+  }) => {
+    await page.goto("http://localhost:3000/settings?tab=preferences");
+    await expect(
+      page.getByRole("switch", { name: "Shortcut Tips" }),
+    ).toBeVisible();
+
+    await page.setViewportSize({ width: 375, height: 667 });
+    await expect(
+      page.getByRole("switch", { name: "Shortcut Tips" }),
+    ).not.toBeVisible();
+  });
 });
