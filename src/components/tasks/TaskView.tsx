@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, type Dispatch, type SetStateAction } from "react";
+import { useRef } from "react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
@@ -28,7 +28,7 @@ import { IconCell } from "@/components/ui/IconCell";
 import SubtaskList from "./SubtaskList";
 import { TaskDatePicker } from "./shared/TaskDatePicker";
 import { TaskPrioritySelect } from "./shared/TaskPrioritySelect";
-import { TaskNotesRow } from "./shared/TaskNotesRow";
+import { TaskNotesRow, type TaskNotesRowHandle } from "./shared/TaskNotesRow";
 import RecurrencePicker from "./TaskSheet/RecurrencePicker";
 import type { Task, Project } from "@/lib/types/task";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
@@ -43,8 +43,6 @@ interface TaskViewBaseProps {
   setContent: (value: string) => void;
   description: string;
   setDescription: (value: string) => void;
-  isPreviewMode: boolean;
-  setIsPreviewMode: Dispatch<SetStateAction<boolean>>;
   dueDate: Date | undefined;
   setDueDate: (value: Date | undefined) => void;
   doDate: Date | undefined;
@@ -92,8 +90,6 @@ export function TaskView(props: TaskViewProps) {
     setContent,
     description,
     setDescription,
-    isPreviewMode,
-    setIsPreviewMode,
     dueDate,
     setDueDate,
     doDate,
@@ -130,7 +126,7 @@ export function TaskView(props: TaskViewProps) {
   const { trigger } = useHaptic();
   const isFinePointer = useMediaQuery("(pointer: fine)");
   const scrollRef = useHorizontalScroll();
-  const [notesEditorOpen, setNotesEditorOpen] = useState(false);
+  const notesRowRef = useRef<TaskNotesRowHandle>(null);
   const titleTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -148,11 +144,9 @@ export function TaskView(props: TaskViewProps) {
       if (!e.shiftKey && !e.altKey) {
         if (mode === "create") {
           onSubmit();
-        } else if (mode === "edit" && !notesEditorOpen) {
+        } else if (mode === "edit") {
           trigger("toggle");
-          // Unlike the click path, this shortcut exists to start typing.
-          setIsPreviewMode(false);
-          setNotesEditorOpen(true);
+          notesRowRef.current?.focus();
         }
       }
       return;
@@ -288,17 +282,13 @@ export function TaskView(props: TaskViewProps) {
         <div className="h-1" />
 
         <TaskNotesRow
+          ref={notesRowRef}
           description={description}
           setDescription={setDescription}
-          isPreviewMode={isPreviewMode}
-          setIsPreviewMode={setIsPreviewMode}
-          defaultPreviewOnOpen={mode === "edit"}
           unreadable={
             props.mode === "edit" &&
             isUnreadable(props.initialTask, "description")
           }
-          open={notesEditorOpen}
-          onOpenChange={setNotesEditorOpen}
         />
 
         <div className="h-1" />

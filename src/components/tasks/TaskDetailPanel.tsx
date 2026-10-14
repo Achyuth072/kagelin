@@ -58,7 +58,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
     defaultValues: defaultTaskFormValues(),
   });
 
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [doDatePickerOpen, setDoDatePickerOpen] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -95,7 +94,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
     if (task) {
       setDraftSubtasks([]);
       setPendingStep("");
-      setIsPreviewMode(!!task.description);
     }
   }
 
@@ -230,8 +228,6 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
             setDescription={(v) =>
               setValue("description", v, { shouldValidate: true })
             }
-            isPreviewMode={isPreviewMode}
-            setIsPreviewMode={setIsPreviewMode}
             dueDate={dueDate}
             setDueDate={(v) =>
               setValue("due_date", v, { shouldValidate: true })
