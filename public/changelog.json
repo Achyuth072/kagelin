@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.48.1",
+    "date": "2026-10-14",
+    "channel": "stable",
+    "sections": {
+      "Improved": [
+        "Replace modal notes editor with inline auto-expanding notes and URL awareness"
+      ],
+      "Fixed": [
+        "Hide shortcut tips preference setting on mobile devices"
+      ]
+    }
+  },
+  {
     "version": "1.48.1-preview.0",
     "date": "2026-10-14",
     "channel": "preview",
@@ -698,17 +711,6 @@
     "sections": {
       "Fixed": [
         "Guard getFailureCount against SSR, where localStorage doesn't exist"
-      ]
-    }
-  },
-  {
-    "version": "1.43.0-preview.5",
-    "date": "2026-09-11",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Harden guest migration against silent data loss with idempotent id-based sync",
-        "Dedupe task notification insert against pending index"
       ]
     }
   }
