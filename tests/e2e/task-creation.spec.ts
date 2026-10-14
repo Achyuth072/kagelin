@@ -36,10 +36,11 @@ test.describe("Task Creation (Guest Mode)", () => {
     await openNewTaskViaShortcut(page);
 
     const createBtn = page.getByRole("button", { name: /create task/i });
+    const input = page.getByPlaceholder("What needs to be done?");
+    await input.clear();
 
     await expect(createBtn).toBeDisabled();
 
-    const input = page.getByPlaceholder("What needs to be done?");
     await input.fill("a");
     await expect(createBtn).toBeEnabled();
     await input.fill("");
@@ -144,5 +145,51 @@ test.describe("Task Creation (Guest Mode)", () => {
     const weeklyBtn = page.getByTitle("Weekly");
     await expect(weeklyBtn).toBeVisible();
     await expect(weeklyBtn).toContainText("W");
+  });
+
+  test("should create task with inline notes and render clickable URLs on reopen", async ({
+    page,
+  }) => {
+    const taskContent = `Task with Notes ${Date.now()}`;
+    await openNewTaskViaShortcut(page);
+    await page.getByPlaceholder("What needs to be done?").fill(taskContent);
+
+    // Fill inline notes with a plain URL
+    const notesInput = page.getByPlaceholder("Add notes");
+    await expect(notesInput).toBeVisible();
+    await notesInput.fill("Check reference: https://example.com/docs");
+
+    // Submit task
+    await page.getByRole("button", { name: /create task/i }).click();
+
+    // Reopen task from list to verify notes & clickable link
+    const taskRow = page
+      .getByTestId("task-list-container")
+      .getByText(taskContent);
+    await expect(taskRow).toBeVisible();
+    await taskRow.click();
+
+    // The note is rendered inline with a clickable link
+    const link = page.getByRole("link", { name: "https://example.com/docs" });
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAttribute("href", "https://example.com/docs");
+    await expect(link).toHaveAttribute("target", "_blank");
+
+    // Click non-link note text to edit
+    await page
+      .getByRole("button", { name: "Edit notes" })
+      .click({ position: { x: 5, y: 5 } });
+    const editNotesInput = page.getByPlaceholder("Add notes");
+    await expect(editNotesInput).toBeVisible();
+    await editNotesInput.fill("Updated note text");
+
+    // Save changes
+    await page.getByRole("button", { name: /save changes/i }).click();
+
+    // Reopen task again to verify updated notes persisted
+    await taskRow.click();
+    await expect(
+      page.getByRole("button", { name: "Edit notes" }),
+    ).toContainText("Updated note text");
   });
 });

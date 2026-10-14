@@ -90,7 +90,6 @@ export default function TaskSheet({
   const [draftSubtasks, setDraftSubtasks] = useState<string[]>([]);
   const [pendingStep, setPendingStep] = useState("");
   const [showSubtasks, setShowSubtasks] = useState(false);
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [tab, setTab] = useState<SheetTab>("edit");
 
   const content = useWatch({ control, name: "content" });
@@ -134,7 +133,6 @@ export default function TaskSheet({
     if (open) {
       setDraftSubtasks([]);
       setPendingStep("");
-      setIsPreviewMode(!!initialTask?.description);
       setTab(initialTab === "insights" && hasSeries ? "insights" : "edit");
     }
   }
@@ -320,8 +318,6 @@ export default function TaskSheet({
                 setDescription={(v) =>
                   setValue("description", v, { shouldValidate: true })
                 }
-                isPreviewMode={isPreviewMode}
-                setIsPreviewMode={setIsPreviewMode}
                 dueDate={dueDate}
                 setDueDate={(v) =>
                   setValue("due_date", v, { shouldValidate: true })
@@ -376,8 +372,6 @@ export default function TaskSheet({
                 setDescription={(v) =>
                   setValue("description", v, { shouldValidate: true })
                 }
-                isPreviewMode={isPreviewMode}
-                setIsPreviewMode={setIsPreviewMode}
                 dueDate={dueDate}
                 setDueDate={(v) =>
                   setValue("due_date", v, { shouldValidate: true })

@@ -61,37 +61,11 @@ vi.mock("@/components/tasks/SubtaskList", () => ({
   ),
 }));
 
-vi.mock("@/components/tasks/shared/TaskNotesEditor", () => ({
-  TaskNotesEditor: ({
-    open,
-    onOpenChange,
-    description,
-    setDescription,
-  }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    description: string;
-    setDescription: (value: string) => void;
-  }) =>
-    open ? (
-      <div data-testid="notes-editor">
-        <textarea
-          aria-label="Notes"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
-        <button onClick={() => onOpenChange(false)}>Close</button>
-      </div>
-    ) : null,
-}));
-
 const baseProps = {
   content: "Test task",
   setContent: vi.fn(),
   description: "",
   setDescription: vi.fn(),
-  isPreviewMode: false,
-  setIsPreviewMode: vi.fn(),
   dueDate: undefined,
   setDueDate: vi.fn(),
   doDate: undefined,
@@ -149,12 +123,14 @@ describe("TaskView - create mode", () => {
     expect(subtaskList.dataset.projectId).toBe("inbox-id");
   });
 
-  it("opening the Notes row defaults the editor to edit mode", () => {
+  it("renders the notes textarea in create mode and syncs edits", () => {
     render(<TaskView {...baseProps} mode="create" />);
 
-    fireEvent.click(screen.getByRole("button", { name: /add details/i }));
+    const textarea = screen.getByPlaceholderText("Add notes");
+    expect(textarea).toBeInTheDocument();
 
-    expect(baseProps.setIsPreviewMode).toHaveBeenCalledWith(false);
+    fireEvent.change(textarea, { target: { value: "New note" } });
+    expect(baseProps.setDescription).toHaveBeenCalledWith("New note");
   });
 
   it("pressing bare Enter in the title textarea submits the task immediately", () => {
@@ -260,51 +236,25 @@ describe("TaskView - edit mode", () => {
     expect(editProps.onDelete).toHaveBeenCalled();
   });
 
-  it("opening the Notes row defaults the editor to preview mode", () => {
+  it("renders the notes row and syncs edits back", () => {
     render(<TaskView {...editProps} mode="edit" />);
 
     fireEvent.click(screen.getByRole("button", { name: /notes/i }));
 
-    expect(editProps.setIsPreviewMode).toHaveBeenCalledWith(true);
-  });
-
-  it("opens the notes editor when the Notes row is clicked and syncs edits back", () => {
-    render(<TaskView {...editProps} mode="edit" />);
-
-    fireEvent.click(screen.getByRole("button", { name: /notes/i }));
-
-    const editor = screen.getByTestId("notes-editor");
     const textarea = screen.getByRole("textbox", { name: /notes/i });
     expect(textarea).toHaveValue("Existing notes");
 
     fireEvent.change(textarea, { target: { value: "Updated notes" } });
     expect(editProps.setDescription).toHaveBeenCalledWith("Updated notes");
-
-    fireEvent.click(screen.getByRole("button", { name: /close/i }));
-    expect(editor).not.toBeInTheDocument();
   });
 
-  it("pressing bare Enter in the title opens the Notes editor ready to type in", () => {
-    render(<TaskView {...editProps} mode="edit" />);
-
-    expect(screen.queryByTestId("notes-editor")).toBeNull();
-
-    const titleInput = screen.getByPlaceholderText("What needs to be done?");
-    fireEvent.keyDown(titleInput, { key: "Enter" });
-
-    expect(screen.getByTestId("notes-editor")).toBeInTheDocument();
-    expect(editProps.setIsPreviewMode).toHaveBeenCalledWith(false);
-  });
-
-  it("pressing bare Enter in the title when Notes is already open is a no-op", () => {
+  it("pressing bare Enter in the title focuses the notes field", () => {
     render(<TaskView {...editProps} mode="edit" />);
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
     fireEvent.keyDown(titleInput, { key: "Enter" });
-    expect(screen.getByTestId("notes-editor")).toBeInTheDocument();
 
-    fireEvent.keyDown(titleInput, { key: "Enter" });
-    expect(screen.getByTestId("notes-editor")).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /notes/i })).toBeInTheDocument();
   });
 
   it("pressing Cmd+Enter or Ctrl+Enter in edit mode title submits the form", () => {
