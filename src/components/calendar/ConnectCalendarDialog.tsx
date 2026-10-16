@@ -165,7 +165,7 @@ export function ConnectCalendarDialog({
   };
 
   const handleProviderSelect = (provider: CalendarProvider) => {
-    window.location.href = `/api/calendar/connect/${provider}`;
+    window.location.href = `${window.location.origin}/api/calendar/connect/${provider}`;
   };
 
   const isMobile = useMediaQuery("(max-width: 640px)");

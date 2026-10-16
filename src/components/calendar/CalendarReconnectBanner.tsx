@@ -28,7 +28,7 @@ export function CalendarReconnectBanner() {
             actionLabel="Reconnect"
             actionIcon={RefreshCw}
             onAction={() => {
-              window.location.href = `/api/calendar/connect/${provider}`;
+              window.location.href = `${window.location.origin}/api/calendar/connect/${provider}`;
             }}
           />
         );
