@@ -19,6 +19,8 @@
     "validate:fix": "npm run format && npm run validate",
     "ci:validate": "cross-env CI=true npm run validate && npm run build",
     "e2e": "playwright test",
+    "e2e:chromium": "playwright test --project=chromium",
+    "screenshot": "playwright screenshot",
     "analyze": "npx cross-env ANALYZE=true npm run build",
     "dead-code": "npx knip",
     "unused-deps": "npx depcheck",

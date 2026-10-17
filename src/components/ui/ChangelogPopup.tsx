@@ -8,7 +8,7 @@ import {
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog";
 import { MessageSquare, Sparkles } from "lucide-react";
-import { DISCUSSIONS_URL } from "@/lib/links";
+import { DISCUSSIONS_URL, FEEDBACK_DISCUSSION_URL } from "@/lib/links";
 import {
   useChangelogEntries,
   isNewerThan,
@@ -67,6 +67,8 @@ function EntryView({ entry }: { entry: ChangelogEntry }) {
 
 export function ChangelogPopup({ open, onOpenChange }: ChangelogPopupProps) {
   const { entries: displayEntries, loading } = useChangelogEntries(open);
+  const releaseDiscussionUrl =
+    displayEntries[0]?.discussionUrl || DISCUSSIONS_URL;
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
@@ -100,15 +102,23 @@ export function ChangelogPopup({ open, onOpenChange }: ChangelogPopupProps) {
           )}
         </div>
 
-        <div className="border-t border-border/80 px-6 py-3 shrink-0">
+        <div className="border-t border-border/80 px-6 py-3 shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <a
-            href={DISCUSSIONS_URL}
+            href={releaseDiscussionUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            <MessageSquare className="h-4 w-4" />
-            Share honest feedback on GitHub
+            <MessageSquare className="h-4 w-4 shrink-0" />
+            Discuss this release on GitHub
+          </a>
+          <a
+            href={FEEDBACK_DISCUSSION_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center text-[12px] font-medium text-muted-foreground/80 hover:text-foreground transition-colors"
+          >
+            Switching from another app? (#197)
           </a>
         </div>
       </ResponsiveDialogContent>

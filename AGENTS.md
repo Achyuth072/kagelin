@@ -17,13 +17,15 @@ npm run test               # vitest (watch mode)
 npx vitest run <path>      # run a single unit test file
 npx vitest run <path> -t "<name>"  # run a single test by name
 npm run e2e                 # playwright (automatically starts dev server if not running)
+npm run e2e:chromium        # playwright, Chromium only (recommended for lightweight WSL2 runs)
 npx playwright test <path>  # run a single e2e spec
+npx playwright screenshot <url> <path>  # capture page/component screenshot via Playwright CLI
 npm run dead-code           # knip — unused exports/files
 npm run unused-deps          # depcheck
 npm run ast-grep             # ast-grep scan — repo-specific structural lint rules (.ast-grep/rules), advisory
 ```
 
-Playwright automatically manages the dev server via the `webServer` block in `playwright.config.ts`.
+Playwright automatically manages the dev server via the `webServer` block in `playwright.config.ts`. Always use the Playwright CLI (`npm run e2e`, `npx playwright test`, or `npx playwright screenshot`) for driving end-to-end tests and capturing screenshots.
 
 The service worker (Serwist) is **disabled** under `npm run dev` (Turbopack skips the Serwist wrapper entirely). To reproduce SW/offline/PWA behavior you must `npm run build && npm start`. See [`.claude/skills/verify/SKILL.md`](.claude/skills/verify/SKILL.md) for driving the app end-to-end, including how to seed guest mode for Playwright without racing the auth guard.
 
