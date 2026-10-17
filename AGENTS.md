@@ -12,7 +12,7 @@ npm run typecheck         # tsc --noEmit
 npm run lint               # eslint
 npm run lint:strict        # eslint --max-warnings=13
 npm run format:check       # prettier --check
-npm run validate           # format:check + lint:strict + typecheck + test, in parallel — run before considering work done
+npm run validate           # format:check + lint:strict + typecheck + test:run, sequentially — run before considering work done
 npm run test               # vitest (watch mode)
 npx vitest run <path>      # run a single unit test file
 npx vitest run <path> -t "<name>"  # run a single test by name

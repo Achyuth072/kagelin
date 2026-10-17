@@ -165,7 +165,6 @@ export function ConnectCalendarDialog({
   };
 
   const handleProviderSelect = (provider: CalendarProvider) => {
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = `/api/calendar/connect/${provider}`;
   };
 

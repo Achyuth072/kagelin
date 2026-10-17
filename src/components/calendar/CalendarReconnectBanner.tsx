@@ -28,7 +28,6 @@ export function CalendarReconnectBanner() {
             actionLabel="Reconnect"
             actionIcon={RefreshCw}
             onAction={() => {
-              // eslint-disable-next-line @next/next/no-location-assign-relative-destination
               window.location.href = `/api/calendar/connect/${provider}`;
             }}
           />
