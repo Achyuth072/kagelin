@@ -1,8 +1,19 @@
 import { parseTodoistCsv } from "./parser";
 import { mapTodoistRowsToKagelin, type MappedTodoistTask } from "./mapper";
 import type { TodoistRow, ParseTodoistResult } from "./types";
+import { summarizeTasks, type TodoistArchiveImportPreview } from "./plan";
 import { taskMutations } from "@/lib/mutations/task";
+import { projectMutations } from "@/lib/mutations/project";
 import { persistImportSource } from "@/lib/mutations/importSource";
+
+const GUEST_MODE_KEY = "kanso_guest_mode";
+
+function detectGuestMode(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    localStorage.getItem(GUEST_MODE_KEY) === "true"
+  );
+}
 
 export interface TodoistImportPreview {
   tasks: MappedTodoistTask[];
@@ -25,39 +36,10 @@ export function prepareTodoistImport(
   const parsed = parseTodoistCsv(csvContent);
   const mapped = mapTodoistRowsToKagelin(parsed.rows, options?.refDate);
 
-  let rootTasksCount = 0;
-  let subtasksCount = 0;
-  let recurringCount = 0;
-
-  const dates: string[] = [];
-
-  for (const task of mapped.tasks) {
-    if (task.tempParentId) {
-      subtasksCount++;
-    } else {
-      rootTasksCount++;
-    }
-
-    if (task.recurrence) {
-      recurringCount++;
-    }
-
-    if (task.dueDate) dates.push(task.dueDate);
-    if (task.doDate) dates.push(task.doDate);
-  }
-
-  dates.sort();
-  const earliestDate = dates.length > 0 ? dates[0] : null;
-  const latestDate = dates.length > 0 ? dates[dates.length - 1] : null;
-
   return {
     tasks: mapped.tasks,
     totalTasks: mapped.tasks.length,
-    rootTasksCount,
-    subtasksCount,
-    recurringCount,
-    earliestDate,
-    latestDate,
+    ...summarizeTasks(mapped.tasks),
     rawSource: {
       meta: parsed.meta,
       rows: parsed.rows,
@@ -65,20 +47,52 @@ export function prepareTodoistImport(
   };
 }
 
+async function createMappedTasks(
+  tasks: MappedTodoistTask[],
+  projectId: string | undefined,
+): Promise<number> {
+  const createTask = (task: MappedTodoistTask, parentId?: string) =>
+    taskMutations.create({
+      content: task.content,
+      description: task.description ?? undefined,
+      priority: task.priority,
+      due_date: task.dueDate ?? undefined,
+      do_date: task.doDate ?? undefined,
+      recurrence: task.recurrence,
+      project_id: projectId,
+      parent_id: parentId,
+    });
+
+  const idMap = new Map<string, string>();
+  let importedCount = 0;
+
+  for (const task of tasks.filter((t) => !t.tempParentId)) {
+    const created = await createTask(task);
+    idMap.set(task.tempId, created.id);
+    importedCount++;
+  }
+
+  for (const task of tasks.filter((t) => t.tempParentId)) {
+    const parentId = idMap.get(task.tempParentId!);
+    await createTask(task, parentId);
+    importedCount++;
+  }
+
+  return importedCount;
+}
+
 export interface ExecuteTodoistImportOptions {
   projectId?: string | null;
   fileName?: string;
+  isGuest?: boolean;
 }
 
 export async function executeTodoistImport(
   preview: TodoistImportPreview,
   options: ExecuteTodoistImportOptions = {},
 ): Promise<{ importedCount: number }> {
-  const isGuest =
-    typeof window !== "undefined" &&
-    localStorage.getItem("kanso_guest_mode") === "true";
+  const isGuest = options.isGuest ?? detectGuestMode();
 
-  // Persist raw source for ADR 0006 round-trip provenance
   await persistImportSource(
     {
       source_app: "todoist",
@@ -88,39 +102,55 @@ export async function executeTodoistImport(
     { isGuest },
   );
 
-  const topLevelTasks = preview.tasks.filter((t) => !t.tempParentId);
-  const subtasks = preview.tasks.filter((t) => Boolean(t.tempParentId));
-
-  const idMap = new Map<string, string>();
-  let importedCount = 0;
-
-  const createTask = (task: MappedTodoistTask, parentId?: string) =>
-    taskMutations.create({
-      content: task.content,
-      description: task.description ?? undefined,
-      priority: task.priority,
-      due_date: task.dueDate ?? undefined,
-      do_date: task.doDate ?? undefined,
-      recurrence: task.recurrence,
-      project_id: options.projectId ? options.projectId : undefined,
-      parent_id: parentId,
-    });
-
-  // 1. Create top-level tasks
-  for (const task of topLevelTasks) {
-    const created = await createTask(task);
-    idMap.set(task.tempId, created.id);
-    importedCount++;
-  }
-
-  // 2. Create subtasks with resolved parent_ids
-  for (const task of subtasks) {
-    const parentId = task.tempParentId
-      ? idMap.get(task.tempParentId)
-      : undefined;
-    await createTask(task, parentId);
-    importedCount++;
-  }
+  const importedCount = await createMappedTasks(
+    preview.tasks,
+    options.projectId || undefined,
+  );
 
   return { importedCount };
+}
+
+export interface ExecuteTodoistArchiveOptions {
+  isGuest: boolean;
+  fileName?: string;
+}
+
+export async function executeTodoistArchiveImport(
+  preview: TodoistArchiveImportPreview,
+  options: ExecuteTodoistArchiveOptions,
+): Promise<{ importedCount: number; createdProjectCount: number }> {
+  await persistImportSource(
+    {
+      source_app: "todoist",
+      file_name: options.fileName ?? null,
+      raw: preview.rawSource,
+    },
+    { isGuest: options.isGuest },
+  );
+
+  let importedCount = 0;
+  let createdProjectCount = 0;
+
+  for (const project of preview.projects) {
+    if (project.tasks.length === 0) continue;
+
+    let projectId: string | undefined;
+    if (project.isInbox) {
+      projectId = undefined;
+    } else if (project.status === "merged" && project.existingProjectId) {
+      projectId = project.existingProjectId;
+    } else {
+      const created = await projectMutations.create({
+        name: project.name,
+        color: project.color,
+        viewStyle: project.viewStyle,
+      });
+      projectId = created.id;
+      createdProjectCount++;
+    }
+
+    importedCount += await createMappedTasks(project.tasks, projectId);
+  }
+
+  return { importedCount, createdProjectCount };
 }
