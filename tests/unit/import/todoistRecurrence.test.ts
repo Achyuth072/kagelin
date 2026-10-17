@@ -131,5 +131,22 @@ describe("Todoist Recurrence & Date Mapper", () => {
       expect(result.dueDate).toBeDefined();
       expect(result.dueDate?.slice(0, 10)).toBe("2026-10-14");
     });
+
+    it("assigns DEADLINE to due_date, recurring anchor to do_date, and preserves recurrence when both exist", () => {
+      const result = parseTodoistDateAndRecurrence({
+        dateStr: "every 2 weeks",
+        deadlineStr: "2026-11-15",
+        refDate,
+      });
+
+      expect(result.dueDate?.slice(0, 10)).toBe("2026-11-15");
+      // 2026-10-14 + 14 days = 2026-10-28
+      expect(result.doDate?.slice(0, 10)).toBe("2026-10-28");
+      expect(result.recurrence).toEqual({
+        freq: "WEEKLY",
+        interval: 2,
+        mode: "strict",
+      });
+    });
   });
 });

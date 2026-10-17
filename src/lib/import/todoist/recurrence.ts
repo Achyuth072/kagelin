@@ -1,5 +1,5 @@
 import * as chrono from "chrono-node";
-import { addDays } from "date-fns";
+import { addDays, addWeeks, addMonths, addYears } from "date-fns";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 
 const DAY_MAP: Record<string, number> = {
@@ -158,6 +158,13 @@ export function calculateInitialRecurrenceDate(
     return addDays(refDate, targetDay - currentDayOfWeek);
   }
 
+  if (rule.interval > 1) {
+    if (rule.freq === "DAILY") return addDays(refDate, rule.interval);
+    if (rule.freq === "WEEKLY") return addWeeks(refDate, rule.interval);
+    if (rule.freq === "MONTHLY") return addMonths(refDate, rule.interval);
+    if (rule.freq === "YEARLY") return addYears(refDate, rule.interval);
+  }
+
   return refDate;
 }
 
@@ -200,24 +207,33 @@ export function parseTodoistDateAndRecurrence(
   const hasDate = Boolean(dateStr && dateStr.trim());
   const hasDeadline = Boolean(deadlineStr && deadlineStr.trim());
 
-  if (hasDate && isRecurrencePattern(dateStr!)) {
-    recurrence = parseRecurrenceRule(dateStr!);
-    if (recurrence) {
-      const initialDate = calculateInitialRecurrenceDate(recurrence, refDate);
-      dueDate = initialDate.toISOString();
+  let parsedDateIso: string | null = null;
+
+  if (hasDate) {
+    if (isRecurrencePattern(dateStr!)) {
+      recurrence = parseRecurrenceRule(dateStr!);
+      if (recurrence) {
+        parsedDateIso = calculateInitialRecurrenceDate(
+          recurrence,
+          refDate,
+        ).toISOString();
+      }
+    } else {
+      parsedDateIso = parseDateStringToIso(dateStr!, refDate);
     }
   }
 
-  if (hasDeadline) {
-    const parsedDeadline = parseDateStringToIso(deadlineStr!, refDate);
-    if (parsedDeadline) {
-      dueDate = parsedDeadline;
-      if (hasDate && !recurrence) {
-        doDate = parseDateStringToIso(dateStr!, refDate);
-      }
-    }
-  } else if (hasDate && !recurrence) {
-    dueDate = parseDateStringToIso(dateStr!, refDate);
+  const parsedDeadlineIso = hasDeadline
+    ? parseDateStringToIso(deadlineStr!, refDate)
+    : null;
+
+  if (parsedDeadlineIso && parsedDateIso) {
+    dueDate = parsedDeadlineIso;
+    doDate = parsedDateIso;
+  } else if (parsedDeadlineIso) {
+    dueDate = parsedDeadlineIso;
+  } else if (parsedDateIso) {
+    dueDate = parsedDateIso;
   }
 
   return {

@@ -77,13 +77,17 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
     cancelImport();
   };
 
+  const processTodoistFile = async (file: File) => {
+    await prepareTodoistImport(file);
+    if (todoistInputRef.current) todoistInputRef.current.value = "";
+  };
+
   const handleImportTodoist = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    await prepareTodoistImport(file);
-    if (todoistInputRef.current) todoistInputRef.current.value = "";
+    await processTodoistFile(file);
   };
 
   const handleConfirmTodoistImport = async () => {
@@ -363,6 +367,19 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
               onClick={() => {
                 trigger("toggle");
                 todoistInputRef.current?.click();
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const file = e.dataTransfer.files?.[0];
+                if (file) {
+                  trigger("toggle");
+                  void processTodoistFile(file);
+                }
               }}
             >
               <div className="flex items-center gap-3">

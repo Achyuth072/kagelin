@@ -220,5 +220,32 @@ describe("ImportDialog — ICS confirmation step", () => {
       expect(cancelTodoistImportMock).toHaveBeenCalled();
       expect(commitTodoistImportMock).not.toHaveBeenCalled();
     });
+
+    it("supports dropping a CSV file directly onto the Todoist card", async () => {
+      prepareTodoistImportMock.mockResolvedValue({
+        tasks: [],
+        totalTasks: 5,
+        rootTasksCount: 5,
+        subtasksCount: 0,
+        recurringCount: 0,
+        earliestDate: null,
+        latestDate: null,
+        rawSource: { meta: {}, rows: [] },
+      });
+
+      render(<ImportDialog open onOpenChange={vi.fn()} />);
+
+      const dropCard = screen.getByText("Todoist").closest(".cursor-pointer");
+      expect(dropCard).not.toBeNull();
+
+      fireEvent.drop(dropCard!, {
+        dataTransfer: {
+          files: [new File(["TYPE,CONTENT\ntask,Test"], "Todoist.csv")],
+        },
+      });
+
+      await screen.findByText("Confirm Todoist Import");
+      expect(prepareTodoistImportMock).toHaveBeenCalled();
+    });
   });
 });
