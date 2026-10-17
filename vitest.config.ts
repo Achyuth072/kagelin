@@ -8,6 +8,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     clearMocks: true,
+    maxWorkers: 2,
     setupFiles: ["./tests/unit/setup.ts"],
     alias: {
       "@": path.resolve(__dirname, "./src"),
