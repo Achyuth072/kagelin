@@ -1,5 +1,21 @@
 [
   {
+    "version": "1.49.0-preview.0",
+    "date": "2026-10-17",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Refine import dialog icons, ordering, and mobile button affordance",
+        "Support drag-and-drop and refine recurrence date splitting",
+        "Add Todoist single-project CSV import engine",
+        "Auto-create GitHub discussions for major and minor releases"
+      ],
+      "Improved": [
+        "Optimize validate pipeline and memory usage for WSL2"
+      ]
+    }
+  },
+  {
     "version": "1.48.1",
     "date": "2026-10-14",
     "channel": "stable",
@@ -701,16 +717,6 @@
       "Fixed": [
         "Don't drop migration onComplete() on StrictMode's phantom cleanup",
         "Scope content key and guest data per account, allowlist webdav headers, redact old payloads"
-      ]
-    }
-  },
-  {
-    "version": "1.43.0-preview.6",
-    "date": "2026-09-12",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Guard getFailureCount against SSR, where localStorage doesn't exist"
       ]
     }
   }
