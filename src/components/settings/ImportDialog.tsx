@@ -11,10 +11,11 @@ import {
 } from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { BetaBadge } from "@/components/ui/beta-badge";
-import { Database, Loader2, Calendar, FileUp } from "lucide-react";
+import { Database, Loader2, Calendar, FileUp, CheckSquare } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
 import { useIcsImport, ICS_CONFIRM_THRESHOLD } from "@/lib/hooks/useIcsImport";
+import { useTodoistImport } from "@/lib/hooks/useTodoistImport";
 
 interface ImportDialogProps {
   open: boolean;
@@ -24,6 +25,7 @@ interface ImportDialogProps {
 export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const icsInputRef = useRef<HTMLInputElement>(null);
+  const todoistInputRef = useRef<HTMLInputElement>(null);
   const { trigger } = useHaptic();
 
   const { importUhabits, isImporting: isImportingUhabits } = useUhabitsImport();
@@ -34,6 +36,13 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
     preview,
     isImporting: isImportingIcs,
   } = useIcsImport();
+  const {
+    prepareImport: prepareTodoistImport,
+    commitImport: commitTodoistImport,
+    cancelImport: cancelTodoistImport,
+    preview: todoistPreview,
+    isImporting: isImportingTodoist,
+  } = useTodoistImport();
 
   const handleImportUhabits = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -68,7 +77,114 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
     cancelImport();
   };
 
-  const isAnyImporting = isImportingUhabits || isImportingIcs;
+  const handleImportTodoist = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await prepareTodoistImport(file);
+    if (todoistInputRef.current) todoistInputRef.current.value = "";
+  };
+
+  const handleConfirmTodoistImport = async () => {
+    trigger("toggle");
+    const success = await commitTodoistImport();
+    if (success) onOpenChange(false);
+  };
+
+  const handleCancelTodoistImport = () => {
+    trigger("tick");
+    cancelTodoistImport();
+  };
+
+  const isAnyImporting =
+    isImportingUhabits || isImportingIcs || isImportingTodoist;
+
+  if (todoistPreview) {
+    const dateRange =
+      todoistPreview.earliestDate && todoistPreview.latestDate
+        ? todoistPreview.earliestDate === todoistPreview.latestDate
+          ? format(new Date(todoistPreview.earliestDate), "MMM d, yyyy")
+          : `${format(new Date(todoistPreview.earliestDate), "MMM d, yyyy")} – ${format(new Date(todoistPreview.latestDate), "MMM d, yyyy")}`
+        : null;
+
+    return (
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) cancelTodoistImport();
+          onOpenChange(next);
+        }}
+      >
+        <ResponsiveDialogContent className="sm:max-w-[425px]">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="type-h2">
+              Confirm Todoist Import
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              Review detected tasks before importing into Kagelin.
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <div className="px-4 py-4 sm:px-0">
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Total tasks found</dt>
+                <dd className="font-medium">{todoistPreview.totalTasks}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Top-level tasks</dt>
+                <dd>{todoistPreview.rootTasksCount}</dd>
+              </div>
+              {todoistPreview.subtasksCount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Steps</dt>
+                  <dd>{todoistPreview.subtasksCount}</dd>
+                </div>
+              )}
+              {todoistPreview.recurringCount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Recurring tasks</dt>
+                  <dd>{todoistPreview.recurringCount}</dd>
+                </div>
+              )}
+              {dateRange && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Scheduled range</dt>
+                  <dd>{dateRange}</dd>
+                </div>
+              )}
+            </dl>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Note: Todoist automated exports only contain active tasks and
+              exclude completed tasks.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="ghost"
+              onClick={handleCancelTodoistImport}
+              className="text-muted-foreground hover:text-foreground"
+              disabled={isImportingTodoist}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmTodoistImport}
+              disabled={isImportingTodoist}
+            >
+              {isImportingTodoist ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                `Import ${todoistPreview.totalTasks} tasks`
+              )}
+            </Button>
+          </div>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+    );
+  }
 
   if (preview) {
     const dateRange =
@@ -239,6 +355,50 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                 className="hidden"
                 aria-label="Upload iCalendar ICS file"
                 onChange={handleImportIcs}
+              />
+            </div>
+
+            <div
+              className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group"
+              onClick={() => {
+                trigger("toggle");
+                todoistInputRef.current?.click();
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-brand/10 text-brand">
+                  <CheckSquare className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium flex items-center gap-1.5">
+                    Todoist
+                    <BetaBadge />
+                  </p>
+                  <p className="text-xs text-muted-foreground lowercase">
+                    Import tasks from project .csv
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 opacity-0 group-hover:opacity-100 transition-opacity text-brand"
+                disabled={isAnyImporting}
+                aria-label="Select Todoist CSV file"
+              >
+                {isImportingTodoist ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileUp className="h-4 w-4" />
+                )}
+              </Button>
+              <input
+                ref={todoistInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                aria-label="Upload Todoist CSV file"
+                onChange={handleImportTodoist}
               />
             </div>
           </div>
