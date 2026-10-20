@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.49.0-preview.1",
+    "date": "2026-10-20",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Import Todoist multi-project ZIP backups with merge and dedupe"
+      ],
+      "Improved": [
+        "Simplify Todoist multi-project ZIP import and deduplication logic"
+      ]
+    }
+  },
+  {
     "version": "1.49.0-preview.0",
     "date": "2026-10-17",
     "channel": "preview",
@@ -706,17 +719,6 @@
         "Reissue recovery code after it's used to unlock",
         "Close displayed notifications on purge so decrypted text doesn't survive lock/sign-out",
         "Scope task notification dedup index to reference_id, not just scheduled_at"
-      ]
-    }
-  },
-  {
-    "version": "1.43.0-preview.7",
-    "date": "2026-09-13",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Don't drop migration onComplete() on StrictMode's phantom cleanup",
-        "Scope content key and guest data per account, allowlist webdav headers, redact old payloads"
       ]
     }
   }
