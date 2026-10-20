@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { ImportDialog } from "@/components/settings/ImportDialog";
 import type { IcsImportPreview } from "@/lib/hooks/useIcsImport";
-import type { TodoistImportPreview } from "@/lib/import/todoist/importTodoist";
+import type { TodoistPreview } from "@/lib/hooks/useTodoistImport";
 
 const {
   prepareImportMock,
@@ -32,7 +32,7 @@ vi.mock("@/lib/hooks/useUhabitsImport", () => ({
 vi.mock("@/lib/hooks/useTodoistImport", () => {
   return {
     useTodoistImport: () => {
-      const [preview, setPreview] = useState<TodoistImportPreview | null>(null);
+      const [preview, setPreview] = useState<TodoistPreview | null>(null);
       return {
         prepareImport: async (file: File) => {
           const result = await prepareTodoistImportMock(file);
@@ -178,11 +178,14 @@ describe("ImportDialog — ICS confirmation step", () => {
 
       render(<ImportDialog open onOpenChange={vi.fn()} />);
 
-      fireEvent.change(screen.getByLabelText("Upload Todoist CSV file"), {
-        target: {
-          files: [new File(["TYPE,CONTENT\ntask,Test"], "Todoist.csv")],
+      fireEvent.change(
+        screen.getByLabelText("Upload Todoist CSV or ZIP backup file"),
+        {
+          target: {
+            files: [new File(["TYPE,CONTENT\ntask,Test"], "Todoist.csv")],
+          },
         },
-      });
+      );
 
       await screen.findByText("Confirm Todoist Import");
       expect(screen.getByText("25")).toBeInTheDocument();
@@ -208,11 +211,14 @@ describe("ImportDialog — ICS confirmation step", () => {
 
       render(<ImportDialog open onOpenChange={vi.fn()} />);
 
-      fireEvent.change(screen.getByLabelText("Upload Todoist CSV file"), {
-        target: {
-          files: [new File(["TYPE,CONTENT\ntask,Test"], "Todoist.csv")],
+      fireEvent.change(
+        screen.getByLabelText("Upload Todoist CSV or ZIP backup file"),
+        {
+          target: {
+            files: [new File(["TYPE,CONTENT\ntask,Test"], "Todoist.csv")],
+          },
         },
-      });
+      );
 
       await screen.findByText("Confirm Todoist Import");
 
@@ -246,6 +252,57 @@ describe("ImportDialog — ICS confirmation step", () => {
 
       await screen.findByText("Confirm Todoist Import");
       expect(prepareTodoistImportMock).toHaveBeenCalled();
+    });
+
+    it("shows a project breakdown for a ZIP backup preview", async () => {
+      const project = (name: string, status: "new" | "merged" | "inbox") => ({
+        name,
+        isInbox: status === "inbox",
+        status,
+        viewStyle: "list" as const,
+        color: "#4B6CB7",
+        existingProjectId: status === "merged" ? "p-1" : null,
+        tasks: [],
+        duplicatesSkipped: 0,
+      });
+
+      prepareTodoistImportMock.mockResolvedValue({
+        projects: [
+          project("Alpha", "new"),
+          project("Beta", "new"),
+          project("Gamma", "merged"),
+        ],
+        totalTasks: 40,
+        rootTasksCount: 35,
+        subtasksCount: 5,
+        recurringCount: 0,
+        earliestDate: null,
+        latestDate: null,
+        newProjectCount: 2,
+        mergedProjectCount: 1,
+        duplicateTasksSkipped: 7,
+        rawSource: { files: [] },
+      });
+
+      render(<ImportDialog open onOpenChange={vi.fn()} />);
+
+      fireEvent.change(
+        screen.getByLabelText("Upload Todoist CSV or ZIP backup file"),
+        {
+          target: { files: [new File(["PK"], "Todoist-backup.zip")] },
+        },
+      );
+
+      await screen.findByText("Confirm Todoist Import");
+      expect(screen.getByText("Projects detected")).toBeInTheDocument();
+      expect(screen.getByText("New projects")).toBeInTheDocument();
+      expect(screen.getByText("Merged into existing")).toBeInTheDocument();
+      expect(screen.getByText("Duplicates skipped")).toBeInTheDocument();
+      expect(screen.getByText("7")).toBeInTheDocument();
+      expect(screen.getByText("Detected projects")).toBeInTheDocument();
+      expect(screen.getByText("Alpha")).toBeInTheDocument();
+      expect(screen.getByText("Beta")).toBeInTheDocument();
+      expect(screen.getByText("Gamma")).toBeInTheDocument();
     });
   });
 });

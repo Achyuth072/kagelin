@@ -5,31 +5,50 @@ import * as Sentry from "@sentry/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useAuth } from "@/components/AuthProvider";
 import { notifyLocalEdit } from "@/lib/sync/sync-scheduler";
 import {
   prepareTodoistImport,
   executeTodoistImport,
+  executeTodoistArchiveImport,
   type TodoistImportPreview,
 } from "@/lib/import/todoist/importTodoist";
+import { extractTodoistCsvFiles } from "@/lib/import/todoist/archive";
+import { fetchTodoistImportWorkspace } from "@/lib/import/todoist/workspace";
+import {
+  buildTodoistImportPlan,
+  isArchivePreview,
+  type TodoistArchiveImportPreview,
+} from "@/lib/import/todoist/plan";
+
+export type TodoistPreview = TodoistImportPreview | TodoistArchiveImportPreview;
+
+function isZipFile(file: File): boolean {
+  return (
+    file.name.toLowerCase().endsWith(".zip") ||
+    file.type === "application/zip" ||
+    file.type === "application/x-zip-compressed"
+  );
+}
 
 export function useTodoistImport() {
   const [isImporting, setIsImporting] = useState(false);
-  const [preview, setPreview] = useState<TodoistImportPreview | null>(null);
+  const [preview, setPreview] = useState<TodoistPreview | null>(null);
   const [currentFileName, setCurrentFileName] = useState<string>("");
   const { trigger } = useHaptic();
+  const { isGuestMode } = useAuth();
   const queryClient = useQueryClient();
 
-  const prepareImport = async (
-    file: File,
-  ): Promise<TodoistImportPreview | null> => {
+  const prepareImport = async (file: File): Promise<TodoistPreview | null> => {
     setIsImporting(true);
     trigger("toggle");
     try {
-      const text = await file.text();
-      const result = prepareTodoistImport(text);
+      const result = isZipFile(file)
+        ? await prepareArchive(file)
+        : await prepareSingleCsv(file);
 
-      if (result.totalTasks === 0) {
-        notify.error("No valid tasks found in Todoist CSV");
+      if (!result || result.totalTasks === 0) {
+        notify.error("No valid tasks found in Todoist import");
         trigger("thud");
         return null;
       }
@@ -38,9 +57,9 @@ export function useTodoistImport() {
       setPreview(result);
       return result;
     } catch (err) {
-      console.error("Failed to parse Todoist CSV:", err);
+      console.error("Failed to parse Todoist import:", err);
       const msg =
-        err instanceof Error ? err.message : "Failed to parse Todoist CSV";
+        err instanceof Error ? err.message : "Failed to parse Todoist import";
       notify.error(msg);
       trigger("thud");
       return null;
@@ -49,13 +68,29 @@ export function useTodoistImport() {
     }
   };
 
+  const prepareSingleCsv = async (
+    file: File,
+  ): Promise<TodoistImportPreview> => {
+    const text = await file.text();
+    return prepareTodoistImport(text);
+  };
+
+  const prepareArchive = async (
+    file: File,
+  ): Promise<TodoistArchiveImportPreview> => {
+    const buffer = await file.arrayBuffer();
+    const files = extractTodoistCsvFiles(new Uint8Array(buffer));
+    const workspace = await fetchTodoistImportWorkspace(isGuestMode);
+    return buildTodoistImportPlan(files, workspace);
+  };
+
   const cancelImport = () => {
     setPreview(null);
     setCurrentFileName("");
   };
 
   const commitImport = async (
-    targetPreview: TodoistImportPreview | null = preview,
+    targetPreview: TodoistPreview | null = preview,
     options?: { projectId?: string | null },
   ): Promise<boolean> => {
     if (!targetPreview) return false;
@@ -67,14 +102,22 @@ export function useTodoistImport() {
     );
 
     try {
-      const { importedCount } = await executeTodoistImport(targetPreview, {
-        projectId: options?.projectId ?? null,
-        fileName: currentFileName || "Todoist.csv",
-      });
+      const { importedCount } = isArchivePreview(targetPreview)
+        ? await executeTodoistArchiveImport(targetPreview, {
+            isGuest: isGuestMode,
+            fileName: currentFileName || "Todoist-backup.zip",
+          })
+        : await executeTodoistImport(targetPreview, {
+            projectId: options?.projectId ?? null,
+            fileName: currentFileName || "Todoist.csv",
+            isGuest: isGuestMode,
+          });
 
-      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      await queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+        queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
+        queryClient.invalidateQueries({ queryKey: ["projects"] }),
+      ]);
       notifyLocalEdit();
 
       notify.success(
@@ -93,8 +136,7 @@ export function useTodoistImport() {
       return false;
     } finally {
       setIsImporting(false);
-      setPreview(null);
-      setCurrentFileName("");
+      cancelImport();
     }
   };
 

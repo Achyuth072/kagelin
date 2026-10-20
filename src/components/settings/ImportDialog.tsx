@@ -16,6 +16,10 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
 import { useIcsImport, ICS_CONFIRM_THRESHOLD } from "@/lib/hooks/useIcsImport";
 import { useTodoistImport } from "@/lib/hooks/useTodoistImport";
+import {
+  isArchivePreview,
+  type TodoistProjectStatus,
+} from "@/lib/import/todoist/plan";
 import { cn } from "@/lib/utils";
 
 function LoopIcon(props: SVGProps<SVGSVGElement>) {
@@ -66,6 +70,12 @@ function TodoistIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+const TODOIST_PROJECT_STATUS_LABELS: Record<TodoistProjectStatus, string> = {
+  inbox: "Inbox",
+  merged: "Merge",
+  new: "New",
+};
 
 interface ImportDialogProps {
   open: boolean;
@@ -155,6 +165,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
     isImportingUhabits || isImportingIcs || isImportingTodoist;
 
   if (todoistPreview) {
+    const isArchive = isArchivePreview(todoistPreview);
     const dateRange =
       todoistPreview.earliestDate && todoistPreview.latestDate
         ? todoistPreview.earliestDate === todoistPreview.latestDate
@@ -208,7 +219,58 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                   <dd>{dateRange}</dd>
                 </div>
               )}
+              {isArchive && (
+                <>
+                  <div className="flex justify-between">
+                    <dt className="text-muted-foreground">Projects detected</dt>
+                    <dd>{todoistPreview.projects.length}</dd>
+                  </div>
+                  {todoistPreview.newProjectCount > 0 && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">New projects</dt>
+                      <dd>{todoistPreview.newProjectCount}</dd>
+                    </div>
+                  )}
+                  {todoistPreview.mergedProjectCount > 0 && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">
+                        Merged into existing
+                      </dt>
+                      <dd>{todoistPreview.mergedProjectCount}</dd>
+                    </div>
+                  )}
+                  {todoistPreview.duplicateTasksSkipped > 0 && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">
+                        Duplicates skipped
+                      </dt>
+                      <dd>{todoistPreview.duplicateTasksSkipped}</dd>
+                    </div>
+                  )}
+                </>
+              )}
             </dl>
+            {isArchive && todoistPreview.projects.length > 0 && (
+              <div className="mt-4 space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Detected projects
+                </p>
+                <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
+                  {todoistPreview.projects.map((project) => (
+                    <li
+                      key={`${project.status}:${project.name}`}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span className="truncate">{project.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {TODOIST_PROJECT_STATUS_LABELS[project.status]} ·{" "}
+                        {project.tasks.length} tasks
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <p className="mt-4 text-xs text-muted-foreground">
               Note: Todoist automated exports only contain active tasks and
               exclude completed tasks.
@@ -448,7 +510,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                     <BetaBadge />
                   </p>
                   <p className="text-xs text-muted-foreground lowercase">
-                    Import tasks from project .csv
+                    Import tasks from CSV or ZIP backup
                   </p>
                 </div>
               </div>
@@ -462,7 +524,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                     : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
                 )}
                 disabled={isAnyImporting}
-                aria-label="Select Todoist CSV file"
+                aria-label="Select Todoist CSV or ZIP backup file"
               >
                 {isImportingTodoist ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -473,9 +535,9 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
               <input
                 ref={todoistInputRef}
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,.zip,text/csv,application/zip"
                 className="hidden"
-                aria-label="Upload Todoist CSV file"
+                aria-label="Upload Todoist CSV or ZIP backup file"
                 onChange={handleImportTodoist}
               />
             </div>
