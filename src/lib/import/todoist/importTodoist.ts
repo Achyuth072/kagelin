@@ -66,16 +66,20 @@ async function createMappedTasks(
   const idMap = new Map<string, string>();
   let importedCount = 0;
 
-  for (const task of tasks.filter((t) => !t.tempParentId)) {
-    const created = await createTask(task);
-    idMap.set(task.tempId, created.id);
-    importedCount++;
+  for (const task of tasks) {
+    if (!task.tempParentId) {
+      const created = await createTask(task);
+      idMap.set(task.tempId, created.id);
+      importedCount++;
+    }
   }
 
-  for (const task of tasks.filter((t) => t.tempParentId)) {
-    const parentId = idMap.get(task.tempParentId!);
-    await createTask(task, parentId);
-    importedCount++;
+  for (const task of tasks) {
+    if (task.tempParentId) {
+      const parentId = idMap.get(task.tempParentId);
+      await createTask(task, parentId);
+      importedCount++;
+    }
   }
 
   return importedCount;

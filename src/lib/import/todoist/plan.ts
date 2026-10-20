@@ -106,7 +106,7 @@ function dedupeTasks(
   seed: Set<string> | undefined,
 ): { kept: MappedTodoistTask[]; skipped: number } {
   if (!seed || seed.size === 0) {
-    return { kept: tasks.map((task) => ({ ...task })), skipped: 0 };
+    return { kept: [...tasks], skipped: 0 };
   }
 
   const seen = new Set(seed);
@@ -114,15 +114,14 @@ function dedupeTasks(
   const kept: MappedTodoistTask[] = [];
 
   for (const task of tasks) {
-    const parentSkipped = task.tempParentId
-      ? skippedIds.has(task.tempParentId)
-      : false;
+    const parentSkipped =
+      task.tempParentId != null && skippedIds.has(task.tempParentId);
     if (parentSkipped || seen.has(normalizeContent(task.content))) {
       skippedIds.add(task.tempId);
       continue;
     }
     seen.add(normalizeContent(task.content));
-    kept.push({ ...task });
+    kept.push(task);
   }
 
   return { kept, skipped: skippedIds.size };
@@ -252,11 +251,7 @@ export function buildTodoistImportPlan(
   return {
     projects,
     totalTasks: totals.rootTasksCount + totals.subtasksCount,
-    rootTasksCount: totals.rootTasksCount,
-    subtasksCount: totals.subtasksCount,
-    recurringCount: totals.recurringCount,
-    earliestDate: totals.earliestDate,
-    latestDate: totals.latestDate,
+    ...totals,
     newProjectCount: projects.filter((p) => p.status === "new").length,
     mergedProjectCount: projects.filter((p) => p.status === "merged").length,
     duplicateTasksSkipped: projects.reduce(

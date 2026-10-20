@@ -16,7 +16,10 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
 import { useIcsImport, ICS_CONFIRM_THRESHOLD } from "@/lib/hooks/useIcsImport";
 import { useTodoistImport } from "@/lib/hooks/useTodoistImport";
-import { isArchivePreview } from "@/lib/import/todoist/plan";
+import {
+  isArchivePreview,
+  type TodoistProjectStatus,
+} from "@/lib/import/todoist/plan";
 import { cn } from "@/lib/utils";
 
 function LoopIcon(props: SVGProps<SVGSVGElement>) {
@@ -67,6 +70,12 @@ function TodoistIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+const TODOIST_PROJECT_STATUS_LABELS: Record<TodoistProjectStatus, string> = {
+  inbox: "Inbox",
+  merged: "Merge",
+  new: "New",
+};
 
 interface ImportDialogProps {
   open: boolean;
@@ -254,12 +263,8 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                     >
                       <span className="truncate">{project.name}</span>
                       <span className="shrink-0 text-xs text-muted-foreground">
-                        {project.status === "inbox"
-                          ? "Inbox"
-                          : project.status === "merged"
-                            ? "Merge"
-                            : "New"}{" "}
-                        · {project.tasks.length} tasks
+                        {TODOIST_PROJECT_STATUS_LABELS[project.status]} ·{" "}
+                        {project.tasks.length} tasks
                       </span>
                     </li>
                   ))}

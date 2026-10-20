@@ -11,11 +11,15 @@ function basename(path: string): string {
   return path.split("/").pop() ?? path;
 }
 
+function stripCsvExtension(fileName: string): string {
+  return fileName.replace(/\.csv$/i, "").trim();
+}
+
 function isImportableCsv(entryName: string): boolean {
   if (entryName.includes("__MACOSX/")) return false;
   const base = basename(entryName);
   if (!/\.csv$/i.test(base) || base.startsWith(".")) return false;
-  return base.replace(/\.csv$/i, "").trim().length > 0;
+  return stripCsvExtension(base).length > 0;
 }
 
 export function extractTodoistCsvFiles(bytes: Uint8Array): TodoistCsvFile[] {
@@ -40,7 +44,7 @@ export function extractTodoistCsvFiles(bytes: Uint8Array): TodoistCsvFile[] {
 
   return csvEntries.map(([name, data]) => {
     const fileName = basename(name);
-    const rawName = fileName.replace(/\.csv$/i, "").trim();
+    const rawName = stripCsvExtension(fileName);
     const isInbox = rawName.toLowerCase() === "inbox";
     return {
       fileName,

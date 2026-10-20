@@ -113,9 +113,11 @@ export function useTodoistImport() {
             isGuest: isGuestMode,
           });
 
-      await queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      await queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] });
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+        queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
+        queryClient.invalidateQueries({ queryKey: ["projects"] }),
+      ]);
       notifyLocalEdit();
 
       notify.success(
@@ -134,8 +136,7 @@ export function useTodoistImport() {
       return false;
     } finally {
       setIsImporting(false);
-      setPreview(null);
-      setCurrentFileName("");
+      cancelImport();
     }
   };
 
