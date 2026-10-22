@@ -2,7 +2,11 @@ import * as Sentry from "@sentry/nextjs";
 import { parseTodoistCsv } from "./parser";
 import { mapTodoistRowsToKagelin, type MappedTodoistTask } from "./mapper";
 import type { ParseTodoistResult, TodoistRow } from "./types";
-import { summarizeTasks, type TodoistArchiveImportPreview } from "./plan";
+import {
+  summarizeTasks,
+  type ParentRedirect,
+  type TodoistArchiveImportPreview,
+} from "./plan";
 import { taskMutations } from "@/lib/mutations/task";
 import { projectMutations } from "@/lib/mutations/project";
 import { persistImportSource } from "@/lib/mutations/importSource";
@@ -85,10 +89,35 @@ function toCreateInput(
   };
 }
 
+// A skipped parent's subtasks follow the redirect to the task with its title.
+function resolveParentId(
+  tempParentId: string | null,
+  rootIdByTempId: Map<string, string>,
+  parentRedirects: Record<string, ParentRedirect>,
+): string | undefined {
+  let current = tempParentId;
+  const visited = new Set<string>();
+
+  while (current && !visited.has(current)) {
+    visited.add(current);
+
+    const direct = rootIdByTempId.get(current);
+    if (direct) return direct;
+
+    const redirect = parentRedirects[current];
+    if (!redirect) return undefined;
+    if (redirect.kind === "existing") return redirect.taskId;
+    current = redirect.tempId;
+  }
+
+  return undefined;
+}
+
 // Roots first, then their subtasks; every id is kept so a failure can undo it.
 async function createMappedTasks(
   tasks: MappedTodoistTask[],
   projectId: string | undefined,
+  parentRedirects: Record<string, ParentRedirect>,
   createdTaskIds: string[],
 ): Promise<Task[]> {
   const roots = tasks.filter((task) => !task.tempParentId);
@@ -115,7 +144,7 @@ async function createMappedTasks(
       toCreateInput(
         task,
         projectId,
-        rootIdByTempId.get(task.tempParentId ?? ""),
+        resolveParentId(task.tempParentId, rootIdByTempId, parentRedirects),
         crypto.randomUUID(),
       ),
     ),
@@ -172,6 +201,7 @@ export async function executeTodoistImport(
     const created = await createMappedTasks(
       preview.tasks,
       options.projectId || undefined,
+      {},
       createdTaskIds,
     );
     return { importedCount: created.length };
@@ -231,6 +261,7 @@ export async function executeTodoistArchiveImport(
       const created = await createMappedTasks(
         project.tasks,
         projectId,
+        project.parentRedirects,
         createdTaskIds,
       );
       importedCount += created.length;

@@ -31,7 +31,7 @@ export interface ParseTodoistResult {
 export type WorkspaceProject = Pick<Project, "id" | "name" | "is_inbox">;
 export type WorkspaceTask = Pick<
   Task,
-  "content" | "project_id" | "is_completed"
+  "id" | "content" | "project_id" | "parent_id" | "is_completed"
 >;
 
 /** The Kagelin workspace an import is merged into. */

@@ -46,9 +46,11 @@ export async function fetchTodoistImportTasks(
           !task.is_completed &&
           (task.project_id === null || scope.has(task.project_id)),
       )
-      .map(({ content, project_id, is_completed }) => ({
+      .map(({ id, content, project_id, parent_id, is_completed }) => ({
+        id,
         content,
         project_id,
+        parent_id,
         is_completed,
       }));
   }
@@ -65,7 +67,7 @@ export async function fetchTodoistImportTasks(
   const inboxTasks = await fetchAllRows<WorkspaceTask>((from, to) =>
     supabase
       .from("tasks")
-      .select("content, project_id, is_completed")
+      .select("id, content, project_id, parent_id, is_completed")
       .eq("is_completed", false)
       .is("project_id", null)
       .order("id", { ascending: true })
@@ -77,7 +79,7 @@ export async function fetchTodoistImportTasks(
   const scopedTasks = await fetchAllRows<WorkspaceTask>((from, to) =>
     supabase
       .from("tasks")
-      .select("content, project_id, is_completed")
+      .select("id, content, project_id, parent_id, is_completed")
       .eq("is_completed", false)
       .in("project_id", projectIds)
       .order("id", { ascending: true })

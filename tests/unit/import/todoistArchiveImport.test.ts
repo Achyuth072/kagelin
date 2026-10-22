@@ -36,6 +36,21 @@ function csvFile(projectName: string, csvContent: string, isInbox = false) {
   return { fileName: `${projectName}.csv`, projectName, isInbox, csvContent };
 }
 
+function existingTask(
+  content: string,
+  projectId: string | null,
+  id = `existing-${content}`,
+  parentId: string | null = null,
+) {
+  return {
+    id,
+    content,
+    project_id: projectId,
+    parent_id: parentId,
+    is_completed: false,
+  };
+}
+
 describe("executeTodoistArchiveImport", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -106,6 +121,69 @@ describe("executeTodoistArchiveImport", () => {
     expect(merged?.project_id).toBe("proj-ex");
   });
 
+  it("attaches the steps of an already existing task to that task", async () => {
+    const plan = buildTodoistImportPlan(
+      [
+        csvFile(
+          "Work",
+          `TYPE,CONTENT,PRIORITY,INDENT\ntask,Parent,4,1\ntask,Child unique,4,2\n`,
+        ),
+      ],
+      {
+        projects: [{ id: "proj-ex", name: "Work", is_inbox: false }],
+        tasks: [existingTask("Parent", "proj-ex", "task-existing")],
+      },
+      new Date("2026-10-14T00:00:00.000Z"),
+    );
+
+    const result = await executeTodoistArchiveImport(plan, {
+      isGuest: false,
+      fileName: "Todoist-backup.zip",
+    });
+
+    expect(result.importedCount).toBe(1);
+
+    const calls = vi
+      .mocked(taskMutations.createMany)
+      .mock.calls.flatMap(([inputs]) => inputs);
+    const child = calls.find((c) => c.content === "Child unique");
+
+    expect(child?.project_id).toBe("proj-ex");
+    expect(child?.parent_id).toBe("task-existing");
+    expect(calls.some((c) => c.content === "Parent")).toBe(false);
+  });
+
+  it("attaches a subtask to the root that took over its skipped parent", async () => {
+    const csv = `TYPE,CONTENT,PRIORITY,INDENT
+task,Parent,4,1
+task,Shared,4,2
+task,Shared,4,1
+task,Child,4,2
+`;
+
+    const plan = buildTodoistImportPlan(
+      [csvFile("Work", csv)],
+      {
+        projects: [{ id: "proj-ex", name: "Work", is_inbox: false }],
+        tasks: [existingTask("Other", "proj-ex", "e-other")],
+      },
+      new Date("2026-10-14T00:00:00.000Z"),
+    );
+
+    await executeTodoistArchiveImport(plan, {
+      isGuest: false,
+      fileName: "Todoist-backup.zip",
+    });
+
+    const calls = vi
+      .mocked(taskMutations.createMany)
+      .mock.calls.flatMap(([inputs]) => inputs);
+    const parent = calls.find((c) => c.content === "Parent");
+    const child = calls.find((c) => c.content === "Child");
+
+    expect(child?.parent_id).toBe(parent?._clientId);
+  });
+
   it("captures the raw parsed payload for ADR 0006 provenance", async () => {
     const plan = buildTodoistImportPlan(
       [csvFile("Work", WORK_CSV)],
@@ -134,12 +212,8 @@ describe("executeTodoistArchiveImport", () => {
       {
         projects: [{ id: "p-work", name: "Work", is_inbox: false }],
         tasks: [
-          {
-            content: "Ship release",
-            project_id: "p-work",
-            is_completed: false,
-          },
-          { content: "Review PR", project_id: "p-work", is_completed: false },
+          existingTask("Ship release", "p-work", "e1"),
+          existingTask("Review PR", "p-work", "e2"),
         ],
       },
       new Date("2026-10-14T00:00:00.000Z"),

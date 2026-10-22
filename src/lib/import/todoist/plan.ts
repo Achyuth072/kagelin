@@ -10,6 +10,10 @@ import type {
 
 export type TodoistProjectStatus = "inbox" | "new" | "merged";
 
+// The replacement is always a root task: the UI shows one level of subtasks.
+export type ParentRedirect =
+  { kind: "existing"; taskId: string } | { kind: "imported"; tempId: string };
+
 export interface TodoistProjectPlan {
   name: string;
   isInbox: boolean;
@@ -19,6 +23,9 @@ export interface TodoistProjectPlan {
   existingProjectId: string | null;
   tasks: MappedTodoistTask[];
   duplicatesSkipped: number;
+  /** tempId of a skipped duplicate -> the task that now holds its subtasks. */
+  parentRedirects: Record<string, ParentRedirect>;
+  subtasksReassigned: number;
 }
 
 export interface TodoistFileFailure {
@@ -37,6 +44,7 @@ export interface TodoistArchiveImportPreview {
   newProjectCount: number;
   mergedProjectCount: number;
   duplicateTasksSkipped: number;
+  subtasksReassigned: number;
   failedFiles: TodoistFileFailure[];
   rawSource: {
     files: Array<{
@@ -103,58 +111,140 @@ function parseFiles(
   return { parsed, failures };
 }
 
+// `contents` holds every active task; `rootOwners` maps a title to its root.
+interface ProjectContentIndex {
+  contents: Map<string, string>;
+  rootOwners: Map<string, string>;
+}
+
 function indexExistingContents(
   workspace: ExistingWorkspace,
-): Map<string, Set<string>> {
-  const index = new Map<string, Set<string>>();
-  for (const task of workspace.tasks) {
-    if (task.is_completed || !task.content) continue;
-    const key = task.project_id ?? INBOX_KEY;
-    let contents = index.get(key);
-    if (!contents) {
-      contents = new Set();
-      index.set(key, contents);
+): Map<string, ProjectContentIndex> {
+  const index = new Map<string, ProjectContentIndex>();
+  const activeTasks = workspace.tasks.filter(
+    (task) => !task.is_completed && task.content,
+  );
+  const byId = new Map(activeTasks.map((task) => [task.id, task]));
+
+  const rootOf = (task: (typeof activeTasks)[number]) => {
+    let current = task;
+    const visited = new Set<string>();
+    while (current.parent_id && !visited.has(current.id)) {
+      visited.add(current.id);
+      const parent = byId.get(current.parent_id);
+      if (!parent) break;
+      current = parent;
     }
-    contents.add(normalizeContent(task.content));
+    return current;
+  };
+
+  for (const task of activeTasks) {
+    const key = task.project_id ?? INBOX_KEY;
+    let bucket = index.get(key);
+    if (!bucket) {
+      bucket = { contents: new Map(), rootOwners: new Map() };
+      index.set(key, bucket);
+    }
+    const content = normalizeContent(task.content!);
+    if (!bucket.contents.has(content)) {
+      bucket.contents.set(content, task.id);
+    }
+    const root = rootOf(task);
+    if (!bucket.rootOwners.has(content)) {
+      bucket.rootOwners.set(content, root.id);
+    }
   }
+
   return index;
 }
 
-function dedupeTasks(
-  tasks: MappedTodoistTask[],
-  seed: Set<string> | undefined,
-): { kept: MappedTodoistTask[]; skipped: number } {
-  if (!seed || seed.size === 0) {
-    return { kept: [...tasks], skipped: 0 };
+function mergeContentIndexes(
+  ...indexes: Array<ProjectContentIndex | undefined>
+): ProjectContentIndex | undefined {
+  const contents = new Map<string, string>();
+  const rootOwners = new Map<string, string>();
+
+  for (const index of indexes) {
+    if (!index) continue;
+    for (const [content, taskId] of index.contents) {
+      if (!contents.has(content)) contents.set(content, taskId);
+    }
+    for (const [content, rootId] of index.rootOwners) {
+      if (!rootOwners.has(content)) rootOwners.set(content, rootId);
+    }
   }
 
-  const seen = new Set(seed);
-  const skippedIds = new Set<string>();
+  return contents.size > 0 ? { contents, rootOwners } : undefined;
+}
+
+interface DedupeOutcome {
+  kept: MappedTodoistTask[];
+  duplicatesSkipped: number;
+  parentRedirects: Record<string, ParentRedirect>;
+}
+
+// A dropped root task does not take its subtasks down with it.
+function dedupeTasks(
+  tasks: MappedTodoistTask[],
+  seed: ProjectContentIndex | undefined,
+): DedupeOutcome {
+  // Nothing to merge into, so nothing to deduplicate against.
+  if (!seed) {
+    return { kept: [...tasks], duplicatesSkipped: 0, parentRedirects: {} };
+  }
+
+  const keptContents = new Set<string>();
+  const keptRootContents = new Map<string, string>();
+  // Lets a root that duplicates a subtask hand its subtasks to that parent.
+  const keptSubtaskParents = new Map<string, string | null>();
   const kept: MappedTodoistTask[] = [];
+  const parentRedirects: Record<string, ParentRedirect> = {};
+  let duplicatesSkipped = 0;
 
   for (const task of tasks) {
-    const parentSkipped =
-      task.tempParentId != null && skippedIds.has(task.tempParentId);
-    if (parentSkipped || seen.has(normalizeContent(task.content))) {
-      skippedIds.add(task.tempId);
+    const content = normalizeContent(task.content);
+    const isRoot = !task.tempParentId;
+
+    if (seed.contents.has(content) || keptContents.has(content)) {
+      duplicatesSkipped++;
+      if (isRoot) {
+        const owner = seed.rootOwners.get(content);
+        if (owner) {
+          parentRedirects[task.tempId] = {
+            kind: "existing",
+            taskId: owner,
+          };
+        } else {
+          const keptRoot = keptRootContents.get(content);
+          if (keptRoot) {
+            parentRedirects[task.tempId] = {
+              kind: "imported",
+              tempId: keptRoot,
+            };
+          } else if (keptSubtaskParents.has(content)) {
+            const parentTempId = keptSubtaskParents.get(content);
+            if (parentTempId) {
+              parentRedirects[task.tempId] = {
+                kind: "imported",
+                tempId: parentTempId,
+              };
+            }
+          }
+        }
+      }
       continue;
     }
-    seen.add(normalizeContent(task.content));
+
+    keptContents.add(content);
+    if (isRoot) {
+      keptRootContents.set(content, task.tempId);
+    } else {
+      keptSubtaskParents.set(content, task.tempParentId);
+    }
     kept.push(task);
   }
 
-  return { kept, skipped: skippedIds.size };
-}
-
-function unionContents(
-  ...sets: Array<Set<string> | undefined>
-): Set<string> | undefined {
-  const merged = new Set<string>();
-  for (const set of sets) {
-    if (!set) continue;
-    for (const value of set) merged.add(value);
-  }
-  return merged.size > 0 ? merged : undefined;
+  return { kept, duplicatesSkipped, parentRedirects };
 }
 
 export function summarizeTasks(tasks: MappedTodoistTask[]): {
@@ -248,12 +338,12 @@ export function buildTodoistImportPlan(
 
     let status: TodoistProjectStatus;
     let existingProjectId: string | null;
-    let seed: Set<string> | undefined;
+    let seed: ProjectContentIndex | undefined;
 
     if (group.isInbox) {
       status = "inbox";
       existingProjectId = null;
-      seed = unionContents(
+      seed = mergeContentIndexes(
         existingContents.get(INBOX_KEY),
         inboxProjectId ? existingContents.get(inboxProjectId) : undefined,
       );
@@ -269,7 +359,10 @@ export function buildTodoistImportPlan(
       }
     }
 
-    const { kept, skipped } = dedupeTasks(tasks, seed);
+    const { kept, duplicatesSkipped, parentRedirects } = dedupeTasks(
+      tasks,
+      seed,
+    );
 
     projects.push({
       name: group.name,
@@ -281,7 +374,9 @@ export function buildTodoistImportPlan(
       color: PROJECT_COLORS[paletteIndex % PROJECT_COLORS.length].hex,
       existingProjectId,
       tasks: kept,
-      duplicatesSkipped: skipped,
+      duplicatesSkipped,
+      parentRedirects,
+      subtasksReassigned: countReassignedSubtasks(kept, parentRedirects),
     });
     paletteIndex++;
   }
@@ -298,6 +393,10 @@ export function buildTodoistImportPlan(
       (sum, project) => sum + project.duplicatesSkipped,
       0,
     ),
+    subtasksReassigned: projects.reduce(
+      (sum, project) => sum + project.subtasksReassigned,
+      0,
+    ),
     failedFiles: failures,
     rawSource: {
       files: parsedFiles.map((parsed) => ({
@@ -307,4 +406,18 @@ export function buildTodoistImportPlan(
       })),
     },
   };
+}
+
+function countReassignedSubtasks(
+  kept: MappedTodoistTask[],
+  parentRedirects: Record<string, ParentRedirect>,
+): number {
+  const redirectedParents = new Set(Object.keys(parentRedirects));
+  let count = 0;
+  for (const task of kept) {
+    if (task.tempParentId && redirectedParents.has(task.tempParentId)) {
+      count++;
+    }
+  }
+  return count;
 }

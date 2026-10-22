@@ -264,6 +264,8 @@ describe("ImportDialog — ICS confirmation step", () => {
         existingProjectId: status === "merged" ? "p-1" : null,
         tasks: [],
         duplicatesSkipped: 0,
+        parentRedirects: {},
+        subtasksReassigned: 0,
       });
 
       prepareTodoistImportMock.mockResolvedValue({
@@ -277,6 +279,7 @@ describe("ImportDialog — ICS confirmation step", () => {
         newProjectCount: 1,
         mergedProjectCount: 0,
         duplicateTasksSkipped: 0,
+        subtasksReassigned: 0,
         failedFiles: [
           { fileName: "Notes.csv", message: "Missing TYPE or CONTENT column" },
         ],
@@ -329,6 +332,7 @@ describe("ImportDialog — ICS confirmation step", () => {
         newProjectCount: 2,
         mergedProjectCount: 1,
         duplicateTasksSkipped: 7,
+        subtasksReassigned: 2,
         failedFiles: [],
         rawSource: { files: [] },
       });
@@ -348,6 +352,9 @@ describe("ImportDialog — ICS confirmation step", () => {
       expect(screen.getByText("Merged into existing")).toBeInTheDocument();
       expect(screen.getByText("Duplicates skipped")).toBeInTheDocument();
       expect(screen.getByText("7")).toBeInTheDocument();
+      expect(
+        screen.getByText("Steps re-attached to matching tasks"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Detected projects")).toBeInTheDocument();
       expect(screen.getByText("Alpha")).toBeInTheDocument();
       expect(screen.getByText("Beta")).toBeInTheDocument();

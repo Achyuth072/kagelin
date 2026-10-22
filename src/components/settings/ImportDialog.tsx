@@ -247,6 +247,14 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                       <dd>{todoistPreview.duplicateTasksSkipped}</dd>
                     </div>
                   )}
+                  {todoistPreview.subtasksReassigned > 0 && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">
+                        Steps re-attached to matching tasks
+                      </dt>
+                      <dd>{todoistPreview.subtasksReassigned}</dd>
+                    </div>
+                  )}
                 </>
               )}
             </dl>
