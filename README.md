@@ -109,4 +109,6 @@ Bug reports and feature requests go in [GitHub Issues](../../issues). For questi
 
 ## License
 
-[AGPL-3.0](LICENSE)
+Copyright (C) 2026 Achyuth S.
+
+Licensed under the [GNU Affero General Public License v3.0](LICENSE).
