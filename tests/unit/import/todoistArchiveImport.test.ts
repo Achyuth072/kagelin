@@ -7,11 +7,11 @@ import { persistImportSource } from "@/lib/mutations/importSource";
 import { PROJECT_COLORS } from "@/lib/constants/colors";
 
 vi.mock("@/lib/mutations/task", () => ({
-  taskMutations: { create: vi.fn() },
+  taskMutations: { createMany: vi.fn(), deleteMany: vi.fn() },
 }));
 
 vi.mock("@/lib/mutations/project", () => ({
-  projectMutations: { create: vi.fn() },
+  projectMutations: { create: vi.fn(), deleteMany: vi.fn() },
 }));
 
 vi.mock("@/lib/mutations/importSource", () => ({
@@ -40,14 +40,16 @@ describe("executeTodoistArchiveImport", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     let taskCounter = 0;
-    vi.mocked(taskMutations.create).mockImplementation(
-      async (input) =>
-        ({
-          id: `task-${++taskCounter}`,
-          content: input.content,
-          project_id: input.project_id ?? null,
-          parent_id: input.parent_id ?? null,
-        }) as never,
+    vi.mocked(taskMutations.createMany).mockImplementation(async (inputs) =>
+      inputs.map(
+        (input) =>
+          ({
+            id: input._clientId ?? `task-${++taskCounter}`,
+            content: input.content,
+            project_id: input.project_id ?? null,
+            parent_id: input.parent_id ?? null,
+          }) as never,
+      ),
     );
     vi.mocked(projectMutations.create).mockResolvedValue({
       id: "proj-new",
@@ -91,15 +93,15 @@ describe("executeTodoistArchiveImport", () => {
     );
 
     const calls = vi
-      .mocked(taskMutations.create)
-      .mock.calls.map(([arg]) => arg);
+      .mocked(taskMutations.createMany)
+      .mock.calls.flatMap(([inputs]) => inputs);
     const ship = calls.find((c) => c.content === "Ship release");
     const review = calls.find((c) => c.content === "Review PR");
     const inbox = calls.find((c) => c.content === "Reply to email");
     const merged = calls.find((c) => c.content === "Old task");
 
     expect(ship?.project_id).toBe("proj-new");
-    expect(review?.parent_id).toBe(ship ? "task-1" : undefined);
+    expect(review?.parent_id).toBe(ship?._clientId);
     expect(inbox?.project_id).toBeUndefined();
     expect(merged?.project_id).toBe("proj-ex");
   });
@@ -150,5 +152,50 @@ describe("executeTodoistArchiveImport", () => {
 
     expect(projectMutations.create).not.toHaveBeenCalled();
     expect(result.importedCount).toBe(0);
+  });
+
+  it("reports how much was created when the import fails part-way", async () => {
+    vi.mocked(taskMutations.createMany).mockRejectedValueOnce(
+      new Error("network down"),
+    );
+
+    const plan = buildTodoistImportPlan(
+      [csvFile("Work", WORK_CSV)],
+      { projects: [], tasks: [] },
+      new Date("2026-10-14T00:00:00.000Z"),
+    );
+
+    await expect(
+      executeTodoistArchiveImport(plan, {
+        isGuest: false,
+        fileName: "Todoist-backup.zip",
+      }),
+    ).rejects.toThrow(/network down/);
+  });
+
+  it("undoes what it created when the import fails part-way", async () => {
+    vi.mocked(taskMutations.createMany)
+      .mockResolvedValueOnce([
+        { id: "task-1", content: "Ship release" } as never,
+      ])
+      .mockRejectedValueOnce(new Error("network down"));
+
+    const plan = buildTodoistImportPlan(
+      [csvFile("Work", WORK_CSV)],
+      { projects: [], tasks: [] },
+      new Date("2026-10-14T00:00:00.000Z"),
+    );
+
+    await expect(
+      executeTodoistArchiveImport(plan, {
+        isGuest: false,
+        fileName: "Todoist-backup.zip",
+      }),
+    ).rejects.toThrow(/rolled back/);
+
+    expect(taskMutations.deleteMany).toHaveBeenCalledWith(
+      expect.arrayContaining(["task-1"]),
+    );
+    expect(projectMutations.deleteMany).toHaveBeenCalledWith(["proj-new"]);
   });
 });

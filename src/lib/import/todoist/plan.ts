@@ -2,13 +2,11 @@ import { PROJECT_COLORS } from "@/lib/constants/colors";
 import { parseTodoistCsv } from "./parser";
 import { mapTodoistRowsToKagelin, type MappedTodoistTask } from "./mapper";
 import type { TodoistCsvFile } from "./archive";
-import type { ParseTodoistResult, TodoistRow } from "./types";
-import type { Project, Task } from "@/lib/types/task";
-
-export interface ExistingWorkspace {
-  projects: Array<Pick<Project, "id" | "name" | "is_inbox">>;
-  tasks: Array<Pick<Task, "content" | "project_id" | "is_completed">>;
-}
+import type {
+  ExistingWorkspace,
+  ParseTodoistResult,
+  TodoistRow,
+} from "./types";
 
 export type TodoistProjectStatus = "inbox" | "new" | "merged";
 
@@ -187,6 +185,27 @@ export function summarizeTasks(tasks: MappedTodoistTask[]): {
     earliestDate: dates[0] ?? null,
     latestDate: dates[dates.length - 1] ?? null,
   };
+}
+
+// The existing projects an import writes into, used to scope the task fetch.
+export function resolveImportTargetProjectIds(
+  files: TodoistCsvFile[],
+  projects: ExistingWorkspace["projects"],
+): string[] {
+  const importedNames = new Set(
+    files.map((file) =>
+      normalizeName(file.isInbox ? "Inbox" : file.projectName),
+    ),
+  );
+
+  const ids: string[] = [];
+  for (const project of projects) {
+    if (!project.name) continue;
+    if (project.is_inbox || importedNames.has(normalizeName(project.name))) {
+      ids.push(project.id);
+    }
+  }
+  return ids;
 }
 
 export function buildTodoistImportPlan(

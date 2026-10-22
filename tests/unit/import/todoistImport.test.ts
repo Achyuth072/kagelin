@@ -8,7 +8,7 @@ import { persistImportSource } from "@/lib/mutations/importSource";
 
 vi.mock("@/lib/mutations/task", () => ({
   taskMutations: {
-    create: vi.fn(),
+    createMany: vi.fn(),
   },
 }));
 
@@ -47,27 +47,29 @@ task,Recurring sync,,2,1,,,every week,en,,,,,
     });
 
     let mockIdCounter = 1;
-    vi.mocked(taskMutations.create).mockImplementation(async (input) => ({
-      id: `task-id-${mockIdCounter++}`,
-      user_id: "test-user",
-      project_id: input.project_id ?? null,
-      parent_id: input.parent_id ?? null,
-      content: input.content,
-      description: input.description ?? null,
-      priority: input.priority ?? 4,
-      due_date: input.due_date ?? null,
-      do_date: input.do_date ?? null,
-      is_evening: false,
-      is_completed: false,
-      completed_at: null,
-      day_order: 0,
-      recurrence: input.recurrence ?? null,
-      recurring_series_id: null,
-      google_event_id: null,
-      google_etag: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }));
+    vi.mocked(taskMutations.createMany).mockImplementation(async (inputs) =>
+      inputs.map((input) => ({
+        id: input._clientId ?? `task-id-${mockIdCounter++}`,
+        user_id: "test-user",
+        project_id: input.project_id ?? null,
+        parent_id: input.parent_id ?? null,
+        content: input.content,
+        description: input.description ?? null,
+        priority: input.priority ?? 4,
+        due_date: input.due_date ?? null,
+        do_date: input.do_date ?? null,
+        is_evening: false,
+        is_completed: false,
+        completed_at: null,
+        day_order: 0,
+        recurrence: input.recurrence ?? null,
+        recurring_series_id: null,
+        google_event_id: null,
+        google_etag: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })),
+    );
 
     const result = await executeTodoistImport(preview, {
       projectId: "project-123",
@@ -83,18 +85,19 @@ task,Recurring sync,,2,1,,,every week,en,,,,,
       expect.anything(),
     );
 
-    // Verify taskMutations.create was called 4 times
-    expect(taskMutations.create).toHaveBeenCalledTimes(4);
+    // Roots are written first, then the subtasks that hang off them.
+    expect(taskMutations.createMany).toHaveBeenCalledTimes(2);
 
-    // Verify subtask had its parent_id set to the parent task's id
-    const calls = vi.mocked(taskMutations.create).mock.calls;
-    const parentCall = calls.find(([arg]) => arg.content === "Project Kickoff");
-    const subtaskCall = calls.find(
-      ([arg]) => arg.content === "Review with team",
+    const calls = vi.mocked(taskMutations.createMany).mock.calls;
+    const parentCall = calls[0][0].find(
+      (arg) => arg.content === "Project Kickoff",
+    );
+    const subtaskCall = calls[1][0].find(
+      (arg) => arg.content === "Review with team",
     );
 
     expect(parentCall).toBeDefined();
     expect(subtaskCall).toBeDefined();
-    expect(subtaskCall?.[0].parent_id).toBe("task-id-1");
+    expect(subtaskCall?.parent_id).toBe(parentCall?._clientId);
   });
 });

@@ -11,13 +11,18 @@ import {
   prepareTodoistImport,
   executeTodoistImport,
   executeTodoistArchiveImport,
+  TodoistImportFailure,
   type TodoistImportPreview,
 } from "@/lib/import/todoist/importTodoist";
 import { extractTodoistCsvFiles } from "@/lib/import/todoist/archive";
-import { fetchTodoistImportWorkspace } from "@/lib/import/todoist/workspace";
+import {
+  fetchTodoistImportProjects,
+  fetchTodoistImportTasks,
+} from "@/lib/import/todoist/workspace";
 import {
   buildTodoistImportPlan,
   isArchivePreview,
+  resolveImportTargetProjectIds,
   type TodoistArchiveImportPreview,
 } from "@/lib/import/todoist/plan";
 
@@ -38,6 +43,15 @@ export function useTodoistImport() {
   const { trigger } = useHaptic();
   const { isGuestMode } = useAuth();
   const queryClient = useQueryClient();
+
+  const refreshWorkspace = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["tasks"] }),
+      queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
+      queryClient.invalidateQueries({ queryKey: ["projects"] }),
+    ]);
+    notifyLocalEdit();
+  };
 
   const prepareImport = async (file: File): Promise<TodoistPreview | null> => {
     setIsImporting(true);
@@ -80,8 +94,13 @@ export function useTodoistImport() {
   ): Promise<TodoistArchiveImportPreview> => {
     const buffer = await file.arrayBuffer();
     const files = extractTodoistCsvFiles(new Uint8Array(buffer));
-    const workspace = await fetchTodoistImportWorkspace(isGuestMode);
-    const plan = buildTodoistImportPlan(files, workspace);
+
+    // Only the projects this backup writes into are read back.
+    const projects = await fetchTodoistImportProjects(isGuestMode);
+    const targetProjectIds = resolveImportTargetProjectIds(files, projects);
+    const tasks = await fetchTodoistImportTasks(isGuestMode, targetProjectIds);
+
+    const plan = buildTodoistImportPlan(files, { projects, tasks });
 
     if (plan.failedFiles.length > 0 && plan.projects.length === 0) {
       throw new Error(
@@ -112,23 +131,32 @@ export function useTodoistImport() {
     );
 
     try {
-      const { importedCount } = isArchivePreview(targetPreview)
-        ? await executeTodoistArchiveImport(targetPreview, {
+      if (isArchivePreview(targetPreview)) {
+        const { importedCount } = await executeTodoistArchiveImport(
+          targetPreview,
+          {
             isGuest: isGuestMode,
             fileName: currentFileName || "Todoist-backup.zip",
-          })
-        : await executeTodoistImport(targetPreview, {
-            projectId: options?.projectId ?? null,
-            fileName: currentFileName || "Todoist.csv",
-            isGuest: isGuestMode,
-          });
+          },
+        );
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["tasks"] }),
-        queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
-        queryClient.invalidateQueries({ queryKey: ["projects"] }),
-      ]);
-      notifyLocalEdit();
+        await refreshWorkspace();
+
+        notify.success(
+          `Successfully imported ${importedCount} tasks from Todoist`,
+          { id: loadingToastId },
+        );
+        trigger("success");
+        return true;
+      }
+
+      const { importedCount } = await executeTodoistImport(targetPreview, {
+        projectId: options?.projectId ?? null,
+        fileName: currentFileName || "Todoist.csv",
+        isGuest: isGuestMode,
+      });
+
+      await refreshWorkspace();
 
       notify.success(
         `Successfully imported ${importedCount} tasks from Todoist`,
@@ -141,7 +169,12 @@ export function useTodoistImport() {
     } catch (err) {
       console.error("Failed to import Todoist tasks:", err);
       Sentry.captureException(err);
-      notify.error("Critical error during import", { id: loadingToastId });
+      notify.error(
+        err instanceof TodoistImportFailure
+          ? err.message
+          : "Critical error during import",
+        { id: loadingToastId },
+      );
       trigger("thud");
       return false;
     } finally {

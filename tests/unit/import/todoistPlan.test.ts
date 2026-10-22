@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildTodoistImportPlan } from "@/lib/import/todoist/plan";
-import type { ExistingWorkspace } from "@/lib/import/todoist/plan";
+import type { ExistingWorkspace } from "@/lib/import/todoist/types";
 import type { TodoistCsvFile } from "@/lib/import/todoist/archive";
 import { PROJECT_COLORS } from "@/lib/constants/colors";
 
