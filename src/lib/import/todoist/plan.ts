@@ -23,6 +23,11 @@ export interface TodoistProjectPlan {
   duplicatesSkipped: number;
 }
 
+export interface TodoistFileFailure {
+  fileName: string;
+  message: string;
+}
+
 export interface TodoistArchiveImportPreview {
   projects: TodoistProjectPlan[];
   totalTasks: number;
@@ -34,6 +39,7 @@ export interface TodoistArchiveImportPreview {
   newProjectCount: number;
   mergedProjectCount: number;
   duplicateTasksSkipped: number;
+  failedFiles: TodoistFileFailure[];
   rawSource: {
     files: Array<{
       fileName: string;
@@ -68,20 +74,35 @@ interface ParsedFile {
   tasks: MappedTodoistTask[];
 }
 
-function parseFiles(files: TodoistCsvFile[], refDate: Date): ParsedFile[] {
+// One unreadable file must not cost the user the rest of the backup.
+function parseFiles(
+  files: TodoistCsvFile[],
+  refDate: Date,
+): { parsed: ParsedFile[]; failures: TodoistFileFailure[] } {
   const parsed: ParsedFile[] = [];
+  const failures: TodoistFileFailure[] = [];
+
   for (const file of files) {
     if (!file.csvContent.trim()) continue;
-    const result = parseTodoistCsv(file.csvContent);
-    const mapped = mapTodoistRowsToKagelin(result.rows, refDate);
-    parsed.push({
-      file,
-      meta: result.meta,
-      rows: result.rows,
-      tasks: mapped.tasks,
-    });
+    try {
+      const result = parseTodoistCsv(file.csvContent);
+      const mapped = mapTodoistRowsToKagelin(result.rows, refDate);
+      parsed.push({
+        file,
+        meta: result.meta,
+        rows: result.rows,
+        tasks: mapped.tasks,
+      });
+    } catch (error) {
+      failures.push({
+        fileName: file.fileName,
+        message:
+          error instanceof Error ? error.message : "Could not parse file",
+      });
+    }
   }
-  return parsed;
+
+  return { parsed, failures };
 }
 
 function indexExistingContents(
@@ -173,7 +194,7 @@ export function buildTodoistImportPlan(
   workspace: ExistingWorkspace = { projects: [], tasks: [] },
   refDate: Date = new Date(),
 ): TodoistArchiveImportPreview {
-  const parsedFiles = parseFiles(files, refDate);
+  const { parsed: parsedFiles, failures } = parseFiles(files, refDate);
 
   const groups = new Map<
     string,
@@ -258,6 +279,7 @@ export function buildTodoistImportPlan(
       (sum, project) => sum + project.duplicatesSkipped,
       0,
     ),
+    failedFiles: failures,
     rawSource: {
       files: parsedFiles.map((parsed) => ({
         fileName: parsed.file.fileName,

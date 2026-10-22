@@ -81,7 +81,17 @@ export function useTodoistImport() {
     const buffer = await file.arrayBuffer();
     const files = extractTodoistCsvFiles(new Uint8Array(buffer));
     const workspace = await fetchTodoistImportWorkspace(isGuestMode);
-    return buildTodoistImportPlan(files, workspace);
+    const plan = buildTodoistImportPlan(files, workspace);
+
+    if (plan.failedFiles.length > 0 && plan.projects.length === 0) {
+      throw new Error(
+        `No project in the backup could be parsed: ${plan.failedFiles
+          .map((failure) => `${failure.fileName} (${failure.message})`)
+          .join("; ")}`,
+      );
+    }
+
+    return plan;
   };
 
   const cancelImport = () => {

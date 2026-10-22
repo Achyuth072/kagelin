@@ -254,6 +254,54 @@ describe("ImportDialog — ICS confirmation step", () => {
       expect(prepareTodoistImportMock).toHaveBeenCalled();
     });
 
+    it("warns about files in the backup that could not be parsed", async () => {
+      const project = (name: string, status: "new" | "merged" | "inbox") => ({
+        name,
+        isInbox: status === "inbox",
+        status,
+        viewStyle: "list" as const,
+        color: "#4B6CB7",
+        existingProjectId: status === "merged" ? "p-1" : null,
+        tasks: [],
+        duplicatesSkipped: 0,
+      });
+
+      prepareTodoistImportMock.mockResolvedValue({
+        projects: [project("Alpha", "new")],
+        totalTasks: 4,
+        rootTasksCount: 4,
+        subtasksCount: 0,
+        recurringCount: 0,
+        earliestDate: null,
+        latestDate: null,
+        newProjectCount: 1,
+        mergedProjectCount: 0,
+        duplicateTasksSkipped: 0,
+        failedFiles: [
+          { fileName: "Notes.csv", message: "Missing TYPE or CONTENT column" },
+        ],
+        rawSource: { files: [] },
+      });
+
+      render(<ImportDialog open onOpenChange={vi.fn()} />);
+
+      fireEvent.change(
+        screen.getByLabelText("Upload Todoist CSV or ZIP backup file"),
+        {
+          target: { files: [new File(["PK"], "Todoist-backup.zip")] },
+        },
+      );
+
+      await screen.findByText("Confirm Todoist Import");
+      expect(
+        screen.getByText(/1 file\(s\) in the backup could not be parsed/i),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Notes.csv")).toBeInTheDocument();
+      expect(
+        screen.getByText("Missing TYPE or CONTENT column"),
+      ).toBeInTheDocument();
+    });
+
     it("shows a project breakdown for a ZIP backup preview", async () => {
       const project = (name: string, status: "new" | "merged" | "inbox") => ({
         name,
@@ -281,6 +329,7 @@ describe("ImportDialog — ICS confirmation step", () => {
         newProjectCount: 2,
         mergedProjectCount: 1,
         duplicateTasksSkipped: 7,
+        failedFiles: [],
         rawSource: { files: [] },
       });
 

@@ -250,6 +250,24 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
                 </>
               )}
             </dl>
+            {isArchive && todoistPreview.failedFiles.length > 0 && (
+              <div className="mt-4 rounded-lg border border-destructive-surface-border bg-destructive-surface p-3.5">
+                <p className="text-xs font-medium text-destructive-surface-foreground">
+                  {todoistPreview.failedFiles.length} file(s) in the backup
+                  could not be parsed and will be skipped
+                </p>
+                <ul className="mt-1.5 space-y-1 text-xs text-destructive-surface-foreground">
+                  {todoistPreview.failedFiles.map((failure) => (
+                    <li key={failure.fileName}>
+                      <span className="font-medium">{failure.fileName}</span>
+                      <span className="block opacity-80">
+                        {failure.message}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {isArchive && todoistPreview.projects.length > 0 && (
               <div className="mt-4 space-y-1.5">
                 <p className="text-xs font-medium text-muted-foreground">

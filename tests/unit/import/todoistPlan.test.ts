@@ -171,6 +171,20 @@ task,Buy milk,4,1
     expect(plan.totalTasks).toBe(1);
   });
 
+  it("keeps the other projects when one file in the backup cannot be parsed", () => {
+    const plan = buildTodoistImportPlan(
+      [csvFile("Work", BOARD_CSV), csvFile("Notes", "hello,world\n1,2\n")],
+      EMPTY_WORKSPACE,
+      REF_DATE,
+    );
+
+    expect(plan.projects.map((p) => p.name)).toEqual(["Work"]);
+    expect(plan.failedFiles).toHaveLength(1);
+    expect(plan.failedFiles[0].fileName).toBe("Notes.csv");
+    expect(plan.failedFiles[0].message).toMatch(/Missing TYPE or CONTENT/i);
+    expect(plan.totalTasks).toBe(2);
+  });
+
   it("aggregates date range and recurring counts across projects", () => {
     const plan = buildTodoistImportPlan(
       [csvFile("Work", BOARD_CSV), csvFile("Personal", LIST_CSV)],
