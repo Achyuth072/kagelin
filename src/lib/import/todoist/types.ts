@@ -28,13 +28,15 @@ export interface ParseTodoistResult {
   };
 }
 
+export const TODOIST_CSV_PREVIEW_KIND = "todoist-csv" as const;
+export const TODOIST_ARCHIVE_PREVIEW_KIND = "todoist-archive" as const;
+
 export type WorkspaceProject = Pick<Project, "id" | "name" | "is_inbox">;
 export type WorkspaceTask = Pick<
   Task,
   "id" | "content" | "project_id" | "parent_id" | "is_completed"
 >;
 
-/** The Kagelin workspace an import is merged into. */
 export interface ExistingWorkspace {
   projects: WorkspaceProject[];
   tasks: WorkspaceTask[];

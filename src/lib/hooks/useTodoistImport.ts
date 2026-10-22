@@ -132,18 +132,18 @@ export function useTodoistImport() {
 
     try {
       if (isArchivePreview(targetPreview)) {
-        const { importedCount } = await executeTodoistArchiveImport(
-          targetPreview,
-          {
+        const { importedCount, createdProjectCount } =
+          await executeTodoistArchiveImport(targetPreview, {
             isGuest: isGuestMode,
             fileName: currentFileName || "Todoist-backup.zip",
-          },
-        );
+          });
 
         await refreshWorkspace();
 
         notify.success(
-          `Successfully imported ${importedCount} tasks from Todoist`,
+          createdProjectCount > 0
+            ? `Imported ${importedCount} tasks and ${createdProjectCount} projects from Todoist`
+            : `Successfully imported ${importedCount} tasks from Todoist`,
           { id: loadingToastId },
         );
         trigger("success");

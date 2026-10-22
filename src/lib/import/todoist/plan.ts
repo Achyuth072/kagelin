@@ -2,10 +2,11 @@ import { PROJECT_COLORS } from "@/lib/constants/colors";
 import { parseTodoistCsv } from "./parser";
 import { mapTodoistRowsToKagelin, type MappedTodoistTask } from "./mapper";
 import type { TodoistCsvFile } from "./archive";
-import type {
-  ExistingWorkspace,
-  ParseTodoistResult,
-  TodoistRow,
+import {
+  TODOIST_ARCHIVE_PREVIEW_KIND,
+  type ExistingWorkspace,
+  type ParseTodoistResult,
+  type TodoistRow,
 } from "./types";
 
 export type TodoistProjectStatus = "inbox" | "new" | "merged";
@@ -34,6 +35,7 @@ export interface TodoistFileFailure {
 }
 
 export interface TodoistArchiveImportPreview {
+  kind: typeof TODOIST_ARCHIVE_PREVIEW_KIND;
   projects: TodoistProjectPlan[];
   totalTasks: number;
   rootTasksCount: number;
@@ -61,7 +63,9 @@ export function isArchivePreview(
   preview: unknown,
 ): preview is TodoistArchiveImportPreview {
   return (
-    typeof preview === "object" && preview !== null && "projects" in preview
+    typeof preview === "object" &&
+    preview !== null &&
+    (preview as { kind?: unknown }).kind === TODOIST_ARCHIVE_PREVIEW_KIND
   );
 }
 
@@ -384,6 +388,7 @@ export function buildTodoistImportPlan(
   const totals = summarizeTasks(projects.flatMap((project) => project.tasks));
 
   return {
+    kind: TODOIST_ARCHIVE_PREVIEW_KIND,
     projects,
     totalTasks: totals.rootTasksCount + totals.subtasksCount,
     ...totals,

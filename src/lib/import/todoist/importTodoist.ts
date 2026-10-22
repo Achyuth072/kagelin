@@ -1,7 +1,11 @@
 import * as Sentry from "@sentry/nextjs";
 import { parseTodoistCsv } from "./parser";
 import { mapTodoistRowsToKagelin, type MappedTodoistTask } from "./mapper";
-import type { ParseTodoistResult, TodoistRow } from "./types";
+import {
+  TODOIST_CSV_PREVIEW_KIND,
+  type ParseTodoistResult,
+  type TodoistRow,
+} from "./types";
 import {
   summarizeTasks,
   type ParentRedirect,
@@ -39,6 +43,7 @@ export class TodoistImportFailure extends Error {
 }
 
 export interface TodoistImportPreview {
+  kind: typeof TODOIST_CSV_PREVIEW_KIND;
   tasks: MappedTodoistTask[];
   totalTasks: number;
   rootTasksCount: number;
@@ -60,6 +65,7 @@ export function prepareTodoistImport(
   const mapped = mapTodoistRowsToKagelin(parsed.rows, options?.refDate);
 
   return {
+    kind: TODOIST_CSV_PREVIEW_KIND,
     tasks: mapped.tasks,
     totalTasks: mapped.tasks.length,
     ...summarizeTasks(mapped.tasks),
