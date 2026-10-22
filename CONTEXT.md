@@ -571,9 +571,9 @@ A Task has Insights only when it belongs to a Series. "Habit stats" is a misnome
 that surface is **Habit Insights**; `Stats` always means the global page.
 _Avoid_: "stats" for a per-item view.
 
-### Backup vs Stats export
+### Backup vs Stats export vs Third-party migration
 
-Two distinct things that both say "export":
+Three distinct things that say "export" or "import":
 
 - **Backup** — full portability: the complete dataset as a ZIP (JSON + ICS),
   round-trips with Import. **One artifact, however it travels.** The file a
@@ -584,6 +584,11 @@ Two distinct things that both say "export":
 - **Stats export** — a read-only analytics extract (CSV daily rollup / JSON stats
   payload), scoped to the current period or one item's Insights. Not a backup;
   does not round-trip.
+- **Third-party migration** — domain-scoped data exchange with external apps
+  (Loop Habit Tracker `.db`/CSV ZIP, Todoist backup ZIP/CSV, Calendar `.ics`).
+  Unlike Backup, migrations conform to external foreign schemas and cover only
+  one domain (tasks only, habits only, or calendar events only).
+  _Avoid_: calling third-party app exports or imports "Backup" or "Restore".
 
 ### Telemetry (vs Stats / Insights)
 
