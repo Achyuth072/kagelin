@@ -7,12 +7,14 @@ Instructions for coding agents working in this repository.
 ```bash
 npm run dev              # dev server, Turbopack, port 3000 (service worker disabled)
 npm run build             # prod build (webpack) — required if the change touches the service worker
+npm run build:wsl         # same build under a 3.5 GB memory cgroup (WSL2; stop `npm run dev` first)
 npm start                 # serve the prod build on :3000
 npm run typecheck         # tsc --noEmit
 npm run lint               # eslint
 npm run lint:strict        # eslint --max-warnings=13
 npm run format:check       # prettier --check
 npm run validate           # format:check + lint:strict + typecheck + test:run, sequentially — run before considering work done
+npm run validate:wsl       # same validation under a 2.5 GB memory cgroup (WSL2)
 npm run test               # vitest (watch mode)
 npx vitest run <path>      # run a single unit test file
 npx vitest run <path> -t "<name>"  # run a single test by name
