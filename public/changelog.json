@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.49.0-preview.3",
+    "date": "2026-10-23",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Clean up local backup card and add accessible migration trigger",
+        "Consolidated app migration dialog with import and export tabs",
+        "Add third-party migration export tab cards and summary counts",
+        "Add client-side Todoist export engine and hook"
+      ]
+    }
+  },
+  {
     "version": "1.49.0-preview.2",
     "date": "2026-10-22",
     "channel": "preview",
@@ -685,31 +698,6 @@
       "Fixed": [
         "Require a new passphrase after recovery-code unlock",
         "Harden push subscription sync and keep content-free error messages"
-      ]
-    }
-  },
-  {
-    "version": "1.43.0",
-    "date": "2026-09-16",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "End-to-end encryption for tasks, habits, projects, labels, and calendar content — protected by a passphrase only you know, with a recovery code as backup",
-        "Manual lock (and optional auto-lock after inactivity) to hide your encrypted content without signing out",
-        "Confirmation step when importing large .ics calendar files, so big imports don't silently overload your task list"
-      ],
-      "Improved": [
-        "Faster encryption during passphrase setup and account migration",
-        "Guest-to-account migration now resumes cleanly if interrupted, instead of risking data loss",
-        "CalDAV sync now respects your configured sync window instead of pulling full history"
-      ],
-      "Fixed": [
-        "Duplicate reminder notifications for the same task",
-        "Recovery code could be reused after it had already unlocked your account",
-        "Notifications could show decrypted content briefly after locking or signing out",
-        "Low-contrast alert banner colors in dark mode",
-        "Settings page scrolled the whole window instead of just its content pane",
-        "Offline mode and installed app not working correctly on Firefox"
       ]
     }
   }
