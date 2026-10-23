@@ -80,7 +80,7 @@ See the [full feature list](docs/features.md).
 <details>
 <summary><strong>Stack</strong></summary>
 
-- **Next.js 16.2.10** (App Router) + **React 19.2.7** (React Compiler)
+- **Next.js 16.4.0** (App Router) + **React 19.3.0** (React Compiler)
 - **Supabase** (Postgres, Auth, Realtime)
 - **TanStack Query v5** (IndexedDB persistence) + **Zustand v5**
 - **Tailwind CSS v4** + **Shadcn UI** (Radix)
@@ -94,7 +94,7 @@ See the [full feature list](docs/features.md).
 
 ## Setup
 
-**Prerequisites**: Node.js 20+, a Supabase project with the schema from `supabase/schema.sql` and relevant migrations from `supabase/migrations`.
+**Prerequisites**: Node.js 24+, a Supabase project with the schema from `supabase/schema.sql` and relevant migrations from `supabase/migrations`.
 
 ```bash
 git clone https://github.com/Achyuth072/kagelin.git
@@ -104,6 +104,8 @@ npm run dev
 ```
 
 ## Contributing & Feedback
+
+Before opening a PR, read [CONTRIBUTING.md](CONTRIBUTING.md) — all PRs must target the `dev` branch, not `main`.
 
 Bug reports and feature requests go in [GitHub Issues](../../issues). For questions and discussion, use [GitHub Discussions](../../discussions).
 
