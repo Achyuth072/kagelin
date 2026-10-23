@@ -63,7 +63,7 @@
     "@radix-ui/react-toggle": "^1.2.1",
     "@radix-ui/react-toggle-group": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.4.1",
-    "@sentry/nextjs": "^10.65.0",
+    "@sentry/nextjs": "^11.8.0",
     "@serwist/next": "^9.5.13",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.89.0",
