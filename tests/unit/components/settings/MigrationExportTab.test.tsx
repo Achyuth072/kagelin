@@ -155,12 +155,12 @@ describe("MigrationExportTab component rendering", () => {
       render(<MigrationExportTab />);
 
       expect(
-        screen.getByRole("heading", { name: "Loop Habit Tracker" }),
+        screen.getByRole("heading", { name: /loop habit/i }),
       ).toBeInTheDocument();
       expect(screen.getByText("2 habits ready to export")).toBeInTheDocument();
 
       expect(
-        screen.getByRole("heading", { name: "Todoist" }),
+        screen.getByRole("heading", { name: /todoist/i }),
       ).toBeInTheDocument();
       expect(screen.getByText("2 tasks across 2 projects")).toBeInTheDocument();
     });
@@ -300,7 +300,7 @@ describe("MigrationExportTab component rendering", () => {
 
       expect(dbButton).not.toBeDisabled();
       expect(zipButton).not.toBeDisabled();
-      expect(todoistButton).toBeDisabled();
+      expect(todoistButton).toHaveAttribute("aria-disabled", "true");
 
       // Check for spinner
       expect(container.querySelectorAll(".animate-spin").length).toBe(1);

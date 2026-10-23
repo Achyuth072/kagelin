@@ -1,7 +1,7 @@
 "use client";
 
-import { Database, Download, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Database, FileDown, Loader2 } from "lucide-react";
+import { BetaBadge } from "@/components/ui/beta-badge";
 import { useAuth } from "@/components/AuthProvider";
 import { useHabits } from "@/lib/hooks/useHabits";
 import { useTasks } from "@/lib/hooks/useTasks";
@@ -41,9 +41,6 @@ export function formatTodoistSummary(
 export interface MigrationExportTabProps {
   className?: string;
 }
-
-const actionButtonClass =
-  "flex-1 min-w-[120px] gap-2 h-9 border-border/60 hover:bg-secondary/40 transition-all font-medium";
 
 function getGuestCounts() {
   const activeProjects = mockStore.getProjects().filter((p) => !p.is_archived);
@@ -111,73 +108,115 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
   return (
     <div className={cn("space-y-4", className)}>
       {/* Loop Habit Tracker Card */}
-      <div className="rounded-lg border border-border/40 p-4 bg-secondary/10 flex flex-col gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all gap-3">
         <div className="flex items-center gap-3">
           <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium">Loop Habit Tracker</h3>
-            <p className="text-xs text-muted-foreground">{habitSummary}</p>
+          <div>
+            <h3 className="text-sm font-medium leading-snug">
+              Loop Habit
+              <span className="flex items-center gap-1.5">
+                Tracker
+                <BetaBadge />
+              </span>
+            </h3>
+            <p className="text-xs text-muted-foreground lowercase mt-0.5">
+              {habitSummary}
+            </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button
-            variant="outline"
-            size="sm"
+        {/* Unified segmented control: slim h-7 container with compact micro typography */}
+        <div className="inline-flex items-center h-7 bg-secondary/20 p-0.5 rounded-md border border-border/40 self-end sm:self-auto shrink-0">
+          <button
+            type="button"
             onClick={() => runExport(exportLoopDb)}
             disabled={isExportingLoop}
+            className="inline-flex items-center h-full gap-1.5 px-2.5 rounded text-xs font-medium tracking-tight hover:bg-secondary/50 active:bg-secondary/70 text-foreground transition-all motion-reduce:transition-none disabled:opacity-50"
             aria-label="Export Loop Habit Tracker database"
-            className={actionButtonClass}
           >
             {isExportingLoop ? (
-              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+              <Loader2
+                className="h-3 w-3 animate-spin text-brand"
+                strokeWidth={2.25}
+              />
             ) : (
-              <Database className="h-4 w-4" strokeWidth={2.25} />
+              <Database className="h-3 w-3 text-brand" strokeWidth={2.25} />
             )}
-            Export (.db)
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
+            <span>.db</span>
+          </button>
+          <div className="h-3 w-[1px] bg-border/40 mx-0.5" />
+          <button
+            type="button"
             onClick={() => runExport(exportLoopZip)}
             disabled={isExportingLoop}
+            className="inline-flex items-center h-full gap-1.5 px-2.5 rounded text-xs font-medium tracking-tight hover:bg-secondary/50 active:bg-secondary/70 text-foreground transition-all motion-reduce:transition-none disabled:opacity-50"
             aria-label="Export Loop Habit Tracker CSV archive"
-            className={actionButtonClass}
           >
             {isExportingLoop ? (
-              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+              <Loader2
+                className="h-3 w-3 animate-spin text-brand"
+                strokeWidth={2.25}
+              />
             ) : (
-              <Download className="h-4 w-4" strokeWidth={2.25} />
+              <FileDown className="h-3 w-3 text-brand" strokeWidth={2.25} />
             )}
-            Export (CSV Zip)
-          </Button>
+            <span>CSV Zip</span>
+          </button>
         </div>
       </div>
 
       {/* Todoist Card */}
-      <div className="rounded-lg border border-border/40 p-4 bg-secondary/10 flex flex-col gap-3">
+      <div
+        role="button"
+        tabIndex={isExportingTodoist ? -1 : 0}
+        aria-disabled={isExportingTodoist}
+        onClick={() => {
+          if (!isExportingTodoist) {
+            void runExport(exportTodoistZip);
+          }
+        }}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && !isExportingTodoist) {
+            e.preventDefault();
+            void runExport(exportTodoistZip);
+          }
+        }}
+        className={cn(
+          "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group",
+          isExportingTodoist &&
+            "pointer-events-none opacity-60 cursor-not-allowed",
+        )}
+        aria-label="Export Todoist ZIP archive"
+      >
         <div className="flex items-center gap-3">
           <TodoistIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium">Todoist</h3>
-            <p className="text-xs text-muted-foreground">{todoistSummary}</p>
+          <div>
+            <h3 className="text-sm font-medium flex items-center gap-1.5">
+              Todoist
+              <BetaBadge />
+            </h3>
+            <p className="text-xs text-muted-foreground lowercase">
+              {todoistSummary}
+            </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => runExport(exportTodoistZip)}
+        <div className="inline-flex items-center h-7 bg-secondary/20 p-0.5 rounded-md border border-border/40">
+          <button
+            type="button"
             disabled={isExportingTodoist}
-            aria-label="Export Todoist ZIP archive"
-            className={cn(actionButtonClass, "sm:flex-initial")}
+            tabIndex={-1}
+            className="inline-flex items-center h-full gap-1.5 px-2.5 rounded text-xs font-medium tracking-tight text-foreground disabled:opacity-50"
+            aria-hidden="true"
           >
             {isExportingTodoist ? (
-              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+              <Loader2
+                className="h-3 w-3 animate-spin text-brand"
+                strokeWidth={2.25}
+              />
             ) : (
-              <Download className="h-4 w-4" strokeWidth={2.25} />
+              <FileDown className="h-3 w-3 text-brand" strokeWidth={2.25} />
             )}
-            Export (.zip)
-          </Button>
+            <span>.zip</span>
+          </button>
         </div>
       </div>
     </div>
