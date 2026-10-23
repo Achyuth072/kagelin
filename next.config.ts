@@ -43,6 +43,9 @@ const nextConfig: NextConfig = {
   turbopack: {},
   reactCompiler: true,
   poweredByHeader: false,
+  experimental: {
+    agentUpgrade: "security",
+  },
   async headers() {
     return [
       {
