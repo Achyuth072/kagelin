@@ -3,6 +3,9 @@
   "version": "1.49.0-preview.2",
   "license": "AGPL-3.0-only",
   "private": false,
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "next dev --turbo",
     "dev:pwa": "next dev --webpack",
@@ -110,8 +113,6 @@
   },
   "devDependencies": {
     "@ast-grep/cli": "^0.50.0",
-    "@commitlint/cli": "^21.2.3",
-    "@commitlint/config-conventional": "^21.2.0",
     "@next/bundle-analyzer": "^16.4.0",
     "@playwright/test": "^1.64.0",
     "@poupe/eslint-plugin-tailwindcss": "^0.3.1",
