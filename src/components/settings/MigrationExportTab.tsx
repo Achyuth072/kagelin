@@ -1,6 +1,7 @@
 "use client";
 
-import { Database, FileDown, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Database, FileDown, Info, Loader2, X } from "lucide-react";
 import { BetaBadge } from "@/components/ui/beta-badge";
 import { useAuth } from "@/components/AuthProvider";
 import { useHabits } from "@/lib/hooks/useHabits";
@@ -62,6 +63,7 @@ function getGuestCounts() {
 export function MigrationExportTab({ className }: MigrationExportTabProps) {
   const { isGuestMode } = useAuth();
   const { trigger } = useHaptic();
+  const [showTodoistTip, setShowTodoistTip] = useState(false);
 
   const habitsQuery = useHabits();
   const tasksQuery = useTasks({ showCompleted: false });
@@ -103,6 +105,19 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
   const runExport = async (action: () => Promise<unknown>) => {
     trigger("toggle");
     await action();
+  };
+
+  const handleExportTodoist = async () => {
+    trigger("toggle");
+    const success = await exportTodoistZip();
+    if (success) {
+      setShowTodoistTip(true);
+    }
+  };
+
+  const handleDismissTip = () => {
+    trigger("tick");
+    setShowTodoistTip(false);
   };
 
   return (
@@ -171,13 +186,13 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
         aria-disabled={isExportingTodoist}
         onClick={() => {
           if (!isExportingTodoist) {
-            void runExport(exportTodoistZip);
+            void handleExportTodoist();
           }
         }}
         onKeyDown={(e) => {
           if ((e.key === "Enter" || e.key === " ") && !isExportingTodoist) {
             e.preventDefault();
-            void runExport(exportTodoistZip);
+            void handleExportTodoist();
           }
         }}
         className={cn(
@@ -219,6 +234,34 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
           </button>
         </div>
       </div>
+
+      {showTodoistTip && (
+        <div
+          role="status"
+          className="flex items-start justify-between gap-2 rounded-lg border border-border/50 bg-muted/30 p-3 text-xs leading-relaxed"
+        >
+          <div className="flex items-start gap-2 min-w-0">
+            <Info
+              className="h-4 w-4 shrink-0 mt-0.5 text-muted-foreground"
+              strokeWidth={2.25}
+            />
+            <p className="text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Tip:</span> Todoist
+              imports CSV files per-project. Unzip the downloaded archive to
+              import individual project CSVs into Todoist. Note that Todoist
+              requires a paid Pro plan to import the Deadline column.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleDismissTip}
+            aria-label="Dismiss tip"
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-seijaku-fast motion-reduce:transition-none p-0.5 rounded hover:bg-secondary/40 outline-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <X className="h-3.5 w-3.5" strokeWidth={2.25} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

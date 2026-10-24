@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import {
   MigrationExportTab,
   formatHabitSummary,
@@ -254,10 +254,12 @@ describe("MigrationExportTab component rendering", () => {
       const todoistButton = screen.getByRole("button", {
         name: "Export Todoist ZIP archive",
       });
-      await fireEvent.click(todoistButton);
+      fireEvent.click(todoistButton);
 
       expect(mockTrigger).toHaveBeenCalledWith("toggle");
-      expect(mockExportTodoistZip).toHaveBeenCalledTimes(1);
+      await waitFor(() => {
+        expect(mockExportTodoistZip).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("disables both Loop buttons and shows spinner when Loop export is active", () => {
@@ -304,6 +306,59 @@ describe("MigrationExportTab component rendering", () => {
 
       // Check for spinner
       expect(container.querySelectorAll(".animate-spin").length).toBe(1);
+    });
+
+    it("shows tip only after Todoist export succeeds and hides it when dismissed", async () => {
+      mockExportTodoistZip.mockResolvedValue(true);
+      render(<MigrationExportTab />);
+
+      // Initially, tip is not displayed
+      expect(
+        screen.queryByText(/Todoist imports CSV files per-project/i),
+      ).not.toBeInTheDocument();
+
+      // Trigger export
+      const todoistButton = screen.getByRole("button", {
+        name: "Export Todoist ZIP archive",
+      });
+      fireEvent.click(todoistButton);
+
+      // Tip appears after export
+      expect(
+        await screen.findByText(/Todoist imports CSV files per-project/i),
+      ).toBeInTheDocument();
+
+      // Dismiss tip
+      const dismissButton = screen.getByRole("button", {
+        name: "Dismiss tip",
+      });
+      fireEvent.click(dismissButton);
+
+      // Tip is hidden and plays cancel/dismiss tick haptic
+      await waitFor(() => {
+        expect(
+          screen.queryByText(/Todoist imports CSV files per-project/i),
+        ).not.toBeInTheDocument();
+      });
+      expect(mockTrigger).toHaveBeenCalledWith("tick");
+    });
+
+    it("does not show tip if Todoist export fails", async () => {
+      mockExportTodoistZip.mockResolvedValue(false);
+      render(<MigrationExportTab />);
+
+      const todoistButton = screen.getByRole("button", {
+        name: "Export Todoist ZIP archive",
+      });
+      fireEvent.click(todoistButton);
+
+      await waitFor(() => {
+        expect(mockExportTodoistZip).toHaveBeenCalledTimes(1);
+      });
+
+      expect(
+        screen.queryByText(/Todoist imports CSV files per-project/i),
+      ).not.toBeInTheDocument();
     });
   });
 });
