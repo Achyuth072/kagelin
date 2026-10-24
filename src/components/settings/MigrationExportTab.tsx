@@ -108,10 +108,10 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
   return (
     <div className={cn("space-y-4", className)}>
       {/* Loop Habit Tracker Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col min-[360px]:flex-row min-[360px]:items-center justify-between gap-2 py-4 px-3.5 sm:gap-3 sm:p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all">
+        <div className="flex items-center gap-2.5 min-[360px]:flex-1 min-w-0">
           <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
-          <div>
+          <div className="min-w-0">
             <h3 className="text-sm font-medium leading-snug">
               Loop Habit
               <span className="flex items-center gap-1.5">
@@ -125,7 +125,7 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
           </div>
         </div>
         {/* Unified segmented control: slim h-7 container with compact micro typography */}
-        <div className="inline-flex items-center h-7 bg-secondary/20 p-0.5 rounded-md border border-border/40 self-end sm:self-auto shrink-0">
+        <div className="inline-flex items-center h-7 bg-secondary/20 p-0.5 rounded-md border border-border/40 ml-auto shrink-0">
           <button
             type="button"
             onClick={() => runExport(exportLoopDb)}
@@ -181,15 +181,15 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
           }
         }}
         className={cn(
-          "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group",
+          "flex flex-col min-[360px]:flex-row min-[360px]:items-center justify-between gap-2 py-4 px-3.5 sm:gap-3 sm:p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group",
           isExportingTodoist &&
             "pointer-events-none opacity-60 cursor-not-allowed",
         )}
         aria-label="Export Todoist ZIP archive"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 min-[360px]:flex-1 min-w-0">
           <TodoistIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
-          <div>
+          <div className="min-w-0">
             <h3 className="text-sm font-medium flex items-center gap-1.5">
               Todoist
               <BetaBadge />
@@ -199,7 +199,7 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
             </p>
           </div>
         </div>
-        <div className="inline-flex items-center h-7 bg-secondary/20 p-0.5 rounded-md border border-border/40">
+        <div className="inline-flex items-center h-7 bg-secondary/20 p-0.5 rounded-md border border-border/40 ml-auto shrink-0">
           <button
             type="button"
             disabled={isExportingTodoist}
