@@ -5,6 +5,7 @@ import type { Project } from "@/lib/types/task";
 interface CreateProjectInput {
   name: string;
   color: string;
+  viewStyle?: "list" | "board";
 }
 
 interface UpdateProjectInput {
@@ -20,10 +21,13 @@ export const projectMutations = {
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
 
+    const viewStyle = input.viewStyle ?? "list";
+
     if (isGuest) {
       return mockStore.addProject({
-        ...input,
-        view_style: "list",
+        name: input.name,
+        color: input.color,
+        view_style: viewStyle,
         is_inbox: false,
         is_archived: false,
       });
@@ -43,6 +47,7 @@ export const projectMutations = {
         user_id: user.id,
         name: input.name,
         color: input.color,
+        view_style: viewStyle,
         is_inbox: false,
         is_archived: false,
       })
@@ -174,6 +179,24 @@ export const projectMutations = {
 
     const supabase = createClient();
     const { error } = await supabase.from("projects").delete().eq("id", id);
+
+    if (error) throw new Error(error.message);
+  },
+
+  deleteMany: async (ids: string[]): Promise<void> => {
+    if (ids.length === 0) return;
+
+    const isGuest =
+      typeof window !== "undefined" &&
+      localStorage.getItem("kanso_guest_mode") === "true";
+
+    if (isGuest) {
+      mockStore.deleteProjects(ids);
+      return;
+    }
+
+    const supabase = createClient();
+    const { error } = await supabase.from("projects").delete().in("id", ids);
 
     if (error) throw new Error(error.message);
   },

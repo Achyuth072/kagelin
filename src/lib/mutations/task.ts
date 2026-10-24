@@ -53,29 +53,42 @@ export const taskMutations = {
   create: async (
     input: CreateTaskInput & { _clientId?: string },
   ): Promise<Task> => {
+    const [task] = await taskMutations.createMany([input]);
+    if (!task) throw new Error("Task creation returned no task");
+    return task;
+  },
+
+  // One round trip per batch instead of two per task.
+  createMany: async (
+    inputs: Array<CreateTaskInput & { _clientId?: string }>,
+  ): Promise<Task[]> => {
+    if (inputs.length === 0) return [];
+
     const isGuest =
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
 
     if (isGuest) {
       // mockStore defaults day_order to append at the end.
-      return mockStore.addTask({
-        id: input._clientId,
-        content: input.content,
-        description: input.description || null,
-        priority: input.priority || 4,
-        due_date: input.due_date || null,
-        do_date: input.do_date || null,
-        is_evening: input.is_evening || false,
-        project_id: input.project_id || null,
-        parent_id: input.parent_id || null,
-        recurrence: input.recurrence || null,
-        recurring_series_id: input.recurrence ? crypto.randomUUID() : null,
-        is_completed: false,
-        completed_at: null,
-        google_event_id: null,
-        google_etag: null,
-      });
+      return mockStore.addTasks(
+        inputs.map((input) => ({
+          id: input._clientId,
+          content: input.content,
+          description: input.description || null,
+          priority: input.priority || 4,
+          due_date: input.due_date || null,
+          do_date: input.do_date || null,
+          is_evening: input.is_evening || false,
+          project_id: input.project_id || null,
+          parent_id: input.parent_id || null,
+          recurrence: input.recurrence || null,
+          recurring_series_id: input.recurrence ? crypto.randomUUID() : null,
+          is_completed: false,
+          completed_at: null,
+          google_event_id: null,
+          google_etag: null,
+        })),
+      );
     }
 
     const supabase = createClient();
@@ -85,9 +98,6 @@ export const taskMutations = {
     const user = session?.user;
     if (!user) throw new Error("Not authenticated");
 
-    const taskId = input._clientId || crypto.randomUUID();
-    const seriesId = input.recurrence ? crypto.randomUUID() : null;
-
     // DB column defaults to 0; append at bottom to avoid tying at the top.
     const { data: lastTask } = await supabase
       .from("tasks")
@@ -96,30 +106,28 @@ export const taskMutations = {
       .order("day_order", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const nextDayOrder = (lastTask?.day_order ?? -1) + 1;
+    const firstDayOrder = (lastTask?.day_order ?? -1) + 1;
 
-    const { data, error } = await supabase
-      .from("tasks")
-      .insert({
-        id: taskId,
-        user_id: user.id,
-        content: input.content,
-        description: input.description || null,
-        priority: input.priority || 4,
-        due_date: input.due_date || null,
-        do_date: input.do_date || null,
-        is_evening: input.is_evening || false,
-        project_id: input.project_id || null,
-        parent_id: input.parent_id || null,
-        recurrence: input.recurrence || null,
-        recurring_series_id: seriesId,
-        day_order: nextDayOrder,
-      })
-      .select()
-      .single();
+    const rows = inputs.map((input, index) => ({
+      id: input._clientId || crypto.randomUUID(),
+      user_id: user.id,
+      content: input.content,
+      description: input.description || null,
+      priority: input.priority || 4,
+      due_date: input.due_date || null,
+      do_date: input.do_date || null,
+      is_evening: input.is_evening || false,
+      project_id: input.project_id || null,
+      parent_id: input.parent_id || null,
+      recurrence: input.recurrence || null,
+      recurring_series_id: input.recurrence ? crypto.randomUUID() : null,
+      day_order: firstDayOrder + index,
+    }));
+
+    const { data, error } = await supabase.from("tasks").insert(rows).select();
 
     if (error) throw new Error(error.message);
-    return data as Task;
+    return (data as Task[]) ?? [];
   },
 
   toggle: async ({
@@ -410,6 +418,23 @@ export const taskMutations = {
     if (error) throw new Error(error.message);
 
     return (subtasks as Task[]) ?? [];
+  },
+
+  deleteMany: async (ids: string[]): Promise<void> => {
+    if (ids.length === 0) return;
+
+    const isGuest =
+      typeof window !== "undefined" &&
+      localStorage.getItem("kanso_guest_mode") === "true";
+
+    if (isGuest) {
+      mockStore.deleteTasks(ids);
+      return;
+    }
+
+    const supabase = createClient();
+    const { error } = await supabase.from("tasks").delete().in("id", ids);
+    if (error) throw new Error(error.message);
   },
 
   // Insert parent first for foreign key constraints.

@@ -51,9 +51,20 @@ describe("getLastTag", () => {
     execFileSync("git", ["config", "user.email", "test@test.com"], { cwd });
     execFileSync("git", ["config", "user.name", "test"], { cwd });
     const commitAndTag = (message, tag) => {
-      execFileSync("git", ["commit", "-q", "--allow-empty", "-m", message], {
-        cwd,
-      });
+      execFileSync(
+        "git",
+        [
+          "commit",
+          "-q",
+          "--no-verify",
+          "--allow-empty",
+          "-m",
+          `chore: ${message}`,
+        ],
+        {
+          cwd,
+        },
+      );
       execFileSync("git", ["tag", tag], { cwd });
     };
     commitAndTag("c1", "v1.43.0");

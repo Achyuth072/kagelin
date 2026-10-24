@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+const fs = require("fs");
 const { execFileSync } = require("child_process");
 const { parseArgs } = require("node:util");
 const path = require("path");
@@ -6,12 +7,26 @@ const { getLastTag, getCommitSubjectsSince } = require("./lib/git-commits.cjs");
 const { determineBump } = require("./lib/determine-bump.cjs");
 const { buildSectionsFromCommits } = require("./generate-changelog.cjs");
 const { runCurationLoop } = require("./curate-changelog.cjs");
+const {
+  createGitHubDiscussion,
+  isMinorOrMajorRelease,
+  resolveTargetVersion,
+  runDiscussionCurationLoop,
+} = require("./lib/github-discussion.cjs");
 
 const BUMP_TO_PRE_INCREMENT = {
   patch: "prepatch",
   minor: "preminor",
   major: "premajor",
 };
+
+function readJson(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  } catch {
+    return null;
+  }
+}
 
 function subjectsSince(tagOptions) {
   return getCommitSubjectsSince(getLastTag(tagOptions));
@@ -92,6 +107,9 @@ async function main() {
   const currentVersion = pkg.version;
   const releaseItArgs = [];
   let env = process.env;
+  let stableCuratedSections = null;
+  let stableCuratedDiscussion = null;
+  let stableIncrement = null;
 
   if (channel === "preview") {
     const midPrerelease = currentVersion.includes("-");
@@ -129,11 +147,26 @@ async function main() {
       ? await runCurationLoop(rawSections)
       : rawSections;
 
+    let curatedDiscussion = null;
+    if (
+      isMinorOrMajorRelease(currentVersion, increment) &&
+      process.stdin.isTTY
+    ) {
+      const targetVersion = resolveTargetVersion(currentVersion, increment);
+      curatedDiscussion = await runDiscussionCurationLoop({
+        version: targetVersion,
+        sections: curatedSections,
+      });
+    }
+
     releaseItArgs.push("--config", ".release-it-stable.json", increment);
     env = {
       ...process.env,
       CURATED_SECTIONS: JSON.stringify(curatedSections),
     };
+    stableCuratedSections = curatedSections;
+    stableCuratedDiscussion = curatedDiscussion;
+    stableIncrement = increment;
   }
 
   if (skipValidate) {
@@ -159,6 +192,49 @@ async function main() {
     });
   } catch (err) {
     process.exit(err.status ?? 1);
+  }
+
+  if (channel === "stable") {
+    const updatedPkg = readJson(path.join(process.cwd(), "package.json"));
+    const releasedVersion = updatedPkg?.version ?? currentVersion;
+
+    const isMajorOrMinor =
+      isMinorOrMajorRelease(currentVersion, stableIncrement) ||
+      isMinorOrMajorRelease(currentVersion, releasedVersion);
+
+    if (!isMajorOrMinor) {
+      console.log(
+        `ℹ Skipping GitHub discussion (minor and major releases only; v${releasedVersion} is a patch release).`,
+      );
+      return;
+    }
+
+    if (stableCuratedDiscussion?.skip) {
+      console.log("ℹ Skipping GitHub discussion creation per user selection.");
+      return;
+    }
+
+    const isDryRun = passthrough.some(
+      (arg) =>
+        arg === "--dry-run" || arg === "-d" || arg.startsWith("--dry-run="),
+    );
+
+    const changelog = readJson(
+      path.join(process.cwd(), "public", "changelog.json"),
+    );
+    const changelogEntry = Array.isArray(changelog)
+      ? changelog.find((e) => e.version === releasedVersion)
+      : null;
+    const releaseSections =
+      changelogEntry?.sections ?? stableCuratedSections ?? {};
+
+    createGitHubDiscussion({
+      version: releasedVersion,
+      sections: releaseSections,
+      title: stableCuratedDiscussion?.title,
+      body: stableCuratedDiscussion?.body,
+      dryRun: isDryRun,
+    });
   }
 }
 

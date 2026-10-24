@@ -48,6 +48,7 @@ const eslintConfig = defineConfig([
         },
       ],
       "react-compiler/react-compiler": "error",
+      "react-hooks/set-state-in-effect": "off",
       "no-restricted-imports": [
         "error",
         {

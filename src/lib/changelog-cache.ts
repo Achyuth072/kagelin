@@ -15,6 +15,7 @@ export interface ChangelogEntry {
   date: string | null;
   channel: "preview" | "stable";
   sections: Partial<Record<ChangelogSectionKey, string[]>>;
+  discussionUrl?: string;
 }
 
 export const RELEASE_CHANNEL: "preview" | "stable" =

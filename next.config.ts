@@ -16,10 +16,7 @@ const withSerwist = withSerwistInit({
   swDest: "public/sw.js",
   disable:
     process.env.NODE_ENV === "development" && process.env.ENABLE_PWA !== "true",
-  // App Router routes are reached via client-side navigation, so a document
-  // fetch never happens for them unless we cache it ourselves on navigate.
   cacheOnNavigation: true,
-  // Precache keys are content hashes, so a bad cached response never re-fetches.
   globPublicPatterns: ["**/!(*.wasm)"],
 });
 
@@ -36,19 +33,21 @@ const nextConfig: NextConfig = {
     : [],
   output: isMobile ? "export" : undefined,
   images: {
-    // Mobile builds use static export (no optimization server).
     unoptimized: isMobile,
   },
-  // Silences Next.js warning when webpack plugins coexist with Turbopack.
   turbopack: {},
   reactCompiler: true,
   poweredByHeader: false,
+  experimental: {
+    agentUpgrade: "security",
+    cpus: 2,
+    webpackMemoryOptimizations: true,
+  },
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
-          // Retained for older browsers; CSP frame-ancestors supersedes it.
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           contentSecurityPolicyHeader({
@@ -87,13 +86,11 @@ const config = withBundleAnalyzer(
   isTurbopack ? nextConfig : withSerwist(nextConfig),
 );
 
-// No-ops unless SENTRY_AUTH_TOKEN and org/project are set.
 export default withSentryConfig(config, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
   silent: !process.env.CI,
   widenClientFileUpload: true,
-  // Upload source maps once after the full build instead of per compiler pass.
   useRunAfterProductionCompileHook: true,
   webpack: {
     treeshake: {
