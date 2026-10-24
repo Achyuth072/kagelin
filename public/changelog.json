@@ -1,5 +1,28 @@
 [
   {
+    "version": "1.49.0",
+    "date": "2026-10-24",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Todoist single-project CSV and multi-project ZIP backup import with automatic project creation, merge, and deduplication",
+        "Todoist export engine generating standard CSV exports directly in the browser with local timezone dates",
+        "Consolidated app migration dialog featuring unified import and export tabs, summary counts, and drag-and-drop file support",
+        "Dismissible guidance tip displayed after exporting task data"
+      ],
+      "Improved": [
+        "Import performance with batched task creation and scoped deduplication checks",
+        "Migration dialog layout, segmented controls, and drawer presentation matching design system across desktop and mobile"
+      ],
+      "Fixed": [
+        "Preserve nested subtask hierarchies when importing tasks into existing projects",
+        "Prevent corrupted files inside multi-project backup ZIPs from halting the entire import",
+        "Accurate project counts and item type summaries in Todoist import previews",
+        "Consistent layout and button affordances between desktop dialog and mobile export drawer"
+      ]
+    }
+  },
+  {
     "version": "1.49.0-preview.5",
     "date": "2026-10-24",
     "channel": "preview",
@@ -689,17 +712,6 @@
     "version": "1.43.2",
     "date": "2026-09-18",
     "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Widen delete-project dialog padding, add Ctrl/Cmd+Enter save to event dialog",
-        "Scope sign out to current device, add sign-out-all-devices option"
-      ]
-    }
-  },
-  {
-    "version": "1.43.2-preview.0",
-    "date": "2026-09-18",
-    "channel": "preview",
     "sections": {
       "Fixed": [
         "Widen delete-project dialog padding, add Ctrl/Cmd+Enter save to event dialog",
