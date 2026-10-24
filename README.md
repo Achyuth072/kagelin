@@ -55,7 +55,7 @@ Most productivity apps want your email before you've written a single task, and 
 
 ## Features
 
-- **Tasks**: Board and List views, projects, recurring tasks, steps, and Vim-style keyboard navigation.
+- **Tasks**: Board and List views, projects, recurring tasks, steps, Todoist import and export, and Vim-style keyboard navigation.
 - **Focus & habits**: a Pomodoro timer that follows you across devices, habits with flexible frequencies and reminders, and Loop Habit Tracker import and export.
 - **Calendar**: month, week, and multi-day views, Google and Outlook sync, event reminders, and `.ics` import and export.
 - **Reminders**: push notifications for tasks, events, and habits, plus a morning brief and an evening plan.
