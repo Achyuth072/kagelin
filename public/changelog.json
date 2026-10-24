@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.49.0-preview.5",
+    "date": "2026-10-24",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Display dismissible tip after Todoist export"
+      ],
+      "Fixed": [
+        "Remove redundant cancel button from app migration dialog",
+        "Resolve Todoist export dates in local time and remove dead export cache path"
+      ]
+    }
+  },
+  {
     "version": "1.49.0-preview.4",
     "date": "2026-10-24",
     "channel": "preview",
@@ -690,16 +704,6 @@
       "Fixed": [
         "Widen delete-project dialog padding, add Ctrl/Cmd+Enter save to event dialog",
         "Scope sign out to current device, add sign-out-all-devices option"
-      ]
-    }
-  },
-  {
-    "version": "1.43.1",
-    "date": "2026-09-17",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Require a new passphrase after recovery-code unlock"
       ]
     }
   }
