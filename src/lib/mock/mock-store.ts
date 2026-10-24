@@ -645,8 +645,24 @@ class MockStore {
       id?: string;
     },
   ): Task {
+    const [newTask] = this.addTasks([task]);
+    return newTask;
+  }
+
+  // One store save per batch, so a bulk import does not re-serialize per task.
+  addTasks(
+    tasks: Array<
+      Partial<Omit<Task, "id" | "user_id" | "created_at" | "updated_at">> & {
+        content: string;
+        id?: string;
+      }
+    >,
+  ): Task[] {
+    if (tasks.length === 0) return [];
+
     const now = new Date().toISOString();
-    const newTask: Task = {
+    const baseDayOrder = this.data.tasks.length;
+    const newTasks: Task[] = tasks.map((task, index) => ({
       project_id: task.project_id ?? null,
       parent_id: task.parent_id ?? null,
       description: task.description ?? null,
@@ -656,7 +672,7 @@ class MockStore {
       is_evening: task.is_evening ?? false,
       is_completed: task.is_completed ?? false,
       completed_at: task.completed_at ?? null,
-      day_order: task.day_order ?? this.data.tasks.length,
+      day_order: task.day_order ?? baseDayOrder + index,
       recurrence: task.recurrence ?? null,
       recurring_series_id: task.recurring_series_id ?? null,
       google_event_id: task.google_event_id ?? null,
@@ -664,27 +680,33 @@ class MockStore {
       content: task.content,
       id:
         task.id ||
-        `guest-task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        `guest-task-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
       user_id: "guest",
       created_at: now,
       updated_at: now,
-    };
+    }));
 
     // Inherit seed status if spawned from a demo recurring series.
-    if (
-      newTask.recurring_series_id &&
-      this.data.tasks.some(
-        (t) =>
-          t.recurring_series_id === newTask.recurring_series_id &&
-          this.isSeedId(t.id),
-      )
-    ) {
-      this.data.seed_ids = [...(this.data.seed_ids ?? []), newTask.id];
+    const seededIds = new Set(
+      newTasks
+        .filter(
+          (newTask) =>
+            newTask.recurring_series_id &&
+            this.data.tasks.some(
+              (t) =>
+                t.recurring_series_id === newTask.recurring_series_id &&
+                this.isSeedId(t.id),
+            ),
+        )
+        .map((newTask) => newTask.id),
+    );
+    if (seededIds.size > 0) {
+      this.data.seed_ids = [...(this.data.seed_ids ?? []), ...seededIds];
     }
 
-    this.data.tasks = [...this.data.tasks, newTask];
+    this.data.tasks = [...this.data.tasks, ...newTasks];
     this.saveToStorage();
-    return newTask;
+    return newTasks;
   }
 
   updateTask(id: string, updates: Partial<Task>): Task | null {
@@ -764,6 +786,36 @@ class MockStore {
     this.unmarkSeedId(id);
     this.saveToStorage();
     return true;
+  }
+
+  deleteTasks(ids: string[]): number {
+    if (ids.length === 0) return 0;
+
+    const idSet = new Set(ids);
+    const before = this.data.tasks.length;
+    this.data.tasks = this.data.tasks.filter((task) => !idSet.has(task.id));
+    const removed = before - this.data.tasks.length;
+    if (removed === 0) return 0;
+
+    for (const id of ids) this.unmarkSeedId(id);
+    this.saveToStorage();
+    return removed;
+  }
+
+  deleteProjects(ids: string[]): number {
+    if (ids.length === 0) return 0;
+
+    const idSet = new Set(ids);
+    const before = this.data.projects.length;
+    this.data.projects = this.data.projects.filter(
+      (project) => !idSet.has(project.id),
+    );
+    const removed = before - this.data.projects.length;
+    if (removed === 0) return 0;
+
+    for (const id of ids) this.unmarkSeedId(id);
+    this.saveToStorage();
+    return removed;
   }
 
   moveTasksToInbox(projectId: string): void {

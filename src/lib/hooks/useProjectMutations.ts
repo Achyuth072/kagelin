@@ -26,7 +26,7 @@ export function useCreateProject() {
         user_id: "",
         name: newProject.name,
         color: newProject.color,
-        view_style: "list",
+        view_style: newProject.viewStyle ?? "list",
         is_inbox: false,
         is_archived: false,
         created_at: new Date().toISOString(),

@@ -14,6 +14,7 @@ Full feature list for [Kagelin](../README.md).
 - **Recurring tasks**: per-task Strict (anchors to due date) or Flexible (anchors to completion) recurrence.
 - **Notes editor**: markdown formatting toolbar with live preview for task notes.
 - **Steps (subtasks)**: add, edit, and drag-to-reorder steps in the edit sheet, with a progress badge on list and board cards.
+- **Todoist migration**: single-project CSV and multi-project ZIP backup import and export with 1:1 priority mapping, step attachment, section mapping, recurrence rules, and deduplication.
 - **Instant updates**: tasks, events, and habits update on screen immediately and roll back if saving fails.
 
 ## Focus & Habits
@@ -44,7 +45,7 @@ Full feature list for [Kagelin](../README.md).
 - **Zero-knowledge encryption**: tasks, habits, projects, labels, and calendar content are encrypted on your device under a passphrase Kagelin never sees. We can't read what you wrote — only that an item exists and when it's due. A recovery code is your backup, and you can lock your content manually or after inactivity without signing out. If you think your key leaked, rotate it: everything is re-encrypted under a new key, other devices are signed out, and only a device that holds the current key can change your passphrase, recovery code, or key. Anything that can't be decrypted shows as "Can't be read" in place, instead of breaking the whole list.
 - **Diagnostic export**: a content-free bundle you can review and attach to bug reports.
 - **WebDAV backup**: keep a copy of everything on a server you own (Nextcloud, Synology). Available at every tier, account or not. It is a backup, not a sync: each upload replaces the last.
-- **Backups & Portability**: encrypted `.zip` export/import, guest backup reminders (skipped on the first visit), and instant cloud data wipe.
+- **Backups & Portability**: encrypted `.zip` export/import, guest backup reminders (skipped on the first visit), third-party app migration (Todoist, Loop Habit Tracker, iCalendar), and instant cloud data wipe.
 - **Offline-first PWA**: full offline support via service worker with stale-while-revalidate caching.
 - **Telemetry**: off by default for everyone, Guest Mode included. If you opt in, we collect anonymous product-usage counts (no task titles, habit names, or other content) tied to a random device ID, never your account. The prompt is deferred until after your first real action.
 

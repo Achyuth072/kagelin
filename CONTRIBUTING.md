@@ -45,11 +45,20 @@ git checkout -b feat/your-feature-name
 # Install dependencies (copies sql-wasm.wasm into public/)
 npm install
 
+# Add environment keys
+cp .env.example .env.local
+
 # Start local dev server (Turbopack, port 3000)
 npm run dev
 ```
 
-> **Note on Service Worker / Offline:** The service worker (Serwist) is disabled during `npm run dev`. To test offline PWA capabilities or the service worker, build and serve production mode:
+> **Note on Service Worker / Offline:** The service worker (Serwist) is disabled during `npm run dev` — Turbopack skips the Serwist wrapper entirely. To exercise it in dev, run the webpack dev server with `ENABLE_PWA=true` in `.env.local`:
+>
+> ```bash
+> npm run dev:pwa
+> ```
+>
+> For a faithful production check, build and serve the production bundle:
 >
 > ```bash
 > npm run build && npm start
@@ -65,7 +74,7 @@ Run the full validation suite before pushing:
 npm run validate
 ```
 
-This runs Prettier format checks, strict ESLint (`--max-warnings=13`), TypeScript typecheck, and Vitest unit tests in parallel.
+This runs Prettier format checks, strict ESLint (`lint:strict`), TypeScript typecheck, and Vitest unit tests sequentially.
 
 ### Other Useful Commands
 

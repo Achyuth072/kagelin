@@ -7,23 +7,27 @@ Instructions for coding agents working in this repository.
 ```bash
 npm run dev              # dev server, Turbopack, port 3000 (service worker disabled)
 npm run build             # prod build (webpack) — required if the change touches the service worker
+npm run build:wsl         # same build under a 3.5 GB memory cgroup (WSL2; stop `npm run dev` first)
 npm start                 # serve the prod build on :3000
 npm run typecheck         # tsc --noEmit
 npm run lint               # eslint
 npm run lint:strict        # eslint --max-warnings=13
 npm run format:check       # prettier --check
-npm run validate           # format:check + lint:strict + typecheck + test, in parallel — run before considering work done
+npm run validate           # format:check + lint:strict + typecheck + test:run, sequentially — run before considering work done
+npm run validate:wsl       # same validation under a 2.5 GB memory cgroup (WSL2)
 npm run test               # vitest (watch mode)
 npx vitest run <path>      # run a single unit test file
 npx vitest run <path> -t "<name>"  # run a single test by name
 npm run e2e                 # playwright (automatically starts dev server if not running)
+npm run e2e:chromium        # playwright, Chromium only (recommended for lightweight WSL2 runs)
 npx playwright test <path>  # run a single e2e spec
+npx playwright screenshot <url> <path>  # capture page/component screenshot via Playwright CLI
 npm run dead-code           # knip — unused exports/files
 npm run unused-deps          # depcheck
 npm run ast-grep             # ast-grep scan — repo-specific structural lint rules (.ast-grep/rules), advisory
 ```
 
-Playwright automatically manages the dev server via the `webServer` block in `playwright.config.ts`.
+Playwright automatically manages the dev server via the `webServer` block in `playwright.config.ts`. Always use the Playwright CLI (`npm run e2e`, `npx playwright test`, or `npx playwright screenshot`) for driving end-to-end tests and capturing screenshots.
 
 The service worker (Serwist) is **disabled** under `npm run dev` (Turbopack skips the Serwist wrapper entirely). To reproduce SW/offline/PWA behavior you must `npm run build && npm start`. See [`.claude/skills/verify/SKILL.md`](.claude/skills/verify/SKILL.md) for driving the app end-to-end, including how to seed guest mode for Playwright without racing the auth guard.
 
@@ -63,6 +67,8 @@ Kagelin (codename Kanso) is a Next.js 16 App Router monolith backed by Supabase 
 - React Compiler is on (`eslint-plugin-react-compiler` set to error) — manual `useMemo`/`useCallback` should generally be unnecessary; a compiler bailout is a smell worth checking rather than papering over.
 - **Code Search Constraint**: for _structural_ searches on source files (`.ts`, `.tsx`, `.js`, `.jsx`) — a call pattern, a JSX shape, a catch block, a hook's argument list — use `ast-grep` via `Bash` (`npx ast-grep run -p '<pattern>' -l ts <path>`), not grep; it matches by AST so formatting and string contents that look like code don't fool it. Plain grep/rg is fine for simple lexical lookups (where is `addEvent` called, does this file import `X`) and for non-code files (`.md`, `.json`, `.env`). `npm run ast-grep` runs the repo's custom `.ast-grep/rules/` lint rules (advisory only, not yet part of `validate`); see [`.scratch/tooling/ast-grep-usage-research.md`](.scratch/tooling/ast-grep-usage-research.md) for pattern syntax and more advanced usage.
 
+- **Batch verification**: run checks together in one composite command (e.g. `npm run validate` or `git status && npm run lint`) rather than across multiple turns to preserve turn budget.
+- **Zero background polling**: the harness notifies reactively on process completion; never poll `manage_task(Action="status")` on background builds or tests.
 - **PR size tripwire**: when a branch's diff against `origin/dev` passes ~500 non-test lines, stop and propose the next finished slice as its own PR into `dev` before adding more. Slice by user-visible behavior (schema first, tests in the same PR), not by layer. `.husky/pre-push` prints a warning at the same threshold.
 
 ## Agent skills

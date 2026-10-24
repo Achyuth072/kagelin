@@ -15,10 +15,8 @@ import {
   Trash2,
   BellRing,
   AlertTriangle,
-  Database,
+  ArrowLeftRight,
 } from "lucide-react";
-import { useUhabitsExport } from "@/lib/hooks/useUhabitsExport";
-import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
 import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,7 +63,7 @@ import {
   replaceCloudBackup,
 } from "@/lib/backup/cloud-data";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
-import { ImportDialog } from "./ImportDialog";
+import { AppMigrationDialog } from "./AppMigrationDialog";
 import { SETTINGS_CARD_CLASS } from "@/components/settings/settingsCardClass";
 
 // Every registered account is required to set a content passphrase
@@ -367,28 +365,10 @@ export function BackupSyncSettings() {
   const supabase = createClient();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const loopFileInputRef = useRef<HTMLInputElement>(null);
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [showExternalImport, setShowExternalImport] = useState(false);
-
-  const {
-    exportLoopDb,
-    exportLoopZip,
-    isExporting: isExportingLoop,
-  } = useUhabitsExport();
-  const { importUhabits, isImporting: isImportingLoop } = useUhabitsImport();
-  const isLoopBusy = isExportingLoop || isImportingLoop;
-
-  const handleLoopFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    await importUhabits(file);
-    if (loopFileInputRef.current) loopFileInputRef.current.value = "";
-  };
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
 
   // Kept in memory only to avoid persisting credentials locally.
   const [webdavCredentials, setWebdavCredentials] = useState<WebDAVCredentials>(
@@ -724,85 +704,34 @@ export function BackupSyncSettings() {
                 </div>
               )}
               <Separator className="bg-border/20 mx-4" />
-              <div className="px-4 pb-4 pt-4 space-y-3">
-                <div className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-muted-foreground">
-                    Loop Habit Tracker
-                  </span>
-                  <input
-                    ref={loopFileInputRef}
-                    type="file"
-                    accept=".db"
-                    className="hidden"
-                    onChange={handleLoopFileChange}
-                    aria-label="Import Loop (.db) file"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        trigger("toggle");
-                        loopFileInputRef.current?.click();
-                      }}
-                      disabled={isLoopBusy}
-                      className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
-                    >
-                      {isImportingLoop ? (
-                        <Loader2
-                          className="h-4 w-4 animate-spin"
-                          strokeWidth={2.25}
-                        />
-                      ) : (
-                        <Upload className="h-4 w-4" strokeWidth={2.25} />
-                      )}
-                      Import (.db)
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={exportLoopDb}
-                      disabled={isLoopBusy}
-                      className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
-                    >
-                      {isExportingLoop ? (
-                        <Loader2
-                          className="h-4 w-4 animate-spin"
-                          strokeWidth={2.25}
-                        />
-                      ) : (
-                        <Database className="h-4 w-4" strokeWidth={2.25} />
-                      )}
-                      Export (.db)
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={exportLoopZip}
-                      disabled={isLoopBusy}
-                      className="flex-1 gap-2 h-10 border-border/60 hover:bg-secondary/40 transition-all font-medium"
-                    >
-                      {isExportingLoop ? (
-                        <Loader2
-                          className="h-4 w-4 animate-spin"
-                          strokeWidth={2.25}
-                        />
-                      ) : (
-                        <Download className="h-4 w-4" strokeWidth={2.25} />
-                      )}
-                      Export (CSV Zip)
-                    </Button>
-                  </div>
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-xs text-muted-foreground hover:text-brand transition-colors h-8"
+              <div className="p-4">
+                <button
+                  type="button"
+                  aria-label="Third-party app migration: Import and export with Loop Habit Tracker, Todoist, and Calendar"
                   onClick={() => {
                     trigger("toggle");
-                    setShowExternalImport(true);
+                    setShowMigrationDialog(true);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      trigger("toggle");
+                      setShowMigrationDialog(true);
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-md border border-border/40 hover:bg-secondary/20 transition-all cursor-pointer select-none min-h-[44px] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background text-left"
                 >
-                  Import from other apps
-                </Button>
+                  <ArrowLeftRight className="h-5 w-5 text-brand shrink-0" />
+                  <div className="flex flex-col text-left">
+                    <span className="font-medium text-sm text-foreground">
+                      Third-party app migration
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Import and export with Loop Habit Tracker, Todoist, and
+                      Calendar
+                    </span>
+                  </div>
+                </button>
               </div>
             </Card>
             {isGuestMode && <BackupRemindersCard />}
@@ -823,9 +752,9 @@ export function BackupSyncSettings() {
         />
       </Tabs>
 
-      <ImportDialog
-        open={showExternalImport}
-        onOpenChange={setShowExternalImport}
+      <AppMigrationDialog
+        open={showMigrationDialog}
+        onOpenChange={setShowMigrationDialog}
       />
 
       <DeleteConfirmationDialog

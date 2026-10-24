@@ -1,10 +1,23 @@
 import { renderHook } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useBackAnchor, useAnchoredBack } from "@/lib/hooks/useBackAnchor";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
+
+const { mockReplace, mockPush, mockBack } = vi.hoisted(() => ({
+  mockReplace: vi.fn(),
+  mockPush: vi.fn(),
+  mockBack: vi.fn(),
+}));
 
 vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(),
+  useRouter: () => ({
+    replace: mockReplace,
+    push: mockPush,
+    back: mockBack,
+    forward: vi.fn(),
+    refresh: vi.fn(),
+    prefetch: vi.fn(),
+  }),
   usePathname: vi.fn(),
 }));
 
@@ -18,21 +31,9 @@ function setLocation(url: string) {
 }
 
 describe("useBackAnchor", () => {
-  const replaceMock = vi.fn();
-  const pushMock = vi.fn();
-  const backMock = vi.fn();
-
   beforeEach(() => {
     vi.clearAllMocks();
     delete window.__backAnchorSettled;
-    vi.mocked(useRouter).mockReturnValue({
-      replace: replaceMock,
-      push: pushMock,
-      back: backMock,
-      forward: vi.fn(),
-      refresh: vi.fn(),
-      prefetch: vi.fn(),
-    });
   });
 
   afterEach(() => {
@@ -50,7 +51,7 @@ describe("useBackAnchor", () => {
     renderHook(() => useBackAnchor());
 
     expect(replaceStateSpy).toHaveBeenCalledWith({}, "", "/");
-    expect(pushMock).toHaveBeenCalledWith("/focus");
+    expect(mockPush).toHaveBeenCalledWith("/focus");
     expect(window.__backAnchorSettled).toBe(true);
   });
 
@@ -60,8 +61,8 @@ describe("useBackAnchor", () => {
 
     renderHook(() => useBackAnchor());
 
-    expect(pushMock).not.toHaveBeenCalled();
-    expect(replaceMock).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 
   it("does nothing on clean root mount", () => {
@@ -70,8 +71,8 @@ describe("useBackAnchor", () => {
 
     renderHook(() => useBackAnchor());
 
-    expect(replaceMock).not.toHaveBeenCalled();
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it("performs synthetic replace bounce on cold non-root route without redirect param", () => {
@@ -80,14 +81,14 @@ describe("useBackAnchor", () => {
 
     const { rerender } = renderHook(() => useBackAnchor());
 
-    expect(replaceMock).toHaveBeenCalledWith("/");
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(mockReplace).toHaveBeenCalledWith("/");
+    expect(mockPush).not.toHaveBeenCalled();
 
     // Next render on "/"
     vi.mocked(usePathname).mockReturnValue("/");
     rerender();
 
-    expect(pushMock).toHaveBeenCalledWith("/focus");
+    expect(mockPush).toHaveBeenCalledWith("/focus");
     expect(window.__backAnchorSettled).toBe(true);
   });
 
@@ -97,8 +98,8 @@ describe("useBackAnchor", () => {
 
     renderHook(() => useBackAnchor());
 
-    expect(replaceMock).not.toHaveBeenCalled();
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it("skips /auth/update-password like /login and /signup", () => {
@@ -107,8 +108,8 @@ describe("useBackAnchor", () => {
 
     renderHook(() => useBackAnchor());
 
-    expect(replaceMock).not.toHaveBeenCalled();
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it("useAnchoredBack triggers router.back once settled", async () => {
@@ -121,7 +122,7 @@ describe("useBackAnchor", () => {
     result.current();
 
     await vi.waitFor(() => {
-      expect(backMock).toHaveBeenCalledTimes(1);
+      expect(mockBack).toHaveBeenCalledTimes(1);
     });
   });
 });
