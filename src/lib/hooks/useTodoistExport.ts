@@ -2,18 +2,15 @@
 
 import { useState } from "react";
 import * as Sentry from "@sentry/nextjs";
-import { useQueryClient } from "@tanstack/react-query";
 import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useAuth } from "@/components/AuthProvider";
 import { downloadBackup } from "@/lib/backup/export-import";
-import type { Project, Task } from "@/lib/types/task";
 
 export function useTodoistExport() {
   const [isExporting, setIsExporting] = useState(false);
   const { trigger } = useHaptic();
   const { isGuestMode } = useAuth();
-  const queryClient = useQueryClient();
 
   const exportTodoistZip = async (): Promise<boolean> => {
     setIsExporting(true);
@@ -21,36 +18,9 @@ export function useTodoistExport() {
     const loadingToastId = notify.loading("Exporting Todoist archive...");
 
     try {
-      let cachedTasks: Task[] | undefined;
-      let cachedProjects: Project[] | undefined;
-
-      if (!isGuestMode) {
-        const tasksQueryData = queryClient.getQueryData<Task[]>([
-          "tasks",
-          {
-            projectId: undefined,
-            showCompleted: false,
-            filter: "all",
-            isGuestMode: false,
-          },
-        ]);
-        const projectsQueryData = queryClient.getQueryData<Project[]>([
-          "projects",
-          false,
-        ]);
-
-        if (tasksQueryData && projectsQueryData) {
-          cachedTasks = tasksQueryData;
-          cachedProjects = projectsQueryData;
-        }
-      }
-
+      // Always re-collect: the query cache holds root rows only (no subtask content).
       const mod = await import("@/lib/export/todoistExport");
-      const bytes = await mod.exportToTodoistZip({
-        isGuest: isGuestMode,
-        tasks: cachedTasks,
-        projects: cachedProjects,
-      });
+      const bytes = await mod.exportToTodoistZip({ isGuest: isGuestMode });
       const filename = mod.generateTodoistExportFilename();
       const blob = new Blob([bytes as Uint8Array<ArrayBuffer>], {
         type: "application/zip",

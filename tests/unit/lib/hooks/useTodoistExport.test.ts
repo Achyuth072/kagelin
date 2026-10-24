@@ -15,13 +15,6 @@ vi.mock("@/components/AuthProvider", () => ({
   useAuth: () => ({ isGuestMode: mockIsGuest }),
 }));
 
-const mockGetQueryData = vi.fn();
-vi.mock("@tanstack/react-query", () => ({
-  useQueryClient: () => ({
-    getQueryData: mockGetQueryData,
-  }),
-}));
-
 vi.mock("@/lib/notify", () => ({
   notify: {
     loading: vi.fn(() => "loading-toast-id"),
@@ -38,7 +31,6 @@ describe("useTodoistExport", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsGuest = false;
-    mockGetQueryData.mockReturnValue(undefined);
   });
 
   it("successfully triggers export in registered mode", async () => {
@@ -60,44 +52,13 @@ describe("useTodoistExport", () => {
     expect(success).toBe(true);
     expect(mockTrigger).toHaveBeenCalledWith("toggle");
     expect(notify.loading).toHaveBeenCalledWith("Exporting Todoist archive...");
-    expect(exportSpy).toHaveBeenCalledWith({
-      isGuest: false,
-      tasks: undefined,
-      projects: undefined,
-    });
+    expect(exportSpy).toHaveBeenCalledWith({ isGuest: false });
     expect(exportImportMod.downloadBackup).toHaveBeenCalled();
     expect(notify.success).toHaveBeenCalledWith("Todoist archive exported", {
       id: "loading-toast-id",
     });
     expect(mockTrigger).toHaveBeenCalledWith("success");
     expect(result.current.isExporting).toBe(false);
-  });
-
-  it("leverages TanStack query cache when present in registered mode", async () => {
-    const cachedTasks = [{ id: "t1", content: "Cached Task" }];
-    const cachedProjects = [{ id: "p1", name: "Cached Project" }];
-
-    mockGetQueryData.mockImplementation((key: unknown[]) => {
-      if (Array.isArray(key) && key[0] === "tasks") return cachedTasks;
-      if (Array.isArray(key) && key[0] === "projects") return cachedProjects;
-      return undefined;
-    });
-
-    const exportSpy = vi
-      .spyOn(todoistExportMod, "exportToTodoistZip")
-      .mockResolvedValueOnce(new Uint8Array([1, 2, 3]));
-
-    const { result } = renderHook(() => useTodoistExport());
-
-    await act(async () => {
-      await result.current.exportTodoistZip();
-    });
-
-    expect(exportSpy).toHaveBeenCalledWith({
-      isGuest: false,
-      tasks: cachedTasks,
-      projects: cachedProjects,
-    });
   });
 
   it("passes isGuest = true when user is in guest mode", async () => {
@@ -112,11 +73,7 @@ describe("useTodoistExport", () => {
       await result.current.exportTodoistZip();
     });
 
-    expect(exportSpy).toHaveBeenCalledWith({
-      isGuest: true,
-      tasks: undefined,
-      projects: undefined,
-    });
+    expect(exportSpy).toHaveBeenCalledWith({ isGuest: true });
   });
 
   it("handles export failure gracefully", async () => {

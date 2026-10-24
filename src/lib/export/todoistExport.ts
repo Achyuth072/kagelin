@@ -50,9 +50,8 @@ export function formatTodoistDate(dateStr?: string | Date | null): string {
   if (dateStr instanceof Date) return format(dateStr, "yyyy-MM-dd");
 
   const trimmed = dateStr.trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
-    return trimmed.slice(0, 10);
-  }
+  // Timed ISO strings must resolve to the local date; the UTC date part can differ by a day.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
   const parsed = new Date(trimmed);
   return isNaN(parsed.getTime()) ? trimmed : format(parsed, "yyyy-MM-dd");
 }
@@ -130,12 +129,15 @@ export function formatTodoistProjectCsv(options: {
   ];
 
   const activeTasks = tasks.filter((t) => !t.is_completed);
-  const activeIds = new Set(activeTasks.map((t) => t.id));
+  const rootIds = new Set(
+    activeTasks.filter((t) => !t.parent_id).map((t) => t.id),
+  );
   const rootTasks: Task[] = [];
   const childrenByParent = new Map<string, Task[]>();
 
   for (const task of activeTasks) {
-    if (task.parent_id && activeIds.has(task.parent_id)) {
+    // Children of non-root parents can't be emitted at INDENT 2, so promote to roots.
+    if (task.parent_id && rootIds.has(task.parent_id)) {
       const list = childrenByParent.get(task.parent_id) ?? [];
       list.push(task);
       childrenByParent.set(task.parent_id, list);
@@ -212,10 +214,8 @@ export interface TodoistExportData {
 }
 
 export interface TodoistExportOptions {
-  tasks?: Task[];
-  projects?: Project[];
-  supabase?: SupabaseClient;
   isGuest?: boolean;
+  supabase?: SupabaseClient;
 }
 
 export function buildTodoistExportZip(data: TodoistExportData): Uint8Array {
@@ -324,9 +324,5 @@ export async function collectTodoistExportData(
 export async function exportToTodoistZip(
   options: TodoistExportOptions = {},
 ): Promise<Uint8Array> {
-  const data =
-    options.tasks && options.projects
-      ? { tasks: options.tasks, projects: options.projects }
-      : await collectTodoistExportData(options);
-  return buildTodoistExportZip(data);
+  return buildTodoistExportZip(await collectTodoistExportData(options));
 }

@@ -60,9 +60,28 @@ describe("todoistExport - CSV formatting", () => {
       expect(formatTodoistDate("2025-04-15")).toBe("2025-04-15");
     });
 
-    it("extracts YYYY-MM-DD from ISO datetime string", () => {
-      expect(formatTodoistDate("2025-04-15T00:00:00.000Z")).toBe("2025-04-15");
-      expect(formatTodoistDate("2025-12-31T23:59:59.999Z")).toBe("2025-12-31");
+    it("resolves timed ISO strings to the local calendar date", () => {
+      const evening = new Date(2026, 0, 5, 20, 0, 0);
+      const afterMidnight = new Date(2026, 0, 5, 0, 30, 0);
+      expect(formatTodoistDate(evening.toISOString())).toBe("2026-01-05");
+      expect(formatTodoistDate(afterMidnight.toISOString())).toBe("2026-01-05");
+    });
+
+    it("formats Date instances using the local calendar date", () => {
+      expect(formatTodoistDate(new Date(2025, 7, 9, 1, 30))).toBe("2025-08-09");
+    });
+
+    it("resolves the local date even when the UTC date part differs", () => {
+      // Fixture crosses UTC midnight for the runner's offset; at UTC±0 the two behaviors coincide.
+      const eastOfUtc = -new Date().getTimezoneOffset() > 0;
+      const wallTime = eastOfUtc
+        ? new Date(2026, 0, 5, 0, 30)
+        : new Date(2026, 0, 5, 23, 30);
+      expect(formatTodoistDate(wallTime.toISOString())).toBe("2026-01-05");
+    });
+
+    it("returns the raw string when nothing parseable remains", () => {
+      expect(formatTodoistDate("2025-04-15T25:00")).toBe("2025-04-15T25:00");
     });
 
     it("returns empty string for null or undefined", () => {
@@ -237,6 +256,28 @@ describe("todoistExport - CSV formatting", () => {
       updated_at: "2025-01-01T00:00:00.000Z",
     };
 
+    const makeTask = (
+      overrides: Partial<Task> & Pick<Task, "id" | "content" | "parent_id">,
+    ): Task => ({
+      user_id: "u1",
+      project_id: "p1",
+      description: null,
+      priority: 4,
+      due_date: null,
+      do_date: null,
+      is_evening: false,
+      is_completed: false,
+      completed_at: null,
+      day_order: 1,
+      recurrence: null,
+      recurring_series_id: null,
+      google_event_id: null,
+      google_etag: null,
+      created_at: "2025-01-01T00:00:00.000Z",
+      updated_at: "2025-01-01T00:00:00.000Z",
+      ...overrides,
+    });
+
     it("generates valid header and meta rows for an empty project", () => {
       const csv = formatTodoistProjectCsv({
         project: mockProject,
@@ -391,6 +432,45 @@ describe("todoistExport - CSV formatting", () => {
       expect(lines[3]).toContain("task,Parent Task 1,Parent desc,1,1");
       expect(lines[4]).toContain("task,Subtask 1.1,,4,2");
       expect(lines[5]).toContain("task,Parent Task 2,,3,1");
+    });
+
+    it("promotes orphaned and nested subtasks to roots so every task is emitted", () => {
+      const tasks: Task[] = [
+        makeTask({ id: "root-1", parent_id: null, content: "Root Task" }),
+        makeTask({ id: "child-1", parent_id: "root-1", content: "Subtask" }),
+        makeTask({
+          id: "grandchild-1",
+          parent_id: "child-1",
+          content: "Nested Step",
+        }),
+        makeTask({
+          id: "orphan-1",
+          parent_id: "done-1",
+          content: "Orphaned Step",
+          day_order: 2,
+        }),
+        makeTask({
+          id: "done-1",
+          parent_id: null,
+          content: "Completed Parent",
+          is_completed: true,
+        }),
+      ];
+
+      const csv = formatTodoistProjectCsv({
+        project: mockProject,
+        tasks,
+      });
+
+      const lines = csv.split("\n").filter(Boolean);
+      expect(lines).toHaveLength(7);
+      const body = lines.slice(3).map((line) => line.split(",")[1]);
+      expect(body.sort()).toEqual([
+        "Nested Step",
+        "Orphaned Step",
+        "Root Task",
+        "Subtask",
+      ]);
     });
   });
 });
