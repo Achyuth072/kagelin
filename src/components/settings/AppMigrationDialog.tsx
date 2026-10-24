@@ -577,17 +577,6 @@ export function AppMigrationDialog({
             </TabsContent>
           </Tabs>
         </div>
-
-        <div className="flex justify-end pt-2">
-          <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            className="text-muted-foreground hover:text-foreground"
-            disabled={isAnyImporting}
-          >
-            Cancel
-          </Button>
-        </div>
       </ResponsiveDialogContent>
     </ResponsiveDialog>
   );

@@ -188,12 +188,12 @@ describe("AppMigrationDialog", () => {
     );
   });
 
-  it("handles dialog close via cancel button", () => {
+  it("handles dialog close via close button", () => {
     const onOpenChange = vi.fn();
     render(<AppMigrationDialog open onOpenChange={onOpenChange} />);
 
-    const cancelButton = screen.getByRole("button", { name: /cancel/i });
-    fireEvent.click(cancelButton);
+    const closeButton = screen.getByRole("button", { name: /close/i });
+    fireEvent.click(closeButton);
 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
