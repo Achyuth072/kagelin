@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.49.0-preview.4",
+    "date": "2026-10-24",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Align migration export tab layout and segmented controls with design system"
+      ],
+      "Fixed": [
+        "Match mobile drawer export layout to desktop dialog"
+      ]
+    }
+  },
+  {
     "version": "1.49.0-preview.3",
     "date": "2026-10-23",
     "channel": "preview",
@@ -687,17 +700,6 @@
     "sections": {
       "Fixed": [
         "Require a new passphrase after recovery-code unlock"
-      ]
-    }
-  },
-  {
-    "version": "1.43.1-preview.0",
-    "date": "2026-09-17",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Require a new passphrase after recovery-code unlock",
-        "Harden push subscription sync and keep content-free error messages"
       ]
     }
   }
