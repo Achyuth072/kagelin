@@ -1,6 +1,4 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { parseTodoistCsv } from "@/lib/import/todoist/parser";
 import { mapTodoistRowsToKagelin } from "@/lib/import/todoist/mapper";
 import {
@@ -35,11 +33,15 @@ function createTask(overrides: Partial<Task> = {}): Task {
 }
 
 describe("Todoist 2025 Template & Help Center CSV Specification Compatibility", () => {
-  const templatePath = resolve(
-    process.cwd(),
-    ".scratch/third-party-migration/Todoist Template CSV_2025.csv",
-  );
-  const templateCsv = readFileSync(templatePath, "utf-8");
+  const templateCsv = `TYPE,CONTENT,DESCRIPTION,PRIORITY,INDENT,AUTHOR,RESPONSIBLE,DATE,DATE_LANG,TIMEZONE,DURATION,DURATION_UNIT,DEADLINE,DEADLINE_LANG
+meta,view_style=list,,,,,,,,,,,,
+,,,,,,,,,,,,,
+task,Call that very important client,,1,1,,,today at 11:00,en,,30,minute,2025-03-31,en
+note,Only available on Tuesdays and Thursdays,,,,,,,,,,,,
+task,**Household chores**:,,4,1,,,,,,,,2025-02-24,en
+task,Clean the house,,4,2,,,every month @ 13:00,en,,120,minute,,
+task,Take out the trash,,3,2,,,every Friday,en,,,,,
+`;
 
   describe("Header & Column Schema Alignment", () => {
     it("matches the canonical 14 columns defined in Todoist Help Center and the 2025 template", () => {
