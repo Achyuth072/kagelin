@@ -85,7 +85,8 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   }),
 }));
 
-vi.mock("@/components/settings/ImportDialog", () => ({
+vi.mock("@/components/settings/AppMigrationDialog", () => ({
+  AppMigrationDialog: () => null,
   ImportDialog: () => null,
 }));
 
