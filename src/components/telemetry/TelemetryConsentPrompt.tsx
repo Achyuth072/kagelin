@@ -66,17 +66,15 @@ export function TelemetryConsentPrompt() {
                 }
           }
           className={cn(
-            // --offline-pill-offset is set on the root by AppShell; it lifts this banner clear of the DemoBar/OfflineIndicator pill, which shares this same bottom-6 anchor on desktop.
-            "fixed inset-x-0 bottom-[calc(var(--mobile-nav-height)+0.75rem)] md:bottom-[calc(1.5rem+var(--offline-pill-offset,0px))] z-50",
+            // --offline-pill-offset (set by AppShell) clears the DemoBar/OfflineIndicator pill sharing this bottom anchor on desktop.
+            "fixed inset-x-0 bottom-[calc(var(--mobile-nav-height)+0.75rem)] md:bottom-[calc(1.5rem+var(--offline-pill-offset,0px))] z-[var(--z-prompt)]",
             "flex justify-center px-4 pointer-events-none",
           )}
         >
           <div
             ref={bannerRef}
             className={cn(
-              // max-w-md is what mobile actually renders at (the px-4 wrapper
-              // already caps it tighter there); md: widens it once there's
-              // room, so the copy doesn't wrap to 3 lines on desktop.
+              // md: widens once there's room so the copy doesn't wrap to 3 lines on desktop.
               "w-full max-w-md md:max-w-xl p-2.5 sm:p-3 rounded-lg",
               "bg-card text-foreground border border-border/80 shadow-sm",
               "pointer-events-auto flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4",

@@ -3,10 +3,9 @@
 import { useIsOnline } from "@/lib/hooks/useIsOnline";
 import { useDemoMode } from "@/lib/hooks/useDemoMode";
 
-// Shared by OfflineIndicator and DemoBar, which never show at once — one
-// footprint for both, only color and content differ.
+// OfflineIndicator and DemoBar never show at once — one shared footprint, only color/content differ.
 export const BANNER_SLOT_WRAPPER_CLASS =
-  "fixed inset-x-0 top-[var(--offline-banner-top,var(--mobile-header-height))] z-30 md:absolute md:inset-x-0 md:top-auto md:bottom-6 md:z-40 md:flex md:justify-center md:pointer-events-none";
+  "fixed inset-x-0 top-[var(--offline-banner-top,var(--mobile-header-height))] z-[var(--z-status)] md:absolute md:inset-x-0 md:top-auto md:bottom-6 md:z-[var(--z-floating)] md:flex md:justify-center md:pointer-events-none";
 
 export const BANNER_SLOT_CARD_CLASS =
   "flex items-center gap-2 pointer-events-auto h-[var(--offline-banner-height)] w-full justify-center border-b px-4 md:h-auto md:w-auto md:justify-start md:gap-3 md:rounded-lg md:border md:px-4 md:py-2";

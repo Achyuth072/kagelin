@@ -15,12 +15,13 @@ export default function AddHabitFab({ onClick }: AddHabitFabProps) {
 
   return (
     <motion.button
+      data-testid="fab"
       onTapStart={() => trigger("thud")}
       whileTap={isPhone ? { scale: 0.95 } : {}}
       onClick={onClick}
       className={cn(
         buttonVariants({ size: "lg" }),
-        "fixed bottom-[calc(var(--mobile-nav-height)+0.75rem)] right-6 h-12 w-12 rounded-xl shadow-lg md:hidden cursor-pointer z-40",
+        "fixed bottom-[calc(var(--mobile-nav-height)+0.75rem)] right-6 h-12 w-12 rounded-xl shadow-lg md:hidden cursor-pointer z-[var(--z-floating)]",
         "[@media(max-height:400px)]:right-3 [@media(max-height:400px)]:h-10 [@media(max-height:400px)]:w-10",
       )}
     >

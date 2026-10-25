@@ -19,7 +19,7 @@ export function Toaster() {
       position="bottom-center"
       expand={true}
       duration={isChangelogOpen ? Infinity : 4000}
-      style={{ zIndex: 70 }}
+      style={{ zIndex: "var(--z-toast)" }}
       // Use container offset instead of per-toast margin so Sonner's stack height calculations don't overlap.
       offset={{
         bottom:

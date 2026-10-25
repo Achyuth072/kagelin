@@ -62,11 +62,12 @@ export const FloatingTimer = memo(function FloatingTimer() {
     <AnimatePresence>
       {shouldShow && (
         <motion.div
+          data-testid="floating-timer"
           initial={{ opacity: 0, y: 100, scale: 0.8 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 100, scale: 0.8 }}
           transition={{ type: "spring", stiffness: 280, damping: 60 }}
-          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-40 bg-card border border-border rounded-2xl shadow-2xl p-4 min-w-[200px] select-none"
+          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[var(--z-floating)] bg-card border border-border rounded-2xl shadow-2xl p-4 min-w-[200px] select-none"
           style={{ touchAction: "none" }}
         >
           {/* Mode Badge */}
