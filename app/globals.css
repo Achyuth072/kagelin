@@ -69,7 +69,7 @@
   --ease-spring-m: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-spring-bouncy: cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
-  /* JS spring animations (e.g. Framer Motion) should match: mass:1, stiffness:280, damping:60 */
+  /* Keep JS springs (Framer Motion) matched: mass:1, stiffness:280, damping:60 */
 }
 
 @keyframes accordion-down {
@@ -90,22 +90,25 @@
   }
 }
 
-/* Layout tokens */
 :root {
   --mobile-header-height: calc(4rem + env(safe-area-inset-top, 0px));
   --offline-banner-height: 2.25rem;
-  --mobile-nav-content-height: 3.25rem; /* 6px pad + 20px icon + 4px gap + 16px label + 6px pad; row stays above Android's 48px min touch target */
+  --mobile-nav-content-height: 3.25rem; /* 6px + 20px icon + 4px gap + 16px label + 6px pad; ≥ Android 48px touch target */
   --mobile-nav-item-pad: 0.375rem;
   /* Safe area inset subsumes the item's 6px bottom padding so they don't stack. */
   --mobile-safe-bottom: max(env(safe-area-inset-bottom, 0px) - 6px, 0px);
   --mobile-nav-height: calc(
     var(--mobile-nav-content-height) + 1px + var(--mobile-safe-bottom)
   );
+
+  --z-status: 30;
+  --z-floating: 40;
+  --z-prompt: 50;
+  --z-toast: 70;
 }
 
-/* iOS reserves a fixed ~34px for the home indicator regardless of device; cap
-   the extra padding at the item's own bottom pad instead of scaling with the
-   full inset, so labels sit close to the indicator like native tab bars do. */
+/* iOS reserves ~34px for the home indicator; cap the padding at the item's
+   own bottom pad so labels sit close to it, like native tab bars do. */
 @supports (-webkit-touch-callout: none) {
   :root {
     --mobile-safe-bottom: min(
@@ -115,38 +118,37 @@
   }
 }
 
-/* Light mode variables - Zen-Modernist (Matte & Ink) */
 :root {
-  --background: 40 20% 99%; /* #FCFCFA - Warm Washi */
-  --foreground: 0 0% 18%; /* #2E2E2E - Ink */
+  --background: 40 20% 99%;
+  --foreground: 0 0% 18%;
   --card: 40 20% 99%;
   --card-foreground: 0 0% 18%;
   --popover: 40 20% 99%;
   --popover-foreground: 0 0% 18%;
-  --primary: 0 0% 18%; /* Ink */
+  --primary: 0 0% 18%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 60 9% 96%; /* #F7F7F5 - Kept for sidebar */
+  --secondary: 60 9% 96%; /* kept for sidebar */
   --secondary-foreground: 0 0% 18%;
   --muted: 60 9% 96%;
-  --muted-foreground: 0 0% 43%; /* #6E6E6E - AA contrast on light backgrounds */
+  --muted-foreground: 0 0% 43%; /* AA text contrast */
   --accent: 60 9% 96%;
   --accent-foreground: 0 0% 18%;
-  --destructive: 12 40% 45%; /* Darkened Terracotta for AA contrast */
+  --destructive: 12 40% 45%; /* darkened for AA contrast */
   --destructive-foreground: 0 0% 98%;
-  /* Opaque terracotta wash for alert surfaces — no translucent bg-destructive/N overlays (see DESIGN_SYSTEM.md "opaque matte"). */
+  /* Opaque wash for alert surfaces, not translucent bg-destructive/N (see DESIGN_SYSTEM.md "opaque matte"). */
   --destructive-surface: 12 45% 95%;
   --destructive-surface-hover: 12 45% 91%;
   --destructive-surface-border: 12 30% 78%;
   /* --destructive only reaches 3.2:1 on this wash in dark mode. */
   --destructive-surface-foreground: 12 45% 38%;
-  --border: 0 0% 60%; /* AA non-text contrast (1.4.11) on light backgrounds */
+  --border: 0 0% 60%; /* AA non-text contrast */
   --input: 0 0% 60%;
   --ring: 0 0% 18%;
-  --brand: 220 44% 50%; /* #4B6CB7 - Kanso Blue */
+  --brand: 220 44% 50%;
   --brand-foreground: 0 0% 100%;
   --sidebar: 60 9% 96%;
   --sidebar-foreground: 0 0% 18%;
-  --sidebar-primary: 220 44% 50%; /* Kanso Blue for active states */
+  --sidebar-primary: 220 44% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 60 5% 91%;
   --sidebar-accent-foreground: 0 0% 18%;
@@ -154,36 +156,35 @@
   --sidebar-ring: 0 0% 18%;
 }
 
-/* Dark mode variables - Zen-Modernist (Sumi Ink) */
 .dark {
-  --background: 0 0% 10%; /* #1A1A1A - Sumi Ink */
-  --foreground: 0 0% 90%; /* #E5E5E5 - Lighter for contrast */
-  --card: 0 0% 13%; /* #222222 - Charcoal */
+  --background: 0 0% 10%;
+  --foreground: 0 0% 90%;
+  --card: 0 0% 13%;
   --card-foreground: 0 0% 90%;
   --popover: 0 0% 13%;
   --popover-foreground: 0 0% 90%;
-  --primary: 0 0% 90%; /* Light Ink */
+  --primary: 0 0% 90%;
   --primary-foreground: 0 0% 10%;
-  --secondary: 0 0% 13%; /* #202020 */
+  --secondary: 0 0% 13%;
   --secondary-foreground: 0 0% 90%;
   --muted: 0 0% 13%;
-  --muted-foreground: 0 0% 63%; /* #A1A1A1 */
+  --muted-foreground: 0 0% 63%;
   --accent: 0 0% 13%;
   --accent-foreground: 0 0% 90%;
-  --destructive: 12 32% 52%; /* Lightened Terracotta for AA text contrast */
+  --destructive: 12 32% 52%; /* lightened for AA text contrast */
   --destructive-foreground: 0 0% 98%;
   --destructive-surface: 12 25% 20%;
   --destructive-surface-hover: 12 25% 25%;
   --destructive-surface-border: 12 25% 34%;
   --destructive-surface-foreground: 12 45% 65%;
-  --border: 0 0% 34%; /* AA non-text contrast (1.4.11) on dark backgrounds */
+  --border: 0 0% 34%; /* AA non-text contrast */
   --input: 0 0% 34%;
   --ring: 0 0% 90%;
-  --brand: 220 44% 50%; /* #4B6CB7 - Kanso Blue */
+  --brand: 220 44% 50%;
   --brand-foreground: 0 0% 100%;
   --sidebar: 0 0% 13%;
   --sidebar-foreground: 0 0% 90%;
-  --sidebar-primary: 220 44% 50%; /* Kanso Blue for active states */
+  --sidebar-primary: 220 44% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 0 0% 20%;
   --sidebar-accent-foreground: 0 0% 90%;
@@ -224,7 +225,7 @@ input[type="radio"] {
   user-select: none;
 }
 
-/* Vaul Drawer - Faster close animation for responsive back navigation */
+/* Faster drawer close for responsive back navigation */
 /* eslint-disable tailwindcss/no-important */
 [vaul-drawer] {
   transition: transform 120ms cubic-bezier(0.32, 0.72, 0, 1) !important;
@@ -372,8 +373,7 @@ input[type="password"]:has(+ button)::-ms-clear {
   }
 }
 
-/* Task completion card styles — defined OUTSIDE @layer utilities so they have
-   higher cascade priority than Tailwind bg-* and hover:bg-* utilities */
+/* Outside @layer utilities so these outrank Tailwind bg-* / hover:bg-* utilities */
 /* eslint-disable tailwindcss/no-important */
 .task-ink-completed-card {
   opacity: 0.5 !important;
@@ -544,11 +544,8 @@ input[type="password"]:has(+ button)::-ms-clear {
   }
 }
 
-/* Sonner's toast <li> defaults to left:0 inside the centered <ol>; re-center
-   it here. Width comes from toastOptions in toaster.tsx, not here.
-   Composed with var(--y) (not replacing it): --y is Sonner's own per-toast
-   vertical stacking transform, set inline per toast. Overriding it outright
-   collapses every stacked toast onto the same spot instead of stacking them. */
+/* Sonner's toast <li> defaults to left:0 inside the centered <ol>; recenter it here.
+   Keep Sonner's own --y stacking transform: overriding it collapses the stack onto one spot. */
 /* eslint-disable tailwindcss/no-important */
 [data-sonner-toaster][data-x-position="center"] [data-sonner-toast] {
   left: 50% !important;

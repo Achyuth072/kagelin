@@ -71,9 +71,10 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries: vi.fn() }),
 }));
 
-// ImportDialog pulls in habit-import mutations that need a real
+// AppMigrationDialog pulls in habit-import mutations that need a real
 // QueryClientProvider; irrelevant to the tab-gating behavior under test.
-vi.mock("@/components/settings/ImportDialog", () => ({
+vi.mock("@/components/settings/AppMigrationDialog", () => ({
+  AppMigrationDialog: () => null,
   ImportDialog: () => null,
 }));
 

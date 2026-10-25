@@ -61,3 +61,13 @@ export const notify = Object.assign(base, {
   dismiss,
   promise: toast.promise,
 });
+
+declare global {
+  interface Window {
+    __notify?: typeof notify;
+  }
+}
+
+if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
+  window.__notify = notify;
+}
