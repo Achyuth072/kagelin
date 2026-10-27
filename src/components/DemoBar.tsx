@@ -37,12 +37,15 @@ export function DemoBar() {
           )}
         >
           <Sparkles className="w-4 h-4 text-muted-foreground shrink-0" />
-          <span className="text-[13px] font-medium tracking-[0.01em]">
-            You&apos;re exploring with demo data
+          <span className="text-[13px] font-medium tracking-[0.01em] whitespace-nowrap">
+            <span className="hidden sm:inline">
+              You&apos;re exploring with demo data
+            </span>
+            <span className="sm:hidden">Demo data</span>
           </span>
           <Link
             href={`/?project=${DEMO_TUTORIAL_PROJECT_ID}`}
-            className={NOTIFICATION_LINK_BUTTON_CLASS}
+            className={cn(NOTIFICATION_LINK_BUTTON_CLASS, "ml-3 sm:ml-1")}
           >
             Meet Kagelin
           </Link>

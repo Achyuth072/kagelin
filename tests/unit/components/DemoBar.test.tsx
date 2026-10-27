@@ -98,6 +98,19 @@ describe("DemoBar", () => {
     ).toHaveAttribute("href", `/?project=${DEMO_TUTORIAL_PROJECT_ID}`);
   });
 
+  it("renders responsive demo text with whitespace-nowrap to preserve padding on mobile", async () => {
+    localStorage.setItem("kanso_guest_mode", "true");
+    mockStore.reset();
+    renderDemoBar();
+
+    const mobileText = await screen.findByText("Demo data");
+    const desktopText = screen.getByText(/you're exploring with demo data/i);
+
+    expect(mobileText).toHaveClass("sm:hidden");
+    expect(desktopText).toHaveClass("hidden", "sm:inline");
+    expect(mobileText.parentElement).toHaveClass("whitespace-nowrap");
+  });
+
   it("is a pill centred in the content column on desktop, like OfflineIndicator", async () => {
     localStorage.setItem("kanso_guest_mode", "true");
     mockStore.reset();
