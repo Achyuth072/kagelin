@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.50.0-preview.0",
+    "date": "2026-10-27",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Defer backup reminder toast while telemetry consent is prompting",
+        "Lift mobile toasts above FAB row and bound toast stack",
+        "Move desktop toasts bottom-right and drive layout breakpoint via app"
+      ],
+      "Fixed": [
+        "Adapt demo banner text on mobile to prevent line wrap"
+      ]
+    }
+  },
+  {
     "version": "1.49.0",
     "date": "2026-10-24",
     "channel": "stable",
@@ -705,17 +720,6 @@
         "Scope and guard habit_entries encryption backfill, clamp skipped heatmap levels",
         "Address uhabits review findings across migration, entry clearing, export, and tests",
         "Exclude merge commits from changelog, open editor on blank curation choice"
-      ]
-    }
-  },
-  {
-    "version": "1.43.2",
-    "date": "2026-09-18",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Widen delete-project dialog padding, add Ctrl/Cmd+Enter save to event dialog",
-        "Scope sign out to current device, add sign-out-all-devices option"
       ]
     }
   }
