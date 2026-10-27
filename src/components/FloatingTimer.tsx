@@ -1,10 +1,11 @@
 "use client";
 
-import React, { memo, useEffect, useRef } from "react";
+import React, { memo, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Play, Pause, X, Maximize2 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useMeasuredOffset } from "@/lib/hooks/useMeasuredOffset";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimer } from "@/components/TimerProvider";
@@ -22,6 +23,8 @@ export const FloatingTimer = memo(function FloatingTimer() {
   const isRunning = useTimerStore((s) => s.state.isRunning);
   const remainingSeconds = useTimerStore((s) => s.state.remainingSeconds);
   const completedSessions = useTimerStore((s) => s.state.completedSessions);
+  // useTimer(), not useTimerActions(): needs `start`, which isn't in the
+  // stable actions-only slice.
   const { start, pause } = useTimer();
 
   const pathname = usePathname();
@@ -39,30 +42,8 @@ export const FloatingTimer = memo(function FloatingTimer() {
 
   const timerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    const node = timerRef.current;
-
-    if (!shouldShow || !node) {
-      root.style.setProperty("--floating-timer-offset", "0px");
-      return;
-    }
-
-    const observer = new ResizeObserver(([entry]) => {
-      const height =
-        entry.borderBoxSize?.[0]?.blockSize ??
-        (entry.target as HTMLElement).offsetHeight ??
-        entry.contentRect.height;
-      root.style.setProperty("--floating-timer-offset", `${height + 12}px`);
-    });
-
-    observer.observe(node);
-
-    return () => {
-      observer.disconnect();
-      root.style.setProperty("--floating-timer-offset", "0px");
-    };
-  }, [shouldShow]);
+  // Toasts stack above the timer on desktop (Toaster's offset formula).
+  useMeasuredOffset(timerRef, shouldShow, "--floating-timer-offset");
 
   const handlePlayPause = () => {
     trigger("toggle");

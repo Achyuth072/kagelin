@@ -39,17 +39,29 @@ async function waitForStableBox(locator: Locator): Promise<Rect | null> {
   return el.boundingBox();
 }
 
-async function getVisibleBox(locator: Locator): Promise<Rect | null> {
+async function getVisibleBox(
+  locator: Locator,
+  measureChild = false,
+): Promise<Rect | null> {
   const count = await locator.count();
   if (count === 0) return null;
   const el = locator.first();
   if (!(await el.isVisible())) return null;
 
-  const innerCard = el.locator("> div");
-  const target =
-    (await innerCard.count()) > 0 && (await innerCard.first().isVisible())
-      ? innerCard.first()
-      : el;
+  // Banners publish their testid on the full-viewport wrapper (fixed
+  // inset-x-0, pointer-events-none); the visible card is a direct child.
+  // Overlays whose testid is already on the card (FAB, FloatingTimer,
+  // MobileNav) measure themselves.
+  let target = el;
+  if (measureChild) {
+    const innerCard = el.locator("> div");
+    if (
+      (await innerCard.count()) > 0 &&
+      (await innerCard.first().isVisible())
+    ) {
+      target = innerCard.first();
+    }
+  }
 
   return waitForStableBox(target);
 }
@@ -192,7 +204,11 @@ async function assertAllBottomOverlaysDoNotIntersect(page: Page) {
     if (box) toasts.push({ name: `Toast #${i}`, box });
   }
 
-  const staticOverlays: { name: string; locator: Locator }[] = [
+  const staticOverlays: {
+    name: string;
+    locator: Locator;
+    measureChild?: boolean;
+  }[] = [
     { name: "FAB", locator: page.locator('[data-testid="fab"]') },
     {
       name: "FloatingTimer",
@@ -201,14 +217,17 @@ async function assertAllBottomOverlaysDoNotIntersect(page: Page) {
     {
       name: "DemoBar",
       locator: page.locator('[data-testid="demo-bar"]'),
+      measureChild: true,
     },
     {
       name: "OfflineIndicator",
       locator: page.locator('[data-testid="offline-indicator"]'),
+      measureChild: true,
     },
     {
       name: "TelemetryConsentPrompt",
       locator: page.locator('[data-testid="telemetry-consent-prompt"]'),
+      measureChild: true,
     },
     {
       name: "MobileNav",
@@ -218,7 +237,7 @@ async function assertAllBottomOverlaysDoNotIntersect(page: Page) {
 
   const resolvedStatic: { name: string; box: Rect }[] = [];
   for (const item of staticOverlays) {
-    const box = await getVisibleBox(item.locator);
+    const box = await getVisibleBox(item.locator, item.measureChild);
     if (box) resolvedStatic.push({ name: item.name, box });
   }
 

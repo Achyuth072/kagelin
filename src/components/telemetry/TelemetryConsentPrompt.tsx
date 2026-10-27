@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { ShieldCheck, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { PrivacyPolicyLink } from "@/components/ui/privacy-policy-link";
 import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
+import { useMeasuredOffset } from "@/lib/hooks/useMeasuredOffset";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
@@ -17,23 +18,9 @@ export function TelemetryConsentPrompt() {
   const { trigger } = useHaptic();
 
   const bannerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const node = bannerRef.current;
-    if (!isVisible || !node) return;
-    const root = document.documentElement;
-    const observer = new ResizeObserver(([entry]) => {
-      const height =
-        entry.borderBoxSize?.[0]?.blockSize ??
-        (entry.target as HTMLElement).offsetHeight ??
-        entry.contentRect.height;
-      root.style.setProperty("--telemetry-prompt-offset", `${height + 12}px`);
-    });
-    observer.observe(node);
-    return () => {
-      observer.disconnect();
-      root.style.setProperty("--telemetry-prompt-offset", "0px");
-    };
-  }, [isVisible]);
+  // Height feeds --telemetry-prompt-offset (read by Toaster's offset formula)
+  // so toasts don't overlap this banner.
+  useMeasuredOffset(bannerRef, isVisible, "--telemetry-prompt-offset");
 
   const handleEnable = () => {
     trigger("toggle");
@@ -73,6 +60,9 @@ export function TelemetryConsentPrompt() {
           <div
             ref={bannerRef}
             className={cn(
+              // max-w-md is what mobile actually renders at (the px-4 wrapper
+              // already caps it tighter there); md: widens it once there's
+              // room, so the copy doesn't wrap to 3 lines on desktop.
               "w-full max-w-md md:max-w-xl p-2.5 sm:p-3 rounded-lg",
               "bg-card text-foreground border border-border/80 shadow-sm",
               "pointer-events-auto flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4",

@@ -22,6 +22,7 @@ export function OfflineIndicator() {
 
   useStatusPillOffset(cardRef, isVisible);
 
+  // Mobile enters from above the header, desktop rises from the bottom of the content column
   const offscreenY = isMobile ? -16 : 16;
 
   return (

@@ -1,8 +1,15 @@
 import { test, expect, chromium } from "@playwright/test";
 import { waitForBackAnchor } from "./support/guest-mode";
 
+/**
+ * Toast width should hug its content, not Sonner's default 356px.
+ * Connects to CDP at localhost:9222 (system Chrome) — Playwright's bundled
+ * chromium is missing system libs in this WSL env.
+ */
 const CDP_ENDPOINT = "http://localhost:9222";
 
+// No CI or teammate machine launches Chrome with --remote-debugging-port=9222;
+// probe first so those runs skip instead of failing on a connection error.
 async function cdpReachable() {
   try {
     const res = await fetch(`${CDP_ENDPOINT}/json/version`, {
@@ -20,6 +27,8 @@ test.describe("Sonner toast width", () => {
     test.skip(!(await cdpReachable()), `no CDP endpoint at ${CDP_ENDPOINT}`);
     const browser = await chromium.connectOverCDP(CDP_ENDPOINT);
     const context = browser.contexts()[0] ?? (await browser.newContext());
+    // Pre-seed guest mode — the Guest button's signInAsGuest()+push races the
+    // auth guard under CDP, redirect-looping back to /login.
     await context.addCookies([
       {
         name: "kanso_guest_mode",

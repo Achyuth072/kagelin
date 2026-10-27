@@ -21,6 +21,7 @@ import { AppSidebar as SidebarComponent } from "@/components/layout/AppSidebar";
 import { MobileNav as MobileNavComponent } from "@/components/layout/MobileNav";
 import { Header as HeaderComponent } from "@/components/layout/Header";
 
+// Memoize core UI shells to prevent re-renders when global modal state changes (PERF-01)
 const AppSidebar = React.memo(SidebarComponent);
 const MobileNav = React.memo(MobileNavComponent);
 const Header = React.memo(HeaderComponent);
@@ -286,6 +287,8 @@ function AppShellContent({ children }: AppShellProps) {
     pathname === "/habits";
   const hasTopBanner = useActiveBanner() !== null;
 
+  // Must run inside EncryptionGate so converting guests set a passphrase
+  // before local data is encrypted and uploaded.
   const { isMigrating, migrationStuck, exportSnapshot } =
     useMigrationStrategy();
 
