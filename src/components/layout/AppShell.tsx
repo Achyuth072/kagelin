@@ -21,7 +21,6 @@ import { AppSidebar as SidebarComponent } from "@/components/layout/AppSidebar";
 import { MobileNav as MobileNavComponent } from "@/components/layout/MobileNav";
 import { Header as HeaderComponent } from "@/components/layout/Header";
 
-// Memoize core UI shells to prevent re-renders when global modal state changes (PERF-01)
 const AppSidebar = React.memo(SidebarComponent);
 const MobileNav = React.memo(MobileNavComponent);
 const Header = React.memo(HeaderComponent);
@@ -151,7 +150,6 @@ function ChangelogPopupWatcher() {
       try {
         const info = await fetchLatestVersion();
         if (!info) return;
-        // Stable builds should not react to preview-only releases.
         if (RELEASE_CHANNEL === "stable" && info.channel !== "stable") return;
         setServerVersion((prev) => {
           if (prev !== info.version) {
@@ -159,9 +157,7 @@ function ChangelogPopupWatcher() {
           }
           return info.version;
         });
-      } catch {
-        // ignore
-      }
+      } catch {}
     };
 
     checkForUpdates();
@@ -283,7 +279,6 @@ function AppShellContent({ children }: AppShellProps) {
   const pathname = usePathname();
   const isFocus = pathname === "/focus";
   const hideMobileNav = pathname === "/focus" || pathname === "/settings";
-  // Sized by --mobile-page-height; nav spacers cause hidden scroll overflow.
   const isFixedHeight =
     hideMobileNav ||
     pathname === "/" ||
@@ -291,8 +286,6 @@ function AppShellContent({ children }: AppShellProps) {
     pathname === "/habits";
   const hasTopBanner = useActiveBanner() !== null;
 
-  // Must run inside EncryptionGate so converting guests set a passphrase
-  // before local data is encrypted and uploaded.
   const { isMigrating, migrationStuck, exportSnapshot } =
     useMigrationStrategy();
 
@@ -302,19 +295,10 @@ function AppShellContent({ children }: AppShellProps) {
   const setIsDesktop = useUiStore((state) => state.setIsDesktop);
   const [commandOpen, setCommandOpen] = useState(false);
 
-  // Sync isDesktop state globally to reduce hook overhead in list items
   const isDesktop = useMediaQuery("(min-width: 768px)");
   useLayoutEffect(() => {
     setIsDesktop(isDesktop);
   }, [isDesktop, setIsDesktop]);
-
-  // Set on root before paint so sibling overlays inherit the offset without a flash.
-  useLayoutEffect(() => {
-    document.documentElement.style.setProperty(
-      "--offline-pill-offset",
-      hasTopBanner ? "3.5rem" : "0px",
-    );
-  }, [hasTopBanner]);
 
   useWeeklyBackup();
 
@@ -397,7 +381,6 @@ function AppShellContent({ children }: AppShellProps) {
 
         {!hideMobileNav && <MobileNav />}
 
-        {/* Rendered outside template animation to prevent shifts */}
         <GlobalFabs />
 
         <GlobalOverlays
@@ -413,12 +396,10 @@ function AppShellContent({ children }: AppShellProps) {
 export default function AppShell({ children }: AppShellProps) {
   const { user, loading } = useAuth();
   const pathname = usePathname();
-  // Admin routes are self-contained pages with their own nav — they never
-  // need the app sidebar/header shell.
   const isBareRoute =
     AUTH_STANDALONE_ROUTES.includes(pathname) || isAdminRoute(pathname);
 
-  useBackAnchor(); // must stay mounted across navigation — see useBackAnchor.ts
+  useBackAnchor();
 
   useEffect(() => {
     purgeLegacyStorage();

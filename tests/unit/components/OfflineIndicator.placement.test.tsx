@@ -150,7 +150,7 @@ describe("offline layout wiring", () => {
 
     // Sonner stacking math ignores per-toast margins; shifting requires the container offset prop.
     expect(toaster).toContain(
-      "calc(1.25rem + var(--offline-pill-offset,0px) + var(--telemetry-prompt-offset,0px))",
+      "calc(1.5rem + max(var(--floating-timer-offset, 0px), calc(var(--offline-pill-offset, 0px) + var(--telemetry-prompt-offset, 0px))))",
     );
     expect(toaster).not.toContain("md:mb-5");
     expect(toaster).not.toContain("mb-[");

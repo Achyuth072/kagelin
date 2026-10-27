@@ -16,17 +16,17 @@ export function TelemetryConsentPrompt() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const { trigger } = useHaptic();
 
-  // Height feeds --telemetry-prompt-offset (read by Toaster) so toasts don't overlap this banner.
   const bannerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const node = bannerRef.current;
     if (!isVisible || !node) return;
     const root = document.documentElement;
     const observer = new ResizeObserver(([entry]) => {
-      root.style.setProperty(
-        "--telemetry-prompt-offset",
-        `${entry.contentRect.height + 12}px`,
-      );
+      const height =
+        entry.borderBoxSize?.[0]?.blockSize ??
+        (entry.target as HTMLElement).offsetHeight ??
+        entry.contentRect.height;
+      root.style.setProperty("--telemetry-prompt-offset", `${height + 12}px`);
     });
     observer.observe(node);
     return () => {
@@ -66,7 +66,6 @@ export function TelemetryConsentPrompt() {
                 }
           }
           className={cn(
-            // --offline-pill-offset (set by AppShell) clears the DemoBar/OfflineIndicator pill sharing this bottom anchor on desktop.
             "fixed inset-x-0 bottom-[calc(var(--mobile-nav-height)+0.75rem)] md:bottom-[calc(1.5rem+var(--offline-pill-offset,0px))] z-[var(--z-prompt)]",
             "flex justify-center px-4 pointer-events-none",
           )}
@@ -74,7 +73,6 @@ export function TelemetryConsentPrompt() {
           <div
             ref={bannerRef}
             className={cn(
-              // md: widens once there's room so the copy doesn't wrap to 3 lines on desktop.
               "w-full max-w-md md:max-w-xl p-2.5 sm:p-3 rounded-lg",
               "bg-card text-foreground border border-border/80 shadow-sm",
               "pointer-events-auto flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4",

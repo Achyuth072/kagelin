@@ -247,11 +247,6 @@ test.describe("Bottom overlays overlap suite", () => {
 
   test.describe("Desktop (1280x800)", () => {
     test("toasts do not intersect overlays at 1280x800", async ({ page }) => {
-      test.fail(
-        true,
-        "Fails until Ticket 02: desktop toasts centered instead of bottom-right, intersecting TelemetryConsentPrompt",
-      );
-
       await setupPageOverlays(page, {
         viewport: { width: 1280, height: 800 },
         route: "/",
@@ -265,11 +260,6 @@ test.describe("Bottom overlays overlap suite", () => {
     test("offline: toasts do not intersect offline indicator at 1280x800", async ({
       page,
     }) => {
-      test.fail(
-        true,
-        "Fails until Ticket 02: desktop toasts centered instead of bottom-right",
-      );
-
       await setupPageOverlays(page, {
         viewport: { width: 1280, height: 800 },
         route: "/",
@@ -283,14 +273,9 @@ test.describe("Bottom overlays overlap suite", () => {
   });
 
   test.describe("Tablet / narrow band (700x900)", () => {
-    test("confirms spec problem #4: toasts overlap mobile nav when 600-767px breakpoint disagrees", async ({
+    test("toasts do not overlap mobile nav on 600-767px band", async ({
       page,
     }) => {
-      test.fail(
-        true,
-        "Confirms spec problem #4: Sonner 600px desktop offset sits inside mobile nav on 600-767px band",
-      );
-
       await setupPageOverlays(page, {
         viewport: { width: 700, height: 900 },
         route: "/",
@@ -305,11 +290,6 @@ test.describe("Bottom overlays overlap suite", () => {
     test("all overlays active at 700x900 do not intersect", async ({
       page,
     }) => {
-      test.fail(
-        true,
-        "Fails until Ticket 02: centered toasts collide with FloatingTimer on 700px viewport",
-      );
-
       await setupPageOverlays(page, {
         viewport: { width: 700, height: 900 },
         route: "/",

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo } from "react";
+import React, { memo, useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Play, Pause, X, Maximize2 } from "lucide-react";
@@ -22,22 +22,47 @@ export const FloatingTimer = memo(function FloatingTimer() {
   const isRunning = useTimerStore((s) => s.state.isRunning);
   const remainingSeconds = useTimerStore((s) => s.state.remainingSeconds);
   const completedSessions = useTimerStore((s) => s.state.completedSessions);
-  // useTimer(), not useTimerActions(): needs `start`, which isn't in the
-  // stable actions-only slice.
   const { start, pause } = useTimer();
 
   const pathname = usePathname();
   const router = useRouter();
-  const { trigger, isPhone } = useHaptic();
+  const { trigger } = useHaptic();
 
   const isPipActive = useUiStore((state) => state.isPipActive);
+  const isDesktop = useUiStore((state) => state.isDesktop);
 
-  // Only show if timer is active, NOT on focus page, NOT on mobile, AND NOT in PIP
   const shouldShow =
     (isRunning || completedSessions > 0) &&
     pathname !== "/focus" &&
-    !isPhone &&
+    isDesktop &&
     !isPipActive;
+
+  const timerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const node = timerRef.current;
+
+    if (!shouldShow || !node) {
+      root.style.setProperty("--floating-timer-offset", "0px");
+      return;
+    }
+
+    const observer = new ResizeObserver(([entry]) => {
+      const height =
+        entry.borderBoxSize?.[0]?.blockSize ??
+        (entry.target as HTMLElement).offsetHeight ??
+        entry.contentRect.height;
+      root.style.setProperty("--floating-timer-offset", `${height + 12}px`);
+    });
+
+    observer.observe(node);
+
+    return () => {
+      observer.disconnect();
+      root.style.setProperty("--floating-timer-offset", "0px");
+    };
+  }, [shouldShow]);
 
   const handlePlayPause = () => {
     trigger("toggle");
@@ -62,6 +87,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
     <AnimatePresence>
       {shouldShow && (
         <motion.div
+          ref={timerRef}
           data-testid="floating-timer"
           initial={{ opacity: 0, y: 100, scale: 0.8 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -70,7 +96,6 @@ export const FloatingTimer = memo(function FloatingTimer() {
           className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[var(--z-floating)] bg-card border border-border rounded-2xl shadow-2xl p-4 min-w-[200px] select-none"
           style={{ touchAction: "none" }}
         >
-          {/* Mode Badge */}
           <div className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground mb-1 text-center">
             {mode === "focus"
               ? "Focus"
@@ -79,12 +104,10 @@ export const FloatingTimer = memo(function FloatingTimer() {
                 : "Long Break"}
           </div>
 
-          {/* Timer Display */}
           <div className="text-3xl font-light font-mono tracking-tight text-foreground tabular-nums text-center mb-3">
             {formatTime(remainingSeconds)}
           </div>
 
-          {/* Controls */}
           <div className="flex items-center justify-center gap-2">
             <button
               onClick={handlePlayPause}
@@ -118,7 +141,6 @@ export const FloatingTimer = memo(function FloatingTimer() {
             </button>
           </div>
 
-          {/* Session Counter */}
           <div className="text-[10px] text-muted-foreground mt-2 text-center">
             {mode === "focus"
               ? `Session ${completedSessions + 1}`
