@@ -2,47 +2,28 @@
 
 Instructions for coding agents working in this repository.
 
+## Project
+
+Kagelin (codename Kanso) is a Next.js 16 App Router monolith backed by Supabase (Postgres + Auth + Realtime), designed local-first with cloud sync layered on top. Package manager is npm; Node >= 24. All details below assume a Linux/WSL2 dev environment.
+
 ## Commands
 
-```bash
-npm run dev              # dev server, Turbopack, port 3000 (service worker disabled)
-npm run build             # prod build (webpack) — required if the change touches the service worker
-npm run build:wsl         # same build under a 3.5 GB memory cgroup (WSL2; stop `npm run dev` first)
-npm start                 # serve the prod build on :3000
-npm run typecheck         # tsc --noEmit
-npm run lint               # eslint
-npm run lint:strict        # eslint --max-warnings=13
-npm run format:check       # prettier --check
-npm run validate           # format:check + lint:strict + typecheck + test:run, sequentially — run before considering work done
-npm run validate:wsl       # same validation under a 2.5 GB memory cgroup (WSL2)
-npm run test               # vitest (watch mode)
-npx vitest run <path>      # run a single unit test file
-npx vitest run <path> -t "<name>"  # run a single test by name
-npm run e2e                 # playwright (automatically starts dev server if not running)
-npm run e2e:chromium        # playwright, Chromium only (recommended for lightweight WSL2 runs)
-npx playwright test <path>  # run a single e2e spec
-npx playwright screenshot <url> <path>  # capture page/component screenshot via Playwright CLI
-npm run dead-code           # knip — unused exports/files
-npm run unused-deps          # depcheck
-npm run ast-grep             # ast-grep scan — repo-specific structural lint rules (.ast-grep/rules), advisory
-```
+`npm run validate` (format:check → lint:strict → typecheck → test:run, sequentially) is the single verification gate — run it before considering work done. Under WSL2 memory limits use `npm run validate:wsl` / `npm run build:wsl` (stop `npm run dev` first for `build:wsl`). Other scripts live in `package.json`.
 
-Playwright automatically manages the dev server via the `webServer` block in `playwright.config.ts`. Always use the Playwright CLI (`npm run e2e`, `npx playwright test`, or `npx playwright screenshot`) for driving end-to-end tests and capturing screenshots.
+Gotchas the environment won't tell you:
 
-The service worker (Serwist) is **disabled** under `npm run dev` (Turbopack skips the Serwist wrapper entirely). To reproduce SW/offline/PWA behavior you must `npm run build && npm start`. See [`.claude/skills/verify/SKILL.md`](.claude/skills/verify/SKILL.md) for driving the app end-to-end, including how to seed guest mode for Playwright without racing the auth guard.
-
-`npm run prepare` (runs on `npm install` via husky) also copies `sql-wasm.wasm` into `public/` — required for the uhabits `.db` import feature (parsed client-side via `sql.js`).
+- `npm run dev` (Turbopack) has the service worker **disabled** — Turbopack skips the Serwist wrapper entirely. To reproduce SW/offline/PWA behavior you must `npm run build && npm start` (both webpack).
+- Playwright manages the dev server itself via the `webServer` block in `playwright.config.ts`. Always drive e2e through the Playwright CLI (`npm run e2e`, `npx playwright test <path>`, `npx playwright screenshot`); `e2e:chromium` is the lightweight WSL2 run.
+- `npm run prepare` (runs on `npm install` via husky) copies `sql-wasm.wasm` into `public/` — required for the uhabits `.db` import feature (parsed client-side via `sql.js`).
+- `npm run lint:strict` fails above 13 warnings — the budget is deliberate; don't raise it to pass a check.
 
 ## Architecture
-
-Kagelin (codename Kanso) is a Next.js 16 App Router monolith backed by Supabase (Postgres + Auth + Realtime), designed local-first with cloud sync layered on top.
 
 **Two directories split routing from logic:**
 
 - `app/` — routes, layouts, API routes only. Should stay thin: compose components from `src/components/`, don't embed business logic.
 - `src/components/` — presentation, grouped by product domain (`habits/`, `tasks/`, `calendar/`, `stats/`, …), plus `ui/` (Shadcn/Radix primitives, kebab-case files) and `providers/` (app-wide context).
-- `src/lib/` — everything else: `hooks/` (React Query data-access hooks — components should not call `supabase.from(...)` directly), `mutations/` (optimistic-update mutation hooks), `store/` (Zustand — `timerStore.ts`, `uiStore.ts`), `sync/`, `caldav/`, `calendar-oauth/`, `webdav/`, `import/` (uhabits), `schemas/` (Zod), `types/`.
-- `supabase/schema.sql` is the source of truth for the DB. Every table enforces `user_id = auth.uid()` via RLS — access control is a Postgres concern, not a middleware one.
+- `src/lib/` — everything else, by concern: data access (React Query hooks and optimistic-update mutations — components should not call `supabase.from(...)` directly), local stores (Zustand — `timerStore.ts`, `uiStore.ts`), sync adapters (CalDAV, calendar OAuth, WebDAV), uhabits import, Zod schemas, types.
 
 **State is split by nature, not by feature**: server-owned data (tasks, habits, events) lives in TanStack Query with IndexedDB persistence; ephemeral/local UI and the focus timer live in Zustand. The timer specifically reconciles against server time (`serverClock.ts`) rather than trusting device clocks, so it survives tab suspension and cross-device handoff.
 
@@ -52,11 +33,7 @@ Kagelin (codename Kanso) is a Next.js 16 App Router monolith backed by Supabase 
 - **Registered (free)**: cloud-persisted, on-demand calendar sync (browser talks directly to Google/MS APIs using the user's own OAuth quota — keeps this tier free to run).
 - **Premium (paid)**: adds realtime cross-device mirroring over Supabase Realtime and background/scheduled server-side sync.
 
-## Where to look for more
-
-- [`CONTEXT.md`](CONTEXT.md) — canonical domain glossary (Habit vs Entry, Streak vs Score, Goal vs Frequency, Series/Occurrence, Stats vs Insights, calendar sync terms). Read before naming anything in these domains; conflicting terminology must be resolved, not shrugged off.
-- [`docs/adr/`](docs/adr/) — architecture decisions with the rejected alternatives and consequences (client-side calendar token handling, the server-anchored timer model, habit color overrides, frequency-aware streak computation). Check here before "fixing" something that looks like a bug but was a deliberate tradeoff.
-- [`README.md`](README.md) — product feature list and shortcuts, useful for understanding user-facing scope.
+`supabase/schema.sql` is the source of truth for the DB. Every table enforces `user_id = auth.uid()` via RLS — access control is a Postgres concern, not a middleware one.
 
 ## Conventions
 
@@ -65,11 +42,20 @@ Kagelin (codename Kanso) is a Next.js 16 App Router monolith backed by Supabase 
 - Unused vars/params: prefix with `_` (linter ignores `^_`).
 - A catch block that only does `console.*` is a lint error — rethrow, surface to the UI, or report to Sentry instead of swallowing it silently.
 - React Compiler is on (`eslint-plugin-react-compiler` set to error) — manual `useMemo`/`useCallback` should generally be unnecessary; a compiler bailout is a smell worth checking rather than papering over.
-- **Code Search Constraint**: for _structural_ searches on source files (`.ts`, `.tsx`, `.js`, `.jsx`) — a call pattern, a JSX shape, a catch block, a hook's argument list — use `ast-grep` via `Bash` (`npx ast-grep run -p '<pattern>' -l ts <path>`), not grep; it matches by AST so formatting and string contents that look like code don't fool it. Plain grep/rg is fine for simple lexical lookups (where is `addEvent` called, does this file import `X`) and for non-code files (`.md`, `.json`, `.env`). `npm run ast-grep` runs the repo's custom `.ast-grep/rules/` lint rules (advisory only, not yet part of `validate`); see [`.scratch/tooling/ast-grep-usage-research.md`](.scratch/tooling/ast-grep-usage-research.md) for pattern syntax and more advanced usage.
-
+- **Code Search Constraint**: for _structural_ searches on source files (`.ts`, `.tsx`, `.js`, `.jsx`) — a call pattern, a JSX shape, a catch block, a hook's argument list — use `ast-grep` via `Bash` (`npx ast-grep run -p '<pattern>' -l ts <path>`), not grep; it matches by AST so formatting and string contents that look like code don't fool it. Plain grep/rg is fine for simple lexical lookups (where is `addEvent` called, does this file import `X`) and for non-code files (`.md`, `.json`, `.env`). `npm run ast-grep` runs the repo's custom `.ast-grep/rules/` lint rules (advisory only, not yet part of `validate`).
 - **Batch verification**: run checks together in one composite command (e.g. `npm run validate` or `git status && npm run lint`) rather than across multiple turns to preserve turn budget.
-- **Zero background polling**: the harness notifies reactively on process completion; never poll `manage_task(Action="status")` on background builds or tests.
 - **PR size tripwire**: when a branch's diff against `origin/dev` passes ~500 non-test lines, stop and propose the next finished slice as its own PR into `dev` before adding more. Slice by user-visible behavior (schema first, tests in the same PR), not by layer. `.husky/pre-push` prints a warning at the same threshold.
+
+## Boundaries
+
+- **Ask first**: schema or migration changes, auth/authz changes, new dependencies, build/deploy config, CI changes, anything cascading outside the original scope.
+- **Never**: commit secrets or tokens; edit generated files by hand when a generation workflow exists; bypass a failing check with `any`, `@ts-ignore`, a disabled lint rule, or `--no-verify`; destructive git or DB operations without explicit approval.
+
+## Where to look for more
+
+- [`CONTEXT.md`](CONTEXT.md) — canonical domain glossary (Habit vs Entry, Streak vs Score, Goal vs Frequency, Series/Occurrence, Stats vs Insights, calendar sync terms). Read before naming anything in these domains; conflicting terminology must be resolved, not shrugged off.
+- [`docs/adr/`](docs/adr/) — architecture decisions with the rejected alternatives and consequences (client-side calendar token handling, the server-anchored timer model, habit color overrides, frequency-aware streak computation). Check here before "fixing" something that looks like a bug but was a deliberate tradeoff.
+- [`README.md`](README.md) — product feature list and shortcuts, useful for understanding user-facing scope.
 
 ## Agent skills
 
@@ -84,3 +70,13 @@ Canonical role names used as-is (needs-triage, needs-info, ready-for-agent, read
 ### Domain docs
 
 Single-context: `CONTEXT.md` + `docs/adr/` at repo root, with supplementary docs in `.scratch/codebase/`. See `docs/agents/domain.md`.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

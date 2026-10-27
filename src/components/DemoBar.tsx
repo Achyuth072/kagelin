@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { useClearGuestData } from "@/lib/hooks/useGuestStoreActions";
@@ -10,6 +10,7 @@ import {
   BANNER_SLOT_CARD_CLASS,
   useActiveBanner,
 } from "@/components/bannerSlot";
+import { useStatusPillOffset } from "@/lib/hooks/useStatusPillOffset";
 import { cn } from "@/lib/utils";
 import { DEMO_TUTORIAL_PROJECT_ID } from "@/lib/mock/mock-store";
 import { NOTIFICATION_LINK_BUTTON_CLASS } from "@/components/ui/notification-link-button";
@@ -18,13 +19,18 @@ export function DemoBar() {
   const activeBanner = useActiveBanner();
   const clearGuestData = useClearGuestData();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const isVisible = activeBanner === "demo";
 
-  if (activeBanner !== "demo") return null;
+  useStatusPillOffset(cardRef, isVisible);
+
+  if (!isVisible) return null;
 
   return (
     <>
       <div data-testid="demo-bar" className={BANNER_SLOT_WRAPPER_CLASS}>
         <div
+          ref={cardRef}
           className={cn(
             BANNER_SLOT_CARD_CLASS,
             "bg-card text-foreground border-border/80",

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { WifiOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsOnline } from "@/lib/hooks/useIsOnline";
@@ -9,18 +10,23 @@ import {
   BANNER_SLOT_WRAPPER_CLASS,
   BANNER_SLOT_CARD_CLASS,
 } from "@/components/bannerSlot";
+import { useStatusPillOffset } from "@/lib/hooks/useStatusPillOffset";
 import { cn } from "@/lib/utils";
 
 export function OfflineIndicator() {
   const isOnline = useIsOnline();
   const isMobile = useIsMobile();
   const prefersReducedMotion = usePrefersReducedMotion();
-  // Mobile enters from above the header, desktop rises from the bottom of the content column
+  const cardRef = useRef<HTMLDivElement>(null);
+  const isVisible = !isOnline;
+
+  useStatusPillOffset(cardRef, isVisible);
+
   const offscreenY = isMobile ? -16 : 16;
 
   return (
     <AnimatePresence>
-      {!isOnline && (
+      {isVisible && (
         <motion.div
           data-testid="offline-indicator"
           initial={{ y: offscreenY, opacity: 0 }}
@@ -39,6 +45,7 @@ export function OfflineIndicator() {
           className={BANNER_SLOT_WRAPPER_CLASS}
         >
           <div
+            ref={cardRef}
             className={cn(
               BANNER_SLOT_CARD_CLASS,
               "bg-card text-foreground border-border/80",

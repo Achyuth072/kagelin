@@ -14,28 +14,35 @@ const inter = Inter({
 
 export function Toaster() {
   const isChangelogOpen = useUiStore((state) => state.isChangelogOpen);
+  const isDesktop = useUiStore((state) => state.isDesktop);
+
+  const desktopOffset = {
+    bottom:
+      "calc(1.5rem + max(var(--floating-timer-offset, 0px), calc(var(--offline-pill-offset, 0px) + var(--telemetry-prompt-offset, 0px))))",
+  };
+
+  const mobileOffset = {
+    left: 16,
+    right: 16,
+    bottom:
+      "calc(var(--mobile-nav-height) + 0.75rem + var(--telemetry-prompt-offset, 0px))",
+  };
+
+  const position = isDesktop ? "bottom-right" : "bottom-center";
+  const offset = isDesktop ? desktopOffset : mobileOffset;
+
   return (
     <SonnerToaster
-      position="bottom-center"
+      position={position}
       expand={true}
       duration={isChangelogOpen ? Infinity : 4000}
       style={{ zIndex: "var(--z-toast)" }}
-      // Use container offset instead of per-toast margin so Sonner's stack height calculations don't overlap.
-      offset={{
-        bottom:
-          "calc(1.25rem + var(--offline-pill-offset,0px) + var(--telemetry-prompt-offset,0px))",
-      }}
-      mobileOffset={{
-        left: 16,
-        right: 16,
-        bottom:
-          "calc(var(--mobile-nav-height) + 0.75rem + var(--telemetry-prompt-offset,0px))",
-      }}
+      offset={offset}
+      mobileOffset={offset}
       swipeDirections={["left", "right", "bottom"]}
       toastOptions={{
         unstyled: true,
         style: {
-          // max-content prevents fit-content from collapsing to min-content inside Sonner's absolute-positioned <li>.
           width: "max-content",
           maxWidth: "min(34rem, calc(100vw - 2rem))",
         },
@@ -50,7 +57,6 @@ export function Toaster() {
             "transition-all duration-300 ease-seijaku",
             "[&_[data-icon]]:text-foreground/60",
           ),
-          // unstyled drops Sonner's spinner anchor; its unlayered CSS needs ! to override.
           icon: "shrink-0 [&>svg]:w-5 [&>svg]:h-5 [&>.sonner-loading-wrapper]:relative!",
           content: "min-w-0 flex-1",
           title:
