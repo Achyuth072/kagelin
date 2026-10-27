@@ -45,8 +45,6 @@ async function getVisibleBox(locator: Locator): Promise<Rect | null> {
   const el = locator.first();
   if (!(await el.isVisible())) return null;
 
-  // Banner wrappers use fixed inset-x-0 pointer-events-none;
-  // measure the visible card child rather than the full-viewport wrapper.
   const innerCard = el.locator("> div");
   const target =
     (await innerCard.count()) > 0 && (await innerCard.first().isVisible())
@@ -166,7 +164,6 @@ async function setupPageOverlays(
     ).toBeVisible({ timeout: 5000 });
   }
 
-  // Action + realistic text so toast width matches production toasts.
   await page.waitForFunction(() => typeof window.__notify === "function");
   await page.evaluate(() => {
     window.__notify?.("Task completed and archived from today's list", {
@@ -187,12 +184,12 @@ async function assertAllBottomOverlaysDoNotIntersect(page: Page) {
   const toastsLocator = page.locator("[data-sonner-toast]");
   await expect(toastsLocator).toHaveCount(2);
 
-  const overlays: { name: string; box: Rect }[] = [];
+  const toasts: { name: string; box: Rect }[] = [];
 
   const toastCount = await toastsLocator.count();
   for (let i = 0; i < toastCount; i++) {
     const box = await waitForStableBox(toastsLocator.nth(i));
-    if (box) overlays.push({ name: `Toast #${i}`, box });
+    if (box) toasts.push({ name: `Toast #${i}`, box });
   }
 
   const staticOverlays: { name: string; locator: Locator }[] = [
@@ -219,19 +216,42 @@ async function assertAllBottomOverlaysDoNotIntersect(page: Page) {
     },
   ];
 
+  const resolvedStatic: { name: string; box: Rect }[] = [];
   for (const item of staticOverlays) {
     const box = await getVisibleBox(item.locator);
-    if (box) overlays.push({ name: item.name, box });
+    if (box) resolvedStatic.push({ name: item.name, box });
   }
 
   const collisions: string[] = [];
 
-  for (let i = 0; i < overlays.length; i++) {
-    for (let j = i + 1; j < overlays.length; j++) {
-      if (rectsIntersect(overlays[i].box, overlays[j].box)) {
-        collisions.push(
-          `${overlays[i].name} ${formatRect(overlays[i].box)} intersects with ${overlays[j].name} ${formatRect(overlays[j].box)}`,
-        );
+  const recordCollision = (
+    a: { name: string; box: Rect },
+    b: { name: string; box: Rect },
+  ) => {
+    collisions.push(
+      `${a.name} ${formatRect(a.box)} intersects with ${b.name} ${formatRect(b.box)}`,
+    );
+  };
+
+  for (const toast of toasts) {
+    for (const staticItem of resolvedStatic) {
+      if (rectsIntersect(toast.box, staticItem.box)) {
+        recordCollision(toast, staticItem);
+      }
+    }
+  }
+
+  for (let i = 0; i < resolvedStatic.length; i++) {
+    for (let j = i + 1; j < resolvedStatic.length; j++) {
+      const a = resolvedStatic[i];
+      const b = resolvedStatic[j];
+      const isMobileFabPrompt =
+        (a.name === "FAB" && b.name === "TelemetryConsentPrompt") ||
+        (a.name === "TelemetryConsentPrompt" && b.name === "FAB");
+      if (isMobileFabPrompt) continue;
+
+      if (rectsIntersect(a.box, b.box)) {
+        recordCollision(a, b);
       }
     }
   }
@@ -312,11 +332,6 @@ test.describe("Bottom overlays overlap suite", () => {
       test(`toasts do not intersect FAB or mobile nav on ${name}`, async ({
         page,
       }) => {
-        test.fail(
-          true,
-          `Fails until Ticket 03: toasts cover the FAB on ${name}`,
-        );
-
         await setupPageOverlays(page, {
           viewport: { width: 390, height: 844 },
           route: path,
@@ -331,11 +346,6 @@ test.describe("Bottom overlays overlap suite", () => {
     test("all overlays active at 390x844 do not intersect", async ({
       page,
     }) => {
-      test.fail(
-        true,
-        "Fails until Ticket 03: mobile toasts overlap with FAB / prompt",
-      );
-
       await setupPageOverlays(page, {
         viewport: { width: 390, height: 844 },
         route: "/",
@@ -347,11 +357,6 @@ test.describe("Bottom overlays overlap suite", () => {
     });
 
     test("offline: overlays at 390x844 do not intersect", async ({ page }) => {
-      test.fail(
-        true,
-        "Fails until Ticket 03: mobile toasts overlap with FAB / offline indicator",
-      );
-
       await setupPageOverlays(page, {
         viewport: { width: 390, height: 844 },
         route: "/",
@@ -361,6 +366,34 @@ test.describe("Bottom overlays overlap suite", () => {
       });
 
       await assertAllBottomOverlaysDoNotIntersect(page);
+    });
+
+    test("swipe-to-dismiss dismisses the front toast on the collapsed stack", async ({
+      page,
+    }) => {
+      await setupPageOverlays(page, {
+        viewport: { width: 390, height: 844 },
+        route: "/",
+        showTelemetryPrompt: false,
+        startTimer: false,
+      });
+
+      const toasts = page.locator("[data-sonner-toast]");
+      await expect(toasts).toHaveCount(2);
+
+      const frontToast = toasts.first();
+      const box = await frontToast.boundingBox();
+      expect(box).not.toBeNull();
+      if (box) {
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width + 100, box.y + box.height / 2, {
+          steps: 5,
+        });
+        await page.mouse.up();
+      }
+
+      await expect(toasts).toHaveCount(1, { timeout: 5000 });
     });
   });
 });

@@ -25,7 +25,7 @@ export function Toaster() {
     left: 16,
     right: 16,
     bottom:
-      "calc(var(--mobile-nav-height) + 0.75rem + var(--telemetry-prompt-offset, 0px))",
+      "calc(var(--mobile-nav-height) + 0.75rem + max(3.75rem, var(--telemetry-prompt-offset, 0px), var(--floating-timer-offset, 0px)))",
   };
 
   const position = isDesktop ? "bottom-right" : "bottom-center";
@@ -34,7 +34,8 @@ export function Toaster() {
   return (
     <SonnerToaster
       position={position}
-      expand={true}
+      expand={false}
+      visibleToasts={isDesktop ? 3 : 2}
       duration={isChangelogOpen ? Infinity : 4000}
       style={{ zIndex: "var(--z-toast)" }}
       offset={offset}

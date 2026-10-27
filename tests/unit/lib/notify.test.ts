@@ -71,4 +71,26 @@ describe("notify", () => {
     notify.error("bad", { action: { label: "L", onClick: () => {} } });
     expect(toastMock.error).toHaveBeenCalledTimes(2);
   });
+
+  it("passes id from notify.loading to notify.success so toasts resolve in place", () => {
+    vi.mocked(toastMock.loading).mockReturnValueOnce("test-toast-id");
+    const id = notify.loading("Syncing calendar…");
+    expect(id).toBe("test-toast-id");
+
+    notify.success("Calendar synced!", { id });
+    expect(toastMock.success).toHaveBeenCalledWith("Calendar synced!", {
+      id: "test-toast-id",
+    });
+  });
+
+  it("passes id from notify.loading to notify.error so import failures resolve in place", () => {
+    vi.mocked(toastMock.loading).mockReturnValueOnce("test-error-id");
+    const id = notify.loading("Importing events...");
+    expect(id).toBe("test-error-id");
+
+    notify.error("Import failed", { id });
+    expect(toastMock.error).toHaveBeenCalledWith("Import failed", {
+      id: "test-error-id",
+    });
+  });
 });
