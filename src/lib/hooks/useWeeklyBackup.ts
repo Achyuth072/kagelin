@@ -5,6 +5,7 @@ import { notify } from "@/lib/notify";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
 import { useUiStore } from "@/lib/store/uiStore";
+import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
 import type { BackupData } from "@/lib/backup/types";
 
 const STORAGE_KEY = "kanso_last_backup_date";
@@ -12,9 +13,10 @@ const SESSION_KEY = "kanso_backup_prompted";
 // Separate from STORAGE_KEY so a first visit is never recorded as a backup.
 const SINCE_KEY = "kanso_backup_reminder_since";
 
-/** Prompts guest users to back up weekly via a dismissible toast, not a modal. */
+/** Prompts guests to back up on a configurable schedule via a dismissible toast. */
 export function useWeeklyBackup() {
   const { isGuestMode } = useAuth();
+  const { shouldPrompt: isTelemetryPrompting } = useTelemetryConsent();
   const backupReminderEnabled = useUiStore((s) => s.backupReminderEnabled);
   const backupReminderFrequencyDays = useUiStore(
     (s) => s.backupReminderFrequencyDays,
@@ -66,11 +68,11 @@ export function useWeeklyBackup() {
   useEffect(() => {
     if (!isGuestMode) return;
     if (!backupReminderEnabled) return;
+    if (isTelemetryPrompting) return;
     if (hasPrompted.current) return;
     if (typeof window !== "undefined" && sessionStorage.getItem(SESSION_KEY))
       return;
 
-    // Start reminder clock on first visit for guests with no prior backup.
     let since = lastBackupDate;
     if (!since) {
       const stored = localStorage.getItem(SINCE_KEY);
@@ -97,6 +99,7 @@ export function useWeeklyBackup() {
         notify(
           "It's been a while since your last backup — back up now to prevent loss",
           {
+            id: "backup-reminder",
             duration: 10000,
             action: {
               label: "Back Up Now",
@@ -115,6 +118,7 @@ export function useWeeklyBackup() {
     backupReminderEnabled,
     backupReminderFrequencyDays,
     lastBackupDate,
+    isTelemetryPrompting,
     triggerBackup,
   ]);
 
