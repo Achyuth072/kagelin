@@ -28,4 +28,4 @@ rule:
                 kind: comment
 message: >
   A catch block that only logs via console.* is a lint error in this repo —
-  rethrow, surface to the UI, or report to Sentry instead of swallowing it.
+  rethrow, surface to the UI, or record a diagnostic error instead of swallowing it.

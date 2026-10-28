@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2 } from "lucide-react";
@@ -41,9 +41,8 @@ export function UpdatePasswordAuth() {
       if (updateError) {
         setError(updateError.message || "Failed to update password");
       } else {
-        // Not awaited — the render below already tolerates `user` clearing
-        // on a later render, so waiting here would only add latency.
-        void signOut().catch((err) => Sentry.captureException(err));
+        // Not awaited: the UI tolerates `user` clearing, and waiting adds latency.
+        void signOut().catch((err) => recordDiagnosticError(err));
         setUpdated(true);
       }
     } catch (err) {

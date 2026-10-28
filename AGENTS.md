@@ -40,7 +40,7 @@ Gotchas the environment won't tell you:
 - Path alias `@/*` → `./src/*` and `./*`.
 - Prettier: 2-space indent, double quotes, semicolons, trailing commas everywhere. Enforced pre-commit via husky + lint-staged.
 - Unused vars/params: prefix with `_` (linter ignores `^_`).
-- A catch block that only does `console.*` is a lint error — rethrow, surface to the UI, or report to Sentry instead of swallowing it silently.
+- A catch block that only does `console.*` is a lint error — rethrow, surface to the UI, or record a diagnostic error instead of swallowing it silently.
 - React Compiler is on (`eslint-plugin-react-compiler` set to error) — manual `useMemo`/`useCallback` should generally be unnecessary; a compiler bailout is a smell worth checking rather than papering over.
 - **Code Search Constraint**: for _structural_ searches on source files (`.ts`, `.tsx`, `.js`, `.jsx`) — a call pattern, a JSX shape, a catch block, a hook's argument list — use `ast-grep` via `Bash` (`npx ast-grep run -p '<pattern>' -l ts <path>`), not grep; it matches by AST so formatting and string contents that look like code don't fool it. Plain grep/rg is fine for simple lexical lookups (where is `addEvent` called, does this file import `X`) and for non-code files (`.md`, `.json`, `.env`). `npm run ast-grep` runs the repo's custom `.ast-grep/rules/` lint rules (advisory only, not yet part of `validate`).
 - **Batch verification**: run checks together in one composite command (e.g. `npm run validate` or `git status && npm run lint`) rather than across multiple turns to preserve turn budget.

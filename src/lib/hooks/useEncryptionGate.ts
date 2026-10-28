@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { useAuth } from "@/components/AuthProvider";
 import { onServerKeySignal } from "@/lib/supabase/wrapClient";
 import { notify } from "@/lib/notify";
@@ -216,7 +216,7 @@ export function useEncryptionGate(): {
         setLockReason("key-changed");
         setAsyncStatus("needs-unlock");
       } catch (err) {
-        Sentry.captureException(err);
+        void recordDiagnosticError(err);
       } finally {
         lockingForKeyRef.current = false;
       }

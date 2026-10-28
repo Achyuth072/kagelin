@@ -1,6 +1,5 @@
 export interface CspOptions {
   supabaseUrl?: string;
-  sentryDsn?: string;
   mode?: "enforce" | "report-only";
 }
 
@@ -20,7 +19,6 @@ export function contentSecurityPolicyHeader(options: CspOptions = {}): {
   value: string;
 } {
   const supabase = parseUrl(options.supabaseUrl);
-  const sentry = parseUrl(options.sentryDsn);
 
   const supabaseWs = supabase
     ? `${supabase.protocol === "http:" ? "ws:" : "wss:"}//${supabase.host}`
@@ -30,7 +28,6 @@ export function contentSecurityPolicyHeader(options: CspOptions = {}): {
     "'self'",
     supabase?.origin,
     supabaseWs,
-    sentry?.origin,
     // Direct calendar sync (Google / Microsoft)
     "https://www.googleapis.com",
     "https://graph.microsoft.com",

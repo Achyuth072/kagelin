@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { useQueryClient } from "@tanstack/react-query";
 import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -168,7 +168,7 @@ export function useTodoistImport() {
       return true;
     } catch (err) {
       console.error("Failed to import Todoist tasks:", err);
-      Sentry.captureException(err);
+      void recordDiagnosticError(err);
       notify.error(
         err instanceof TodoistImportFailure
           ? err.message

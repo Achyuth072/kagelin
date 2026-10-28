@@ -68,7 +68,7 @@ const eslintConfig = defineConfig([
           selector:
             "CatchClause > BlockStatement[body.length=1] > ExpressionStatement > CallExpression[callee.object.name='console']",
           message:
-            "Catch block only logs to console — the error is silently absorbed. Rethrow, surface it to the caller/UI, or report it (e.g. Sentry.captureException).",
+            "Catch block only logs to console — the error is silently absorbed. Rethrow, surface it to the caller/UI, or record a diagnostic error.",
         },
       ],
     },

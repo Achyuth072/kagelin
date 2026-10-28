@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useAuth } from "@/components/AuthProvider";
@@ -31,7 +31,7 @@ export function useTodoistExport() {
       trigger("success");
       return true;
     } catch (err) {
-      Sentry.captureException(err);
+      void recordDiagnosticError(err);
       notify.error("Failed to export Todoist archive", { id: loadingToastId });
       trigger("thud");
       return false;

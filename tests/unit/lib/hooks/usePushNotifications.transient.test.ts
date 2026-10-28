@@ -5,7 +5,7 @@ import {
 } from "@/lib/hooks/usePushNotifications";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { syncPushSubscription } from "@/lib/push-api";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 
 vi.mock("@/components/AuthProvider", () => ({
   useAuth: vi.fn(() => ({ isGuestMode: false })),
@@ -27,7 +27,9 @@ vi.mock("@/lib/push-api", () => ({
   sendPushNotification: vi.fn(),
 }));
 
-vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
+vi.mock("@/lib/errors/diagnostics", () => ({
+  recordDiagnosticError: vi.fn(),
+}));
 
 const subscription = {
   endpoint: "https://stable.test",
@@ -90,7 +92,7 @@ describe("push subscription sync on resume", () => {
     await mountThenResume();
 
     expect(syncPushSubscription).toHaveBeenCalledTimes(1);
-    expect(Sentry.captureException).not.toHaveBeenCalled();
+    expect(recordDiagnosticError).not.toHaveBeenCalled();
   });
 
   it("reports a genuine failure, tagged with the worker state", async () => {
@@ -100,10 +102,11 @@ describe("push subscription sync on resume", () => {
 
     await mountThenResume();
 
-    expect(Sentry.captureException).toHaveBeenCalledWith(
+    expect(recordDiagnosticError).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({
-        tags: { pushOperation: "revalidate", swState: "activated" },
+        pushOperation: "revalidate",
+        swState: "activated",
       }),
     );
   });

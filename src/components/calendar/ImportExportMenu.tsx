@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import {
   MoreVertical,
   FileDown,
@@ -116,8 +116,8 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
           await createEvent.mutateAsync(eventInput);
           importedCount++;
         } catch (err) {
-          Sentry.captureException(err, {
-            tags: { context: "ics-import-single-event" },
+          void recordDiagnosticError(err, {
+            source: "ics-import-single-event",
           });
         }
       }

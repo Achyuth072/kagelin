@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { parseTodoistCsv } from "./parser";
 import { mapTodoistRowsToKagelin, type MappedTodoistTask } from "./mapper";
 import {
@@ -171,7 +171,7 @@ async function rollbackImport(
     await projectMutations.deleteMany(projectIds);
     return true;
   } catch (rollbackError) {
-    Sentry.captureException(rollbackError);
+    void recordDiagnosticError(rollbackError);
     return false;
   }
 }
@@ -185,7 +185,7 @@ function captureRawSource(
   void persistImportSource(
     { source_app: "todoist", file_name: fileName, raw: rawSource },
     { isGuest },
-  ).catch((error) => Sentry.captureException(error));
+  ).catch((error) => recordDiagnosticError(error));
 }
 
 export interface ExecuteTodoistImportOptions {

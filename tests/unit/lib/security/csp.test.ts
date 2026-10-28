@@ -3,7 +3,6 @@ import { contentSecurityPolicyHeader } from "@/lib/security/csp";
 
 const env = {
   supabaseUrl: "https://abcdefgh.supabase.co",
-  sentryDsn: "https://deadbeef@o123.ingest.de.sentry.io/456",
 };
 
 function directives(value: string): Map<string, string[]> {
@@ -52,7 +51,6 @@ describe("contentSecurityPolicyHeader", () => {
       "'self'",
       "https://abcdefgh.supabase.co",
       "wss://abcdefgh.supabase.co",
-      "https://o123.ingest.de.sentry.io",
       "https://www.googleapis.com",
       "https://graph.microsoft.com",
       "https://api.pwnedpasswords.com",
@@ -82,14 +80,12 @@ describe("contentSecurityPolicyHeader", () => {
     const connect = policy({ mode: "enforce" }).get("connect-src");
 
     expect(connect).not.toContain("https://abcdefgh.supabase.co");
-    expect(connect).not.toContain("https://o123.ingest.de.sentry.io");
     expect(connect).toContain("'self'");
   });
 
   it("ignores unparseable configuration rather than emitting a broken source", () => {
     const connect = policy({
       supabaseUrl: "not-a-url",
-      sentryDsn: "also-not-a-url",
       mode: "enforce",
     }).get("connect-src");
 

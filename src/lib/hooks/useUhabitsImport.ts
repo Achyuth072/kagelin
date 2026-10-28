@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import {
   parseUhabitsFile,
   partitionAgainstExisting,
@@ -37,7 +37,7 @@ export function useUhabitsImport() {
     const loadingToastId = notify.loading(`Parsing ${file.name}...`);
 
     const reportImportFailure = (err: unknown, message: string) => {
-      Sentry.captureException(err);
+      void recordDiagnosticError(err);
       notify.error(message, { id: loadingToastId });
       trigger("thud");
       return false;
@@ -67,7 +67,7 @@ export function useUhabitsImport() {
       void persistImportSource(
         { source_app: "uhabits", file_name: file.name, raw: source },
         { isGuest },
-      ).catch((err) => Sentry.captureException(err));
+      ).catch((err) => recordDiagnosticError(err));
 
       let habitsToImport = habits;
       let skippedNames: string[] = [];

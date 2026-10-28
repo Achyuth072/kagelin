@@ -33,6 +33,10 @@ const SAFE_CONTEXT_KEYS = new Set([
   "digest",
   "method",
   "count",
+  "pushOperation",
+  "swState",
+  "failureIndex",
+  "failedCount",
 ]);
 
 function extractErrorName(error: unknown): string {

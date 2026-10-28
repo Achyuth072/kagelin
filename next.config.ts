@@ -1,6 +1,5 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
-import { withSentryConfig } from "@sentry/nextjs";
 import { version } from "./package.json";
 
 import bundleAnalyzer from "@next/bundle-analyzer";
@@ -52,7 +51,6 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           contentSecurityPolicyHeader({
             supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-            sentryDsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
             mode:
               process.env.CSP_MODE === "report-only"
                 ? "report-only"
@@ -86,15 +84,4 @@ const config = withBundleAnalyzer(
   isTurbopack ? nextConfig : withSerwist(nextConfig),
 );
 
-export default withSentryConfig(config, {
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  useRunAfterProductionCompileHook: true,
-  webpack: {
-    treeshake: {
-      removeDebugLogging: true,
-    },
-  },
-});
+export default config;

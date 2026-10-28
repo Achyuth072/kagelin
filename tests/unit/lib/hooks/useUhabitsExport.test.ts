@@ -7,14 +7,14 @@ const {
   mockExportToUhabitsZip,
   mockDownloadBackup,
   mockTrigger,
-  mockCaptureException,
+  mockRecordDiagnosticError,
   mockNotify,
 } = vi.hoisted(() => ({
   mockExportToUhabitsDb: vi.fn(),
   mockExportToUhabitsZip: vi.fn(),
   mockDownloadBackup: vi.fn(),
   mockTrigger: vi.fn(),
-  mockCaptureException: vi.fn(),
+  mockRecordDiagnosticError: vi.fn(),
   mockNotify: {
     loading: vi.fn(() => "toast-id"),
     success: vi.fn(),
@@ -44,8 +44,9 @@ vi.mock("@/lib/notify", () => ({
   notify: mockNotify,
 }));
 
-vi.mock("@sentry/nextjs", () => ({
-  captureException: (...args: unknown[]) => mockCaptureException(...args),
+vi.mock("@/lib/errors/diagnostics", () => ({
+  recordDiagnosticError: (...args: unknown[]) =>
+    mockRecordDiagnosticError(...args),
 }));
 
 describe("useUhabitsExport", () => {
@@ -84,7 +85,7 @@ describe("useUhabitsExport", () => {
     expect(result.current.isExporting).toBe(false);
   });
 
-  it("handles exportLoopDb failure with error notification and sentry report", async () => {
+  it("handles exportLoopDb failure with error notification and diagnostic report", async () => {
     mockExportToUhabitsDb.mockRejectedValueOnce(new Error("WASM failed"));
 
     const { result } = renderHook(() => useUhabitsExport());
@@ -96,7 +97,7 @@ describe("useUhabitsExport", () => {
 
     expect(success).toBe(false);
     expect(mockTrigger).toHaveBeenCalledWith("thud");
-    expect(mockCaptureException).toHaveBeenCalledWith(expect.any(Error));
+    expect(mockRecordDiagnosticError).toHaveBeenCalledWith(expect.any(Error));
     expect(mockNotify.error).toHaveBeenCalledWith(
       "Failed to export Loop database",
       expect.objectContaining({ id: "toast-id" }),
@@ -130,7 +131,7 @@ describe("useUhabitsExport", () => {
     expect(result.current.isExporting).toBe(false);
   });
 
-  it("handles exportLoopZip failure with error notification and sentry report", async () => {
+  it("handles exportLoopZip failure with error notification and diagnostic report", async () => {
     mockExportToUhabitsZip.mockRejectedValueOnce(
       new Error("Zip compression error"),
     );
@@ -144,7 +145,7 @@ describe("useUhabitsExport", () => {
 
     expect(success).toBe(false);
     expect(mockTrigger).toHaveBeenCalledWith("thud");
-    expect(mockCaptureException).toHaveBeenCalledWith(expect.any(Error));
+    expect(mockRecordDiagnosticError).toHaveBeenCalledWith(expect.any(Error));
     expect(mockNotify.error).toHaveBeenCalledWith(
       "Failed to export Loop CSV archive",
       expect.objectContaining({ id: "toast-id" }),

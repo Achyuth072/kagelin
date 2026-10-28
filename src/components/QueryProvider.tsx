@@ -3,7 +3,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { useState, useEffect } from "react";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { createClient } from "@/lib/supabase/client";
 import { taskMutations } from "@/lib/mutations/task";
 import { habitMutations } from "@/lib/mutations/habit";
@@ -127,7 +127,7 @@ export default function QueryProvider({
             queryClient.resumePausedMutations();
           } else {
             purgeDeviceContent(queryClient).catch((err) =>
-              Sentry.captureException(err),
+              recordDiagnosticError(err),
             );
           }
         });

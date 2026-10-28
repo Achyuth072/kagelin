@@ -1,5 +1,5 @@
 import { get } from "idb-keyval";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
@@ -236,7 +236,7 @@ export async function collectUhabitsExportData(
         const stored = (await get<{ raw: unknown }[]>(GUEST_STORE_KEY)) ?? [];
         rawSources = stored.map((record) => record.raw);
       } catch (err) {
-        Sentry.captureException(err);
+        void recordDiagnosticError(err);
       }
     }
     return { habits, entries, rawSources };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { useUiStore } from "@/lib/store/uiStore";
 import { removePushSubscription, syncPushSubscription } from "@/lib/push-api";
 import { displayNotification } from "@/lib/notifications";
@@ -30,8 +30,9 @@ function serviceWorkerState(): string {
 // Transient network drops are retried on the next resume.
 function reportUnexpected(error: unknown, operation: string) {
   if (isTransientNetworkError(error)) return;
-  Sentry.captureException(error, {
-    tags: { pushOperation: operation, swState: serviceWorkerState() },
+  void recordDiagnosticError(error, {
+    pushOperation: operation,
+    swState: serviceWorkerState(),
   });
 }
 

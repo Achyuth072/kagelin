@@ -245,9 +245,9 @@ vi.mock("@/lib/crypto/keyChainMark", () => ({
   },
 }));
 
-const captureExceptionMock = vi.fn();
-vi.mock("@sentry/nextjs", () => ({
-  captureException: (err: unknown) => captureExceptionMock(err),
+const recordDiagnosticErrorMock = vi.fn();
+vi.mock("@/lib/errors/diagnostics", () => ({
+  recordDiagnosticError: (err: unknown) => recordDiagnosticErrorMock(err),
 }));
 
 import { keyStore } from "@/lib/crypto/keyStore";
@@ -570,7 +570,7 @@ describe("keyManager", () => {
     ).resolves.toBeInstanceOf(Uint8Array);
 
     await vi.waitFor(() =>
-      expect(captureExceptionMock).toHaveBeenCalledWith(
+      expect(recordDiagnosticErrorMock).toHaveBeenCalledWith(
         expect.objectContaining({
           message: expect.stringMatching(
             /proof of the content key doesn't match/,
@@ -850,7 +850,7 @@ describe("keyManager", () => {
 
       expect(rows.get(USER_ID)?.current_key_id).toBe(2);
       expect(result.recoveryCode).toMatch(/^[0-9A-Z-]+$/);
-      expect(captureExceptionMock).toHaveBeenCalledWith(saveError);
+      expect(recordDiagnosticErrorMock).toHaveBeenCalledWith(saveError);
       expect(signOutMock).toHaveBeenCalledWith({ scope: "others" });
       expect(result.keySavedOnDevice).toBe(false);
     }, 60000);
@@ -876,7 +876,7 @@ describe("keyManager", () => {
         "new passphrase",
       );
 
-      expect(captureExceptionMock).toHaveBeenCalledWith(clearError);
+      expect(recordDiagnosticErrorMock).toHaveBeenCalledWith(clearError);
       expect(result.recoveryCode).toMatch(/^[0-9A-Z-]+$/);
       expect(result.keySavedOnDevice).toBe(false);
     }, 60000);
@@ -973,7 +973,7 @@ describe("keyManager", () => {
 
       expect(keyStoreState.keyId).toBe("2");
       expect(keyStoreState.retired).toEqual({});
-      expect(captureExceptionMock).toHaveBeenCalledTimes(1);
+      expect(recordDiagnosticErrorMock).toHaveBeenCalledTimes(1);
     }, 60000);
 
     it("still loads the retired keys of a rotation after an earlier clear", async () => {
@@ -987,7 +987,7 @@ describe("keyManager", () => {
 
       expect(keyStoreState.keyId).toBe("3");
       expect(keyStoreState.retired).toEqual({ "2": secondKey });
-      expect(captureExceptionMock).not.toHaveBeenCalled();
+      expect(recordDiagnosticErrorMock).not.toHaveBeenCalled();
     }, 90000);
   });
 });

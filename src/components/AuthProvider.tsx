@@ -9,7 +9,7 @@ import {
   useCallback,
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { createClient } from "@/lib/supabase/client";
 import { EMAIL_CONFIRMED_PATH } from "@/lib/auth/auth-routes";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
@@ -112,7 +112,7 @@ export function AuthProvider({
     // Purge cached content on passive session termination so subsequent logins cannot inherit keys.
     const purge = () => {
       purgeDeviceContent(queryClient).catch((err) =>
-        Sentry.captureException(err),
+        recordDiagnosticError(err),
       );
     };
 
@@ -295,9 +295,8 @@ export function AuthProvider({
     try {
       await purgeDeviceContent(queryClient);
     } catch (err) {
-      // A purge failure (e.g. IndexedDB blocked) must not strand the user
-      // on a "signing out" screen — the session has already ended.
-      Sentry.captureException(err);
+      // A purge failure must not strand the user: the session has already ended.
+      void recordDiagnosticError(err);
     }
   }, [queryClient]);
 
