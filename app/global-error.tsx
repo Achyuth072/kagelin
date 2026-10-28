@@ -1,16 +1,22 @@
 "use client";
 
-import { useEffect } from "react";
-import * as Sentry from "@sentry/nextjs";
+import { useEffect, useState, type CSSProperties } from "react";
+import {
+  recordDiagnosticError,
+  exportDiagnosticReport,
+} from "@/lib/errors/diagnostics";
 
-/**
- * Catches errors thrown by the root layout itself (providers, fonts, etc.) —
- * `error.tsx` can't, since it renders *inside* the layout. Next.js requires
- * this file to render its own <html>/<body>; kept deliberately dependency-free
- * (no Tailwind tokens, providers, or app components) since those are exactly
- * what may have just crashed. Sentry is the one exception — it's a monitoring
- * SDK, not an app dependency, and is the only way to see root-layout crashes.
- */
+const actionButtonStyle: CSSProperties = {
+  padding: "0.5rem 1.25rem",
+  borderRadius: "0.5rem",
+  border: "1px solid rgba(255,255,255,0.2)",
+  background: "transparent",
+  color: "inherit",
+  cursor: "pointer",
+};
+
+// Renders outside the root layout, so it must supply its own <html>/<body> and
+// stay dependency-free — app styles and providers may be what just crashed.
 export default function GlobalError({
   error,
   reset,
@@ -18,10 +24,21 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     console.error("Unhandled root layout error:", error);
-    Sentry.captureException(error);
+    void recordDiagnosticError(error, { source: "global-error" });
   }, [error]);
+
+  const handleCopyDiagnostics = async () => {
+    try {
+      const report = await exportDiagnosticReport(error);
+      await navigator.clipboard.writeText(report);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
 
   return (
     <html lang="en">
@@ -46,20 +63,26 @@ export default function GlobalError({
           Something went wrong before the app could start. Try reloading — your
           data is safe.
         </p>
-        <button
-          onClick={() => reset()}
+        <div
           style={{
+            display: "flex",
+            gap: "0.75rem",
+            flexWrap: "wrap",
+            justifyContent: "center",
             marginTop: "1.5rem",
-            padding: "0.5rem 1.25rem",
-            borderRadius: "0.5rem",
-            border: "1px solid rgba(255,255,255,0.2)",
-            background: "transparent",
-            color: "inherit",
-            cursor: "pointer",
           }}
         >
-          Try again
-        </button>
+          <button type="button" onClick={reset} style={actionButtonStyle}>
+            Try again
+          </button>
+          <button
+            type="button"
+            onClick={handleCopyDiagnostics}
+            style={actionButtonStyle}
+          >
+            {copied ? "Diagnostics copied" : "Copy diagnostics"}
+          </button>
+        </div>
       </body>
     </html>
   );

@@ -7,6 +7,7 @@ import {
   Check,
   Copy,
   Download,
+  FileText,
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import type { DiagnosticBundle } from "@/lib/diagnostics/collectDiagnosticBundle
 import { SUPPORT_EMAIL } from "@/lib/links";
 import { notify } from "@/lib/notify";
 import { triggerDownload } from "@/lib/utils/stats-export";
+import { exportDiagnosticReport } from "@/lib/errors/diagnostics";
 
 function downloadBundle(json: string) {
   const filename = `kagelin-diagnostic-${new Date().toISOString().split("T")[0]}.json`;
@@ -33,6 +35,23 @@ export function DiagnosticExportSettings() {
   const [generating, setGenerating] = useState(false);
   const [bundle, setBundle] = useState<DiagnosticBundle | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyingLog, setCopyingLog] = useState(false);
+  const [logCopied, setLogCopied] = useState(false);
+
+  const handleCopyDiagnosticLog = async () => {
+    setCopyingLog(true);
+    try {
+      const report = await exportDiagnosticReport();
+      await navigator.clipboard.writeText(report);
+      setLogCopied(true);
+      notify.success("Diagnostic log copied");
+      setTimeout(() => setLogCopied(false), 2000);
+    } catch {
+      notify.error("Couldn't copy diagnostic log");
+    } finally {
+      setCopyingLog(false);
+    }
+  };
 
   const handleGenerate = async () => {
     setGenerating(true);
@@ -88,6 +107,42 @@ export function DiagnosticExportSettings() {
           platform, settings, and the structure of your data (counts, recurrence
           rules, ids, timestamps). Never your task, habit, event or project
           text.
+        </p>
+      </div>
+
+      <div className="space-y-3 p-4 rounded-lg border border-border/50 bg-background">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 rounded-full bg-secondary/30 shrink-0">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <p className="text-sm font-medium">Diagnostic Error Log</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-2"
+            onClick={handleCopyDiagnosticLog}
+            disabled={copyingLog}
+          >
+            {copyingLog ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : logCopied ? (
+              <>
+                <Check className="h-4 w-4" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                Copy Log
+              </>
+            )}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Copy recent error events and system details to your clipboard for
+          reporting issues on GitHub. Personal content is never included.
         </p>
       </div>
 

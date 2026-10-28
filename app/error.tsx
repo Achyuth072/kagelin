@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Check, Copy } from "lucide-react";
 import { slideUp } from "@/lib/motion";
-import * as Sentry from "@sentry/nextjs";
+import {
+  recordDiagnosticError,
+  exportDiagnosticReport,
+} from "@/lib/errors/diagnostics";
 
 export default function ErrorBoundary({
   error,
@@ -16,11 +19,23 @@ export default function ErrorBoundary({
   reset: () => void;
 }) {
   const router = useRouter();
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     console.error("Unhandled render error:", error);
-    Sentry.captureException(error);
+    void recordDiagnosticError(error, { source: "error-boundary" });
   }, [error]);
+
+  const handleCopyDiagnostics = async () => {
+    try {
+      const report = await exportDiagnosticReport(error);
+      await navigator.clipboard.writeText(report);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard unavailable or denied
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
@@ -38,11 +53,28 @@ export default function ErrorBoundary({
           head back home if it keeps happening.
         </p>
 
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <Button variant="outline" onClick={() => router.push("/")}>
             Go home
           </Button>
-          <Button onClick={() => reset()}>Try again</Button>
+          <Button
+            variant="outline"
+            className="gap-2"
+            onClick={handleCopyDiagnostics}
+          >
+            {copied ? (
+              <>
+                <Check className="h-4 w-4" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                Copy diagnostics
+              </>
+            )}
+          </Button>
+          <Button onClick={reset}>Try again</Button>
         </div>
       </motion.div>
     </div>

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const mockPush = vi.fn();
@@ -39,6 +39,22 @@ describe("app/error.tsx (H-2)", () => {
     render(<ErrorBoundary error={err} reset={vi.fn()} />);
     expect(console.error).toHaveBeenCalledWith("Unhandled render error:", err);
   });
+
+  it("copies diagnostic report to clipboard when 'Copy diagnostics' is clicked", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    render(<ErrorBoundary error={new Error("render crash")} reset={vi.fn()} />);
+    const copyBtn = screen.getByRole("button", { name: /copy diagnostics/i });
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
+
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalled());
+    const copiedText = writeText.mock.calls[0][0];
+    expect(copiedText).toContain("Kagelin Diagnostic Report");
+    expect(await screen.findByText("Copied")).toBeInTheDocument();
+  });
 });
 
 describe("app/global-error.tsx (H-2)", () => {
@@ -56,5 +72,21 @@ describe("app/global-error.tsx (H-2)", () => {
     render(<GlobalError error={new Error("boom")} reset={reset} />);
     fireEvent.click(screen.getByText("Try again"));
     expect(reset).toHaveBeenCalled();
+  });
+
+  it("copies diagnostic report to clipboard when 'Copy diagnostics' is clicked", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    render(<GlobalError error={new Error("root crash")} reset={vi.fn()} />);
+    const copyBtn = screen.getByRole("button", { name: /copy diagnostics/i });
+    await act(async () => {
+      fireEvent.click(copyBtn);
+    });
+
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalled());
+    const copiedText = writeText.mock.calls[0][0];
+    expect(copiedText).toContain("Kagelin Diagnostic Report");
+    expect(await screen.findByText("Diagnostics copied")).toBeInTheDocument();
   });
 });
