@@ -239,6 +239,47 @@ describe("DiagnosticExportSettings", () => {
     expect(mockExportReport).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps preview mounted without aggressive loading flash when refreshing", async () => {
+    let resolveRefresh: (value: string) => void = () => {};
+    const refreshPromise = new Promise<string>((resolve) => {
+      resolveRefresh = resolve;
+    });
+
+    mockExportReport
+      .mockResolvedValueOnce("### Initial Report")
+      .mockReturnValueOnce(refreshPromise);
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    expect(await screen.findByText("### Initial Report")).toBeInTheDocument();
+
+    const refreshBtn = screen.getByRole("button", { name: /refresh/i });
+    await act(async () => {
+      fireEvent.click(refreshBtn);
+    });
+
+    // While refresh is pending:
+    // Existing preview stays in document (no aggressive flash / unmounting)
+    expect(screen.getByText("### Initial Report")).toBeInTheDocument();
+    expect(screen.queryByText("Loading diagnostics…")).not.toBeInTheDocument();
+    const pre = screen.getByText("### Initial Report");
+    expect(pre).toHaveAttribute("aria-busy", "true");
+
+    // Resolve the refresh
+    await act(async () => {
+      resolveRefresh("### Fresh After Refresh");
+    });
+
+    expect(
+      await screen.findByText("### Fresh After Refresh"),
+    ).toBeInTheDocument();
+    expect(pre).toHaveAttribute("aria-busy", "false");
+  });
+
   it("prompts confirmation and clears diagnostic errors upon confirmation", async () => {
     mockExportReport
       .mockResolvedValueOnce("### Initial Report with 1 error")

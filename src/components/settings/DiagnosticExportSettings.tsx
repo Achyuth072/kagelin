@@ -25,10 +25,12 @@ import {
   ResponsiveDialogDescription,
 } from "@/components/ui/responsive-dialog";
 import { useDiagnosticBundle } from "@/lib/hooks/useDiagnosticBundle";
+import { useHaptic } from "@/lib/hooks/useHaptic";
 import type { DiagnosticBundle } from "@/lib/diagnostics/collectDiagnosticBundle";
 import { SUPPORT_EMAIL } from "@/lib/links";
 import { notify } from "@/lib/notify";
 import { triggerDownload } from "@/lib/utils/stats-export";
+import { cn } from "@/lib/utils";
 import {
   exportDiagnosticReport,
   clearDiagnosticErrors,
@@ -42,6 +44,7 @@ function downloadBundle(json: string) {
 export function DiagnosticExportSettings() {
   const { isGuestMode } = useAuth();
   const queryClient = useQueryClient();
+  const { trigger } = useHaptic();
   const [open, setOpen] = useState(false);
   const [includeDataStructure, setIncludeDataStructure] = useState(false);
   const [loadingReport, setLoadingReport] = useState(false);
@@ -66,6 +69,7 @@ export function DiagnosticExportSettings() {
   };
 
   const handleOpen = async () => {
+    trigger("toggle");
     setOpen(true);
     setConfirmingClear(false);
     setLoadingReport(true);
@@ -79,6 +83,7 @@ export function DiagnosticExportSettings() {
   };
 
   const handleRefresh = async () => {
+    trigger("toggle");
     setIsRefreshing(true);
     try {
       await loadReport();
@@ -98,6 +103,7 @@ export function DiagnosticExportSettings() {
   };
 
   const handleConfirmClear = async () => {
+    trigger("thud");
     setIsClearing(true);
     try {
       await clearDiagnosticErrors();
@@ -114,6 +120,7 @@ export function DiagnosticExportSettings() {
   };
 
   const handleToggleDataStructure = async (checked: boolean) => {
+    trigger("toggle");
     setIncludeDataStructure(checked);
     if (checked && !bundle) {
       setLoadingBundle(true);
@@ -130,9 +137,8 @@ export function DiagnosticExportSettings() {
   };
 
   const jsonString = bundle ? JSON.stringify(bundle, null, 2) : "";
-  const isPreviewLoading =
-    loadingReport || isRefreshing || (includeDataStructure && loadingBundle);
-  const isBusy = isPreviewLoading || isClearing;
+  const isInitialLoading = (!markdownReport && loadingReport) || loadingBundle;
+  const isBusy = loadingReport || isRefreshing || isClearing || loadingBundle;
 
   const handleCopy = async () => {
     const textToCopy = includeDataStructure ? jsonString : markdownReport;
@@ -140,6 +146,7 @@ export function DiagnosticExportSettings() {
 
     try {
       await navigator.clipboard.writeText(textToCopy);
+      trigger("success");
       setCopied(true);
       notify.success(
         includeDataStructure
@@ -193,7 +200,7 @@ export function DiagnosticExportSettings() {
                   Diagnostic Report
                 </ResponsiveDialogTitle>
                 {capturedAt && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="type-micro text-muted-foreground mt-0.5">
                     Captured at {capturedAt.toLocaleTimeString()}
                   </p>
                 )}
@@ -201,7 +208,7 @@ export function DiagnosticExportSettings() {
               <div className="flex items-center gap-1.5 self-start sm:self-auto">
                 {confirmingClear ? (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground mr-1">
+                    <span className="type-micro text-muted-foreground mr-1">
                       Clear errors?
                     </span>
                     <Button
@@ -213,7 +220,7 @@ export function DiagnosticExportSettings() {
                       disabled={isClearing}
                     >
                       {isClearing && (
-                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        <Loader2 className="h-3 w-3 animate-spin mr-1 motion-reduce:animate-none" />
                       )}
                       Confirm
                     </Button>
@@ -222,7 +229,10 @@ export function DiagnosticExportSettings() {
                       variant="ghost"
                       size="sm"
                       className="h-7 px-2 text-xs"
-                      onClick={() => setConfirmingClear(false)}
+                      onClick={() => {
+                        trigger("tick");
+                        setConfirmingClear(false);
+                      }}
                       disabled={isClearing}
                     >
                       Cancel
@@ -234,13 +244,16 @@ export function DiagnosticExportSettings() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+                      className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-foreground transition-seijaku-fast"
                       onClick={handleRefresh}
                       disabled={isBusy}
                       aria-label="Refresh"
                     >
                       <RotateCw
-                        className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`}
+                        className={cn(
+                          "h-3.5 w-3.5 motion-reduce:animate-none",
+                          isRefreshing && "animate-spin",
+                        )}
                       />
                       Refresh
                     </Button>
@@ -248,12 +261,15 @@ export function DiagnosticExportSettings() {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-destructive"
-                      onClick={() => setConfirmingClear(true)}
+                      className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-destructive transition-seijaku-fast"
+                      onClick={() => {
+                        trigger("tick");
+                        setConfirmingClear(true);
+                      }}
                       disabled={isBusy}
                       aria-label="Clear Log"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-3.5 w-3.5" strokeWidth={2.25} />
                       Clear Log
                     </Button>
                   </>
@@ -291,10 +307,10 @@ export function DiagnosticExportSettings() {
             )}
 
             <div className="relative">
-              {isPreviewLoading ? (
+              {isInitialLoading ? (
                 <div className="h-44 flex flex-col items-center justify-center gap-2 rounded-lg border border-border/40 bg-secondary/20">
-                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none text-muted-foreground" />
+                  <p className="type-micro text-muted-foreground">
                     {loadingBundle
                       ? "Compiling state bundle…"
                       : "Loading diagnostics…"}
@@ -304,7 +320,13 @@ export function DiagnosticExportSettings() {
                 <pre
                   data-vaul-no-drag
                   tabIndex={0}
-                  className="max-h-[30vh] sm:max-h-[40vh] overflow-auto rounded-lg border border-border/40 bg-secondary/20 p-3 text-xs whitespace-pre-wrap break-all font-mono select-text"
+                  aria-busy={isRefreshing}
+                  className={cn(
+                    "max-h-[30vh] sm:max-h-[40vh] overflow-auto rounded-lg border border-border/40 bg-secondary/20 p-3 text-xs whitespace-pre-wrap break-all font-mono select-text transition-opacity transition-seijaku-fast",
+                    isRefreshing
+                      ? "opacity-60 pointer-events-none"
+                      : "opacity-100",
+                  )}
                 >
                   {includeDataStructure
                     ? jsonString
@@ -318,11 +340,11 @@ export function DiagnosticExportSettings() {
               <div className="space-y-0.5">
                 <label
                   htmlFor="toggle-advanced-data"
-                  className="text-xs font-medium cursor-pointer"
+                  className="type-ui font-medium cursor-pointer"
                 >
                   Include database schedule structure (Advanced)
                 </label>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                <p className="type-micro text-muted-foreground leading-relaxed">
                   Includes task counts, recurrence rules, and streak metadata
                   (no text). Needed only for complex sync or calendar bugs.
                 </p>
@@ -335,11 +357,11 @@ export function DiagnosticExportSettings() {
               />
             </div>
 
-            <p className="text-[11px] text-muted-foreground text-center">
+            <p className="type-micro text-muted-foreground text-center">
               Questions or private inquiries? Reach us directly at{" "}
               <a
                 href={`mailto:${SUPPORT_EMAIL}`}
-                className="underline underline-offset-2 hover:text-foreground"
+                className="underline underline-offset-2 hover:text-foreground transition-seijaku-fast"
               >
                 {SUPPORT_EMAIL}
               </a>
@@ -347,12 +369,15 @@ export function DiagnosticExportSettings() {
           </div>
 
           {/* Sticky footer with actions and mobile-friendly close button */}
-          <div className="p-4 border-t border-border/80 shrink-0 bg-background/95 backdrop-blur-sm flex flex-col-reverse sm:flex-row justify-end gap-2 pb-safe sm:pb-4">
+          <div className="p-4 border-t border-border/80 shrink-0 bg-background flex flex-col-reverse sm:flex-row justify-end gap-2 pb-safe sm:pb-4">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                trigger("tick");
+                setOpen(false);
+              }}
             >
               Close
             </Button>
@@ -363,7 +388,10 @@ export function DiagnosticExportSettings() {
                 variant="outline"
                 size="sm"
                 className="gap-2"
-                onClick={() => downloadBundle(jsonString)}
+                onClick={() => {
+                  trigger("tick");
+                  downloadBundle(jsonString);
+                }}
                 disabled={isBusy || !bundle}
               >
                 <Download className="h-4 w-4" />
