@@ -24,9 +24,11 @@ vi.mock("@/lib/hooks/useDiagnosticBundle", () => ({
 const mockExportReport = vi
   .fn()
   .mockResolvedValue("### Mock Diagnostic Report");
+const mockClearErrors = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/errors/diagnostics", () => ({
   exportDiagnosticReport: () => mockExportReport(),
+  clearDiagnosticErrors: () => mockClearErrors(),
 }));
 
 describe("DiagnosticExportSettings", () => {
@@ -34,6 +36,14 @@ describe("DiagnosticExportSettings", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockExportReport
+      .mockReset()
+      .mockResolvedValue("### Mock Diagnostic Report");
+    mockClearErrors.mockReset().mockResolvedValue(undefined);
+    mockGenerateBundle.mockReset().mockResolvedValue({
+      app: { version: "1.0.0", releaseChannel: "preview" },
+      data: { counts: { tasks: 5 } },
+    });
     writeText.mockReset().mockResolvedValue(undefined);
     Object.assign(navigator, {
       clipboard: {
@@ -148,5 +158,270 @@ describe("DiagnosticExportSettings", () => {
     await vi.waitFor(() => {
       expect(screen.queryByText("Diagnostic Report")).not.toBeInTheDocument();
     });
+  });
+
+  it("re-fetches diagnostic report every time the dialog is opened", async () => {
+    mockExportReport
+      .mockResolvedValueOnce("### Initial Report")
+      .mockResolvedValueOnce("### Fresh Second Report");
+
+    render(<DiagnosticExportSettings />);
+
+    const openBtn = screen.getByRole("button", { name: /open report/i });
+
+    // Open first time
+    await act(async () => {
+      fireEvent.click(openBtn);
+    });
+    expect(await screen.findByText("### Initial Report")).toBeInTheDocument();
+    expect(mockExportReport).toHaveBeenCalledTimes(1);
+
+    // Close dialog
+    const closeBtn = screen.getAllByRole("button", { name: /close/i })[0];
+    await act(async () => {
+      fireEvent.click(closeBtn);
+    });
+    await vi.waitFor(() => {
+      expect(screen.queryByText("Diagnostic Report")).not.toBeInTheDocument();
+    });
+
+    // Re-open dialog - should fetch fresh report instead of serving stale report
+    await act(async () => {
+      fireEvent.click(openBtn);
+    });
+    expect(
+      await screen.findByText("### Fresh Second Report"),
+    ).toBeInTheDocument();
+    expect(mockExportReport).toHaveBeenCalledTimes(2);
+  });
+
+  it("displays captured timestamp in header and refreshes report on Refresh click", async () => {
+    mockExportReport
+      .mockResolvedValueOnce("### Initial Report")
+      .mockResolvedValueOnce("### Refreshed Report");
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    expect(await screen.findByText("### Initial Report")).toBeInTheDocument();
+    expect(screen.getByText(/captured at/i)).toBeInTheDocument();
+
+    const refreshBtn = screen.getByRole("button", { name: /refresh/i });
+    expect(refreshBtn).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(refreshBtn);
+    });
+
+    expect(await screen.findByText("### Refreshed Report")).toBeInTheDocument();
+    expect(mockExportReport).toHaveBeenCalledTimes(2);
+  });
+
+  it("prompts confirmation and clears diagnostic errors upon confirmation", async () => {
+    mockExportReport
+      .mockResolvedValueOnce("### Initial Report with 1 error")
+      .mockResolvedValueOnce(
+        "### Diagnostic Report\n\n*No diagnostic errors recorded.*",
+      );
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    expect(
+      await screen.findByText("### Initial Report with 1 error"),
+    ).toBeInTheDocument();
+
+    // Click Clear Log to show confirmation prompt
+    const clearBtn = screen.getByRole("button", { name: /clear log/i });
+    await act(async () => {
+      fireEvent.click(clearBtn);
+    });
+
+    expect(screen.getByText("Clear errors?")).toBeInTheDocument();
+    const confirmBtn = screen.getByRole("button", { name: /confirm/i });
+    const cancelBtn = screen.getByRole("button", { name: /cancel/i });
+    expect(confirmBtn).toBeInTheDocument();
+    expect(cancelBtn).toBeInTheDocument();
+
+    // Confirm clear
+    await act(async () => {
+      fireEvent.click(confirmBtn);
+    });
+
+    expect(mockClearErrors).toHaveBeenCalledTimes(1);
+    expect(notify.success).toHaveBeenCalledWith("Diagnostic errors cleared");
+    expect(
+      await screen.findByText(/no diagnostic errors recorded/i),
+    ).toBeInTheDocument();
+  });
+
+  it("cancels clear log confirmation without calling clearDiagnosticErrors", async () => {
+    mockExportReport.mockResolvedValueOnce("### Initial Report");
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    expect(await screen.findByText("### Initial Report")).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /clear log/i }));
+    });
+
+    expect(screen.getByText("Clear errors?")).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    });
+
+    expect(mockClearErrors).not.toHaveBeenCalled();
+    expect(screen.queryByText("Clear errors?")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /clear log/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("resets active data bundle when clearing errors so the markdown report preview is shown", async () => {
+    mockExportReport
+      .mockResolvedValueOnce("### Initial Report")
+      .mockResolvedValueOnce(
+        "### Diagnostic Report\n\n*No diagnostic errors recorded.*",
+      );
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    // Enable bundle
+    const toggle = screen.getByLabelText(
+      /include database schedule structure/i,
+    );
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+    expect(mockGenerateBundle).toHaveBeenCalledTimes(1);
+
+    // Now clear errors
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /clear log/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
+    });
+
+    expect(mockClearErrors).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByText(/no diagnostic errors recorded/i),
+    ).toBeInTheDocument();
+    // Toggle should be unchecked
+    expect(toggle).not.toBeChecked();
+  });
+
+  it("notifies error when diagnostic report fails to load", async () => {
+    mockExportReport.mockRejectedValueOnce(new Error("Failed to export"));
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    expect(notify.error).toHaveBeenCalledWith(
+      "Couldn't generate diagnostic report",
+    );
+  });
+
+  it("notifies error when clearing diagnostic errors fails", async () => {
+    mockExportReport.mockResolvedValueOnce("### Initial Report");
+    mockClearErrors.mockRejectedValueOnce(new Error("Disk error"));
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /clear log/i }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
+    });
+
+    expect(notify.error).toHaveBeenCalledWith(
+      "Couldn't clear diagnostic errors",
+    );
+  });
+
+  it("refreshes active data bundle when refresh is clicked with advanced data structure enabled", async () => {
+    mockExportReport
+      .mockResolvedValueOnce("### Initial Report")
+      .mockResolvedValueOnce("### Refreshed Report");
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    // Toggle advanced bundle
+    const toggle = screen.getByLabelText(
+      /include database schedule structure/i,
+    );
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+    expect(mockGenerateBundle).toHaveBeenCalledTimes(1);
+
+    // Refresh
+    const refreshBtn = screen.getByRole("button", { name: /refresh/i });
+    await act(async () => {
+      fireEvent.click(refreshBtn);
+    });
+
+    expect(mockExportReport).toHaveBeenCalledTimes(2);
+    expect(mockGenerateBundle).toHaveBeenCalledTimes(2);
+  });
+
+  it("notifies error when refreshing active data bundle fails", async () => {
+    mockExportReport
+      .mockResolvedValueOnce("### Initial Report")
+      .mockResolvedValueOnce("### Refreshed Report");
+    mockGenerateBundle
+      .mockResolvedValueOnce({
+        app: { version: "1.0.0", releaseChannel: "preview" },
+        data: { counts: { tasks: 5 } },
+      })
+      .mockRejectedValueOnce(new Error("Bundle build failed"));
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    const toggle = screen.getByLabelText(
+      /include database schedule structure/i,
+    );
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+
+    const refreshBtn = screen.getByRole("button", { name: /refresh/i });
+    await act(async () => {
+      fireEvent.click(refreshBtn);
+    });
+
+    expect(notify.error).toHaveBeenCalledWith("Couldn't refresh state bundle");
   });
 });

@@ -9,6 +9,8 @@ import {
   Download,
   Eye,
   Loader2,
+  RotateCw,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -24,7 +26,10 @@ import type { DiagnosticBundle } from "@/lib/diagnostics/collectDiagnosticBundle
 import { SUPPORT_EMAIL } from "@/lib/links";
 import { notify } from "@/lib/notify";
 import { triggerDownload } from "@/lib/utils/stats-export";
-import { exportDiagnosticReport } from "@/lib/errors/diagnostics";
+import {
+  exportDiagnosticReport,
+  clearDiagnosticErrors,
+} from "@/lib/errors/diagnostics";
 
 function downloadBundle(json: string) {
   const filename = `kagelin-diagnostic-${new Date().toISOString().split("T")[0]}.json`;
@@ -35,24 +40,68 @@ export function DiagnosticExportSettings() {
   const [open, setOpen] = useState(false);
   const [includeDataStructure, setIncludeDataStructure] = useState(false);
   const [loadingReport, setLoadingReport] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [confirmingClear, setConfirmingClear] = useState(false);
   const [loadingBundle, setLoadingBundle] = useState(false);
   const [markdownReport, setMarkdownReport] = useState<string>("");
   const [bundle, setBundle] = useState<DiagnosticBundle | null>(null);
   const [copied, setCopied] = useState(false);
+  const [capturedAt, setCapturedAt] = useState<Date | null>(null);
   const { generateBundle } = useDiagnosticBundle();
+
+  const loadReport = async () => {
+    const report = await exportDiagnosticReport();
+    setMarkdownReport(report);
+    setCapturedAt(new Date());
+    return report;
+  };
 
   const handleOpen = async () => {
     setOpen(true);
-    if (!markdownReport) {
-      setLoadingReport(true);
-      try {
-        const report = await exportDiagnosticReport();
-        setMarkdownReport(report);
-      } catch {
-        notify.error("Couldn't generate diagnostic report");
-      } finally {
-        setLoadingReport(false);
+    setConfirmingClear(false);
+    setLoadingReport(true);
+    try {
+      await loadReport();
+    } catch {
+      notify.error("Couldn't generate diagnostic report");
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadReport();
+      if (includeDataStructure) {
+        try {
+          const freshBundle = await generateBundle();
+          setBundle(freshBundle);
+        } catch {
+          notify.error("Couldn't refresh state bundle");
+        }
       }
+    } catch {
+      notify.error("Couldn't generate diagnostic report");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleConfirmClear = async () => {
+    setIsClearing(true);
+    try {
+      await clearDiagnosticErrors();
+      await loadReport();
+      setBundle(null);
+      setIncludeDataStructure(false);
+      notify.success("Diagnostic errors cleared");
+    } catch {
+      notify.error("Couldn't clear diagnostic errors");
+    } finally {
+      setIsClearing(false);
+      setConfirmingClear(false);
     }
   };
 
@@ -61,8 +110,8 @@ export function DiagnosticExportSettings() {
     if (checked && !bundle) {
       setLoadingBundle(true);
       try {
-        const b = await generateBundle();
-        setBundle(b);
+        const freshBundle = await generateBundle();
+        setBundle(freshBundle);
       } catch {
         notify.error("Couldn't generate state bundle");
         setIncludeDataStructure(false);
@@ -73,7 +122,9 @@ export function DiagnosticExportSettings() {
   };
 
   const jsonString = bundle ? JSON.stringify(bundle, null, 2) : "";
-  const isLoading = loadingReport || (includeDataStructure && loadingBundle);
+  const isPreviewLoading =
+    loadingReport || isRefreshing || (includeDataStructure && loadingBundle);
+  const isBusy = isPreviewLoading || isClearing;
 
   const handleCopy = async () => {
     const textToCopy = includeDataStructure ? jsonString : markdownReport;
@@ -119,13 +170,89 @@ export function DiagnosticExportSettings() {
         </p>
       </div>
 
-      <ResponsiveDialog open={open} onOpenChange={setOpen}>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          if (!nextOpen) setConfirmingClear(false);
+        }}
+      >
         <ResponsiveDialogContent className="sm:max-w-xl border-border/80 shadow-none p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
-          <ResponsiveDialogHeader className="p-4 sm:p-6 pb-3 border-b border-border/80 shrink-0 text-left">
-            <ResponsiveDialogTitle className="type-h2">
-              Diagnostic Report
-            </ResponsiveDialogTitle>
-            <ResponsiveDialogDescription>
+          <ResponsiveDialogHeader className="p-4 sm:p-6 pb-3 border-b border-border/80 shrink-0 text-left sm:pr-12">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <ResponsiveDialogTitle className="type-h2">
+                  Diagnostic Report
+                </ResponsiveDialogTitle>
+                {capturedAt && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Captured at {capturedAt.toLocaleTimeString()}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                {confirmingClear ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground mr-1">
+                      Clear errors?
+                    </span>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={handleConfirmClear}
+                      disabled={isClearing}
+                    >
+                      {isClearing && (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      )}
+                      Confirm
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => setConfirmingClear(false)}
+                      disabled={isClearing}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+                      onClick={handleRefresh}
+                      disabled={isBusy}
+                      aria-label="Refresh"
+                    >
+                      <RotateCw
+                        className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`}
+                      />
+                      Refresh
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-destructive"
+                      onClick={() => setConfirmingClear(true)}
+                      disabled={isBusy}
+                      aria-label="Clear Log"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Clear Log
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+            <ResponsiveDialogDescription className="mt-1">
               Review system specs and logs. Personal content (task, habit, and
               event names) is never included.
             </ResponsiveDialogDescription>
@@ -156,7 +283,7 @@ export function DiagnosticExportSettings() {
             )}
 
             <div className="relative">
-              {isLoading ? (
+              {isPreviewLoading ? (
                 <div className="h-44 flex flex-col items-center justify-center gap-2 rounded-lg border border-border/40 bg-secondary/20">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   <p className="text-xs text-muted-foreground">
@@ -196,6 +323,7 @@ export function DiagnosticExportSettings() {
                 id="toggle-advanced-data"
                 checked={includeDataStructure}
                 onCheckedChange={handleToggleDataStructure}
+                disabled={isBusy}
               />
             </div>
 
@@ -228,7 +356,7 @@ export function DiagnosticExportSettings() {
                 size="sm"
                 className="gap-2"
                 onClick={() => downloadBundle(jsonString)}
-                disabled={isLoading || !bundle}
+                disabled={isBusy || !bundle}
               >
                 <Download className="h-4 w-4" />
                 Download JSON
@@ -240,7 +368,7 @@ export function DiagnosticExportSettings() {
               size="sm"
               className="gap-2"
               onClick={handleCopy}
-              disabled={isLoading}
+              disabled={isBusy}
             >
               {copied ? (
                 <>
