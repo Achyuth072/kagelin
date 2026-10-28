@@ -74,8 +74,6 @@
     "@tanstack/react-query-persist-client": "^5.104.2",
     "@types/sql.js": "^1.4.11",
     "@types/web-push": "^3.6.4",
-    "@upstash/ratelimit": "^2.2.0",
-    "@upstash/redis": "^1.38.0",
     "chrono-node": "^2.10.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

@@ -5,12 +5,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
-    // 1. IP rate limiting (evaluated in-memory/Upstash and discarded immediately)
+    // IP is used in-memory only and never persisted
     const clientIp = getClientIp(request);
     const limited = await enforceRateLimit("telemetry", clientIp);
     if (limited) return limited;
 
-    // 2. Body parsing
     let rawBody: unknown;
     try {
       rawBody = await request.json();
@@ -18,7 +17,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
 
-    // 3. Schema validation (strict check rejects unknown keys, PII, and oversized payloads)
+    // Strict mode rejects unknown keys, PII, and oversized payloads
     const parsed = TelemetryBatchRequestSchema.safeParse(rawBody);
     if (!parsed.success) {
       return NextResponse.json(
@@ -35,7 +34,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, count: 0 }, { status: 200 });
     }
 
-    // 4. Transform into database rows (strictly zero IP or PII persisted)
+    // Only device id, event name, and properties are persisted
     const rows = events.map((event) => ({
       device_id: event.deviceId,
       event_name: event.name,
@@ -43,7 +42,7 @@ export async function POST(request: Request) {
         "properties" in event && event.properties ? event.properties : {},
     }));
 
-    // 5. Ingestion via privileged admin client (bypasses RLS)
+    // Admin client bypasses RLS
     const supabase = createAdminClient();
     const { error: insertError } = await supabase
       .from("telemetry_events")

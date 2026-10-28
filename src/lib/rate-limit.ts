@@ -1,21 +1,15 @@
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import { NextResponse } from "next/server";
 
-// Upstash-backed since serverless instances don't share memory for an
-// in-memory limiter. Fails open when unconfigured rather than taking the app down.
+// In-memory sliding window, scoped to this server instance.
 
-type Window = `${number} ${"s" | "m" | "h" | "d"}`;
-
-// Centralized so two call sites can't configure the same name differently.
 const LIMITS = {
-  /** Unauthenticated proxy — limited per IP. */
-  webdav: { maxRequests: 60, window: "1 m" },
-  /** Authenticated push sends — limited per user. */
-  "push-send": { maxRequests: 10, window: "1 m" },
-  /** Telemetry ingestion — limited per IP. */
-  telemetry: { maxRequests: 60, window: "1 m" },
-} as const satisfies Record<string, { maxRequests: number; window: Window }>;
+  // Unauthenticated proxy — limited per IP.
+  webdav: { maxRequests: 60, windowMs: 60_000 },
+  // Authenticated push sends — limited per user.
+  "push-send": { maxRequests: 10, windowMs: 60_000 },
+  // Telemetry ingestion — limited per IP.
+  telemetry: { maxRequests: 60, windowMs: 60_000 },
+} as const satisfies Record<string, { maxRequests: number; windowMs: number }>;
 
 export type RateLimitName = keyof typeof LIMITS;
 
@@ -25,61 +19,74 @@ export type RateLimitResult =
       allowed: false;
       limit: number;
       remaining: number;
-      /** Unix ms timestamp when the window resets. */
+      // Unix ms timestamp when the window resets.
       reset: number;
     };
 
-let warnedNotConfigured = false;
-const limiters = new Map<RateLimitName, Ratelimit>();
+const MAX_STORED_KEYS = 5000;
+const MAX_WINDOW_MS = Math.max(
+  ...Object.values(LIMITS).map((item) => item.windowMs),
+);
+const requestBuckets = new Map<string, number[]>();
 
-function getLimiter(name: RateLimitName): Ratelimit | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-
-  if (!url || !token) {
-    if (!warnedNotConfigured) {
-      warnedNotConfigured = true;
-      console.warn(
-        "[rate-limit] UPSTASH_REDIS_REST_URL/TOKEN not set — rate limiting is disabled (failing open).",
-      );
+// Drops idle buckets, then the oldest ones if still over capacity.
+function pruneBuckets(now: number): void {
+  for (const [key, timestamps] of requestBuckets.entries()) {
+    const latest = timestamps[timestamps.length - 1];
+    if (!latest || now - latest > MAX_WINDOW_MS) {
+      requestBuckets.delete(key);
     }
-    return null;
   }
 
-  const cached = limiters.get(name);
-  if (cached) return cached;
-
-  const { maxRequests, window } = LIMITS[name];
-  const limiter = new Ratelimit({
-    redis: new Redis({ url, token }),
-    limiter: Ratelimit.slidingWindow(maxRequests, window),
-    prefix: `kagelin-ratelimit:${name}`,
-    analytics: false,
-  });
-  limiters.set(name, limiter);
-  return limiter;
+  if (requestBuckets.size > MAX_STORED_KEYS) {
+    const overflow = requestBuckets.size - MAX_STORED_KEYS;
+    let evicted = 0;
+    for (const key of requestBuckets.keys()) {
+      requestBuckets.delete(key);
+      evicted++;
+      if (evicted >= overflow) break;
+    }
+  }
 }
 
-/**
- * Checks and consumes one request against a named, sliding-window limit.
- * Fails open (allowed: true) if Upstash isn't configured.
- */
+// Consumes one request against the named limit.
 export async function checkRateLimit(
   name: RateLimitName,
   identifier: string,
 ): Promise<RateLimitResult> {
-  const limiter = getLimiter(name);
-  if (!limiter) {
-    return { allowed: true };
+  const config = LIMITS[name];
+  const key = `${name}:${identifier}`;
+  const now = Date.now();
+  const windowStart = now - config.windowMs;
+
+  const existing = requestBuckets.get(key) ?? [];
+  const validTimestamps = existing.filter((t) => t > windowStart);
+
+  if (validTimestamps.length >= config.maxRequests) {
+    // A slot opens when the oldest of the max requests expires.
+    const earliest = validTimestamps[0] ?? now;
+    const reset = earliest + config.windowMs;
+
+    requestBuckets.set(key, validTimestamps);
+    return {
+      allowed: false,
+      limit: config.maxRequests,
+      remaining: 0,
+      reset,
+    };
   }
 
-  const { success, limit, remaining, reset } = await limiter.limit(identifier);
-  return success
-    ? { allowed: true }
-    : { allowed: false, limit, remaining, reset };
+  validTimestamps.push(now);
+  requestBuckets.set(key, validTimestamps);
+
+  if (requestBuckets.size > MAX_STORED_KEYS) {
+    pruneBuckets(now);
+  }
+
+  return { allowed: true };
 }
 
-/** Returns a 429 response when rate limited, or null when allowed. */
+// Returns a 429 response when rate limited, or null when allowed.
 export async function enforceRateLimit(
   name: RateLimitName,
   identifier: string,
@@ -102,11 +109,17 @@ export async function enforceRateLimit(
   );
 }
 
-/** Best-effort client IP extraction behind Vercel's proxy. */
+// Best-effort client IP extraction behind Vercel or reverse proxies.
 export function getClientIp(request: Request): string {
   const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) {
-    return forwardedFor.split(",")[0].trim();
+    const ip = forwardedFor.split(",")[0]?.trim();
+    if (ip) return ip;
   }
-  return request.headers.get("x-real-ip") ?? "unknown";
+  return request.headers.get("x-real-ip")?.trim() || "unknown";
+}
+
+// Clears stored history; used by unit tests.
+export function resetRateLimitsForTesting(): void {
+  requestBuckets.clear();
 }
