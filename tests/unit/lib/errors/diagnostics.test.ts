@@ -1,9 +1,10 @@
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, afterAll, vi } from "vitest";
 import {
   recordDiagnosticError,
   getDiagnosticErrors,
   clearDiagnosticErrors,
   exportDiagnosticReport,
+  getExtendedSystemInfo,
   MAX_DIAGNOSTIC_ERRORS,
 } from "@/lib/errors/diagnostics";
 import { REDACTED } from "@/lib/errors/scrubEvent";
@@ -151,5 +152,152 @@ describe("src/lib/errors/diagnostics.ts", () => {
     const report = await exportDiagnosticReport(new Error("Failed to fetch"));
     expect(report).toContain("IndexedDB persistence failed");
     expect(report).toContain("Failed to fetch");
+  });
+
+  describe("getExtendedSystemInfo & exportDiagnosticReport extended fields", () => {
+    const originalStorage = navigator.storage;
+    const originalServiceWorker = navigator.serviceWorker;
+
+    beforeEach(() => {
+      // Clean navigator mocks
+      Object.defineProperty(navigator, "storage", {
+        value: undefined,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(navigator, "serviceWorker", {
+        value: undefined,
+        configurable: true,
+        writable: true,
+      });
+    });
+
+    afterAll(() => {
+      Object.defineProperty(navigator, "storage", {
+        value: originalStorage,
+        configurable: true,
+        writable: true,
+      });
+      Object.defineProperty(navigator, "serviceWorker", {
+        value: originalServiceWorker,
+        configurable: true,
+        writable: true,
+      });
+    });
+
+    it("gathers storage quota and service worker status when APIs are available", async () => {
+      Object.defineProperty(navigator, "storage", {
+        value: {
+          estimate: vi.fn().mockResolvedValue({
+            usage: 14.2 * 1024 * 1024,
+            quota: 2048 * 1024 * 1024,
+          }),
+          persisted: vi.fn().mockResolvedValue(true),
+        },
+        configurable: true,
+      });
+
+      Object.defineProperty(navigator, "serviceWorker", {
+        value: {
+          controller: {
+            state: "activated",
+          },
+        },
+        configurable: true,
+      });
+
+      const sys = await getExtendedSystemInfo({
+        tier: "registered",
+        pendingMutationsCount: 2,
+      });
+
+      expect(sys.tier).toBe("registered");
+      expect(sys.storage).toEqual({
+        usageMb: 14.2,
+        quotaMb: 2048,
+        percentUsed: 0.7,
+        persisted: true,
+      });
+      expect(sys.serviceWorker).toEqual({
+        controllerActive: true,
+        state: "activated",
+      });
+      expect(sys.syncHealth).toEqual({
+        pendingMutationsCount: 2,
+      });
+    });
+
+    it("gracefully degrades when navigator.storage and serviceWorker are undefined or reject", async () => {
+      Object.defineProperty(navigator, "storage", {
+        value: {
+          estimate: vi.fn().mockRejectedValue(new Error("Permission denied")),
+          persisted: vi
+            .fn()
+            .mockRejectedValue(new Error("Storage unavailable")),
+        },
+        configurable: true,
+      });
+
+      const sys = await getExtendedSystemInfo();
+
+      expect(sys.storage).toBeUndefined();
+      expect(sys.serviceWorker).toEqual({
+        controllerActive: false,
+      });
+      expect(sys.syncHealth).toEqual({
+        pendingMutationsCount: 0,
+      });
+    });
+
+    it("renders storage, service worker, tier, and pending offline mutations in the markdown report", async () => {
+      Object.defineProperty(navigator, "storage", {
+        value: {
+          estimate: vi.fn().mockResolvedValue({
+            usage: 14.2 * 1024 * 1024,
+            quota: 2048 * 1024 * 1024,
+          }),
+          persisted: vi.fn().mockResolvedValue(true),
+        },
+        configurable: true,
+      });
+
+      Object.defineProperty(navigator, "serviceWorker", {
+        value: {
+          controller: {
+            state: "activated",
+          },
+        },
+        configurable: true,
+      });
+
+      const report = await exportDiagnosticReport(undefined, {
+        tier: "registered",
+        pendingMutationsCount: 0,
+      });
+
+      expect(report).toContain("- **Tier:** `registered`");
+      expect(report).toContain(
+        "- **Storage:** `14.2 MB / 2048 MB (0.7% used, persistent)`",
+      );
+      expect(report).toContain("- **Service Worker:** `active (activated)`");
+      expect(report).toContain("- **Pending Offline Mutations:** `0`");
+    });
+
+    it("renders fallback values in markdown report when storage is unavailable and no SW controller", async () => {
+      const report = await exportDiagnosticReport(undefined, {
+        tier: "guest",
+        pendingMutationsCount: 5,
+      });
+
+      expect(report).toContain("- **Tier:** `guest`");
+      expect(report).toContain("- **Storage:** `unavailable`");
+      expect(report).toContain("- **Service Worker:** `none`");
+      expect(report).toContain("- **Pending Offline Mutations:** `5`");
+    });
+
+    it("falls back to unknown tier when options are not provided", async () => {
+      const report = await exportDiagnosticReport();
+      expect(report).toContain("- **Tier:** `unknown`");
+    });
   });
 });

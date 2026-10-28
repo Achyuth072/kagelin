@@ -210,6 +210,41 @@ export async function clearDiagnosticErrors(): Promise<void> {
   await writeQueue;
 }
 
+export interface DiagnosticStorageInfo {
+  usageMb: number;
+  quotaMb: number;
+  percentUsed: number;
+  persisted: boolean;
+}
+
+export interface DiagnosticServiceWorkerInfo {
+  controllerActive: boolean;
+  state?: string;
+}
+
+export interface DiagnosticSyncHealthInfo {
+  pendingMutationsCount: number;
+}
+
+export interface DiagnosticSystemInfo {
+  appVersion: string;
+  releaseChannel: string;
+  userAgent: string;
+  language: string;
+  timeZone: string;
+  standalone: boolean;
+  online: boolean;
+  tier?: "guest" | "registered" | "premium";
+  storage?: DiagnosticStorageInfo;
+  serviceWorker?: DiagnosticServiceWorkerInfo;
+  syncHealth?: DiagnosticSyncHealthInfo;
+}
+
+export interface DiagnosticReportOptions {
+  tier?: "guest" | "registered" | "premium";
+  pendingMutationsCount?: number;
+}
+
 function getSystemInfo() {
   let userAgent = "unknown";
   let language = "unknown";
@@ -246,8 +281,68 @@ function getSystemInfo() {
   };
 }
 
+async function getStorageInfo(): Promise<DiagnosticStorageInfo | undefined> {
+  if (typeof navigator === "undefined" || !navigator.storage?.estimate) {
+    return undefined;
+  }
+
+  try {
+    const estimate = await navigator.storage.estimate();
+    const usage = estimate.usage || 0;
+    const quota = estimate.quota || 0;
+    const toMb = (bytes: number) =>
+      Math.round((bytes / (1024 * 1024)) * 10) / 10;
+    const percentUsed = quota > 0 ? Math.round((usage / quota) * 1000) / 10 : 0;
+
+    let persisted = false;
+    if (typeof navigator.storage.persisted === "function") {
+      try {
+        persisted = await navigator.storage.persisted();
+      } catch {}
+    }
+
+    return {
+      usageMb: toMb(usage),
+      quotaMb: toMb(quota),
+      percentUsed,
+      persisted,
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+export async function getExtendedSystemInfo(
+  options?: DiagnosticReportOptions,
+): Promise<DiagnosticSystemInfo> {
+  const base = getSystemInfo();
+  const storage = await getStorageInfo();
+
+  const controller =
+    typeof navigator !== "undefined" && "serviceWorker" in navigator
+      ? navigator.serviceWorker?.controller
+      : undefined;
+
+  const serviceWorker: DiagnosticServiceWorkerInfo = controller
+    ? { controllerActive: true, state: controller.state }
+    : { controllerActive: false };
+
+  const syncHealth: DiagnosticSyncHealthInfo = {
+    pendingMutationsCount: options?.pendingMutationsCount ?? 0,
+  };
+
+  return {
+    ...base,
+    tier: options?.tier,
+    storage,
+    serviceWorker,
+    syncHealth,
+  };
+}
+
 export async function exportDiagnosticReport(
   currentError?: unknown,
+  options?: DiagnosticReportOptions,
 ): Promise<string> {
   let errors = await getDiagnosticErrors();
 
@@ -267,8 +362,16 @@ export async function exportDiagnosticReport(
     }
   }
 
-  const sys = getSystemInfo();
+  const sys = await getExtendedSystemInfo(options);
   const now = new Date().toISOString();
+
+  const storageStr = sys.storage
+    ? `${sys.storage.usageMb} MB / ${sys.storage.quotaMb} MB (${sys.storage.percentUsed}% used, ${sys.storage.persisted ? "persistent" : "best-effort"})`
+    : "unavailable";
+
+  const swStr = sys.serviceWorker?.controllerActive
+    ? `active${sys.serviceWorker.state ? ` (${sys.serviceWorker.state})` : ""}`
+    : "none";
 
   const lines: string[] = [
     "### Kagelin Diagnostic Report",
@@ -277,11 +380,15 @@ export async function exportDiagnosticReport(
     "#### System Information",
     `- **App Version:** \`${sys.appVersion}\``,
     `- **Release Channel:** \`${sys.releaseChannel}\``,
+    `- **Tier:** \`${sys.tier ?? "unknown"}\``,
     `- **User Agent:** \`${sys.userAgent}\``,
     `- **Time Zone:** \`${sys.timeZone}\``,
     `- **Language:** \`${sys.language}\``,
     `- **Standalone:** \`${sys.standalone}\``,
     `- **Online:** \`${sys.online}\``,
+    `- **Storage:** \`${storageStr}\``,
+    `- **Service Worker:** \`${swStr}\``,
+    `- **Pending Offline Mutations:** \`${sys.syncHealth?.pendingMutationsCount ?? 0}\``,
     "",
   ];
 

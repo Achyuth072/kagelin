@@ -21,14 +21,31 @@ vi.mock("@/lib/hooks/useDiagnosticBundle", () => ({
   }),
 }));
 
+let mockIsGuestMode = false;
+let mockPendingMutations: Array<{
+  state: { status: string; isPaused?: boolean };
+}> = [];
+
+vi.mock("@/components/AuthProvider", () => ({
+  useAuth: () => ({ isGuestMode: mockIsGuestMode }),
+}));
+
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({
+    getMutationCache: () => ({
+      getAll: () => mockPendingMutations,
+    }),
+  }),
+}));
+
 const mockExportReport = vi
   .fn()
   .mockResolvedValue("### Mock Diagnostic Report");
 const mockClearErrors = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/errors/diagnostics", () => ({
-  exportDiagnosticReport: () => mockExportReport(),
-  clearDiagnosticErrors: () => mockClearErrors(),
+  exportDiagnosticReport: (...args: unknown[]) => mockExportReport(...args),
+  clearDiagnosticErrors: (...args: unknown[]) => mockClearErrors(...args),
 }));
 
 describe("DiagnosticExportSettings", () => {
@@ -36,6 +53,8 @@ describe("DiagnosticExportSettings", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsGuestMode = false;
+    mockPendingMutations = [];
     mockExportReport
       .mockReset()
       .mockResolvedValue("### Mock Diagnostic Report");
@@ -423,5 +442,72 @@ describe("DiagnosticExportSettings", () => {
     });
 
     expect(notify.error).toHaveBeenCalledWith("Couldn't refresh state bundle");
+  });
+
+  it("passes registered tier and pending mutations count to exportDiagnosticReport", async () => {
+    mockIsGuestMode = false;
+    mockPendingMutations = [
+      { state: { status: "pending" } },
+      { state: { status: "success", isPaused: false } },
+      { state: { status: "idle", isPaused: true } },
+    ];
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    expect(mockExportReport).toHaveBeenCalledWith(undefined, {
+      tier: "registered",
+      pendingMutationsCount: 2,
+    });
+  });
+
+  it("passes guest tier to exportDiagnosticReport when in guest mode", async () => {
+    mockIsGuestMode = true;
+    mockPendingMutations = [];
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    expect(mockExportReport).toHaveBeenCalledWith(undefined, {
+      tier: "guest",
+      pendingMutationsCount: 0,
+    });
+  });
+
+  it("renders storage and service worker lines in the markdown preview", async () => {
+    mockExportReport.mockResolvedValueOnce(
+      [
+        "### Kagelin Diagnostic Report",
+        "#### System Information",
+        "- **Tier:** `registered`",
+        "- **Storage:** `14.2 MB / 2048 MB (0.7% used, persistent)`",
+        "- **Service Worker:** `active (activated)`",
+        "- **Pending Offline Mutations:** `0`",
+      ].join("\n"),
+    );
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    expect(
+      await screen.findByText(
+        "- **Storage:** `14.2 MB / 2048 MB (0.7% used, persistent)`",
+        { exact: false },
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("- **Service Worker:** `active (activated)`", {
+        exact: false,
+      }),
+    ).toBeInTheDocument();
   });
 });

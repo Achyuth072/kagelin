@@ -1,13 +1,18 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { useUiStore } from "@/lib/store/uiStore";
 import { getTelemetryConsent } from "@/lib/telemetry/store";
 import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
 import { collectCloudBackup } from "@/lib/backup/cloud-data";
-import { getDiagnosticErrors } from "@/lib/errors/diagnostics";
+import {
+  getDiagnosticErrors,
+  getExtendedSystemInfo,
+} from "@/lib/errors/diagnostics";
+import { getPendingMutationsCount } from "@/lib/diagnostics/syncHealth";
 import {
   collectDiagnosticBundle,
   recentErrorsAsLogs,
@@ -31,6 +36,7 @@ function getPlatformInfo(): DiagnosticPlatformInfo {
 
 export function useDiagnosticBundle() {
   const { isGuestMode } = useAuth();
+  const queryClient = useQueryClient();
   const { theme } = useTheme();
   const timeFormat = useUiStore((s) => s.timeFormat);
   const hapticsEnabled = useUiStore((s) => s.hapticsEnabled);
@@ -63,28 +69,43 @@ export function useDiagnosticBundle() {
       telemetryConsent: getTelemetryConsent(),
     };
 
-    const { tasks, projects, habits, habit_entries, events } = isGuestMode
-      ? {
-          tasks: mockStore.getTasks(),
-          projects: mockStore.getProjects(),
-          habits: mockStore.getHabits(),
-          habit_entries: mockStore.getHabitEntries(),
-          events: mockStore.getEvents(),
-        }
-      : await collectCloudBackup(createClient());
+    const pendingMutationsCount = getPendingMutationsCount(queryClient);
+
+    const fetchBackupData = () =>
+      isGuestMode
+        ? {
+            tasks: mockStore.getTasks(),
+            projects: mockStore.getProjects(),
+            habits: mockStore.getHabits(),
+            habit_entries: mockStore.getHabitEntries(),
+            events: mockStore.getEvents(),
+          }
+        : collectCloudBackup(createClient());
+
+    const [sysInfo, logs, backupData] = await Promise.all([
+      getExtendedSystemInfo({
+        tier: isGuestMode ? "guest" : "registered",
+        pendingMutationsCount,
+      }),
+      getDiagnosticErrors().then(recentErrorsAsLogs),
+      fetchBackupData(),
+    ]);
 
     return collectDiagnosticBundle({
       tier: isGuestMode ? "guest" : "registered",
       appVersion: APP_VERSION,
       releaseChannel: RELEASE_CHANNEL,
       platform: getPlatformInfo(),
+      storage: sysInfo.storage,
+      serviceWorker: sysInfo.serviceWorker,
+      syncHealth: sysInfo.syncHealth,
       settings,
-      tasks,
-      projects,
-      habits,
-      habitEntries: habit_entries,
-      events,
-      logs: recentErrorsAsLogs(await getDiagnosticErrors()),
+      tasks: backupData.tasks,
+      projects: backupData.projects,
+      habits: backupData.habits,
+      habitEntries: backupData.habit_entries,
+      events: backupData.events,
+      logs,
     });
   };
 

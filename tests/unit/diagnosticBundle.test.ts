@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { collectDiagnosticBundle } from "@/lib/diagnostics/collectDiagnosticBundle";
+import { getPendingMutationsCount } from "@/lib/diagnostics/syncHealth";
 import type { Task, Project } from "@/lib/types/task";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
@@ -176,5 +177,63 @@ describe("collectDiagnosticBundle", () => {
     });
     expect(bundle.data.events[0]).not.toHaveProperty("category");
     expect(bundle.data.events[0]).not.toHaveProperty("metadata");
+  });
+
+  it("includes storage, serviceWorker, and syncHealth when provided in bundle input", () => {
+    const input = {
+      ...fixtureInput(),
+      storage: {
+        usageMb: 15.5,
+        quotaMb: 2048,
+        percentUsed: 0.8,
+        persisted: true,
+      },
+      serviceWorker: {
+        controllerActive: true,
+        state: "activated",
+      },
+      syncHealth: {
+        pendingMutationsCount: 3,
+      },
+    };
+
+    const bundle = collectDiagnosticBundle(input);
+
+    expect(bundle.storage).toEqual({
+      usageMb: 15.5,
+      quotaMb: 2048,
+      percentUsed: 0.8,
+      persisted: true,
+    });
+    expect(bundle.serviceWorker).toEqual({
+      controllerActive: true,
+      state: "activated",
+    });
+    expect(bundle.syncHealth).toEqual({
+      pendingMutationsCount: 3,
+    });
+  });
+
+  describe("getPendingMutationsCount", () => {
+    it("returns 0 when queryClient or mutationCache is not present", () => {
+      expect(getPendingMutationsCount(undefined)).toBe(0);
+      expect(getPendingMutationsCount(null)).toBe(0);
+      expect(getPendingMutationsCount({} as never)).toBe(0);
+    });
+
+    it("filters and counts mutations that are pending or paused", () => {
+      const mockQueryClient = {
+        getMutationCache: () => ({
+          getAll: () => [
+            { state: { status: "pending" } },
+            { state: { status: "idle", isPaused: true } },
+            { state: { status: "success", isPaused: false } },
+            { state: { status: "error", isPaused: false } },
+          ],
+        }),
+      } as never;
+
+      expect(getPendingMutationsCount(mockQueryClient)).toBe(2);
+    });
   });
 });

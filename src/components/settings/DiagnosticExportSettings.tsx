@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/components/AuthProvider";
+import { getPendingMutationsCount } from "@/lib/diagnostics/syncHealth";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -37,6 +40,8 @@ function downloadBundle(json: string) {
 }
 
 export function DiagnosticExportSettings() {
+  const { isGuestMode } = useAuth();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [includeDataStructure, setIncludeDataStructure] = useState(false);
   const [loadingReport, setLoadingReport] = useState(false);
@@ -51,7 +56,10 @@ export function DiagnosticExportSettings() {
   const { generateBundle } = useDiagnosticBundle();
 
   const loadReport = async () => {
-    const report = await exportDiagnosticReport();
+    const report = await exportDiagnosticReport(undefined, {
+      tier: isGuestMode ? "guest" : "registered",
+      pendingMutationsCount: getPendingMutationsCount(queryClient),
+    });
     setMarkdownReport(report);
     setCapturedAt(new Date());
     return report;

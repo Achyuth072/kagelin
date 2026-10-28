@@ -1,7 +1,12 @@
 import type { Task, Project } from "@/lib/types/task";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
-import type { DiagnosticErrorRecord } from "@/lib/errors/diagnostics";
+import type {
+  DiagnosticErrorRecord,
+  DiagnosticStorageInfo,
+  DiagnosticServiceWorkerInfo,
+  DiagnosticSyncHealthInfo,
+} from "@/lib/errors/diagnostics";
 import { stripContent } from "./stripContent";
 
 export interface DiagnosticLogEntry {
@@ -57,10 +62,13 @@ export interface DiagnosticSettingsSnapshot {
 }
 
 export interface DiagnosticBundleInput {
-  tier: "guest" | "registered";
+  tier: "guest" | "registered" | "premium";
   appVersion: string;
   releaseChannel: string;
   platform: DiagnosticPlatformInfo;
+  storage?: DiagnosticStorageInfo;
+  serviceWorker?: DiagnosticServiceWorkerInfo;
+  syncHealth?: DiagnosticSyncHealthInfo;
   settings: DiagnosticSettingsSnapshot;
   tasks: Task[];
   projects: Project[];
@@ -74,7 +82,10 @@ export interface DiagnosticBundle {
   generatedAt: string;
   app: { version: string; releaseChannel: string };
   platform: DiagnosticPlatformInfo;
-  account: { tier: "guest" | "registered" };
+  account: { tier: "guest" | "registered" | "premium" };
+  storage?: DiagnosticStorageInfo;
+  serviceWorker?: DiagnosticServiceWorkerInfo;
+  syncHealth?: DiagnosticSyncHealthInfo;
   settings: DiagnosticSettingsSnapshot;
   data: {
     counts: {
@@ -100,6 +111,9 @@ export function collectDiagnosticBundle(
     app: { version: input.appVersion, releaseChannel: input.releaseChannel },
     platform: input.platform,
     account: { tier: input.tier },
+    ...(input.storage ? { storage: input.storage } : {}),
+    ...(input.serviceWorker ? { serviceWorker: input.serviceWorker } : {}),
+    ...(input.syncHealth ? { syncHealth: input.syncHealth } : {}),
     settings: input.settings,
     data: {
       counts: {
