@@ -124,6 +124,7 @@ describe("src/lib/errors/diagnostics.ts", () => {
     expect(report).toContain("#### Error Log (1 event)");
     expect(report).toContain("Failed to fetch");
     expect(report).toContain('{"source":"network"}');
+    expect(report).not.toContain("IndexedDB persistence failed");
   });
 
   it("handles export when no errors are logged", async () => {
@@ -139,5 +140,16 @@ describe("src/lib/errors/diagnostics.ts", () => {
     await expect(
       recordDiagnosticError(new Error("Something")),
     ).resolves.not.toThrow();
+  });
+
+  it("notes IndexedDB unavailability in the report after storage failures", async () => {
+    const { set } = await import("idb-keyval");
+    vi.mocked(set).mockRejectedValueOnce(new Error("IndexedDB quota exceeded"));
+
+    await recordDiagnosticError(new Error("Persist failed"));
+
+    const report = await exportDiagnosticReport(new Error("Failed to fetch"));
+    expect(report).toContain("IndexedDB persistence failed");
+    expect(report).toContain("Failed to fetch");
   });
 });

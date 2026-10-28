@@ -111,7 +111,7 @@ function scrubContext(
     }
 
     if (typeof val === "string") {
-      if (key === "route" || key === "url") {
+      if (key === "route") {
         scrubbed[key] = stripQuery(val);
       } else {
         scrubbed[key] = SAFE_STRING_REGEX.test(val) ? val : REDACTED;
@@ -148,6 +148,10 @@ function createDiagnosticRecord(
 
 let inMemoryErrors: DiagnosticErrorRecord[] = [];
 let writeQueue: Promise<void> = Promise.resolve();
+// IndexedDB ops are best-effort with the in-memory buffer as fallback; the
+// flag tracks failed persistence (only writes clear it) and is surfaced in
+// the exported report.
+let idbPersistFailed = false;
 
 export async function getDiagnosticErrors(): Promise<DiagnosticErrorRecord[]> {
   await writeQueue.catch(() => {});
@@ -156,7 +160,9 @@ export async function getDiagnosticErrors(): Promise<DiagnosticErrorRecord[]> {
     if (Array.isArray(records)) {
       return records;
     }
-  } catch {}
+  } catch {
+    idbPersistFailed = true;
+  }
   return [...inMemoryErrors];
 }
 
@@ -179,7 +185,10 @@ export async function recordDiagnosticError(
           list.push(record);
           const capped = list.slice(-MAX_DIAGNOSTIC_ERRORS);
           await set(DIAGNOSTIC_ERRORS_KEY, capped);
-        } catch {}
+          idbPersistFailed = false;
+        } catch {
+          idbPersistFailed = true;
+        }
       });
 
     await writeQueue;
@@ -193,7 +202,10 @@ export async function clearDiagnosticErrors(): Promise<void> {
     .then(async () => {
       try {
         await del(DIAGNOSTIC_ERRORS_KEY);
-      } catch {}
+        idbPersistFailed = false;
+      } catch {
+        idbPersistFailed = true;
+      }
     });
   await writeQueue;
 }
@@ -272,6 +284,13 @@ export async function exportDiagnosticReport(
     `- **Online:** \`${sys.online}\``,
     "",
   ];
+
+  if (idbPersistFailed) {
+    lines.push(
+      "**Note:** IndexedDB persistence failed — some recently recorded events may be missing from this report.",
+      "",
+    );
+  }
 
   if (errors.length === 0) {
     lines.push("*No diagnostic errors recorded.*");

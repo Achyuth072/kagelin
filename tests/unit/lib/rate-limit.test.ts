@@ -3,6 +3,8 @@ import {
   checkRateLimit,
   enforceRateLimit,
   getClientIp,
+  getStoredKeyCountForTesting,
+  MAX_STORED_KEYS,
   resetRateLimitsForTesting,
 } from "@/lib/rate-limit";
 
@@ -104,6 +106,18 @@ describe("rate-limit (in-memory sliding window)", () => {
 
     const res = await checkRateLimit("push-send", "trigger-prune");
     expect(res.allowed).toBe(true);
+    expect(getStoredKeyCountForTesting()).toBe(1);
+  });
+
+  it("evicts oldest buckets once active keys exceed MAX_STORED_KEYS", async () => {
+    vi.setSystemTime(100_000);
+
+    for (let i = 0; i < MAX_STORED_KEYS + 1; i++) {
+      const result = await checkRateLimit("push-send", `bulk-${i}`);
+      expect(result.allowed).toBe(true);
+    }
+
+    expect(getStoredKeyCountForTesting()).toBe(MAX_STORED_KEYS);
   });
 
   it("enforceRateLimit returns null when request is allowed", async () => {

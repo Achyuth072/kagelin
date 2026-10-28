@@ -7,9 +7,10 @@ import { getTelemetryConsent } from "@/lib/telemetry/store";
 import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
 import { collectCloudBackup } from "@/lib/backup/cloud-data";
-import { getRecentClientLogs } from "@/lib/diagnostics/clientLog";
+import { getDiagnosticErrors } from "@/lib/errors/diagnostics";
 import {
   collectDiagnosticBundle,
+  recentErrorsAsLogs,
   type DiagnosticBundle,
   type DiagnosticPlatformInfo,
 } from "@/lib/diagnostics/collectDiagnosticBundle";
@@ -83,7 +84,7 @@ export function useDiagnosticBundle() {
       habits,
       habitEntries: habit_entries,
       events,
-      logs: getRecentClientLogs(),
+      logs: recentErrorsAsLogs(await getDiagnosticErrors()),
     });
   };
 

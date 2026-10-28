@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
-import {
-  recordDiagnosticError,
-  exportDiagnosticReport,
-} from "@/lib/errors/diagnostics";
+import { useEffect, type CSSProperties } from "react";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
+import { useCopyDiagnostics } from "@/lib/errors/useCopyDiagnostics";
 
 const actionButtonStyle: CSSProperties = {
   padding: "0.5rem 1.25rem",
@@ -24,21 +22,12 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copyDiagnostics } = useCopyDiagnostics(error);
 
   useEffect(() => {
     console.error("Unhandled root layout error:", error);
     void recordDiagnosticError(error, { source: "global-error" });
   }, [error]);
-
-  const handleCopyDiagnostics = async () => {
-    try {
-      const report = await exportDiagnosticReport(error);
-      await navigator.clipboard.writeText(report);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {}
-  };
 
   return (
     <html lang="en">
@@ -77,7 +66,7 @@ export default function GlobalError({
           </button>
           <button
             type="button"
-            onClick={handleCopyDiagnostics}
+            onClick={copyDiagnostics}
             style={actionButtonStyle}
           >
             {copied ? "Diagnostics copied" : "Copy diagnostics"}

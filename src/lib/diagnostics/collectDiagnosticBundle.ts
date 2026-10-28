@@ -1,8 +1,35 @@
 import type { Task, Project } from "@/lib/types/task";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import type { CalendarEvent } from "@/lib/types/calendar-event";
+import type { DiagnosticErrorRecord } from "@/lib/errors/diagnostics";
 import { stripContent } from "./stripContent";
-import type { DiagnosticLogEntry } from "./clientLog";
+
+export interface DiagnosticLogEntry {
+  timestamp: string;
+  category?: string;
+  level?: string;
+  message?: string;
+  data?: Record<string, unknown>;
+}
+
+// Builds the bundle's Recent Logs from the client diagnostic error buffer.
+// Records are pre-scrubbed at write time — no plaintext user content.
+export function recentErrorsAsLogs(
+  records: DiagnosticErrorRecord[],
+): DiagnosticLogEntry[] {
+  return records.map((record) => ({
+    timestamp: record.timestamp,
+    category: "error",
+    level: "error",
+    message: record.message,
+    data: {
+      name: record.name,
+      digest: record.digest,
+      context: record.context,
+      stack: record.stack,
+    },
+  }));
+}
 
 export interface DiagnosticPlatformInfo {
   userAgent: string;

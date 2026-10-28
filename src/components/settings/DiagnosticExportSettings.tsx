@@ -23,7 +23,7 @@ import type { DiagnosticBundle } from "@/lib/diagnostics/collectDiagnosticBundle
 import { SUPPORT_EMAIL } from "@/lib/links";
 import { notify } from "@/lib/notify";
 import { triggerDownload } from "@/lib/utils/stats-export";
-import { exportDiagnosticReport } from "@/lib/errors/diagnostics";
+import { useCopyDiagnostics } from "@/lib/errors/useCopyDiagnostics";
 
 function downloadBundle(json: string) {
   const filename = `kagelin-diagnostic-${new Date().toISOString().split("T")[0]}.json`;
@@ -36,18 +36,17 @@ export function DiagnosticExportSettings() {
   const [bundle, setBundle] = useState<DiagnosticBundle | null>(null);
   const [copied, setCopied] = useState(false);
   const [copyingLog, setCopyingLog] = useState(false);
-  const [logCopied, setLogCopied] = useState(false);
+  const { copied: logCopied, copyDiagnostics } = useCopyDiagnostics();
 
   const handleCopyDiagnosticLog = async () => {
     setCopyingLog(true);
     try {
-      const report = await exportDiagnosticReport();
-      await navigator.clipboard.writeText(report);
-      setLogCopied(true);
-      notify.success("Diagnostic log copied");
-      setTimeout(() => setLogCopied(false), 2000);
-    } catch {
-      notify.error("Couldn't copy diagnostic log");
+      const ok = await copyDiagnostics();
+      if (ok) {
+        notify.success("Diagnostic log copied");
+      } else {
+        notify.error("Couldn't copy diagnostic log");
+      }
     } finally {
       setCopyingLog(false);
     }

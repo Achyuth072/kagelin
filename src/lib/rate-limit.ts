@@ -23,7 +23,7 @@ export type RateLimitResult =
       reset: number;
     };
 
-const MAX_STORED_KEYS = 5000;
+export const MAX_STORED_KEYS = 5000;
 const MAX_WINDOW_MS = Math.max(
   ...Object.values(LIMITS).map((item) => item.windowMs),
 );
@@ -122,4 +122,9 @@ export function getClientIp(request: Request): string {
 // Clears stored history; used by unit tests.
 export function resetRateLimitsForTesting(): void {
   requestBuckets.clear();
+}
+
+// Current bucket count; used by unit tests.
+export function getStoredKeyCountForTesting(): number {
+  return requestBuckets.size;
 }
