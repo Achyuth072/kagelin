@@ -556,4 +556,105 @@ describe("DiagnosticExportSettings", () => {
       }),
     ).toBeInTheDocument();
   });
+
+  it("keeps preview mounted and stable without layout shift when toggling advanced bundle for the first time", async () => {
+    let resolveBundle: (value: {
+      app: { version: string; releaseChannel: string };
+      data: { counts: { tasks: number } };
+    }) => void = () => {};
+    const bundlePromise = new Promise<{
+      app: { version: string; releaseChannel: string };
+      data: { counts: { tasks: number } };
+    }>((resolve) => {
+      resolveBundle = resolve;
+    });
+
+    mockGenerateBundle.mockReturnValueOnce(bundlePromise);
+
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    expect(
+      await screen.findByText("### Mock Diagnostic Report"),
+    ).toBeInTheDocument();
+
+    const toggle = screen.getByLabelText(
+      /include database schedule structure/i,
+    );
+
+    // Toggle on for the first time
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+
+    // Preview remains mounted and has accessible region and live announcement
+    const preview = screen.getByRole("region", {
+      name: /diagnostic report preview/i,
+    });
+    expect(preview).toBeInTheDocument();
+    expect(preview).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByText("Compiling state bundle…")).toBeInTheDocument();
+
+    // Resolve bundle generation
+    await act(async () => {
+      resolveBundle({
+        app: { version: "1.0.0", releaseChannel: "preview" },
+        data: { counts: { tasks: 5 } },
+      });
+    });
+
+    expect(preview).toHaveAttribute("aria-busy", "false");
+    expect(
+      screen.queryByText("Compiling state bundle…"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("provides accessible switch description and confirmation group semantics", async () => {
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    const toggle = screen.getByLabelText(
+      /include database schedule structure/i,
+    );
+    expect(toggle).toHaveAttribute("aria-describedby", "toggle-advanced-desc");
+    expect(
+      screen.getByText(/includes task counts, recurrence rules/i),
+    ).toHaveAttribute("id", "toggle-advanced-desc");
+
+    // Click clear log
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /clear log/i }));
+    });
+
+    const confirmGroup = screen.getByRole("group", {
+      name: /confirm log clearing/i,
+    });
+    expect(confirmGroup).toBeInTheDocument();
+
+    const confirmBtn = screen.getByRole("button", { name: /confirm/i });
+    expect(confirmBtn).toHaveFocus();
+  });
+
+  it("uses responsive labels for toolbar actions and avoids redundant footer close button", async () => {
+    render(<DiagnosticExportSettings />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+    });
+
+    const refreshBtn = screen.getByRole("button", { name: /refresh/i });
+    const clearBtn = screen.getByRole("button", { name: /clear log/i });
+    expect(refreshBtn).toHaveAttribute("aria-label", "Refresh");
+    expect(clearBtn).toHaveAttribute("aria-label", "Clear Log");
+
+    // Close button is only the dialog close button, not duplicated in the footer
+    const closeButtons = screen.getAllByRole("button", { name: /close/i });
+    expect(closeButtons).toHaveLength(1);
+  });
 });

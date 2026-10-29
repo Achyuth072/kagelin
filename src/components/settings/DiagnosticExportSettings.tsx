@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Bug,
@@ -61,6 +61,14 @@ export function DiagnosticExportSettings() {
   const [capturedAt, setCapturedAt] = useState<Date | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const { generateBundle, generateReport } = useDiagnosticBundle();
+  const clearButtonRef = useRef<HTMLButtonElement>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (confirmingClear) {
+      confirmButtonRef.current?.focus();
+    }
+  }, [confirmingClear]);
 
   useEffect(() => {
     if (!open || !capturedAt) return;
@@ -115,22 +123,18 @@ export function DiagnosticExportSettings() {
     setIsClearing(true);
     try {
       await clearDiagnosticErrors();
+      setBundle(null);
+      setIncludeDataStructure(false);
+      try {
+        await loadReport();
+        notify.success("Diagnostic errors cleared");
+      } catch {
+        notify.error(
+          "Diagnostic errors cleared, but the report couldn't refresh",
+        );
+      }
     } catch {
       notify.error("Couldn't clear diagnostic errors");
-      setIsClearing(false);
-      setConfirmingClear(false);
-      return;
-    }
-
-    setBundle(null);
-    setIncludeDataStructure(false);
-    try {
-      await loadReport();
-      notify.success("Diagnostic errors cleared");
-    } catch {
-      notify.error(
-        "Diagnostic errors cleared, but the report couldn't refresh",
-      );
     } finally {
       setIsClearing(false);
       setConfirmingClear(false);
@@ -155,7 +159,7 @@ export function DiagnosticExportSettings() {
   };
 
   const jsonString = bundle ? JSON.stringify(bundle, null, 2) : "";
-  const isInitialLoading = (!markdownReport && isRefreshing) || loadingBundle;
+  const isInitialLoading = !markdownReport && isRefreshing;
   const isBusy = isRefreshing || isClearing || loadingBundle;
 
   const handleCopy = async () => {
@@ -183,7 +187,10 @@ export function DiagnosticExportSettings() {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="p-2 rounded-full bg-secondary/30 shrink-0">
-              <Bug className="h-4 w-4 text-muted-foreground" />
+              <Bug
+                className="h-4 w-4 text-muted-foreground"
+                aria-hidden="true"
+              />
             </div>
             <p className="text-sm font-medium">Report a Problem</p>
           </div>
@@ -193,7 +200,7 @@ export function DiagnosticExportSettings() {
             className="shrink-0 gap-2"
             onClick={handleOpen}
           >
-            <Eye className="h-4 w-4" />
+            <Eye className="h-4 w-4" aria-hidden="true" />
             Open Report
           </Button>
         </div>
@@ -211,90 +218,11 @@ export function DiagnosticExportSettings() {
         }}
       >
         <ResponsiveDialogContent className="sm:max-w-xl border-border/80 shadow-none p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
-          <ResponsiveDialogHeader className="p-4 sm:p-6 pb-3 border-b border-border/80 shrink-0 text-left sm:pr-12">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                <ResponsiveDialogTitle className="type-h2">
-                  Diagnostic Report
-                </ResponsiveDialogTitle>
-                {capturedAt && (
-                  <p className="type-micro text-muted-foreground mt-0.5">
-                    Captured {formatCapturedAt(capturedAt, now)}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 self-start sm:self-auto">
-                {confirmingClear ? (
-                  <div className="flex items-center gap-1.5">
-                    <span className="type-micro text-muted-foreground mr-1">
-                      Clear errors?
-                    </span>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={handleConfirmClear}
-                      disabled={isClearing}
-                    >
-                      {isClearing && (
-                        <Loader2 className="h-3 w-3 animate-spin mr-1 motion-reduce:animate-none" />
-                      )}
-                      Confirm
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => {
-                        trigger("tick");
-                        setConfirmingClear(false);
-                      }}
-                      disabled={isClearing}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-foreground transition-seijaku-fast"
-                      onClick={handleRefresh}
-                      disabled={isBusy}
-                      aria-label="Refresh"
-                    >
-                      <RotateCw
-                        className={cn(
-                          "h-3.5 w-3.5 motion-reduce:animate-none",
-                          isRefreshing && "animate-spin",
-                        )}
-                      />
-                      Refresh
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs gap-1.5 text-muted-foreground hover:text-destructive transition-seijaku-fast"
-                      onClick={() => {
-                        trigger("tick");
-                        setConfirmingClear(true);
-                      }}
-                      disabled={isBusy}
-                      aria-label="Clear Log"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" strokeWidth={2.25} />
-                      Clear Log
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-            <ResponsiveDialogDescription className="mt-1">
+          <ResponsiveDialogHeader className="p-4 sm:p-6 pb-4 border-b border-border/80 shrink-0 text-left pr-12 sm:pr-14">
+            <ResponsiveDialogTitle className="type-h2">
+              Diagnostic Report
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription className="text-xs sm:text-sm text-muted-foreground mt-1.5 leading-relaxed">
               Review system specs and logs. Personal content (task, habit, and
               event names) is never included.
             </ResponsiveDialogDescription>
@@ -303,10 +231,14 @@ export function DiagnosticExportSettings() {
           <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4">
             {includeDataStructure ? (
               <div
-                role="alert"
-                className="flex gap-2.5 text-xs text-destructive-surface-foreground bg-destructive-surface border border-destructive-surface-border rounded-lg p-3"
+                role="status"
+                aria-live="polite"
+                className="flex gap-2.5 text-xs text-destructive-surface-foreground bg-destructive-surface border border-destructive-surface-border rounded-lg p-3 min-h-[44px]"
               >
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <AlertTriangle
+                  className="h-4 w-4 shrink-0 mt-0.5"
+                  aria-hidden="true"
+                />
                 <p>
                   <strong>Notice:</strong> Structural metadata includes your
                   routine timestamps, recurrence rules, and time zone. Please
@@ -315,8 +247,15 @@ export function DiagnosticExportSettings() {
                 </p>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-secondary/30 rounded-lg p-2.5">
-                <Check className="h-4 w-4 text-primary shrink-0" />
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex items-center gap-2.5 text-xs text-foreground/80 bg-secondary/40 border border-border/50 rounded-lg p-3 min-h-[44px]"
+              >
+                <Check
+                  className="h-4 w-4 text-primary shrink-0"
+                  aria-hidden="true"
+                />
                 <span>
                   Safe for public bug reports on GitHub. Stack traces and error
                   messages are pre-scrubbed of personal data.
@@ -324,45 +263,173 @@ export function DiagnosticExportSettings() {
               </div>
             )}
 
-            <div className="relative">
-              {isInitialLoading ? (
-                <div className="h-44 flex flex-col items-center justify-center gap-2 rounded-lg border border-border/40 bg-secondary/20">
-                  <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none text-muted-foreground" />
-                  <p className="type-micro text-muted-foreground">
-                    {loadingBundle
-                      ? "Compiling state bundle…"
-                      : "Loading diagnostics…"}
-                  </p>
-                </div>
-              ) : (
-                <pre
-                  data-vaul-no-drag
-                  tabIndex={0}
-                  aria-busy={isRefreshing}
-                  className={cn(
-                    "max-h-[30vh] sm:max-h-[40vh] overflow-auto rounded-lg border border-border/40 bg-secondary/20 p-3 text-xs whitespace-pre-wrap break-all font-mono select-text transition-opacity transition-seijaku-fast",
-                    isRefreshing
-                      ? "opacity-60 pointer-events-none"
-                      : "opacity-100",
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-muted-foreground font-medium truncate">
+                  {capturedAt
+                    ? `Captured ${formatCapturedAt(capturedAt, now)}`
+                    : "Report Preview"}
+                </span>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {confirmingClear ? (
+                    <div
+                      role="group"
+                      aria-label="Confirm log clearing"
+                      className="flex items-center gap-1.5"
+                    >
+                      <span
+                        id="clear-log-prompt"
+                        className="text-xs text-muted-foreground mr-1"
+                      >
+                        Clear errors?
+                      </span>
+                      <Button
+                        ref={confirmButtonRef}
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="h-8 px-2.5 text-xs min-h-[36px] sm:min-h-[32px]"
+                        onClick={handleConfirmClear}
+                        disabled={isClearing}
+                        aria-describedby="clear-log-prompt"
+                      >
+                        {isClearing && (
+                          <Loader2
+                            className="h-3.5 w-3.5 animate-spin mr-1 motion-reduce:animate-none"
+                            aria-hidden="true"
+                          />
+                        )}
+                        Confirm
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2.5 text-xs min-h-[36px] sm:min-h-[32px]"
+                        onClick={() => {
+                          trigger("tick");
+                          setConfirmingClear(false);
+                          clearButtonRef.current?.focus();
+                        }}
+                        disabled={isClearing}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label="Refresh"
+                        className="h-8 px-2 text-xs min-h-[36px] min-w-[36px] sm:min-h-[32px] sm:min-w-0 text-muted-foreground hover:text-foreground transition-seijaku-fast"
+                        onClick={handleRefresh}
+                        disabled={isBusy}
+                      >
+                        <RotateCw
+                          className={cn(
+                            "h-3.5 w-3.5 motion-reduce:animate-none",
+                            isRefreshing && "animate-spin",
+                          )}
+                          aria-hidden="true"
+                        />
+                        <span className="hidden sm:inline">Refresh</span>
+                      </Button>
+                      <Button
+                        ref={clearButtonRef}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label="Clear Log"
+                        className="h-8 px-2 text-xs min-h-[36px] min-w-[36px] sm:min-h-[32px] sm:min-w-0 text-muted-foreground hover:text-destructive transition-seijaku-fast"
+                        onClick={() => {
+                          trigger("tick");
+                          setConfirmingClear(true);
+                        }}
+                        disabled={isBusy}
+                      >
+                        <Trash2
+                          className="h-3.5 w-3.5"
+                          strokeWidth={2.25}
+                          aria-hidden="true"
+                        />
+                        <span className="hidden sm:inline">Clear Log</span>
+                      </Button>
+                    </>
                   )}
-                >
-                  {includeDataStructure
-                    ? jsonString
-                    : markdownReport || "No errors recorded."}
-                </pre>
-              )}
+                </div>
+              </div>
+
+              <div className="relative">
+                {isInitialLoading ? (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="h-64 sm:h-72 flex flex-col items-center justify-center gap-2 rounded-lg border border-border/40 bg-secondary/20"
+                  >
+                    <Loader2
+                      className="h-5 w-5 animate-spin motion-reduce:animate-none text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Loading diagnostics…
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <pre
+                      data-vaul-no-drag
+                      tabIndex={0}
+                      role="region"
+                      aria-label="Diagnostic report preview"
+                      aria-busy={isRefreshing || loadingBundle}
+                      className={cn(
+                        "h-64 sm:h-72 overflow-auto rounded-lg border border-border/40 bg-secondary/20 p-3 text-xs whitespace-pre-wrap break-all font-mono select-text transition-opacity transition-seijaku-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                        isRefreshing || loadingBundle
+                          ? "opacity-60 pointer-events-none"
+                          : "opacity-100",
+                      )}
+                    >
+                      {includeDataStructure
+                        ? jsonString
+                        : markdownReport || "No errors recorded."}
+                    </pre>
+
+                    {loadingBundle && (
+                      <div
+                        role="status"
+                        aria-live="polite"
+                        className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg bg-background/80 backdrop-blur-[1px]"
+                      >
+                        <Loader2
+                          className="h-5 w-5 animate-spin motion-reduce:animate-none text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Compiling state bundle…
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Advanced toggle */}
-            <div className="flex items-start justify-between gap-4 p-3 rounded-lg border border-border/40 bg-secondary/10">
-              <div className="space-y-0.5">
+            <div className="flex items-start justify-between gap-4 p-3.5 rounded-lg border border-border/50 bg-secondary/10">
+              <div className="space-y-1">
                 <label
                   htmlFor="toggle-advanced-data"
-                  className="type-ui font-medium cursor-pointer"
+                  className="text-sm font-medium cursor-pointer text-foreground block"
                 >
                   Include database schedule structure (Advanced)
                 </label>
-                <p className="type-micro text-muted-foreground leading-relaxed">
+                <p
+                  id="toggle-advanced-desc"
+                  className="text-xs text-muted-foreground leading-relaxed"
+                >
                   Includes task counts, recurrence rules, and streak metadata
                   (no text). Needed only for complex sync or calendar bugs.
                 </p>
@@ -372,47 +439,37 @@ export function DiagnosticExportSettings() {
                 checked={includeDataStructure}
                 onCheckedChange={handleToggleDataStructure}
                 disabled={isBusy}
+                aria-describedby="toggle-advanced-desc"
               />
             </div>
 
-            <p className="type-micro text-muted-foreground text-center">
+            <p className="text-xs text-muted-foreground text-center">
               Questions or private inquiries? Reach us directly at{" "}
               <a
                 href={`mailto:${SUPPORT_EMAIL}`}
-                className="underline underline-offset-2 hover:text-foreground transition-seijaku-fast"
+                aria-label={`Send email to ${SUPPORT_EMAIL}`}
+                className="underline underline-offset-2 text-foreground/80 hover:text-foreground transition-seijaku-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-xs"
               >
                 {SUPPORT_EMAIL}
               </a>
             </p>
           </div>
 
-          {/* Sticky footer with actions and mobile-friendly close button */}
-          <div className="p-4 border-t border-border/80 shrink-0 bg-background flex flex-col-reverse sm:flex-row justify-end gap-2 pb-safe sm:pb-4">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                trigger("tick");
-                setOpen(false);
-              }}
-            >
-              Close
-            </Button>
-
+          {/* Sticky footer with actions */}
+          <div className="p-4 border-t border-border/80 shrink-0 bg-background flex flex-col sm:flex-row justify-end gap-2 pb-safe sm:pb-4">
             {includeDataStructure && (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="gap-2"
+                className="gap-2 min-h-[36px]"
                 onClick={() => {
                   trigger("tick");
                   downloadBundle(jsonString);
                 }}
                 disabled={isBusy || !bundle}
               >
-                <Download className="h-4 w-4" />
+                <Download className="h-4 w-4" aria-hidden="true" />
                 Download JSON
               </Button>
             )}
@@ -420,18 +477,19 @@ export function DiagnosticExportSettings() {
             <Button
               type="button"
               size="sm"
-              className="gap-2"
+              className="gap-2 min-h-[36px]"
               onClick={handleCopy}
               disabled={isBusy}
+              aria-live="polite"
             >
               {copied ? (
                 <>
-                  <Check className="h-4 w-4" />
+                  <Check className="h-4 w-4" aria-hidden="true" />
                   Copied
                 </>
               ) : (
                 <>
-                  <Copy className="h-4 w-4" />
+                  <Copy className="h-4 w-4" aria-hidden="true" />
                   {includeDataStructure
                     ? "Copy Full Bundle"
                     : "Copy for GitHub"}
