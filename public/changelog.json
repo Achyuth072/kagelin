@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.50.0-preview.3",
+    "date": "2026-10-29",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add @shadcn/lint skeleton and enforce matte surfaces over glassmorphism"
+      ],
+      "Fixed": [
+        "Deduplicate close action, prevent bundle layout jump, and enhance a11y"
+      ]
+    }
+  },
+  {
     "version": "1.50.0-preview.2",
     "date": "2026-10-29",
     "channel": "preview",
@@ -705,21 +718,6 @@
     "sections": {
       "Fixed": [
         "Default missing habit columns instead of nulling them on guest migration"
-      ]
-    }
-  },
-  {
-    "version": "1.44.0-preview.2",
-    "date": "2026-09-21",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add habit reminders setting and Guest hint on the reminder field",
-        "Queue habit reminders from a per-minute pg_cron producer"
-      ],
-      "Fixed": [
-        "Skip profiles with an unrecognised timezone in the habit reminder producer",
-        "Habit reminder midnight lookback, constraint lookup and Guest hint scope"
       ]
     }
   }
