@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.50.0-preview.2",
+    "date": "2026-10-29",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add storage quota, service worker status, and sync health to diagnostic reports",
+        "Add report freshness, on-demand refresh, and error log clearing"
+      ],
+      "Fixed": [
+        "Correct diagnostic report fields and refresh behaviour",
+        "Align diagnostic modal with design system and smooth refresh flashing"
+      ]
+    }
+  },
+  {
     "version": "1.50.0-preview.1",
     "date": "2026-10-28",
     "channel": "preview",
@@ -705,16 +720,6 @@
       "Fixed": [
         "Skip profiles with an unrecognised timezone in the habit reminder producer",
         "Habit reminder midnight lookback, constraint lookup and Guest hint scope"
-      ]
-    }
-  },
-  {
-    "version": "1.44.0-preview.1",
-    "date": "2026-09-20",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Remove rounded corners clipping project bar on desktop task rows"
       ]
     }
   }
