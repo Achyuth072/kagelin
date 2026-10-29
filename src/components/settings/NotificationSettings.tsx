@@ -454,10 +454,10 @@ export function NotificationSettings() {
             />
 
             {eventRemindersOn && (
-              <div className="flex items-center justify-between p-3 rounded-md border border-border/30 bg-muted/20">
+              <div className="flex items-center justify-between p-3 min-h-[44px] rounded-md border border-border/30 bg-muted/20">
                 <div>
                   <p className="text-sm font-medium">Default lead time</p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="type-micro text-muted-foreground">
                     Applied to new events
                   </p>
                 </div>
