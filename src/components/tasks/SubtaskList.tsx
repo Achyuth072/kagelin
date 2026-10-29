@@ -557,7 +557,7 @@ export default function SubtaskList({
                 }}
               >
                 {activeContent && (
-                  <div className="flex items-center gap-2.5 py-1.5 px-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border shadow-md opacity-90">
+                  <div className="flex items-center gap-2.5 py-1.5 px-3 bg-background rounded-lg border border-border shadow-sm">
                     <DragHandle
                       variant={isDesktop ? "desktop" : "mobile"}
                       className="shrink-0 opacity-100"

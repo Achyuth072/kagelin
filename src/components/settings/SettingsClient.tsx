@@ -220,7 +220,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
           </p>
         </div>
 
-        <div className="md:hidden -mx-4 border-b border-border/50 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <div className="md:hidden -mx-4 border-b border-border/50 bg-background px-4 py-3">
           <Tabs
             value={activeTab}
             onValueChange={handleTabChange}

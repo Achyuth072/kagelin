@@ -3,6 +3,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import { recommended as tailwindRecommended } from "@poupe/eslint-plugin-tailwindcss";
 import reactCompiler from "eslint-plugin-react-compiler";
+import { plugin as shadcnPlugin } from "@shadcn/lint";
 import noUnboundedSupabaseSelect from "./eslint-rules/no-unbounded-supabase-select.mjs";
 
 const eslintConfig = defineConfig([
@@ -62,6 +63,32 @@ const eslintConfig = defineConfig([
         },
       ],
       "local/no-unbounded-supabase-select": "error",
+      "shadcn/no-restyle": [
+        "error",
+        {
+          allow: [
+            "layout",
+            "spacing",
+            "shape",
+            "color",
+            "typography",
+            "effects",
+            "motion",
+            "transition-seijaku",
+            "transition-seijaku-*",
+            "type-*",
+            "sumi-red-action",
+            "tabular-nums",
+            "truncate",
+            "break-words",
+          ],
+          deny: ["backdrop-blur*", "blur-*"],
+          message: {
+            effects:
+              "Effects that violate DESIGN_SYSTEM.md (such as glassmorphism and blurs) are forbidden. Surfaces must be opaque matte.",
+          },
+        },
+      ],
       "no-restricted-syntax": [
         "warn",
         {
@@ -74,11 +101,25 @@ const eslintConfig = defineConfig([
     },
     plugins: {
       "react-compiler": reactCompiler,
+      shadcn: shadcnPlugin,
       local: {
         rules: {
           "no-unbounded-supabase-select": noUnboundedSupabaseSelect,
         },
       },
+    },
+    settings: {
+      shadcn: {
+        ui: "@/components/ui",
+        note: "Refer to .scratch/product/DESIGN_SYSTEM.md for Kagelin design rules, tokens, and constraints.",
+      },
+    },
+  },
+  // src/components/ui contains primitives (Radix wrappers) which own base styling.
+  {
+    files: ["src/components/ui/**/*.{ts,tsx}"],
+    rules: {
+      "shadcn/no-restyle": "off",
     },
   },
   // notify.ts and toaster.tsx are the only files allowed to import sonner

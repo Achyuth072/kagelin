@@ -86,7 +86,7 @@ const ScheduleView = memo(
                 {/* Date Header */}
                 <div
                   className={cn(
-                    "sticky top-0 z-10 bg-background/95 backdrop-blur-sm",
+                    "sticky top-0 z-10 bg-background",
                     "py-4 border-b border-border/40",
                   )}
                 >

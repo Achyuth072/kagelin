@@ -401,7 +401,7 @@ export function DiagnosticExportSettings() {
                       <div
                         role="status"
                         aria-live="polite"
-                        className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg bg-background/80 backdrop-blur-[1px]"
+                        className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg bg-background"
                       >
                         <Loader2
                           className="h-5 w-5 animate-spin motion-reduce:animate-none text-muted-foreground"

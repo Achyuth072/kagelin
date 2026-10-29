@@ -51,7 +51,7 @@ export function Toaster() {
           toast: cn(
             inter.variable,
             "font-sans",
-            "bg-card/98 backdrop-blur-md border border-border/80 text-foreground",
+            "bg-card border border-border/80 text-foreground",
             "rounded-md shadow-sm inline-flex items-center gap-3",
             "py-2.5 px-4 sm:py-3 sm:px-5",
             "w-fit",

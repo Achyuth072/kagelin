@@ -115,6 +115,7 @@
     "@next/bundle-analyzer": "^16.4.2",
     "@playwright/test": "^1.64.0",
     "@poupe/eslint-plugin-tailwindcss": "^0.3.1",
+    "@shadcn/lint": "^0.2.3",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",

@@ -28,7 +28,7 @@ export const TaskGhost = React.memo(
       <div
         className={cn(
           "flex items-center w-full gap-2 md:gap-4 touch-none opacity-98 transition-all duration-200",
-          "bg-background/98 border border-border/80 backdrop-blur-xl relative overflow-hidden",
+          "bg-background border border-border/80 relative overflow-hidden",
           viewMode === "list"
             ? "px-4 py-3 w-full rounded-xl border-2 border-primary/20 shadow-sm"
             : "p-3 pl-4 rounded-xl border-2 border-primary/20 shadow-sm cursor-grabbing w-70",
