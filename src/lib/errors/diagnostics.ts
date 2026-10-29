@@ -214,7 +214,7 @@ export interface DiagnosticStorageInfo {
   usageMb: number;
   quotaMb: number;
   percentUsed: number;
-  persisted: boolean;
+  persisted?: boolean;
 }
 
 export interface DiagnosticServiceWorkerInfo {
@@ -226,6 +226,8 @@ export interface DiagnosticSyncHealthInfo {
   pendingMutationsCount: number;
 }
 
+export type DiagnosticAccountTier = "guest" | "registered";
+
 export interface DiagnosticSystemInfo {
   appVersion: string;
   releaseChannel: string;
@@ -234,14 +236,14 @@ export interface DiagnosticSystemInfo {
   timeZone: string;
   standalone: boolean;
   online: boolean;
-  tier?: "guest" | "registered" | "premium";
+  tier?: DiagnosticAccountTier;
   storage?: DiagnosticStorageInfo;
   serviceWorker?: DiagnosticServiceWorkerInfo;
   syncHealth?: DiagnosticSyncHealthInfo;
 }
 
 export interface DiagnosticReportOptions {
-  tier?: "guest" | "registered" | "premium";
+  tier?: DiagnosticAccountTier;
   pendingMutationsCount?: number;
 }
 
@@ -294,11 +296,13 @@ async function getStorageInfo(): Promise<DiagnosticStorageInfo | undefined> {
       Math.round((bytes / (1024 * 1024)) * 10) / 10;
     const percentUsed = quota > 0 ? Math.round((usage / quota) * 1000) / 10 : 0;
 
-    let persisted = false;
+    let persisted: boolean | undefined;
     if (typeof navigator.storage.persisted === "function") {
       try {
         persisted = await navigator.storage.persisted();
-      } catch {}
+      } catch {
+        persisted = undefined;
+      }
     }
 
     return {
@@ -327,9 +331,10 @@ export async function getExtendedSystemInfo(
     ? { controllerActive: true, state: controller.state }
     : { controllerActive: false };
 
-  const syncHealth: DiagnosticSyncHealthInfo = {
-    pendingMutationsCount: options?.pendingMutationsCount ?? 0,
-  };
+  const syncHealth: DiagnosticSyncHealthInfo | undefined =
+    typeof options?.pendingMutationsCount === "number"
+      ? { pendingMutationsCount: options.pendingMutationsCount }
+      : undefined;
 
   return {
     ...base,
@@ -365,8 +370,14 @@ export async function exportDiagnosticReport(
   const sys = await getExtendedSystemInfo(options);
   const now = new Date().toISOString();
 
+  const persistence = sys.storage
+    ? sys.storage.persisted === undefined
+      ? ""
+      : `, ${sys.storage.persisted ? "persistent" : "best-effort"}`
+    : "";
+
   const storageStr = sys.storage
-    ? `${sys.storage.usageMb} MB / ${sys.storage.quotaMb} MB (${sys.storage.percentUsed}% used, ${sys.storage.persisted ? "persistent" : "best-effort"})`
+    ? `${sys.storage.usageMb} MB / ${sys.storage.quotaMb} MB (${sys.storage.percentUsed}% used${persistence})`
     : "unavailable";
 
   const swStr = sys.serviceWorker?.controllerActive
@@ -380,7 +391,7 @@ export async function exportDiagnosticReport(
     "#### System Information",
     `- **App Version:** \`${sys.appVersion}\``,
     `- **Release Channel:** \`${sys.releaseChannel}\``,
-    `- **Tier:** \`${sys.tier ?? "unknown"}\``,
+    ...(sys.tier ? [`- **Tier:** \`${sys.tier}\``] : []),
     `- **User Agent:** \`${sys.userAgent}\``,
     `- **Time Zone:** \`${sys.timeZone}\``,
     `- **Language:** \`${sys.language}\``,
@@ -388,7 +399,11 @@ export async function exportDiagnosticReport(
     `- **Online:** \`${sys.online}\``,
     `- **Storage:** \`${storageStr}\``,
     `- **Service Worker:** \`${swStr}\``,
-    `- **Pending Offline Mutations:** \`${sys.syncHealth?.pendingMutationsCount ?? 0}\``,
+    ...(sys.syncHealth
+      ? [
+          `- **Pending Offline Mutations:** \`${sys.syncHealth.pendingMutationsCount}\``,
+        ]
+      : []),
     "",
   ];
 

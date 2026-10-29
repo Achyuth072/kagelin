@@ -15,36 +15,20 @@ const mockGenerateBundle = vi.fn().mockResolvedValue({
   data: { counts: { tasks: 5 } },
 });
 
-vi.mock("@/lib/hooks/useDiagnosticBundle", () => ({
-  useDiagnosticBundle: () => ({
-    generateBundle: mockGenerateBundle,
-  }),
-}));
-
-let mockIsGuestMode = false;
-let mockPendingMutations: Array<{
-  state: { status: string; isPaused?: boolean };
-}> = [];
-
-vi.mock("@/components/AuthProvider", () => ({
-  useAuth: () => ({ isGuestMode: mockIsGuestMode }),
-}));
-
-vi.mock("@tanstack/react-query", () => ({
-  useQueryClient: () => ({
-    getMutationCache: () => ({
-      getAll: () => mockPendingMutations,
-    }),
-  }),
-}));
-
-const mockExportReport = vi
+const mockGenerateReport = vi
   .fn()
   .mockResolvedValue("### Mock Diagnostic Report");
+
+vi.mock("@/lib/hooks/useDiagnosticBundle", () => ({
+  useDiagnosticBundle: () => ({
+    generateBundle: (...args: unknown[]) => mockGenerateBundle(...args),
+    generateReport: (...args: unknown[]) => mockGenerateReport(...args),
+  }),
+}));
+
 const mockClearErrors = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@/lib/errors/diagnostics", () => ({
-  exportDiagnosticReport: (...args: unknown[]) => mockExportReport(...args),
   clearDiagnosticErrors: (...args: unknown[]) => mockClearErrors(...args),
 }));
 
@@ -53,9 +37,7 @@ describe("DiagnosticExportSettings", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsGuestMode = false;
-    mockPendingMutations = [];
-    mockExportReport
+    mockGenerateReport
       .mockReset()
       .mockResolvedValue("### Mock Diagnostic Report");
     mockClearErrors.mockReset().mockResolvedValue(undefined);
@@ -180,7 +162,7 @@ describe("DiagnosticExportSettings", () => {
   });
 
   it("re-fetches diagnostic report every time the dialog is opened", async () => {
-    mockExportReport
+    mockGenerateReport
       .mockResolvedValueOnce("### Initial Report")
       .mockResolvedValueOnce("### Fresh Second Report");
 
@@ -193,7 +175,7 @@ describe("DiagnosticExportSettings", () => {
       fireEvent.click(openBtn);
     });
     expect(await screen.findByText("### Initial Report")).toBeInTheDocument();
-    expect(mockExportReport).toHaveBeenCalledTimes(1);
+    expect(mockGenerateReport).toHaveBeenCalledTimes(1);
 
     // Close dialog
     const closeBtn = screen.getAllByRole("button", { name: /close/i })[0];
@@ -211,11 +193,11 @@ describe("DiagnosticExportSettings", () => {
     expect(
       await screen.findByText("### Fresh Second Report"),
     ).toBeInTheDocument();
-    expect(mockExportReport).toHaveBeenCalledTimes(2);
+    expect(mockGenerateReport).toHaveBeenCalledTimes(2);
   });
 
   it("displays captured timestamp in header and refreshes report on Refresh click", async () => {
-    mockExportReport
+    mockGenerateReport
       .mockResolvedValueOnce("### Initial Report")
       .mockResolvedValueOnce("### Refreshed Report");
 
@@ -226,7 +208,7 @@ describe("DiagnosticExportSettings", () => {
     });
 
     expect(await screen.findByText("### Initial Report")).toBeInTheDocument();
-    expect(screen.getByText(/captured at/i)).toBeInTheDocument();
+    expect(screen.getByText(/captured just now/i)).toBeInTheDocument();
 
     const refreshBtn = screen.getByRole("button", { name: /refresh/i });
     expect(refreshBtn).toBeInTheDocument();
@@ -236,7 +218,7 @@ describe("DiagnosticExportSettings", () => {
     });
 
     expect(await screen.findByText("### Refreshed Report")).toBeInTheDocument();
-    expect(mockExportReport).toHaveBeenCalledTimes(2);
+    expect(mockGenerateReport).toHaveBeenCalledTimes(2);
   });
 
   it("keeps preview mounted without aggressive loading flash when refreshing", async () => {
@@ -245,7 +227,7 @@ describe("DiagnosticExportSettings", () => {
       resolveRefresh = resolve;
     });
 
-    mockExportReport
+    mockGenerateReport
       .mockResolvedValueOnce("### Initial Report")
       .mockReturnValueOnce(refreshPromise);
 
@@ -281,7 +263,7 @@ describe("DiagnosticExportSettings", () => {
   });
 
   it("prompts confirmation and clears diagnostic errors upon confirmation", async () => {
-    mockExportReport
+    mockGenerateReport
       .mockResolvedValueOnce("### Initial Report with 1 error")
       .mockResolvedValueOnce(
         "### Diagnostic Report\n\n*No diagnostic errors recorded.*",
@@ -322,7 +304,7 @@ describe("DiagnosticExportSettings", () => {
   });
 
   it("cancels clear log confirmation without calling clearDiagnosticErrors", async () => {
-    mockExportReport.mockResolvedValueOnce("### Initial Report");
+    mockGenerateReport.mockResolvedValueOnce("### Initial Report");
 
     render(<DiagnosticExportSettings />);
 
@@ -350,7 +332,7 @@ describe("DiagnosticExportSettings", () => {
   });
 
   it("resets active data bundle when clearing errors so the markdown report preview is shown", async () => {
-    mockExportReport
+    mockGenerateReport
       .mockResolvedValueOnce("### Initial Report")
       .mockResolvedValueOnce(
         "### Diagnostic Report\n\n*No diagnostic errors recorded.*",
@@ -388,7 +370,7 @@ describe("DiagnosticExportSettings", () => {
   });
 
   it("notifies error when diagnostic report fails to load", async () => {
-    mockExportReport.mockRejectedValueOnce(new Error("Failed to export"));
+    mockGenerateReport.mockRejectedValueOnce(new Error("Failed to export"));
 
     render(<DiagnosticExportSettings />);
 
@@ -402,7 +384,7 @@ describe("DiagnosticExportSettings", () => {
   });
 
   it("notifies error when clearing diagnostic errors fails", async () => {
-    mockExportReport.mockResolvedValueOnce("### Initial Report");
+    mockGenerateReport.mockResolvedValueOnce("### Initial Report");
     mockClearErrors.mockRejectedValueOnce(new Error("Disk error"));
 
     render(<DiagnosticExportSettings />);
@@ -424,7 +406,7 @@ describe("DiagnosticExportSettings", () => {
   });
 
   it("refreshes active data bundle when refresh is clicked with advanced data structure enabled", async () => {
-    mockExportReport
+    mockGenerateReport
       .mockResolvedValueOnce("### Initial Report")
       .mockResolvedValueOnce("### Refreshed Report");
 
@@ -449,12 +431,12 @@ describe("DiagnosticExportSettings", () => {
       fireEvent.click(refreshBtn);
     });
 
-    expect(mockExportReport).toHaveBeenCalledTimes(2);
+    expect(mockGenerateReport).toHaveBeenCalledTimes(2);
     expect(mockGenerateBundle).toHaveBeenCalledTimes(2);
   });
 
   it("notifies error when refreshing active data bundle fails", async () => {
-    mockExportReport
+    mockGenerateReport
       .mockResolvedValueOnce("### Initial Report")
       .mockResolvedValueOnce("### Refreshed Report");
     mockGenerateBundle
@@ -485,44 +467,67 @@ describe("DiagnosticExportSettings", () => {
     expect(notify.error).toHaveBeenCalledWith("Couldn't refresh state bundle");
   });
 
-  it("passes registered tier and pending mutations count to exportDiagnosticReport", async () => {
-    mockIsGuestMode = false;
-    mockPendingMutations = [
-      { state: { status: "pending" } },
-      { state: { status: "success", isPaused: false } },
-      { state: { status: "idle", isPaused: true } },
-    ];
+  it("regenerates the advanced bundle when the dialog is reopened", async () => {
+    mockGenerateReport
+      .mockResolvedValueOnce("### Initial Report")
+      .mockResolvedValueOnce("### Second Report");
 
     render(<DiagnosticExportSettings />);
+    const openBtn = screen.getByRole("button", { name: /open report/i });
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /open report/i }));
+      fireEvent.click(openBtn);
+    });
+    await act(async () => {
+      fireEvent.click(
+        screen.getByLabelText(/include database schedule structure/i),
+      );
+    });
+    expect(mockGenerateBundle).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole("button", { name: /close/i })[0]);
+    });
+    await vi.waitFor(() => {
+      expect(screen.queryByText("Diagnostic Report")).not.toBeInTheDocument();
     });
 
-    expect(mockExportReport).toHaveBeenCalledWith(undefined, {
-      tier: "registered",
-      pendingMutationsCount: 2,
+    await act(async () => {
+      fireEvent.click(openBtn);
     });
+
+    expect(mockGenerateReport).toHaveBeenCalledTimes(2);
+    expect(mockGenerateBundle).toHaveBeenCalledTimes(2);
   });
 
-  it("passes guest tier to exportDiagnosticReport when in guest mode", async () => {
-    mockIsGuestMode = true;
-    mockPendingMutations = [];
+  it("reports a failed preview refresh separately when clearing succeeds", async () => {
+    mockGenerateReport
+      .mockResolvedValueOnce("### Initial Report")
+      .mockRejectedValueOnce(new Error("Refresh failed"));
 
     render(<DiagnosticExportSettings />);
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /open report/i }));
     });
+    expect(await screen.findByText("### Initial Report")).toBeInTheDocument();
 
-    expect(mockExportReport).toHaveBeenCalledWith(undefined, {
-      tier: "guest",
-      pendingMutationsCount: 0,
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /clear log/i }));
     });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /confirm/i }));
+    });
+
+    expect(mockClearErrors).toHaveBeenCalledTimes(1);
+    expect(notify.error).toHaveBeenCalledWith(
+      "Diagnostic errors cleared, but the report couldn't refresh",
+    );
+    expect(notify.success).not.toHaveBeenCalled();
   });
 
   it("renders storage and service worker lines in the markdown preview", async () => {
-    mockExportReport.mockResolvedValueOnce(
+    mockGenerateReport.mockResolvedValueOnce(
       [
         "### Kagelin Diagnostic Report",
         "#### System Information",

@@ -244,9 +244,7 @@ describe("src/lib/errors/diagnostics.ts", () => {
       expect(sys.serviceWorker).toEqual({
         controllerActive: false,
       });
-      expect(sys.syncHealth).toEqual({
-        pendingMutationsCount: 0,
-      });
+      expect(sys.syncHealth).toBeUndefined();
     });
 
     it("renders storage, service worker, tier, and pending offline mutations in the markdown report", async () => {
@@ -295,9 +293,31 @@ describe("src/lib/errors/diagnostics.ts", () => {
       expect(report).toContain("- **Pending Offline Mutations:** `5`");
     });
 
-    it("falls back to unknown tier when options are not provided", async () => {
+    it("omits tier and sync health lines when the caller provides no options", async () => {
       const report = await exportDiagnosticReport();
-      expect(report).toContain("- **Tier:** `unknown`");
+      expect(report).not.toContain("**Tier:**");
+      expect(report).not.toContain("**Pending Offline Mutations:**");
+    });
+
+    it("omits the persistence qualifier when the persisted query fails", async () => {
+      Object.defineProperty(navigator, "storage", {
+        value: {
+          estimate: vi.fn().mockResolvedValue({
+            usage: 14.2 * 1024 * 1024,
+            quota: 2048 * 1024 * 1024,
+          }),
+          persisted: vi
+            .fn()
+            .mockRejectedValue(new Error("Storage unavailable")),
+        },
+        configurable: true,
+      });
+
+      const report = await exportDiagnosticReport(undefined, { tier: "guest" });
+
+      expect(report).toContain(
+        "- **Storage:** `14.2 MB / 2048 MB (0.7% used)`",
+      );
     });
   });
 });

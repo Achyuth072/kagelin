@@ -6,6 +6,7 @@ import type {
   DiagnosticStorageInfo,
   DiagnosticServiceWorkerInfo,
   DiagnosticSyncHealthInfo,
+  DiagnosticAccountTier,
 } from "@/lib/errors/diagnostics";
 import { stripContent } from "./stripContent";
 
@@ -62,7 +63,7 @@ export interface DiagnosticSettingsSnapshot {
 }
 
 export interface DiagnosticBundleInput {
-  tier: "guest" | "registered" | "premium";
+  tier: DiagnosticAccountTier;
   appVersion: string;
   releaseChannel: string;
   platform: DiagnosticPlatformInfo;
@@ -82,7 +83,7 @@ export interface DiagnosticBundle {
   generatedAt: string;
   app: { version: string; releaseChannel: string };
   platform: DiagnosticPlatformInfo;
-  account: { tier: "guest" | "registered" | "premium" };
+  account: { tier: DiagnosticAccountTier };
   storage?: DiagnosticStorageInfo;
   serviceWorker?: DiagnosticServiceWorkerInfo;
   syncHealth?: DiagnosticSyncHealthInfo;

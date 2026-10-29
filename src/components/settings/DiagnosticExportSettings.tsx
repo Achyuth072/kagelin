@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   Bug,
@@ -14,9 +14,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/components/AuthProvider";
-import { getPendingMutationsCount } from "@/lib/diagnostics/syncHealth";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -31,23 +28,29 @@ import { SUPPORT_EMAIL } from "@/lib/links";
 import { notify } from "@/lib/notify";
 import { triggerDownload } from "@/lib/utils/stats-export";
 import { cn } from "@/lib/utils";
-import {
-  exportDiagnosticReport,
-  clearDiagnosticErrors,
-} from "@/lib/errors/diagnostics";
+import { clearDiagnosticErrors } from "@/lib/errors/diagnostics";
 
 function downloadBundle(json: string) {
   const filename = `kagelin-diagnostic-${new Date().toISOString().split("T")[0]}.json`;
   triggerDownload(filename, json, "application/json");
 }
 
+function formatCapturedAt(capturedAt: Date, now: number): string {
+  const elapsedSeconds = Math.max(
+    0,
+    Math.round((now - capturedAt.getTime()) / 1000),
+  );
+  const relative =
+    elapsedSeconds < 45
+      ? "just now"
+      : `${Math.round(elapsedSeconds / 60)} min ago`;
+  return `${relative} (${capturedAt.toLocaleTimeString()})`;
+}
+
 export function DiagnosticExportSettings() {
-  const { isGuestMode } = useAuth();
-  const queryClient = useQueryClient();
   const { trigger } = useHaptic();
   const [open, setOpen] = useState(false);
   const [includeDataStructure, setIncludeDataStructure] = useState(false);
-  const [loadingReport, setLoadingReport] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [confirmingClear, setConfirmingClear] = useState(false);
@@ -56,45 +59,38 @@ export function DiagnosticExportSettings() {
   const [bundle, setBundle] = useState<DiagnosticBundle | null>(null);
   const [copied, setCopied] = useState(false);
   const [capturedAt, setCapturedAt] = useState<Date | null>(null);
-  const { generateBundle } = useDiagnosticBundle();
+  const [now, setNow] = useState(() => Date.now());
+  const { generateBundle, generateReport } = useDiagnosticBundle();
+
+  useEffect(() => {
+    if (!open || !capturedAt) return;
+    const intervalId = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(intervalId);
+  }, [open, capturedAt]);
 
   const loadReport = async () => {
-    const report = await exportDiagnosticReport(undefined, {
-      tier: isGuestMode ? "guest" : "registered",
-      pendingMutationsCount: getPendingMutationsCount(queryClient),
-    });
+    const report = await generateReport();
     setMarkdownReport(report);
     setCapturedAt(new Date());
+    setNow(Date.now());
     return report;
   };
 
-  const handleOpen = async () => {
-    trigger("toggle");
-    setOpen(true);
-    setConfirmingClear(false);
-    setLoadingReport(true);
-    try {
-      await loadReport();
-    } catch {
-      notify.error("Couldn't generate diagnostic report");
-    } finally {
-      setLoadingReport(false);
+  const refreshReport = async () => {
+    await loadReport();
+    if (includeDataStructure) {
+      try {
+        setBundle(await generateBundle());
+      } catch {
+        notify.error("Couldn't refresh state bundle");
+      }
     }
   };
 
-  const handleRefresh = async () => {
-    trigger("toggle");
+  const runRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await loadReport();
-      if (includeDataStructure) {
-        try {
-          const freshBundle = await generateBundle();
-          setBundle(freshBundle);
-        } catch {
-          notify.error("Couldn't refresh state bundle");
-        }
-      }
+      await refreshReport();
     } catch {
       notify.error("Couldn't generate diagnostic report");
     } finally {
@@ -102,17 +98,39 @@ export function DiagnosticExportSettings() {
     }
   };
 
+  const handleOpen = async () => {
+    trigger("toggle");
+    setOpen(true);
+    setConfirmingClear(false);
+    await runRefresh();
+  };
+
+  const handleRefresh = async () => {
+    trigger("toggle");
+    await runRefresh();
+  };
+
   const handleConfirmClear = async () => {
     trigger("thud");
     setIsClearing(true);
     try {
       await clearDiagnosticErrors();
-      await loadReport();
-      setBundle(null);
-      setIncludeDataStructure(false);
-      notify.success("Diagnostic errors cleared");
     } catch {
       notify.error("Couldn't clear diagnostic errors");
+      setIsClearing(false);
+      setConfirmingClear(false);
+      return;
+    }
+
+    setBundle(null);
+    setIncludeDataStructure(false);
+    try {
+      await loadReport();
+      notify.success("Diagnostic errors cleared");
+    } catch {
+      notify.error(
+        "Diagnostic errors cleared, but the report couldn't refresh",
+      );
     } finally {
       setIsClearing(false);
       setConfirmingClear(false);
@@ -137,8 +155,8 @@ export function DiagnosticExportSettings() {
   };
 
   const jsonString = bundle ? JSON.stringify(bundle, null, 2) : "";
-  const isInitialLoading = (!markdownReport && loadingReport) || loadingBundle;
-  const isBusy = loadingReport || isRefreshing || isClearing || loadingBundle;
+  const isInitialLoading = (!markdownReport && isRefreshing) || loadingBundle;
+  const isBusy = isRefreshing || isClearing || loadingBundle;
 
   const handleCopy = async () => {
     const textToCopy = includeDataStructure ? jsonString : markdownReport;
@@ -201,7 +219,7 @@ export function DiagnosticExportSettings() {
                 </ResponsiveDialogTitle>
                 {capturedAt && (
                   <p className="type-micro text-muted-foreground mt-0.5">
-                    Captured at {capturedAt.toLocaleTimeString()}
+                    Captured {formatCapturedAt(capturedAt, now)}
                   </p>
                 )}
               </div>

@@ -9,8 +9,10 @@ import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
 import { collectCloudBackup } from "@/lib/backup/cloud-data";
 import {
+  exportDiagnosticReport,
   getDiagnosticErrors,
   getExtendedSystemInfo,
+  type DiagnosticAccountTier,
 } from "@/lib/errors/diagnostics";
 import { getPendingMutationsCount } from "@/lib/diagnostics/syncHealth";
 import {
@@ -52,6 +54,16 @@ export function useDiagnosticBundle() {
   const viewMode = useUiStore((s) => s.viewMode);
   const habitViewMode = useUiStore((s) => s.habitViewMode);
 
+  const accountTier: DiagnosticAccountTier = isGuestMode
+    ? "guest"
+    : "registered";
+
+  const generateReport = (): Promise<string> =>
+    exportDiagnosticReport(undefined, {
+      tier: accountTier,
+      pendingMutationsCount: getPendingMutationsCount(queryClient),
+    });
+
   const generateBundle = async (): Promise<DiagnosticBundle> => {
     const settings = {
       theme,
@@ -84,7 +96,7 @@ export function useDiagnosticBundle() {
 
     const [sysInfo, logs, backupData] = await Promise.all([
       getExtendedSystemInfo({
-        tier: isGuestMode ? "guest" : "registered",
+        tier: accountTier,
         pendingMutationsCount,
       }),
       getDiagnosticErrors().then(recentErrorsAsLogs),
@@ -92,7 +104,7 @@ export function useDiagnosticBundle() {
     ]);
 
     return collectDiagnosticBundle({
-      tier: isGuestMode ? "guest" : "registered",
+      tier: accountTier,
       appVersion: APP_VERSION,
       releaseChannel: RELEASE_CHANNEL,
       platform: getPlatformInfo(),
@@ -109,5 +121,5 @@ export function useDiagnosticBundle() {
     });
   };
 
-  return { generateBundle };
+  return { generateBundle, generateReport };
 }
