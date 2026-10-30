@@ -57,6 +57,9 @@ describe("Tabs Component", () => {
       </Tabs>,
     );
 
+    const list = screen.getByRole("tablist");
+    expect(list.className).toContain("h-9");
+
     let tab = screen.getByRole("tab", { name: "Small" });
     expect(tab.className).toContain("h-7");
 
@@ -70,6 +73,24 @@ describe("Tabs Component", () => {
 
     tab = screen.getByRole("tab", { name: "Large" });
     expect(tab.className).toContain("h-9");
+  });
+
+  it("applies brand text to active card tab when no icon is present", () => {
+    render(
+      <Tabs defaultValue="text-only">
+        <TabsList>
+          <TabsTrigger value="text-only">Text Only</TabsTrigger>
+        </TabsList>
+      </Tabs>,
+    );
+
+    const tab = screen.getByRole("tab", { name: "Text Only" });
+    expect(tab.className).toContain(
+      "data-[state=active]:[&:not(:has(svg))]:text-brand",
+    );
+    expect(tab.className).toContain(
+      "data-[state=active]:[&:has(svg)]:text-foreground",
+    );
   });
 
   it("allows TabsTrigger to override the parent variant", () => {

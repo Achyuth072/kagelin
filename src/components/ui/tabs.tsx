@@ -16,7 +16,7 @@ const tabsListVariants = cva(
       },
       size: {
         default: "h-10",
-        sm: "h-8",
+        sm: "h-9",
         lg: "h-11",
       },
     },
@@ -34,7 +34,7 @@ const tabsTriggerVariants = cva(
       variant: {
         brand:
           "text-muted-foreground hover:text-foreground hover:bg-secondary/40 data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:border-brand/20 data-[state=active]:shadow-none",
-        card: "text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:border-border/80 data-[state=active]:text-foreground data-[state=active]:shadow-xs [&_svg]:transition-colors data-[state=active]:[&_svg]:text-brand",
+        card: "text-muted-foreground hover:text-foreground data-[state=active]:bg-card data-[state=active]:border-border/80 data-[state=active]:[&:not(:has(svg))]:text-brand data-[state=active]:[&:has(svg)]:text-foreground data-[state=active]:shadow-xs [&_svg]:transition-colors data-[state=active]:[&_svg]:text-brand",
       },
       size: {
         default: "h-8 px-3 text-[13px]",

@@ -12,6 +12,7 @@ import {
 } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useHabitCellActions } from "@/lib/hooks/useHabitCellActions";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -102,7 +103,7 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
             aria-label="Previous month"
             disabled={!canGoPrev}
             onClick={handlePrev}
-            className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+            className="h-7 w-7 rounded-md text-muted-foreground hover:text-brand hover:bg-brand/10 transition-colors focus-visible:ring-2 focus-visible:ring-brand"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -111,7 +112,12 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
             size="sm"
             disabled={isCurrentMonth}
             onClick={handleToday}
-            className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+            className={cn(
+              "h-7 px-2 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-brand",
+              isCurrentMonth
+                ? "text-muted-foreground"
+                : "text-brand font-semibold hover:text-brand hover:bg-brand/10",
+            )}
           >
             Today
           </Button>
@@ -121,7 +127,7 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
             aria-label="Next month"
             disabled={!canGoNext}
             onClick={handleNext}
-            className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+            className="h-7 w-7 rounded-md text-muted-foreground hover:text-brand hover:bg-brand/10 transition-colors focus-visible:ring-2 focus-visible:ring-brand"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
