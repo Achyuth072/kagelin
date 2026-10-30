@@ -337,7 +337,7 @@ function BackupRemindersCard() {
   );
 }
 
-function buildGuestBackupData(): BackupData {
+export function buildGuestBackupData(): BackupData {
   return {
     metadata: {
       version: 1,

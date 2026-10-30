@@ -168,7 +168,7 @@ export function usePushNotifications(
 
         return sub;
       } catch (error) {
-        console.error("Error subscribing to push notifications:", error);
+        reportUnexpected(error, "subscribe");
         return null;
       } finally {
         setIsSyncing(false);
@@ -187,7 +187,7 @@ export function usePushNotifications(
 
   const requestPermission = useCallback(
     async (options?: SubscribeOptions): Promise<PushPermissionResult> => {
-      if (isGuestMode || !isSupported) {
+      if (!isSupported) {
         return { permission: "denied", subscription: null };
       }
 
@@ -197,7 +197,7 @@ export function usePushNotifications(
 
         let sub: PushSubscription | null = null;
 
-        if (result === "granted") {
+        if (result === "granted" && !isGuestMode) {
           sub = await subscribeToPush(
             result as NotificationPermission,
             options,
@@ -209,7 +209,7 @@ export function usePushNotifications(
           subscription: sub,
         };
       } catch (error) {
-        console.error("Error requesting notification permission:", error);
+        reportUnexpected(error, "permission");
         return { permission: "denied", subscription: null };
       }
     },
@@ -233,7 +233,7 @@ export function usePushNotifications(
       setNotificationsEnabled(false);
       return true;
     } catch (error) {
-      console.error("Error unsubscribing from push notifications:", error);
+      reportUnexpected(error, "unsubscribe");
       return false;
     }
   }, [
@@ -244,16 +244,30 @@ export function usePushNotifications(
   ]);
 
   const showNotification = useCallback(
-    async (title: string, options?: NotificationOptions): Promise<void> => {
+    async (title: string, options?: NotificationOptions): Promise<boolean> => {
       if (!isSupported || permission !== "granted") {
-        return;
+        return false;
       }
 
       try {
         const registration = await getServiceWorkerRegistration();
         await displayNotification(registration, title, options);
+        return true;
       } catch (error) {
+        if (
+          typeof window !== "undefined" &&
+          "Notification" in window &&
+          Notification.permission === "granted"
+        ) {
+          try {
+            new Notification(title, options);
+            return true;
+          } catch (fallbackError) {
+            reportUnexpected(fallbackError, "display_fallback");
+          }
+        }
         reportUnexpected(error, "display");
+        return false;
       }
     },
     [isSupported, permission, getServiceWorkerRegistration],
@@ -317,12 +331,6 @@ export function usePushNotifications(
         const currentSub = await registration.pushManager.getSubscription();
 
         if (currentSub) {
-          if (currentSub.endpoint !== subscriptionEndpointRef.current) {
-            console.log(
-              "[Push] Subscription endpoint changed, syncing new endpoint",
-            );
-          }
-
           // Sync unconditionally — freshness matters even if unchanged
           setSubscription(currentSub);
           await sendSubscriptionToBackend(currentSub);
