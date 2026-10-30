@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from "vitest";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 describe("Tabs Component", () => {
-  it("renders with default brand variant and switches tabs on click", () => {
+  it("renders with default card variant and switches tabs on click", () => {
     const onValueChange = vi.fn();
     render(
       <Tabs defaultValue="first" onValueChange={onValueChange}>
@@ -23,18 +23,18 @@ describe("Tabs Component", () => {
     expect(secondTab).toHaveAttribute("data-state", "inactive");
     expect(screen.getByText("First Content")).toBeInTheDocument();
 
-    // Brand variant classes
-    expect(firstTab.className).toContain("data-[state=active]:bg-brand");
+    // Card variant classes
+    expect(firstTab.className).toContain("data-[state=active]:bg-card");
 
     // Click/mouseDown second tab
     fireEvent.mouseDown(secondTab);
     expect(onValueChange).toHaveBeenCalledWith("second");
   });
 
-  it("supports card variant inherited from TabsList", () => {
+  it("supports brand variant inherited from TabsList", () => {
     render(
       <Tabs defaultValue="overview">
-        <TabsList variant="card">
+        <TabsList variant="brand">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
         </TabsList>
@@ -44,9 +44,8 @@ describe("Tabs Component", () => {
     const list = screen.getByRole("tablist");
     const overviewTab = screen.getByRole("tab", { name: "Overview" });
 
-    expect(list.className).toContain("bg-secondary/20");
-    expect(overviewTab.className).toContain("data-[state=active]:bg-card");
-    expect(overviewTab.className).toContain("data-[state=active]:shadow-xs");
+    expect(list.className).toContain("bg-secondary/10");
+    expect(overviewTab.className).toContain("data-[state=active]:bg-brand");
   });
 
   it("supports size variants (sm, default, lg)", () => {

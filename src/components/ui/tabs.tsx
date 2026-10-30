@@ -21,7 +21,7 @@ const tabsListVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "brand",
+      variant: "card",
       size: "default",
     },
   },
@@ -43,7 +43,7 @@ const tabsTriggerVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "brand",
+      variant: "card",
       size: "default",
     },
   },
@@ -60,7 +60,7 @@ interface TabsListContextValue {
 }
 
 const TabsListContext = React.createContext<TabsListContextValue>({
-  variant: "brand",
+  variant: "card",
   size: "default",
 });
 
@@ -69,7 +69,7 @@ const TabsList = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TabsPrimitive.List> &
     VariantProps<typeof tabsListVariants>
 >(({ className, variant, size, children, ...props }, ref) => {
-  const resolvedVariant = variant ?? "brand";
+  const resolvedVariant = variant ?? "card";
   const resolvedSize = size ?? "default";
 
   return (

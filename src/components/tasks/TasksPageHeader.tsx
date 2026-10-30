@@ -83,10 +83,10 @@ function TasksPageHeaderBase({
         }}
         className="h-10"
       >
-        <TabsList className="bg-secondary/10 p-1 rounded-lg h-10 border border-border/40 shadow-none">
+        <TabsList>
           <TabsTrigger
             value="list"
-            className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-8 border border-transparent data-[state=active]:border-brand/20"
+            className="gap-2 px-2.5"
             title="List View (Shift+1)"
           >
             <List className="h-4 w-4" strokeWidth={2.25} />
@@ -94,7 +94,7 @@ function TasksPageHeaderBase({
           </TabsTrigger>
           <TabsTrigger
             value="board"
-            className="rounded-md gap-2 px-2.5 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-8 border border-transparent data-[state=active]:border-brand/20"
+            className="gap-2 px-2.5"
             title="Board View (Shift+2)"
           >
             <KanbanSquare className="h-4 w-4" strokeWidth={2.25} />

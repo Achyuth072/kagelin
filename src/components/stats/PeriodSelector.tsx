@@ -1,7 +1,8 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useHaptic } from "@/lib/hooks/useHaptic";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { STATS_PERIOD_OPTIONS, type StatsPeriod } from "@/lib/types/stats";
 import { cn } from "@/lib/utils";
@@ -20,38 +21,36 @@ export function PeriodSelector({
   className,
 }: PeriodSelectorProps) {
   const reduced = usePrefersReducedMotion();
+  const { trigger } = useHaptic();
 
   return (
-    <ToggleGroup
-      type="single"
+    <Tabs
       value={value}
       onValueChange={(next) => {
-        if (next) onValueChange(next as StatsPeriod);
+        if (next) {
+          trigger("tick");
+          onValueChange(next as StatsPeriod);
+        }
       }}
-      className={cn(
-        "w-fit gap-1 rounded-lg border border-border/40 bg-secondary/10 p-1 shadow-none",
-        className,
-      )}
+      className={cn("w-fit", className)}
     >
-      {STATS_PERIOD_OPTIONS.map((opt) => (
-        <ToggleGroupItem
-          key={opt.value}
-          value={opt.value}
-          className={cn(
-            "h-8 min-w-0 gap-1.5 rounded-md border border-transparent px-2.5 text-[13px] font-medium tracking-tight tabular-nums transition-all",
-            "text-muted-foreground hover:bg-secondary/40 hover:text-foreground",
-            "data-[state=on]:border-brand/20 data-[state=on]:bg-brand data-[state=on]:text-brand-foreground data-[state=on]:shadow-none",
-          )}
-        >
-          {opt.label}
-          {opt.value === "all" && isAllLoading && (
-            <Loader2
-              className={cn("h-3 w-3", !reduced && "animate-spin")}
-              aria-label="Loading all-time data"
-            />
-          )}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+      <TabsList className="gap-1">
+        {STATS_PERIOD_OPTIONS.map((opt) => (
+          <TabsTrigger
+            key={opt.value}
+            value={opt.value}
+            className="min-w-0 gap-1.5 px-2.5 tabular-nums data-[state=active]:text-brand"
+          >
+            {opt.label}
+            {opt.value === "all" && isAllLoading && (
+              <Loader2
+                className={cn("h-3 w-3", !reduced && "animate-spin")}
+                aria-label="Loading all-time data"
+              />
+            )}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }
