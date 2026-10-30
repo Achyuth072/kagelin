@@ -5,6 +5,7 @@ import { useTheme } from "next-themes";
 import { useAuth } from "@/components/AuthProvider";
 import { useActiveBanner } from "@/components/bannerSlot";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoaderOverlay } from "@/components/ui/loader-overlay";
 import {
   ArrowLeft,
@@ -448,11 +449,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
     goals.weeklyTasksCompleted,
   ].filter((g) => g != null).length;
 
-  const handleNavKeyDown = (
-    e: React.KeyboardEvent,
-    currentIndex: number,
-    isMobile = false,
-  ) => {
+  const handleNavKeyDown = (e: React.KeyboardEvent, currentIndex: number) => {
     const targetIndex = getNextRovingIndex(
       e.key,
       currentIndex,
@@ -462,9 +459,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
     if (targetIndex >= 0) {
       e.preventDefault();
       handleTabChange(navSectionTabs[targetIndex].value);
-      const prefix = isMobile ? "settings-mobile-tab-" : "settings-tab-";
       document
-        .getElementById(`${prefix}${navSectionTabs[targetIndex].value}`)
+        .getElementById(`settings-tab-${navSectionTabs[targetIndex].value}`)
         ?.focus();
     }
   };
@@ -1105,45 +1101,33 @@ export function SettingsClient({ version }: SettingsClientProps) {
 
         {/* Mobile Tab Bar */}
         <div className="md:hidden -mx-4 border-b border-border/60 bg-background px-4 py-2 shrink-0 z-10">
-          <div
-            className="grid grid-cols-3 gap-1 bg-secondary/30 p-1 rounded-lg border border-border/40"
-            role="tablist"
-            aria-label="Settings sections"
-            aria-orientation="horizontal"
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => handleTabChange(v as SettingsTab)}
+            className="w-full"
           >
-            {navSectionTabs.map((tab, idx) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.value;
-              return (
-                <button
-                  key={tab.value}
-                  id={`settings-mobile-tab-${tab.value}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  aria-controls={`settings-tabpanel-${tab.value}`}
-                  tabIndex={isActive ? 0 : -1}
-                  onKeyDown={(e) => handleNavKeyDown(e, idx, true)}
-                  onClick={() => handleTabChange(tab.value)}
-                  className={cn(
-                    "flex items-center justify-center gap-1.5 py-2 px-1 rounded-md text-xs font-medium transition-seijaku-fast min-h-[38px] border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    isActive
-                      ? "bg-card border-border/80 text-foreground shadow-xs"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <Icon
-                    className={cn(
-                      "h-3.5 w-3.5 shrink-0 transition-colors",
-                      isActive ? "text-brand" : "text-muted-foreground",
-                    )}
-                    aria-hidden="true"
-                  />
-                  <span className="truncate">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+            <TabsList
+              variant="card"
+              className="grid grid-cols-3 w-full h-auto min-h-[46px] p-1 gap-1 bg-secondary/30 border border-border/40 shadow-none"
+              aria-label="Settings sections"
+            >
+              {navSectionTabs.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    id={`settings-mobile-tab-${tab.value}`}
+                    aria-controls={`settings-tabpanel-${tab.value}`}
+                    className="h-auto min-h-[38px] gap-1.5 px-1 py-2 text-xs"
+                  >
+                    <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span className="truncate">{tab.label}</span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Desktop Header */}
