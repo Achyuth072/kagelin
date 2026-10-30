@@ -86,7 +86,7 @@ describe("HabitView", () => {
         setHabitType={setHabitType}
       />,
     );
-    fireEvent.click(screen.getByText("Measurable"));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Measurable" }));
     expect(setHabitType).toHaveBeenCalledWith("measurable");
   });
 
@@ -163,13 +163,13 @@ describe("HabitView", () => {
         setHabitType={vi.fn()}
       />,
     );
-    expect(screen.getByText("Measurable")).toHaveAttribute(
-      "aria-pressed",
-      "true",
+    expect(screen.getByRole("tab", { name: "Measurable" })).toHaveAttribute(
+      "data-state",
+      "active",
     );
-    expect(screen.getByText("Yes or No")).toHaveAttribute(
-      "aria-pressed",
-      "false",
+    expect(screen.getByRole("tab", { name: "Yes or No" })).toHaveAttribute(
+      "data-state",
+      "inactive",
     );
   });
 });

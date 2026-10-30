@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import RecurrencePicker from "@/components/tasks/TaskSheet/RecurrencePicker";
 import "@testing-library/jest-dom";
@@ -78,5 +78,34 @@ describe("RecurrencePicker Repetition State", () => {
     expect(button).toHaveAttribute("title", "Daily");
     expect(button.className).toContain("text-brand");
     expect(within(button).getByText("D")).toBeInTheDocument();
+  });
+
+  it("should render Strict and Flexible tabs and switch mode on tab selection", () => {
+    const rule = {
+      freq: "WEEKLY" as const,
+      interval: 1,
+      mode: "flexible" as const,
+    };
+
+    render(
+      <RecurrencePicker value={rule} onChange={mockOnChange} variant="icon" />,
+    );
+
+    const content = screen.getByTestId("popover-content");
+    const flexibleTab = within(content).getByRole("tab", { name: "Flexible" });
+    const strictTab = within(content).getByRole("tab", { name: "Strict" });
+
+    expect(flexibleTab).toHaveAttribute("data-state", "active");
+    expect(strictTab).toHaveAttribute("data-state", "inactive");
+
+    fireEvent.mouseDown(flexibleTab);
+    expect(mockOnChange).not.toHaveBeenCalled();
+
+    fireEvent.mouseDown(strictTab);
+    expect(mockOnChange).toHaveBeenCalledWith({
+      freq: "WEEKLY",
+      interval: 1,
+      mode: "strict",
+    });
   });
 });

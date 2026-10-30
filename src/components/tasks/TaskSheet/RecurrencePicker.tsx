@@ -7,6 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
@@ -57,6 +58,7 @@ export default function RecurrencePicker({
   const isIconVariant = variant === "icon";
   const hasRecurrence = !!value;
   const badgeLetter = hasRecurrence ? getRecurrenceBadge(value) : null;
+  const currentMode = value?.mode ?? "flexible";
   const { trigger } = useHaptic();
 
   return (
@@ -128,46 +130,26 @@ export default function RecurrencePicker({
                   Type
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-1 bg-foreground/[0.04] dark:bg-foreground/[0.06] p-0.5 rounded-md border border-border/40">
-                <Button
-                  variant={value.mode === "strict" ? "secondary" : "ghost"}
-                  size="sm"
-                  className={cn(
-                    "h-6 text-[11px] px-2 shadow-none rounded-[4px] transition-all",
-                    value.mode === "strict"
-                      ? "bg-brand text-brand-foreground font-semibold shadow-sm hover:bg-brand hover:text-brand-foreground"
-                      : "text-muted-foreground hover:text-muted-foreground hover:bg-transparent",
-                  )}
-                  onClick={() => {
+              <Tabs
+                value={currentMode}
+                onValueChange={(val) => {
+                  if (val && val !== currentMode) {
                     trigger("toggle");
-                    onChange({ ...value, mode: "strict" });
-                  }}
-                >
-                  Strict
-                </Button>
-                <Button
-                  variant={
-                    !value.mode || value.mode === "flexible"
-                      ? "secondary"
-                      : "ghost"
+                    onChange({
+                      ...value,
+                      mode: val as "strict" | "flexible",
+                    });
                   }
-                  size="sm"
-                  className={cn(
-                    "h-6 text-[11px] px-2 shadow-none rounded-[4px] transition-all",
-                    !value.mode || value.mode === "flexible"
-                      ? "bg-brand text-brand-foreground font-semibold shadow-sm hover:bg-brand hover:text-brand-foreground"
-                      : "text-muted-foreground hover:text-muted-foreground hover:bg-transparent",
-                  )}
-                  onClick={() => {
-                    trigger("toggle");
-                    onChange({ ...value, mode: "flexible" });
-                  }}
-                >
-                  Flexible
-                </Button>
-              </div>
+                }}
+                className="w-full"
+              >
+                <TabsList size="sm" className="grid grid-cols-2 w-full">
+                  <TabsTrigger value="strict">Strict</TabsTrigger>
+                  <TabsTrigger value="flexible">Flexible</TabsTrigger>
+                </TabsList>
+              </Tabs>
               <p className="text-[10px] text-muted-foreground/60 mt-1.5 px-1 leading-tight">
-                {value.mode === "strict"
+                {currentMode === "strict"
                   ? "Repeats from original due date."
                   : "Repeats from completion date."}
               </p>

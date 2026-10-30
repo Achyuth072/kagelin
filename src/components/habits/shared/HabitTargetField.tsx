@@ -1,8 +1,8 @@
 "use client";
 
 import { Target } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
 export type TargetType = "at_least" | "at_most";
@@ -66,25 +66,28 @@ export function HabitTargetField({
           className="h-8 px-2.5 text-[13px] rounded-lg border border-border/40 bg-secondary/10 w-24 outline-none placeholder:text-muted-foreground/60"
         />
 
-        <div className="inline-flex h-8 p-0.5 rounded-lg bg-secondary/10 border border-border/40 shrink-0">
-          {(["at_least", "at_most"] as TargetType[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTargetType(t)}
-              aria-pressed={targetType === t}
-              aria-label={t === "at_least" ? "At least" : "At most"}
-              className={cn(
-                "rounded-md w-7 h-7 text-[13px] font-medium tracking-tight border border-transparent transition-seijaku-fast",
-                targetType === t
-                  ? "bg-brand text-brand-foreground border-brand/20"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/40",
-              )}
-            >
-              {DIRECTION_LABELS[t]}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          value={targetType}
+          onValueChange={(val) => {
+            if (val) {
+              setTargetType(val as TargetType);
+            }
+          }}
+          className="shrink-0"
+        >
+          <TabsList size="sm">
+            {(["at_least", "at_most"] as TargetType[]).map((t) => (
+              <TabsTrigger
+                key={t}
+                value={t}
+                aria-label={t === "at_least" ? "At least" : "At most"}
+                className="w-7 px-0"
+              >
+                {DIRECTION_LABELS[t]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
     </div>
   );

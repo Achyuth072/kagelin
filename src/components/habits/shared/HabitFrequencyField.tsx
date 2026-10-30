@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Repeat, Minus, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { MAX_FREQUENCY_DAYS, type FrequencyPeriod } from "@/lib/types/habit";
 import {
@@ -103,24 +103,23 @@ export function HabitFrequencyField({
         <Repeat className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
       </IconCell>
       <div className="flex-1 min-w-0 flex flex-col gap-2">
-        <div className="flex h-8 p-0.5 rounded-lg bg-secondary/10 border border-border/40 gap-0.5">
-          {MODES.map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => selectMode(m)}
-              aria-pressed={mode === m}
-              className={cn(
-                "flex-1 rounded-md px-2 h-7 text-[13px] font-medium tracking-tight border border-transparent transition-seijaku-fast",
-                mode === m
-                  ? "bg-brand text-brand-foreground border-brand/20"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/40",
-              )}
-            >
-              {MODE_LABELS[m]}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          value={mode}
+          onValueChange={(val) => {
+            if (val) {
+              selectMode(val as FrequencyMode);
+            }
+          }}
+          className="w-full"
+        >
+          <TabsList size="sm" className="grid grid-cols-4 w-full">
+            {MODES.map((m) => (
+              <TabsTrigger key={m} value={m}>
+                {MODE_LABELS[m]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
         {/* Daily is 1-in-1, but pre-D habits may still be N per day. */}
         {(mode !== "daily" || count > 1) && (
