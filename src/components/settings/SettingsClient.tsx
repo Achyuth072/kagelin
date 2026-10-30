@@ -540,10 +540,10 @@ export function SettingsClient({ version }: SettingsClientProps) {
             >
               <div
                 className={cn(
-                  "p-1.5 rounded-md shrink-0 transition-colors",
+                  "p-1.5 rounded-md shrink-0 transition-colors border",
                   isActive
-                    ? "bg-secondary/80 text-brand border border-border/50"
-                    : "bg-secondary/30 text-muted-foreground",
+                    ? "bg-secondary/80 text-brand border-border/50"
+                    : "bg-secondary/30 text-muted-foreground border-transparent",
                 )}
                 aria-hidden="true"
               >
@@ -1084,7 +1084,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
         )}
       >
         {/* Mobile Top Header */}
-        <div className="md:hidden">
+        <div className="md:hidden shrink-0">
           <div className="flex items-center gap-3 mb-2">
             <Button
               variant="ghost"
@@ -1104,7 +1104,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
         </div>
 
         {/* Mobile Tab Bar */}
-        <div className="md:hidden -mx-4 border-b border-border/60 bg-background px-4 py-2 sticky top-0 z-10">
+        <div className="md:hidden -mx-4 border-b border-border/60 bg-background px-4 py-2 shrink-0 z-10">
           <div
             className="grid grid-cols-3 gap-1 bg-secondary/30 p-1 rounded-lg border border-border/40"
             role="tablist"
@@ -1128,18 +1128,18 @@ export function SettingsClient({ version }: SettingsClientProps) {
                   className={cn(
                     "flex items-center justify-center gap-1.5 py-2 px-1 rounded-md text-xs font-medium transition-seijaku-fast min-h-[38px] border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     isActive
-                      ? "bg-card border-border/80 text-foreground font-semibold shadow-xs"
+                      ? "bg-card border-border/80 text-foreground shadow-xs"
                       : "border-transparent text-muted-foreground hover:text-foreground",
                   )}
                 >
                   <Icon
                     className={cn(
-                      "h-3.5 w-3.5 transition-colors",
+                      "h-3.5 w-3.5 shrink-0 transition-colors",
                       isActive ? "text-brand" : "text-muted-foreground",
                     )}
                     aria-hidden="true"
                   />
-                  <span>{tab.label}</span>
+                  <span className="truncate">{tab.label}</span>
                 </button>
               );
             })}
