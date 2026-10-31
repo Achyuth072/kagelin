@@ -1,5 +1,26 @@
 [
   {
+    "version": "1.50.0-preview.4",
+    "date": "2026-10-31",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Finalize 3-column contextual rail layout in settings"
+      ],
+      "Improved": [
+        "Standardize tabs dimensions, icons, and text sizing across mobile and desktop",
+        "Standardize segmented controls and legacy tabs to card variant",
+        "Default tabs to card variant and migrate header and stats switchers",
+        "Standardize tabs component variants and migrate mobile settings tab strip",
+        "Overhaul entire settings page with collapsible accordion layout"
+      ],
+      "Fixed": [
+        "Prevent tab overflow, standardize active text styling, and add sheet tab icons",
+        "Prevent tab strip shrinking and desktop icon border shift in settings"
+      ]
+    }
+  },
+  {
     "version": "1.50.0-preview.3",
     "date": "2026-10-29",
     "channel": "preview",
@@ -708,16 +729,6 @@
         "Guest-to-account migration no longer wipes habit fields it doesn't recognize",
         "Habit reminders no longer skip around midnight or for unrecognized timezones",
         "Clipped rounded corners on the project bar in desktop task rows"
-      ]
-    }
-  },
-  {
-    "version": "1.44.0-preview.3",
-    "date": "2026-09-22",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Default missing habit columns instead of nulling them on guest migration"
       ]
     }
   }
