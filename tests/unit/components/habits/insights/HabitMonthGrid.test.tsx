@@ -79,6 +79,7 @@ describe("HabitMonthGrid", () => {
     expect(month).toHaveAttribute("aria-label", "May 2026");
     expect(todayBtn).not.toBeDisabled();
     expect(todayBtn.className).toContain("text-brand");
+    expect(todayBtn.className).toContain("bg-brand/10");
     expect(nextBtn).not.toBeDisabled();
     expect(prevBtn).toBeDisabled();
   });
