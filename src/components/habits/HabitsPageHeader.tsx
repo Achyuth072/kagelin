@@ -30,12 +30,12 @@ export function HabitsPageHeader({
         className="h-10"
       >
         <TabsList>
-          <TabsTrigger value="grid" className="gap-2 px-2.5">
-            <LayoutGrid className="h-4 w-4" strokeWidth={2.25} />
+          <TabsTrigger value="grid" className="px-2.5">
+            <LayoutGrid strokeWidth={2.25} aria-hidden="true" />
             <span className="hidden md:inline">Grid</span>
           </TabsTrigger>
-          <TabsTrigger value="compact" className="gap-2 px-2.5">
-            <Rows3 className="h-4 w-4" strokeWidth={2.25} />
+          <TabsTrigger value="compact" className="px-2.5">
+            <Rows3 strokeWidth={2.25} aria-hidden="true" />
             <span className="hidden md:inline">Compact</span>
           </TabsTrigger>
         </TabsList>

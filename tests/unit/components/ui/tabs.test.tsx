@@ -108,4 +108,22 @@ describe("Tabs Component", () => {
     expect(tab.className).toContain("data-[state=active]:bg-card");
     expect(tab.className).not.toContain("data-[state=active]:bg-brand");
   });
+
+  it("includes standard icon size, shrink-0, and gap on TabsTrigger", () => {
+    render(
+      <Tabs defaultValue="with-icon">
+        <TabsList>
+          <TabsTrigger value="with-icon">
+            <svg data-testid="test-icon" />
+            <span>Icon Tab</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>,
+    );
+
+    const tab = screen.getByRole("tab", { name: "Icon Tab" });
+    expect(tab.className).toContain("gap-1.5");
+    expect(tab.className).toContain("[&_svg]:size-3.5");
+    expect(tab.className).toContain("[&_svg]:shrink-0");
+  });
 });

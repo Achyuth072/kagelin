@@ -86,18 +86,18 @@ function TasksPageHeaderBase({
         <TabsList>
           <TabsTrigger
             value="list"
-            className="gap-2 px-2.5"
+            className="px-2.5"
             title="List View (Shift+1)"
           >
-            <List className="h-4 w-4" strokeWidth={2.25} />
+            <List strokeWidth={2.25} aria-hidden="true" />
             <span className="hidden lg:inline">List</span>
           </TabsTrigger>
           <TabsTrigger
             value="board"
-            className="gap-2 px-2.5"
+            className="px-2.5"
             title="Board View (Shift+2)"
           >
-            <KanbanSquare className="h-4 w-4" strokeWidth={2.25} />
+            <KanbanSquare strokeWidth={2.25} aria-hidden="true" />
             <span className="hidden lg:inline">Board</span>
           </TabsTrigger>
         </TabsList>

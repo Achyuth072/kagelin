@@ -629,18 +629,18 @@ export function BackupSyncSettings() {
           <TabsTrigger
             value="local"
             onClick={() => trigger("toggle")}
-            className="gap-2"
+            className="h-full px-2"
           >
-            <HardDrive className="h-3.5 w-3.5" />
-            Local Storage
+            <HardDrive aria-hidden="true" />
+            <span className="truncate">Local Storage</span>
           </TabsTrigger>
           <TabsTrigger
             value="cloud"
             onClick={() => trigger("toggle")}
-            className="gap-2"
+            className="h-full px-2"
           >
-            <Cloud className="h-3.5 w-3.5" />
-            WebDAV
+            <Cloud aria-hidden="true" />
+            <span className="truncate">WebDAV</span>
           </TabsTrigger>
         </TabsList>
 

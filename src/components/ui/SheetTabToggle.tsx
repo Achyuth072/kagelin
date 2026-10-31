@@ -17,12 +17,12 @@ export function SheetTabToggle({ value, onValueChange }: SheetTabToggleProps) {
       onValueChange={(next) => onValueChange(next as SheetTab)}
     >
       <TabsList size="lg">
-        <TabsTrigger value="edit" aria-label="Edit" className="gap-1.5">
-          <Pencil className="h-4 w-4" strokeWidth={2.25} />
+        <TabsTrigger value="edit" aria-label="Edit">
+          <Pencil strokeWidth={2.25} aria-hidden="true" />
           <span className="hidden sm:inline">Edit</span>
         </TabsTrigger>
-        <TabsTrigger value="insights" aria-label="Insights" className="gap-1.5">
-          <BarChart3 className="h-4 w-4" strokeWidth={2.25} />
+        <TabsTrigger value="insights" aria-label="Insights">
+          <BarChart3 strokeWidth={2.25} aria-hidden="true" />
           <span className="hidden sm:inline">Insights</span>
         </TabsTrigger>
       </TabsList>

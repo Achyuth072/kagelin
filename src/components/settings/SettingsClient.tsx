@@ -1108,7 +1108,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
           >
             <TabsList
               variant="card"
-              className="grid grid-cols-3 w-full h-auto min-h-[46px] p-1 gap-1 bg-secondary/30 border border-border/40 shadow-none"
+              size="lg"
+              className="grid grid-cols-3 w-full"
               aria-label="Settings sections"
             >
               {navSectionTabs.map((tab) => {
@@ -1119,9 +1120,9 @@ export function SettingsClient({ version }: SettingsClientProps) {
                     value={tab.value}
                     id={`settings-mobile-tab-${tab.value}`}
                     aria-controls={`settings-tabpanel-${tab.value}`}
-                    className="h-auto min-h-[38px] gap-1.5 px-1 py-2 text-xs"
+                    className="h-full px-2"
                   >
-                    <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <Icon aria-hidden="true" />
                     <span className="truncate">{tab.label}</span>
                   </TabsTrigger>
                 );
