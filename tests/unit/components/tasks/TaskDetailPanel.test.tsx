@@ -16,6 +16,8 @@ import {
 import { useInboxProject } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
 
+import { useTaskEditorContext } from "@/components/tasks/TaskEditorProvider";
+
 interface MockTaskEditViewProps {
   onKeyDown?: React.KeyboardEventHandler;
   content?: string;
@@ -31,44 +33,56 @@ interface MockTaskEditViewProps {
   onDelete?: () => void;
 }
 
-const { MockTaskEditView } = vi.hoisted(() => ({
-  MockTaskEditView: (props: MockTaskEditViewProps) => (
-    <div data-testid="task-edit-view" onKeyDown={props.onKeyDown}>
+function MockTaskEditView(props: MockTaskEditViewProps) {
+  const editor = useTaskEditorContext();
+  const content = props.content ?? editor.content;
+  const setContent = props.setContent ?? editor.setContent;
+  const description = props.description ?? editor.description;
+  const setDescription = props.setDescription ?? editor.setDescription;
+  const pendingStep = props.pendingStep ?? editor.pendingStep;
+  const setPendingStep = props.setPendingStep ?? editor.setPendingStep;
+  const onSubmit = props.onSubmit ?? editor.onSubmit;
+  const onDelete = props.onDelete ?? editor.onDeleteRequest;
+  const isPending = props.isPending ?? editor.isPending;
+  const hasContent = props.hasContent ?? editor.hasContent;
+  const errors = props.errors ?? editor.errors;
+
+  return (
+    <div
+      data-testid="task-edit-view"
+      onKeyDown={props.onKeyDown ?? editor.onKeyDown}
+    >
       <input
-        value={props.content || ""}
-        onChange={(e) => props.setContent?.(e.target.value)}
+        value={content || ""}
+        onChange={(e) => setContent(e.target.value)}
         data-testid="task-content-input"
       />
-      {props.errors?.content && (
-        <span data-testid="error-content">{props.errors.content.message}</span>
+      {errors?.content && (
+        <span data-testid="error-content">{errors.content.message}</span>
       )}
       <textarea
-        value={props.description || ""}
-        onChange={(e) => props.setDescription?.(e.target.value)}
+        value={description || ""}
+        onChange={(e) => setDescription(e.target.value)}
       />
       <input
         data-testid="step-input"
-        value={props.pendingStep || ""}
-        onChange={(e) => props.setPendingStep?.(e.target.value)}
+        value={pendingStep || ""}
+        onChange={(e) => setPendingStep(e.target.value)}
       />
       <button
         type="submit"
-        onClick={props.onSubmit}
-        disabled={props.isPending || !props.hasContent}
+        onClick={onSubmit}
+        disabled={isPending || !hasContent}
       >
         Save
       </button>
-      <button onClick={props.onDelete}>Delete Task</button>
+      <button onClick={onDelete}>Delete Task</button>
     </div>
-  ),
-}));
+  );
+}
 
-vi.mock("next/dynamic", () => ({
-  default: () => MockTaskEditView,
-}));
-
-vi.mock("./TaskEditView", () => ({
-  TaskEditView: MockTaskEditView,
+vi.mock("@/components/tasks/TaskView", () => ({
+  TaskView: (props: MockTaskEditViewProps) => <MockTaskEditView {...props} />,
 }));
 
 vi.mock("@/lib/hooks/useTaskMutations", () => ({

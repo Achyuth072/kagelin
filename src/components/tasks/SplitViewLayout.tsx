@@ -108,7 +108,7 @@ function SplitViewLayoutBase({
       </div>
 
       <div className="w-[40%] h-full overflow-hidden p-4 md:p-6 lg:p-8">
-        <div className="h-full w-full rounded-2xl border border-border bg-background/50 overflow-hidden shadow-sm">
+        <div className="h-full w-full rounded-2xl border border-border/80 bg-card overflow-hidden shadow-sm">
           <TaskDetailPanel task={selectedTask} onClose={handleCloseDetail} />
         </div>
       </div>

@@ -7,7 +7,6 @@ import {
   startOfDay,
 } from "date-fns";
 import type { Task } from "@/lib/types/task";
-import type { CreateTaskInput } from "@/lib/schemas/task";
 
 export const priorityTextClasses: Record<1 | 2 | 3 | 4, string> = {
   1: "text-foreground font-bold",
@@ -46,7 +45,9 @@ export function taskDomId(taskId: string): string {
   return `task-item-${taskId}`;
 }
 
-export type TaskFormValues = CreateTaskInput;
+import type { TaskFormValues } from "@/lib/types/task-view";
+
+export type { TaskFormValues };
 
 export function taskToFormValues(task: Task): TaskFormValues {
   return {

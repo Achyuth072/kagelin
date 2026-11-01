@@ -1,185 +1,47 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { CreateTaskSchema, type CreateTaskInput } from "@/lib/schemas/task";
 import type { Task } from "@/lib/types/task";
-import type { RecurrenceRule } from "@/lib/utils/recurrence";
-import {
-  useUpdateTask,
-  useDeleteTask,
-  useCreateTask,
-} from "@/lib/hooks/useTaskMutations";
-import { useInboxProject } from "@/lib/hooks/useTasks";
-import { useProjects } from "@/lib/hooks/useProjects";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import dynamic from "next/dynamic";
-import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
-import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
-import { omitUntouchedUnreadable } from "@/lib/crypto/unreadable";
-import {
-  taskToFormValues,
-  defaultTaskFormValues,
-  type TaskFormValues,
-} from "./task-utils";
-
-const TaskView = dynamic(
-  () => import("./TaskView").then((mod) => mod.TaskView),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-full items-center justify-center p-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    ),
-  },
-);
+import { X } from "lucide-react";
+import { TaskView } from "./TaskView";
+import { TaskEditorProvider, useTaskEditorContext } from "./TaskEditorProvider";
 
 interface TaskDetailPanelProps {
   task: Task | null;
   onClose?: () => void;
 }
 
-export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
+function TaskDetailPanelContent({ onClose }: { onClose?: () => void }) {
   const { trigger } = useHaptic();
+  const { onKeyDown } = useTaskEditorContext();
 
-  const {
-    handleSubmit,
-    setValue,
-    control,
-    reset,
-    trigger: triggerValidation,
-    formState: { errors, isValid },
-  } = useForm<TaskFormValues>({
-    resolver: zodResolver(CreateTaskSchema),
-    mode: "onChange",
-    defaultValues: defaultTaskFormValues(),
-  });
-
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const [doDatePickerOpen, setDoDatePickerOpen] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [draftSubtasks, setDraftSubtasks] = useState<string[]>([]);
-  const [pendingStep, setPendingStep] = useState("");
-  const [showSubtasks, setShowSubtasks] = useState(false);
-
-  const content = useWatch({ control, name: "content" });
-  const watchedDueDate = useWatch({ control, name: "due_date" });
-  const dueDate = watchedDueDate
-    ? new Date(watchedDueDate as string)
-    : undefined;
-  const watchedDoDate = useWatch({ control, name: "do_date" });
-  const doDate = watchedDoDate ? new Date(watchedDoDate as string) : undefined;
-  const priority = (useWatch({ control, name: "priority" }) ?? 4) as
-    1 | 2 | 3 | 4;
-  const recurrence = useWatch({
-    control,
-    name: "recurrence",
-  }) as RecurrenceRule | null;
-  const selectedProjectId = useWatch({ control, name: "project_id" }) ?? null;
-  const description = useWatch({ control, name: "description" }) || "";
-
-  const updateMutation = useUpdateTask();
-  const createMutation = useCreateTask();
-  const deleteMutation = useDeleteTask();
-  const { data: inboxProject } = useInboxProject();
-  const { data: projects } = useProjects();
-  const isMobile = useMediaQuery("(max-width: 768px)");
-
-  const [prevTask, setPrevTask] = useState(task);
-  if (task !== prevTask) {
-    setPrevTask(task);
-    if (task) {
-      setDraftSubtasks([]);
-      setPendingStep("");
-    }
-  }
-
-  useEffect(() => {
-    if (task) {
-      reset(taskToFormValues(task));
-      void triggerValidation();
-    }
-  }, [task, reset, triggerValidation]);
-
-  const onFormSubmit = useCallback(
-    (data: CreateTaskInput) => {
-      if (!task) return;
-
-      trigger("success");
-
-      updateMutation.mutate(
-        omitUntouchedUnreadable(task, {
-          ...data,
-          id: task.id,
-          due_date:
-            data.due_date instanceof Date
-              ? data.due_date.toISOString()
-              : data.due_date || null,
-          do_date:
-            data.do_date instanceof Date
-              ? data.do_date.toISOString()
-              : data.do_date || null,
-        }),
-      );
-
-      const stepToFlush = pendingStep.trim();
-      if (stepToFlush) {
-        const targetProjectId =
-          (data.project_id ?? task.project_id) || inboxProject?.id || undefined;
-        createMutation.mutate({
-          content: stepToFlush,
-          project_id: targetProjectId,
-          parent_id: task.id,
-          priority: 4,
-        });
-        setPendingStep("");
-      }
-
-      onClose?.();
-    },
-    [
-      task,
-      pendingStep,
-      updateMutation,
-      inboxProject?.id,
-      createMutation,
-      onClose,
-      trigger,
-    ],
+  return (
+    <div className="flex flex-col h-full bg-card" onKeyDown={onKeyDown}>
+      {onClose && (
+        <div className="shrink-0 flex justify-end px-4 pt-3">
+          <button
+            onClick={() => {
+              trigger("tick");
+              onClose();
+            }}
+            className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 border border-border/80 transition-all duration-200"
+            aria-label="Close task details"
+          >
+            <X className="h-5 w-5 opacity-80" strokeWidth={2.25} />
+          </button>
+        </div>
+      )}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <TaskView layout="panel" />
+      </div>
+    </div>
   );
+}
 
-  const handleDelete = useCallback(() => {
-    if (!task) return;
-    setShowDeleteDialog(true);
-  }, [task]);
-
-  const handleConfirmDelete = useCallback(() => {
-    if (!task) return;
-    trigger("thud");
-    setShowDeleteDialog(false);
-    onClose?.();
-    deleteMutation.mutate(task.id);
-  }, [task, deleteMutation, onClose, trigger]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        handleSubmit(onFormSubmit)();
-      }
-      if (e.key === "Escape") onClose?.();
-    },
-    [handleSubmit, onFormSubmit, onClose],
-  );
-
-  const isPending = updateMutation.isPending;
-
+export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   if (!task) {
     return (
-      <div className="flex h-full items-center justify-center p-16 animate-in fade-in duration-500">
+      <div className="flex h-full items-center justify-center p-16 animate-in fade-in duration-500 bg-card">
         <p className="type-body text-muted-foreground font-medium">
           Select a task to view details
         </p>
@@ -188,98 +50,8 @@ export function TaskDetailPanel({ task, onClose }: TaskDetailPanelProps) {
   }
 
   return (
-    <>
-      <div className="flex flex-col h-full" onKeyDown={handleKeyDown}>
-        {onClose && (
-          <div className="shrink-0 flex justify-end px-4 pt-3">
-            <button
-              onClick={() => {
-                trigger("tick");
-                onClose();
-              }}
-              className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 border border-border transition-all duration-200"
-              aria-label="Close task details"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.25"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="opacity-80"
-              >
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <TaskView
-            mode="edit"
-            initialTask={task}
-            content={content}
-            setContent={(v) => setValue("content", v, { shouldValidate: true })}
-            description={description}
-            setDescription={(v) =>
-              setValue("description", v, { shouldValidate: true })
-            }
-            dueDate={dueDate}
-            setDueDate={(v) =>
-              setValue("due_date", v, { shouldValidate: true })
-            }
-            doDate={doDate}
-            setDoDate={(v) => setValue("do_date", v, { shouldValidate: true })}
-            setIsEvening={(v) =>
-              setValue("is_evening", v, { shouldValidate: true })
-            }
-            priority={priority}
-            setPriority={(v) =>
-              setValue("priority", v, { shouldValidate: true })
-            }
-            recurrence={recurrence}
-            setRecurrence={(v) =>
-              setValue("recurrence", v, { shouldValidate: true })
-            }
-            selectedProjectId={selectedProjectId}
-            setSelectedProjectId={(v) =>
-              setValue("project_id", v, { shouldValidate: true })
-            }
-            datePickerOpen={datePickerOpen}
-            setDatePickerOpen={setDatePickerOpen}
-            doDatePickerOpen={doDatePickerOpen}
-            setDoDatePickerOpen={setDoDatePickerOpen}
-            showSubtasks={showSubtasks}
-            setShowSubtasks={setShowSubtasks}
-            draftSubtasks={draftSubtasks}
-            setDraftSubtasks={setDraftSubtasks}
-            pendingStep={pendingStep}
-            setPendingStep={setPendingStep}
-            inboxProjectId={inboxProject?.id || null}
-            projects={projects}
-            isMobile={isMobile}
-            hasContent={isValid}
-            isPending={isPending}
-            onSubmit={handleSubmit(onFormSubmit)}
-            onDelete={handleDelete}
-            onKeyDown={handleKeyDown}
-            errors={errors}
-            layout="panel"
-          />
-        </div>
-      </div>
-
-      <DeleteConfirmationDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Task"
-        description={`Are you sure you want to delete "${task.content ?? UNREADABLE_LABEL}"? This action cannot be undone.`}
-      />
-    </>
+    <TaskEditorProvider task={task} onClose={onClose} autoFocusTitle={false}>
+      <TaskDetailPanelContent onClose={onClose} />
+    </TaskEditorProvider>
   );
 }

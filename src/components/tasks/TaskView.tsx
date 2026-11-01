@@ -30,62 +30,18 @@ import { TaskDatePicker } from "./shared/TaskDatePicker";
 import { TaskPrioritySelect } from "./shared/TaskPrioritySelect";
 import { TaskNotesRow, type TaskNotesRowHandle } from "./shared/TaskNotesRow";
 import RecurrencePicker from "./TaskSheet/RecurrencePicker";
-import type { Task, Project } from "@/lib/types/task";
-import type { RecurrenceRule } from "@/lib/utils/recurrence";
-
-import { FieldErrors } from "react-hook-form";
-import type { CreateTaskInput } from "@/lib/schemas/task";
 import { ReadableText } from "@/components/encryption/ReadableText";
 import { isUnreadable } from "@/lib/crypto/unreadable";
+import { useTaskEditorContext } from "./TaskEditorProvider";
 
-interface TaskViewBaseProps {
-  content: string;
-  setContent: (value: string) => void;
-  description: string;
-  setDescription: (value: string) => void;
-  dueDate: Date | undefined;
-  setDueDate: (value: Date | undefined) => void;
-  doDate: Date | undefined;
-  setDoDate: (value: Date | undefined) => void;
-  setIsEvening: (value: boolean) => void;
-  priority: 1 | 2 | 3 | 4;
-  setPriority: (value: 1 | 2 | 3 | 4) => void;
-  recurrence: RecurrenceRule | null;
-  setRecurrence: (value: RecurrenceRule | null) => void;
-  selectedProjectId: string | null;
-  setSelectedProjectId: (value: string | null) => void;
-  datePickerOpen: boolean;
-  setDatePickerOpen: (value: boolean) => void;
-  doDatePickerOpen: boolean;
-  setDoDatePickerOpen: (value: boolean) => void;
-  showSubtasks: boolean;
-  setShowSubtasks: (value: boolean) => void;
-  draftSubtasks: string[];
-  setDraftSubtasks: (value: string[]) => void;
-  pendingStep?: string;
-  setPendingStep?: (value: string) => void;
-  inboxProjectId: string | null;
-  projects: Project[] | undefined;
-  isMobile: boolean;
-  hasContent: boolean;
-  isPending: boolean;
-  onSubmit: () => void;
-  onKeyDown: (e: React.KeyboardEvent) => void;
-  errors?: FieldErrors<CreateTaskInput>;
+export interface TaskViewProps {
+  layout?: "sheet" | "panel";
 }
 
-export type TaskViewProps =
-  | (TaskViewBaseProps & { mode: "create" })
-  | (TaskViewBaseProps & {
-      mode: "edit";
-      initialTask: Task;
-      onDelete: () => void;
-      layout?: "sheet" | "panel";
-    });
-
-export function TaskView(props: TaskViewProps) {
-  const { mode } = props;
+export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
   const {
+    mode,
+    task: initialTask,
     content,
     setContent,
     description,
@@ -117,11 +73,11 @@ export function TaskView(props: TaskViewProps) {
     hasContent,
     isPending,
     onSubmit,
+    onDeleteRequest: onDelete,
     onKeyDown,
     errors,
-  } = props;
-
-  const layout = mode === "edit" ? (props.layout ?? "sheet") : "sheet";
+    autoFocusTitle,
+  } = useTaskEditorContext();
 
   const { trigger } = useHaptic();
   const isFinePointer = useMediaQuery("(pointer: fine)");
@@ -156,7 +112,7 @@ export function TaskView(props: TaskViewProps) {
   };
 
   const { data: editSubtaskCount } = useSubtasks(
-    mode === "edit" ? props.initialTask.id : undefined,
+    mode === "edit" && initialTask ? initialTask.id : undefined,
     { select: (data) => data.length },
   );
   const subtaskCount =
@@ -173,13 +129,13 @@ export function TaskView(props: TaskViewProps) {
   return (
     <div
       className={cn(
-        "flex flex-col w-full max-w-full overflow-hidden",
+        "flex flex-col w-full max-w-full overflow-hidden bg-card text-card-foreground",
         mode === "create"
           ? "h-auto"
           : cn("transition-all", layout === "sheet" ? "h-auto" : "h-full"),
       )}
     >
-      <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
+      <div className="px-4 pt-6 pb-4 border-b border-border/80 shrink-0">
         <textarea
           ref={titleTextareaRef}
           id={contentId}
@@ -188,7 +144,9 @@ export function TaskView(props: TaskViewProps) {
           value={content}
           onChange={(e) => setContent(e.target.value.replace(/[\r\n]+/g, " "))}
           onKeyDown={handleTitleKeyDown}
-          autoFocus={isFinePointer}
+          autoFocus={
+            autoFocusTitle !== undefined ? autoFocusTitle : isFinePointer
+          }
           rows={1}
           className={cn(
             "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none resize-none",
@@ -207,11 +165,11 @@ export function TaskView(props: TaskViewProps) {
 
       <div
         className={cn(
-          "flex-1 min-h-0 w-full py-2",
+          "flex-1 min-h-0 w-full px-4 py-4 space-y-4",
           mode === "edit" && "overflow-y-auto",
         )}
       >
-        <div className="flex items-center gap-3 px-3 py-2.5 mx-2">
+        <div className="flex items-center gap-3">
           <div className="w-5 shrink-0 flex items-center justify-center">
             <SlidersHorizontal
               className="h-4 w-4 text-muted-foreground"
@@ -274,26 +232,23 @@ export function TaskView(props: TaskViewProps) {
         </div>
 
         {(errors?.due_date || errors?.do_date) && (
-          <div className="px-3 mx-2 text-[10px] font-bold text-destructive">
+          <div className="text-[10px] font-bold text-destructive">
             {errors?.due_date?.message || errors?.do_date?.message}
           </div>
         )}
-
-        <div className="h-1" />
 
         <TaskNotesRow
           ref={notesRowRef}
           description={description}
           setDescription={setDescription}
           unreadable={
-            props.mode === "edit" &&
-            isUnreadable(props.initialTask, "description")
+            mode === "edit" && initialTask
+              ? isUnreadable(initialTask, "description")
+              : false
           }
         />
 
-        <div className="h-1" />
-
-        <div className="mx-2">
+        <div>
           <button
             type="button"
             onClick={() => {
@@ -325,10 +280,12 @@ export function TaskView(props: TaskViewProps) {
           <CollapsibleReveal open={showSubtasks}>
             <div className="pl-11 pr-3 pb-2">
               <SubtaskList
-                taskId={mode === "edit" ? props.initialTask.id : undefined}
+                taskId={
+                  mode === "edit" && initialTask ? initialTask.id : undefined
+                }
                 projectId={
-                  mode === "edit"
-                    ? props.initialTask.project_id || inboxProjectId
+                  mode === "edit" && initialTask
+                    ? initialTask.project_id || inboxProjectId
                     : inboxProjectId
                 }
                 draftSubtasks={draftSubtasks}
@@ -344,11 +301,9 @@ export function TaskView(props: TaskViewProps) {
             </div>
           </CollapsibleReveal>
         </div>
-
-        <div className="h-1" />
       </div>
 
-      <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
+      <div className="shrink-0 flex items-center gap-3 p-4 border-t border-border/80 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-card w-full max-w-full">
         <Select
           value={selectedProjectId || "inbox"}
           onValueChange={(v) => {
@@ -401,10 +356,10 @@ export function TaskView(props: TaskViewProps) {
           <Button
             variant="destructive"
             size="sm"
-            className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
+            className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku"
             onClick={() => {
               trigger("thud");
-              props.onDelete();
+              onDelete();
             }}
             aria-label="Delete task"
           >
