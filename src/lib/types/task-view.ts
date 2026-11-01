@@ -2,6 +2,53 @@ import type { Task, Project } from "@/lib/types/task";
 import type { CreateTaskInput } from "@/lib/schemas/task";
 import type { UseFormReturn, FieldErrors } from "react-hook-form";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
+import type { GroupOption, SortOption } from "@/lib/types/sorting";
+import type {
+  CollisionDetection,
+  DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
+  SensorDescriptor,
+  SensorOptions,
+} from "@dnd-kit/core";
+
+export interface TaskGroup {
+  title: string;
+  tasks: Task[];
+}
+
+export interface TaskPresentation {
+  groups: TaskGroup[] | null;
+  active: Task[];
+  evening: Task[];
+  completed: Task[];
+}
+
+export interface UseTaskDndOptions {
+  presentation: TaskPresentation;
+  tasks?: Task[];
+  projectsMap?: Map<string, Project>;
+  groupBy?: GroupOption;
+  sortBy?: SortOption;
+  isDesktop?: boolean;
+}
+
+export interface UseTaskDndReturn {
+  activeTask: Task | null;
+  activeId: string | null;
+  displayPresentation: TaskPresentation;
+  isDragging: boolean;
+  sensors: SensorDescriptor<SensorOptions>[];
+  collisionDetection: CollisionDetection;
+  handleDragStart: (event: DragStartEvent) => void;
+  handleDragOver: (event: DragOverEvent) => void;
+  handleDragEnd: (event: DragEndEvent) => void;
+  handleDragCancel: () => void;
+  onDragStart: (event: DragStartEvent) => void;
+  onDragOver: (event: DragOverEvent) => void;
+  onDragEnd: (event: DragEndEvent) => void;
+  onDragCancel: () => void;
+}
 
 export type TaskFormValues = CreateTaskInput;
 

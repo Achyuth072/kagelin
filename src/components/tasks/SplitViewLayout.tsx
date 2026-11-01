@@ -7,6 +7,7 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { TaskDetailPanel } from "./TaskDetailPanel";
 import TaskList from "./TaskList";
+import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
 import type { SortOption, GroupOption } from "@/lib/types/sorting";
 
@@ -47,9 +48,9 @@ function SplitViewLayoutBase({
     () => selection,
   );
   const { trigger } = useHaptic();
-  // Below 1024px, a 40% side panel is too thin for the detail form (cramped
-  // footer, wrapped badges) — show task details in a modal instead.
-  const isWideSplit = useMediaQuery("(min-width: 1024px)");
+  // Below 1280px, usable width is <355px — route task editing through
+  // the unified modal sheet instead.
+  const isWideSplit = useMediaQuery("(min-width: 1280px)");
 
   const handleTaskSelect = useCallback(
     (task: Task) => {
@@ -97,7 +98,13 @@ function SplitViewLayoutBase({
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <div className="w-[60%] h-full overflow-hidden">
+      <div
+        className={cn(
+          "h-full overflow-hidden transition-[width] duration-200",
+          selectedTask ? "w-[60%] shrink-0" : "w-full flex-1",
+        )}
+        style={{ transitionTimingFunction: "var(--ease-seijaku)" }}
+      >
         <TaskList
           sortBy={sortBy}
           groupBy={groupBy}
@@ -107,9 +114,20 @@ function SplitViewLayoutBase({
         />
       </div>
 
-      <div className="w-[40%] h-full overflow-hidden p-4 md:p-6 lg:p-8">
+      <div
+        data-testid="docked-task-inspector"
+        className={cn(
+          "h-full overflow-hidden pt-2 pr-4 md:pr-6 pb-8 pl-0 shrink-0 transition-[width,opacity] duration-200",
+          selectedTask
+            ? "w-[40%] opacity-100"
+            : "w-0 opacity-0 pointer-events-none",
+        )}
+        style={{ transitionTimingFunction: "var(--ease-seijaku)" }}
+      >
         <div className="h-full w-full rounded-2xl border border-border/80 bg-card overflow-hidden shadow-sm">
-          <TaskDetailPanel task={selectedTask} onClose={handleCloseDetail} />
+          {selectedTask && (
+            <TaskDetailPanel task={selectedTask} onClose={handleCloseDetail} />
+          )}
         </div>
       </div>
     </div>

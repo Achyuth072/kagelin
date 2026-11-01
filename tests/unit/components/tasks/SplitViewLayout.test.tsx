@@ -46,8 +46,12 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   }),
 }));
 
+let mockIsWide = true;
 vi.mock("@/lib/hooks/useMediaQuery", () => ({
-  useMediaQuery: () => true,
+  useMediaQuery: (query: string) => {
+    if (query.includes("1280")) return mockIsWide;
+    return true;
+  },
 }));
 
 let queryClient: QueryClient;
@@ -63,16 +67,19 @@ function renderLayout() {
 describe("SplitViewLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockIsWide = true;
     queryClient = new QueryClient();
   });
 
-  it("SV-N-01: Renders with no selected task by default", () => {
+  it("SV-N-01: Renders task list at 100% width by default with no empty placeholder pane", () => {
     renderLayout();
 
-    expect(screen.getByText("Empty State")).toBeInTheDocument();
+    const listContainer = screen.getByTestId("task-list").parentElement;
+    expect(listContainer).toHaveClass("w-full");
+    expect(screen.queryByText("Empty State")).not.toBeInTheDocument();
   });
 
-  it("SV-N-02: Updates detail panel when a task is selected", () => {
+  it("SV-N-02: Expands side inspector (w-[40%], duration-200, pt-2) and shrinks list to w-[60%] when a task is selected", () => {
     renderLayout();
 
     const selectBtn = screen.getByText("Select Task 1");
@@ -80,17 +87,26 @@ describe("SplitViewLayout", () => {
 
     expect(screen.getByText("Selected Task")).toBeInTheDocument();
     expect(mockHapticTrigger).toHaveBeenCalledWith("toggle");
+
+    const listContainer = screen.getByTestId("task-list").parentElement;
+    expect(listContainer).toHaveClass("w-[60%]");
+
+    const inspector = screen.getByTestId("docked-task-inspector");
+    expect(inspector).toHaveClass("w-[40%]");
+    expect(inspector).toHaveClass("pt-2");
+    expect(inspector).toHaveClass("duration-200");
   });
 
-  it("SV-N-03: Returns to empty state when detail panel is closed", () => {
+  it("SV-N-03: Returns to 100% width when detail panel is closed", () => {
     renderLayout();
     fireEvent.click(screen.getByText("Select Task 1"));
-    expect(screen.queryByText("Empty State")).not.toBeInTheDocument();
 
     const closeBtn = screen.getByText("Close Detail");
     fireEvent.click(closeBtn);
 
-    expect(screen.getByText("Empty State")).toBeInTheDocument();
+    const listContainer = screen.getByTestId("task-list").parentElement;
+    expect(listContainer).toHaveClass("w-full");
+    expect(screen.queryByText("Selected Task")).not.toBeInTheDocument();
     expect(mockHapticTrigger).toHaveBeenCalledWith("tick");
   });
 
@@ -111,14 +127,21 @@ describe("SplitViewLayout", () => {
     expect(screen.getByText("Edited Task")).toBeInTheDocument();
   });
 
-  it("SV-03: Has a fixed 60/40 layout split", () => {
+  it("SV-N-05: Routes viewports <1280px through modal and >=1280px to docked pane", () => {
+    mockIsWide = false;
     renderLayout();
 
-    const listContainer = screen.getByTestId("task-list").parentElement;
-    const detailContainer =
-      screen.getByTestId("task-detail-panel").parentElement?.parentElement;
+    expect(
+      screen.queryByTestId("docked-task-inspector"),
+    ).not.toBeInTheDocument();
 
-    expect(listContainer).toHaveClass("w-[60%]");
-    expect(detailContainer).toHaveClass("w-[40%]");
+    const selectBtn = screen.getByText("Select Task 1");
+    fireEvent.click(selectBtn);
+
+    // Modal Dialog should render for <1280px viewports
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("docked-task-inspector"),
+    ).not.toBeInTheDocument();
   });
 });

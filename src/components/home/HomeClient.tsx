@@ -10,8 +10,6 @@ import { useUiStore } from "@/lib/store/uiStore";
 import { useTaskActions } from "@/components/TaskActionsProvider";
 import { PlusIcon } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
-import { SplitViewLayout } from "@/components/tasks/SplitViewLayout";
 import { PwaInstallHint } from "@/components/home/PwaInstallHint";
 import { StartHereCard } from "@/components/home/StartHereCard";
 import type { SortOption, GroupOption } from "@/lib/types/sorting";
@@ -35,7 +33,6 @@ export function HomeClient() {
   const setViewMode = useUiStore((state) => state.setViewMode);
   const { openAddTask } = useTaskActions();
   const { trigger } = useHaptic();
-  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const [isTaskListPending, startTransition] = useTransition();
 
@@ -125,22 +122,12 @@ export function HomeClient() {
         className="flex-1 min-h-0 transition-opacity duration-150"
         style={{ opacity: isTaskListPending ? 0.6 : 1 }}
       >
-        {/* Conditionally render views instead of CSS hiding to prevent double-rendering TaskList instances. */}
-        {viewMode === "list" && !isMobile ? (
-          <SplitViewLayout
-            sortBy={sortBy}
-            groupBy={groupBy}
-            projectId={currentProjectId}
-            filter={filter}
-          />
-        ) : (
-          <TaskList
-            sortBy={sortBy}
-            groupBy={groupBy}
-            projectId={currentProjectId}
-            filter={filter}
-          />
-        )}
+        <TaskList
+          sortBy={sortBy}
+          groupBy={groupBy}
+          projectId={currentProjectId}
+          filter={filter}
+        />
       </div>
     </div>
   );

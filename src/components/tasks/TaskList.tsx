@@ -8,45 +8,36 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useSyncExternalStore,
   memo,
 } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
 import {
-  KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
-  DragOverEvent,
   DragOverlay,
   defaultDropAnimationSideEffects,
   defaultAnnouncements,
-  closestCorners,
   DndContext,
   MeasuringStrategy,
 } from "@dnd-kit/core";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useTaskActions } from "@/components/TaskActionsProvider";
-import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useTasks } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
 import TaskSheet from "./TaskSheet";
+import { TaskDetailPanel } from "./TaskDetailPanel";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { cn } from "@/lib/utils";
 import type { Task, Project } from "@/lib/types/task";
 import type { SortOption, GroupOption } from "@/lib/types/sorting";
 import type { TaskGroup } from "@/lib/hooks/useTaskViewData";
 import {
-  getTaskUpdatesForGroup,
   getPasteOverrides,
-  computeReorderPairs,
   computeFreezeOrderPairs,
-  isDropBlockedGroup,
 } from "@/lib/utils/task-dnd";
+import { useTaskDnd } from "./useTaskDnd";
 import {
   useReorderTasks,
-  useUpdateTask,
   useDeleteTask,
   useToggleTask,
   useDuplicateTask,
@@ -85,6 +76,20 @@ function canScrollTaskListContainer(element: Element): boolean {
   return element.dataset.taskListScrollContainer === "true";
 }
 
+function findCachedTask(
+  queryClient: QueryClient,
+  taskId: string | undefined,
+): Task | undefined {
+  if (!taskId) return undefined;
+  for (const [, tasks] of queryClient.getQueriesData<Task[]>({
+    queryKey: ["tasks"],
+  })) {
+    const found = tasks?.find((t) => t.id === taskId);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 interface TaskListProps {
   sortBy?: SortOption;
   groupBy?: GroupOption;
@@ -102,11 +107,13 @@ function TaskListBase({
 }: TaskListProps) {
   const { data: tasks = [], isLoading } = useTasks({ projectId, filter });
   const { data: projectsData } = useProjects();
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [activeTask, setActiveTask] = useState<Task | null>(null);
-  // Bridges local drag state until optimistic cache update lands.
-  const [lockLocal, setLockLocal] = useState(false);
+  const queryClient = useQueryClient();
+  const [selection, setSelectedTask] = useState<Task | null>(null);
+  const selectedTask = useSyncExternalStore(
+    (notify) => queryClient.getQueryCache().subscribe(notify),
+    () => findCachedTask(queryClient, selection?.id) ?? selection,
+    () => selection,
+  );
   const [keyboardSelectedId, setKeyboardSelectedId] = useState<string | null>(
     null,
   );
@@ -115,14 +122,10 @@ function TaskListBase({
     key: "g" | "y";
     timestamp: number;
   } | null>(null);
-
-  const queryClient = useQueryClient();
   const reorderMutation = useReorderTasks();
-  const updateMutation = useUpdateTask();
   const deleteMutation = useDeleteTask();
   const toggleMutation = useToggleTask();
   const duplicateMutation = useDuplicateTask();
-  const setSortBy = useUiStore((state) => state.setSortBy);
   const customSortEnteredViaDrag = useUiStore(
     (state) => state.customSortEnteredViaDrag,
   );
@@ -130,6 +133,9 @@ function TaskListBase({
     (state) => state.setCustomSortEnteredViaDrag,
   );
   const viewMode = useUiStore((state) => state.viewMode);
+  const isDockedWide = useMediaQuery("(min-width: 1280px)");
+  const isDockedInspector =
+    isDockedWide && viewMode === "list" && !onTaskSelect;
   const isDesktop = useUiStore((state) => state.isDesktop);
   const selectedTaskId = useUiStore((state) => state.selectedTaskId);
   const setSelectedTaskId = useUiStore((state) => state.setSelectedTaskId);
@@ -137,22 +143,6 @@ function TaskListBase({
   const { openAddTask } = useTaskActions();
   const { trigger: triggerHaptic } = useHaptic();
   const setActiveTaskId = useTimerStore((state) => state.setActiveTaskId);
-
-  const mouseSensor = useSensor(MouseSensor, {
-    // If we're on mobile (!isDesktop), we enforce a delay even for mouse pointers
-    // to match TouchSensor behavior and prevent DevTools swipes from clashing.
-    activationConstraint: isDesktop
-      ? { distance: 5 }
-      : { delay: 250, tolerance: 5 },
-  });
-  const touchSensor = useSensor(TouchSensor, {
-    activationConstraint: { delay: 250, tolerance: 5 },
-  });
-  const keyboardSensor = useSensor(KeyboardSensor, {
-    coordinateGetter: sortableKeyboardCoordinates,
-  });
-
-  const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
 
   const projectsMap = useMemo(() => {
     const map = new Map<string, Project>();
@@ -171,28 +161,14 @@ function TaskListBase({
     projects: projectsData,
   });
 
-  const [localActive, setLocalActive] = useState<Task[]>(processedTasks.active);
-  const [localEvening, setLocalEvening] = useState<Task[]>(
-    processedTasks.evening,
-  );
-  const [localGroups, setLocalGroups] = useState<TaskGroup[] | null>(
-    processedTasks.groups,
-  );
-
-  const displayTasks =
-    activeId || lockLocal ? localActive : processedTasks.active;
-  const displayEveningTasks =
-    activeId || lockLocal ? localEvening : processedTasks.evening;
-  const displayGroups =
-    activeId || lockLocal ? localGroups : processedTasks.groups;
-
-  const getTaskUpdates = useCallback(
-    (groupTitle: string) =>
-      getTaskUpdatesForGroup(groupTitle, projectsMap, groupBy),
-    [projectsMap, groupBy],
-  );
-
-  const preDragFlatTasksRef = useRef<Task[]>([]);
+  const dnd = useTaskDnd({
+    presentation: processedTasks,
+    tasks,
+    projectsMap,
+    groupBy,
+    sortBy,
+    isDesktop,
+  });
 
   const prevSortByRef = useRef(sortBy);
   const prevDisplayedFlatRef = useRef<Task[]>([]);
@@ -232,6 +208,41 @@ function TaskListBase({
     setCustomSortEnteredViaDrag,
   ]);
 
+  const handleCloseDetail = useCallback(() => {
+    triggerHaptic("tick");
+    setSelectedTask(null);
+    scrollContainerRef.current?.focus({ preventScroll: true });
+  }, [triggerHaptic]);
+
+  const [pendingFocusTitle, setPendingFocusTitle] = useState(false);
+
+  const focusInspectorTitle = useCallback(() => {
+    const el = document.getElementById(
+      "task-content-edit",
+    ) as HTMLTextAreaElement | null;
+    if (el) {
+      el.focus();
+      const len = el.value.length;
+      el.setSelectionRange(len, len);
+    } else {
+      setPendingFocusTitle(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (pendingFocusTitle && selectedTask) {
+      const el = document.getElementById(
+        "task-content-edit",
+      ) as HTMLTextAreaElement | null;
+      if (el) {
+        setPendingFocusTitle(false);
+        el.focus();
+        const len = el.value.length;
+        el.setSelectionRange(len, len);
+      }
+    }
+  }, [pendingFocusTitle, selectedTask]);
+
   const handleTaskClick = useCallback(
     (task: Task) => {
       (document.activeElement as HTMLElement)?.blur();
@@ -239,9 +250,13 @@ function TaskListBase({
         onTaskSelect(task);
       } else {
         setSelectedTask(task);
+        setKeyboardSelectedId(task.id);
+        if (isDockedInspector) {
+          scrollContainerRef.current?.focus({ preventScroll: true });
+        }
       }
     },
-    [onTaskSelect],
+    [onTaskSelect, isDockedInspector],
   );
 
   // Clear id only once found; the list may still be loading on initial navigation.
@@ -253,374 +268,19 @@ function TaskListBase({
     setSelectedTaskId(null);
   }, [selectedTaskId, tasks, setSelectedTaskId, handleTaskClick]);
 
-  const handleDragStart = useCallback(
-    (event: DragStartEvent) => {
-      // Synced on drag start only to avoid per-render cost.
-      setLocalActive(processedTasks.active);
-      setLocalEvening(processedTasks.evening);
-      setLocalGroups(processedTasks.groups);
-      const id = event.active.id as string;
-      setActiveId(id);
-      setActiveTask(
-        processedTasks.active.find((t) => t.id === id) ||
-          processedTasks.evening.find((t) => t.id === id) ||
-          processedTasks.groups
-            ?.flatMap((g) => g.tasks)
-            .find((t) => t.id === id) ||
-          null,
-      );
-      // Uses processedTasks so filtered items and tie-broken orders do not corrupt reordering.
-      const visibleTasks = processedTasks.groups
-        ? processedTasks.groups.flatMap((g) => g.tasks)
-        : [...processedTasks.active, ...processedTasks.evening];
-      preDragFlatTasksRef.current =
-        sortBy === "custom"
-          ? [...visibleTasks].sort((a, b) => a.day_order - b.day_order)
-          : visibleTasks;
-      triggerHaptic("toggle");
-    },
-    [processedTasks, triggerHaptic, sortBy],
-  );
-
-  const handleDragOver = useCallback(
-    (event: DragOverEvent) => {
-      const { active, over } = event;
-      if (!over) return;
-      if (active.id === over.id) return;
-
-      const activeContainer = active.data.current?.sortable?.containerId;
-      const overContainer = over.data.current?.sortable?.containerId || over.id;
-
-      if (!activeContainer || !overContainer) return;
-
-      if (localGroups && localGroups.length > 0) {
-        const activeGroupIndex = localGroups.findIndex(
-          (g: TaskGroup) =>
-            g.title === activeContainer ||
-            g.tasks.some((t: Task) => t.id === active.id),
-        );
-        const overGroupIndex = localGroups.findIndex(
-          (g: TaskGroup) =>
-            g.title === overContainer ||
-            g.tasks.some((t: Task) => t.id === over.id),
-        );
-
-        if (activeGroupIndex === -1 || overGroupIndex === -1) return;
-
-        if (activeGroupIndex === overGroupIndex) {
-          const group = localGroups[activeGroupIndex];
-          const oldIndex = group.tasks.findIndex((t) => t.id === active.id);
-
-          // findIndex on React state can be off-by-one during rapid drag-over.
-          let newIndex = over.data.current?.sortable?.index;
-          if (newIndex === undefined) {
-            newIndex = group.tasks.findIndex((t) => t.id === over.id);
-          }
-
-          if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-            const newTasks = arrayMove(group.tasks, oldIndex, newIndex);
-            const newGroups = [...localGroups];
-            newGroups[activeGroupIndex] = { ...group, tasks: newTasks };
-            setLocalGroups(newGroups);
-          }
-        } else {
-          if (isDropBlockedGroup(localGroups[overGroupIndex].title, groupBy)) {
-            return;
-          }
-          setLocalGroups((prev) => {
-            if (!prev) return prev;
-            const newGroups = [...prev];
-            const sourceGroup = { ...newGroups[activeGroupIndex] };
-            const targetGroup = { ...newGroups[overGroupIndex] };
-
-            const taskIndex = sourceGroup.tasks.findIndex(
-              (t: Task) => t.id === active.id,
-            );
-            if (taskIndex === -1) return prev;
-
-            const [task] = sourceGroup.tasks.splice(taskIndex, 1);
-            const updates = getTaskUpdates(targetGroup.title);
-            const updatedTask = { ...task, ...updates };
-
-            let newIndex = over.data.current?.sortable?.index;
-            if (newIndex === undefined) {
-              const overIndex = targetGroup.tasks.findIndex(
-                (t: Task) => t.id === over.id,
-              );
-              newIndex = overIndex >= 0 ? overIndex : targetGroup.tasks.length;
-            } else {
-              if (newIndex < 0) newIndex = targetGroup.tasks.length;
-            }
-
-            targetGroup.tasks.splice(newIndex, 0, updatedTask);
-
-            newGroups[activeGroupIndex] = sourceGroup;
-            newGroups[overGroupIndex] = targetGroup;
-            return newGroups;
-          });
-        }
-      } else {
-        if (activeContainer === overContainer) {
-          const isEvening = activeContainer === "evening-section";
-          const list = isEvening ? localEvening : localActive;
-          const setList = isEvening ? setLocalEvening : setLocalActive;
-
-          const oldIndex = list.findIndex((t: Task) => t.id === active.id);
-
-          let newIndex = over.data.current?.sortable?.index;
-          if (newIndex === undefined) {
-            newIndex = list.findIndex((t: Task) => t.id === over.id);
-          }
-
-          if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
-            setList(arrayMove(list, oldIndex, newIndex));
-          }
-        } else {
-          const activeIsEvening = activeContainer === "evening-section";
-          const overIsEvening = overContainer === "evening-section";
-
-          const sourceList = activeIsEvening ? localEvening : localActive;
-          const targetList = overIsEvening ? localEvening : localActive;
-          const setSource = activeIsEvening ? setLocalEvening : setLocalActive;
-          const setTarget = overIsEvening ? setLocalEvening : setLocalActive;
-
-          const activeTask = sourceList.find((t: Task) => t.id === active.id);
-          if (!activeTask) return;
-
-          const dndKitIndex = over.data.current?.sortable?.index;
-          let newIndex: number;
-
-          if (dndKitIndex !== undefined) {
-            newIndex = dndKitIndex >= 0 ? dndKitIndex : targetList.length;
-          } else {
-            const overIndex = targetList.findIndex(
-              (t: Task) => t.id === over.id,
-            );
-            if (over.id in targetList) {
-              newIndex = overIndex;
-            } else {
-              newIndex = overIndex >= 0 ? overIndex : targetList.length;
-            }
-          }
-
-          setSource(sourceList.filter((t: Task) => t.id !== active.id));
-          setTarget([
-            ...targetList.slice(0, newIndex),
-            { ...activeTask, is_evening: overIsEvening },
-            ...targetList.slice(newIndex),
-          ]);
-        }
-      }
-    },
-    [localActive, localEvening, localGroups, getTaskUpdates, groupBy],
-  );
-
-  const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event;
-
-      // lockLocal(false) must precede setActiveId(null) to avoid a render with stale localActive.
-      if (!over) {
-        setLockLocal(false);
-        setLocalActive(processedTasks.active);
-        setLocalEvening(processedTasks.evening);
-        setLocalGroups(processedTasks.groups);
-        setActiveId(null);
-        setActiveTask(null);
-        return;
-      }
-
-      if (localGroups && localGroups.length > 0) {
-        const activeId = active.id as string;
-        const finalGroup = localGroups.find((g: TaskGroup) =>
-          g.tasks.some((t: Task) => t.id === activeId),
-        );
-        if (!finalGroup) {
-          setActiveId(null);
-          setActiveTask(null);
-          return;
-        }
-        const activeTask = finalGroup.tasks.find(
-          (t: Task) => t.id === activeId,
-        );
-        if (!activeTask) {
-          setActiveId(null);
-          setActiveTask(null);
-          return;
-        }
-
-        const originalGroup = processedTasks.groups?.find((g: TaskGroup) =>
-          g.tasks.some((t: Task) => t.id === activeId),
-        );
-        const isSameSection = originalGroup?.title === finalGroup.title;
-
-        // Must precede setActiveId(null) to avoid displayTasks falling through to stale data.
-        setLockLocal(true);
-        if (sortBy !== "custom") {
-          setCustomSortEnteredViaDrag(true);
-          setSortBy("custom");
-        }
-
-        const updates = getTaskUpdates(finalGroup.title);
-        const originalTask = tasks.find((t: Task) => t.id === activeId);
-
-        const hasChanged =
-          originalTask &&
-          Object.keys(updates).some(
-            (key) =>
-              (updates as Record<string, unknown>)[key] !==
-              (originalTask as unknown as Record<string, unknown>)[key],
-          );
-
-        // Releases lock only once all mutations settle to prevent refetch snap-back.
-        let pendingCount = 0;
-        const tryReleaseLock = () => {
-          pendingCount--;
-          if (pendingCount <= 0) setLockLocal(false);
-        };
-
-        if (hasChanged) {
-          triggerHaptic("thud");
-          pendingCount++;
-          updateMutation.mutate(
-            { id: activeId, ...updates },
-            {
-              onSettled: tryReleaseLock,
-            },
-          );
-        }
-
-        // In non-custom sort, freeze the full order because other groups' day_orders are stale.
-        let pairs: { id: string; day_order: number }[];
-        if (sortBy === "custom") {
-          const orderedIds = finalGroup.tasks.map((t: Task) => t.id);
-          pairs = computeReorderPairs(
-            activeId,
-            orderedIds,
-            preDragFlatTasksRef.current,
-            isSameSection,
-          );
-        } else {
-          pairs = computeFreezeOrderPairs(localGroups.flatMap((g) => g.tasks));
-        }
-        if (pairs.length > 0) {
-          pendingCount++;
-          reorderMutation.mutate(pairs, {
-            onSettled: tryReleaseLock,
-          });
-        }
-        if (pendingCount === 0) {
-          setLockLocal(false);
-        }
-        triggerHaptic("thud");
-        setActiveId(null);
-        setActiveTask(null);
-      } else {
-        const findTaskInLocal = (id: string) =>
-          localActive.find((t: Task) => t.id === id) ||
-          localEvening.find((t: Task) => t.id === id);
-
-        const activeTask = findTaskInLocal(active.id as string);
-        if (!activeTask) {
-          setActiveId(null);
-          setActiveTask(null);
-          return;
-        }
-
-        // Must precede setActiveId(null) to avoid displayTasks falling through to stale data.
-        setLockLocal(true);
-        if (sortBy !== "custom") {
-          setCustomSortEnteredViaDrag(true);
-          setSortBy("custom");
-        }
-
-        const isInEveningNow = localEvening.some(
-          (t: Task) => t.id === active.id,
-        );
-        const wasInEveningBefore = processedTasks.evening.some(
-          (t: Task) => t.id === active.id,
-        );
-        const isSameSection = isInEveningNow === wasInEveningBefore;
-
-        let pendingCount = 0;
-        const tryReleaseLock = () => {
-          pendingCount--;
-          if (pendingCount <= 0) setLockLocal(false);
-        };
-
-        if (isInEveningNow !== wasInEveningBefore) {
-          triggerHaptic("thud");
-          pendingCount++;
-          updateMutation.mutate(
-            {
-              id: activeTask.id,
-              is_evening: isInEveningNow,
-            },
-            {
-              onSettled: tryReleaseLock,
-            },
-          );
-        }
-
-        triggerHaptic("thud");
-        // In non-custom sort, freeze the full order so untouched sections don't jump.
-        let pairs: { id: string; day_order: number }[];
-        if (sortBy === "custom") {
-          const currentList = isInEveningNow ? localEvening : localActive;
-          const orderedIds = currentList.map((t: Task) => t.id);
-          pairs = computeReorderPairs(
-            activeTask.id,
-            orderedIds,
-            preDragFlatTasksRef.current,
-            isSameSection,
-          );
-        } else {
-          pairs = computeFreezeOrderPairs([...localActive, ...localEvening]);
-        }
-        if (pairs.length > 0) {
-          pendingCount++;
-          reorderMutation.mutate(pairs, {
-            onSettled: tryReleaseLock,
-          });
-        }
-        if (pendingCount === 0) {
-          setLockLocal(false);
-        }
-        setActiveId(null);
-        setActiveTask(null);
-      }
-    },
-    [
-      processedTasks.active,
-      processedTasks.evening,
-      processedTasks.groups,
-      localActive,
-      localEvening,
-      localGroups,
-      triggerHaptic,
-      updateMutation,
-      sortBy,
-      setSortBy,
-      setCustomSortEnteredViaDrag,
-      reorderMutation,
-      tasks,
-      getTaskUpdates,
-    ],
-  );
-
   const navigableTasks = useMemo(() => {
-    const list: Task[] = [];
-    if (processedTasks?.groups) {
-      processedTasks.groups.forEach((g) => list.push(...g.tasks));
-    } else {
-      list.push(...(processedTasks?.active || []));
-    }
-    list.push(...(processedTasks?.evening || []));
-    list.push(...(processedTasks?.completed || []));
-    return list;
+    const activeOrGrouped = processedTasks.groups
+      ? processedTasks.groups.flatMap((g) => g.tasks)
+      : processedTasks.active;
+    return [
+      ...activeOrGrouped,
+      ...processedTasks.evening,
+      ...processedTasks.completed,
+    ];
   }, [processedTasks]);
 
-  const isAnyModalOpen = useIsAnyModalOpen() || !!selectedTask;
+  const isAnyModalOpen =
+    useIsAnyModalOpen() || (!!selectedTask && !isDockedInspector);
 
   const boardColumns = useMemo<TaskGroup[]>(
     () => getBoardColumns(processedTasks),
@@ -811,14 +471,13 @@ function TaskListBase({
 
   const toggleSelected = () => {
     clearPendingDoublePress();
-    if (keyboardSelectedId) {
-      const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
-      if (task) {
-        toggleMutation.mutate({
-          id: task.id,
-          is_completed: !task.is_completed,
-        });
-      }
+    if (!keyboardSelectedId) return;
+    const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
+    if (task) {
+      toggleMutation.mutate({
+        id: task.id,
+        is_completed: !task.is_completed,
+      });
     }
   };
 
@@ -838,9 +497,17 @@ function TaskListBase({
     ["enter", "o"],
     () => {
       clearPendingDoublePress();
-      if (keyboardSelectedId) {
-        const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
-        if (task) handleTaskClick(task);
+      if (!keyboardSelectedId) return;
+      const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
+      if (!task) return;
+
+      if (isDockedInspector) {
+        if (selectedTask?.id !== task.id) {
+          setSelectedTask(task);
+        }
+        focusInspectorTitle();
+      } else {
+        handleTaskClick(task);
       }
     },
     hotkeyOptions,
@@ -852,8 +519,22 @@ function TaskListBase({
       clearPendingDoublePress();
       if (keyboardSelectedId) {
         const deletedId = keyboardSelectedId;
+        const currentIndex = navigableTasks.findIndex(
+          (t) => t.id === deletedId,
+        );
+        const nextTask =
+          currentIndex !== -1 && currentIndex + 1 < navigableTasks.length
+            ? navigableTasks[currentIndex + 1]
+            : currentIndex > 0
+              ? navigableTasks[currentIndex - 1]
+              : null;
+
         handleNavVertical(1);
         deleteMutation.mutate(deletedId);
+
+        if (selectedTask?.id === deletedId) {
+          setSelectedTask(nextTask);
+        }
       }
     },
     hotkeyOptions,
@@ -942,29 +623,120 @@ function TaskListBase({
     () => {
       clearPendingDoublePress();
       setKeyboardSelectedId(null);
+      setSelectedTask(null);
       // Clear yanked task on Escape so GlobalHotkeys 'p' is not suppressed.
       if (hasYankedTask) useUiStore.getState().setYankedTaskId(null);
     },
     {
-      enabled: !isAnyModalOpen && (hasSelection || hasYankedTask),
+      enabled:
+        !isAnyModalOpen && (hasSelection || hasYankedTask || !!selectedTask),
     },
   );
 
+  const handleInspectorKeyDownCapture = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        scrollContainerRef.current?.focus({ preventScroll: true });
+      }
+    },
+    [],
+  );
+
+  // Follow active task selection when docked inspector is open during Vim traversal
+  useEffect(() => {
+    if (
+      isDockedInspector &&
+      selectedTask &&
+      keyboardSelectedId &&
+      keyboardSelectedId !== selectedTask.id
+    ) {
+      const nextTask = navigableTasks.find((t) => t.id === keyboardSelectedId);
+      if (nextTask) {
+        setSelectedTask(nextTask);
+      }
+    }
+  }, [isDockedInspector, selectedTask, keyboardSelectedId, navigableTasks]);
+
+  // Initial URL check: hydrate task from ?task=<id> without stripping it on mount
+  const initialUrlCheckedRef = useRef(false);
+  useEffect(() => {
+    if (initialUrlCheckedRef.current || !isDockedInspector) return;
+    if (typeof window === "undefined") return;
+
+    const url = new URL(window.location.href);
+    const taskIdFromUrl = url.searchParams.get("task");
+    if (!taskIdFromUrl) {
+      initialUrlCheckedRef.current = true;
+      return;
+    }
+    if (tasks.length > 0) {
+      initialUrlCheckedRef.current = true;
+      const matchingTask = tasks.find((t) => t.id === taskIdFromUrl);
+      if (matchingTask) {
+        setSelectedTask(matchingTask);
+        setKeyboardSelectedId(matchingTask.id);
+      }
+    }
+  }, [isDockedInspector, tasks]);
+
+  // Desktop docked inspection updates ?task=<id> via replaceState without pushing history
+  useEffect(() => {
+    if (
+      !isDockedInspector ||
+      !initialUrlCheckedRef.current ||
+      typeof window === "undefined"
+    ) {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    const currentParam = url.searchParams.get("task");
+
+    if (selectedTask) {
+      if (currentParam === selectedTask.id) return;
+      url.searchParams.set("task", selectedTask.id);
+    } else {
+      if (!currentParam) return;
+      url.searchParams.delete("task");
+    }
+
+    window.history.replaceState(
+      window.history.state,
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }, [isDockedInspector, selectedTask]);
+
+  const [preservedTask, setPreservedTask] = useState<Task | null>(selectedTask);
+  useEffect(() => {
+    if (selectedTask) {
+      setPreservedTask(selectedTask);
+    }
+  }, [selectedTask]);
+  const activeInspectorTask = selectedTask ?? preservedTask;
+
   const overlayContent = useMemo(() => {
-    if (!activeTask) return null;
-    const project = projectsMap.get(activeTask.project_id || "inbox");
+    if (!dnd.activeTask) return null;
+    const project = projectsMap.get(dnd.activeTask.project_id || "inbox");
+    const isBoard = viewMode === "board";
 
     return (
-      <div className="opacity-90 pointer-events-none will-change-transform rotate-1 scale-[1.02]">
+      <div
+        className={`opacity-90 pointer-events-none will-change-transform rotate-1 scale-[1.02] ${
+          isBoard ? "w-[280px]" : "w-[360px] max-w-[90vw]"
+        }`}
+      >
         <TaskGhost
-          task={activeTask}
+          task={dnd.activeTask}
           isDesktop={isDesktop}
-          viewMode="list"
+          viewMode={isBoard ? "board" : "list"}
           project={project}
         />
       </div>
     );
-  }, [activeTask, projectsMap, isDesktop]);
+  }, [dnd.activeTask, projectsMap, isDesktop, viewMode]);
 
   if (isLoading) {
     return (
@@ -1008,14 +780,13 @@ function TaskListBase({
   return (
     <>
       <DndContext
-        sensors={sensors}
-        // closestCorners avoids rectIntersection resolving to entire column in stacked droppables.
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
+        sensors={dnd.sensors}
+        collisionDetection={dnd.collisionDetection}
+        onDragStart={dnd.onDragStart}
+        onDragOver={dnd.onDragOver}
+        onDragEnd={dnd.onDragEnd}
+        onDragCancel={dnd.onDragCancel}
         accessibility={{ announcements: dndAnnouncements }}
-        // WhileDragging avoids idle re-measure overhead during cross-column drags.
         measuring={{
           droppable: {
             strategy: MeasuringStrategy.WhileDragging,
@@ -1031,43 +802,83 @@ function TaskListBase({
           canScroll: canScrollTaskListContainer,
         }}
       >
-        <div
-          ref={scrollContainerRef}
-          data-task-list-scroll-container="true"
-          role={viewMode === "board" ? "grid" : "listbox"}
-          aria-label={viewMode === "board" ? "Task board" : "Task list"}
-          tabIndex={0}
-          aria-activedescendant={
-            keyboardSelectedId ? taskDomId(keyboardSelectedId) : undefined
-          }
-          className="flex-1 h-full overflow-y-auto scrollbar-hide relative overscroll-contain focus-visible:outline-none"
-          style={{ contain: "strict" }}
-        >
-          {viewMode === "board" ? (
-            <TaskBoard
-              processedTasks={processedTasks}
-              projectsMap={projectsMap}
-              onSelect={handleTaskClick}
-              isDesktop={isDesktop}
-              triggerHaptic={triggerHaptic}
-              setActiveTaskId={setActiveTaskId}
-              groupBy={groupBy}
-              keyboardSelectedId={keyboardSelectedId}
-            />
-          ) : (
-            <TaskListView
-              processedTasks={processedTasks}
-              activeTasks={displayTasks}
-              eveningTasks={displayEveningTasks}
-              groupTasks={displayGroups}
-              handleTaskClick={handleTaskClick}
-              keyboardSelectedId={keyboardSelectedId}
-              isDndActive={!!activeId}
-              projectsMap={projectsMap}
-              isDesktop={isDesktop}
-              triggerHaptic={triggerHaptic}
-              setActiveTaskId={setActiveTaskId}
-            />
+        <div className="flex h-full w-full overflow-hidden">
+          <div
+            ref={scrollContainerRef}
+            data-task-list-scroll-container="true"
+            role={viewMode === "board" ? "grid" : "listbox"}
+            aria-label={viewMode === "board" ? "Task board" : "Task list"}
+            tabIndex={0}
+            aria-activedescendant={
+              keyboardSelectedId ? taskDomId(keyboardSelectedId) : undefined
+            }
+            className={cn(
+              "h-full overflow-y-auto scrollbar-hide relative overscroll-contain focus-visible:outline-none",
+              isDockedInspector
+                ? cn(
+                    "transition-[width] duration-200",
+                    selectedTask ? "w-[60%] shrink-0" : "w-full flex-1",
+                  )
+                : "flex-1 w-full",
+            )}
+            style={{
+              contain: "strict",
+              ...(isDockedInspector
+                ? { transitionTimingFunction: "var(--ease-seijaku)" }
+                : {}),
+            }}
+          >
+            {viewMode === "board" ? (
+              <TaskBoard
+                presentation={dnd.displayPresentation}
+                processedTasks={dnd.displayPresentation}
+                projectsMap={projectsMap}
+                onSelect={handleTaskClick}
+                isDesktop={isDesktop}
+                triggerHaptic={triggerHaptic}
+                setActiveTaskId={setActiveTaskId}
+                groupBy={groupBy}
+                keyboardSelectedId={keyboardSelectedId}
+                isDndActive={dnd.isDragging}
+              />
+            ) : (
+              <TaskListView
+                processedTasks={processedTasks}
+                activeTasks={dnd.displayPresentation.active}
+                eveningTasks={dnd.displayPresentation.evening}
+                groupTasks={dnd.displayPresentation.groups}
+                handleTaskClick={handleTaskClick}
+                keyboardSelectedId={keyboardSelectedId}
+                isDndActive={dnd.isDragging}
+                projectsMap={projectsMap}
+                isDesktop={isDesktop}
+                triggerHaptic={triggerHaptic}
+                setActiveTaskId={setActiveTaskId}
+              />
+            )}
+          </div>
+
+          {isDockedInspector && (
+            <div
+              data-testid="docked-task-inspector"
+              className={cn(
+                "h-full overflow-hidden shrink-0 transition-[width,opacity,padding] duration-200",
+                selectedTask
+                  ? "w-[40%] opacity-100 pt-2 pr-4 md:pr-6 pb-8 pl-0"
+                  : "w-0 opacity-0 p-0 pointer-events-none",
+              )}
+              style={{ transitionTimingFunction: "var(--ease-seijaku)" }}
+              onKeyDownCapture={handleInspectorKeyDownCapture}
+            >
+              <div className="h-full w-full rounded-2xl border border-border/80 bg-card overflow-hidden shadow-sm">
+                {activeInspectorTask && (
+                  <TaskDetailPanel
+                    task={activeInspectorTask}
+                    onClose={handleCloseDetail}
+                  />
+                )}
+              </div>
+            </div>
           )}
         </div>
 
@@ -1090,7 +901,7 @@ function TaskListBase({
       </DndContext>
 
       <TaskSheet
-        open={!!selectedTask}
+        open={!!selectedTask && !isDockedInspector}
         onClose={() => setSelectedTask(null)}
         initialTask={selectedTask}
       />

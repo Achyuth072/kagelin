@@ -72,8 +72,14 @@ const projectBucketUpdates = (
 };
 
 const eveningBucketUpdates = (groupKey: string): TaskPlacement | null => {
-  if (groupKey === "this evening") return { is_evening: true };
-  if (groupKey === "active" || groupKey === "tasks") {
+  if (groupKey === "this evening" || groupKey === "evening-section") {
+    return { is_evening: true };
+  }
+  if (
+    groupKey === "active" ||
+    groupKey === "tasks" ||
+    groupKey === "active-section"
+  ) {
     return { is_evening: false };
   }
   return null;

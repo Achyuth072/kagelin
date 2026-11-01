@@ -13,24 +13,16 @@ import {
 } from "date-fns";
 import type { Task, Project } from "@/lib/types/task";
 import type { SortOption, GroupOption } from "@/lib/types/sorting";
+import type { TaskGroup, TaskPresentation } from "@/lib/types/task-view";
+
+export type { TaskGroup, TaskPresentation };
+export type ProcessedTasks = TaskPresentation;
 
 interface useTaskViewDataProps {
   tasks: Task[] | undefined;
   sortBy: SortOption;
   groupBy: GroupOption;
   projects?: Project[];
-}
-
-export interface TaskGroup {
-  title: string;
-  tasks: Task[];
-}
-
-export interface ProcessedTasks {
-  active: Task[];
-  completed: Task[];
-  evening: Task[];
-  groups: TaskGroup[] | null;
 }
 
 // Board view columns: real groups if grouped, else Tasks/This Evening.
