@@ -62,6 +62,51 @@ const dndAnnouncements = {
 
 const VIM_DOUBLE_PRESS_TIMEOUT_MS = 500;
 
+const DISMISS_IGNORE_SELECTOR = [
+  '[data-testid="docked-task-inspector"]',
+  '[data-testid="board-overlay-drawer"]',
+  '[data-task-inspector="true"]',
+  '[role="dialog"]',
+  '[role="menu"]',
+  '[data-radix-portal] [role="listbox"]',
+  '[role="tooltip"]',
+  '[role="alertdialog"]',
+  "[data-radix-portal]",
+  "[data-radix-popper-content-wrapper]",
+  ".toaster",
+  "[data-sonner-toaster]",
+  '[role="tab"]',
+  '[data-testid="view-mode-tabs"]',
+  '[data-testid="board-inspect-mode-toggle"]',
+  "[id^='task-item-']",
+  "[data-task-row]",
+  "[role='option']",
+  "[role='gridcell']",
+  ".group\\/card",
+  ".group\\/item",
+].join(", ");
+
+function InspectorCardShell({
+  task,
+  onClose,
+  shadowClass = "shadow-sm",
+}: {
+  task: Task | null;
+  onClose: () => void;
+  shadowClass?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "h-full w-full rounded-2xl border border-border/80 bg-card overflow-hidden",
+        shadowClass,
+      )}
+    >
+      {task && <TaskDetailPanel task={task} onClose={onClose} />}
+    </div>
+  );
+}
+
 function canScrollTaskListContainer(element: Element): boolean {
   if (!(element instanceof HTMLElement)) {
     return false;
@@ -133,9 +178,17 @@ function TaskListBase({
     (state) => state.setCustomSortEnteredViaDrag,
   );
   const viewMode = useUiStore((state) => state.viewMode);
+  const boardInspectMode = useUiStore((state) => state.boardInspectMode);
   const isDockedWide = useMediaQuery("(min-width: 1280px)");
-  const isDockedInspector =
-    isDockedWide && viewMode === "list" && !onTaskSelect;
+  const isDesktopInspector = isDockedWide && !onTaskSelect;
+  const isBoardOverlay =
+    isDesktopInspector &&
+    viewMode === "board" &&
+    boardInspectMode === "overlay";
+  const isDockedSplit =
+    isDesktopInspector &&
+    (viewMode === "list" ||
+      (viewMode === "board" && boardInspectMode === "split"));
   const isDesktop = useUiStore((state) => state.isDesktop);
   const selectedTaskId = useUiStore((state) => state.selectedTaskId);
   const setSelectedTaskId = useUiStore((state) => state.setSelectedTaskId);
@@ -169,6 +222,35 @@ function TaskListBase({
     sortBy,
     isDesktop,
   });
+
+  const listScrollTopRef = useRef(0);
+  const boardScrollLeftRef = useRef(0);
+
+  const handleContainerScroll = useCallback(() => {
+    if (viewMode === "list" && scrollContainerRef.current) {
+      listScrollTopRef.current = scrollContainerRef.current.scrollTop;
+    } else if (viewMode === "board") {
+      const board = scrollContainerRef.current?.querySelector(
+        '[data-testid="task-board-container"]',
+      );
+      if (board) {
+        boardScrollLeftRef.current = board.scrollLeft;
+      }
+    }
+  }, [viewMode]);
+
+  useLayoutEffect(() => {
+    if (viewMode === "list" && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = listScrollTopRef.current;
+    } else if (viewMode === "board") {
+      const board = scrollContainerRef.current?.querySelector(
+        '[data-testid="task-board-container"]',
+      );
+      if (board) {
+        board.scrollLeft = boardScrollLeftRef.current;
+      }
+    }
+  }, [viewMode]);
 
   const prevSortByRef = useRef(sortBy);
   const prevDisplayedFlatRef = useRef<Task[]>([]);
@@ -251,12 +333,12 @@ function TaskListBase({
       } else {
         setSelectedTask(task);
         setKeyboardSelectedId(task.id);
-        if (isDockedInspector) {
+        if (isDesktopInspector) {
           scrollContainerRef.current?.focus({ preventScroll: true });
         }
       }
     },
-    [onTaskSelect, isDockedInspector],
+    [onTaskSelect, isDesktopInspector],
   );
 
   // Clear id only once found; the list may still be loading on initial navigation.
@@ -280,7 +362,7 @@ function TaskListBase({
   }, [processedTasks]);
 
   const isAnyModalOpen =
-    useIsAnyModalOpen() || (!!selectedTask && !isDockedInspector);
+    useIsAnyModalOpen() || (!!selectedTask && !isDesktopInspector);
 
   const boardColumns = useMemo<TaskGroup[]>(
     () => getBoardColumns(processedTasks),
@@ -501,7 +583,7 @@ function TaskListBase({
       const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
       if (!task) return;
 
-      if (isDockedInspector) {
+      if (isDesktopInspector) {
         if (selectedTask?.id !== task.id) {
           setSelectedTask(task);
         }
@@ -644,10 +726,10 @@ function TaskListBase({
     [],
   );
 
-  // Follow active task selection when docked inspector is open during Vim traversal
+  // Follow active task selection when desktop inspector is open during Vim traversal
   useEffect(() => {
     if (
-      isDockedInspector &&
+      isDesktopInspector &&
       selectedTask &&
       keyboardSelectedId &&
       keyboardSelectedId !== selectedTask.id
@@ -657,12 +739,12 @@ function TaskListBase({
         setSelectedTask(nextTask);
       }
     }
-  }, [isDockedInspector, selectedTask, keyboardSelectedId, navigableTasks]);
+  }, [isDesktopInspector, selectedTask, keyboardSelectedId, navigableTasks]);
 
   // Initial URL check: hydrate task from ?task=<id> without stripping it on mount
   const initialUrlCheckedRef = useRef(false);
   useEffect(() => {
-    if (initialUrlCheckedRef.current || !isDockedInspector) return;
+    if (initialUrlCheckedRef.current || !isDesktopInspector) return;
     if (typeof window === "undefined") return;
 
     const url = new URL(window.location.href);
@@ -679,12 +761,12 @@ function TaskListBase({
         setKeyboardSelectedId(matchingTask.id);
       }
     }
-  }, [isDockedInspector, tasks]);
+  }, [isDesktopInspector, tasks]);
 
-  // Desktop docked inspection updates ?task=<id> via replaceState without pushing history
+  // Desktop docked/overlay inspection updates ?task=<id> via replaceState without pushing history
   useEffect(() => {
     if (
-      !isDockedInspector ||
+      !isDesktopInspector ||
       !initialUrlCheckedRef.current ||
       typeof window === "undefined"
     ) {
@@ -707,7 +789,31 @@ function TaskListBase({
       "",
       `${url.pathname}${url.search}${url.hash}`,
     );
-  }, [isDockedInspector, selectedTask]);
+  }, [isDesktopInspector, selectedTask]);
+
+  // Global pointerdown listener for dismissing inspector on empty canvas, topbar, sidebar, or header
+  useEffect(() => {
+    if (!isDesktopInspector || !selectedTask) return;
+
+    const handlePointerDown = (e: PointerEvent) => {
+      // Only dismiss on primary click
+      if (e.button !== 0 || dnd.isDragging) return;
+
+      const target = e.target as HTMLElement | null;
+      if (!target || !target.isConnected) return;
+
+      // Retain inspection for interactions inside inspector, portalled overlays, tabs, or task cards
+      if (target.closest(DISMISS_IGNORE_SELECTOR)) return;
+
+      // Clicks on topbar, page header, app sidebar, or empty canvas voids: dismiss inspector
+      handleCloseDetail();
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isDesktopInspector, selectedTask, dnd.isDragging, handleCloseDetail]);
 
   const [preservedTask, setPreservedTask] = useState<Task | null>(selectedTask);
   useEffect(() => {
@@ -802,19 +908,20 @@ function TaskListBase({
           canScroll: canScrollTaskListContainer,
         }}
       >
-        <div className="flex h-full w-full overflow-hidden">
+        <div className="flex h-full w-full overflow-hidden relative">
           <div
             ref={scrollContainerRef}
             data-task-list-scroll-container="true"
             role={viewMode === "board" ? "grid" : "listbox"}
             aria-label={viewMode === "board" ? "Task board" : "Task list"}
             tabIndex={0}
+            onScroll={handleContainerScroll}
             aria-activedescendant={
               keyboardSelectedId ? taskDomId(keyboardSelectedId) : undefined
             }
             className={cn(
-              "h-full overflow-y-auto scrollbar-hide relative overscroll-contain focus-visible:outline-none",
-              isDockedInspector
+              "h-full overflow-y-auto scrollbar-hide relative overscroll-contain focus-visible:outline-none motion-reduce:transition-none",
+              isDockedSplit
                 ? cn(
                     "transition-[width] duration-200",
                     selectedTask ? "w-[60%] shrink-0" : "w-full flex-1",
@@ -823,7 +930,7 @@ function TaskListBase({
             )}
             style={{
               contain: "strict",
-              ...(isDockedInspector
+              ...(isDockedSplit
                 ? { transitionTimingFunction: "var(--ease-seijaku)" }
                 : {}),
             }}
@@ -858,11 +965,12 @@ function TaskListBase({
             )}
           </div>
 
-          {isDockedInspector && (
+          {isDockedSplit && (
             <div
               data-testid="docked-task-inspector"
+              data-task-inspector="true"
               className={cn(
-                "h-full overflow-hidden shrink-0 transition-[width,opacity,padding] duration-200",
+                "h-full overflow-hidden shrink-0 transition-[width,opacity,padding] duration-200 motion-reduce:transition-none",
                 selectedTask
                   ? "w-[40%] opacity-100 pt-2 pr-4 md:pr-6 pb-8 pl-0"
                   : "w-0 opacity-0 p-0 pointer-events-none",
@@ -870,14 +978,31 @@ function TaskListBase({
               style={{ transitionTimingFunction: "var(--ease-seijaku)" }}
               onKeyDownCapture={handleInspectorKeyDownCapture}
             >
-              <div className="h-full w-full rounded-2xl border border-border/80 bg-card overflow-hidden shadow-sm">
-                {activeInspectorTask && (
-                  <TaskDetailPanel
-                    task={activeInspectorTask}
-                    onClose={handleCloseDetail}
-                  />
-                )}
-              </div>
+              <InspectorCardShell
+                task={activeInspectorTask}
+                onClose={handleCloseDetail}
+              />
+            </div>
+          )}
+
+          {isBoardOverlay && (
+            <div
+              data-testid="board-overlay-drawer"
+              data-task-inspector="true"
+              className={cn(
+                "absolute right-0 top-0 bottom-0 z-30 w-[440px] pt-2 pr-4 md:pr-6 pb-8 pl-0 transition-[transform,opacity] duration-200 motion-reduce:transition-none pointer-events-auto",
+                selectedTask
+                  ? "translate-x-0 opacity-100"
+                  : "translate-x-full opacity-0 pointer-events-none",
+              )}
+              style={{ transitionTimingFunction: "var(--ease-seijaku)" }}
+              onKeyDownCapture={handleInspectorKeyDownCapture}
+            >
+              <InspectorCardShell
+                task={activeInspectorTask}
+                onClose={handleCloseDetail}
+                shadowClass="shadow-xl"
+              />
             </div>
           )}
         </div>
@@ -901,7 +1026,7 @@ function TaskListBase({
       </DndContext>
 
       <TaskSheet
-        open={!!selectedTask && !isDockedInspector}
+        open={!!selectedTask && !isDesktopInspector}
         onClose={() => setSelectedTask(null)}
         initialTask={selectedTask}
       />
