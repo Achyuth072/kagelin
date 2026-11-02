@@ -75,21 +75,33 @@ describe("Tabs Component", () => {
     expect(tab.className).toContain("h-9");
   });
 
-  it("applies brand text to active card tab when no icon is present", () => {
+  it("applies high-contrast foreground text to active card tabs regardless of icon presence", () => {
     render(
       <Tabs defaultValue="text-only">
         <TabsList>
           <TabsTrigger value="text-only">Text Only</TabsTrigger>
+          <TabsTrigger value="with-icon">
+            <svg data-testid="tab-icon" />
+            <span>With Icon</span>
+          </TabsTrigger>
         </TabsList>
       </Tabs>,
     );
 
-    const tab = screen.getByRole("tab", { name: "Text Only" });
-    expect(tab.className).toContain(
+    const textOnlyTab = screen.getByRole("tab", { name: "Text Only" });
+    const withIconTab = screen.getByRole("tab", { name: "With Icon" });
+
+    expect(textOnlyTab.className).toContain(
+      "data-[state=active]:text-foreground",
+    );
+    expect(textOnlyTab.className).not.toContain(
       "data-[state=active]:[&:not(:has(svg))]:text-brand",
     );
-    expect(tab.className).toContain(
-      "data-[state=active]:[&:has(svg)]:text-foreground",
+    expect(withIconTab.className).toContain(
+      "data-[state=active]:text-foreground",
+    );
+    expect(withIconTab.className).toContain(
+      "data-[state=active]:[&_svg]:text-brand",
     );
   });
 
