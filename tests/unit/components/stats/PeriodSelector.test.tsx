@@ -12,7 +12,10 @@ describe("PeriodSelector Component", () => {
 
     expect(activeTab).toHaveAttribute("data-state", "active");
     expect(inactiveTab).toHaveAttribute("data-state", "inactive");
-    expect(activeTab.className).toContain("data-[state=active]:text-brand");
+    expect(activeTab.className).toContain(
+      "data-[state=active]:text-foreground",
+    );
+    expect(activeTab.className).not.toContain("data-[state=active]:text-brand");
   });
 
   it("calls onValueChange when a tab is clicked", () => {

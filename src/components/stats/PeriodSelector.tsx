@@ -39,7 +39,7 @@ export function PeriodSelector({
           <TabsTrigger
             key={opt.value}
             value={opt.value}
-            className="min-w-0 gap-1.5 px-2.5 tabular-nums data-[state=active]:text-brand"
+            className="min-w-0 gap-1.5 px-2.5 tabular-nums"
           >
             {opt.label}
             {opt.value === "all" && isAllLoading && (
