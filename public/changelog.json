@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.50.0-preview.6",
+    "date": "2026-11-02",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Remove hardcoded brand text color on PeriodSelector tabs",
+        "Improve visual accessibility of active tabs by standardizing high-contrast text",
+        "Align task ghost visual parity, subtasks progress badge, and dynamic list width"
+      ]
+    }
+  },
+  {
     "version": "1.50.0-preview.5",
     "date": "2026-11-02",
     "channel": "preview",
@@ -715,17 +727,6 @@
       "Fixed": [
         "Prevent a corrupted download from getting stuck in the offline cache and breaking Loop (.db) habit import",
         "Automatically recover if that cache was already corrupted"
-      ]
-    }
-  },
-  {
-    "version": "1.44.1-preview.0",
-    "date": "2026-09-22",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Reject bad responses before they poison the sql-wasm runtime cache",
-        "Heal poisoned sql.js precache, preserve wasm diagnostics in Sentry"
       ]
     }
   }
