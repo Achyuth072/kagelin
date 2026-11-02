@@ -490,7 +490,11 @@ input[type="password"]:has(+ button)::-ms-clear {
       transparent;
   }
 
+  .custom-scrollbar {
+    scrollbar-width: thin;
+  }
   .custom-scrollbar::-webkit-scrollbar {
+    display: block;
     width: 6px;
     height: 6px;
   }

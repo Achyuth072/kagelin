@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, memo } from "react";
+import React, { useMemo, memo, useRef, useEffect } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -11,6 +11,7 @@ import { getBoardColumns, type TaskGroup } from "@/lib/hooks/useTaskViewData";
 import type { Task, Project } from "@/lib/types/task";
 import type { GroupOption } from "@/lib/types/sorting";
 import type { TaskPresentation } from "@/lib/types/task-view";
+import { cn } from "@/lib/utils";
 import { SortableBoardTaskCard } from "./SortableBoardTaskCard";
 
 export interface TaskBoardProps {
@@ -23,6 +24,37 @@ export interface TaskBoardProps {
   groupBy?: GroupOption;
   keyboardSelectedId?: string | null;
   isDndActive?: boolean;
+  onScroll?: React.UIEventHandler<HTMLDivElement>;
+}
+
+/**
+ * Checks whether the wheel event target is inside a scrollable column container
+ * that still has vertical headroom in the direction of `deltaY`.
+ */
+function hasVerticalScrollHeadroom(
+  target: EventTarget | null,
+  boundary: HTMLElement,
+  deltaY: number,
+): boolean {
+  let el = target as HTMLElement | null;
+
+  while (el && el !== boundary) {
+    if (
+      el.getAttribute?.("role") === "row" ||
+      el.classList?.contains("overflow-y-auto")
+    ) {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      if (deltaY > 0 && scrollTop + clientHeight < scrollHeight - 1) {
+        return true;
+      }
+      if (deltaY < 0 && scrollTop > 1) {
+        return true;
+      }
+    }
+    el = el.parentElement;
+  }
+
+  return false;
 }
 
 export function TaskBoard({
@@ -35,20 +67,60 @@ export function TaskBoard({
   groupBy: _groupBy,
   keyboardSelectedId,
   isDndActive = false,
+  onScroll,
 }: TaskBoardProps) {
   const isJsLoaded = useJsLoaded();
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const boardColumns = useMemo<TaskGroup[]>(
     () => (presentation ? getBoardColumns(presentation) : []),
     [presentation],
   );
 
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Allow native horizontal scrolling when holding Shift or using trackpad horizontal gesture
+      if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+        return;
+      }
+
+      // Preserve vertical scrolling when the wheel target is inside a column with scroll headroom
+      if (hasVerticalScrollHeadroom(e.target, el, e.deltaY)) {
+        return;
+      }
+
+      const hasHorizontalOverflow =
+        el.scrollWidth > el.clientWidth ||
+        (el.scrollWidth === 0 && el.clientWidth === 0);
+
+      if (hasHorizontalOverflow) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
+
   if (!isJsLoaded) return null;
 
   return (
     <div
-      className={`flex items-start h-full overflow-x-auto pb-12 md:pb-6 px-4 md:px-6 gap-6 scrollbar-hide${isDndActive ? "" : " snap-x snap-mandatory"}`}
+      ref={containerRef}
+      onScroll={onScroll}
+      data-task-list-scroll-container="true"
       data-testid="task-board-container"
+      className={cn(
+        "flex items-start h-full overflow-x-auto pb-12 md:pb-6 px-4 md:px-6 gap-6",
+        isDesktop ? "custom-scrollbar" : "scrollbar-hide",
+        !isDndActive && "snap-x snap-mandatory",
+      )}
     >
       {boardColumns.map((group) => (
         <KanbanColumn
@@ -111,6 +183,7 @@ const KanbanColumn = memo(function KanbanColumn({
       >
         <div
           role="row"
+          data-task-list-scroll-container="true"
           className="px-3 pt-1.5 pb-4 scroll-py-1.5 space-y-3 flex-1 overflow-y-auto scrollbar-hide"
         >
           {group.tasks.map((task) => {

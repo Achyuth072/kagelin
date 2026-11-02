@@ -952,6 +952,7 @@ function TaskListBase({
                 groupBy={groupBy}
                 keyboardSelectedId={keyboardSelectedId}
                 isDndActive={dnd.isDragging}
+                onScroll={handleContainerScroll}
               />
             ) : (
               <TaskListView
