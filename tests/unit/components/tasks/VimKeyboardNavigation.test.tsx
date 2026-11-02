@@ -159,6 +159,7 @@ async function renderTaskList(props?: { onTaskSelect?: (task: Task) => void }) {
 
 describe("Vim Keyboard Navigation & Highlighting", () => {
   beforeEach(() => {
+    window.history.replaceState(null, "", "/");
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
     taskState.tasks = [];
     uiState.viewMode = "board";

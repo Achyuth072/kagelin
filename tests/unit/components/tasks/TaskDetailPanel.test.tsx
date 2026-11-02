@@ -17,6 +17,7 @@ import { useInboxProject } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
 
 import { useTaskEditorContext } from "@/components/tasks/TaskEditorProvider";
+import { useTaskEditorDrafts } from "@/lib/store/taskEditorDrafts";
 
 interface MockTaskEditViewProps {
   onKeyDown?: React.KeyboardEventHandler;
@@ -146,6 +147,7 @@ describe("TaskDetailPanel", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useTaskEditorDrafts.setState({ drafts: {} });
     (useUpdateTask as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: mockUpdateMutate,
       isPending: false,

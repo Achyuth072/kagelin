@@ -1,6 +1,7 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useTaskEditor } from "@/components/tasks/useTaskEditor";
+import { useTaskEditorDrafts } from "@/lib/store/taskEditorDrafts";
 import type { Task } from "@/lib/types/task";
 import {
   useCreateTask,
@@ -54,6 +55,7 @@ describe("useTaskEditor", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    useTaskEditorDrafts.setState({ drafts: {} });
     (useCreateTask as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       mutate: mockCreateMutate,
       isPending: false,
@@ -275,6 +277,64 @@ describe("useTaskEditor", () => {
     await waitFor(() => {
       expect(result.current.content).toBe("Brand New Task");
       expect(result.current.pendingStep).toBe("");
+    });
+  });
+
+  it("restores an unsaved draft when an editor for the same task remounts (docked pane → sheet crossing)", async () => {
+    const docked = renderHook(() => useTaskEditor({ task: mockTask }));
+    await waitFor(() => {
+      expect(docked.result.current.content).toBe("Existing Task Title");
+    });
+
+    act(() => {
+      docked.result.current.setContent("Edited while docked");
+    });
+    docked.unmount();
+
+    // The sheet mounts a fresh editor for the same task after the 1280px
+    // crossing: it must hydrate from the saved draft, not the saved task.
+    const sheet = renderHook(() => useTaskEditor({ task: mockTask }));
+    await waitFor(() => {
+      expect(sheet.result.current.content).toBe("Edited while docked");
+    });
+    sheet.unmount();
+  });
+
+  it("does not resurface a draft after the editor closes and reopens without remounting", async () => {
+    // The crossing leaves a draft behind.
+    const docked = renderHook(() => useTaskEditor({ task: mockTask }));
+    await waitFor(() => {
+      expect(docked.result.current.content).toBe("Existing Task Title");
+    });
+    act(() => {
+      docked.result.current.setContent("Edited while docked");
+    });
+    docked.unmount();
+
+    // Sheet-style lifecycle: mounted closed, opened once (draft consumed),
+    // closed, reopened. No remount in between means no fresh draft, so the
+    // reopen shows the task's saved values.
+    const { rerender, result } = renderHook(
+      (props: Parameters<typeof useTaskEditor>[0]) => useTaskEditor(props),
+      { initialProps: { task: mockTask, open: false } },
+    );
+    await waitFor(() => {
+      expect(result.current.content).toBe("Existing Task Title");
+    });
+    act(() => {
+      rerender({ task: mockTask, open: true });
+    });
+    await waitFor(() => {
+      expect(result.current.content).toBe("Edited while docked");
+    });
+    act(() => {
+      rerender({ task: mockTask, open: false });
+    });
+    act(() => {
+      rerender({ task: mockTask, open: true });
+    });
+    await waitFor(() => {
+      expect(result.current.content).toBe("Existing Task Title");
     });
   });
 });

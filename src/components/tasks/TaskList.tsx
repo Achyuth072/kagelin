@@ -52,7 +52,11 @@ import { TaskListView } from "./TaskListView";
 import { TaskBoard } from "./TaskBoard";
 import { TaskGhost } from "./TaskGhost";
 import { useTimerStore } from "@/lib/store/timerStore";
-import { taskDomId } from "./task-utils";
+import {
+  taskDomId,
+  focusTextareaToEnd,
+  TASK_TITLE_EDIT_ID,
+} from "./task-utils";
 
 // Suppress onDragOver announcements to prevent aria-live thrashing.
 const dndAnnouncements = {
@@ -299,28 +303,27 @@ function TaskListBase({
   const [pendingFocusTitle, setPendingFocusTitle] = useState(false);
 
   const focusInspectorTitle = useCallback(() => {
-    const el = document.getElementById(
-      "task-content-edit",
-    ) as HTMLTextAreaElement | null;
-    if (el) {
-      el.focus();
-      const len = el.value.length;
-      el.setSelectionRange(len, len);
-    } else {
+    if (
+      !focusTextareaToEnd(
+        document.getElementById(
+          TASK_TITLE_EDIT_ID,
+        ) as HTMLTextAreaElement | null,
+      )
+    ) {
       setPendingFocusTitle(true);
     }
   }, []);
 
   useEffect(() => {
     if (pendingFocusTitle && selectedTask) {
-      const el = document.getElementById(
-        "task-content-edit",
-      ) as HTMLTextAreaElement | null;
-      if (el) {
+      if (
+        focusTextareaToEnd(
+          document.getElementById(
+            TASK_TITLE_EDIT_ID,
+          ) as HTMLTextAreaElement | null,
+        )
+      ) {
         setPendingFocusTitle(false);
-        el.focus();
-        const len = el.value.length;
-        el.setSelectionRange(len, len);
       }
     }
   }, [pendingFocusTitle, selectedTask]);
@@ -741,10 +744,14 @@ function TaskListBase({
     }
   }, [isDesktopInspector, selectedTask, keyboardSelectedId, navigableTasks]);
 
-  // Initial URL check: hydrate task from ?task=<id> without stripping it on mount
+  // Initial URL check: hydrate task from ?task=<id> without stripping it on
+  // mount. Works at every tier (spec stories 21–22): on desktop the docked/
+  // overlay inspector opens; below 1280px the TaskSheet modal opens and
+  // ResponsiveDialog's useBackNavigation gives the native back-button
+  // dismissal with a synthetic back anchor.
   const initialUrlCheckedRef = useRef(false);
   useEffect(() => {
-    if (initialUrlCheckedRef.current || !isDesktopInspector) return;
+    if (initialUrlCheckedRef.current || onTaskSelect) return;
     if (typeof window === "undefined") return;
 
     const url = new URL(window.location.href);
@@ -761,17 +768,16 @@ function TaskListBase({
         setKeyboardSelectedId(matchingTask.id);
       }
     }
-  }, [isDesktopInspector, tasks]);
+  }, [onTaskSelect, tasks]);
 
-  // Desktop docked/overlay inspection updates ?task=<id> via replaceState without pushing history
+  // Inspecting a task reflects ?task=<id> via replaceState without pushing
+  // history; closing strips it (also below 1280px, where the sheet's
+  // onOpenChange -> setSelectedTask(null) drives this effect).
   useEffect(() => {
-    if (
-      !isDesktopInspector ||
-      !initialUrlCheckedRef.current ||
-      typeof window === "undefined"
-    ) {
+    if (onTaskSelect || !initialUrlCheckedRef.current) {
       return;
     }
+    if (typeof window === "undefined") return;
 
     const url = new URL(window.location.href);
     const currentParam = url.searchParams.get("task");
@@ -789,7 +795,7 @@ function TaskListBase({
       "",
       `${url.pathname}${url.search}${url.hash}`,
     );
-  }, [isDesktopInspector, selectedTask]);
+  }, [onTaskSelect, selectedTask]);
 
   // Global pointerdown listener for dismissing inspector on empty canvas, topbar, sidebar, or header
   useEffect(() => {
@@ -938,7 +944,6 @@ function TaskListBase({
             {viewMode === "board" ? (
               <TaskBoard
                 presentation={dnd.displayPresentation}
-                processedTasks={dnd.displayPresentation}
                 projectsMap={projectsMap}
                 onSelect={handleTaskClick}
                 isDesktop={isDesktop}

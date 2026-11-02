@@ -162,6 +162,7 @@ async function renderTaskList() {
 
 describe("TaskList hotkey gating", () => {
   beforeEach(() => {
+    window.history.replaceState(null, "", "/");
     storeState.tasks = [
       makeTask("a", "Alpha", 0),
       makeTask("b", "Bravo", 1),

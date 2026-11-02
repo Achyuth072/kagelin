@@ -7,7 +7,7 @@ import {
   act,
 } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import TaskList from "@/components/tasks/TaskList";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Task } from "@/lib/types/task";
@@ -335,5 +335,67 @@ describe("DynamicDualSheet in TaskList", () => {
     });
 
     expect(inspector).toHaveClass("w-[40%]");
+  });
+});
+
+describe("TaskList deep-link hydration (?task=)", () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    mockIsWide = true;
+    useUiStore.setState({
+      viewMode: "list",
+      sortBy: "date",
+      groupBy: "none",
+      boardInspectMode: "overlay",
+    });
+    storeState.tasks = [
+      makeTask("task-1", "Alpha task", 1),
+      makeTask("task-2", "Beta task", 2),
+    ];
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    queryClient.setQueryData(
+      ["tasks", { projectId: undefined, filter: undefined }],
+      storeState.tasks,
+    );
+  });
+
+  afterEach(() => {
+    window.history.replaceState(null, "", "/");
+  });
+
+  const renderTaskList = () =>
+    render(
+      <QueryClientProvider client={queryClient}>
+        <TaskList />
+      </QueryClientProvider>,
+    );
+
+  it("opens the modal sheet for a cold ?task= deep link below 1280px (story 21)", async () => {
+    mockIsWide = false;
+    window.history.pushState({}, "", "/?task=task-2");
+
+    renderTaskList();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("task-sheet-modal")).toBeInTheDocument();
+    });
+  });
+
+  it("opens the docked inspector for a cold ?task= deep link on desktop (story 21)", async () => {
+    mockIsWide = true;
+    window.history.pushState({}, "", "/?task=task-1");
+
+    renderTaskList();
+
+    await waitFor(() => {
+      const inspector = screen.getByTestId("docked-task-inspector");
+      expect(inspector).toHaveClass("w-[40%]");
+      expect(inspector).toHaveClass("opacity-100");
+    });
   });
 });

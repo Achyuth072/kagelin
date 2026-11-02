@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CreateTaskSchema, type CreateTaskInput } from "@/lib/schemas/task";
@@ -17,6 +17,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { omitUntouchedUnreadable } from "@/lib/crypto/unreadable";
 import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
 import { taskToFormValues, defaultTaskFormValues } from "./task-utils";
+import { useTaskEditorDrafts } from "@/lib/store/taskEditorDrafts";
 import type {
   UseTaskEditorOptions,
   TaskEditorState,
@@ -111,10 +112,44 @@ export function useTaskEditor({
     }
   }
 
+  const taskRef = useRef(task);
+  useEffect(() => {
+    taskRef.current = task;
+  });
+
+  // Bridge for view-tier crossings (spec story 20): when the viewport crosses
+  // 1280px while inspecting, the docked editor unmounts and TaskSheet mounts a
+  // fresh one. Snapshot the live (possibly dirty) form values at unmount so the
+  // next editor mount for the same task hydrates from them instead of the
+  // task's saved state. Pristine caches are a no-op (values match the task).
+  const taskBaselineRef = useRef<{ id: string; json: string } | null>(null);
+  useEffect(() => {
+    const currentTask = taskRef.current;
+    taskBaselineRef.current = currentTask
+      ? {
+          id: currentTask.id,
+          json: JSON.stringify(taskToFormValues(currentTask)),
+        }
+      : null;
+  });
+
+  useEffect(() => {
+    return () => {
+      const currentTask = taskRef.current;
+      const baseline = taskBaselineRef.current;
+      if (!currentTask || !baseline || baseline.id !== currentTask.id) return;
+      if (JSON.stringify(form.getValues()) === baseline.json) return;
+      useTaskEditorDrafts
+        .getState()
+        .saveDraft(currentTask.id, { ...form.getValues() });
+    };
+  }, [form]);
+
   useEffect(() => {
     if (open) {
       if (task) {
-        reset(taskToFormValues(task));
+        const draft = useTaskEditorDrafts.getState().popDraft(task.id);
+        reset(draft ?? taskToFormValues(task));
         void triggerValidation();
       } else {
         reset(
