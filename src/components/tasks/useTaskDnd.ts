@@ -8,6 +8,7 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import type { Task, Project } from "@/lib/types/task";
@@ -27,6 +28,7 @@ import {
 import { useReorderTasks, useUpdateTask } from "@/lib/hooks/useTaskMutations";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { taskDomId } from "./task-utils";
 
 const EMPTY_MAP = new Map<string, Project>();
 
@@ -70,6 +72,7 @@ export function useTaskDnd({
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [activeWidth, setActiveWidth] = useState<number | null>(null);
   const [lockLocal, setLockLocal] = useState(false);
 
   const [localActive, setLocalActive] = useState<Task[]>(presentation.active);
@@ -121,17 +124,22 @@ export function useTaskDnd({
     [projectsMap, groupBy],
   );
 
+  const clearActiveDrag = useCallback(() => {
+    setActiveId(null);
+    setActiveTask(null);
+    setActiveWidth(null);
+  }, []);
+
   const resetDragState = useCallback(() => {
     setLockLocal(false);
     setLocalActive(presentation.active);
     setLocalEvening(presentation.evening);
     setLocalGroups(presentation.groups);
-    setActiveId(null);
-    setActiveTask(null);
-  }, [presentation]);
+    clearActiveDrag();
+  }, [presentation, clearActiveDrag]);
 
   const handleDragStart = useCallback(
-    (event: { active: { id: unknown } }) => {
+    (event: DragStartEvent) => {
       setLocalActive([...presentation.active]);
       setLocalEvening([...presentation.evening]);
       setLocalGroups(
@@ -141,6 +149,14 @@ export function useTaskDnd({
 
       const id = String(event.active.id);
       setActiveId(id);
+
+      const initialWidth =
+        event.active.rect?.current?.initial?.width ??
+        (typeof document !== "undefined"
+          ? (document.getElementById(taskDomId(id))?.getBoundingClientRect()
+              .width ?? null)
+          : null);
+      setActiveWidth(initialWidth);
 
       const visibleTasks = presentation.groups
         ? presentation.groups.flatMap((g) => g.tasks)
@@ -373,8 +389,7 @@ export function useTaskDnd({
           triggerHaptic("thud");
         }
 
-        setActiveId(null);
-        setActiveTask(null);
+        clearActiveDrag();
       };
 
       if (localGroups && localGroups.length > 0) {
@@ -382,8 +397,7 @@ export function useTaskDnd({
           g.tasks.some((t) => t.id === activeIdStr),
         );
         if (!finalGroup) {
-          setActiveId(null);
-          setActiveTask(null);
+          clearActiveDrag();
           return;
         }
 
@@ -425,8 +439,7 @@ export function useTaskDnd({
           localEvening.find((t) => t.id === activeIdStr);
 
         if (!draggedTask) {
-          setActiveId(null);
-          setActiveTask(null);
+          clearActiveDrag();
           return;
         }
 
@@ -449,6 +462,7 @@ export function useTaskDnd({
       localActive,
       localEvening,
       resetDragState,
+      clearActiveDrag,
       sortBy,
       tasks,
       getTaskUpdates,
@@ -468,6 +482,7 @@ export function useTaskDnd({
   return {
     activeTask,
     activeId,
+    activeWidth,
     displayPresentation,
     isDragging: !!activeId,
     sensors,

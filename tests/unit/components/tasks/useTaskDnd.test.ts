@@ -181,6 +181,27 @@ describe("useTaskDnd", () => {
     expect(desktopResult.current.isDragging).toBe(true);
     expect(hapticTriggerMock).not.toHaveBeenCalled();
 
+    act(() => {
+      desktopResult.current.onDragStart({
+        active: {
+          id: "t1",
+          rect: {
+            current: {
+              initial: { width: 640 },
+            },
+          },
+        },
+      } as unknown as DragStartEvent);
+    });
+
+    expect(desktopResult.current.activeWidth).toBe(640);
+
+    act(() => {
+      desktopResult.current.onDragCancel();
+    });
+
+    expect(desktopResult.current.activeWidth).toBeNull();
+
     const { result: mobileResult } = renderHook(() =>
       useTaskDnd({
         presentation: initialPresentation,
@@ -284,6 +305,8 @@ describe("useTaskDnd", () => {
         over: { id: "t3" },
       } as unknown as DragEndEvent);
     });
+
+    expect(result.current.activeWidth).toBeNull();
 
     // Commit triggers haptic thud on mobile
     expect(hapticTriggerMock).toHaveBeenCalledWith("thud");

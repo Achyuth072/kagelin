@@ -36,6 +36,7 @@ export interface UseTaskDndOptions {
 export interface UseTaskDndReturn {
   activeTask: Task | null;
   activeId: string | null;
+  activeWidth: number | null;
   displayPresentation: TaskPresentation;
   isDragging: boolean;
   sensors: SensorDescriptor<SensorOptions>[];

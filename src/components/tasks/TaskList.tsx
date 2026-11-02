@@ -833,22 +833,34 @@ function TaskListBase({
     if (!dnd.activeTask) return null;
     const project = projectsMap.get(dnd.activeTask.project_id || "inbox");
     const isBoard = viewMode === "board";
+    const widthStyle =
+      dnd.activeWidth != null
+        ? {
+            width: isBoard
+              ? `${dnd.activeWidth}px`
+              : `${Math.round(dnd.activeWidth * 0.96)}px`,
+          }
+        : undefined;
 
     return (
       <div
-        className={`opacity-90 pointer-events-none will-change-transform rotate-1 scale-[1.02] ${
-          isBoard ? "w-[280px]" : "w-[360px] max-w-[90vw]"
-        }`}
+        style={widthStyle}
+        className={cn(
+          "opacity-90 pointer-events-none will-change-transform rotate-1 scale-[1.02]",
+          isBoard
+            ? !dnd.activeWidth && "w-[280px]"
+            : !dnd.activeWidth && "w-full max-w-[90vw]",
+        )}
       >
         <TaskGhost
           task={dnd.activeTask}
           isDesktop={isDesktop}
-          viewMode={isBoard ? "board" : "list"}
+          viewMode={viewMode}
           project={project}
         />
       </div>
     );
-  }, [dnd.activeTask, projectsMap, isDesktop, viewMode]);
+  }, [dnd.activeTask, dnd.activeWidth, projectsMap, isDesktop, viewMode]);
 
   if (isLoading) {
     return (
