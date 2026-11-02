@@ -7,11 +7,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useJsLoaded } from "@/lib/hooks/use-js-loaded";
-import {
-  getBoardColumns,
-  type ProcessedTasks,
-  type TaskGroup,
-} from "@/lib/hooks/useTaskViewData";
+import { getBoardColumns, type TaskGroup } from "@/lib/hooks/useTaskViewData";
 import type { Task, Project } from "@/lib/types/task";
 import type { GroupOption } from "@/lib/types/sorting";
 import type { TaskPresentation } from "@/lib/types/task-view";
@@ -19,7 +15,6 @@ import { SortableBoardTaskCard } from "./SortableBoardTaskCard";
 
 export interface TaskBoardProps {
   presentation?: TaskPresentation;
-  processedTasks?: ProcessedTasks;
   projectsMap?: Map<string, Project>;
   onSelect?: (task: Task) => void;
   isDesktop?: boolean;
@@ -32,7 +27,6 @@ export interface TaskBoardProps {
 
 export function TaskBoard({
   presentation,
-  processedTasks,
   projectsMap = new Map(),
   onSelect,
   isDesktop = false,
@@ -44,11 +38,9 @@ export function TaskBoard({
 }: TaskBoardProps) {
   const isJsLoaded = useJsLoaded();
 
-  const presentationData = presentation ?? processedTasks;
-
   const boardColumns = useMemo<TaskGroup[]>(
-    () => (presentationData ? getBoardColumns(presentationData) : []),
-    [presentationData],
+    () => (presentation ? getBoardColumns(presentation) : []),
+    [presentation],
   );
 
   if (!isJsLoaded) return null;

@@ -40,10 +40,6 @@ export interface UseTaskDndReturn {
   isDragging: boolean;
   sensors: SensorDescriptor<SensorOptions>[];
   collisionDetection: CollisionDetection;
-  handleDragStart: (event: DragStartEvent) => void;
-  handleDragOver: (event: DragOverEvent) => void;
-  handleDragEnd: (event: DragEndEvent) => void;
-  handleDragCancel: () => void;
   onDragStart: (event: DragStartEvent) => void;
   onDragOver: (event: DragOverEvent) => void;
   onDragEnd: (event: DragEndEvent) => void;

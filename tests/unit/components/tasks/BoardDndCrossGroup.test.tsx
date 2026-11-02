@@ -186,9 +186,9 @@ const defaultProps = {
 };
 
 function BoardTestHarness({
-  processedTasks: currentProcessedTasks,
+  presentation: currentProcessedTasks,
 }: {
-  processedTasks: ProcessedTasks;
+  presentation: ProcessedTasks;
 }) {
   const dnd = useTaskDnd({
     presentation: currentProcessedTasks,
@@ -206,11 +206,7 @@ function BoardTestHarness({
       onDragEnd={dnd.onDragEnd}
       onDragCancel={dnd.onDragCancel}
     >
-      <TaskBoard
-        presentation={dnd.displayPresentation}
-        processedTasks={dnd.displayPresentation}
-        {...defaultProps}
-      />
+      <TaskBoard presentation={dnd.displayPresentation} {...defaultProps} />
     </DndContext>
   );
 }
@@ -335,7 +331,7 @@ describe("TaskBoard — cross-group snap-back regression", () => {
 
   it("holds the display lock until mutations settle on onSettled without polling", () => {
     const { rerender } = render(
-      <BoardTestHarness processedTasks={staleProcessedTasks} />,
+      <BoardTestHarness presentation={staleProcessedTasks} />,
     );
 
     expect(getTaskColumn("t1")).toBe("High");
@@ -373,7 +369,7 @@ describe("TaskBoard — cross-group snap-back regression", () => {
     // Stale refetch: the parent re-renders with old server data (t1 back in
     // High) while the mutation is still in flight. The display lock must win.
     act(() => {
-      rerender(<BoardTestHarness processedTasks={staleProcessedTasks} />);
+      rerender(<BoardTestHarness presentation={staleProcessedTasks} />);
     });
 
     expect(getTaskColumn("t1")).toBe("Critical");
@@ -383,7 +379,7 @@ describe("TaskBoard — cross-group snap-back regression", () => {
     });
 
     act(() => {
-      rerender(<BoardTestHarness processedTasks={correctProcessedTasks} />);
+      rerender(<BoardTestHarness presentation={correctProcessedTasks} />);
     });
 
     expect(getTaskColumn("t1")).toBe("Critical");
@@ -391,7 +387,7 @@ describe("TaskBoard — cross-group snap-back regression", () => {
   });
 
   it("releases lock immediately for same-column reorder (no updateMutation)", () => {
-    render(<BoardTestHarness processedTasks={staleProcessedTasks} />);
+    render(<BoardTestHarness presentation={staleProcessedTasks} />);
 
     act(() => {
       captured.handlers.onDragStart?.({ active: { id: "t1" } });

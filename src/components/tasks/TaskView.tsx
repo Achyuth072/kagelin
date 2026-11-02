@@ -32,6 +32,7 @@ import { TaskNotesRow, type TaskNotesRowHandle } from "./shared/TaskNotesRow";
 import RecurrencePicker from "./TaskSheet/RecurrencePicker";
 import { ReadableText } from "@/components/encryption/ReadableText";
 import { isUnreadable } from "@/lib/crypto/unreadable";
+import { TASK_TITLE_CREATE_ID, TASK_TITLE_EDIT_ID } from "./task-utils";
 import { useTaskEditorContext } from "./TaskEditorProvider";
 
 export interface TaskViewProps {
@@ -118,7 +119,8 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
   const subtaskCount =
     mode === "create" ? draftSubtasks.length : (editSubtaskCount ?? 0);
 
-  const contentId = mode === "create" ? "task-content" : "task-content-edit";
+  const contentId =
+    mode === "create" ? TASK_TITLE_CREATE_ID : TASK_TITLE_EDIT_ID;
   const contentErrorId =
     mode === "create" ? "task-content-error" : "task-content-edit-error";
   const createDatePickerPositioning =

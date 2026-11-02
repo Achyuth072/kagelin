@@ -175,9 +175,9 @@ const defaultProps = {
 };
 
 function GroupedTestHarness({
-  processedTasks: currentProcessedTasks,
+  presentation: currentProcessedTasks,
 }: {
-  processedTasks: ProcessedTasks;
+  presentation: ProcessedTasks;
 }) {
   const dnd = useTaskDnd({
     presentation: currentProcessedTasks,
@@ -195,11 +195,7 @@ function GroupedTestHarness({
       onDragEnd={dnd.onDragEnd}
       onDragCancel={dnd.onDragCancel}
     >
-      <TaskBoard
-        presentation={dnd.displayPresentation}
-        processedTasks={dnd.displayPresentation}
-        {...defaultProps}
-      />
+      <TaskBoard presentation={dnd.displayPresentation} {...defaultProps} />
     </DndContext>
   );
 }
@@ -239,7 +235,7 @@ describe("TaskBoard — grouped drag under a derived sort", () => {
   });
 
   it("preserves the untouched group's order when a same-group reorder converts to custom", () => {
-    render(<GroupedTestHarness processedTasks={processedTasks} />);
+    render(<GroupedTestHarness presentation={processedTasks} />);
 
     // Drag h2 above h1 within the High group. Each step is wrapped in act() so
     // React flushes the local-state update and the captured handlers refresh to

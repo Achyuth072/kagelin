@@ -219,7 +219,7 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
 
     render(
       <TaskBoard
-        processedTasks={processedTasks}
+        presentation={processedTasks}
         projectsMap={new Map()}
         isDesktop={true}
         triggerHaptic={vi.fn()}

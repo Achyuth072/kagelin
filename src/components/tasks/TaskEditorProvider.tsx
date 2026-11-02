@@ -20,10 +20,6 @@ export function useTaskEditorContext(): TaskEditorState {
   return context;
 }
 
-export function useOptionalTaskEditorContext(): TaskEditorState | null {
-  return useContext(TaskEditorContext);
-}
-
 export interface TaskEditorProviderProps extends UseTaskEditorOptions {
   children: React.ReactNode;
 }

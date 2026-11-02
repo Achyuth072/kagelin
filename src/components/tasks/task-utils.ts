@@ -24,6 +24,17 @@ export const priorityCheckboxClasses: Record<1 | 2 | 3 | 4, string> = {
   4: "border-foreground/80 data-[state=checked]:bg-foreground data-[state=checked]:border-foreground",
 };
 
+export const TASK_TITLE_CREATE_ID = "task-content";
+export const TASK_TITLE_EDIT_ID = "task-content-edit";
+
+export function focusTextareaToEnd(el: HTMLTextAreaElement | null): boolean {
+  if (!el) return false;
+  el.focus();
+  const end = el.value.length;
+  el.setSelectionRange(end, end);
+  return true;
+}
+
 export function formatDueDate(dateString: string): string {
   const date = parseISO(dateString);
   if (isToday(date)) return "Today";

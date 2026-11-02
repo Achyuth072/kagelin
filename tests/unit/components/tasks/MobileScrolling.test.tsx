@@ -178,7 +178,7 @@ describe("Mobile Scrolling Padding", () => {
     };
 
     const { container: _container } = render(
-      <TaskBoard processedTasks={mockProcessedTasks} {...dummyProps} />,
+      <TaskBoard presentation={mockProcessedTasks} {...dummyProps} />,
     );
 
     // Find the board container which has pb-12 class
