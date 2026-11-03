@@ -1,5 +1,34 @@
 [
   {
+    "version": "1.50.0",
+    "date": "2026-11-03",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Redesigned compact habit view featuring a synchronized 7-day rolling timeline matrix",
+        "Slide-out task editor drawer for Kanban board view with click-outside dismissal",
+        "Three-column contextual settings layout with responsive mobile accordion navigation",
+        "Client-side diagnostic report modal tracking storage quota, service worker status, and sync health",
+        "Direct task deep-linking via ?task= URL parameters with draft persistence",
+        "In-memory sliding window rate limiter removing external Redis dependencies"
+      ],
+      "Improved": [
+        "Board view horizontal wheel scrolling, scrollbar affordances, and drag auto-scroll",
+        "Standardized tactile card-variant tabs with enhanced contrast across header, stats, and settings",
+        "Desktop toast placement anchored to the bottom-right and mobile toasts elevated above navigation buttons",
+        "Unified overlay z-index scale eliminating modal and dropdown clipping",
+        "Subtask progress badge indicators and drag-and-drop ghost visual parity"
+      ],
+      "Fixed": [
+        "Deep link task hydration on guest and local-first accounts",
+        "Low text contrast on active tab indicators in dark and light modes",
+        "Layout shifts and icon border jumps in settings panels",
+        "Toast stacking overflow and timing conflicts with telemetry consent prompts",
+        "Diagnostic report refresh flashing and duplicate close actions"
+      ]
+    }
+  },
+  {
     "version": "1.50.0-preview.7",
     "date": "2026-11-03",
     "channel": "preview",
@@ -716,16 +745,6 @@
     "sections": {
       "Added": [
         "Skipped is reachable on every habit surface"
-      ]
-    }
-  },
-  {
-    "version": "1.44.2-preview.0",
-    "date": "2026-09-22",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Measurable habits log a quantity and shade by target in grid view"
       ]
     }
   }
