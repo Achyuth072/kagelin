@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.50.0-preview.7",
+    "date": "2026-11-03",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Redesign compact habit view with synchronized timeline matrix"
+      ]
+    }
+  },
+  {
     "version": "1.50.0-preview.6",
     "date": "2026-11-02",
     "channel": "preview",
@@ -716,17 +726,6 @@
     "sections": {
       "Fixed": [
         "Measurable habits log a quantity and shade by target in grid view"
-      ]
-    }
-  },
-  {
-    "version": "1.44.1",
-    "date": "2026-09-22",
-    "channel": "stable",
-    "sections": {
-      "Fixed": [
-        "Prevent a corrupted download from getting stuck in the offline cache and breaking Loop (.db) habit import",
-        "Automatically recover if that cache was already corrupted"
       ]
     }
   }
