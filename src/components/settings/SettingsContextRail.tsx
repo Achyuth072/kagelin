@@ -507,11 +507,12 @@ export function SettingsContextRail({
               >
                 <h3 className="flex items-center gap-2 text-xs font-medium text-foreground">
                   <Lock className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
-                  <span>Zero-Knowledge Vault</span>
+                  <span>Content Encryption</span>
                 </h3>
                 <p className="type-micro text-muted-foreground leading-relaxed">
-                  Client-side keys protect your habit notes and task contents
-                  with AES-GCM row-bound encryption before transmission.
+                  Client-side keys protect your task, habit, and calendar
+                  content with XChaCha20-Poly1305 row-bound encryption before
+                  transmission.
                 </p>
               </section>
             </>
