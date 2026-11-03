@@ -4,9 +4,10 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Check, Copy } from "lucide-react";
 import { slideUp } from "@/lib/motion";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
+import { useCopyDiagnostics } from "@/lib/errors/useCopyDiagnostics";
 
 export default function ErrorBoundary({
   error,
@@ -16,10 +17,11 @@ export default function ErrorBoundary({
   reset: () => void;
 }) {
   const router = useRouter();
+  const { copied, copyDiagnostics } = useCopyDiagnostics(error);
 
   useEffect(() => {
     console.error("Unhandled render error:", error);
-    Sentry.captureException(error);
+    void recordDiagnosticError(error, { source: "error-boundary" });
   }, [error]);
 
   return (
@@ -38,11 +40,24 @@ export default function ErrorBoundary({
           head back home if it keeps happening.
         </p>
 
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
           <Button variant="outline" onClick={() => router.push("/")}>
             Go home
           </Button>
-          <Button onClick={() => reset()}>Try again</Button>
+          <Button variant="outline" className="gap-2" onClick={copyDiagnostics}>
+            {copied ? (
+              <>
+                <Check className="h-4 w-4" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                Copy diagnostics
+              </>
+            )}
+          </Button>
+          <Button onClick={reset}>Try again</Button>
         </div>
       </motion.div>
     </div>

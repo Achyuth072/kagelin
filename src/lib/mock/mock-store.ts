@@ -1,5 +1,5 @@
 import { isWeekend } from "date-fns";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import type { Task, Project } from "@/lib/types/task";
 import {
   ENTRY_VALUE_DONE,
@@ -616,8 +616,8 @@ class MockStore {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
     } catch (error) {
-      // Central write choke point: report failure once and never swallow quota errors.
-      Sentry.captureException(error);
+      // Central write choke point: report once, then surface the quota error.
+      void recordDiagnosticError(error);
       throw new Error(
         "Failed to save guest data — browser storage may be full.",
         { cause: error },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useEffectEvent, useState } from "react";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { notify } from "@/lib/notify";
 import type { ResealProgress } from "@/lib/crypto/reseal";
 import {
@@ -62,7 +62,7 @@ export function ResealIndicator({
       })
       .catch((err) => {
         if (signal.aborted) return;
-        Sentry.captureException(err);
+        void recordDiagnosticError(err);
         notify(failureMessage(err), {
           id: TOAST_ID,
           duration: Infinity,

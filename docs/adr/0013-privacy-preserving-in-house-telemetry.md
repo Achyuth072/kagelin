@@ -15,7 +15,7 @@ This ADR defines the architectural invariants, privacy boundaries, event catalog
 2. **Decoupled Device Identity**
    - A random UUID (`device_id`) is generated client-side via `crypto.randomUUID()` and stored in `localStorage`.
    - `device_id` is **never** correlated with `auth.uid()`, email addresses, or user profile records.
-   - IP addresses are used solely in-memory by Upstash Redis for DDoS rate-limiting at `/api/telemetry` and are immediately discarded—never persisted to Postgres.
+   - IP addresses are used solely in-memory for DDoS rate-limiting at `/api/telemetry` and are immediately discarded—never persisted to Postgres.
 
 3. **Opt-in with First-Session Consent**
    - Telemetry is disabled by default until the user explicitly grants permission.

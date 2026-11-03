@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { createClient } from "@/lib/supabase/client";
 import {
   DEFAULT_ARGON2_PARAMS,
@@ -54,7 +54,7 @@ async function cacheMasterKey(
   let retiredKeys = row.retired_keys ?? {};
   // Dropped rather than rejected to prevent lockouts; resealed data needs no retired keys.
   if (keyId <= mark.retiredClearedAt && Object.keys(retiredKeys).length > 0) {
-    Sentry.captureException(
+    void recordDiagnosticError(
       new Error("Ignored retired keys written back after they were cleared"),
     );
     retiredKeys = {};
@@ -113,7 +113,7 @@ function ensureRotationVerifierInBackground(
   row: EncryptionKeyRow,
 ): void {
   ensureRotationVerifier(userId, masterKey, row).catch((err) =>
-    Sentry.captureException(err),
+    recordDiagnosticError(err),
   );
 }
 
@@ -539,12 +539,12 @@ export async function rotateContentKey(
     recordActivity();
   } catch (err) {
     keySavedOnDevice = false;
-    Sentry.captureException(err);
+    void recordDiagnosticError(err);
     // Until the user unlocks again, the retired key must not seal writes the server rejects.
     try {
       await keyStore.clear();
     } catch (clearErr) {
-      Sentry.captureException(clearErr);
+      void recordDiagnosticError(clearErr);
     }
   }
   if (keySavedOnDevice) {
@@ -552,7 +552,7 @@ export async function rotateContentKey(
     try {
       await keyChainMark.raise(userId, { current_key_id: newKeyId as number });
     } catch (err) {
-      Sentry.captureException(err);
+      void recordDiagnosticError(err);
     }
   }
 

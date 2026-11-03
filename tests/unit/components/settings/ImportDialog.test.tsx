@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { useState } from "react";
-import { ImportDialog } from "@/components/settings/ImportDialog";
+import { ImportDialog } from "@/components/settings/AppMigrationDialog";
 import type { IcsImportPreview } from "@/lib/hooks/useIcsImport";
 import type { TodoistPreview } from "@/lib/hooks/useTodoistImport";
 

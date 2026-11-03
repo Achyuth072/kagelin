@@ -44,6 +44,14 @@ describe("useUiStore", () => {
     expect(state.isProjectsOpen).toBe(true);
     expect(state.sortBy).toBe("date");
     expect(state.viewMode).toBe("list");
+    expect(state.boardInspectMode).toBe("overlay");
+  });
+
+  it("should update board inspect mode", () => {
+    useUiStore.getState().setBoardInspectMode("split");
+    expect(useUiStore.getState().boardInspectMode).toBe("split");
+    useUiStore.getState().setBoardInspectMode("overlay");
+    expect(useUiStore.getState().boardInspectMode).toBe("overlay");
   });
 
   it("should toggle projects visibility", () => {

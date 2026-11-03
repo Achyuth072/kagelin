@@ -54,10 +54,17 @@ describe("HabitTargetField", () => {
       />,
     );
     expect(screen.getByLabelText("At least")).toHaveAttribute(
-      "aria-pressed",
-      "true",
+      "data-state",
+      "active",
     );
-    fireEvent.click(screen.getByLabelText("At most"));
+    expect(screen.getByLabelText("At most")).toHaveAttribute(
+      "data-state",
+      "inactive",
+    );
+    fireEvent.mouseDown(screen.getByLabelText("At least"));
+    expect(onTargetTypeChange).not.toHaveBeenCalled();
+
+    fireEvent.mouseDown(screen.getByLabelText("At most"));
     expect(onTargetTypeChange).toHaveBeenCalledWith("at_most");
   });
 });

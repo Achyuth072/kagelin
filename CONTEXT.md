@@ -553,6 +553,29 @@ the record is already a `tasks` row; promotion removes the `parent_id` and
 surfaces it as a peer task. Not yet built; noted here to prevent the concept from
 being invented under a conflicting name.
 
+### Dual-Sheet Inspector
+
+The dynamic, docked side pane on desktop (`≥1280px`) used for viewing and editing
+task details alongside the execution list. Unlike a permanent split view, the
+dual-sheet inspector opens conditionally only when a task is selected, collapsing
+to restore full screen width to the list when closed. In Board view, it renders
+as an unblurred overlay drawer to preserve horizontal column real estate.
+_Avoid_: split pane, side panel, detail sidebar (implying permanent mounting).
+
+### Task Sheet
+
+The responsive modal dialog / bottom drawer used for task creation and editing
+across mobile and tablet viewports (`<1280px`). Preserves synthetic back-anchor
+navigation on mobile cold opens.
+_Avoid_: task popup, edit modal.
+
+### Grid / Bento view _(rejected)_
+
+A previously evaluated and permanently rejected masonry layout for tasks. Tasks
+are homogeneous text records lacking variable aspect-ratio media; masonry grids
+destroy baseline scannability and provide no semantic drag targets. The only
+supported task layouts are **List** (`Shift+1`) and **Board** (`Shift+2`).
+
 ---
 
 ## Analytics

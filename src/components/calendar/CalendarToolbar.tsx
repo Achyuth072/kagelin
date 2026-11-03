@@ -126,7 +126,7 @@ export function CalendarToolbar({
   return (
     <div
       className={cn(
-        "flex flex-row items-center justify-between gap-1 px-4 py-3 border-b bg-background/60 backdrop-blur-xl sticky top-0 z-20 shadow-sm overflow-hidden overscroll-x-none",
+        "flex flex-row items-center justify-between gap-1 px-4 py-3 border-b bg-background sticky top-0 z-20 shadow-sm overflow-hidden overscroll-x-none",
         "h-[60px] md:h-[68px]",
         className,
       )}

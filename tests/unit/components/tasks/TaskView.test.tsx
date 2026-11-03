@@ -1,7 +1,10 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { TaskView } from "@/components/tasks/TaskView";
+import { TaskEditorContext } from "@/components/tasks/TaskEditorProvider";
 import type { Task } from "@/lib/types/task";
+import type { TaskEditorState, TaskFormValues } from "@/lib/types/task-view";
+import type { UseFormReturn } from "react-hook-form";
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: vi.fn() }),
@@ -61,39 +64,6 @@ vi.mock("@/components/tasks/SubtaskList", () => ({
   ),
 }));
 
-const baseProps = {
-  content: "Test task",
-  setContent: vi.fn(),
-  description: "",
-  setDescription: vi.fn(),
-  dueDate: undefined,
-  setDueDate: vi.fn(),
-  doDate: undefined,
-  setDoDate: vi.fn(),
-  setIsEvening: vi.fn(),
-  priority: 4 as const,
-  setPriority: vi.fn(),
-  recurrence: null,
-  setRecurrence: vi.fn(),
-  selectedProjectId: null,
-  setSelectedProjectId: vi.fn(),
-  datePickerOpen: false,
-  setDatePickerOpen: vi.fn(),
-  doDatePickerOpen: false,
-  setDoDatePickerOpen: vi.fn(),
-  showSubtasks: false,
-  setShowSubtasks: vi.fn(),
-  draftSubtasks: [],
-  setDraftSubtasks: vi.fn(),
-  inboxProjectId: "inbox-id",
-  projects: [],
-  isMobile: false,
-  hasContent: true,
-  isPending: false,
-  onSubmit: vi.fn(),
-  onKeyDown: vi.fn(),
-};
-
 const baseTask: Task = {
   id: "task-1",
   content: "Test Task",
@@ -105,9 +75,76 @@ const baseTask: Task = {
   project_id: "project-1",
 } as Task;
 
+function createMockEditorState(
+  overrides: Partial<TaskEditorState> = {},
+): TaskEditorState {
+  return {
+    task: null,
+    mode: "create",
+    form: {
+      formState: { errors: {} },
+    } as unknown as UseFormReturn<TaskFormValues>,
+    content: "Test task",
+    setContent: vi.fn(),
+    description: "",
+    setDescription: vi.fn(),
+    dueDate: undefined,
+    setDueDate: vi.fn(),
+    doDate: undefined,
+    setDoDate: vi.fn(),
+    isEvening: false,
+    setIsEvening: vi.fn(),
+    priority: 4,
+    setPriority: vi.fn(),
+    recurrence: null,
+    setRecurrence: vi.fn(),
+    selectedProjectId: null,
+    setSelectedProjectId: vi.fn(),
+    datePickerOpen: false,
+    setDatePickerOpen: vi.fn(),
+    doDatePickerOpen: false,
+    setDoDatePickerOpen: vi.fn(),
+    showSubtasks: false,
+    setShowSubtasks: vi.fn(),
+    draftSubtasks: [],
+    setDraftSubtasks: vi.fn(),
+    pendingStep: "",
+    setPendingStep: vi.fn(),
+    inboxProjectId: "inbox-id",
+    projects: [],
+    isMobile: false,
+    autoFocusTitle: false,
+    isPending: false,
+    hasContent: true,
+    errors: {},
+    onSubmit: vi.fn(),
+    onKeyDown: vi.fn(),
+    showDeleteDialog: false,
+    setShowDeleteDialog: vi.fn(),
+    onDeleteRequest: vi.fn(),
+    onConfirmDelete: vi.fn(),
+    deleteTitle: "Delete Task",
+    deleteDescription: "Delete description",
+    ...overrides,
+  };
+}
+
+function renderTaskView(
+  overrides: Partial<TaskEditorState> = {},
+  layout?: "sheet" | "panel",
+) {
+  const state = createMockEditorState(overrides);
+  const result = render(
+    <TaskEditorContext.Provider value={state}>
+      <TaskView layout={layout} />
+    </TaskEditorContext.Provider>,
+  );
+  return { ...result, state };
+}
+
 describe("TaskView - create mode", () => {
   it("renders a create (Send) button and no delete button", () => {
-    render(<TaskView {...baseProps} mode="create" />);
+    renderTaskView({ mode: "create" });
 
     expect(
       screen.getByRole("button", { name: /create task/i }),
@@ -116,7 +153,7 @@ describe("TaskView - create mode", () => {
   });
 
   it("passes an empty taskId and the inbox project to SubtaskList", () => {
-    render(<TaskView {...baseProps} mode="create" showSubtasks={true} />);
+    renderTaskView({ mode: "create", showSubtasks: true });
 
     const subtaskList = screen.getByTestId("subtask-list");
     expect(subtaskList.dataset.taskId).toBe("");
@@ -124,18 +161,19 @@ describe("TaskView - create mode", () => {
   });
 
   it("renders the notes textarea in create mode and syncs edits", () => {
-    render(<TaskView {...baseProps} mode="create" />);
+    const setDescription = vi.fn();
+    renderTaskView({ mode: "create", setDescription });
 
     const textarea = screen.getByPlaceholderText("Add notes");
     expect(textarea).toBeInTheDocument();
 
     fireEvent.change(textarea, { target: { value: "New note" } });
-    expect(baseProps.setDescription).toHaveBeenCalledWith("New note");
+    expect(setDescription).toHaveBeenCalledWith("New note");
   });
 
   it("pressing bare Enter in the title textarea submits the task immediately", () => {
     const onSubmit = vi.fn();
-    render(<TaskView {...baseProps} mode="create" onSubmit={onSubmit} />);
+    renderTaskView({ mode: "create", onSubmit });
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
     fireEvent.keyDown(titleInput, { key: "Enter" });
@@ -145,7 +183,7 @@ describe("TaskView - create mode", () => {
 
   it("pressing Ctrl+Enter or Cmd+Enter in the title textarea submits the task", () => {
     const onSubmit = vi.fn();
-    render(<TaskView {...baseProps} mode="create" onSubmit={onSubmit} />);
+    renderTaskView({ mode: "create", onSubmit });
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
     fireEvent.keyDown(titleInput, { key: "Enter", metaKey: true });
@@ -158,10 +196,13 @@ describe("TaskView - create mode", () => {
   it("does not let a title Enter reach the surrounding sheet, which submits on Cmd+Enter too", () => {
     const onSubmit = vi.fn();
     const containerKeyDown = vi.fn();
+    const state = createMockEditorState({ mode: "create", onSubmit });
 
     render(
       <div onKeyDown={containerKeyDown}>
-        <TaskView {...baseProps} mode="create" onSubmit={onSubmit} />
+        <TaskEditorContext.Provider value={state}>
+          <TaskView />
+        </TaskEditorContext.Provider>
       </div>,
     );
 
@@ -177,7 +218,7 @@ describe("TaskView - create mode", () => {
 
   it("replaces newlines with spaces when text with newlines is entered or pasted", () => {
     const setContent = vi.fn();
-    render(<TaskView {...baseProps} mode="create" setContent={setContent} />);
+    renderTaskView({ mode: "create", setContent });
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
     fireEvent.change(titleInput, {
@@ -189,7 +230,7 @@ describe("TaskView - create mode", () => {
 
   it("prevents default on Shift+Enter in title and does not submit", () => {
     const onSubmit = vi.fn();
-    render(<TaskView {...baseProps} mode="create" onSubmit={onSubmit} />);
+    renderTaskView({ mode: "create", onSubmit });
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
     const notPrevented = fireEvent.keyDown(titleInput, {
@@ -203,15 +244,14 @@ describe("TaskView - create mode", () => {
 });
 
 describe("TaskView - edit mode", () => {
-  const editProps = {
-    ...baseProps,
+  const baseEditOverrides = {
+    mode: "edit" as const,
+    task: baseTask,
     description: "Existing notes",
-    initialTask: baseTask,
-    onDelete: vi.fn(),
   };
 
   it("renders Save and Delete buttons", () => {
-    render(<TaskView {...editProps} mode="edit" />);
+    renderTaskView(baseEditOverrides);
 
     expect(
       screen.getByRole("button", { name: /save changes/i }),
@@ -222,7 +262,7 @@ describe("TaskView - edit mode", () => {
   });
 
   it("passes the initial task's id and project to SubtaskList", () => {
-    render(<TaskView {...editProps} mode="edit" showSubtasks={true} />);
+    renderTaskView({ ...baseEditOverrides, showSubtasks: true });
 
     const subtaskList = screen.getByTestId("subtask-list");
     expect(subtaskList.dataset.taskId).toBe("task-1");
@@ -230,14 +270,16 @@ describe("TaskView - edit mode", () => {
   });
 
   it("calls onDelete when the delete button is clicked", () => {
-    render(<TaskView {...editProps} mode="edit" />);
+    const onDeleteRequest = vi.fn();
+    renderTaskView({ ...baseEditOverrides, onDeleteRequest });
 
     fireEvent.click(screen.getByRole("button", { name: /delete task/i }));
-    expect(editProps.onDelete).toHaveBeenCalled();
+    expect(onDeleteRequest).toHaveBeenCalled();
   });
 
   it("renders the notes row and syncs edits back", () => {
-    render(<TaskView {...editProps} mode="edit" />);
+    const setDescription = vi.fn();
+    renderTaskView({ ...baseEditOverrides, setDescription });
 
     fireEvent.click(screen.getByRole("button", { name: /notes/i }));
 
@@ -245,11 +287,11 @@ describe("TaskView - edit mode", () => {
     expect(textarea).toHaveValue("Existing notes");
 
     fireEvent.change(textarea, { target: { value: "Updated notes" } });
-    expect(editProps.setDescription).toHaveBeenCalledWith("Updated notes");
+    expect(setDescription).toHaveBeenCalledWith("Updated notes");
   });
 
   it("pressing bare Enter in the title focuses the notes field", () => {
-    render(<TaskView {...editProps} mode="edit" />);
+    renderTaskView(baseEditOverrides);
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
     fireEvent.keyDown(titleInput, { key: "Enter" });
@@ -259,7 +301,7 @@ describe("TaskView - edit mode", () => {
 
   it("pressing Cmd+Enter or Ctrl+Enter in edit mode title submits the form", () => {
     const onSubmit = vi.fn();
-    render(<TaskView {...editProps} mode="edit" onSubmit={onSubmit} />);
+    renderTaskView({ ...baseEditOverrides, onSubmit });
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
     fireEvent.keyDown(titleInput, { key: "Enter", metaKey: true });
@@ -271,14 +313,11 @@ describe("TaskView - edit mode", () => {
 
   it("collapses subtasks and focuses title textarea when onCollapse is triggered", () => {
     const setShowSubtasks = vi.fn();
-    render(
-      <TaskView
-        {...editProps}
-        mode="edit"
-        showSubtasks={true}
-        setShowSubtasks={setShowSubtasks}
-      />,
-    );
+    renderTaskView({
+      ...baseEditOverrides,
+      showSubtasks: true,
+      setShowSubtasks,
+    });
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
     const collapseBtn = screen.getByTestId("subtask-collapse-btn");
@@ -289,14 +328,11 @@ describe("TaskView - edit mode", () => {
   });
 
   it("forwards recurrence and isMobile props to RecurrencePicker in edit mode", () => {
-    render(
-      <TaskView
-        {...editProps}
-        mode="edit"
-        recurrence={{ freq: "WEEKLY", interval: 1 }}
-        isMobile={true}
-      />,
-    );
+    renderTaskView({
+      ...baseEditOverrides,
+      recurrence: { freq: "WEEKLY", interval: 1 },
+      isMobile: true,
+    });
 
     const picker = screen.getByTestId("recurrence-picker");
     expect(picker.getAttribute("data-recurrence")).toBe("WEEKLY");

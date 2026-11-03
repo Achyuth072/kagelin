@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { ShieldCheck, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { PrivacyPolicyLink } from "@/components/ui/privacy-policy-link";
 import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
+import { useMeasuredOffset } from "@/lib/hooks/useMeasuredOffset";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
@@ -16,24 +17,10 @@ export function TelemetryConsentPrompt() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const { trigger } = useHaptic();
 
-  // Height feeds --telemetry-prompt-offset (read by Toaster) so toasts don't overlap this banner.
   const bannerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const node = bannerRef.current;
-    if (!isVisible || !node) return;
-    const root = document.documentElement;
-    const observer = new ResizeObserver(([entry]) => {
-      root.style.setProperty(
-        "--telemetry-prompt-offset",
-        `${entry.contentRect.height + 12}px`,
-      );
-    });
-    observer.observe(node);
-    return () => {
-      observer.disconnect();
-      root.style.setProperty("--telemetry-prompt-offset", "0px");
-    };
-  }, [isVisible]);
+  // Height feeds --telemetry-prompt-offset (read by Toaster's offset formula)
+  // so toasts don't overlap this banner.
+  useMeasuredOffset(bannerRef, isVisible, "--telemetry-prompt-offset");
 
   const handleEnable = () => {
     trigger("toggle");
@@ -66,8 +53,7 @@ export function TelemetryConsentPrompt() {
                 }
           }
           className={cn(
-            // --offline-pill-offset is set on the root by AppShell; it lifts this banner clear of the DemoBar/OfflineIndicator pill, which shares this same bottom-6 anchor on desktop.
-            "fixed inset-x-0 bottom-[calc(var(--mobile-nav-height)+0.75rem)] md:bottom-[calc(1.5rem+var(--offline-pill-offset,0px))] z-50",
+            "fixed inset-x-0 bottom-[calc(var(--mobile-nav-height)+0.75rem)] md:bottom-[calc(1.5rem+var(--offline-pill-offset,0px))] z-[var(--z-prompt)]",
             "flex justify-center px-4 pointer-events-none",
           )}
         >

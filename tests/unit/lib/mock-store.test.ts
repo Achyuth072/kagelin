@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import {
   mockStore,
   STORAGE_KEY,
@@ -11,7 +11,9 @@ import { REPO_URL } from "@/lib/links";
 import type { Task } from "@/lib/types/task";
 import { ENTRY_VALUE_SKIPPED, type HabitEntry } from "@/lib/types/habit";
 
-vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
+vi.mock("@/lib/errors/diagnostics", () => ({
+  recordDiagnosticError: vi.fn(),
+}));
 
 const seededReset = () => mockStore.reset(createSeededRandom(1));
 
@@ -668,16 +670,16 @@ describe("MockStore bulk habit entry writes", () => {
   });
 
   // Only the uhabits import reports its own failures; this covers the other ~30 guest write sites.
-  it("reports a failed write to Sentry", () => {
-    vi.mocked(Sentry.captureException).mockClear();
+  it("reports a failed write to diagnostics", () => {
+    vi.mocked(recordDiagnosticError).mockClear();
     vi.spyOn(localStorage, "setItem").mockImplementationOnce(() => {
       throw new DOMException("exceeded the quota", "QuotaExceededError");
     });
 
     expect(() => mockStore.addHabitEntries(makeEntries(10))).toThrow();
 
-    expect(Sentry.captureException).toHaveBeenCalledOnce();
-    const [reported] = vi.mocked(Sentry.captureException).mock.calls[0];
+    expect(recordDiagnosticError).toHaveBeenCalledOnce();
+    const [reported] = vi.mocked(recordDiagnosticError).mock.calls[0];
     expect((reported as DOMException).name).toBe("QuotaExceededError");
   });
 });

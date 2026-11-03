@@ -353,4 +353,38 @@ describe("usePushNotifications", () => {
     expect(syncPushSubscription).toHaveBeenCalledTimes(1);
     expect(syncPushSubscription).toHaveBeenCalledWith(subscription);
   });
+
+  it("TC-HOOK-09: should fallback to new Notification when SW is not registered", async () => {
+    const notificationConstructorSpy = vi.fn();
+    class MockNotification {
+      constructor(title: string, options?: NotificationOptions) {
+        notificationConstructorSpy(title, options);
+      }
+      static permission = "granted";
+    }
+
+    Object.defineProperty(window, "Notification", {
+      value: MockNotification,
+      writable: true,
+      configurable: true,
+    });
+
+    vi.spyOn(navigator.serviceWorker, "getRegistration").mockResolvedValue(
+      null as unknown as ServiceWorkerRegistration,
+    );
+
+    const { result } = renderHook(() => usePushNotifications());
+
+    let success = false;
+    await act(async () => {
+      success = await result.current.showNotification("Test Title", {
+        body: "Test Body",
+      });
+    });
+
+    expect(success).toBe(true);
+    expect(notificationConstructorSpy).toHaveBeenCalledWith("Test Title", {
+      body: "Test Body",
+    });
+  });
 });

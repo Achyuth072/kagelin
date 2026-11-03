@@ -27,14 +27,14 @@ function renderField(
   };
 }
 
-const pressed = (name: RegExp) =>
-  screen.getByRole("button", { name }).getAttribute("aria-pressed");
+const isSelected = (name: RegExp) =>
+  screen.getByRole("tab", { name }).getAttribute("data-state") === "active";
 
 describe("HabitFrequencyField — four segments", () => {
   it("renders Daily, Weekly, Monthly, Custom", () => {
     renderField();
     for (const n of [/daily/i, /weekly/i, /monthly/i, /custom/i]) {
-      expect(screen.getByRole("button", { name: n })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: n })).toBeInTheDocument();
     }
   });
 
@@ -51,7 +51,7 @@ describe("HabitFrequencyField — four segments", () => {
     ["2-in-14 → Custom", { count: 2, frequencyDays: 14 }, /custom/i],
   ])("%s", (_l, props, name) => {
     renderField({ period: undefined, ...props });
-    expect(pressed(name)).toBe("true");
+    expect(isSelected(name)).toBe(true);
   });
 });
 
@@ -59,7 +59,7 @@ describe("HabitFrequencyField — segment switching calls correct callbacks", ()
   it("Daily resets count, period and days", () => {
     const { onCountChange, onPeriodChange, onFrequencyDaysChange } =
       renderField({ count: 3, period: "week" });
-    fireEvent.click(screen.getByRole("button", { name: /daily/i }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: /daily/i }));
     expect(onCountChange).toHaveBeenCalledWith(1);
     expect(onPeriodChange).toHaveBeenCalledWith("day");
     expect(onFrequencyDaysChange).toHaveBeenCalledWith(undefined);
@@ -67,21 +67,21 @@ describe("HabitFrequencyField — segment switching calls correct callbacks", ()
 
   it("Weekly sets the week period and clears days", () => {
     const { onPeriodChange, onFrequencyDaysChange } = renderField();
-    fireEvent.click(screen.getByRole("button", { name: /weekly/i }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: /weekly/i }));
     expect(onPeriodChange).toHaveBeenCalledWith("week");
     expect(onFrequencyDaysChange).toHaveBeenCalledWith(undefined);
   });
 
   it("Monthly sets the month period and clears days", () => {
     const { onPeriodChange, onFrequencyDaysChange } = renderField();
-    fireEvent.click(screen.getByRole("button", { name: /monthly/i }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: /monthly/i }));
     expect(onPeriodChange).toHaveBeenCalledWith("month");
     expect(onFrequencyDaysChange).toHaveBeenCalledWith(undefined);
   });
 
   it("Custom clears the period and sets days ≥ 2", () => {
     const { onPeriodChange, onFrequencyDaysChange } = renderField();
-    fireEvent.click(screen.getByRole("button", { name: /custom/i }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: /custom/i }));
     expect(onPeriodChange).toHaveBeenCalledWith(null);
     const daysArg = (onFrequencyDaysChange as ReturnType<typeof vi.fn>).mock
       .calls[0][0] as number;
@@ -99,7 +99,7 @@ describe("HabitFrequencyField — segment switching calls correct callbacks", ()
         onFrequencyDaysChange={vi.fn()}
       />,
     );
-    fireEvent.click(screen.getByRole("button", { name: /custom/i }));
+    fireEvent.mouseDown(screen.getByRole("tab", { name: /custom/i }));
     rerender(
       <HabitFrequencyField
         count={1}
@@ -110,7 +110,7 @@ describe("HabitFrequencyField — segment switching calls correct callbacks", ()
         onFrequencyDaysChange={vi.fn()}
       />,
     );
-    expect(pressed(/custom/i)).toBe("true");
+    expect(isSelected(/custom/i)).toBe(true);
     expect(screen.getByLabelText(/number of days/i)).toBeInTheDocument();
   });
 });
@@ -180,7 +180,7 @@ describe("HabitFrequencyField — typing D", () => {
 describe("HabitFrequencyField — legacy N per day", () => {
   it("shows the count for a D=1 habit with count > 1", () => {
     renderField({ count: 3, period: "day" });
-    expect(pressed(/daily/i)).toBe("true");
+    expect(isSelected(/daily/i)).toBe(true);
     expect(screen.getByText("3")).toBeInTheDocument();
     expect(screen.getByText(/times per day/i)).toBeInTheDocument();
   });

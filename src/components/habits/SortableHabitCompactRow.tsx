@@ -2,6 +2,10 @@
 
 import React, { memo } from "react";
 import type { LucideIcon } from "lucide-react";
+import type {
+  DraggableAttributes,
+  DraggableSyntheticListeners,
+} from "@dnd-kit/core";
 import type { HabitWithEntries } from "@/lib/hooks/useHabits";
 import { cn } from "@/lib/utils";
 import { useSortableRow, dropLineClasses } from "@/lib/hooks/useSortableRow";
@@ -31,8 +35,8 @@ const HabitRowContent = memo(
     listeners,
     setActivatorNodeRef,
   }: SortableHabitCompactRowProps & {
-    attributes: import("@dnd-kit/core").DraggableAttributes;
-    listeners: import("@dnd-kit/core").DraggableSyntheticListeners | undefined;
+    attributes: DraggableAttributes;
+    listeners: DraggableSyntheticListeners | undefined;
     setActivatorNodeRef: (element: HTMLElement | null) => void;
   }) => {
     return (
@@ -84,7 +88,7 @@ export function SortableHabitCompactRow({
       ref={setNodeRef}
       style={dndStyle}
       className={cn(
-        "relative bg-background",
+        "relative bg-card",
         isDragging ? "z-20 opacity-30" : "z-10 opacity-100",
         isDragging && "will-change-transform",
         dropLineClasses(dropLine),

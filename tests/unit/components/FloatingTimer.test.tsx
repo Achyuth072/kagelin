@@ -30,6 +30,7 @@ let mockIsRunning = false;
 let mockRemainingSeconds = 1500;
 let mockCompletedSessions = 1; // shouldShow requires isRunning || completedSessions > 0
 let mockIsPipActive = false;
+let mockIsDesktop = true;
 
 // ===== Module mocks =====
 
@@ -59,11 +60,12 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
 
 interface MockUiStoreState {
   isPipActive: boolean;
+  isDesktop: boolean;
 }
 
 vi.mock("@/lib/store/uiStore", () => ({
   useUiStore: (selector: (state: MockUiStoreState) => unknown) =>
-    selector({ isPipActive: mockIsPipActive }),
+    selector({ isPipActive: mockIsPipActive, isDesktop: mockIsDesktop }),
 }));
 
 interface MockTimerStoreState {
@@ -112,6 +114,7 @@ describe("FloatingTimer", () => {
     mockRemainingSeconds = 1500;
     mockCompletedSessions = 1;
     mockIsPipActive = false;
+    mockIsDesktop = true;
   });
 
   it("calls the synced pause() (not the raw store) when running and play/pause is tapped", () => {
@@ -142,5 +145,62 @@ describe("FloatingTimer", () => {
 
     expect(mockSyncedPause).toHaveBeenCalledTimes(1);
     expect(mockRawPause).not.toHaveBeenCalled();
+  });
+
+  it("does not render when isDesktop is false", () => {
+    mockIsDesktop = false;
+    mockIsRunning = true;
+
+    render(<FloatingTimer />);
+    expect(screen.queryByTestId("floating-timer")).not.toBeInTheDocument();
+  });
+
+  it("publishes --floating-timer-offset and resets it on unmount", () => {
+    mockIsRunning = true;
+    let observerCallback: ResizeObserverCallback = () => {};
+    const mockDisconnect = vi.fn();
+    const mockObserve = vi.fn();
+
+    class MockObserver {
+      constructor(cb: ResizeObserverCallback) {
+        observerCallback = cb;
+      }
+      observe = mockObserve;
+      disconnect = mockDisconnect;
+    }
+    vi.stubGlobal("ResizeObserver", MockObserver);
+
+    const setPropertySpy = vi.spyOn(
+      document.documentElement.style,
+      "setProperty",
+    );
+
+    const { unmount } = render(<FloatingTimer />);
+    const timerElement = screen.getByTestId("floating-timer");
+    expect(mockObserve).toHaveBeenCalledWith(timerElement);
+
+    // Simulate resize entry with borderBoxSize
+    observerCallback(
+      [
+        {
+          target: timerElement,
+          borderBoxSize: [{ blockSize: 140, inlineSize: 200 }],
+          contentRect: { height: 110, width: 180 },
+        } as unknown as ResizeObserverEntry,
+      ],
+      {} as ResizeObserver,
+    );
+
+    expect(setPropertySpy).toHaveBeenCalledWith(
+      "--floating-timer-offset",
+      "152px",
+    );
+
+    unmount();
+    expect(mockDisconnect).toHaveBeenCalled();
+    expect(setPropertySpy).toHaveBeenCalledWith(
+      "--floating-timer-offset",
+      "0px",
+    );
   });
 });

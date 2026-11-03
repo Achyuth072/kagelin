@@ -32,10 +32,6 @@ vi.mock("@/lib/mutations/importSource", () => ({
   persistImportSource: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock("@sentry/nextjs", () => ({
-  captureException: vi.fn(),
-}));
-
 const mockCreateClient = vi.mocked(createClient);
 
 describe("useUhabitsImport hook", () => {

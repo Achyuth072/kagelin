@@ -15,12 +15,12 @@ export function ToggleRow({
   onChange: (c: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between p-3 rounded-md border border-border/30 bg-muted/20">
+    <div className="flex items-center justify-between p-3 min-h-[44px] rounded-md border border-border/30 bg-muted/20">
       <div className="flex items-center gap-3">
         <Icon className="h-4 w-4 text-muted-foreground" />
         <div>
           <p className="text-sm font-medium">{title}</p>
-          <p className="text-[10px] text-muted-foreground">{description}</p>
+          <p className="type-micro text-muted-foreground">{description}</p>
         </div>
       </div>
       <Switch checked={checked} onCheckedChange={onChange} aria-label={title} />

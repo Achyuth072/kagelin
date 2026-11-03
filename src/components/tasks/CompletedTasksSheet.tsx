@@ -140,7 +140,7 @@ export function CompletedTasksSheet({
     }
     if (item.type === "header") {
       return (
-        <h3 className="type-micro font-semibold uppercase px-6 py-3 border-b border-border/40 bg-background/95 backdrop-blur-sm sticky top-0 z-10">
+        <h3 className="type-micro font-semibold uppercase px-6 py-3 border-b border-border/40 bg-background sticky top-0 z-10">
           {item.title}
         </h3>
       );

@@ -398,6 +398,18 @@ SELECT cron.schedule(
   $$SELECT public.invoke_edge_function('daily-briefing')$$
 );
 
+-- pg_net logs every HTTP request/response into net._http_response and never
+-- prunes it automatically. Prune daily at 03:00 UTC keeping responses from the last hour.
+SELECT cron.unschedule(jobname)
+FROM cron.job
+WHERE jobname = 'prune-pgnet-responses';
+
+SELECT cron.schedule(
+  'prune-pgnet-responses',
+  '0 3 * * *',
+  $$DELETE FROM net._http_response WHERE created < now() - interval '1 hour'$$
+);
+
 -- Returns encrypted payload envelope for valid ciphertext, or NULL to omit via jsonb_strip_nulls.
 -- Scheme literals below must match SCHEME and SCHEME_V2 in src/lib/crypto/envelope.ts.
 CREATE OR REPLACE FUNCTION public.encrypted_notification_body(

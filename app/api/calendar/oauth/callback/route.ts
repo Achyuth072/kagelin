@@ -5,14 +5,11 @@ import { NextResponse } from "next/server";
 import { exchangeAuthCode } from "@/lib/calendar-oauth/auth-code-exchange";
 import { encryptRefreshToken } from "@/lib/calendar-oauth/token-crypto";
 import { getAppBaseUrl } from "@/lib/calendar-oauth/app-url";
-import * as Sentry from "@sentry/nextjs";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  // Pin to the canonical app URL, not the request origin: behind Vercel's proxy
-  // the origin can be an internal host, which both breaks the token exchange
-  // (redirect_uri must match the connect route) and would bounce the user to a
-  // domain where their session cookie is absent.
+  // Use the canonical app URL, not the request origin: behind Vercel's proxy the
+  // origin can be internal, which breaks redirect_uri matching and cookies.
   const baseUrl = getAppBaseUrl(request);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
@@ -87,9 +84,6 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${baseUrl}/calendar?connected=${provider}`);
   } catch (e) {
     console.error("[calendar-oauth-callback] connect failed:", e);
-    // This is caught and redirected, not rethrown — error.tsx/global-error.tsx
-    // never see it, so it must be reported explicitly or it's invisible to Sentry.
-    Sentry.captureException(e, { tags: { route: "calendar-oauth-callback" } });
     const reason = e instanceof Error ? e.message : "exchange_failed";
     return NextResponse.redirect(
       `${baseUrl}/calendar?oauth_error=${encodeURIComponent(reason)}`,

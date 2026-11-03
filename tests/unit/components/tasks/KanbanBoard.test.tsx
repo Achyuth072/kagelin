@@ -154,7 +154,7 @@ describe("IntegratedTaskKanbanBoard", () => {
     render(
       <TooltipProvider>
         <TaskBoard
-          processedTasks={mockProcessedTasks}
+          presentation={mockProcessedTasks}
           projectsMap={new Map()}
           isDesktop={true}
           triggerHaptic={vi.fn()}
@@ -183,7 +183,7 @@ describe("IntegratedTaskKanbanBoard", () => {
     render(
       <TooltipProvider>
         <TaskBoard
-          processedTasks={emptyTasks}
+          presentation={emptyTasks}
           projectsMap={new Map()}
           isDesktop={true}
           triggerHaptic={vi.fn()}
@@ -205,7 +205,7 @@ describe("IntegratedTaskKanbanBoard", () => {
     render(
       <TooltipProvider>
         <TaskBoard
-          processedTasks={noEvening}
+          presentation={noEvening}
           projectsMap={new Map()}
           isDesktop={true}
           triggerHaptic={vi.fn()}
@@ -225,7 +225,7 @@ describe("IntegratedTaskKanbanBoard", () => {
     const { container } = render(
       <TooltipProvider>
         <TaskBoard
-          processedTasks={mockProcessedTasks}
+          presentation={mockProcessedTasks}
           projectsMap={new Map()}
           isDesktop={true}
           triggerHaptic={vi.fn()}
@@ -244,7 +244,7 @@ describe("IntegratedTaskKanbanBoard", () => {
     render(
       <TooltipProvider>
         <TaskBoard
-          processedTasks={mockProcessedTasks}
+          presentation={mockProcessedTasks}
           projectsMap={new Map()}
           isDesktop={true}
           triggerHaptic={vi.fn()}
@@ -262,7 +262,7 @@ describe("IntegratedTaskKanbanBoard", () => {
     render(
       <TooltipProvider>
         <TaskBoard
-          processedTasks={mockProcessedTasks}
+          presentation={mockProcessedTasks}
           projectsMap={new Map()}
           isDesktop={true}
           triggerHaptic={vi.fn()}
@@ -280,7 +280,7 @@ describe("IntegratedTaskKanbanBoard", () => {
     render(
       <TooltipProvider>
         <TaskBoard
-          processedTasks={mockProcessedTasks}
+          presentation={mockProcessedTasks}
           onSelect={onSelect}
           projectsMap={new Map()}
           isDesktop={true}

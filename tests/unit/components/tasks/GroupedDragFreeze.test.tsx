@@ -17,7 +17,9 @@
 import type { ReactNode } from "react";
 import { act, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DndContext } from "@dnd-kit/core";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
+import { useTaskDnd } from "@/components/tasks/useTaskDnd";
 import { useReorderTasks, useUpdateTask } from "@/lib/hooks/useTaskMutations";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Task, Project } from "@/lib/types/task";
@@ -172,6 +174,32 @@ const defaultProps = {
   setActiveTaskId: vi.fn(),
 };
 
+function GroupedTestHarness({
+  presentation: currentProcessedTasks,
+}: {
+  presentation: ProcessedTasks;
+}) {
+  const dnd = useTaskDnd({
+    presentation: currentProcessedTasks,
+    groupBy: "priority",
+    sortBy: "priority",
+    isDesktop: true,
+  });
+
+  return (
+    <DndContext
+      sensors={dnd.sensors}
+      collisionDetection={dnd.collisionDetection}
+      onDragStart={dnd.onDragStart}
+      onDragOver={dnd.onDragOver}
+      onDragEnd={dnd.onDragEnd}
+      onDragCancel={dnd.onDragCancel}
+    >
+      <TaskBoard presentation={dnd.displayPresentation} {...defaultProps} />
+    </DndContext>
+  );
+}
+
 describe("TaskBoard — grouped drag under a derived sort", () => {
   let reorderMutateMock: ReturnType<typeof vi.fn>;
   let setSortByMock: ReturnType<typeof vi.fn>;
@@ -207,11 +235,11 @@ describe("TaskBoard — grouped drag under a derived sort", () => {
   });
 
   it("preserves the untouched group's order when a same-group reorder converts to custom", () => {
-    render(<TaskBoard processedTasks={processedTasks} {...defaultProps} />);
+    render(<GroupedTestHarness presentation={processedTasks} />);
 
     // Drag h2 above h1 within the High group. Each step is wrapped in act() so
     // React flushes the local-state update and the captured handlers refresh to
-    // closures over the latest localColumns (mirrors BoardDndCrossGroup).
+    // closures over the latest local group state.
     act(() => {
       captured.handlers.onDragStart?.({ active: { id: "h2" } });
     });

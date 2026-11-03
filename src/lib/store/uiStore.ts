@@ -17,6 +17,8 @@ export interface GoalsState {
 export type ShortcutTipAction =
   "newTask" | "newHabit" | "newEvent" | "newProject" | "logbook";
 
+export type BoardInspectMode = "overlay" | "split";
+
 export type StepId = "task" | "habit" | "focus" | "import";
 
 export interface StartHereState {
@@ -52,9 +54,11 @@ interface UiState {
   sortBy: SortOption;
   groupBy: GroupOption;
   viewMode: TaskViewMode;
+  boardInspectMode: BoardInspectMode;
   setSortBy: (sort: SortOption) => void;
   setGroupBy: (group: GroupOption) => void;
   setViewMode: (mode: TaskViewMode) => void;
+  setBoardInspectMode: (mode: BoardInspectMode) => void;
   // Set by drag handlers so the day_order-freeze effect skips drag-driven sortBy switches.
   customSortEnteredViaDrag: boolean;
   setCustomSortEnteredViaDrag: (value: boolean) => void;
@@ -151,9 +155,11 @@ export const useUiStore = create<UiState>()(
       sortBy: "date",
       groupBy: "none",
       viewMode: "list",
+      boardInspectMode: "overlay",
       setSortBy: (sort) => set({ sortBy: sort }),
       setGroupBy: (group) => set({ groupBy: group }),
       setViewMode: (mode) => set({ viewMode: mode }),
+      setBoardInspectMode: (mode) => set({ boardInspectMode: mode }),
       customSortEnteredViaDrag: false,
       setCustomSortEnteredViaDrag: (value) =>
         set({ customSortEnteredViaDrag: value }),

@@ -337,7 +337,7 @@ function BackupRemindersCard() {
   );
 }
 
-function buildGuestBackupData(): BackupData {
+export function buildGuestBackupData(): BackupData {
   return {
     metadata: {
       version: 1,
@@ -625,22 +625,22 @@ export function BackupSyncSettings() {
       />
 
       <Tabs defaultValue="local" className="space-y-4">
-        <TabsList className="grid grid-cols-2 bg-secondary/10 p-1 rounded-lg h-11 border border-border/40 shadow-none">
+        <TabsList size="lg" className="grid grid-cols-2 w-full">
           <TabsTrigger
             value="local"
             onClick={() => trigger("toggle")}
-            className="rounded-md gap-2 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-9 border border-transparent data-[state=active]:border-brand/20"
+            className="h-full px-2"
           >
-            <HardDrive className="h-3.5 w-3.5" />
-            Local Storage
+            <HardDrive aria-hidden="true" />
+            <span className="truncate">Local Storage</span>
           </TabsTrigger>
           <TabsTrigger
             value="cloud"
             onClick={() => trigger("toggle")}
-            className="rounded-md gap-2 text-[13px] font-medium tracking-tight data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-all h-9 border border-transparent data-[state=active]:border-brand/20"
+            className="h-full px-2"
           >
-            <Cloud className="h-3.5 w-3.5" />
-            WebDAV
+            <Cloud aria-hidden="true" />
+            <span className="truncate">WebDAV</span>
           </TabsTrigger>
         </TabsList>
 

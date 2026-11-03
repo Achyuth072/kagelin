@@ -1,4 +1,5 @@
 import { test, expect, chromium } from "@playwright/test";
+import { waitForBackAnchor } from "./support/guest-mode";
 
 /**
  * Toast width should hug its content, not Sonner's default 356px.
@@ -42,7 +43,6 @@ test.describe("Sonner toast width", () => {
         localStorage.setItem("kanso_guest_mode", "true");
       });
 
-      // Skips the home page and the Settings nav click.
       await page.goto("http://localhost:3000/settings", {
         waitUntil: "domcontentloaded",
         timeout: 30000,
@@ -100,7 +100,6 @@ test.describe("Sonner toast width", () => {
           : null;
 
         return {
-          // <li data-sonner-toast>
           liWidth: rect.width,
           liHeight: rect.height,
           liComputedWidth: cs.width,
@@ -111,12 +110,10 @@ test.describe("Sonner toast width", () => {
           liPaddingLeft: parseFloat(cs.paddingLeft),
           liPaddingRight: parseFloat(cs.paddingRight),
           liClassName: li.className,
-          // <ol data-sonner-toaster>
           olWidth: olRect?.width ?? -1,
           olComputedWidth: olCs?.width ?? "n/a",
           olInlineWidth: ol?.style.width ?? "n/a",
           olInlineCustomWidth: ol?.style.getPropertyValue("--width") ?? "n/a",
-          // content
           contentWidth: contentRect?.width ?? 0,
           contentRight: contentRect?.right ?? 0,
           liRight: rect.right,
@@ -135,10 +132,8 @@ test.describe("Sonner toast width", () => {
         "[toast-width measurement]\n" + JSON.stringify(measurement, null, 2),
       );
 
-      // Well under Sonner's ~356px default.
       expect(measurement.liWidth).toBeLessThan(280);
 
-      // Flush, with tolerance for the flex gap.
       expect(measurement.gapRightInside).toBeLessThan(12);
     } finally {
       await page.close();
@@ -211,7 +206,6 @@ test.describe("Sonner toast width", () => {
         const titleRect = titleEl.getBoundingClientRect();
         const titleCs = getComputedStyle(titleEl);
         const titleLineHeightRaw = titleCs.lineHeight;
-        // line-height: "normal" → fall back to ~1.2 * font-size
         let titleLineHeight = parseFloat(titleLineHeightRaw);
         if (Number.isNaN(titleLineHeight)) {
           const fontSize = parseFloat(titleCs.fontSize);
@@ -243,7 +237,6 @@ test.describe("Sonner toast width", () => {
         throw new Error(`Measurement failed: ${measurement.reason}`);
       }
 
-      // 30% tolerance for rounding; a 2-line wrap would be ~2x lineHeight.
       expect(measurement.titleHeight).toBeLessThanOrEqual(
         measurement.titleLineHeight * 1.3,
       );
@@ -254,8 +247,16 @@ test.describe("Sonner toast width", () => {
   });
 
   test("toast is horizontally centered on mobile viewport (360px)", async () => {
-    // Bundled Chromium, no CDP. Fixed viewport so Sonner's mobile rules fire.
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({
+      args: [
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--disable-software-rasterizer",
+        "--no-sandbox",
+        "--disable-extensions",
+        "--mute-audio",
+      ],
+    });
     const context = await browser.newContext({
       viewport: { width: 360, height: 640 },
     });
@@ -273,11 +274,11 @@ test.describe("Sonner toast width", () => {
         localStorage.setItem("kanso_guest_mode", "true");
       });
 
-      await page.goto("http://localhost:3000/settings", {
+      await page.goto("http://localhost:3000/?redirect=/settings", {
         waitUntil: "domcontentloaded",
         timeout: 30000,
       });
-      console.log("[debug-mobile] after goto /settings, url=", page.url());
+      await waitForBackAnchor(page, "/settings");
 
       if (page.url().includes("/login")) {
         throw new Error(
@@ -340,7 +341,6 @@ test.describe("Sonner toast width", () => {
           JSON.stringify(measurement, null, 2),
       );
 
-      // 8px tolerance covers fractional pixels and any rounding.
       expect(measurement.delta).toBeLessThan(8);
     } finally {
       await page.close();

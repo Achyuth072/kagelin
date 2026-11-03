@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   getTaskUpdatesForGroup,
+  isDropBlockedGroup,
   projectGroupTitle,
 } from "@/lib/utils/task-dnd";
 import { format, addDays } from "date-fns";
@@ -72,6 +73,37 @@ describe("getTaskUpdatesForGroup", () => {
   it("should set is_evening false for 'Active'", () => {
     const updates = getTaskUpdatesForGroup("Active", projectsMap);
     expect(updates.is_evening).toBe(false);
+  });
+
+  it("should set is_evening true for 'evening-section'", () => {
+    const updates = getTaskUpdatesForGroup("evening-section", projectsMap);
+    expect(updates.is_evening).toBe(true);
+  });
+
+  it("should set is_evening false for 'active-section'", () => {
+    const updates = getTaskUpdatesForGroup("active-section", projectsMap);
+    expect(updates.is_evening).toBe(false);
+  });
+
+  describe("isDropBlockedGroup", () => {
+    it("blocks drops into Overdue when groupBy is date", () => {
+      expect(isDropBlockedGroup("Overdue", "date")).toBe(true);
+      expect(isDropBlockedGroup("overdue", "date")).toBe(true);
+    });
+
+    it("allows drops into non-overdue groups when groupBy is date", () => {
+      expect(isDropBlockedGroup("Today", "date")).toBe(false);
+      expect(isDropBlockedGroup("Tomorrow", "date")).toBe(false);
+    });
+
+    it("blocks Overdue when groupBy is undefined", () => {
+      expect(isDropBlockedGroup("Overdue")).toBe(true);
+    });
+
+    it("does not block Overdue when grouped by priority or project", () => {
+      expect(isDropBlockedGroup("Overdue", "priority")).toBe(false);
+      expect(isDropBlockedGroup("Overdue", "project")).toBe(false);
+    });
   });
 
   describe("with an explicit groupBy", () => {

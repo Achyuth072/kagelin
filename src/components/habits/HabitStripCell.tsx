@@ -107,7 +107,7 @@ export function HabitStripCell({
         filled
           ? "border-transparent"
           : missed
-            ? "border-destructive/50 bg-destructive/10 text-destructive"
+            ? "bg-destructive-surface border border-destructive-surface-border text-destructive-surface-foreground"
             : skipped
               ? "border-border bg-secondary/40 text-muted-foreground"
               : "border-border bg-secondary/40 text-muted-foreground group-hover:bg-secondary",
@@ -155,10 +155,32 @@ export function HabitStripCell({
     </span>
   );
 
-  if (isMeasurable) {
-    return (
-      <div className={wrapperClass}>
-        {headerLabel}
+  const cellButton = (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onActivate();
+        if (!isMeasurable) {
+          onToggle(date);
+        }
+      }}
+      aria-label={cellLabel}
+      title={stateText}
+      className={cn(
+        "group relative flex items-center justify-center rounded-md transition-seijaku-fast",
+        touchTargetClass,
+        cellSizing,
+      )}
+    >
+      {cellContent}
+    </button>
+  );
+
+  return (
+    <div className={wrapperClass}>
+      {headerLabel}
+      {isMeasurable ? (
         <HabitQuantityPopover
           stored={stored}
           unit={habit?.unit}
@@ -166,48 +188,11 @@ export function HabitStripCell({
           onLog={(amount) => onLogValue?.(date, amount)}
           onClear={() => onClearValue?.(date)}
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onActivate();
-            }}
-            aria-label={cellLabel}
-            title={stateText}
-            className={cn(
-              "group relative flex items-center justify-center rounded-md transition-seijaku-fast",
-              touchTargetClass,
-              cellSizing,
-            )}
-          >
-            {cellContent}
-          </button>
+          {cellButton}
         </HabitQuantityPopover>
-        {liveRegion}
-      </div>
-    );
-  }
-
-  return (
-    <div className={wrapperClass}>
-      {headerLabel}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onActivate();
-          onToggle(date);
-        }}
-        aria-label={cellLabel}
-        title={stateText}
-        className={cn(
-          "group relative flex items-center justify-center rounded-md transition-seijaku-fast",
-          touchTargetClass,
-          cellSizing,
-        )}
-      >
-        {cellContent}
-      </button>
+      ) : (
+        cellButton
+      )}
       {liveRegion}
     </div>
   );

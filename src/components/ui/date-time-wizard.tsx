@@ -98,7 +98,7 @@ export function DateTimeWizard({
               value="date"
               className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm"
             >
-              <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
+              <CalendarIcon aria-hidden="true" />
               {tempDate ? format(tempDate, "MMM d") : "Date"}
             </TabsTrigger>
             {showTime && (
@@ -107,7 +107,7 @@ export function DateTimeWizard({
                 disabled={!tempDate}
                 className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Clock className="w-3.5 h-3.5 mr-1.5" />
+                <Clock aria-hidden="true" />
                 {tempDate ? formatTime(tempDate) : "Time"}
               </TabsTrigger>
             )}

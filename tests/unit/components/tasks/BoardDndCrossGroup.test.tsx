@@ -1,49 +1,19 @@
 /**
- * TDD regression test for cross-group snap-back in TaskBoard.
+ * Regression test for cross-group snap-back in TaskBoard.
  *
- * Root cause (identified via debug session dnd-cross-group-snap-back-context.md):
- *
- *   When a cross-column drop fires two mutations:
- *     1. updateMutation  — updates the task's group-property (e.g. priority: 1)
- *     2. reorderMutation — updates day_order for the destination column
- *
- *   reorderMutation settles first → mutation-level onSettled calls
- *   invalidateQueries(["tasks"]) → a background refetch starts.
- *
- *   If this refetch completes BEFORE updateMutation has committed to the server,
- *   the server returns the task with its OLD property value (e.g. priority: 2).
- *   React Query overwrites the optimistic cache with the stale server data.
- *   The parent re-renders TaskBoard with stale processedTasks → boardColumns
- *   has the task back in the old column.
- *
- *   When updateMutation finally settles, tryReleaseLock fires → setLockLocal(false)
- *   → displayColumns switches to boardColumns (STALE) → task appears in wrong
- *   column for a frame → SNAP-BACK.
- *
- * The fix: defer setLockLocal(false) until boardColumns actually reflects the
- * expected destination column (i.e. the task appears in the destination column
- * in boardColumns). This is tracked via a pendingLockRelease ref + a useEffect
- * that watches boardColumns and releases only when the condition is met.
- *
- * Test structure:
- *   1. Render TaskBoard with priority groups: High=[t1,t2], Critical=[t3]
- *   2. Drag t1 from High to Critical (DragStart → DragOver → DragEnd)
- *   3. Simulate stale-refetch scenario: re-render with stale processedTasks
- *      (t1 still in High, not Critical) — mimics the cache overwrite.
- *   4. Call reorderMutation.onSettled (pending 2→1, lock should stay)
- *   5. Call updateMutation.onSettled  (pending 1→0, lock should NOT release yet
- *      because boardColumns is stale)
- *   6. Assert t1 is STILL in Critical (lockLocal held via deferred release)
- *   7. Re-render with correct processedTasks (t1 in Critical)
- *   8. Assert t1 is now shown in Critical (deferred release fired, lock released)
- *
- * Steps 6 & 8 both FAIL without the fix; PASS with the fix.
+ * A cross-column drop fires two mutations (the group property, then day_order).
+ * The first one's invalidateQueries can refetch stale server data before the
+ * second commits, so the parent re-renders with the task back in its old column.
+ * useTaskDnd holds a local display lock until every mutation's onSettled fires,
+ * which keeps the card in its dropped column for the whole in-flight window.
  */
 
 import type { ReactNode } from "react";
 import { act, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DndContext } from "@dnd-kit/core";
 import { TaskBoard } from "@/components/tasks/TaskBoard";
+import { useTaskDnd } from "@/components/tasks/useTaskDnd";
 import { useReorderTasks, useUpdateTask } from "@/lib/hooks/useTaskMutations";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Task, Project } from "@/lib/types/task";
@@ -215,6 +185,32 @@ const defaultProps = {
   setActiveTaskId: vi.fn(),
 };
 
+function BoardTestHarness({
+  presentation: currentProcessedTasks,
+}: {
+  presentation: ProcessedTasks;
+}) {
+  const dnd = useTaskDnd({
+    presentation: currentProcessedTasks,
+    groupBy: "priority",
+    sortBy: "custom",
+    isDesktop: true,
+  });
+
+  return (
+    <DndContext
+      sensors={dnd.sensors}
+      collisionDetection={dnd.collisionDetection}
+      onDragStart={dnd.onDragStart}
+      onDragOver={dnd.onDragOver}
+      onDragEnd={dnd.onDragEnd}
+      onDragCancel={dnd.onDragCancel}
+    >
+      <TaskBoard presentation={dnd.displayPresentation} {...defaultProps} />
+    </DndContext>
+  );
+}
+
 describe("TaskBoard — cross-group snap-back regression", () => {
   let reorderMutateMock: ReturnType<typeof vi.fn>;
   let updateMutateMock: ReturnType<typeof vi.fn>;
@@ -239,9 +235,11 @@ describe("TaskBoard — cross-group snap-back regression", () => {
         sortBy: "custom",
         groupBy: "none",
         viewMode: "board",
+        boardInspectMode: "overlay",
         setSortBy: vi.fn(),
         setGroupBy: vi.fn(),
         setViewMode: vi.fn(),
+        setBoardInspectMode: vi.fn(),
         customSortEnteredViaDrag: false,
         setCustomSortEnteredViaDrag: vi.fn(),
         habitViewMode: "grid",
@@ -331,27 +329,23 @@ describe("TaskBoard — cross-group snap-back regression", () => {
     );
   }
 
-  it("holds the display lock until boardColumns reflects the destination column (deferred release)", () => {
+  it("holds the display lock until mutations settle on onSettled without polling", () => {
     const { rerender } = render(
-      <TaskBoard processedTasks={staleProcessedTasks} {...defaultProps} />,
+      <BoardTestHarness presentation={staleProcessedTasks} />,
     );
 
-    // Initial: t1 must be in High
     expect(getTaskColumn("t1")).toBe("High");
 
-    // --- Drag t1 from High to Critical ---
     act(() => {
       captured.handlers.onDragStart?.({ active: { id: "t1" } });
     });
     act(() => {
-      // Drag over the Critical column (using column title as over.id)
       captured.handlers.onDragOver?.({
         active: { id: "t1" },
         over: { id: "Critical" },
       });
     });
 
-    // After dragOver: t1 must be in Critical in local state
     expect(getTaskColumn("t1")).toBe("Critical");
 
     act(() => {
@@ -372,56 +366,29 @@ describe("TaskBoard — cross-group snap-back regression", () => {
 
     expect(updateOnSettled).toBeDefined();
 
-    // --- Simulate stale refetch: re-render with stale processedTasks ---
-    // This mimics the race where a background refetch returns OLD server data
-    // (t1 priority=2, still in High). The parent component re-renders TaskBoard
-    // with this stale processedTasks prop, overwriting boardColumns.
+    // Stale refetch: the parent re-renders with old server data (t1 back in
+    // High) while the mutation is still in flight. The display lock must win.
     act(() => {
-      rerender(
-        <TaskBoard processedTasks={staleProcessedTasks} {...defaultProps} />,
-      );
+      rerender(<BoardTestHarness presentation={staleProcessedTasks} />);
     });
 
-    // At this point: lockLocal=true (still dragging), display shows localColumns
-    // t1 must still appear in Critical regardless of the stale prop
     expect(getTaskColumn("t1")).toBe("Critical");
 
-    // --- updateMutation settles (pendingCount 1 → 0) ---
-    // With the fix (deferred release): lock does NOT release yet because
-    // boardColumns (from stale processedTasks) still has t1 in High.
-    // Without the fix: lock releases immediately → displayColumns = boardColumns
-    // (stale) → t1 appears in High → snap-back.
     act(() => {
       updateOnSettled?.();
     });
 
-    // CRITICAL ASSERTION 1: t1 must NOT snap back to High.
-    // Fails without the deferred-release fix.
-    expect(getTaskColumn("t1")).toBe("Critical");
-    expect(getTaskColumn("t1")).not.toBe("High");
-
-    // --- Parent re-renders with CORRECT processedTasks (final refetch done) ---
-    // This simulates the updateMutation's own invalidateQueries refetch completing
-    // and returning the correct server data (t1 priority=1, in Critical).
-    // The deferred release useEffect should now fire and release the lock.
     act(() => {
-      rerender(
-        <TaskBoard processedTasks={correctProcessedTasks} {...defaultProps} />,
-      );
+      rerender(<BoardTestHarness presentation={correctProcessedTasks} />);
     });
 
-    // CRITICAL ASSERTION 2: t1 must now be in Critical (lock released correctly,
-    // boardColumns reflects correct state).
     expect(getTaskColumn("t1")).toBe("Critical");
     expect(getTaskColumn("t1")).not.toBe("High");
   });
 
   it("releases lock immediately for same-column reorder (no updateMutation)", () => {
-    render(
-      <TaskBoard processedTasks={staleProcessedTasks} {...defaultProps} />,
-    );
+    render(<BoardTestHarness presentation={staleProcessedTasks} />);
 
-    // Drag t1 within the High column (t1 → t2 swap)
     act(() => {
       captured.handlers.onDragStart?.({ active: { id: "t1" } });
     });
@@ -438,8 +405,7 @@ describe("TaskBoard — cross-group snap-back regression", () => {
       });
     });
 
-    // For same-column: hasChanged=false → updateMutation must NOT fire
-    // Only reorderMutation fires
+    // Same column means no field change, so only the reorder mutation fires.
     expect(updateMutateMock).not.toHaveBeenCalled();
     expect(reorderMutateMock).toHaveBeenCalledOnce();
 
@@ -447,12 +413,10 @@ describe("TaskBoard — cross-group snap-back regression", () => {
       reorderMutateMock.mock.calls[0]?.[1]?.onSettled;
     expect(reorderOnSettled).toBeDefined();
 
-    // When only reorderMutation settles, lock releases immediately
     act(() => {
       reorderOnSettled?.();
     });
 
-    // After same-column reorder, t1 and t2 should both still be in High
     expect(getTaskColumn("t1")).toBe("High");
     expect(getTaskColumn("t2")).toBe("High");
   });

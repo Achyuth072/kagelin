@@ -65,7 +65,7 @@ export function FocusSubtaskList() {
         align="center"
         sideOffset={8}
         collisionPadding={16}
-        className="w-[320px] max-w-[calc(100vw-2rem)] p-2 bg-popover/95 backdrop-blur-md border-border/40 shadow-xl max-h-[50vh] overflow-y-auto text-left"
+        className="w-[320px] max-w-[calc(100vw-2rem)] p-2 bg-popover border-border/80 shadow-md max-h-[50vh] overflow-y-auto text-left"
       >
         <SubtaskList
           taskId={activeTaskId}

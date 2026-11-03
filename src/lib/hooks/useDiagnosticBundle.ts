@@ -1,15 +1,23 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { useUiStore } from "@/lib/store/uiStore";
 import { getTelemetryConsent } from "@/lib/telemetry/store";
 import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
 import { collectCloudBackup } from "@/lib/backup/cloud-data";
-import { getRecentClientLogs } from "@/lib/diagnostics/clientLog";
+import {
+  exportDiagnosticReport,
+  getDiagnosticErrors,
+  getExtendedSystemInfo,
+  type DiagnosticAccountTier,
+} from "@/lib/errors/diagnostics";
+import { getPendingMutationsCount } from "@/lib/diagnostics/syncHealth";
 import {
   collectDiagnosticBundle,
+  recentErrorsAsLogs,
   type DiagnosticBundle,
   type DiagnosticPlatformInfo,
 } from "@/lib/diagnostics/collectDiagnosticBundle";
@@ -30,6 +38,7 @@ function getPlatformInfo(): DiagnosticPlatformInfo {
 
 export function useDiagnosticBundle() {
   const { isGuestMode } = useAuth();
+  const queryClient = useQueryClient();
   const { theme } = useTheme();
   const timeFormat = useUiStore((s) => s.timeFormat);
   const hapticsEnabled = useUiStore((s) => s.hapticsEnabled);
@@ -44,6 +53,16 @@ export function useDiagnosticBundle() {
   const groupBy = useUiStore((s) => s.groupBy);
   const viewMode = useUiStore((s) => s.viewMode);
   const habitViewMode = useUiStore((s) => s.habitViewMode);
+
+  const accountTier: DiagnosticAccountTier = isGuestMode
+    ? "guest"
+    : "registered";
+
+  const generateReport = (): Promise<string> =>
+    exportDiagnosticReport(undefined, {
+      tier: accountTier,
+      pendingMutationsCount: getPendingMutationsCount(queryClient),
+    });
 
   const generateBundle = async (): Promise<DiagnosticBundle> => {
     const settings = {
@@ -62,30 +81,45 @@ export function useDiagnosticBundle() {
       telemetryConsent: getTelemetryConsent(),
     };
 
-    const { tasks, projects, habits, habit_entries, events } = isGuestMode
-      ? {
-          tasks: mockStore.getTasks(),
-          projects: mockStore.getProjects(),
-          habits: mockStore.getHabits(),
-          habit_entries: mockStore.getHabitEntries(),
-          events: mockStore.getEvents(),
-        }
-      : await collectCloudBackup(createClient());
+    const pendingMutationsCount = getPendingMutationsCount(queryClient);
+
+    const fetchBackupData = () =>
+      isGuestMode
+        ? {
+            tasks: mockStore.getTasks(),
+            projects: mockStore.getProjects(),
+            habits: mockStore.getHabits(),
+            habit_entries: mockStore.getHabitEntries(),
+            events: mockStore.getEvents(),
+          }
+        : collectCloudBackup(createClient());
+
+    const [sysInfo, logs, backupData] = await Promise.all([
+      getExtendedSystemInfo({
+        tier: accountTier,
+        pendingMutationsCount,
+      }),
+      getDiagnosticErrors().then(recentErrorsAsLogs),
+      fetchBackupData(),
+    ]);
 
     return collectDiagnosticBundle({
-      tier: isGuestMode ? "guest" : "registered",
+      tier: accountTier,
       appVersion: APP_VERSION,
       releaseChannel: RELEASE_CHANNEL,
       platform: getPlatformInfo(),
+      storage: sysInfo.storage,
+      serviceWorker: sysInfo.serviceWorker,
+      syncHealth: sysInfo.syncHealth,
       settings,
-      tasks,
-      projects,
-      habits,
-      habitEntries: habit_entries,
-      events,
-      logs: getRecentClientLogs(),
+      tasks: backupData.tasks,
+      projects: backupData.projects,
+      habits: backupData.habits,
+      habitEntries: backupData.habit_entries,
+      events: backupData.events,
+      logs,
     });
   };
 
-  return { generateBundle };
+  return { generateBundle, generateReport };
 }

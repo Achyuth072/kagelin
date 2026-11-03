@@ -1,6 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 
+let mockShouldPrompt = false;
+vi.mock("@/lib/hooks/useTelemetryConsent", () => ({
+  useTelemetryConsent: () => ({
+    shouldPrompt: mockShouldPrompt,
+    consent: mockShouldPrompt ? "unprompted" : "granted",
+    setConsent: vi.fn(),
+  }),
+}));
+
 vi.mock("@/lib/notify", () => ({
   notify: vi.fn(),
 }));
@@ -31,6 +40,7 @@ const SESSION_KEY = "kanso_backup_prompted";
 
 describe("useWeeklyBackup", () => {
   beforeEach(async () => {
+    mockShouldPrompt = false;
     localStorage.clear();
     sessionStorage.clear();
     vi.useFakeTimers();
@@ -78,9 +88,57 @@ describe("useWeeklyBackup", () => {
     expect(notify).toHaveBeenCalledWith(
       "It's been a while since your last backup — back up now to prevent loss",
       expect.objectContaining({
+        id: "backup-reminder",
         action: expect.objectContaining({
           label: "Back Up Now",
         }),
+      }),
+    );
+  });
+
+  it("does not show toast while telemetry consent is prompting", async () => {
+    mockShouldPrompt = true;
+    const oldDate = new Date(Date.now() - SEVEN_DAYS_MS - 1000);
+    localStorage.setItem(STORAGE_KEY, oldDate.toISOString());
+
+    const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
+    const { notify } = await import("@/lib/notify");
+
+    renderHook(() => useWeeklyBackup());
+
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it("shows toast once telemetry prompt is resolved", async () => {
+    mockShouldPrompt = true;
+    const oldDate = new Date(Date.now() - SEVEN_DAYS_MS - 1000);
+    localStorage.setItem(STORAGE_KEY, oldDate.toISOString());
+
+    const { useWeeklyBackup } = await import("@/lib/hooks/useWeeklyBackup");
+    const { notify } = await import("@/lib/notify");
+
+    const { rerender } = renderHook(() => useWeeklyBackup());
+
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+    expect(notify).not.toHaveBeenCalled();
+
+    mockShouldPrompt = false;
+    rerender();
+
+    act(() => {
+      vi.advanceTimersByTime(4000);
+    });
+
+    expect(notify).toHaveBeenCalledWith(
+      "It's been a while since your last backup — back up now to prevent loss",
+      expect.objectContaining({
+        id: "backup-reminder",
       }),
     );
   });

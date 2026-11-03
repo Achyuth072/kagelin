@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
+import { format, parseISO } from "date-fns";
 import {
   DndContext,
   DragOverlay,
@@ -29,6 +30,9 @@ import { useUiStore } from "@/lib/store/uiStore";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { computeReorderPairs } from "@/lib/utils/habit-dnd";
 import { getHabitIcon } from "@/components/habits/shared/HabitIconPicker";
+import { getRolling7Days } from "@/lib/utils/habit-rolling";
+import { dayValue } from "@/lib/utils/habit-score";
+import { cn } from "@/lib/utils";
 import { HabitCompactRow } from "./HabitCompactRow";
 import { SortableHabitCompactRow } from "./SortableHabitCompactRow";
 
@@ -46,9 +50,11 @@ interface HabitCompactListProps {
 }
 
 /**
- * Folio-continuous compact view: one container, rows separated by border-b
- * (DESIGN_SYSTEM List geometry), drag-to-reorder via the task dnd-kit hybrid
- * (desktop left-edge handle, mobile whole-row long-press).
+ * Timeline Matrix compact view (Variant B):
+ * - Folio-continuous container with synchronized 7-day timeline header.
+ * - Desktop row height: 44px (h-11) for comfortable power-user density.
+ * - 24px × 24px squircle cells with 4px tactile gaps.
+ * - Drag-to-reorder via dnd-kit hybrid (desktop left-edge handle, mobile long-press).
  */
 export function HabitCompactList({
   habits,
@@ -67,14 +73,17 @@ export function HabitCompactList({
   // displayHabits falls through to the source `habits`, so no effect sync.
   const [localHabits, setLocalHabits] = useState<HabitWithEntries[]>(habits);
 
-  const displayHabits = useMemo(
-    () => (activeId || lockLocal ? localHabits : habits),
-    [activeId, lockLocal, localHabits, habits],
-  );
-  const habitIds = useMemo(
-    () => displayHabits.map((h) => h.id),
-    [displayHabits],
-  );
+  const displayHabits = activeId || lockLocal ? localHabits : habits;
+  const habitIds = displayHabits.map((h) => h.id);
+
+  const now = new Date();
+  const todayStr = format(now, "yyyy-MM-dd");
+  const headerDays = getRolling7Days([], now, null);
+
+  const completedTodayCount = habits.filter((h) => {
+    const entry = h.entries.find((e) => e.date === todayStr);
+    return entry != null && dayValue(entry.value, h) >= 1;
+  }).length;
 
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: isDesktop
@@ -146,22 +155,69 @@ export function HabitCompactList({
       // idle, which is pure overhead for this flat single-list case.
       measuring={{ droppable: { strategy: MeasuringStrategy.WhileDragging } }}
     >
-      <SortableContext items={habitIds} strategy={verticalListSortingStrategy}>
-        <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-card">
-          {displayHabits.map((habit) => (
-            <SortableHabitCompactRow
-              key={habit.id}
-              habit={habit}
-              icon={getHabitIcon(habit.icon)}
-              onEdit={() => onEditHabit(habit)}
-              onViewInsights={
-                onViewInsights ? () => onViewInsights(habit) : undefined
-              }
-              isDesktop={isDesktop}
-            />
-          ))}
+      <div className="w-full flex flex-col rounded-xl border border-border/80 bg-card overflow-hidden">
+        {/* Synchronized Timeline Header */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-secondary/30 border-b border-border/60 select-none">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs font-semibold tracking-tight uppercase text-foreground">
+              Habits
+            </span>
+            <span className="text-[11px] font-medium bg-secondary border border-border/60 text-muted-foreground px-2 py-0.5 rounded-full tabular-nums">
+              {completedTodayCount} of {habits.length} done today
+            </span>
+          </div>
+
+          {/* 7-Day Calendar Strip Header (Synchronized with 192px squircle grid) */}
+          <div className="hidden sm:flex items-center">
+            <div className="grid grid-cols-7 gap-1 w-[192px] text-center">
+              {headerDays.map((d) => {
+                const dateNum = format(parseISO(d.date), "d");
+                return (
+                  <div
+                    key={d.date}
+                    className={cn(
+                      "flex flex-col items-center leading-none py-1 rounded-[6px] transition-colors",
+                      d.isToday
+                        ? "bg-secondary font-bold text-foreground"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider">
+                      {d.weekdayLabel}
+                    </span>
+                    <span className="text-xs tabular-nums font-semibold mt-0.5">
+                      {dateNum}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Spacer matching row's onViewInsights button (w-7 ml-2) for column alignment */}
+            {onViewInsights && <div className="w-7 ml-2" />}
+          </div>
         </div>
-      </SortableContext>
+
+        {/* Sortable Rows */}
+        <SortableContext
+          items={habitIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="divide-y divide-border/40">
+            {displayHabits.map((habit) => (
+              <SortableHabitCompactRow
+                key={habit.id}
+                habit={habit}
+                icon={getHabitIcon(habit.icon)}
+                onEdit={() => onEditHabit(habit)}
+                onViewInsights={
+                  onViewInsights ? () => onViewInsights(habit) : undefined
+                }
+                isDesktop={isDesktop}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </div>
 
       {typeof document !== "undefined" &&
         createPortal(
@@ -174,7 +230,7 @@ export function HabitCompactList({
             }}
           >
             {activeHabit && (
-              <div className="overflow-hidden rounded-xl border border-border bg-background opacity-90 shadow-sm">
+              <div className="overflow-hidden rounded-xl border border-border bg-card opacity-90 shadow-sm">
                 <HabitCompactRow
                   habit={activeHabit}
                   icon={getHabitIcon(activeHabit.icon)}

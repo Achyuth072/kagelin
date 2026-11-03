@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { useQueryClient } from "@tanstack/react-query";
 import { parseICSFile } from "@/lib/utils/ics-parser";
 import { notify } from "@/lib/notify";
@@ -182,12 +182,13 @@ export function useIcsImport() {
       );
       trigger("success");
 
-      // Locked encryption keys are expected user state, not crashes; avoid Sentry spam.
+      // Locked keys are expected user state, not failures worth reporting.
       failures
         .filter((failure) => !isContentKeyUnavailableError(failure))
         .forEach((failure, index) => {
-          Sentry.captureException(failure, {
-            tags: { failureIndex: index, failedCount: failures.length },
+          void recordDiagnosticError(failure, {
+            failureIndex: index,
+            failedCount: failures.length,
           });
         });
 

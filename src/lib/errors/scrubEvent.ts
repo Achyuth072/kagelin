@@ -47,10 +47,17 @@ type ScrubbableEvent = {
 };
 
 // Supabase REST puts filter values in query strings (`?title=eq.Buy+milk`), leaking content.
-function stripQuery(value: unknown): unknown {
+export function stripQuery(value: string): string;
+export function stripQuery(value: unknown): unknown;
+export function stripQuery(value: unknown): unknown {
   if (typeof value !== "string") return value;
   const cut = value.search(/[?#]/);
   return cut === -1 ? value : value.slice(0, cut);
+}
+
+export function isSafeErrorMessage(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  return SAFE_EXCEPTION_MESSAGES.has(value) || isWasmDiagnostic(value);
 }
 
 function pickSafeData(
@@ -82,9 +89,7 @@ export function scrubEvent<T extends object>(event: T): T {
 
   for (const exception of payload.exception?.values ?? []) {
     if (typeof exception.value === "string") {
-      const safe =
-        SAFE_EXCEPTION_MESSAGES.has(exception.value) ||
-        isWasmDiagnostic(exception.value);
+      const safe = isSafeErrorMessage(exception.value);
       exception.value = safe ? exception.value : REDACTED;
     }
     for (const frame of exception.stacktrace?.frames ?? []) {

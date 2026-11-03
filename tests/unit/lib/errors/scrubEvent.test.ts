@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { REDACTED, scrubBreadcrumb, scrubEvent } from "@/lib/errors/scrubEvent";
-import { sentryOptions } from "../../../../sentry.shared";
 
 const TASK_TITLE = "Buy milk for Nana";
 
@@ -157,21 +156,6 @@ describe("scrubBreadcrumb", () => {
     });
 
     expect(scrubbed).toEqual({ category: "ui.click", message: REDACTED });
-  });
-});
-
-describe("sentryOptions", () => {
-  it("scrubs on the way out in every runtime", () => {
-    expect(sentryOptions.beforeSend).toBe(scrubEvent);
-    expect(sentryOptions.beforeSendTransaction).toBe(scrubEvent);
-    expect(sentryOptions.beforeBreadcrumb).toBe(scrubBreadcrumb);
-    expect(sentryOptions.sendDefaultPii).toBe(false);
-  });
-
-  it("does not leak content through the configured beforeSend hook", () => {
-    const sent = sentryOptions.beforeSend(eventCarryingContent());
-
-    expect(JSON.stringify(sent)).not.toContain(TASK_TITLE);
   });
 });
 

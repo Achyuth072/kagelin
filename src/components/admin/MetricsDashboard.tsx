@@ -61,9 +61,6 @@ function safeFormatDate(dateStr: string, formatStr: string): string {
   }
 }
 
-const PERIOD_TRIGGER_CLASS =
-  "rounded-md px-3.5 h-8 text-xs font-medium tracking-tight border border-transparent text-muted-foreground transition-seijaku-fast hover:text-foreground hover:bg-secondary/40 data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:border-brand/20 data-[state=active]:shadow-none";
-
 const CHART_AXIS_PROPS = {
   stroke: "hsl(var(--muted-foreground))",
   fontSize: 11,
@@ -290,16 +287,10 @@ export function MetricsDashboard({
             value={timeRange}
             onValueChange={(val) => setTimeRange(val as TimeRange)}
           >
-            <TabsList className="inline-flex bg-secondary/20 p-1 rounded-lg h-10 border border-border/40">
-              <TabsTrigger value="7d" className={PERIOD_TRIGGER_CLASS}>
-                7 Days
-              </TabsTrigger>
-              <TabsTrigger value="30d" className={PERIOD_TRIGGER_CLASS}>
-                30 Days
-              </TabsTrigger>
-              <TabsTrigger value="all" className={PERIOD_TRIGGER_CLASS}>
-                All History
-              </TabsTrigger>
+            <TabsList>
+              <TabsTrigger value="7d">7 Days</TabsTrigger>
+              <TabsTrigger value="30d">30 Days</TabsTrigger>
+              <TabsTrigger value="all">All History</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>

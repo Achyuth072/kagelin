@@ -14,28 +14,36 @@ const inter = Inter({
 
 export function Toaster() {
   const isChangelogOpen = useUiStore((state) => state.isChangelogOpen);
+  const isDesktop = useUiStore((state) => state.isDesktop);
+
+  const desktopOffset = {
+    bottom:
+      "calc(1.5rem + max(var(--floating-timer-offset, 0px), calc(var(--offline-pill-offset, 0px) + var(--telemetry-prompt-offset, 0px))))",
+  };
+
+  const mobileOffset = {
+    left: 16,
+    right: 16,
+    bottom:
+      "calc(var(--mobile-nav-height) + 0.75rem + max(3.75rem, var(--telemetry-prompt-offset, 0px), var(--floating-timer-offset, 0px)))",
+  };
+
+  const position = isDesktop ? "bottom-right" : "bottom-center";
+  const offset = isDesktop ? desktopOffset : mobileOffset;
+
   return (
     <SonnerToaster
-      position="bottom-center"
-      expand={true}
+      position={position}
+      expand={false}
+      visibleToasts={isDesktop ? 3 : 2}
       duration={isChangelogOpen ? Infinity : 4000}
-      style={{ zIndex: 70 }}
-      // Use container offset instead of per-toast margin so Sonner's stack height calculations don't overlap.
-      offset={{
-        bottom:
-          "calc(1.25rem + var(--offline-pill-offset,0px) + var(--telemetry-prompt-offset,0px))",
-      }}
-      mobileOffset={{
-        left: 16,
-        right: 16,
-        bottom:
-          "calc(var(--mobile-nav-height) + 0.75rem + var(--telemetry-prompt-offset,0px))",
-      }}
+      style={{ zIndex: "var(--z-toast)" }}
+      offset={offset}
+      mobileOffset={offset}
       swipeDirections={["left", "right", "bottom"]}
       toastOptions={{
         unstyled: true,
         style: {
-          // max-content prevents fit-content from collapsing to min-content inside Sonner's absolute-positioned <li>.
           width: "max-content",
           maxWidth: "min(34rem, calc(100vw - 2rem))",
         },
@@ -43,7 +51,7 @@ export function Toaster() {
           toast: cn(
             inter.variable,
             "font-sans",
-            "bg-card/98 backdrop-blur-md border border-border/80 text-foreground",
+            "bg-card border border-border/80 text-foreground",
             "rounded-md shadow-sm inline-flex items-center gap-3",
             "py-2.5 px-4 sm:py-3 sm:px-5",
             "w-fit",

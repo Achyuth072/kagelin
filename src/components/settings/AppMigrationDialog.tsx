@@ -398,22 +398,22 @@ export function AppMigrationDialog({
             onValueChange={handleTabChange}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsList size="lg" className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger
                 value="import"
-                className="flex items-center gap-1.5"
+                className="h-full px-2"
                 aria-label="Import from other apps"
               >
-                <ArrowDownToLine className="h-4 w-4" />
-                <span>Import</span>
+                <ArrowDownToLine aria-hidden="true" />
+                <span className="truncate">Import</span>
               </TabsTrigger>
               <TabsTrigger
                 value="export"
-                className="flex items-center gap-1.5"
+                className="h-full px-2"
                 aria-label="Export to other apps"
               >
-                <ArrowUpFromLine className="h-4 w-4" />
-                <span>Export</span>
+                <ArrowUpFromLine aria-hidden="true" />
+                <span className="truncate">Export</span>
               </TabsTrigger>
             </TabsList>
 

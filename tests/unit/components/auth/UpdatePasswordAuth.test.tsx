@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { useAuth } from "@/components/AuthProvider";
 import { UpdatePasswordAuth } from "@/components/auth/UpdatePasswordAuth";
 import type { User } from "@supabase/supabase-js";
@@ -9,7 +9,9 @@ vi.mock("@/components/AuthProvider", () => ({
   useAuth: vi.fn(),
 }));
 
-vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
+vi.mock("@/lib/errors/diagnostics", () => ({
+  recordDiagnosticError: vi.fn(),
+}));
 
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -104,8 +106,8 @@ describe("UpdatePasswordAuth", () => {
     expect(mockPush).toHaveBeenCalledWith("/login");
   });
 
-  it("shows the confirmation without waiting on signOut, and reports a signOut failure to Sentry instead of blocking it", async () => {
-    vi.mocked(Sentry.captureException).mockClear();
+  it("shows the confirmation without waiting on signOut, and reports a signOut failure to diagnostics instead of blocking it", async () => {
+    vi.mocked(recordDiagnosticError).mockClear();
     const updatePassword = vi.fn().mockResolvedValue({ error: null });
     const signOutError = new Error("network error");
     const signOut = vi.fn().mockRejectedValue(signOutError);
@@ -122,7 +124,7 @@ describe("UpdatePasswordAuth", () => {
 
     expect(await screen.findByText("Password updated")).toBeInTheDocument();
     await waitFor(() =>
-      expect(Sentry.captureException).toHaveBeenCalledWith(signOutError),
+      expect(recordDiagnosticError).toHaveBeenCalledWith(signOutError),
     );
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });

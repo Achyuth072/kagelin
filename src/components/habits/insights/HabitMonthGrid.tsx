@@ -12,6 +12,7 @@ import {
 } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useHabitCellActions } from "@/lib/hooks/useHabitCellActions";
 import { useCoarsePointer } from "@/lib/hooks/useCoarsePointer";
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -95,14 +96,14 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
         <p className="text-xs sm:text-sm font-semibold text-muted-foreground">
           {label}
         </p>
-        <div className="flex items-center gap-1">
+        <div className="inline-flex items-center rounded-lg border border-border/60 bg-secondary/30 p-0.5 shadow-xs">
           <Button
             variant="ghost"
             size="icon"
             aria-label="Previous month"
             disabled={!canGoPrev}
             onClick={handlePrev}
-            className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+            className="h-7 w-7 sm:h-8 sm:w-8 rounded-md text-muted-foreground hover:text-brand hover:bg-brand/10 transition-seijaku-fast focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40 disabled:bg-transparent"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -111,7 +112,12 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
             size="sm"
             disabled={isCurrentMonth}
             onClick={handleToday}
-            className="h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+            className={cn(
+              "h-7 sm:h-8 px-2.5 sm:px-3 text-xs font-medium rounded-md transition-seijaku-fast focus-visible:ring-2 focus-visible:ring-brand disabled:bg-transparent",
+              isCurrentMonth
+                ? "text-muted-foreground/60 disabled:opacity-40"
+                : "text-brand font-semibold bg-brand/10 hover:bg-brand/20 shadow-xs",
+            )}
           >
             Today
           </Button>
@@ -121,7 +127,7 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
             aria-label="Next month"
             disabled={!canGoNext}
             onClick={handleNext}
-            className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+            className="h-7 w-7 sm:h-8 sm:w-8 rounded-md text-muted-foreground hover:text-brand hover:bg-brand/10 transition-seijaku-fast focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40 disabled:bg-transparent"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>

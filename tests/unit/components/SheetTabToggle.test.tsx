@@ -26,4 +26,23 @@ describe("SheetTabToggle", () => {
     // Then: onValueChange is never called with an empty value
     expect(onValueChange).not.toHaveBeenCalledWith("");
   });
+
+  it("renders icons and responsive label text for mobile", () => {
+    const onValueChange = vi.fn();
+    const { container } = render(
+      <SheetTabToggle value="edit" onValueChange={onValueChange} />,
+    );
+
+    const editTab = screen.getByRole("tab", { name: "Edit" });
+    const insightsTab = screen.getByRole("tab", { name: "Insights" });
+
+    // Icons rendered
+    expect(container.querySelectorAll("svg")).toHaveLength(2);
+
+    // Labels have hidden sm:inline so they are icon-only on mobile
+    const editLabel = editTab.querySelector("span");
+    const insightsLabel = insightsTab.querySelector("span");
+    expect(editLabel).toHaveClass("hidden", "sm:inline");
+    expect(insightsLabel).toHaveClass("hidden", "sm:inline");
+  });
 });

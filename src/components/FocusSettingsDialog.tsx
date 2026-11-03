@@ -59,12 +59,6 @@ const rowCls =
 const numberInputCls =
   "w-10 bg-transparent border-0 outline-none text-sm text-right text-foreground [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
-const tabTriggerCls = cn(
-  "rounded-md text-[12px] font-medium tracking-tight h-7 px-2",
-  "data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:shadow-none transition-seijaku-fast",
-  "border border-transparent data-[state=active]:border-brand/20 text-muted-foreground hover:text-foreground hover:bg-secondary/40",
-);
-
 const resetBtnCls =
   "h-9 w-9 p-0 [&_svg]:size-5! rounded-lg transition-seijaku-fast";
 const saveBtnCls =
@@ -370,16 +364,10 @@ function SettingsForm() {
             }}
             className="w-full"
           >
-            <TabsList className="grid grid-cols-3 w-full bg-secondary/10 p-1 rounded-lg h-9 border border-border/40 shadow-none">
-              <TabsTrigger value="keep" className={tabTriggerCls}>
-                Keep
-              </TabsTrigger>
-              <TabsTrigger value="pause" className={tabTriggerCls}>
-                Pause
-              </TabsTrigger>
-              <TabsTrigger value="reset" className={tabTriggerCls}>
-                Reset
-              </TabsTrigger>
+            <TabsList size="sm" className="grid grid-cols-3 w-full">
+              <TabsTrigger value="keep">Keep</TabsTrigger>
+              <TabsTrigger value="pause">Pause</TabsTrigger>
+              <TabsTrigger value="reset">Reset</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>

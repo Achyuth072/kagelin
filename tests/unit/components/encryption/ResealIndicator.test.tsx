@@ -1,6 +1,6 @@
 import { act, render, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { ResealIndicator } from "@/components/encryption/ResealIndicator";
 import { notify } from "@/lib/notify";
 import {
@@ -13,7 +13,9 @@ vi.mock("@/lib/crypto/resealUntilClean", async (importOriginal) => ({
   resealUntilClean: vi.fn(),
 }));
 
-vi.mock("@sentry/nextjs", () => ({ captureException: vi.fn() }));
+vi.mock("@/lib/errors/diagnostics", () => ({
+  recordDiagnosticError: vi.fn(),
+}));
 
 vi.mock("@/lib/notify", () => ({
   notify: Object.assign(vi.fn(), { loading: vi.fn(), dismiss: vi.fn() }),
@@ -22,7 +24,7 @@ vi.mock("@/lib/notify", () => ({
 describe("ResealIndicator", () => {
   beforeEach(() => {
     vi.mocked(resealUntilClean).mockReset();
-    vi.mocked(Sentry.captureException).mockReset();
+    vi.mocked(recordDiagnosticError).mockReset();
     vi.mocked(notify).mockReset();
     vi.mocked(notify.loading).mockReset();
     vi.mocked(notify.dismiss).mockReset();
@@ -55,7 +57,7 @@ describe("ResealIndicator", () => {
 
     await waitFor(() => expect(notify).toHaveBeenCalled());
     const [, options] = vi.mocked(notify).mock.lastCall ?? [];
-    expect(Sentry.captureException).toHaveBeenCalledWith(error);
+    expect(recordDiagnosticError).toHaveBeenCalledWith(error);
     expect(onComplete).not.toHaveBeenCalled();
     expect(options?.action?.label).toBe("Retry");
 
@@ -84,7 +86,7 @@ describe("ResealIndicator", () => {
     expect(signal!.aborted).toBe(true);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(onComplete).not.toHaveBeenCalled();
-    expect(Sentry.captureException).not.toHaveBeenCalled();
+    expect(recordDiagnosticError).not.toHaveBeenCalled();
     expect(notify.dismiss).toHaveBeenCalledWith("reseal");
   });
 

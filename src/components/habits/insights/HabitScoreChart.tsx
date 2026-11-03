@@ -18,11 +18,6 @@ import { LineChart as LineChartIcon } from "lucide-react";
 
 type Period = "week" | "month" | "year";
 
-// Shared ink & matte segmented-control trigger style (matches SheetTabToggle
-// and the Settings section tabs): indigo-active pill on a matte track.
-const PERIOD_TRIGGER_CLASS =
-  "rounded-md px-4 h-9 text-[13px] font-medium tracking-tight border border-transparent text-muted-foreground transition-seijaku-fast hover:text-foreground hover:bg-secondary/40 data-[state=active]:bg-brand data-[state=active]:text-brand-foreground data-[state=active]:border-brand/20 data-[state=active]:shadow-none";
-
 const PERIOD_SLICE: Record<Period, number> = {
   week: 7,
   month: 30,
@@ -62,16 +57,10 @@ export function HabitScoreChart({ habit, entries }: HabitScoreChartProps) {
   return (
     <div className="space-y-4">
       <Tabs value={period} onValueChange={(next) => setPeriod(next as Period)}>
-        <TabsList className="inline-flex bg-secondary/10 p-1 rounded-lg h-11 border border-border/40 shadow-none">
-          <TabsTrigger value="week" className={PERIOD_TRIGGER_CLASS}>
-            Week
-          </TabsTrigger>
-          <TabsTrigger value="month" className={PERIOD_TRIGGER_CLASS}>
-            Month
-          </TabsTrigger>
-          <TabsTrigger value="year" className={PERIOD_TRIGGER_CLASS}>
-            Year
-          </TabsTrigger>
+        <TabsList>
+          <TabsTrigger value="week">Week</TabsTrigger>
+          <TabsTrigger value="month">Month</TabsTrigger>
+          <TabsTrigger value="year">Year</TabsTrigger>
         </TabsList>
       </Tabs>
 

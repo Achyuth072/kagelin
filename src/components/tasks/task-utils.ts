@@ -7,7 +7,6 @@ import {
   startOfDay,
 } from "date-fns";
 import type { Task } from "@/lib/types/task";
-import type { CreateTaskInput } from "@/lib/schemas/task";
 
 export const priorityTextClasses: Record<1 | 2 | 3 | 4, string> = {
   1: "text-foreground font-bold",
@@ -24,6 +23,17 @@ export const priorityCheckboxClasses: Record<1 | 2 | 3 | 4, string> = {
   3: "border-foreground/80 data-[state=checked]:bg-foreground data-[state=checked]:border-foreground",
   4: "border-foreground/80 data-[state=checked]:bg-foreground data-[state=checked]:border-foreground",
 };
+
+export const TASK_TITLE_CREATE_ID = "task-content";
+export const TASK_TITLE_EDIT_ID = "task-content-edit";
+
+export function focusTextareaToEnd(el: HTMLTextAreaElement | null): boolean {
+  if (!el) return false;
+  el.focus();
+  const end = el.value.length;
+  el.setSelectionRange(end, end);
+  return true;
+}
 
 export function formatDueDate(dateString: string): string {
   const date = parseISO(dateString);
@@ -46,7 +56,9 @@ export function taskDomId(taskId: string): string {
   return `task-item-${taskId}`;
 }
 
-export type TaskFormValues = CreateTaskInput;
+import type { TaskFormValues } from "@/lib/types/task-view";
+
+export type { TaskFormValues };
 
 export function taskToFormValues(task: Task): TaskFormValues {
   return {

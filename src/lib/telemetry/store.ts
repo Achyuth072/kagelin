@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/nextjs";
+import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 
 export type TelemetryConsent = "granted" | "denied" | "unprompted";
 
@@ -107,7 +107,7 @@ export function markFirstAction(): void {
   try {
     localStorage.setItem(TELEMETRY_FIRST_ACTION_KEY, "true");
   } catch (error) {
-    Sentry.captureException(error);
+    void recordDiagnosticError(error);
   }
 
   // Reuses consent event so prompt subscribers re-evaluate without a separate channel.
@@ -147,8 +147,7 @@ export function setTelemetryConsent(status: "granted" | "denied"): void {
       );
     }
   } catch (error) {
-    // Non-critical: report storage write failure without throwing.
-    Sentry.captureException(error);
+    void recordDiagnosticError(error);
   }
 }
 
