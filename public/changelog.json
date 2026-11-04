@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.50.1-preview.0",
+    "date": "2026-11-04",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Keep task selection ring keyboard-only",
+        "Board inspector scroll clearance, split bring-into-view, and shadow outline"
+      ]
+    }
+  },
+  {
     "version": "1.50.0",
     "date": "2026-11-03",
     "channel": "stable",
@@ -735,16 +746,6 @@
     "sections": {
       "Added": [
         "Any past day is reachable and editable from habit insights"
-      ]
-    }
-  },
-  {
-    "version": "1.44.2-preview.1",
-    "date": "2026-09-23",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Skipped is reachable on every habit surface"
       ]
     }
   }
