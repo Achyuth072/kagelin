@@ -21,7 +21,22 @@ import { usePiP } from "@/components/providers/PiPProvider";
 import { useFullscreen } from "@/lib/hooks/useFullscreen";
 import { Minimize2, Target, PictureInPicture2 } from "lucide-react";
 import { useTodayFocusSessions } from "@/lib/hooks/useTodayFocusSessions";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const MODE_LABELS: Record<TimerMode, string> = {
   focus: "Focus",
@@ -59,6 +74,27 @@ export default function FocusPage() {
 
   const progress =
     ((totalSeconds - state.remainingSeconds) / totalSeconds) * 100;
+
+  const [confirmStopOpen, setConfirmStopOpen] = useState(false);
+
+  const handleStop = () => {
+    const isSessionActive =
+      state.isRunning || state.remainingSeconds < totalSeconds;
+    const hasProgress = state.completedSessions > 0 || isSessionActive;
+
+    if (hasProgress) {
+      setConfirmStopOpen(true);
+    } else {
+      stop();
+      if (isPiPActive) closePiP();
+    }
+  };
+
+  const executeStop = () => {
+    stop();
+    if (isPiPActive) closePiP();
+    setConfirmStopOpen(false);
+  };
 
   const handlePlayPause = () => {
     if (state.isRunning) {
@@ -167,17 +203,22 @@ export default function FocusPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <motion.button
-                className={sideControlCls}
-                onTapStart={() => trigger("thud")}
-                whileTap={isPhone ? { scale: 0.95 } : {}}
-                onClick={() => {
-                  stop();
-                  if (isPiPActive) closePiP();
-                }}
-              >
-                <Square className="h-5 w-5" strokeWidth={2.25} />
-              </motion.button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <motion.button
+                    className={sideControlCls}
+                    onTapStart={() => trigger("thud")}
+                    whileTap={isPhone ? { scale: 0.95 } : {}}
+                    onClick={handleStop}
+                    aria-label="Reset timer and cycle"
+                  >
+                    <Square className="h-5 w-5" strokeWidth={2.25} />
+                  </motion.button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  Reset timer and cycle
+                </TooltipContent>
+              </Tooltip>
 
               <motion.button
                 className={cn(
@@ -206,6 +247,32 @@ export default function FocusPage() {
             </div>
 
             <CancelSessionButton />
+
+            <AlertDialog
+              open={confirmStopOpen}
+              onOpenChange={setConfirmStopOpen}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset timer and cycle?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Reset all completed sessions and restart cycle? This will
+                    wipe your multi-session progress. To abort only the active
+                    interval while preserving your completed sessions, use
+                    Cancel session instead.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep progress</AlertDialogCancel>
+                  <AlertDialogAction
+                    variant="destructive"
+                    onClick={executeStop}
+                  >
+                    Reset cycle
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             <div className="mt-16">
               <FocusSettingsDialog />

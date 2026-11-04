@@ -48,6 +48,8 @@ export function CancelSessionButton() {
           "transition-opacity duration-300 cursor-pointer",
         )}
         type="button"
+        title="Cancel current session while keeping cycle progress"
+        aria-label="Cancel session (keeps cycle progress)"
       >
         Cancel session
       </button>

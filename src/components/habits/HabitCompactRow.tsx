@@ -89,7 +89,17 @@ export function HabitCompactRow({
 
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={onEdit ? `Edit habit ${habit.name}` : undefined}
       onClick={onEdit}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onEdit?.();
+        }
+      }}
       {...(!isDesktop ? dragAttributes : {})}
       {...(!isDesktop ? dragListeners : {})}
       className="group flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 py-2.5 sm:py-0 sm:h-11 transition-seijaku-fast hover:bg-secondary/40 active:bg-secondary/70 cursor-pointer select-none"
@@ -282,17 +292,18 @@ function CompactMatrixCell({
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        onHaptic(isToday);
         onActivate();
         if (!isMeasurable) {
           onToggle(date);
+        } else {
+          onHaptic(isToday);
         }
       }}
       aria-label={cellLabel}
       title={stateText}
       className={cn(
         "relative flex h-6 w-6 items-center justify-center rounded-[7px] transition-seijaku-fast shrink-0 p-0",
-        coarse && "before:absolute before:-inset-1 before:content-['']",
+        coarse && "before:absolute before:-inset-1.5 before:content-['']",
       )}
     >
       {buttonContent}

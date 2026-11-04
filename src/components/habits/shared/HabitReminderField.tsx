@@ -133,7 +133,7 @@ export function HabitReminderField({
               </Popover>
             )}
 
-            <div className="flex items-center gap-0.5 min-[400px]:gap-1 shrink-0">
+            <div className="flex items-center gap-2 shrink-0">
               {DAY_CHIPS.map(({ bit, label, ariaLabel }) => {
                 const active = (reminderDays & (1 << bit)) !== 0;
                 return (
@@ -144,7 +144,7 @@ export function HabitReminderField({
                     aria-pressed={active}
                     aria-label={ariaLabel}
                     className={cn(
-                      "h-5 w-5 min-[400px]:h-6 min-[400px]:w-6 rounded-full text-[11px] font-semibold flex items-center justify-center border border-transparent transition-seijaku-fast",
+                      "relative h-8 w-8 rounded-full text-xs font-semibold flex items-center justify-center border border-transparent transition-seijaku-fast before:absolute before:-inset-1 before:content-['']",
                       active
                         ? "bg-brand text-brand-foreground"
                         : "text-muted-foreground bg-secondary/10 border-border/40 hover:text-foreground hover:bg-secondary/40",
