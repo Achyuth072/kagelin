@@ -126,7 +126,10 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
   return (
     <div
       className={cn(
-        "flex flex-col w-full max-w-full overflow-hidden bg-card text-card-foreground",
+        "flex flex-col w-full max-w-full overflow-hidden",
+        layout === "panel"
+          ? "bg-card text-card-foreground"
+          : "bg-background text-foreground",
         mode === "create"
           ? "h-auto"
           : cn("transition-all", layout === "sheet" ? "h-auto" : "h-full"),
@@ -295,7 +298,12 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
         </div>
       </div>
 
-      <div className="shrink-0 flex items-center gap-3 p-4 border-t border-border/80 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-card w-full max-w-full">
+      <div
+        className={cn(
+          "shrink-0 flex items-center gap-3 p-4 border-t border-border/80 pb-[calc(1rem+env(safe-area-inset-bottom))] w-full max-w-full",
+          layout === "panel" ? "bg-card" : "bg-background",
+        )}
+      >
         <Select
           value={selectedProjectId || "inbox"}
           onValueChange={(v) => {

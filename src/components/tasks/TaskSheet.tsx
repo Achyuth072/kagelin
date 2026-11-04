@@ -63,10 +63,10 @@ export default function TaskSheet({
     <ResponsiveDialog open={open} onOpenChange={onClose}>
       <ResponsiveDialogContent
         className={cn(
-          "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none sm:grid-cols-[minmax(0,1fr)] sm:max-w-lg bg-card border-border/80",
+          "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none sm:grid-cols-[minmax(0,1fr)] sm:max-w-lg border-border/80",
         )}
       >
-        <div className="flex flex-col max-h-[90dvh] min-w-0 bg-card">
+        <div className="flex flex-col max-h-[90dvh] min-w-0">
           <ResponsiveDialogHeader className="sr-only">
             <ResponsiveDialogTitle>
               {effectiveTask ? "Edit Task" : "New Task"}
@@ -79,7 +79,7 @@ export default function TaskSheet({
           </ResponsiveDialogHeader>
 
           {!isCreationMode && hasSeries && (
-            <div className="px-4 pt-3 pb-1 shrink-0 bg-card">
+            <div className="px-4 pt-3 pb-1 shrink-0">
               <SheetTabToggle
                 value={tab}
                 onValueChange={(next) => startTransition(() => setTab(next))}
@@ -87,7 +87,7 @@ export default function TaskSheet({
             </div>
           )}
 
-          <div className="overflow-y-auto scrollbar-thin flex-1 min-h-0 bg-card">
+          <div className="overflow-y-auto scrollbar-thin flex-1 min-h-0">
             {tab === "insights" && hasSeries ? (
               <TaskInsightsPanel task={effectiveTask!} />
             ) : (
