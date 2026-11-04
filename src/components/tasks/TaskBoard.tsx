@@ -24,6 +24,8 @@ export interface TaskBoardProps {
   setActiveTaskId: (taskId: string) => void;
   groupBy?: GroupOption;
   keyboardSelectedId?: string | null;
+  /** Task currently open in the split inspector or overlay drawer. */
+  inspectedTaskId?: string | null;
   isDndActive?: boolean;
   onScroll?: React.UIEventHandler<HTMLDivElement>;
   hasOverlayDrawer?: boolean;
@@ -40,10 +42,8 @@ function scrollElementBy(el: HTMLElement, left: number) {
   }
 }
 
-/**
- * Checks whether the wheel event target is inside a scrollable column container
- * that still has vertical headroom in the direction of `deltaY`.
- */
+// Checks whether the wheel event target is inside a scrollable column container
+// that still has vertical headroom in the direction of `deltaY`.
 function hasVerticalScrollHeadroom(
   target: EventTarget | null,
   boundary: HTMLElement,
@@ -79,6 +79,7 @@ export function TaskBoard({
   setActiveTaskId,
   groupBy: _groupBy,
   keyboardSelectedId,
+  inspectedTaskId,
   isDndActive = false,
   onScroll,
   hasOverlayDrawer = false,
@@ -91,8 +92,11 @@ export function TaskBoard({
     [presentation],
   );
 
+  // Keep the Vim selection or inspected task in view.
+  const scrollTargetId = keyboardSelectedId ?? inspectedTaskId;
+
   useEffect(() => {
-    if (!containerRef.current || !keyboardSelectedId) {
+    if (!containerRef.current || !scrollTargetId) {
       return;
     }
 
@@ -100,7 +104,7 @@ export function TaskBoard({
       if (!containerRef.current) return;
       const el = containerRef.current;
       const targetCard = el.querySelector(
-        `[id="${taskDomId(keyboardSelectedId)}"]`,
+        `[id="${taskDomId(scrollTargetId)}"]`,
       ) as HTMLElement | null;
 
       if (!targetCard) return;
@@ -128,7 +132,7 @@ export function TaskBoard({
     checkAndScroll();
     const timer = setTimeout(checkAndScroll, 220);
     return () => clearTimeout(timer);
-  }, [hasOverlayDrawer, keyboardSelectedId]);
+  }, [hasOverlayDrawer, scrollTargetId]);
 
   useEffect(() => {
     const el = containerRef.current;

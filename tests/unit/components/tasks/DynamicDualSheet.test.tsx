@@ -9,6 +9,7 @@ import {
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import TaskList from "@/components/tasks/TaskList";
+import { taskDomId } from "@/components/tasks/task-utils";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Task } from "@/lib/types/task";
 
@@ -397,5 +398,11 @@ describe("TaskList deep-link hydration (?task=)", () => {
       expect(inspector).toHaveClass("w-[40%]");
       expect(inspector).toHaveClass("opacity-100");
     });
+
+    // Deep links must not mark the task as Vim-selected.
+    expect(document.getElementById(taskDomId("task-1"))).not.toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 });

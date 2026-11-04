@@ -335,7 +335,6 @@ function TaskListBase({
         onTaskSelect(task);
       } else {
         setSelectedTask(task);
-        setKeyboardSelectedId(task.id);
         if (isDesktopInspector) {
           scrollContainerRef.current?.focus({ preventScroll: true });
         }
@@ -344,11 +343,13 @@ function TaskListBase({
     [onTaskSelect, isDesktopInspector],
   );
 
-  // Clear id only once found; the list may still be loading on initial navigation.
+  // Wait for the task to load before consuming the requested id.
   useEffect(() => {
     if (!selectedTaskId) return;
     const task = tasks.find((t) => t.id === selectedTaskId);
     if (!task) return;
+    // Clear stale Vim focus so the next j/k starts from this task.
+    setKeyboardSelectedId(null);
     handleTaskClick(task);
     setSelectedTaskId(null);
   }, [selectedTaskId, tasks, setSelectedTaskId, handleTaskClick]);
@@ -372,11 +373,13 @@ function TaskListBase({
     [processedTasks],
   );
 
+  // A click leaves no Vim cursor, so navigation continues from the inspected task.
+  const navOriginId =
+    keyboardSelectedId ?? (isDesktopInspector ? selectedTask?.id : null);
+
   const handleListNav = (direction: 1 | -1) => {
     if (navigableTasks.length === 0) return;
-    const currentIndex = navigableTasks.findIndex(
-      (t) => t.id === keyboardSelectedId,
-    );
+    const currentIndex = navigableTasks.findIndex((t) => t.id === navOriginId);
     if (currentIndex === -1) {
       setKeyboardSelectedId(navigableTasks[0].id);
       return;
@@ -397,11 +400,9 @@ function TaskListBase({
     let currentColIndex = -1;
     let currentRowIndex = -1;
 
-    if (keyboardSelectedId) {
+    if (navOriginId) {
       for (let c = 0; c < boardColumns.length; c++) {
-        const r = boardColumns[c].tasks.findIndex(
-          (t) => t.id === keyboardSelectedId,
-        );
+        const r = boardColumns[c].tasks.findIndex((t) => t.id === navOriginId);
         if (r !== -1) {
           currentColIndex = c;
           currentRowIndex = r;
@@ -517,6 +518,19 @@ function TaskListBase({
     if (hasSelection) {
       scrollContainerRef.current?.focus({ preventScroll: true });
     }
+  }, [hasSelection]);
+
+  // Primary pointer presses end Vim mode; the ring is keyboard-only focus.
+  useEffect(() => {
+    if (!hasSelection) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      setKeyboardSelectedId(null);
+    };
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+    };
   }, [hasSelection]);
 
   // Arrow keys scroll until a task is selected; vim keys always claim keypress.
@@ -764,8 +778,8 @@ function TaskListBase({
       initialUrlCheckedRef.current = true;
       const matchingTask = tasks.find((t) => t.id === taskIdFromUrl);
       if (matchingTask) {
+        // Deep links are not keyboard navigation; don't mark the task as Vim-selected.
         setSelectedTask(matchingTask);
-        setKeyboardSelectedId(matchingTask.id);
       }
     }
   }, [onTaskSelect, tasks]);
@@ -963,6 +977,7 @@ function TaskListBase({
                 setActiveTaskId={setActiveTaskId}
                 groupBy={groupBy}
                 keyboardSelectedId={keyboardSelectedId}
+                inspectedTaskId={selectedTask?.id ?? null}
                 isDndActive={dnd.isDragging}
                 onScroll={handleContainerScroll}
                 hasOverlayDrawer={isBoardOverlay && !!selectedTask}
