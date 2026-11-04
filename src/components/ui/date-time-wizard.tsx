@@ -13,6 +13,7 @@ import { Calendar as CalendarIcon, Clock, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DateTimeWizardProps {
+  title?: string;
   date: Date | undefined;
   setDate: (date: Date | undefined) => void;
   onClose: () => void;
@@ -25,6 +26,7 @@ interface DateTimeWizardProps {
 }
 
 export function DateTimeWizard({
+  title,
   date,
   setDate,
   onClose,
@@ -79,7 +81,12 @@ export function DateTimeWizard({
   return (
     <div className="flex flex-col w-full max-w-[320px] mx-auto bg-popover rounded-md overflow-hidden">
       {/* Header / Tabs */}
-      <div className="flex items-center justify-between p-2 border-b bg-muted/40">
+      <div className="flex flex-col p-2 border-b bg-muted/40 gap-1.5">
+        {title && (
+          <div className="px-1 text-xs font-semibold text-foreground/85 tracking-wide">
+            {title}
+          </div>
+        )}
         <Tabs
           value={step}
           onValueChange={(v) => {

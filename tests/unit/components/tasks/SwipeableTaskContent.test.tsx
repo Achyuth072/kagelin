@@ -127,4 +127,10 @@ describe("SwipeableTaskContent Drag Resistance & Thresholds", () => {
     expect(dragElastic.left).toBe(0);
     expect(dragElastic.right).toBe(0);
   });
+
+  it("should render Check icon instead of Pencil icon for right swipe reveal", () => {
+    const { container } = render(<SwipeableTaskContent {...defaultProps} />);
+    expect(container.querySelector(".lucide-check")).toBeTruthy();
+    expect(container.querySelector(".lucide-pencil")).toBeNull();
+  });
 });

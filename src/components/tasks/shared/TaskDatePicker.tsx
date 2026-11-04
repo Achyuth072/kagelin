@@ -62,6 +62,18 @@ export function TaskDatePicker({
   const { trigger } = useHaptic();
   const { formatDateWithTime } = useTimeFormat();
 
+  const prefix = title.toLowerCase().includes("start")
+    ? "Start"
+    : title.toLowerCase().includes("due")
+      ? "Due"
+      : title;
+
+  const formattedDate = date
+    ? showTime
+      ? formatDateWithTime(date, "MMM d")
+      : format(date, "MMMM d, yyyy")
+    : null;
+
   const buttonContent = (
     <div className="flex items-center gap-1.5">
       <Icon
@@ -70,29 +82,29 @@ export function TaskDatePicker({
           isCompact
             ? "h-5 w-5"
             : "h-5 w-5 transition-all text-muted-foreground",
-          date && (isCompact ? "mr-1.5 h-4 w-4" : "text-primary"),
+          date && (isCompact ? "mr-1 h-4 w-4" : "text-primary"),
           error && "text-destructive",
         )}
       />
-      {date && (
+      {date ? (
         <>
           <span
             className={cn(
               "text-sm font-medium",
-              isCompact ? "" : "ml-1",
+              isCompact ? "" : "ml-0.5",
               error && "text-destructive",
             )}
           >
-            {showTime
-              ? formatDateWithTime(date, "MMM d")
-              : format(date, "MMMM d, yyyy")}
+            {prefix}: {formattedDate}
           </span>
 
           <span
             role="button"
-            title={!isMobile ? `Clear ${title.toLowerCase()}` : undefined}
+            tabIndex={0}
+            title={`Clear ${title.toLowerCase()}`}
+            aria-label={`Clear ${title.toLowerCase()}`}
             className={cn(
-              "ml-1 p-0.5 rounded",
+              "relative ml-1 p-0.5 rounded cursor-pointer before:absolute before:-inset-2 before:content-['']",
               isCompact
                 ? "hover:bg-destructive-surface-hover"
                 : "rounded-full hover:bg-current/10",
@@ -104,15 +116,38 @@ export function TaskDatePicker({
               trigger("toggle");
               setDate(undefined);
             }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                trigger("toggle");
+                setDate(undefined);
+              }
+            }}
           >
             <X
               className={cn("h-3 w-3", isCompact && "hover:text-destructive")}
             />
           </span>
         </>
+      ) : (
+        <span
+          className={cn(
+            "text-xs sm:text-sm font-medium",
+            isCompact ? "" : "ml-0.5",
+            error && "text-destructive",
+          )}
+        >
+          {title}
+        </span>
       )}
     </div>
   );
+
+  const buttonTitle = `Set ${title.toLowerCase()}`;
+  const buttonAriaLabel = date
+    ? `${title}: ${formattedDate}`
+    : `Set ${title.toLowerCase()}`;
 
   if (isMobile) {
     return (
@@ -130,20 +165,20 @@ export function TaskDatePicker({
               "border-destructive-surface-border bg-destructive-surface text-destructive hover:bg-destructive-surface-hover hover:text-destructive",
             isCompact
               ? cn(
-                  "w-9 px-0 text-muted-foreground hover:text-foreground",
-                  date &&
-                    cn("w-auto px-2.5 border-transparent", activeClassName),
+                  "w-auto px-2.5 text-muted-foreground hover:text-foreground",
+                  date && cn("border-transparent", activeClassName),
                 )
               : cn(
-                  "min-w-9 px-0 text-muted-foreground hover:text-foreground hover:bg-accent",
+                  "w-auto px-2.5 sm:px-3 text-muted-foreground hover:text-foreground hover:bg-accent",
                   date &&
                     cn(
-                      "px-3 w-auto hover:bg-transparent border-transparent",
+                      "hover:bg-transparent border-transparent",
                       activeClassName,
                     ),
                 ),
           )}
-          title={!isMobile ? `Set ${title.toLowerCase()}` : undefined}
+          title={buttonTitle}
+          aria-label={buttonAriaLabel}
         >
           {buttonContent}
         </Button>
@@ -158,6 +193,7 @@ export function TaskDatePicker({
             <ResponsiveDialogTitle>Set {title}</ResponsiveDialogTitle>
           </ResponsiveDialogHeader>
           <DateTimeWizard
+            title={`Set ${title}`}
             date={date}
             setDate={setDate}
             onClose={() => onOpenChange(false)}
@@ -182,20 +218,20 @@ export function TaskDatePicker({
               "border-destructive-surface-border bg-destructive-surface text-destructive hover:bg-destructive-surface-hover hover:text-destructive",
             isCompact
               ? cn(
-                  "w-9 px-0 text-muted-foreground hover:text-foreground",
-                  date &&
-                    cn("w-auto px-2.5 border-transparent", activeClassName),
+                  "w-auto px-2.5 text-muted-foreground hover:text-foreground",
+                  date && cn("border-transparent", activeClassName),
                 )
               : cn(
-                  "min-w-9 px-0 text-muted-foreground hover:text-foreground hover:bg-accent",
+                  "w-auto px-2.5 sm:px-3 text-muted-foreground hover:text-foreground hover:bg-accent",
                   date &&
                     cn(
-                      "px-3 w-auto hover:bg-transparent border-transparent",
+                      "hover:bg-transparent border-transparent",
                       activeClassName,
                     ),
                 ),
           )}
-          title={!isMobile ? `Set ${title.toLowerCase()}` : undefined}
+          title={buttonTitle}
+          aria-label={buttonAriaLabel}
         >
           {buttonContent}
         </Button>
@@ -208,6 +244,7 @@ export function TaskDatePicker({
         collisionPadding={16}
       >
         <DateTimeWizard
+          title={`Set ${title}`}
           date={date}
           setDate={setDate}
           onClose={() => onOpenChange(false)}

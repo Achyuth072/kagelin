@@ -43,6 +43,7 @@ import { DragHandle } from "@/components/tasks/DragHandle";
 import { computeReorderPairs } from "@/lib/utils/task-dnd";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Task } from "@/lib/types/task";
+import { notify } from "@/lib/notify";
 import {
   ReadableText,
   UNREADABLE_LABEL,
@@ -372,7 +373,19 @@ export default function SubtaskList({
     if (isDraftMode) {
       const index = parseDraftIndex(id);
       if (!isNaN(index)) {
-        onDraftSubtasksChange?.(draftSubtasks.filter((_, i) => i !== index));
+        const deletedItem = draftSubtasks[index];
+        const newDrafts = draftSubtasks.filter((_, i) => i !== index);
+        onDraftSubtasksChange?.(newDrafts);
+        notify("Step deleted", {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              const restored = [...newDrafts];
+              restored.splice(index, 0, deletedItem);
+              onDraftSubtasksChange?.(restored);
+            },
+          },
+        });
       }
     } else {
       deleteMutation.mutate(id);
@@ -408,7 +421,8 @@ export default function SubtaskList({
     if (!trimmed && wasUnreadable) {
       setEditingId(null);
     } else if (!trimmed) {
-      handleDeleteSubtask(id);
+      // Revert to original content rather than deleting
+      setEditingId(null);
     } else if (isDraftMode) {
       const index = parseDraftIndex(id);
       if (!isNaN(index)) {
@@ -457,11 +471,13 @@ export default function SubtaskList({
         onCollapse?.();
       }
     } else if (e.key === "Backspace") {
-      if (!newSubtaskContent && items.length > 0) {
+      if (!newSubtaskContent) {
         e.preventDefault();
-        const lastIndex = items.length - 1;
-        handleDeleteSubtask(getItemId(items[lastIndex], lastIndex));
-        focusPreviousStepOrInput(lastIndex - 1);
+        if (onCollapse) {
+          onCollapse();
+        } else {
+          newStepInputRef.current?.blur();
+        }
       }
     } else if (e.key === "Escape") {
       e.preventDefault();

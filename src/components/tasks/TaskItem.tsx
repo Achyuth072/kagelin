@@ -25,6 +25,7 @@ import { BoardTaskCard } from "./BoardTaskCard";
 import { ListTaskCard } from "./ListTaskCard";
 import { SwipeableTaskContent } from "./SwipeableTaskContent";
 import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
+import { notify } from "@/lib/notify";
 
 interface TaskItemProps {
   task: Task;
@@ -87,12 +88,25 @@ function TaskItemBase({
     router.push("/focus");
   };
 
-  const handleComplete = (checked: boolean) => {
+  const handleComplete = (
+    checked: boolean,
+    options?: { showToast?: boolean },
+  ) => {
     triggerHaptic?.(checked ? "success" : "toggle");
     setIsChecking(true);
     if (checked) {
       setShouldAnimate(true);
       setTimeout(() => setShouldAnimate(false), 1000);
+      if (options?.showToast) {
+        notify("Task completed", {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              handleComplete(false);
+            },
+          },
+        });
+      }
     } else {
       setShouldAnimate(false);
     }
@@ -187,8 +201,7 @@ function TaskItemBase({
             setShowDeleteDialog(true);
           }}
           onSwipeRight={() => {
-            triggerHaptic?.("thud");
-            onSelect?.(task);
+            handleComplete(true, { showToast: true });
           }}
           onSwipeStart={() => setIsSwipeDragging(true)}
           onSwipeEnd={() => setIsSwipeDragging(false)}

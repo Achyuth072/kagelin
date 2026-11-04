@@ -1,10 +1,19 @@
 import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Calendar, Moon, Flag, Play, Trash2 } from "lucide-react";
+import {
+  ChevronRight,
+  Calendar,
+  CalendarClock,
+  Moon,
+  Flag,
+  Play,
+  Trash2,
+} from "lucide-react";
 import { StepProgressBadge } from "./StepProgressBadge";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
+import { isToday, parseISO } from "date-fns";
 
 import {
   priorityTextClasses,
@@ -56,6 +65,8 @@ export function ListTaskCard({
   shouldAnimate = false,
   isKeyboardSelected = false,
 }: ListTaskCardProps) {
+  const isPlannedToday = !!task.do_date && isToday(parseISO(task.do_date));
+
   return (
     <div
       id={taskDomId(task.id)}
@@ -145,10 +156,17 @@ export function ListTaskCard({
         </div>
 
         {(task.due_date ||
+          isPlannedToday ||
           task.priority < 4 ||
           task.subtasks?.length ||
           project) && (
           <div className="flex items-center gap-3 mt-0.5 ml-[2px] mb-1">
+            {isPlannedToday && (
+              <span className="type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider whitespace-nowrap text-brand">
+                <CalendarClock className="h-3 w-3" strokeWidth={2.5} />
+                Planned Today
+              </span>
+            )}
             {task.due_date && (
               <span
                 className={cn(
