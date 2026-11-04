@@ -110,8 +110,10 @@ describe("HabitCompactRow rolling-7 strip", () => {
     });
     // start_date is yesterday, so the strip's first active cell is yesterday.
     const tapYesterdayOn = (value: number) => {
-      const { unmount } = render(<HabitCompactRow habit={withValue(value)} />);
-      fireEvent.click(screen.getAllByRole("button")[0]);
+      const { container, unmount } = render(
+        <HabitCompactRow habit={withValue(value)} />,
+      );
+      fireEvent.click(container.querySelectorAll("button")[0]);
       unmount();
     };
 
@@ -124,5 +126,33 @@ describe("HabitCompactRow rolling-7 strip", () => {
       ENTRY_VALUE_SKIPPED,
       0,
     ]);
+  });
+
+  it("provides accessible role='button', tabIndex=0, and keyboard activation for edit", () => {
+    const onEdit = vi.fn();
+    render(<HabitCompactRow habit={mockHabit} onEdit={onEdit} />);
+
+    const row = screen.getByRole("button", {
+      name: `Edit habit ${mockHabit.name}`,
+    });
+    expect(row).toBeInTheDocument();
+    expect(row).toHaveAttribute("tabindex", "0");
+
+    fireEvent.keyDown(row, { key: "Enter" });
+    expect(onEdit).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(row, { key: " " });
+    expect(onEdit).toHaveBeenCalledTimes(2);
+
+    fireEvent.keyDown(row, { key: "ArrowDown" });
+    expect(onEdit).toHaveBeenCalledTimes(2);
+  });
+
+  it("applies expanded touch target before:-inset-1.5 on coarse pointers", () => {
+    vi.mocked(useCoarsePointerModule.useCoarsePointer).mockReturnValue(true);
+    const { container } = render(<HabitCompactRow habit={mockHabit} />);
+    const activeButtons = container.querySelectorAll("button");
+    expect(activeButtons.length).toBeGreaterThan(0);
+    expect(activeButtons[0]).toHaveClass("before:-inset-1.5");
   });
 });
