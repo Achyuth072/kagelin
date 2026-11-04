@@ -965,6 +965,7 @@ function TaskListBase({
                 keyboardSelectedId={keyboardSelectedId}
                 isDndActive={dnd.isDragging}
                 onScroll={handleContainerScroll}
+                hasOverlayDrawer={isBoardOverlay && !!selectedTask}
               />
             ) : (
               <TaskListView
@@ -1019,7 +1020,7 @@ function TaskListBase({
               <InspectorCardShell
                 task={activeInspectorTask}
                 onClose={handleCloseDetail}
-                shadowClass="shadow-xl"
+                shadowClass="shadow-md"
               />
             </div>
           )}
