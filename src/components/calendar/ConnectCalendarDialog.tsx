@@ -23,6 +23,16 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   CalendarProvider,
   CALDAV_PROVIDERS,
   DiscoveredCalendar,
@@ -68,6 +78,10 @@ export function ConnectCalendarDialog({
   const queryClient = useQueryClient();
   const [selectedProvider, setSelectedProvider] =
     useState<CalendarProvider | null>(null);
+  const [providerToDisconnect, setProviderToDisconnect] = useState<
+    string | null
+  >(null);
+  const [isDisconnecting, setIsDisconnecting] = useState<string | null>(null);
 
   const [pickerCalendars, setPickerCalendars] = useState<DiscoveredCalendar[]>(
     [],
@@ -229,6 +243,7 @@ export function ConnectCalendarDialog({
                     size="sm"
                     className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
                     title={`Choose ${p} calendars`}
+                    disabled={isDisconnecting !== null}
                     onClick={() => openCalendarPicker(p as CalendarProvider)}
                   >
                     <Calendars className="w-3.5 h-3.5" strokeWidth={2.25} />
@@ -240,12 +255,15 @@ export function ConnectCalendarDialog({
                     className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive-surface-hover"
                     title={`Disconnect ${p}`}
                     aria-label={`Disconnect ${p}`}
-                    onClick={async () => {
-                      await disconnect(p);
-                      notify.success(`${capitalize(p)} disconnected`);
-                    }}
+                    disabled={isDisconnecting !== null}
+                    aria-busy={isDisconnecting === p}
+                    onClick={() => setProviderToDisconnect(p)}
                   >
-                    <Trash2 className="w-3.5 h-3.5" strokeWidth={2.25} />
+                    {isDisconnecting === p ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" strokeWidth={2.25} />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -364,6 +382,58 @@ export function ConnectCalendarDialog({
           </div>
         )}
       </ResponsiveDialogContent>
+
+      <AlertDialog
+        open={providerToDisconnect !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !isDisconnecting) setProviderToDisconnect(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Disconnect{" "}
+              {providerToDisconnect ? capitalize(providerToDisconnect) : ""}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Your synced events will no longer be refreshed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDisconnecting !== null}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDisconnecting !== null}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!providerToDisconnect) return;
+                const p = providerToDisconnect;
+                setIsDisconnecting(p);
+                try {
+                  await disconnect(p as CalendarProvider);
+                  notify.success(`${capitalize(p)} disconnected`);
+                  setProviderToDisconnect(null);
+                } catch {
+                  notify.error(`Failed to disconnect ${capitalize(p)}`);
+                } finally {
+                  setIsDisconnecting(null);
+                }
+              }}
+            >
+              {isDisconnecting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Disconnecting...
+                </>
+              ) : (
+                "Disconnect"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ResponsiveDialog>
   );
 }

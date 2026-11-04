@@ -59,15 +59,27 @@ export const EventOverflowPopover = memo(
             <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">
               {remainingEvents.map((event) => {
                 const isTask = event.category === "task";
+                const timeText = formatTime(event.start);
+                const titleText = event.title ?? "";
                 return (
                   <div
                     key={event.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`${timeText}: ${titleText}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onEventClick?.(event);
                     }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onEventClick?.(event);
+                      }
+                    }}
                     className={cn(
-                      "group flex flex-col gap-0.5 p-2 rounded-lg transition-all cursor-pointer",
+                      "group flex flex-col gap-0.5 p-2 rounded-lg transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                       isTask
                         ? "bg-brand/8 border-t border-t-border/40 border-r border-r-border/40 border-b border-b-border/40 hover:bg-brand/12"
                         : "bg-brand text-white hover:brightness-110",
