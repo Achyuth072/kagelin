@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, PanInfo, useMotionValue, useTransform } from "framer-motion";
-import { Trash2, Pencil } from "lucide-react";
+import { Trash2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SwipeableTaskContentProps {
@@ -78,7 +78,7 @@ export function SwipeableTaskContent({
           style={{ opacity: leftIconOpacity, scale: leftIconScale }}
           className="text-white pointer-events-none"
         >
-          <Pencil className="h-5 w-5" strokeWidth={2.25} />
+          <Check className="h-5 w-5" strokeWidth={2.25} />
         </motion.div>
       </motion.div>
 

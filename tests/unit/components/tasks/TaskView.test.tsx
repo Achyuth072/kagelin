@@ -290,13 +290,14 @@ describe("TaskView - edit mode", () => {
     expect(setDescription).toHaveBeenCalledWith("Updated notes");
   });
 
-  it("pressing bare Enter in the title focuses the notes field", () => {
-    renderTaskView(baseEditOverrides);
+  it("pressing bare Enter in the title submits the form in edit mode too", () => {
+    const onSubmit = vi.fn();
+    renderTaskView({ ...baseEditOverrides, onSubmit });
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
     fireEvent.keyDown(titleInput, { key: "Enter" });
 
-    expect(screen.getByRole("textbox", { name: /notes/i })).toBeInTheDocument();
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
   it("pressing Cmd+Enter or Ctrl+Enter in edit mode title submits the form", () => {

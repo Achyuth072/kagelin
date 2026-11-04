@@ -42,8 +42,12 @@ vi.mock("@/components/ui/popover", () => ({
 }));
 
 // Mock DateTimeWizard
+const mockDateTimeWizard = vi.fn();
 vi.mock("@/components/ui/date-time-wizard", () => ({
-  DateTimeWizard: () => <div data-testid="datetime-wizard">Wizard</div>,
+  DateTimeWizard: (props: unknown) => {
+    mockDateTimeWizard(props);
+    return <div data-testid="datetime-wizard">Wizard</div>;
+  },
 }));
 
 // Mock Haptic hook
@@ -68,5 +72,67 @@ describe("TaskDatePicker", () => {
     // Then: PopoverContent should have align="center"
     const popoverContent = screen.getByTestId("popover-content");
     expect(popoverContent.getAttribute("data-align")).toBe("center");
+  });
+
+  it("should render visible label and title when date is unset, including on mobile", () => {
+    render(
+      <TaskDatePicker
+        {...defaultProps}
+        open={false}
+        title="Start Date"
+        isMobile={true}
+      />,
+    );
+
+    expect(screen.getByText("Start Date")).toBeDefined();
+    const button = screen.getByRole("button", { name: /start date/i });
+    expect(button.getAttribute("title")).toBe("Set start date");
+  });
+
+  it("should display prefix when date is set", () => {
+    const testDate = new Date("2026-11-04T12:00:00Z");
+    render(
+      <TaskDatePicker {...defaultProps} date={testDate} title="Due Date" />,
+    );
+
+    expect(screen.getByText(/Due:/)).toBeDefined();
+  });
+
+  it("should allow clearing via keyboard (Enter and Space) with touch target expansion", async () => {
+    const setDate = vi.fn();
+    const testDate = new Date("2026-11-04T12:00:00Z");
+    const { fireEvent } = await import("@testing-library/react");
+
+    render(
+      <TaskDatePicker
+        {...defaultProps}
+        date={testDate}
+        setDate={setDate}
+        title="Due Date"
+      />,
+    );
+
+    const clearBtn = screen.getByLabelText("Clear due date");
+    expect(clearBtn.getAttribute("tabindex")).toBe("0");
+    expect(clearBtn.className).toContain("before:absolute");
+    expect(clearBtn.className).toContain("before:-inset-2");
+
+    fireEvent.keyDown(clearBtn, { key: "Enter" });
+    expect(setDate).toHaveBeenCalledWith(undefined);
+
+    setDate.mockClear();
+    fireEvent.keyDown(clearBtn, { key: " " });
+    expect(setDate).toHaveBeenCalledWith(undefined);
+  });
+
+  it("should pass contextual title to DateTimeWizard", () => {
+    mockDateTimeWizard.mockClear();
+    render(<TaskDatePicker {...defaultProps} title="Start Date" />);
+
+    expect(mockDateTimeWizard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Set Start Date",
+      }),
+    );
   });
 });

@@ -99,12 +99,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
       }
 
       if (!e.shiftKey && !e.altKey) {
-        if (mode === "create") {
-          onSubmit();
-        } else if (mode === "edit") {
-          trigger("toggle");
-          notesRowRef.current?.focus();
-        }
+        onSubmit();
       }
       return;
     }
@@ -189,6 +184,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               open={datePickerOpen}
               onOpenChange={setDatePickerOpen}
               variant="icon"
+              title="Due Date"
               {...createDatePickerPositioning}
               error={!!errors?.due_date}
             />
@@ -200,13 +196,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               open={doDatePickerOpen}
               onOpenChange={setDoDatePickerOpen}
               variant="icon"
-              title={
-                mode === "create"
-                  ? !isMobile
-                    ? "Start Date"
-                    : undefined
-                  : "Start Date"
-              }
+              title="Start Date"
               icon={CalendarClock}
               {...createDatePickerPositioning}
               error={!!errors?.do_date}
