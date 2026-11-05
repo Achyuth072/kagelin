@@ -3,7 +3,7 @@ import { render } from "@testing-library/react";
 import { useUiStore } from "@/lib/store/uiStore";
 
 const { mockSonnerToaster } = vi.hoisted(() => {
-  const mockSonnerToaster = vi.fn((_props: Record<string, unknown>) => (
+  const mockSonnerToaster = vi.fn((_props: import("sonner").ToasterProps) => (
     <div data-testid="sonner-toaster-mock" />
   ));
   return { mockSonnerToaster };
@@ -39,6 +39,7 @@ describe("Toaster component", () => {
     expect(lastCall?.position).toBe("bottom-center");
     expect(lastCall?.expand).toBe(false);
     expect(lastCall?.visibleToasts).toBe(2);
+    expect(lastCall?.closeButton).toBe(false);
     expect(lastCall?.swipeDirections).toEqual(["left", "right", "bottom"]);
 
     const expectedMobileBottom =
@@ -67,6 +68,7 @@ describe("Toaster component", () => {
     expect(lastCall?.position).toBe("bottom-right");
     expect(lastCall?.expand).toBe(false);
     expect(lastCall?.visibleToasts).toBe(3);
+    expect(lastCall?.closeButton).toBe(true);
     expect(lastCall?.swipeDirections).toEqual(["left", "right", "bottom"]);
 
     const expectedDesktopBottom =
@@ -78,5 +80,24 @@ describe("Toaster component", () => {
     expect(lastCall?.mobileOffset).toEqual({
       bottom: expectedDesktopBottom,
     });
+  });
+
+  it("configures select-none, cursor-default, and accessible close button styling", () => {
+    useUiStore.setState({ isDesktop: true, isChangelogOpen: false });
+
+    render(<Toaster />);
+
+    const lastCall = mockSonnerToaster.mock.calls.at(-1)?.[0];
+    expect(lastCall).toBeDefined();
+
+    const classNames = lastCall?.toastOptions?.classNames;
+    expect(classNames?.toast).toContain("select-none");
+    expect(classNames?.toast).toContain("cursor-default");
+    expect(classNames?.error).toContain("select-text");
+    expect(classNames?.closeButton).toContain("text-muted-foreground");
+    expect(classNames?.closeButton).toContain("hover:bg-sidebar");
+    expect(classNames?.closeButton).toContain("transition-seijaku-fast");
+
+    expect(lastCall?.icons?.close).toBeDefined();
   });
 });
