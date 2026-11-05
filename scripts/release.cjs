@@ -4,7 +4,10 @@ const { execFileSync } = require("child_process");
 const { parseArgs } = require("node:util");
 const path = require("path");
 const { getLastTag, getCommitSubjectsSince } = require("./lib/git-commits.cjs");
-const { determineBump } = require("./lib/determine-bump.cjs");
+const {
+  determineBump,
+  shouldEscalatePrerelease,
+} = require("./lib/determine-bump.cjs");
 const { buildSectionsFromCommits } = require("./generate-changelog.cjs");
 const { runCurationLoop } = require("./curate-changelog.cjs");
 const {
@@ -123,11 +126,21 @@ async function main() {
         "--preRelease=preview",
       );
     } else if (midPrerelease) {
-      releaseItArgs.push(
-        "--config",
-        ".release-it.json",
-        "--preRelease=preview",
-      );
+      const bump = computeBump(subjectsSince());
+      if (shouldEscalatePrerelease(currentVersion, bump)) {
+        releaseItArgs.push(
+          "--config",
+          ".release-it.json",
+          BUMP_TO_PRE_INCREMENT[bump],
+          "--preRelease=preview",
+        );
+      } else {
+        releaseItArgs.push(
+          "--config",
+          ".release-it.json",
+          "--preRelease=preview",
+        );
+      }
     } else {
       const bump = computeBump(subjectsSince());
       releaseItArgs.push(
