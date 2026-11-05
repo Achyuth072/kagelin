@@ -136,4 +136,17 @@ describe("SwipeableTaskContent Drag Resistance & Thresholds", () => {
 
     expect(screen.getByTestId("suspended-child")).toBeTruthy();
   });
+
+  it("should apply touch-pan-y and select-none classes for mobile gesture hygiene", () => {
+    const { container } = render(<SwipeableTaskContent {...defaultProps} />);
+    const dragContainer = container.querySelector('div[data-drag="x"]');
+    expect(dragContainer?.className).toContain("touch-pan-y");
+    expect(dragContainer?.className).toContain("select-none");
+  });
+
+  it("should disable drag when isDesktop is true", () => {
+    render(<SwipeableTaskContent {...defaultProps} isDesktop={true} />);
+    const dragContainer = document.querySelector('div[data-drag="x"]');
+    expect(dragContainer).toBeNull();
+  });
 });

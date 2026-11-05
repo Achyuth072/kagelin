@@ -177,7 +177,7 @@ export function SwipeableTaskContent({
       <motion.div
         key={`content-${isCompleted}`}
         style={{ x }}
-        drag="x"
+        drag={isDesktop ? false : "x"}
         dragDirectionLock
         dragConstraints={{
           left: isCompleted ? 0 : -100,
@@ -191,7 +191,10 @@ export function SwipeableTaskContent({
         dragSnapToOrigin={true}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        className={cn("relative z-10 bg-background", className)}
+        className={cn(
+          "relative z-10 bg-background touch-pan-y select-none",
+          className,
+        )}
         onClick={onClick}
       >
         {children}
