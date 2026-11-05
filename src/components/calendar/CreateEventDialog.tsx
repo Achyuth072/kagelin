@@ -61,6 +61,8 @@ import {
   useUpdateCalendarEvent,
   useDeleteCalendarEvent,
 } from "@/lib/hooks/useCalendarEventMutations";
+import { notify } from "@/lib/notify";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useAuth } from "@/components/AuthProvider";
@@ -186,6 +188,7 @@ export function CreateEventDialog({
   const [locationPortalEl, setLocationPortalEl] =
     useState<HTMLDivElement | null>(null);
   const locationListRef = useRef<HTMLDivElement>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const events = useCalendarStore((state) => state.events);
   const locationHistory = useLocationHistoryStore((state) => state.locations);
   const addLocation = useLocationHistoryStore((state) => state.addLocation);
@@ -342,10 +345,37 @@ export function CreateEventDialog({
     }
   };
 
-  const handleDelete = () => {
+  const handleDeleteClick = () => {
     if (!event) return;
-    trigger("thud");
-    deleteEvent.mutate(event.id);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!event) return;
+    const eventToRestore = { ...event };
+    deleteEvent.mutate(event.id, {
+      onSuccess: () => {
+        notify("Event deleted", {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              createEvent.mutate({
+                title: eventToRestore.title ?? "",
+                description: eventToRestore.description ?? undefined,
+                location: eventToRestore.location ?? undefined,
+                start_time: eventToRestore.start.toISOString(),
+                end_time: eventToRestore.end.toISOString(),
+                all_day: eventToRestore.allDay,
+                color: eventToRestore.color,
+                category: eventToRestore.category ?? undefined,
+                reminder_minutes: eventToRestore.reminderMinutes ?? undefined,
+              });
+            },
+          },
+        });
+      },
+    });
+    setShowDeleteConfirm(false);
     onOpenChange(false);
   };
 
@@ -728,7 +758,7 @@ export function CreateEventDialog({
                   variant="destructive"
                   size="sm"
                   className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
-                  onClick={handleDelete}
+                  onClick={handleDeleteClick}
                   disabled={isRecurring || deleteEvent.isPending}
                   aria-label="Delete event"
                 >
@@ -762,6 +792,14 @@ export function CreateEventDialog({
           </div>
         </form>
       </ResponsiveDialogContent>
+      <DeleteConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Event"
+        description="Are you sure you want to delete this event?"
+        confirmLabel="Delete"
+      />
     </ResponsiveDialog>
   );
 }

@@ -84,13 +84,18 @@ export function DayColumn({
         const topPx = (event.top / 100) * (24 * HOUR_HEIGHT);
         const heightPx = (event.height / 100) * (24 * HOUR_HEIGHT);
         const isTask = event.category === "task";
+        const timeText = formatTime(event.start);
+        const titleText = event.title ?? "";
 
         return (
           <div
             key={event.id}
+            role="button"
+            tabIndex={0}
+            aria-label={`${timeText}: ${titleText}`}
             className={cn(
               "absolute rounded-sm px-1 md:px-2 py-1 text-[10px] md:text-xs cursor-pointer overflow-hidden flex flex-col gap-0.5",
-              "z-10 hover:z-20 hover:brightness-95 active:scale-[0.98] transition-all",
+              "z-10 hover:z-20 hover:brightness-95 active:scale-[0.98] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
               isTask
                 ? "bg-brand/8 border-t border-t-border/40 border-r border-r-border/40 border-b border-b-border/40 text-foreground"
                 : "bg-brand/90 text-white border-l-2 border-brand",
@@ -98,6 +103,13 @@ export function DayColumn({
             onClick={(e) => {
               e.stopPropagation();
               onEventClick?.(event);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                onEventClick?.(event);
+              }
             }}
             style={{
               top: `${topPx + HEADER_HEIGHT}px`,

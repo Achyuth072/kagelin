@@ -68,10 +68,23 @@ const MonthDayCell = memo(
 
     return (
       <div
+        role="gridcell"
+        tabIndex={0}
+        aria-label={format(day, "EEEE, MMMM d, yyyy")}
+        aria-selected={isCurrentDay}
         onClick={() => onDateClick?.(day)}
+        onKeyDown={(e) => {
+          if (
+            e.target === e.currentTarget &&
+            (e.key === "Enter" || e.key === " ")
+          ) {
+            e.preventDefault();
+            onDateClick?.(day);
+          }
+        }}
         className={cn(
           "relative p-0.5 pb-0.5 md:p-2 md:pb-1 flex flex-col h-full min-h-16 md:min-h-21",
-          "cursor-pointer transition-colors overflow-hidden",
+          "cursor-pointer transition-colors overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:z-20",
           isCompact && "p-0.5 md:p-1 md:pb-0.5",
           !isCurrentMonth && "bg-muted/5 opacity-40",
           isCurrentDay ? "bg-brand/10" : "hover:bg-accent/30",
@@ -105,15 +118,27 @@ const MonthDayCell = memo(
           >
             {visibleEvents.map((event) => {
               const isTask = event.category === "task";
+              const titleText = event.title ?? UNREADABLE_LABEL;
+              const timeText = formatTime(event.start);
               return (
                 <div
                   key={event.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${timeText}: ${titleText}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onEventClick?.(event);
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onEventClick?.(event);
+                    }
+                  }}
                   className={cn(
-                    "text-[10px] md:text-[11px] px-1 md:px-2 py-0.5 mx-[1px] md:mx-0 rounded-sm truncate font-semibold leading-tight hover:brightness-95 transition-all cursor-pointer",
+                    "text-[10px] md:text-[11px] px-1 md:px-2 py-0.5 mx-[1px] md:mx-0 rounded-sm truncate font-semibold leading-tight hover:brightness-95 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
                     isTask
                       ? "bg-brand/8 border-t border-t-border/40 border-r border-r-border/40 border-b border-b-border/40 text-foreground"
                       : "bg-brand text-white",
@@ -124,11 +149,9 @@ const MonthDayCell = memo(
                       borderLeftWidth: "3px",
                     }),
                   }}
-                  title={event.title ?? UNREADABLE_LABEL}
+                  title={titleText}
                 >
-                  <span className="hidden md:inline">
-                    {formatTime(event.start)}{" "}
-                  </span>
+                  <span className="hidden md:inline">{timeText} </span>
                   <ReadableText text={event.title} />
                 </div>
               );
@@ -201,10 +224,12 @@ const MonthView = memo(
         )}
       >
         {/* Week day headers */}
-        <div className="grid grid-cols-7 border-b border-border/40">
+        <div role="row" className="grid grid-cols-7 border-b border-border/40">
           {weekDays.map((day) => (
             <div
               key={day}
+              role="columnheader"
+              aria-label={day}
               className="p-3 text-center text-[11px] font-bold text-muted-foreground/60 uppercase tracking-widest"
             >
               {day}
@@ -214,6 +239,8 @@ const MonthView = memo(
 
         {/* Calendar grid */}
         <div
+          role="grid"
+          aria-label={format(currentDate, "MMMM yyyy")}
           className={cn(
             "flex-1 min-h-0 grid grid-cols-7 overflow-y-auto divide-x divide-border/40 divide-y divide-border/40 border-b border-r border-border/40",
           )}

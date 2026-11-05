@@ -190,7 +190,7 @@ function CloudSyncCard({
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
               onClick={onTestConnection}
@@ -216,7 +216,7 @@ function CloudSyncCard({
                 variant="destructive"
                 size="icon"
                 onClick={onResetCredentials}
-                className="h-9 w-9"
+                className="h-9 w-9 shrink-0 ml-1.5"
                 title="Forget credentials"
                 aria-label="Forget credentials"
               >
@@ -380,6 +380,7 @@ export function BackupSyncSettings() {
   >("idle");
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingRestore, setPendingRestore] = useState<BackupData | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const invalidateDataQueries = async () => {
     await Promise.all([
@@ -475,7 +476,6 @@ export function BackupSyncSettings() {
   };
 
   const resetCredentials = () => {
-    trigger("toggle");
     setWebdavCredentials({ serverUrl: "", username: "", password: "" });
     setConnectionStatus("idle");
     notify.success("Credentials cleared");
@@ -745,7 +745,7 @@ export function BackupSyncSettings() {
           connectionStatus={connectionStatus}
           isSyncing={isSyncing}
           onTestConnection={handleTestConnection}
-          onResetCredentials={resetCredentials}
+          onResetCredentials={() => setShowResetConfirm(true)}
           onSyncUpload={handleSyncUpload}
           onSyncDownload={handleSyncDownload}
           showEnvelopeWarning={!isGuestMode}
@@ -755,6 +755,15 @@ export function BackupSyncSettings() {
       <AppMigrationDialog
         open={showMigrationDialog}
         onOpenChange={setShowMigrationDialog}
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={resetCredentials}
+        title="Forget WebDAV credentials?"
+        description="You will need to re-enter your server details to sync."
+        confirmLabel="Forget"
       />
 
       <DeleteConfirmationDialog
