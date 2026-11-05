@@ -95,9 +95,19 @@ describe("Toaster component", () => {
     expect(classNames?.toast).toContain("cursor-default");
     expect(classNames?.error).toContain("select-text");
     expect(classNames?.closeButton).toContain("text-muted-foreground");
-    expect(classNames?.closeButton).toContain("hover:bg-sidebar");
+    expect(classNames?.closeButton).toContain("hover:text-foreground");
+    expect(classNames?.closeButton).toContain("hover:bg-muted/60");
+    expect(classNames?.closeButton).toContain("rounded-md");
+    expect(classNames?.closeButton).not.toContain("hover:bg-sidebar");
+    expect(classNames?.closeButton).not.toContain("-mr-");
     expect(classNames?.closeButton).toContain("transition-seijaku-fast");
 
-    expect(lastCall?.icons?.close).toBeDefined();
+    const closeIcon = lastCall?.icons?.close as React.ReactElement<{
+      className?: string;
+      strokeWidth?: number;
+    }>;
+    expect(closeIcon).toBeDefined();
+    expect(closeIcon.props.strokeWidth).toBe(2.25);
+    expect(closeIcon.props.className).toContain("h-3.5 w-3.5");
   });
 });

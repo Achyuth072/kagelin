@@ -44,7 +44,7 @@ export function Toaster() {
       mobileOffset={offset}
       swipeDirections={["left", "right", "bottom"]}
       icons={{
-        close: <X className="h-4 w-4" strokeWidth={2} />,
+        close: <X className="h-3.5 w-3.5" strokeWidth={2.25} />,
       }}
       toastOptions={{
         unstyled: true,
@@ -85,11 +85,10 @@ export function Toaster() {
           ),
           closeButton: cn(
             "order-last shrink-0",
-            "flex size-6 items-center justify-center rounded-sm",
-            "cursor-pointer text-muted-foreground hover:bg-sidebar hover:text-foreground",
+            "flex size-6 items-center justify-center rounded-md",
+            "cursor-pointer text-muted-foreground/80 hover:bg-muted/60 hover:text-foreground",
             "transition-seijaku-fast",
             "focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
-            "-mr-1.5 sm:-mr-2",
           ),
         },
       }}
