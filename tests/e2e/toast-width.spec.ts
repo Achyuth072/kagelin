@@ -1,4 +1,4 @@
-import { test, expect, chromium } from "@playwright/test";
+import { test, expect, chromium, type Page } from "@playwright/test";
 import { waitForBackAnchor } from "./support/guest-mode";
 
 /**
@@ -19,6 +19,20 @@ async function cdpReachable() {
   } catch {
     return false;
   }
+}
+
+async function triggerDemoReset(page: Page) {
+  const dangerSection = page.getByRole("button", { name: /danger zone/i });
+  if (await dangerSection.isVisible().catch(() => false)) {
+    const isExpanded = await dangerSection.getAttribute("aria-expanded");
+    if (isExpanded !== "true") {
+      await dangerSection.click();
+    }
+  }
+
+  const resetBtn = page.getByRole("button", { name: /^reset demo data$/i });
+  await expect(resetBtn).toBeVisible({ timeout: 10000 });
+  await resetBtn.click();
 }
 
 test.describe("Sonner toast width", () => {
@@ -71,10 +85,7 @@ test.describe("Sonner toast width", () => {
         console.log("[debug] account tab not present, continuing");
       }
 
-      const resetBtn = page.getByRole("button", { name: /reset demo/i });
-      await expect(resetBtn).toBeVisible({ timeout: 10000 });
-      console.log("[debug] reset btn visible, clicking");
-      await resetBtn.click();
+      await triggerDemoReset(page);
 
       const toastLi = page.locator("[data-sonner-toast]").first();
       await expect(toastLi).toBeVisible({ timeout: 5000 });
@@ -183,9 +194,7 @@ test.describe("Sonner toast width", () => {
         await accountTab.click();
       }
 
-      const resetBtn = page.getByRole("button", { name: /reset demo/i });
-      await expect(resetBtn).toBeVisible({ timeout: 10000 });
-      await resetBtn.click();
+      await triggerDemoReset(page);
 
       const toastLi = page.locator("[data-sonner-toast]").first();
       await expect(toastLi).toBeVisible({ timeout: 5000 });
@@ -298,9 +307,7 @@ test.describe("Sonner toast width", () => {
         await accountTab.click();
       }
 
-      const resetBtn = page.getByRole("button", { name: /reset demo/i });
-      await expect(resetBtn).toBeVisible({ timeout: 10000 });
-      await resetBtn.click();
+      await triggerDemoReset(page);
 
       const toastLi = page.locator("[data-sonner-toast]").first();
       await expect(toastLi).toBeVisible({ timeout: 5000 });

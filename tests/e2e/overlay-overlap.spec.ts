@@ -406,6 +406,16 @@ test.describe("Bottom overlays overlap suite", () => {
       if (box) {
         await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
         await page.mouse.down();
+        await page.mouse.move(
+          box.x + box.width / 2 + 60,
+          box.y + box.height / 2,
+          {
+            steps: 5,
+          },
+        );
+        const draggingBox = await frontToast.boundingBox();
+        expect(draggingBox).not.toBeNull();
+        expect(draggingBox!.x).toBeGreaterThan(box.x + 30);
         await page.mouse.move(box.x + box.width + 100, box.y + box.height / 2, {
           steps: 5,
         });
