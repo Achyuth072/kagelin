@@ -41,6 +41,8 @@ interface TaskItemProps {
   isDesktop?: boolean;
   triggerHaptic?: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   setActiveTaskId?: (taskId: string) => void;
+  shouldShowHint?: boolean;
+  onHintShown?: () => void;
 }
 
 function TaskItemBase({
@@ -57,6 +59,8 @@ function TaskItemBase({
   isDesktop = false,
   triggerHaptic,
   setActiveTaskId,
+  shouldShowHint = false,
+  onHintShown,
 }: TaskItemProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [_isChecking, setIsChecking] = useState(false);
@@ -195,6 +199,9 @@ function TaskItemBase({
           _isDragging={isDragging}
           _isHandleActive={isHandleActive}
           isCompleted={task.is_completed}
+          triggerHaptic={triggerHaptic}
+          shouldShowHint={shouldShowHint}
+          onHintShown={onHintShown}
           onSwipeLeft={() => {
             triggerHaptic?.("thud");
             setPendingDelete(true);

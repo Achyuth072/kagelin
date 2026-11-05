@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SwipeableTaskContent } from "@/components/tasks/SwipeableTaskContent";
 import React from "react";
@@ -18,14 +18,10 @@ vi.mock("framer-motion", async () => {
               drag,
               dragElastic,
               dragConstraints,
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              initial,
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              animate,
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              exit,
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              transition,
+              _initial,
+              _animate,
+              _exit,
+              _transition,
               ...props
             }: any,
             ref: any,
@@ -51,7 +47,9 @@ vi.mock("framer-motion", async () => {
         return Div;
       })(),
     },
-    useMotionValue: vi.fn(() => ({ get: () => 0, set: vi.fn() })),
+    useMotionValue: vi.fn(() => ({ get: () => 0, set: vi.fn(), on: vi.fn() })),
+    useMotionValueEvent: vi.fn(),
+    animate: vi.fn(),
     useTransform: vi.fn((_val, _from, _to) => ({ get: () => 0 })),
     AnimatePresence: ({ children }: { children: React.ReactNode }) => (
       <>{children}</>
@@ -74,56 +72,51 @@ describe("SwipeableTaskContent Drag Resistance & Thresholds", () => {
     vi.clearAllMocks();
   });
 
-  it("should have tight dragElastic configuration (0.2) to prevent 'loose' feel", () => {
+  it("should have responsive dragElastic and direct tracking constraints", () => {
     render(<SwipeableTaskContent {...defaultProps} />);
 
-    // The drag container is now a child motion.div
     const dragContainer = document.querySelector('div[data-drag="x"]');
     const dragElasticRaw = dragContainer?.getAttribute("data-drag-elastic");
+    const dragConstraintsRaw = dragContainer?.getAttribute(
+      "data-drag-constraints",
+    );
     const dragElastic = JSON.parse(dragElasticRaw!);
+    const dragConstraints = JSON.parse(dragConstraintsRaw!);
 
-    expect(dragElastic.left).toBe(0.2);
-    expect(dragElastic.right).toBe(0.2);
+    expect(dragElastic.left).toBe(0.25);
+    expect(dragElastic.right).toBe(0.25);
+    expect(dragConstraints.left).toBe(-100);
+    expect(dragConstraints.right).toBe(100);
   });
 
-  it("should have proper physical thresholds and visual commitment points", () => {
+  it("should have proper physical thresholds and visual commitment points (75px)", () => {
     render(<SwipeableTaskContent {...defaultProps} />);
 
     const transformCalls = (vi.mocked(useTransform).mock as { calls: any[][] })
       .calls;
-    // We expect 4 calls now: 2 for backgrounds, 2 for icon opacity, 2 for icon scale
-    // Actually, in the new code:
-    // 1. completeBgOpacity
-    // 2. deleteBgOpacity
-    // 3. leftIconOpacity
-    // 4. rightIconOpacity
-    // 5. leftIconScale
-    // 6. rightIconScale
 
     const backgroundTransformCall = transformCalls.find(
       (call: any[]) =>
         Array.isArray(call[1]) &&
-        call[1].some((t: number) => Math.abs(t) === 30),
+        call[1].some((t: number) => Math.abs(t) === 75),
     );
 
     expect(backgroundTransformCall).toBeTruthy();
     const thresholds = backgroundTransformCall![1] as number[];
     const maxVisualThreshold = Math.max(...thresholds.map(Math.abs));
 
-    // For a 150px physical drag with 0.2 elastic, the visual offset x should be 30
-    expect(maxVisualThreshold).toBe(30);
+    expect(maxVisualThreshold).toBe(75);
   });
 
   it("should make swipe rigid (dragElastic=0) instead of disabling drag to prevent DnD event bubbling when isCompleted is true", () => {
     render(<SwipeableTaskContent {...defaultProps} isCompleted={true} />);
 
     const dragContainer = document.querySelector('div[data-drag="x"]');
-    expect(dragContainer).toBeTruthy(); // MUST still be "x" to swallow pointer events
+    expect(dragContainer).toBeTruthy();
 
     const dragElasticRaw = dragContainer?.getAttribute("data-drag-elastic");
     const dragElastic = JSON.parse(dragElasticRaw!);
 
-    // MUST be rigid to prevent visual movement
     expect(dragElastic.left).toBe(0);
     expect(dragElastic.right).toBe(0);
   });
@@ -132,5 +125,15 @@ describe("SwipeableTaskContent Drag Resistance & Thresholds", () => {
     const { container } = render(<SwipeableTaskContent {...defaultProps} />);
     expect(container.querySelector(".lucide-check")).toBeTruthy();
     expect(container.querySelector(".lucide-pencil")).toBeNull();
+  });
+
+  it("should render static children when suspended", () => {
+    render(
+      <SwipeableTaskContent {...defaultProps} suspended={true}>
+        <div data-testid="suspended-child">Suspended Child</div>
+      </SwipeableTaskContent>,
+    );
+
+    expect(screen.getByTestId("suspended-child")).toBeTruthy();
   });
 });

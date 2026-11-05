@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useMemo } from "react";
+import React, { memo, useMemo, useState, useEffect } from "react";
 import { Moon } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import {
@@ -12,6 +12,7 @@ import SortableListTaskCard from "./SortableListTaskCard";
 import type { Task, Project } from "@/lib/types/task";
 import type { ProcessedTasks, TaskGroup } from "@/lib/hooks/useTaskViewData";
 import { cn } from "@/lib/utils";
+import { isSwipeHintDismissed, dismissSwipeHint } from "@/lib/utils/swipeHint";
 
 /**
  * DroppableContainer is a lightweight wrapper for dnd-kit drop zones.
@@ -113,6 +114,23 @@ function TaskListViewBase({
   const activeIds = useMemo(() => active.map((t) => t.id), [active]);
   const eveningIds = useMemo(() => evening.map((t) => t.id), [evening]);
 
+  const [hintTaskId, setHintTaskId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isDesktop || isSwipeHintDismissed()) return;
+    const firstActiveTask =
+      active.find((t) => !t.is_completed) ??
+      groups?.flatMap((g) => g.tasks).find((t) => !t.is_completed);
+    if (firstActiveTask) {
+      setHintTaskId(firstActiveTask.id);
+    }
+  }, [isDesktop, active, groups]);
+
+  const handleHintShown = () => {
+    dismissSwipeHint();
+    setHintTaskId(null);
+  };
+
   return (
     <div
       className="px-4 md:px-6 pb-12 md:pb-8 flex flex-col gap-8 touch-manipulation"
@@ -149,6 +167,10 @@ function TaskListViewBase({
                         isDesktop={isDesktop}
                         triggerHaptic={triggerHaptic}
                         setActiveTaskId={setActiveTaskId}
+                        shouldShowHint={task.id === hintTaskId}
+                        onHintShown={
+                          task.id === hintTaskId ? handleHintShown : undefined
+                        }
                       />
                     );
                   })}
@@ -183,6 +205,10 @@ function TaskListViewBase({
                       isDesktop={isDesktop}
                       triggerHaptic={triggerHaptic}
                       setActiveTaskId={setActiveTaskId}
+                      shouldShowHint={task.id === hintTaskId}
+                      onHintShown={
+                        task.id === hintTaskId ? handleHintShown : undefined
+                      }
                     />
                   );
                 })}
@@ -227,6 +253,10 @@ function TaskListViewBase({
                       isDesktop={isDesktop}
                       triggerHaptic={triggerHaptic}
                       setActiveTaskId={setActiveTaskId}
+                      shouldShowHint={task.id === hintTaskId}
+                      onHintShown={
+                        task.id === hintTaskId ? handleHintShown : undefined
+                      }
                     />
                   );
                 })}

@@ -72,6 +72,11 @@ export function ListTaskCard({
       id={taskDomId(task.id)}
       role="option"
       aria-selected={isKeyboardSelected}
+      aria-description={
+        !isDesktop && !task.is_completed
+          ? "Swipe right to complete, swipe left to delete"
+          : undefined
+      }
       className={cn(
         "flex items-center w-full gap-2 md:gap-3 group relative bg-background border-b border-border/10 hover:bg-secondary/15 transition-all px-4 py-3 touch-manipulation",
         isKeyboardSelected &&
