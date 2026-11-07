@@ -16,7 +16,6 @@ import {
 import {
   Calendar,
   CalendarClock,
-  Folder,
   Inbox,
   ListTodo,
   Save,
@@ -151,8 +150,6 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
             return `TASK-${raw.slice(0, 4)}`;
           })()
         : "TASK-102";
-
-  const selectedProject = projects?.find((p) => p.id === selectedProjectId);
 
   return (
     <div
@@ -373,17 +370,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
             onPointerDown={() => trigger("toggle")}
             className="flex items-center gap-2 bg-secondary/40 hover:bg-secondary/60 border border-border/50 rounded-lg px-2.5 py-1.5 text-xs font-medium cursor-pointer transition-colors max-w-[180px] h-9 shadow-none text-foreground [&>svg]:opacity-100 [&>svg]:text-foreground shrink-0"
           >
-            <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            <span
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{
-                backgroundColor:
-                  selectedProject?.color ?? "hsl(var(--muted-foreground))",
-              }}
-            />
-            <span className="truncate font-medium">
-              <SelectValue placeholder="Inbox" />
-            </span>
+            <SelectValue placeholder="Inbox" />
           </SelectTrigger>
           <SelectContent
             className={cn(

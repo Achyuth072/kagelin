@@ -423,12 +423,28 @@ describe("TaskView - normalized form patterns & surface parity", () => {
 
     const projectTrigger = screen.getByRole("combobox");
     expect(projectTrigger).toHaveClass("max-w-[180px]", "rounded-lg");
+    expect(projectTrigger.querySelector(".lucide-folder")).toBeNull();
+    // Only one color indicator dot (from SelectValue), not duplicate dots
+    expect(projectTrigger.querySelectorAll(".rounded-full")).toHaveLength(1);
 
     const deleteBtn = screen.getByRole("button", { name: /delete task/i });
     expect(deleteBtn).toHaveClass("h-9", "w-9");
 
     const saveBtn = screen.getByRole("button", { name: /save changes/i });
     expect(saveBtn).toHaveClass("h-9", "w-9", "bg-brand");
+  });
+
+  it("renders project selector for inbox without duplicate folder icons or dots", () => {
+    renderTaskView({
+      mode: "create",
+      selectedProjectId: null,
+      hasContent: false,
+    });
+
+    const projectTrigger = screen.getByRole("combobox");
+    expect(projectTrigger.querySelector(".lucide-folder")).toBeNull();
+    expect(projectTrigger.querySelectorAll(".rounded-full")).toHaveLength(0);
+    expect(projectTrigger.querySelector(".lucide-inbox")).toBeInTheDocument();
   });
 
   it("renders with panel layout without error", () => {
