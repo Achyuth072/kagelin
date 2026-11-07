@@ -12,9 +12,9 @@ describe("PriorityGlyph", () => {
     expect(glyph.children).toHaveLength(3);
     expect(glyph.children[0].className).toContain("h-1.5");
     expect(glyph.children[0].className).toContain("opacity-100");
-    expect(glyph.children[1].className).toContain("h-2.5");
+    expect(glyph.children[1].className).toContain("h-2");
     expect(glyph.children[1].className).toContain("opacity-100");
-    expect(glyph.children[2].className).toContain("h-3.5");
+    expect(glyph.children[2].className).toContain("h-2.5");
     expect(glyph.children[2].className).toContain("opacity-100");
   });
 
@@ -24,9 +24,9 @@ describe("PriorityGlyph", () => {
     expect(glyph).toBeInTheDocument();
     expect(glyph.children[0].className).toContain("h-1.5");
     expect(glyph.children[0].className).toContain("opacity-100");
-    expect(glyph.children[1].className).toContain("h-2.5");
+    expect(glyph.children[1].className).toContain("h-2");
     expect(glyph.children[1].className).toContain("opacity-100");
-    expect(glyph.children[2].className).toContain("h-1");
+    expect(glyph.children[2].className).toContain("h-2.5");
     expect(glyph.children[2].className).toContain("opacity-20");
   });
 
@@ -36,9 +36,9 @@ describe("PriorityGlyph", () => {
     expect(glyph).toBeInTheDocument();
     expect(glyph.children[0].className).toContain("h-1.5");
     expect(glyph.children[0].className).toContain("opacity-100");
-    expect(glyph.children[1].className).toContain("h-1");
+    expect(glyph.children[1].className).toContain("h-2");
     expect(glyph.children[1].className).toContain("opacity-20");
-    expect(glyph.children[2].className).toContain("h-1");
+    expect(glyph.children[2].className).toContain("h-2.5");
     expect(glyph.children[2].className).toContain("opacity-20");
   });
 

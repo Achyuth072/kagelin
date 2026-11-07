@@ -23,20 +23,20 @@ export function PriorityGlyph({ level, className }: PriorityGlyphProps) {
     >
       <span
         className={cn(
-          "w-[2.5px] rounded-[0.5px] bg-foreground transition-all",
-          level <= 3 ? "h-1.5 opacity-100" : "h-1 opacity-20",
+          "w-[2.5px] h-1.5 rounded-[0.5px] bg-foreground transition-all",
+          level <= 3 ? "opacity-100" : "opacity-20",
         )}
       />
       <span
         className={cn(
-          "w-[2.5px] rounded-[0.5px] bg-foreground transition-all",
-          level <= 2 ? "h-2.5 opacity-100" : "h-1 opacity-20",
+          "w-[2.5px] h-2 rounded-[0.5px] bg-foreground transition-all",
+          level <= 2 ? "opacity-100" : "opacity-20",
         )}
       />
       <span
         className={cn(
-          "w-[2.5px] rounded-[0.5px] bg-foreground transition-all",
-          level === 1 ? "h-3.5 opacity-100" : "h-1 opacity-20",
+          "w-[2.5px] h-2.5 rounded-[0.5px] bg-foreground transition-all",
+          level === 1 ? "opacity-100" : "opacity-20",
         )}
       />
     </span>
