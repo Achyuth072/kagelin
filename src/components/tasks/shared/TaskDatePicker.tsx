@@ -1,6 +1,6 @@
 "use client";
 
-import { format, isBefore, startOfDay } from "date-fns";
+import { format, isBefore, isToday, startOfDay } from "date-fns";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -63,6 +63,8 @@ export function TaskDatePicker({
   const isDoDate = title === "Do Date" || title.toLowerCase().includes("start");
   const isOverdue =
     !isDoDate && !!date && isBefore(date, startOfDay(new Date()));
+  const isDoDateToday = isDoDate && !!date && isToday(date);
+  const isHighlighted = isDoDateToday || isOverdue;
   const { trigger } = useHaptic();
   const { formatDateWithTime } = useTimeFormat();
 
@@ -83,7 +85,7 @@ export function TaskDatePicker({
       <Icon
         className={cn(
           "h-3.5 w-3.5",
-          isDoDate ? "text-brand" : "text-muted-foreground",
+          isDoDateToday ? "text-foreground" : "text-muted-foreground",
           error && "text-destructive",
         )}
       />
@@ -135,11 +137,9 @@ export function TaskDatePicker({
   const buttonClassName = isChip
     ? cn(
         "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-auto shadow-none",
-        isDoDate
-          ? "bg-brand/10 hover:bg-brand/20 border-brand/20 text-brand"
-          : isOverdue
-            ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
-            : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-foreground",
+        isHighlighted
+          ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
+          : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-foreground",
         error && "border-destructive text-destructive",
       )
     : cn(

@@ -136,7 +136,8 @@ describe("TaskDatePicker", () => {
     );
   });
 
-  it("should render chip variant for Do Date and Due Date with expected styles", () => {
+  it("should render chip variant for Do Date and Due Date with accessible high-contrast styles", () => {
+    // Unset Do Date chip should have neutral styling, not Kagelin blue
     const { unmount } = render(
       <TaskDatePicker
         {...defaultProps}
@@ -146,9 +147,60 @@ describe("TaskDatePicker", () => {
       />,
     );
     const doChip = screen.getByRole("button", { name: /do date/i });
-    expect(doChip).toHaveClass("bg-brand/10", "text-brand");
+    expect(doChip).toHaveClass(
+      "bg-secondary/40",
+      "border-border/50",
+      "text-foreground",
+    );
+    expect(doChip).not.toHaveClass("bg-brand/10", "text-brand");
     expect(screen.getByText("Do: None")).toBeInTheDocument();
     unmount();
+
+    // Planned Today Do Date chip should have accessible high-contrast emphasis
+    const today = new Date();
+    const { unmount: unmountToday } = render(
+      <TaskDatePicker
+        {...defaultProps}
+        variant="chip"
+        title="Do Date"
+        date={today}
+        open={false}
+      />,
+    );
+    const doChipToday = screen.getByRole("button", { name: /do date/i });
+    expect(doChipToday).toHaveClass(
+      "bg-secondary/70",
+      "border-border/80",
+      "font-semibold",
+      "text-foreground",
+    );
+    expect(doChipToday).not.toHaveClass("bg-brand/10", "text-brand");
+    const todayIcon = doChipToday.querySelector("svg");
+    expect(todayIcon).toHaveClass("text-foreground");
+    unmountToday();
+
+    // Do Date on a future date (not today) should have neutral chip styling
+    const futureDoDate = new Date();
+    futureDoDate.setDate(futureDoDate.getDate() + 2);
+    const { unmount: unmountFutureDo } = render(
+      <TaskDatePicker
+        {...defaultProps}
+        variant="chip"
+        title="Do Date"
+        date={futureDoDate}
+        open={false}
+      />,
+    );
+    const doChipFuture = screen.getByRole("button", { name: /do date/i });
+    expect(doChipFuture).toHaveClass(
+      "bg-secondary/40",
+      "border-border/50",
+      "text-foreground",
+    );
+    expect(doChipFuture).not.toHaveClass("bg-secondary/70", "font-semibold");
+    const futureDoIcon = doChipFuture.querySelector("svg");
+    expect(futureDoIcon).toHaveClass("text-muted-foreground");
+    unmountFutureDo();
 
     // Normal due date
     const futureDate = new Date();
