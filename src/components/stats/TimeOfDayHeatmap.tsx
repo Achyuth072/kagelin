@@ -80,7 +80,7 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
           <h3 className="text-sm font-semibold text-foreground">
             Focus by Time of Day
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2">
+          <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2">
             <span>{readoutText}</span>
             {selectedCell && (
               <button
@@ -205,10 +205,14 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground/70 pt-0.5">
-            <span className="sm:hidden">← Swipe runway for all 24h →</span>
-            <span className="hidden sm:inline">24-hour focus runway</span>
-            <span>Intensity: 0m → 60m+</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2 text-[10px] font-mono text-muted-foreground/70 pt-0.5">
+            <span className="sm:hidden whitespace-nowrap">
+              ← Swipe runway for all 24h →
+            </span>
+            <span className="hidden sm:inline whitespace-nowrap">
+              24-hour focus runway
+            </span>
+            <span className="whitespace-nowrap">Intensity: 0m → 60m+</span>
           </div>
         </>
       )}

@@ -46,14 +46,16 @@ export function FocusTrendChart({
   );
 
   return (
-    <Card className={cn("p-6 border-border/50", className)}>
+    <Card className={cn("p-4 sm:p-6 border-border/50", className)}>
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Trend
             </h3>
-            <p className="text-sm text-muted-foreground mt-1">{periodLabel}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {periodLabel} focus and task trend
+            </p>
           </div>
           {hasData && (
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -78,30 +80,39 @@ export function FocusTrendChart({
           />
         ) : (
           <div className="w-full min-w-0 overflow-hidden">
-            <table className="sr-only">
-              <caption>{periodLabel} Focus and Task Trend Summary</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Date</th>
-                  <th scope="col">Focus Hours</th>
-                  <th scope="col">Tasks Completed</th>
-                </tr>
-              </thead>
-              <tbody>
-                {chartData.map((d) => (
-                  <tr key={d.date}>
-                    <td>{d.label}</td>
-                    <td>{d.hours} hours</td>
-                    <td>{d.tasksCompleted} tasks</td>
+            <div className="sr-only">
+              <table className="sr-only">
+                <caption className="sr-only">
+                  {periodLabel} Focus and Task Trend Summary
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Focus Hours</th>
+                    <th scope="col">Tasks Completed</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {chartData.map((d) => (
+                    <tr key={d.date}>
+                      <td>{d.label}</td>
+                      <td>{d.hours} hours</td>
+                      <td>{d.tasksCompleted} tasks</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={isMobile ? 230 : 200}>
               <ComposedChart
                 data={chartData}
-                margin={{ top: 12, right: 0, bottom: 0, left: 0 }}
+                margin={{
+                  top: 12,
+                  right: 0,
+                  bottom: 0,
+                  left: isMobile ? -6 : 0,
+                }}
               >
                 <defs>
                   <linearGradient
@@ -126,7 +137,7 @@ export function FocusTrendChart({
                 <XAxis
                   dataKey="label"
                   stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
+                  fontSize={isMobile ? 11 : 12}
                   tickLine={false}
                   axisLine={false}
                   interval={tickInterval}
@@ -134,9 +145,9 @@ export function FocusTrendChart({
                 />
                 <YAxis
                   yAxisId="hours"
-                  width={36}
+                  width={isMobile ? 28 : 36}
                   stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
+                  fontSize={isMobile ? 11 : 12}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(value) => `${value}h`}
@@ -144,9 +155,9 @@ export function FocusTrendChart({
                 <YAxis
                   yAxisId="tasks"
                   orientation="right"
-                  width={28}
+                  width={isMobile ? 22 : 28}
                   stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
+                  fontSize={isMobile ? 11 : 12}
                   tickLine={false}
                   axisLine={false}
                   allowDecimals={false}

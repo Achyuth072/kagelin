@@ -132,7 +132,7 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
 
   if (isLoading) {
     return (
-      <Card className={cn("p-6 border-border/50", className)}>
+      <Card className={cn("p-4 sm:p-6 border-border/50", className)}>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <Skeleton className="h-4 w-32" />
@@ -144,7 +144,9 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
   }
 
   return (
-    <Card className={cn("p-6 border-border/50 overflow-hidden", className)}>
+    <Card
+      className={cn("p-4 sm:p-6 border-border/50 overflow-hidden", className)}
+    >
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>

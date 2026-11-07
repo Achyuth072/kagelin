@@ -82,8 +82,16 @@ describe("FocusTrendChart", () => {
       />,
     );
 
+    expect(
+      screen.getByText("Last 7 days (ends today) focus and task trend"),
+    ).toBeInTheDocument();
+
     const table = screen.getByRole("table", { hidden: true });
     expect(table).toHaveClass("sr-only");
+    expect(table.parentElement).toHaveClass("sr-only");
+    expect(
+      screen.getByText("Last 7 days (ends today) Focus and Task Trend Summary"),
+    ).toHaveClass("sr-only");
 
     expect(screen.getByText("2.5 hours")).toBeInTheDocument();
     expect(screen.getByText("4 tasks")).toBeInTheDocument();
@@ -95,6 +103,9 @@ describe("FocusTrendChart", () => {
     const { container } = render(
       <FocusTrendChart data={sampleData} periodLabel="Last 7 days" />,
     );
+
+    const card = container.querySelector(".p-4.sm\\:p-6");
+    expect(card).toBeInTheDocument();
 
     // Gradient in defs
     const gradient = container.querySelector("#focusGradient");

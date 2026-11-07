@@ -32,9 +32,25 @@ describe("TimeOfDayHeatmap", () => {
     ).toBeInTheDocument();
 
     // Check footer hints
-    expect(screen.getByText("24-hour focus runway")).toBeInTheDocument();
-    expect(screen.getByText(/Swipe runway for all 24h/i)).toBeInTheDocument();
-    expect(screen.getByText("Intensity: 0m → 60m+")).toBeInTheDocument();
+    const desktopHint = screen.getByText("24-hour focus runway");
+    const mobileHint = screen.getByText(/Swipe runway for all 24h/i);
+    const intensityHint = screen.getByText("Intensity: 0m → 60m+");
+
+    expect(desktopHint).toBeInTheDocument();
+    expect(desktopHint).toHaveClass("whitespace-nowrap");
+    expect(mobileHint).toBeInTheDocument();
+    expect(mobileHint).toHaveClass("whitespace-nowrap");
+    expect(intensityHint).toBeInTheDocument();
+    expect(intensityHint).toHaveClass("whitespace-nowrap");
+
+    const footerEl = intensityHint.parentElement;
+    expect(footerEl).toHaveClass(
+      "flex",
+      "flex-col",
+      "sm:flex-row",
+      "gap-1.5",
+      "sm:gap-2",
+    );
 
     // Check grid template columns
     const gridEl = container.querySelector(
