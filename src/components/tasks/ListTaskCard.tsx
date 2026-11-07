@@ -156,10 +156,10 @@ export function ListTaskCard({
             {task.priority < 4 && <PriorityGlyph level={task.priority} />}
           </div>
 
-          {/* Desktop Hover Action Cluster (STABLE WIDTH, OPACITY-FADE = ZERO LAYOUT SHIFT) */}
+          {/* Action Cluster (Mobile: play button visible; Desktop: hover fade with zero layout shift) */}
           <div
             data-testid="hover-action-cluster"
-            className="hidden md:flex w-14 justify-end items-center gap-1 flex-shrink-0 opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition-opacity duration-150 pointer-events-none md:group-hover:pointer-events-auto"
+            className="flex w-14 justify-end items-center gap-1 flex-shrink-0 opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto transition-opacity duration-150"
           >
             <button
               type="button"
@@ -175,7 +175,7 @@ export function ListTaskCard({
               title="Delete (d)"
               aria-label="Delete task"
               onClick={onDeleteRequest}
-              className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-secondary/50 transition-colors"
+              className="hidden md:inline-flex p-1 rounded text-muted-foreground hover:text-destructive hover:bg-secondary/50 transition-colors"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>

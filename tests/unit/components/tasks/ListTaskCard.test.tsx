@@ -121,4 +121,40 @@ describe("ListTaskCard", () => {
       expect(handleComplete).toHaveBeenCalledWith(true);
     }
   });
+
+  it("renders visible play button on mobile while keeping delete button desktop-only", () => {
+    const handlePlayFocus = vi.fn();
+    const onDeleteRequest = vi.fn();
+
+    render(
+      <ListTaskCard
+        task={baseTask}
+        isDesktop={false}
+        isExpanded={false}
+        toggleExpand={vi.fn()}
+        handleComplete={vi.fn()}
+        handlePlayFocus={handlePlayFocus}
+        onDeleteRequest={onDeleteRequest}
+        project={undefined}
+      />,
+    );
+
+    const cluster = screen.getByTestId("hover-action-cluster");
+    expect(cluster).toBeInTheDocument();
+    expect(cluster.className).not.toContain("hidden md:flex");
+    expect(cluster.className).toContain("opacity-100");
+
+    const playButton = screen.getByRole("button", {
+      name: "Start focus timer",
+    });
+    expect(playButton).toBeInTheDocument();
+    fireEvent.click(playButton);
+    expect(handlePlayFocus).toHaveBeenCalledTimes(1);
+
+    const deleteButton = screen.getByRole("button", {
+      name: "Delete task",
+    });
+    expect(deleteButton).toBeInTheDocument();
+    expect(deleteButton.className).toContain("hidden md:inline-flex");
+  });
 });
