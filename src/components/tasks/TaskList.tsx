@@ -1072,7 +1072,7 @@ function TaskListBase({
               className={cn(
                 "h-full overflow-hidden shrink-0 transition-[width,opacity,padding] duration-200 motion-reduce:transition-none",
                 selectedTask
-                  ? "w-[40%] opacity-100 pt-2 pr-4 md:pr-6 pb-8 pl-0"
+                  ? "w-[40%] opacity-100 pt-2 pr-4 md:pr-6 pb-8 pl-0 pointer-events-auto"
                   : "w-0 opacity-0 p-0 pointer-events-none",
               )}
               style={{ transitionTimingFunction: "var(--ease-seijaku)" }}

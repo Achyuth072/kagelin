@@ -213,6 +213,7 @@ describe("DynamicDualSheet in TaskList", () => {
     const inspector = screen.getByTestId("docked-task-inspector");
     expect(inspector).toHaveClass("pt-2");
     expect(inspector).toHaveClass("duration-200");
+    expect(inspector).toHaveClass("pointer-events-auto");
 
     const scrollContainer = screen.getByRole("grid");
     expect(scrollContainer).toHaveClass("w-[60%]");
@@ -336,6 +337,29 @@ describe("DynamicDualSheet in TaskList", () => {
     });
 
     expect(inspector).toHaveClass("w-[40%]");
+  });
+
+  it("DDS-08: Pointerdown inside inspector does not dismiss it even when document.body pointer-events are disabled", async () => {
+    renderTaskList();
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Alpha task")[0]).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByText("Alpha task")[0]);
+    const inspector = await screen.findByTestId("docked-task-inspector");
+
+    // Simulate modal dropdown disabling body pointer events
+    document.body.style.pointerEvents = "none";
+    try {
+      act(() => {
+        fireEvent.pointerDown(inspector, { button: 0 });
+      });
+      expect(inspector).toHaveClass("w-[40%]");
+      expect(inspector).toHaveClass("pointer-events-auto");
+    } finally {
+      document.body.style.pointerEvents = "";
+    }
   });
 });
 
