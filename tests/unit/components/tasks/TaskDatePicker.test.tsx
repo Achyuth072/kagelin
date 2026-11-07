@@ -135,4 +135,49 @@ describe("TaskDatePicker", () => {
       }),
     );
   });
+
+  it("should render chip variant for Do Date and Due Date with expected styles", () => {
+    const { unmount } = render(
+      <TaskDatePicker
+        {...defaultProps}
+        variant="chip"
+        title="Do Date"
+        open={false}
+      />,
+    );
+    const doChip = screen.getByRole("button", { name: /do date/i });
+    expect(doChip).toHaveClass("bg-brand/10", "text-brand");
+    expect(screen.getByText("Do: Today")).toBeInTheDocument();
+    unmount();
+
+    // Normal due date
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 3);
+    const { unmount: unmountDue } = render(
+      <TaskDatePicker
+        {...defaultProps}
+        variant="chip"
+        title="Due Date"
+        date={futureDate}
+        open={false}
+      />,
+    );
+    const dueChip = screen.getByTitle("Set due date");
+    expect(dueChip).toHaveClass("bg-secondary/40", "border-border/50");
+    unmountDue();
+
+    // Overdue due date
+    const pastDate = new Date("2020-01-01T00:00:00Z");
+    render(
+      <TaskDatePicker
+        {...defaultProps}
+        variant="chip"
+        title="Due Date"
+        date={pastDate}
+        open={false}
+      />,
+    );
+    const overdueChip = screen.getByTitle("Set due date");
+    expect(overdueChip).toHaveClass("bg-secondary/70", "font-semibold");
+  });
 });

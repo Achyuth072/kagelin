@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Repeat } from "lucide-react";
+import { Repeat, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import { formatRecurrenceRule } from "@/lib/utils/recurrence";
@@ -17,7 +17,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 interface RecurrencePickerProps {
   value: RecurrenceRule | null;
   onChange: (value: RecurrenceRule | null) => void;
-  variant?: "default" | "icon";
+  variant?: "default" | "icon" | "chip";
   isMobile?: boolean;
 }
 
@@ -64,7 +64,49 @@ export default function RecurrencePicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        {isIconVariant ? (
+        {variant === "chip" ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md bg-secondary/40 hover:bg-secondary/60 border border-border/50 text-muted-foreground hover:text-foreground transition-colors shrink-0 h-auto shadow-none"
+            onClick={() => {
+              trigger("toggle");
+            }}
+            title={!isMobile ? formatRecurrenceRule(value) : undefined}
+          >
+            <Repeat className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>
+              Repeat:{" "}
+              {value ? badgeLetter || formatRecurrenceRule(value) : "None"}
+            </span>
+            {hasRecurrence && (
+              <span
+                role="button"
+                tabIndex={0}
+                title="Clear repeat"
+                aria-label="Clear repeat"
+                className="relative ml-0.5 p-0.5 rounded-full hover:bg-current/10 cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  trigger("toggle");
+                  onChange(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    trigger("toggle");
+                    onChange(null);
+                  }
+                }}
+              >
+                <X className="h-3 w-3" />
+              </span>
+            )}
+          </Button>
+        ) : isIconVariant ? (
           <Button
             variant="ghost"
             size="sm"

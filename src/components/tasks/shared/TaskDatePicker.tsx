@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { format, isBefore, startOfDay, isToday } from "date-fns";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ interface TaskDatePickerProps {
   isMobile: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  variant?: "icon" | "compact";
+  variant?: "icon" | "compact" | "chip";
   title?: string;
   activeClassName?: string;
   icon?: LucideIcon;
@@ -59,11 +59,19 @@ export function TaskDatePicker({
   onEveningSelect,
 }: TaskDatePickerProps) {
   const isCompact = variant === "compact";
+  const isChip = variant === "chip";
+  const isDoDate =
+    title.toLowerCase().includes("start") || title.toLowerCase().includes("do");
+  const isOverdue =
+    !isDoDate &&
+    !!date &&
+    isBefore(date, startOfDay(new Date())) &&
+    !isToday(date);
   const { trigger } = useHaptic();
   const { formatDateWithTime } = useTimeFormat();
 
-  const prefix = title.toLowerCase().includes("start")
-    ? "Start"
+  const prefix = isDoDate
+    ? "Do"
     : title.toLowerCase().includes("due")
       ? "Due"
       : title;
@@ -74,7 +82,45 @@ export function TaskDatePicker({
       : format(date, "MMMM d, yyyy")
     : null;
 
-  const buttonContent = (
+  const buttonContent = isChip ? (
+    <div className="flex items-center gap-1.5">
+      <Icon
+        className={cn(
+          "h-3.5 w-3.5",
+          isDoDate ? "text-brand" : "text-muted-foreground",
+          error && "text-destructive",
+        )}
+      />
+      <span>
+        {prefix}: {date ? formattedDate : isDoDate ? "Today" : "None"}
+      </span>
+      {date && (
+        <span
+          role="button"
+          tabIndex={0}
+          title={`Clear ${title.toLowerCase()}`}
+          aria-label={`Clear ${title.toLowerCase()}`}
+          className="relative ml-0.5 p-0.5 rounded-full hover:bg-current/10 cursor-pointer"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            trigger("toggle");
+            setDate(undefined);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              trigger("toggle");
+              setDate(undefined);
+            }
+          }}
+        >
+          <X className="h-3 w-3" />
+        </span>
+      )}
+    </div>
+  ) : (
     <div className="flex items-center gap-1.5">
       <Icon
         strokeWidth={1.5}
@@ -149,6 +195,32 @@ export function TaskDatePicker({
     ? `${title}: ${formattedDate}`
     : `Set ${title.toLowerCase()}`;
 
+  const buttonClassName = isChip
+    ? cn(
+        "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-auto shadow-none",
+        isDoDate
+          ? "bg-brand/10 hover:bg-brand/20 border-brand/20 text-brand"
+          : isOverdue
+            ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
+            : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-foreground",
+        error && "border-destructive text-destructive",
+      )
+    : cn(
+        "h-9 transition-all shrink-0 group [&_svg]:!size-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none",
+        error &&
+          "border-destructive-surface-border bg-destructive-surface text-destructive hover:bg-destructive-surface-hover hover:text-destructive",
+        isCompact
+          ? cn(
+              "w-auto px-2.5 text-muted-foreground hover:text-foreground",
+              date && cn("border-transparent", activeClassName),
+            )
+          : cn(
+              "w-auto px-2.5 sm:px-3 text-muted-foreground hover:text-foreground hover:bg-accent",
+              date &&
+                cn("hover:bg-transparent border-transparent", activeClassName),
+            ),
+      );
+
   if (isMobile) {
     return (
       <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
@@ -159,24 +231,7 @@ export function TaskDatePicker({
             trigger("toggle");
             onOpenChange(true);
           }}
-          className={cn(
-            "h-9 transition-all shrink-0 group [&_svg]:!size-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none",
-            error &&
-              "border-destructive-surface-border bg-destructive-surface text-destructive hover:bg-destructive-surface-hover hover:text-destructive",
-            isCompact
-              ? cn(
-                  "w-auto px-2.5 text-muted-foreground hover:text-foreground",
-                  date && cn("border-transparent", activeClassName),
-                )
-              : cn(
-                  "w-auto px-2.5 sm:px-3 text-muted-foreground hover:text-foreground hover:bg-accent",
-                  date &&
-                    cn(
-                      "hover:bg-transparent border-transparent",
-                      activeClassName,
-                    ),
-                ),
-          )}
+          className={buttonClassName}
           title={buttonTitle}
           aria-label={buttonAriaLabel}
         >
@@ -212,24 +267,7 @@ export function TaskDatePicker({
         <Button
           variant="ghost"
           size="sm"
-          className={cn(
-            "h-9 transition-all shrink-0 group [&_svg]:!size-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none",
-            error &&
-              "border-destructive-surface-border bg-destructive-surface text-destructive hover:bg-destructive-surface-hover hover:text-destructive",
-            isCompact
-              ? cn(
-                  "w-auto px-2.5 text-muted-foreground hover:text-foreground",
-                  date && cn("border-transparent", activeClassName),
-                )
-              : cn(
-                  "w-auto px-2.5 sm:px-3 text-muted-foreground hover:text-foreground hover:bg-accent",
-                  date &&
-                    cn(
-                      "hover:bg-transparent border-transparent",
-                      activeClassName,
-                    ),
-                ),
-          )}
+          className={buttonClassName}
           title={buttonTitle}
           aria-label={buttonAriaLabel}
         >

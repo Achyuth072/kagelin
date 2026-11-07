@@ -118,7 +118,7 @@ function SubtaskItemContent({
         disabled={isDraftMode}
         aria-label={`Mark "${content ?? UNREADABLE_LABEL}" complete`}
         className={cn(
-          "relative mt-0.5 h-3.5 w-3.5 !rounded-sm",
+          "relative mt-0.5 h-3.5 w-3.5 !rounded-[3.5px] border",
           touchTargetClasses.default,
           priorityCheckboxClasses[4],
         )}
@@ -591,7 +591,7 @@ export default function SubtaskList({
                       disabled
                       aria-label={`Step "${activeContent}"`}
                       className={cn(
-                        "mt-0.5 h-3.5 w-3.5 !rounded-sm",
+                        "mt-0.5 h-3.5 w-3.5 !rounded-[3.5px] border",
                         priorityCheckboxClasses[4],
                       )}
                     />
