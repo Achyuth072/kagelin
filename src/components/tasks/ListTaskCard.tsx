@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
-import { isToday, parseISO } from "date-fns";
+import { format, isToday, parseISO } from "date-fns";
 import { formatDueDate, isOverdue, taskDomId } from "./task-utils";
 import {
   DraggableAttributes,
@@ -66,7 +66,7 @@ export function ListTaskCard({
   return (
     <div
       id={taskDomId(task.id)}
-      role="option"
+      role="row"
       aria-selected={isKeyboardSelected}
       aria-description={
         !isDesktop && !task.is_completed
@@ -106,6 +106,7 @@ export function ListTaskCard({
 
       {/* Left: Accessible 44px Checkbox Container with Left & Right Breathing Room */}
       <div
+        role="gridcell"
         className="pt-0.5 pl-1 sm:pl-2 pr-3 sm:pr-4 flex-shrink-0"
         onClick={(e) => e.stopPropagation()}
         data-testid="task-checkbox-container"
@@ -119,7 +120,7 @@ export function ListTaskCard({
             handleComplete(!task.is_completed);
           }}
           aria-label={`Toggle complete ${task.content ?? ""}`}
-          className="h-10 w-10 -m-3 flex items-center justify-center transition-colors rounded-full hover:bg-secondary/40"
+          className="h-11 w-11 -m-3.5 flex items-center justify-center transition-colors rounded-full hover:bg-secondary/40"
         >
           <span
             className={cn(
@@ -137,7 +138,7 @@ export function ListTaskCard({
       </div>
 
       {/* Center: Full-Width Vertical Stack */}
-      <div className="flex-1 min-w-0 pr-1">
+      <div role="gridcell" className="flex-1 min-w-0 pr-1">
         {/* Top row: Title + Priority Glyph + Desktop Hover Actions (ZERO JUMP) */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -165,7 +166,7 @@ export function ListTaskCard({
               title="Focus (f)"
               aria-label="Start focus timer"
               onClick={handlePlayFocus}
-              className="p-1 rounded text-muted-foreground hover:text-brand hover:bg-secondary/50 transition-colors pointer-events-auto"
+              className="p-1 rounded text-muted-foreground hover:text-brand hover:bg-secondary/50 transition-colors"
             >
               <Play className="h-3.5 w-3.5 fill-current" />
             </button>
@@ -174,7 +175,7 @@ export function ListTaskCard({
               title="Delete (d)"
               aria-label="Delete task"
               onClick={onDeleteRequest}
-              className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-secondary/50 transition-colors pointer-events-auto"
+              className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-secondary/50 transition-colors"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -187,7 +188,11 @@ export function ListTaskCard({
           {task.do_date && (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md bg-brand/10 border border-brand/20 text-brand">
               <CalendarClock className="h-3 w-3 stroke-[2.25]" />
-              <span>{isPlannedToday ? "Planned Today" : task.do_date}</span>
+              <span>
+                {isPlannedToday
+                  ? "Planned Today"
+                  : format(parseISO(task.do_date), "MMM d")}
+              </span>
             </span>
           )}
 

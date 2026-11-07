@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Clock, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -50,6 +50,17 @@ interface TimeOfDayHeatmapProps {
 
 export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
+  const [focusPos, setFocusPos] = useState({ day: 0, hour: 0 });
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const focusCell = (day: number, hour: number) => {
+    setFocusPos({ day, hour });
+    gridRef.current
+      ?.querySelector<HTMLButtonElement>(
+        `[data-day="${day}"][data-hour="${hour}"]`,
+      )
+      ?.focus();
+  };
 
   const hasData = matrix.some((row) => row.some((minutes) => minutes > 0));
 
@@ -97,6 +108,7 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
         <>
           <div className="w-full overflow-x-auto pb-1.5 touch-pan-x custom-scrollbar">
             <div
+              ref={gridRef}
               className="grid gap-1 w-full min-w-[480px] md:min-w-0"
               style={{
                 gridTemplateColumns: "32px repeat(24, minmax(16px, 1fr))",
@@ -136,6 +148,42 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
                       <button
                         key={hour}
                         type="button"
+                        data-day={dayIdx}
+                        data-hour={hour}
+                        tabIndex={
+                          focusPos.day === dayIdx && focusPos.hour === hour
+                            ? 0
+                            : -1
+                        }
+                        onFocus={() => setFocusPos({ day: dayIdx, hour })}
+                        onKeyDown={(e) => {
+                          let nextDay = dayIdx;
+                          let nextHour = hour;
+                          switch (e.key) {
+                            case "ArrowRight":
+                              nextHour = Math.min(23, hour + 1);
+                              break;
+                            case "ArrowLeft":
+                              nextHour = Math.max(0, hour - 1);
+                              break;
+                            case "ArrowDown":
+                              nextDay = Math.min(6, dayIdx + 1);
+                              break;
+                            case "ArrowUp":
+                              nextDay = Math.max(0, dayIdx - 1);
+                              break;
+                            case "Home":
+                              nextHour = 0;
+                              break;
+                            case "End":
+                              nextHour = 23;
+                              break;
+                            default:
+                              return;
+                          }
+                          e.preventDefault();
+                          focusCell(nextDay, nextHour);
+                        }}
                         onClick={() =>
                           setSelectedCell({
                             day,
@@ -144,7 +192,7 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
                           })
                         }
                         className={cn(
-                          "w-full h-4.5 sm:h-5 md:h-5.5 min-w-[16px] rounded-[3px] transition-transform hover:scale-110 hover:z-10 relative focus-visible:ring-1 focus-visible:ring-brand flex items-center justify-center",
+                          "w-full h-4 sm:h-5 md:h-5.5 min-w-[16px] rounded-[3px] transition-transform motion-safe:hover:scale-110 hover:z-10 relative focus-visible:ring-1 focus-visible:ring-brand flex items-center justify-center",
                           bgClass,
                         )}
                         title={`${day} ${formattedHour}: ${minutes}m`}
@@ -159,9 +207,7 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
 
           <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground/70 pt-0.5">
             <span className="sm:hidden">← Swipe runway for all 24h →</span>
-            <span className="hidden sm:inline">
-              24-hour calibrated runway • 100% full width
-            </span>
+            <span className="hidden sm:inline">24-hour focus runway</span>
             <span>Intensity: 0m → 60m+</span>
           </div>
         </>

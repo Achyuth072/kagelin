@@ -98,7 +98,7 @@ describe("TaskDatePicker", () => {
     expect(screen.getByText(/Due:/)).toBeDefined();
   });
 
-  it("should allow clearing via keyboard (Enter and Space) with touch target expansion", async () => {
+  it("should allow clearing via a native button with touch target expansion", async () => {
     const setDate = vi.fn();
     const testDate = new Date("2026-11-04T12:00:00Z");
     const { fireEvent } = await import("@testing-library/react");
@@ -113,15 +113,15 @@ describe("TaskDatePicker", () => {
     );
 
     const clearBtn = screen.getByLabelText("Clear due date");
-    expect(clearBtn.getAttribute("tabindex")).toBe("0");
+    expect(clearBtn.tagName).toBe("BUTTON");
     expect(clearBtn.className).toContain("before:absolute");
     expect(clearBtn.className).toContain("before:-inset-2");
 
-    fireEvent.keyDown(clearBtn, { key: "Enter" });
+    fireEvent.click(clearBtn);
     expect(setDate).toHaveBeenCalledWith(undefined);
 
     setDate.mockClear();
-    fireEvent.keyDown(clearBtn, { key: " " });
+    fireEvent.click(clearBtn);
     expect(setDate).toHaveBeenCalledWith(undefined);
   });
 
@@ -147,7 +147,7 @@ describe("TaskDatePicker", () => {
     );
     const doChip = screen.getByRole("button", { name: /do date/i });
     expect(doChip).toHaveClass("bg-brand/10", "text-brand");
-    expect(screen.getByText("Do: Today")).toBeInTheDocument();
+    expect(screen.getByText("Do: None")).toBeInTheDocument();
     unmount();
 
     // Normal due date

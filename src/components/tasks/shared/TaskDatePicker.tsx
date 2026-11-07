@@ -1,6 +1,6 @@
 "use client";
 
-import { format, isBefore, startOfDay, isToday } from "date-fns";
+import { format, isBefore, startOfDay } from "date-fns";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,13 +60,9 @@ export function TaskDatePicker({
 }: TaskDatePickerProps) {
   const isCompact = variant === "compact";
   const isChip = variant === "chip";
-  const isDoDate =
-    title.toLowerCase().includes("start") || title.toLowerCase().includes("do");
+  const isDoDate = title === "Do Date" || title.toLowerCase().includes("start");
   const isOverdue =
-    !isDoDate &&
-    !!date &&
-    isBefore(date, startOfDay(new Date())) &&
-    !isToday(date);
+    !isDoDate && !!date && isBefore(date, startOfDay(new Date()));
   const { trigger } = useHaptic();
   const { formatDateWithTime } = useTimeFormat();
 
@@ -92,33 +88,8 @@ export function TaskDatePicker({
         )}
       />
       <span>
-        {prefix}: {date ? formattedDate : isDoDate ? "Today" : "None"}
+        {prefix}: {date ? formattedDate : "None"}
       </span>
-      {date && (
-        <span
-          role="button"
-          tabIndex={0}
-          title={`Clear ${title.toLowerCase()}`}
-          aria-label={`Clear ${title.toLowerCase()}`}
-          className="relative ml-0.5 p-0.5 rounded-full hover:bg-current/10 cursor-pointer"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            trigger("toggle");
-            setDate(undefined);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              e.stopPropagation();
-              trigger("toggle");
-              setDate(undefined);
-            }
-          }}
-        >
-          <X className="h-3 w-3" />
-        </span>
-      )}
     </div>
   ) : (
     <div className="flex items-center gap-1.5">
@@ -133,49 +104,15 @@ export function TaskDatePicker({
         )}
       />
       {date ? (
-        <>
-          <span
-            className={cn(
-              "text-sm font-medium",
-              isCompact ? "" : "ml-0.5",
-              error && "text-destructive",
-            )}
-          >
-            {prefix}: {formattedDate}
-          </span>
-
-          <span
-            role="button"
-            tabIndex={0}
-            title={`Clear ${title.toLowerCase()}`}
-            aria-label={`Clear ${title.toLowerCase()}`}
-            className={cn(
-              "relative ml-1 p-0.5 rounded cursor-pointer before:absolute before:-inset-2 before:content-['']",
-              isCompact
-                ? "hover:bg-destructive-surface-hover"
-                : "rounded-full hover:bg-current/10",
-              error && "hover:bg-destructive-surface-hover",
-            )}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              trigger("toggle");
-              setDate(undefined);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                e.stopPropagation();
-                trigger("toggle");
-                setDate(undefined);
-              }
-            }}
-          >
-            <X
-              className={cn("h-3 w-3", isCompact && "hover:text-destructive")}
-            />
-          </span>
-        </>
+        <span
+          className={cn(
+            "text-sm font-medium",
+            isCompact ? "" : "ml-0.5",
+            error && "text-destructive",
+          )}
+        >
+          {prefix}: {formattedDate}
+        </span>
       ) : (
         <span
           className={cn(
@@ -221,32 +158,94 @@ export function TaskDatePicker({
             ),
       );
 
+  const clearButton =
+    !isChip && date ? (
+      <button
+        type="button"
+        title={`Clear ${title.toLowerCase()}`}
+        aria-label={`Clear ${title.toLowerCase()}`}
+        className={cn(
+          "relative ml-1 p-0.5 rounded cursor-pointer before:absolute before:-inset-2 before:content-['']",
+          isCompact
+            ? "hover:bg-destructive-surface-hover"
+            : "rounded-full hover:bg-current/10",
+          error && "hover:bg-destructive-surface-hover",
+        )}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          trigger("toggle");
+          setDate(undefined);
+        }}
+      >
+        <X className={cn("h-3 w-3", isCompact && "hover:text-destructive")} />
+      </button>
+    ) : null;
+
   if (isMobile) {
     return (
-      <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            trigger("toggle");
-            onOpenChange(true);
-          }}
-          className={buttonClassName}
-          title={buttonTitle}
-          aria-label={buttonAriaLabel}
+      <div className="inline-flex items-center">
+        <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              trigger("toggle");
+              onOpenChange(true);
+            }}
+            className={buttonClassName}
+            title={buttonTitle}
+            aria-label={buttonAriaLabel}
+          >
+            {buttonContent}
+          </Button>
+          <ResponsiveDialogContent
+            className={cn(
+              "w-full p-0",
+              !isCompact &&
+                "max-w-[320px] mx-auto h-auto rounded-[10px] mb-4 bg-popover [&>div.h-2]:hidden",
+            )}
+          >
+            <ResponsiveDialogHeader className="sr-only">
+              <ResponsiveDialogTitle>Set {title}</ResponsiveDialogTitle>
+            </ResponsiveDialogHeader>
+            <DateTimeWizard
+              title={`Set ${title}`}
+              date={date}
+              setDate={setDate}
+              onClose={() => onOpenChange(false)}
+              showTime={showTime}
+              allowPastDates={allowPastDates}
+              onEveningSelect={onEveningSelect}
+            />
+          </ResponsiveDialogContent>
+        </ResponsiveDialog>
+        {clearButton}
+      </div>
+    );
+  }
+
+  return (
+    <div className="inline-flex items-center">
+      <Popover open={open} onOpenChange={onOpenChange}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={buttonClassName}
+            title={buttonTitle}
+            aria-label={buttonAriaLabel}
+          >
+            {buttonContent}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-auto p-0 border-none shadow-xl"
+          align={align}
+          side={side}
+          sideOffset={sideOffset}
+          collisionPadding={16}
         >
-          {buttonContent}
-        </Button>
-        <ResponsiveDialogContent
-          className={cn(
-            "w-full p-0",
-            !isCompact &&
-              "max-w-[320px] mx-auto h-auto rounded-[10px] mb-4 bg-popover [&>div.h-2]:hidden",
-          )}
-        >
-          <ResponsiveDialogHeader className="sr-only">
-            <ResponsiveDialogTitle>Set {title}</ResponsiveDialogTitle>
-          </ResponsiveDialogHeader>
           <DateTimeWizard
             title={`Set ${title}`}
             date={date}
@@ -256,41 +255,9 @@ export function TaskDatePicker({
             allowPastDates={allowPastDates}
             onEveningSelect={onEveningSelect}
           />
-        </ResponsiveDialogContent>
-      </ResponsiveDialog>
-    );
-  }
-
-  return (
-    <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={buttonClassName}
-          title={buttonTitle}
-          aria-label={buttonAriaLabel}
-        >
-          {buttonContent}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-auto p-0 border-none shadow-xl"
-        align={align}
-        side={side}
-        sideOffset={sideOffset}
-        collisionPadding={16}
-      >
-        <DateTimeWizard
-          title={`Set ${title}`}
-          date={date}
-          setDate={setDate}
-          onClose={() => onOpenChange(false)}
-          showTime={showTime}
-          allowPastDates={allowPastDates}
-          onEveningSelect={onEveningSelect}
-        />
-      </PopoverContent>
-    </Popover>
+        </PopoverContent>
+      </Popover>
+      {clearButton}
+    </div>
   );
 }

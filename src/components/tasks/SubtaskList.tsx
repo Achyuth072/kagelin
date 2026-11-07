@@ -56,7 +56,7 @@ const dndAnnouncements = {
 
 // Extends touch target to 44x44px bounding box.
 const touchTargetClasses = {
-  default: "after:absolute after:-inset-3.5 after:content-['']",
+  default: "after:absolute after:-inset-[15px] after:content-['']",
   delete: "after:absolute after:-inset-1 after:content-['']",
 };
 
@@ -194,7 +194,7 @@ function SortableSubtaskItem(props: SubtaskRowProps) {
       ref={setNodeRef}
       style={dndStyle}
       className={cn(
-        "group relative flex items-center gap-2.5 py-1.5 px-3 hover:bg-secondary/10 rounded-lg transition-colors",
+        "group relative flex min-h-11 items-center gap-2.5 py-1.5 px-3 hover:bg-secondary/10 rounded-lg transition-colors",
         isDragging ? "z-20 opacity-30" : "z-10 opacity-100",
         isDragging && "will-change-transform",
         dropLineClasses(dropLine),
@@ -214,7 +214,7 @@ function SortableSubtaskItem(props: SubtaskRowProps) {
 
 function StaticSubtaskItem(props: SubtaskRowProps) {
   return (
-    <div className="group flex items-center gap-3 py-1.5 px-3 hover:bg-secondary/10 rounded-lg transition-colors">
+    <div className="group flex min-h-11 items-center gap-3 py-1.5 px-3 hover:bg-secondary/10 rounded-lg transition-colors">
       <SubtaskItemContent {...props} />
     </div>
   );
@@ -581,7 +581,7 @@ export default function SubtaskList({
                 }}
               >
                 {activeContent && (
-                  <div className="flex items-center gap-2.5 py-1.5 px-3 bg-background rounded-lg border border-border shadow-sm">
+                  <div className="flex min-h-11 items-center gap-2.5 py-1.5 px-3 bg-background rounded-lg border border-border shadow-sm">
                     <DragHandle
                       variant={isDesktop ? "desktop" : "mobile"}
                       className="shrink-0 opacity-100"

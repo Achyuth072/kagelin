@@ -11,6 +11,7 @@ import {
 import { FileText } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { ReadableText } from "@/components/encryption/ReadableText";
+import { IconCell } from "@/components/ui/IconCell";
 import { cn } from "@/lib/utils";
 
 export interface TaskNotesRowHandle {
@@ -106,18 +107,18 @@ export const TaskNotesRow = forwardRef<TaskNotesRowHandle, TaskNotesRowProps>(
     }, [isEditing]);
 
     return (
-      <div className="mx-0.5">
+      <div className="mx-2">
         <div
-          className="flex items-start gap-3 px-2 py-2 rounded-md transition-seijaku-fast hover:bg-muted/40 cursor-text"
+          className="flex items-start gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast hover:bg-muted/40 cursor-text"
           onClick={() => {
             if (!unreadable && !isEditing) {
               startEditing();
             }
           }}
         >
-          <div className="w-5 flex items-start justify-center flex-shrink-0 pt-[5px] text-muted-foreground">
+          <IconCell className="pt-[5px] text-muted-foreground">
             <FileText className="h-4 w-4" strokeWidth={2.25} />
-          </div>
+          </IconCell>
           {unreadable ? (
             <span className="text-xs flex-1 min-w-0">
               <ReadableText text={null} />
@@ -153,10 +154,9 @@ export const TaskNotesRow = forwardRef<TaskNotesRowHandle, TaskNotesRowProps>(
                 onChange={(e) => setDescription(e.target.value)}
                 onFocus={() => setIsEditing(true)}
                 onBlur={() => setIsEditing(false)}
-                rows={3}
                 hidden={showPreview}
                 className={cn(
-                  "w-full p-0 bg-transparent border-0 outline-none resize-none leading-relaxed text-foreground placeholder:text-muted-foreground/60 font-sans text-xs",
+                  "w-full field-sizing-content max-h-32 p-0 bg-transparent border-0 outline-none resize-none leading-relaxed text-foreground placeholder:text-muted-foreground/60 font-sans text-xs",
                   showPreview && "hidden",
                 )}
               />

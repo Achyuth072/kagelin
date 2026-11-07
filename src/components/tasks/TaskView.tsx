@@ -25,6 +25,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { IconCell } from "@/components/ui/IconCell";
 import SubtaskList from "./SubtaskList";
 import { TaskDatePicker } from "./shared/TaskDatePicker";
 import { PriorityGlyph } from "./PriorityGlyph";
@@ -141,9 +143,13 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
     mode === "create"
       ? "TASK-NEW"
       : initialTask?.id
-        ? initialTask.id.toUpperCase().startsWith("TASK-")
-          ? initialTask.id.toUpperCase()
-          : `TASK-${initialTask.id.toUpperCase()}`
+        ? (() => {
+            const raw = initialTask.id
+              .replace(/^task-/i, "")
+              .replace(/-/g, "")
+              .toUpperCase();
+            return `TASK-${raw.slice(0, 4)}`;
+          })()
         : "TASK-102";
 
   const selectedProject = projects?.find((p) => p.id === selectedProjectId);
@@ -182,7 +188,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
             autoFocusTitle !== undefined ? autoFocusTitle : isFinePointer
           }
           className={cn(
-            "w-full text-base sm:text-lg font-semibold tracking-tight bg-transparent border-b border-border/40 pb-2 pt-0.5 outline-none placeholder:text-muted-foreground/50 text-foreground",
+            "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border/40 pb-2 pt-0.5 outline-none placeholder:text-muted-foreground/50 text-foreground",
             errors?.content && "placeholder:text-destructive/60",
           )}
           aria-invalid={!!errors?.content}
@@ -289,9 +295,9 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
       >
         {/* Row 1: Steps Checklist */}
         <div className="flex items-start gap-3 px-2 py-2 rounded-md hover:bg-muted/40 transition-colors">
-          <div className="w-5 flex items-start justify-center flex-shrink-0 pt-[3px] text-muted-foreground">
+          <IconCell className="text-muted-foreground">
             <ListTodo className="h-4 w-4" strokeWidth={2.25} />
-          </div>
+          </IconCell>
           <div className="flex-1 text-xs space-y-2">
             <button
               type="button"
@@ -299,7 +305,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
                 trigger("toggle");
                 setShowSubtasks(!showSubtasks);
               }}
-              aria-label={`Steps (${doneSubtaskCount}/${totalSubtaskCount}) - Subtasks`}
+              aria-label={`Steps (${doneSubtaskCount}/${totalSubtaskCount})`}
               className="flex items-center justify-between w-full text-left cursor-pointer select-none"
             >
               <span className="text-muted-foreground font-medium">
@@ -371,7 +377,8 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
             <span
               className="w-2 h-2 rounded-full shrink-0"
               style={{
-                backgroundColor: selectedProject?.color ?? "#6b7280",
+                backgroundColor:
+                  selectedProject?.color ?? "hsl(var(--muted-foreground))",
               }}
             />
             <span className="truncate font-medium">
@@ -413,18 +420,20 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
 
         <div className="flex items-center gap-2">
           {mode === "edit" && (
-            <button
+            <Button
               type="button"
+              variant="destructive"
+              size="icon"
               onClick={() => {
                 trigger("thud");
                 onDelete();
               }}
               aria-label="Delete task"
               title="Delete task"
-              className="h-9 w-9 p-0 rounded-lg bg-destructive/15 text-destructive hover:bg-destructive hover:text-destructive-foreground border border-destructive/20 shadow-sm shadow-destructive/10 flex items-center justify-center transition-colors"
+              className="h-9 w-9 p-0 shadow-sm shadow-destructive/10"
             >
               <Trash2 className="h-4 w-4" />
-            </button>
+            </Button>
           )}
 
           <button

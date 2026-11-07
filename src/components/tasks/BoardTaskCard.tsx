@@ -58,7 +58,7 @@ export function BoardTaskCard({
       <div className="flex flex-col gap-2 w-full text-left p-3 pl-4">
         <div className="flex items-start gap-2">
           <div
-            className="pt-0.5 -m-2.5 p-2.5 flex items-center justify-center shrink-0"
+            className="-m-3.5 p-3.5 flex items-center justify-center shrink-0"
             onClick={(e) => e.stopPropagation()}
             data-testid="board-checkbox-container"
           >

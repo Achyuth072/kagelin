@@ -92,9 +92,9 @@ describe("ListTaskCard", () => {
     expect(checkboxContainer.className).toContain("pl-1");
     expect(checkboxContainer.className).toContain("pr-3");
     const checkButton = checkboxContainer.querySelector("button");
-    expect(checkButton?.className).toContain("h-10");
-    expect(checkButton?.className).toContain("w-10");
-    expect(checkButton?.className).toContain("-m-3");
+    expect(checkButton?.className).toContain("h-11");
+    expect(checkButton?.className).toContain("w-11");
+    expect(checkButton?.className).toContain("-m-3.5");
 
     // Zero-layout-shift hover cluster
     const cluster = screen.getByTestId("hover-action-cluster");

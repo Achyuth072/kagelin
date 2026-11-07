@@ -660,7 +660,12 @@ function TaskListBase({
       if (!keyboardSelectedId) return;
       const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
       if (task) {
+        const timerState = useTimerStore.getState().state;
         triggerHaptic("thud");
+        if (timerState.isRunning && timerState.activeTaskId === task.id) {
+          useTimerStore.getState().stop();
+          return;
+        }
         useTimerStore.getState().setActiveTaskId(task.id);
         useTimerStore.getState().requestFocusStart();
         router.push("/focus");
@@ -1004,7 +1009,7 @@ function TaskListBase({
           <div
             ref={scrollContainerRef}
             data-task-list-scroll-container="true"
-            role={viewMode === "board" ? "grid" : "listbox"}
+            role="grid"
             aria-label={viewMode === "board" ? "Task board" : "Task list"}
             tabIndex={0}
             onScroll={handleContainerScroll}
@@ -1041,6 +1046,7 @@ function TaskListBase({
                 isDndActive={dnd.isDragging}
                 onScroll={handleContainerScroll}
                 hasOverlayDrawer={isBoardOverlay && !!selectedTask}
+                onAddTask={() => openAddTask()}
               />
             ) : (
               <TaskListView

@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Repeat, X } from "lucide-react";
+import { Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import { formatRecurrenceRule } from "@/lib/utils/recurrence";
@@ -76,35 +76,7 @@ export default function RecurrencePicker({
             title={!isMobile ? formatRecurrenceRule(value) : undefined}
           >
             <Repeat className="h-3.5 w-3.5 text-muted-foreground" />
-            <span>
-              Repeat:{" "}
-              {value ? badgeLetter || formatRecurrenceRule(value) : "None"}
-            </span>
-            {hasRecurrence && (
-              <span
-                role="button"
-                tabIndex={0}
-                title="Clear repeat"
-                aria-label="Clear repeat"
-                className="relative ml-0.5 p-0.5 rounded-full hover:bg-current/10 cursor-pointer"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  trigger("toggle");
-                  onChange(null);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    trigger("toggle");
-                    onChange(null);
-                  }
-                }}
-              >
-                <X className="h-3 w-3" />
-              </span>
-            )}
+            <span>Repeat: {value ? formatRecurrenceRule(value) : "None"}</span>
           </Button>
         ) : isIconVariant ? (
           <Button

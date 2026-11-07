@@ -185,7 +185,7 @@ describe("DynamicDualSheet in TaskList", () => {
       expect(screen.getByText("Alpha task")).toBeInTheDocument();
     });
 
-    const scrollContainer = screen.getByRole("listbox");
+    const scrollContainer = screen.getByRole("grid");
     expect(scrollContainer).toHaveClass("w-full");
     const inspector = screen.getByTestId("docked-task-inspector");
     expect(inspector).toHaveClass("w-0");
@@ -214,7 +214,7 @@ describe("DynamicDualSheet in TaskList", () => {
     expect(inspector).toHaveClass("pt-2");
     expect(inspector).toHaveClass("duration-200");
 
-    const scrollContainer = screen.getByRole("listbox");
+    const scrollContainer = screen.getByRole("grid");
     expect(scrollContainer).toHaveClass("w-[60%]");
   });
 
@@ -238,7 +238,7 @@ describe("DynamicDualSheet in TaskList", () => {
     fireEvent.click(closeBtn);
 
     await waitFor(() => {
-      const scrollContainer = screen.getByRole("listbox");
+      const scrollContainer = screen.getByRole("grid");
       expect(scrollContainer).toHaveClass("w-full");
       const inspector = screen.getByTestId("docked-task-inspector");
       expect(inspector).toHaveClass("w-0");
@@ -314,7 +314,7 @@ describe("DynamicDualSheet in TaskList", () => {
     });
 
     await waitFor(() => {
-      const scrollContainer = screen.getByRole("listbox");
+      const scrollContainer = screen.getByRole("grid");
       expect(scrollContainer).toHaveClass("w-full");
       const inspector = screen.getByTestId("docked-task-inspector");
       expect(inspector).toHaveClass("w-0");

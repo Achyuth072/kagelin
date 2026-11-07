@@ -179,12 +179,8 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
                   const tooltip = renderTooltip(activity);
                   return (
                     <g
-                      tabIndex={0}
-                      role="button"
-                      aria-label={tooltip}
                       data-tooltip-id="activity-tooltip"
                       data-tooltip-content={tooltip}
-                      className="focus-visible:outline-none focus-visible:stroke-brand focus-visible:stroke-2"
                     >
                       {block}
                     </g>

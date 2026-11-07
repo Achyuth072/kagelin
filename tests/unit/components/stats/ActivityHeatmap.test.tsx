@@ -44,10 +44,9 @@ describe("ActivityHeatmap", () => {
     expect(html).not.toContain("#ebebeb");
   });
 
-  it("provides accessible keyboard cell inspection", () => {
-    render(<ActivityHeatmap />);
-    const cellButtons = screen.getAllByRole("button");
-    expect(cellButtons.length).toBeGreaterThan(0);
-    expect(cellButtons[0]).toHaveAttribute("tabindex", "0");
+  it("renders semantic brand tokens without non-functional interactive cells", () => {
+    const { container } = render(<ActivityHeatmap />);
+    expect(container.innerHTML).toContain("var(--brand)");
+    expect(container.querySelector('g[role="button"]')).toBeNull();
   });
 });

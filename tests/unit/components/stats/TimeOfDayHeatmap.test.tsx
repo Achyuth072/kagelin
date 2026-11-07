@@ -23,7 +23,7 @@ describe("TimeOfDayHeatmap", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders 24-hour calibrated runway grid with 100% full width layout", () => {
+  it("renders 24-hour focus runway grid with 100% full width layout", () => {
     const { container } = render(<TimeOfDayHeatmap matrix={sampleMatrix} />);
 
     expect(screen.getByText("Focus by Time of Day")).toBeInTheDocument();
@@ -32,9 +32,7 @@ describe("TimeOfDayHeatmap", () => {
     ).toBeInTheDocument();
 
     // Check footer hints
-    expect(
-      screen.getByText(/24-hour calibrated runway • 100% full width/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText("24-hour focus runway")).toBeInTheDocument();
     expect(screen.getByText(/Swipe runway for all 24h/i)).toBeInTheDocument();
     expect(screen.getByText("Intensity: 0m → 60m+")).toBeInTheDocument();
 
@@ -43,6 +41,25 @@ describe("TimeOfDayHeatmap", () => {
       '[style*="32px repeat(24, minmax(16px, 1fr))"]',
     );
     expect(gridEl).toBeInTheDocument();
+  });
+
+  it("uses a roving tabindex and moves focus with arrow keys", () => {
+    render(<TimeOfDayHeatmap matrix={sampleMatrix} />);
+
+    const firstCell = screen.getByTitle("Mon 12:00 AM: 0m");
+    expect(firstCell).toHaveAttribute("tabindex", "0");
+    expect(screen.getByTitle("Mon 9:00 AM: 15m")).toHaveAttribute(
+      "tabindex",
+      "-1",
+    );
+
+    fireEvent.keyDown(firstCell, { key: "ArrowRight" });
+    const nextHour = screen.getByTitle("Mon 1:00 AM: 0m");
+    expect(nextHour).toHaveAttribute("tabindex", "0");
+    expect(nextHour).toHaveFocus();
+
+    fireEvent.keyDown(nextHour, { key: "ArrowDown" });
+    expect(screen.getByTitle("Tue 1:00 AM: 0m")).toHaveFocus();
   });
 
   it("calibrates intensity levels across 0m, 1-20m, 21-40m, 41-60m, >60m", () => {

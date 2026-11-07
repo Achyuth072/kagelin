@@ -29,6 +29,7 @@ export interface TaskBoardProps {
   isDndActive?: boolean;
   onScroll?: React.UIEventHandler<HTMLDivElement>;
   hasOverlayDrawer?: boolean;
+  onAddTask?: () => void;
 }
 
 const OVERLAY_DRAWER_WIDTH = 440;
@@ -83,6 +84,7 @@ export function TaskBoard({
   isDndActive = false,
   onScroll,
   hasOverlayDrawer = false,
+  onAddTask,
 }: TaskBoardProps) {
   const isJsLoaded = useJsLoaded();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -189,6 +191,7 @@ export function TaskBoard({
           onSelect={onSelect}
           setActiveTaskId={setActiveTaskId}
           triggerHaptic={triggerHaptic}
+          onAddTask={onAddTask}
           keyboardSelectedId={
             group.tasks.some((t) => t.id === keyboardSelectedId)
               ? keyboardSelectedId
@@ -208,6 +211,7 @@ const KanbanColumn = memo(function KanbanColumn({
   setActiveTaskId,
   triggerHaptic,
   keyboardSelectedId,
+  onAddTask,
 }: {
   group: TaskGroup;
   projectsMap: Map<string, Project>;
@@ -216,6 +220,7 @@ const KanbanColumn = memo(function KanbanColumn({
   setActiveTaskId: (taskId: string) => void;
   triggerHaptic: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   keyboardSelectedId?: string | null;
+  onAddTask?: () => void;
 }) {
   const { setNodeRef } = useDroppable({ id: group.title });
 
@@ -264,10 +269,20 @@ const KanbanColumn = memo(function KanbanColumn({
             );
           })}
           {group.tasks.length === 0 && (
-            <div className="h-24 flex items-center justify-center border-2 border-dashed border-border/40 rounded-2xl">
+            <div className="h-24 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border/40 rounded-2xl">
               <span className="text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest">
                 Ma (Void)
               </span>
+              {onAddTask && (
+                <button
+                  type="button"
+                  onClick={onAddTask}
+                  aria-label="Add task"
+                  className="min-h-11 px-3 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+                >
+                  + Add task
+                </button>
+              )}
             </div>
           )}
         </div>

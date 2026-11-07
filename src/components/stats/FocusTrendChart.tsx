@@ -184,7 +184,7 @@ export function FocusTrendChart({
                   type="monotone"
                   dataKey="hours"
                   stroke="hsl(var(--brand))"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                   dot={false}
                   activeDot={{ r: 5 }}
                   isAnimationActive={false}

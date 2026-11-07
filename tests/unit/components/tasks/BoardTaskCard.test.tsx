@@ -39,10 +39,10 @@ describe("BoardTaskCard", () => {
       />,
     );
 
-    // 44px tap area via -m-2.5 p-2.5
+    // 44px tap area via -m-3.5 p-3.5
     const checkboxContainer = screen.getByTestId("board-checkbox-container");
-    expect(checkboxContainer.className).toContain("-m-2.5");
-    expect(checkboxContainer.className).toContain("p-2.5");
+    expect(checkboxContainer.className).toContain("-m-3.5");
+    expect(checkboxContainer.className).toContain("p-3.5");
 
     // Stepped priority glyph for P1
     const glyph = screen.getByRole("img", { name: "Priority P1" });

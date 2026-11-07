@@ -78,7 +78,7 @@ async function renderTaskList() {
     </QueryClientProvider>,
   );
   await waitFor(() => {
-    expect(document.querySelector('[role="listbox"]')).toBeTruthy();
+    expect(document.querySelector('[role="grid"]')).toBeTruthy();
   });
   return view;
 }
