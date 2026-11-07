@@ -70,7 +70,7 @@ export default function RecurrencePicker({
             variant="ghost"
             size="sm"
             className={cn(
-              "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-auto shadow-none",
+              "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-auto shadow-none",
               hasRecurrence
                 ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
                 : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",

@@ -20,6 +20,7 @@ import {
   Send,
   Save,
   X,
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   Command,
@@ -75,6 +76,7 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useLocationHistoryStore } from "@/lib/store/locationHistoryStore";
 import { useScrollIsolation } from "@/lib/hooks/useScrollIsolation";
+import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
 
@@ -188,6 +190,7 @@ export function CreateEventDialog({
   const [locationPortalEl, setLocationPortalEl] =
     useState<HTMLDivElement | null>(null);
   const locationListRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useHorizontalScroll();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const events = useCalendarStore((state) => state.events);
   const locationHistory = useLocationHistoryStore((state) => state.locations);
@@ -381,8 +384,16 @@ export function CreateEventDialog({
 
   const trimmedSearch = draftLocation.trim();
 
-  const rowCls =
-    "flex items-center gap-3 px-3 py-2.5 rounded-md mx-2 transition-seijaku-fast";
+  const eventIdBadge = !event
+    ? "EVENT-NEW"
+    : (() => {
+        const raw = event.id
+          .replace(/^evt-|^event-/i, "")
+          .replace(/-/g, "")
+          .toUpperCase();
+        return `EVENT-${raw.slice(0, 4)}`;
+      })();
+
   const hoverCls = isRecurring ? "" : "hover:bg-muted/40";
 
   return (
@@ -404,7 +415,13 @@ export function CreateEventDialog({
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
+          <div className="px-4 pt-4 pb-2 shrink-0">
+            <span
+              data-testid="event-header-badge"
+              className="text-[10px] sm:text-xs font-mono uppercase text-brand tracking-wider font-semibold block mb-0.5"
+            >
+              {eventIdBadge}
+            </span>
             <input
               {...register("title")}
               id="event-title"
@@ -412,8 +429,7 @@ export function CreateEventDialog({
               autoFocus={isFinePointer && !isRecurring}
               disabled={isRecurring}
               className={cn(
-                "w-full text-xl font-semibold tracking-tight bg-transparent border-0 outline-none",
-                "placeholder:text-muted-foreground text-foreground",
+                "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border/40 pb-2 pt-0.5 outline-none placeholder:text-muted-foreground/50 text-foreground",
                 errors.title && "placeholder:text-destructive/60",
               )}
             />
@@ -424,29 +440,87 @@ export function CreateEventDialog({
             )}
           </div>
 
+          {/* Property Strip — All-Day & Reminder in a Single Horizontal Line */}
+          <div className="px-4 py-1.5 flex items-center gap-2.5 shrink-0">
+            <div className="w-5 shrink-0 flex items-center justify-center text-muted-foreground">
+              <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={2.25} />
+            </div>
+            <div
+              ref={scrollRef}
+              data-testid="property-strip"
+              className="py-1 px-0.5 flex items-center gap-2 overflow-x-auto scrollbar-hide min-w-0 flex-1 pr-2"
+            >
+              {/* All day switch chip */}
+              <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2.5 py-1 border border-border/50 shrink-0 h-7 sm:h-8">
+                <Sun
+                  className="h-3.5 w-3.5 text-muted-foreground"
+                  strokeWidth={2.25}
+                />
+                <span className="text-xs sm:text-[13px] text-foreground font-medium mr-1">
+                  All day
+                </span>
+                <Switch
+                  id="all-day"
+                  aria-label="All day"
+                  checked={allDay}
+                  disabled={isRecurring}
+                  onCheckedChange={(checked) => {
+                    trigger("toggle");
+                    setValue("all_day", checked);
+                  }}
+                  className="scale-75 origin-right"
+                />
+              </div>
+
+              {/* Reminder select chip */}
+              <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2.5 py-1 border border-border/50 shrink-0 h-7 sm:h-8">
+                <BellRing
+                  className="h-3.5 w-3.5 text-muted-foreground"
+                  strokeWidth={2.25}
+                />
+                <Select
+                  value={
+                    reminderMinutes === null
+                      ? NO_REMINDER
+                      : String(reminderMinutes)
+                  }
+                  disabled={isRecurring || isGuestMode}
+                  onValueChange={(val) =>
+                    setValue(
+                      "reminder_minutes",
+                      val === NO_REMINDER ? null : Number(val),
+                    )
+                  }
+                >
+                  <SelectTrigger
+                    aria-label="Reminder"
+                    className="h-auto border-0 bg-transparent p-0 text-xs sm:text-[13px] font-medium text-foreground focus-visible:ring-0 shadow-none gap-1 [&>svg]:size-3"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NO_REMINDER}>No reminder</SelectItem>
+                    {reminderOptions(allDay).map((o) => (
+                      <SelectItem key={o.value} value={String(o.value)}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {isGuestMode && (
+                <span className="text-[11px] sm:text-xs text-muted-foreground shrink-0 pl-1">
+                  (Reminders need an account)
+                </span>
+              )}
+            </div>
+          </div>
+
           {/* Portal target inside Dialog for wheel events, outside overflow-y-auto to avoid clipping. */}
           <div ref={setLocationPortalEl} />
 
           <div className="flex-1 overflow-y-auto min-h-0 py-2">
-            <div className={cn(rowCls, hoverCls)}>
-              <IconCell>
-                <Sun
-                  className="h-4 w-4 text-muted-foreground"
-                  strokeWidth={2.25}
-                />
-              </IconCell>
-              <span className="text-sm flex-1 text-foreground">All day</span>
-              <Switch
-                id="all-day"
-                checked={allDay}
-                disabled={isRecurring}
-                onCheckedChange={(checked) => {
-                  trigger("toggle");
-                  setValue("all_day", checked);
-                }}
-              />
-            </div>
-
             <div
               className={cn(
                 "mx-2 my-1 pl-3 border-l-2 border-brand/40 rounded-r-md",
@@ -673,51 +747,6 @@ export function CreateEventDialog({
             </div>
 
             <div className="mx-2">
-              <div className={cn(rowCls, "mx-0", hoverCls)}>
-                <IconCell>
-                  <BellRing
-                    className="h-4 w-4 text-muted-foreground"
-                    strokeWidth={2.25}
-                  />
-                </IconCell>
-                <Select
-                  value={
-                    reminderMinutes === null
-                      ? NO_REMINDER
-                      : String(reminderMinutes)
-                  }
-                  disabled={isRecurring || isGuestMode}
-                  onValueChange={(val) =>
-                    setValue(
-                      "reminder_minutes",
-                      val === NO_REMINDER ? null : Number(val),
-                    )
-                  }
-                >
-                  <SelectTrigger
-                    aria-label="Reminder"
-                    className="h-auto flex-1 border-0 bg-transparent p-0 text-foreground focus-visible:ring-0"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_REMINDER}>No reminder</SelectItem>
-                    {reminderOptions(allDay).map((o) => (
-                      <SelectItem key={o.value} value={String(o.value)}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {isGuestMode && (
-                <p className="px-3 pb-1 text-xs text-muted-foreground">
-                  Reminders need an account.
-                </p>
-              )}
-            </div>
-
-            <div className="mx-2">
               <div
                 className={cn(
                   "flex items-start gap-3 px-3 py-2.5 rounded-md transition-colors",
@@ -750,45 +779,50 @@ export function CreateEventDialog({
             <div className="h-1" />
           </div>
 
-          <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background sm:rounded-b-lg">
-            {event && (
+          <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background sm:rounded-b-lg w-full max-w-full">
+            <div className="flex items-center gap-2">
+              {/* Left slot aligned with TaskView */}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {event && (
+                <RecurringTooltip isRecurring={isRecurring}>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
+                    onClick={handleDeleteClick}
+                    disabled={isRecurring || deleteEvent.isPending}
+                    aria-label="Delete event"
+                  >
+                    <Trash2 strokeWidth={2.25} />
+                  </Button>
+                </RecurringTooltip>
+              )}
               <RecurringTooltip isRecurring={isRecurring}>
                 <Button
-                  type="button"
-                  variant="destructive"
+                  type="submit"
                   size="sm"
-                  className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
-                  onClick={handleDeleteClick}
-                  disabled={isRecurring || deleteEvent.isPending}
-                  aria-label="Delete event"
+                  disabled={
+                    isRecurring ||
+                    !isFormValid ||
+                    !safeStartDate ||
+                    !safeEndDate ||
+                    createEvent.isPending ||
+                    updateEvent.isPending
+                  }
+                  className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
+                  aria-label={event ? "Save changes" : "Create event"}
                 >
-                  <Trash2 strokeWidth={2.25} />
+                  {event ? (
+                    <Save className="h-5 w-5 stroke-[2.25px]" />
+                  ) : (
+                    <Send className="h-5 w-5 stroke-[2.25px]" />
+                  )}
                 </Button>
               </RecurringTooltip>
-            )}
-            <div className="flex-1" />
-            <RecurringTooltip isRecurring={isRecurring}>
-              <Button
-                type="submit"
-                size="sm"
-                disabled={
-                  isRecurring ||
-                  !isFormValid ||
-                  !safeStartDate ||
-                  !safeEndDate ||
-                  createEvent.isPending ||
-                  updateEvent.isPending
-                }
-                className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
-                aria-label={event ? "Save changes" : "Create event"}
-              >
-                {event ? (
-                  <Save className="h-5 w-5 stroke-[2.25px]" />
-                ) : (
-                  <Send className="h-5 w-5 stroke-[2.25px]" />
-                )}
-              </Button>
-            </RecurringTooltip>
+            </div>
           </div>
         </form>
       </ResponsiveDialogContent>

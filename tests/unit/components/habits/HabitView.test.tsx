@@ -63,12 +63,41 @@ describe("HabitView", () => {
     setReminderTime: vi.fn(),
     reminderDays: 127,
     setReminderDays: vi.fn(),
+    habitType: "boolean" as const,
+    setHabitType: vi.fn(),
     hasContent: true,
     isPending: false,
     onSubmit: vi.fn(),
     onKeyDown: vi.fn(),
     mode: "create" as const,
   };
+
+  it("renders header badge HABIT-NEW in create mode and HABIT-XXXX in edit mode", () => {
+    const { rerender } = render(<HabitView {...baseProps} mode="create" />);
+    expect(screen.getByTestId("habit-header-badge")).toHaveTextContent(
+      "HABIT-NEW",
+    );
+
+    rerender(
+      <HabitView
+        {...baseProps}
+        mode="edit"
+        habitId="habit-abcd-1234"
+        onArchive={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("habit-header-badge")).toHaveTextContent(
+      "HABIT-ABCD",
+    );
+  });
+
+  it("renders the property strip containing SlidersHorizontal and property controls", () => {
+    render(<HabitView {...baseProps} />);
+    expect(screen.getByTestId("property-strip")).toBeInTheDocument();
+    expect(screen.getByText("Icon & color")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Yes or No" })).toBeInTheDocument();
+  });
 
   it("does not render the target field for a boolean habit", () => {
     render(

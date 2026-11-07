@@ -160,6 +160,18 @@ describe("CreateEventSchema — validation", () => {
 
 const defaultDate = new Date("2025-06-01T10:00:00");
 
+const editEvent = {
+  id: "evt-123",
+  title: "Existing Meeting",
+  description: "Some desc",
+  location: "Office",
+  start: new Date("2025-06-01T10:00:00"),
+  end: new Date("2025-06-01T11:00:00"),
+  allDay: false,
+  color: "#000",
+  calendarId: "cal-1",
+};
+
 /**
  * Flush the deferred reset() from the open useEffect.
  * The effect uses setTimeout(0) to defer reset(), which in async test context
@@ -186,6 +198,47 @@ describe("CreateEventDialog — button activation (create mode)", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("renders header badge EVENT-NEW in create mode and EVENT-XXXX in edit mode", async () => {
+    const { rerender } = render(
+      <CreateEventDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        defaultDate={defaultDate}
+      />,
+    );
+    await flushResetTimer();
+    expect(screen.getByTestId("event-header-badge")).toHaveTextContent(
+      "EVENT-NEW",
+    );
+
+    rerender(
+      <CreateEventDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        defaultDate={defaultDate}
+        event={editEvent}
+      />,
+    );
+    await flushResetTimer();
+    expect(screen.getByTestId("event-header-badge")).toHaveTextContent(
+      "EVENT-123",
+    );
+  });
+
+  it("renders property strip containing all-day and reminder controls", async () => {
+    render(
+      <CreateEventDialog
+        open={true}
+        onOpenChange={vi.fn()}
+        defaultDate={defaultDate}
+      />,
+    );
+    await flushResetTimer();
+    expect(screen.getByTestId("property-strip")).toBeInTheDocument();
+    expect(screen.getByLabelText("All day")).toBeInTheDocument();
+    expect(screen.getByLabelText("Reminder")).toBeInTheDocument();
   });
 
   it("[P1] submit button is disabled on initial render (empty title)", async () => {

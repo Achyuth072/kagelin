@@ -167,7 +167,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
       <div className="px-4 pt-4 pb-2 shrink-0">
         <span
           data-testid="task-header-badge"
-          className="text-[10px] font-mono uppercase text-brand tracking-wider font-semibold block mb-0.5"
+          className="text-[10px] sm:text-xs font-mono uppercase text-brand tracking-wider font-semibold block mb-0.5"
         >
           {taskIdBadge}
         </span>
@@ -255,7 +255,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
                 aria-label={`Priority P${p}`}
                 aria-pressed={priority === p}
                 className={cn(
-                  "px-2 py-0.5 rounded text-[11px] font-mono flex items-center gap-1 transition-colors",
+                  "px-2 py-0.5 rounded text-[11px] sm:text-xs font-mono flex items-center gap-1 transition-colors",
                   priority === p
                     ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
                     : "text-muted-foreground hover:text-foreground",

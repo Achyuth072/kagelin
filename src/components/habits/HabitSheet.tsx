@@ -283,6 +283,7 @@ export function HabitSheet({
     onSubmit: handleSubmit(onFormSubmit),
     onKeyDown: handleKeyDown,
     errors,
+    habitId: effectiveHabit?.id,
   };
 
   return (
