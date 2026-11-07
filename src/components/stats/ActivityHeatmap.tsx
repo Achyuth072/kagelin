@@ -12,6 +12,36 @@ import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import { cn } from "@/lib/utils";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 
+const BRAND_SCALE = [
+  "hsl(var(--secondary))",
+  "hsl(var(--brand) / 0.25)",
+  "hsl(var(--brand) / 0.5)",
+  "hsl(var(--brand) / 0.75)",
+  "hsl(var(--brand))",
+];
+
+const CALENDAR_LABELS = {
+  months: [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ],
+  weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  legend: {
+    less: "Less",
+    more: "More",
+  },
+};
+
 interface ActivityHeatmapProps {
   className?: string;
 }
@@ -85,23 +115,10 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
     return () => cancelAnimationFrame(frame);
   }, [calendarData.length, isMobile, isLoading]);
 
-  // Monochromatic Kagelin theme (brand color scale)
   const theme = useMemo(
     () => ({
-      dark: [
-        "#262626", // Level 0 - empty (muted)
-        "hsl(220, 44%, 80%)", // Level 1
-        "hsl(220, 44%, 70%)", // Level 2
-        "hsl(220, 44%, 60%)", // Level 3
-        "hsl(var(--brand))", // Level 4 - max (brand)
-      ],
-      light: [
-        "#ebebeb", // Level 0 - empty (muted)
-        "hsl(220, 44%, 80%)", // Level 1
-        "hsl(220, 44%, 70%)", // Level 2
-        "hsl(220, 44%, 60%)", // Level 3
-        "hsl(var(--brand))", // Level 4 - max (brand)
-      ],
+      dark: BRAND_SCALE,
+      light: BRAND_SCALE,
     }),
     [],
   );
@@ -157,35 +174,22 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
                 showColorLegend={true}
                 showMonthLabels={true}
                 showTotalCount={false}
-                labels={{
-                  months: [
-                    "Jan",
-                    "Feb",
-                    "Mar",
-                    "Apr",
-                    "May",
-                    "Jun",
-                    "Jul",
-                    "Aug",
-                    "Sep",
-                    "Oct",
-                    "Nov",
-                    "Dec",
-                  ],
-                  weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-                  legend: {
-                    less: "Less",
-                    more: "More",
-                  },
+                labels={CALENDAR_LABELS}
+                renderBlock={(block, activity) => {
+                  const tooltip = renderTooltip(activity);
+                  return (
+                    <g
+                      tabIndex={0}
+                      role="button"
+                      aria-label={tooltip}
+                      data-tooltip-id="activity-tooltip"
+                      data-tooltip-content={tooltip}
+                      className="focus-visible:outline-none focus-visible:stroke-brand focus-visible:stroke-2"
+                    >
+                      {block}
+                    </g>
+                  );
                 }}
-                renderBlock={(block, activity) => (
-                  <g
-                    data-tooltip-id="activity-tooltip"
-                    data-tooltip-content={renderTooltip(activity)}
-                  >
-                    {block}
-                  </g>
-                )}
               />
             </div>
           </div>

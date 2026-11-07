@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import { Card } from "@/components/ui/card";
 import {
   ComposedChart,
+  Area,
   Line,
   XAxis,
   YAxis,
@@ -77,11 +78,51 @@ export function FocusTrendChart({
           />
         ) : (
           <div className="w-full min-w-0 overflow-hidden">
+            <table className="sr-only">
+              <caption>{periodLabel} Focus and Task Trend Summary</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Focus Hours</th>
+                  <th scope="col">Tasks Completed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chartData.map((d) => (
+                  <tr key={d.date}>
+                    <td>{d.label}</td>
+                    <td>{d.hours} hours</td>
+                    <td>{d.tasksCompleted} tasks</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
             <ResponsiveContainer width="100%" height={200}>
               <ComposedChart
                 data={chartData}
                 margin={{ top: 12, right: 0, bottom: 0, left: 0 }}
               >
+                <defs>
+                  <linearGradient
+                    id="focusGradient"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop
+                      offset="0%"
+                      stopColor="hsl(var(--brand))"
+                      stopOpacity={0.2}
+                    />
+                    <stop
+                      offset="100%"
+                      stopColor="hsl(var(--brand))"
+                      stopOpacity={0}
+                    />
+                  </linearGradient>
+                </defs>
                 <XAxis
                   dataKey="label"
                   stroke="hsl(var(--muted-foreground))"
@@ -111,6 +152,11 @@ export function FocusTrendChart({
                   allowDecimals={false}
                 />
                 <Tooltip
+                  cursor={{
+                    stroke: "hsl(var(--border))",
+                    strokeWidth: 1,
+                    strokeDasharray: "2 2",
+                  }}
                   contentStyle={{
                     backgroundColor: "hsl(var(--background))",
                     border: "1px solid hsl(var(--border))",
@@ -122,6 +168,16 @@ export function FocusTrendChart({
                     value,
                     name === "hours" ? "Focus hours" : "Tasks completed",
                   ]}
+                />
+                <Area
+                  yAxisId="hours"
+                  type="monotone"
+                  dataKey="hours"
+                  fill="url(#focusGradient)"
+                  stroke="none"
+                  isAnimationActive={false}
+                  tooltipType="none"
+                  legendType="none"
                 />
                 <Line
                   yAxisId="hours"

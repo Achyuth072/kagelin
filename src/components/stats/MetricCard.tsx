@@ -1,6 +1,6 @@
 "use client";
 
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 
@@ -59,16 +59,16 @@ export function MetricCard({
               aria-label={`${trend.isPositive ? "Increased" : "Decreased"} by ${Math.abs(trend.value)}% compared to last period`}
               className={cn(
                 "text-[11px] md:text-xs font-bold flex items-center gap-1 w-fit px-2 py-0.5 rounded-md mt-1.5 border transition-all",
-                trend.value === 0
-                  ? "text-muted-foreground bg-secondary/50 border-border/50"
-                  : trend.isPositive
-                    ? "text-brand bg-brand/15 border-brand/20"
-                    : "text-destructive bg-destructive-surface border-destructive-surface-border",
+                trend.isPositive
+                  ? "text-brand bg-brand/15 border-brand/20"
+                  : "text-destructive bg-destructive-surface border-destructive-surface-border",
               )}
             >
-              <span className="text-xs md:text-sm" aria-hidden="true">
-                {trend.isPositive ? "↑" : "↓"}
-              </span>
+              {trend.isPositive ? (
+                <TrendingUp className="h-3 w-3 shrink-0" aria-hidden="true" />
+              ) : (
+                <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+              )}
               <span className="tracking-tight">{Math.abs(trend.value)}%</span>
             </div>
           )}
