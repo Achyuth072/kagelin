@@ -52,11 +52,51 @@ import { TaskListView } from "./TaskListView";
 import { TaskBoard } from "./TaskBoard";
 import { TaskGhost } from "./TaskGhost";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { useRouter } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   taskDomId,
   focusTextareaToEnd,
   TASK_TITLE_EDIT_ID,
 } from "./task-utils";
+
+export function BoardViewSkeleton() {
+  return (
+    <div
+      data-testid="board-view-skeleton"
+      className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 gap-4 h-full"
+    >
+      {[1, 2, 3].map((col) => (
+        <div
+          key={col}
+          className="flex flex-col gap-3 rounded-xl border border-border/40 bg-secondary/10 p-4"
+        >
+          <div className="flex items-center justify-between pb-2 border-b border-border/30">
+            <Skeleton className="h-4 w-24 rounded" />
+            <Skeleton className="h-4 w-6 rounded-full" />
+          </div>
+          <div className="space-y-3 pt-2">
+            {[1, 2, 3].map((card) => (
+              <div
+                key={card}
+                className="p-3 rounded-lg border border-border/30 bg-background/60 space-y-2"
+              >
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-3.5 w-3.5 rounded-sm shrink-0" />
+                  <Skeleton className="h-3.5 w-full rounded" />
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Skeleton className="h-3 w-12 rounded" />
+                  <Skeleton className="h-3 w-16 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // Suppress onDragOver announcements to prevent aria-live thrashing.
 const dndAnnouncements = {
@@ -157,6 +197,7 @@ function TaskListBase({
   const { data: tasks = [], isLoading } = useTasks({ projectId, filter });
   const { data: projectsData } = useProjects();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [selection, setSelectedTask] = useState<Task | null>(null);
   const selectedTask = useSyncExternalStore(
     (notify) => queryClient.getQueryCache().subscribe(notify),
@@ -613,6 +654,22 @@ function TaskListBase({
   );
 
   useHotkeys(
+    "f",
+    () => {
+      clearPendingDoublePress();
+      if (!keyboardSelectedId) return;
+      const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
+      if (task) {
+        triggerHaptic("thud");
+        useTimerStore.getState().setActiveTaskId(task.id);
+        useTimerStore.getState().requestFocusStart();
+        router.push("/focus");
+      }
+    },
+    hotkeyOptions,
+  );
+
+  useHotkeys(
     ["d", "backspace"],
     () => {
       clearPendingDoublePress();
@@ -877,6 +934,9 @@ function TaskListBase({
   }, [dnd.activeTask, dnd.activeWidth, projectsMap, isDesktop, viewMode]);
 
   if (isLoading) {
+    if (viewMode === "board") {
+      return <BoardViewSkeleton />;
+    }
     return (
       <div className="px-4 md:px-6 py-4">
         <div className="space-y-0">

@@ -54,9 +54,9 @@ const dndAnnouncements = {
   onDragOver: () => undefined,
 };
 
-// Extends touch target without bleeding into adjacent rows (~36px pitch).
+// Extends touch target to 44x44px bounding box.
 const touchTargetClasses = {
-  default: "after:absolute after:-inset-2.5 after:content-['']",
+  default: "after:absolute after:-inset-3.5 after:content-['']",
   delete: "after:absolute after:-inset-1 after:content-['']",
 };
 
@@ -119,7 +119,7 @@ function SubtaskItemContent({
         aria-label={`Mark "${content ?? UNREADABLE_LABEL}" complete`}
         className={cn(
           "relative mt-0.5 h-3.5 w-3.5 !rounded-sm",
-          !isDesktop && touchTargetClasses.default,
+          touchTargetClasses.default,
           priorityCheckboxClasses[4],
         )}
       />
@@ -140,16 +140,24 @@ function SubtaskItemContent({
           className="flex-1 h-7 py-0 px-0 text-[14px] bg-transparent border-none shadow-none focus-visible:ring-0"
         />
       ) : (
-        <span
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => onStartEdit(id, content ?? "")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onStartEdit(id, content ?? "");
+            }
+          }}
           className={cn(
-            "flex-1 text-[14px] leading-snug transition-all break-all cursor-text",
+            "flex-1 text-[14px] leading-snug transition-all break-all cursor-text focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm",
             isCompleted &&
               "text-muted-foreground/60 line-through decoration-muted-foreground/20",
           )}
         >
           <ReadableText text={content} />
-        </span>
+        </div>
       )}
       <Button
         variant="ghost"

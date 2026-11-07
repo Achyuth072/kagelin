@@ -2,14 +2,14 @@
 
 import React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Flag, Moon, Play } from "lucide-react";
+import { Calendar, Moon, Play } from "lucide-react";
 import { StepProgressBadge } from "./StepProgressBadge";
+import { PriorityGlyph } from "./PriorityGlyph";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
 import {
   priorityCheckboxClasses,
   formatDueDate,
-  priorityTextClasses,
   taskDomId,
 } from "./task-utils";
 import { KanbanBoardCardButton } from "@/components/kanban";
@@ -57,7 +57,11 @@ export function BoardTaskCard({
 
       <div className="flex flex-col gap-2 w-full text-left p-3 pl-4">
         <div className="flex items-start gap-2">
-          <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="pt-0.5 -m-2.5 p-2.5 flex items-center justify-center shrink-0"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="board-checkbox-container"
+          >
             <Checkbox
               checked={task.is_completed}
               onCheckedChange={handleComplete}
@@ -100,13 +104,9 @@ export function BoardTaskCard({
             </span>
           )}
           {task.priority < 4 && (
-            <span
-              className={cn(
-                "flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider",
-                priorityTextClasses[task.priority as 1 | 2 | 3 | 4],
-              )}
-            >
-              <Flag className="h-3 w-3" strokeWidth={2.5} />P{task.priority}
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-secondary/35 border border-border/40 text-foreground">
+              <PriorityGlyph level={task.priority} />
+              <span>P{task.priority}</span>
             </span>
           )}
           {task.is_evening && (

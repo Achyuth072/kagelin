@@ -110,7 +110,7 @@ export function useTaskDnd({
       : { delay: 250, tolerance: 5 },
   });
   const touchSensor = useSensor(TouchSensor, {
-    activationConstraint: { delay: 250, tolerance: 5 },
+    activationConstraint: { delay: 300, tolerance: 5 },
   });
   const keyboardSensor = useSensor(KeyboardSensor, {
     coordinateGetter: sortableKeyboardCoordinates,

@@ -20,6 +20,12 @@ import TaskList from "@/components/tasks/TaskList";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Task } from "@/lib/types/task";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+  }),
+}));
+
 const storeState = vi.hoisted(() => ({ tasks: [] as Task[] }));
 
 vi.mock("@/lib/mock/mock-store", () => ({

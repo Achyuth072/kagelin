@@ -1,27 +1,25 @@
 "use client";
 
 import React from "react";
-import { Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { priorityTextClasses } from "./task-utils";
+import { PriorityGlyph } from "./PriorityGlyph";
 
 interface PriorityBadgeProps {
-  priority: number;
+  priority?: number | null;
   className?: string;
 }
 
 export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
-  if (!priority || priority >= 4) return null;
+  if (priority == null || priority >= 4 || priority < 1) return null;
 
   return (
     <span
       className={cn(
-        "text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 leading-none",
-        priorityTextClasses[priority as 1 | 2 | 3 | 4],
+        "inline-flex items-center gap-1.5 text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-secondary/35 border border-border/40 text-foreground",
         className,
       )}
     >
-      <Flag className="h-2.5 w-2.5 shrink-0" strokeWidth={2.5} role="img" />
+      <PriorityGlyph level={priority} />
       <span>P{priority}</span>
     </span>
   );

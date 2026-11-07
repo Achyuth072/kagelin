@@ -8,6 +8,7 @@ import { ListTaskCard } from "@/components/tasks/ListTaskCard";
 import { taskDomId } from "@/components/tasks/task-utils";
 import type { ProcessedTasks } from "@/lib/hooks/useTaskViewData";
 import type { Task } from "@/lib/types/task";
+import { useTimerStore } from "@/lib/store/timerStore";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -427,6 +428,21 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
 
       fireEvent.keyDown(document, { key: "d", code: "KeyD" });
       expect(mutations.deleteMutate).not.toHaveBeenCalled();
+    });
+
+    it("pressing 'f' requests focus session for selected task", async () => {
+      uiState.viewMode = "list";
+      taskState.tasks = [
+        buildTask({ id: "a", content: "Alpha", day_order: 0 }),
+      ];
+      await renderTaskList();
+
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      expect(selectedId(["a"])).toBe("a");
+
+      fireEvent.keyDown(document, { key: "f", code: "KeyF" });
+      expect(useTimerStore.getState().state.activeTaskId).toBe("a");
+      expect(useTimerStore.getState().pendingFocusStart).toBe(true);
     });
 
     it("Arrow keys and Space are not swallowed when nothing is selected", async () => {

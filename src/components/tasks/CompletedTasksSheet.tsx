@@ -32,6 +32,8 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
 import { ReadableText } from "@/components/encryption/ReadableText";
@@ -151,25 +153,37 @@ export function CompletedTasksSheet({
   const content = (
     <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="p-4 space-y-3" data-testid="completed-tasks-skeleton">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-secondary/10"
+            >
+              <Skeleton className="h-4 w-4 rounded-sm shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4 rounded" />
+                <Skeleton className="h-3 w-1/4 rounded" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : completedTasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-          <CheckCircle2 className="h-16 w-16 text-muted-foreground/50 mb-4" />
-          <h2 className="text-xl font-semibold mb-2">No Completed Tasks</h2>
-          <p className="text-muted-foreground max-w-md">
-            Tasks you complete will appear here. Start checking off items from
-            your task list!
-          </p>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <EmptyState
+            icon={CheckCircle2}
+            title="No Completed Tasks"
+            description="Tasks you complete will appear here. Start checking off items from your task list!"
+            className="py-12"
+          />
         </div>
       ) : !hasResults && isSearching ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-          <Search className="h-12 w-12 text-muted-foreground/30 mb-4" />
-          <h2 className="text-lg font-medium mb-1">No tasks found</h2>
-          <p className="text-sm text-muted-foreground">
-            Try searching for something else
-          </p>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <EmptyState
+            icon={Search}
+            title="No tasks found"
+            description="Try searching for something else"
+            className="py-12"
+          />
         </div>
       ) : (
         <Virtuoso

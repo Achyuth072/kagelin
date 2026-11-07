@@ -541,4 +541,17 @@ describe("SubtaskList - completion haptics", () => {
 
     expect(mockTrigger).not.toHaveBeenCalledWith("success");
   });
+
+  it("activates edit mode when pressing Enter or Space on step title role='button'", () => {
+    renderDraftSubtaskList();
+    const input = screen.getByPlaceholderText("Add a step...");
+    fireEvent.change(input, { target: { value: "First step" } });
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+
+    const stepButton = screen.getByRole("button", { name: "First step" });
+    expect(stepButton).toBeInTheDocument();
+
+    fireEvent.keyDown(stepButton, { key: "Enter", code: "Enter" });
+    expect(screen.getByLabelText("Edit step")).toBeInTheDocument();
+  });
 });

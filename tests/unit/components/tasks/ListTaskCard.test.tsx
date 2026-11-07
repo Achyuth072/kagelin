@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { ListTaskCard } from "@/components/tasks/ListTaskCard";
 import type { Task } from "@/lib/types/task";
@@ -12,7 +12,7 @@ describe("ListTaskCard", () => {
     parent_id: null,
     content: "Prepare presentation",
     description: null,
-    priority: 4,
+    priority: 1,
     due_date: null,
     do_date: null,
     is_evening: false,
@@ -25,7 +25,16 @@ describe("ListTaskCard", () => {
     google_etag: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    subtasks: [],
+    subtasks: [
+      {
+        id: "step-1",
+        is_completed: true,
+      },
+      {
+        id: "step-2",
+        is_completed: false,
+      },
+    ],
   };
 
   it("displays 'Planned Today' indicator when task is planned for today via do_date", () => {
@@ -51,5 +60,63 @@ describe("ListTaskCard", () => {
 
     expect(screen.getByText("Planned Today")).toBeDefined();
     expect(screen.getByText(/Dec 31/)).toBeDefined();
+  });
+
+  it("renders Folio Continuous geometry, breathing padding, 44px tap bounds, and hover cluster", () => {
+    const handleComplete = vi.fn();
+    const handlePlayFocus = vi.fn();
+    const onDeleteRequest = vi.fn();
+    const toggleExpand = vi.fn();
+
+    const { container } = render(
+      <ListTaskCard
+        task={baseTask}
+        isDesktop={true}
+        isExpanded={false}
+        toggleExpand={toggleExpand}
+        handleComplete={handleComplete}
+        handlePlayFocus={handlePlayFocus}
+        onDeleteRequest={onDeleteRequest}
+        project={{ color: "#10b981", name: "Client Work" }}
+      />,
+    );
+
+    // Folio continuous container classes
+    const row = container.querySelector("[data-task-row]");
+    expect(row).toBeInTheDocument();
+    expect(row?.className).toContain("p-3.5");
+    expect(row?.className).toContain("border-b");
+
+    // Checkbox container breathing padding & 44px bounds
+    const checkboxContainer = screen.getByTestId("task-checkbox-container");
+    expect(checkboxContainer.className).toContain("pl-1");
+    expect(checkboxContainer.className).toContain("pr-3");
+    const checkButton = checkboxContainer.querySelector("button");
+    expect(checkButton?.className).toContain("h-10");
+    expect(checkButton?.className).toContain("w-10");
+    expect(checkButton?.className).toContain("-m-3");
+
+    // Zero-layout-shift hover cluster
+    const cluster = screen.getByTestId("hover-action-cluster");
+    expect(cluster.className).toContain("w-14");
+    expect(cluster.className).toContain("flex-shrink-0");
+
+    // Stepped priority glyph and P1 chip
+    expect(
+      screen.getAllByRole("img", { name: "Priority P1" }).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText("P1")).toBeInTheDocument();
+
+    // Steps fraction chip button
+    const stepsButton = screen.getByRole("button", { name: "Expand steps" });
+    expect(stepsButton).toHaveTextContent("1/2 steps");
+    fireEvent.click(stepsButton);
+    expect(toggleExpand).toHaveBeenCalled();
+
+    // Checkbox click
+    if (checkButton) {
+      fireEvent.click(checkButton);
+      expect(handleComplete).toHaveBeenCalledWith(true);
+    }
   });
 });
