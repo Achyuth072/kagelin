@@ -8,7 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Repeat } from "lucide-react";
+import { Check, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import { formatRecurrenceRule } from "@/lib/utils/recurrence";
@@ -69,13 +69,23 @@ export default function RecurrencePicker({
             type="button"
             variant="ghost"
             size="sm"
-            className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md bg-secondary/40 hover:bg-secondary/60 border border-border/50 text-muted-foreground hover:text-foreground transition-colors shrink-0 h-auto shadow-none"
+            className={cn(
+              "inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-auto shadow-none",
+              hasRecurrence
+                ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
+                : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+            )}
             onClick={() => {
               trigger("toggle");
             }}
             title={!isMobile ? formatRecurrenceRule(value) : undefined}
           >
-            <Repeat className="h-3.5 w-3.5 text-muted-foreground" />
+            <Repeat
+              className={cn(
+                "h-3.5 w-3.5",
+                hasRecurrence ? "text-foreground" : "text-muted-foreground",
+              )}
+            />
             <span>Repeat: {value ? formatRecurrenceRule(value) : "None"}</span>
           </Button>
         ) : isIconVariant ? (
@@ -110,64 +120,86 @@ export default function RecurrencePicker({
           </Button>
         )}
       </PopoverTrigger>
-      <PopoverContent className="w-56 p-2" align="start">
-        <div className="space-y-1">
-          {PRESET_RULES.map((preset) => (
-            <Button
-              key={preset.label}
-              variant={
-                value?.freq === preset.value?.freq &&
-                value?.interval === preset.value?.interval
-                  ? "secondary"
-                  : "ghost"
-              }
-              className="w-full justify-start h-8 text-[13px]"
-              onClick={() => {
-                trigger("toggle");
-                // Maintain existing mode if switching between presets
-                onChange(
-                  preset.value
-                    ? { ...preset.value, mode: value?.mode || "flexible" }
-                    : null,
-                );
-                if (!preset.value) setOpen(false);
-              }}
-            >
-              {preset.label}
-            </Button>
-          ))}
+      <PopoverContent
+        className="w-52 p-1 rounded-lg border border-border/60 bg-popover text-popover-foreground shadow-md outline-none"
+        align="start"
+        sideOffset={4}
+        collisionPadding={16}
+      >
+        <div className="space-y-0.5">
+          {PRESET_RULES.map((preset) => {
+            const isSelected =
+              preset.value === null
+                ? value === null
+                : value?.freq === preset.value.freq &&
+                  value?.interval === preset.value.interval;
+
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                className={cn(
+                  "relative flex w-full cursor-pointer select-none items-center justify-between rounded-sm px-2.5 py-1.5 text-xs sm:text-[13px] outline-none transition-seijaku-fast",
+                  isSelected
+                    ? "bg-accent text-accent-foreground font-medium"
+                    : "text-muted-foreground hover:bg-accent/60 hover:text-accent-foreground",
+                )}
+                onClick={() => {
+                  trigger("toggle");
+                  // Maintain existing mode if switching between presets
+                  onChange(
+                    preset.value
+                      ? { ...preset.value, mode: value?.mode || "flexible" }
+                      : null,
+                  );
+                  if (!preset.value) setOpen(false);
+                }}
+              >
+                <span>{preset.label}</span>
+                {isSelected && (
+                  <Check
+                    className="h-3.5 w-3.5 text-brand shrink-0"
+                    strokeWidth={2.25}
+                  />
+                )}
+              </button>
+            );
+          })}
 
           {value && (
-            <div className="pt-2 mt-1 border-t border-border">
-              <div className="flex items-center justify-between px-1 mb-1.5">
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Type
-                </span>
+            <>
+              <div className="-mx-1 my-1 h-px bg-border/40" />
+              <div className="p-1 pt-0.5">
+                <div className="flex items-center justify-between px-1 mb-1.5">
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Type
+                  </span>
+                </div>
+                <Tabs
+                  value={currentMode}
+                  onValueChange={(val) => {
+                    if (val && val !== currentMode) {
+                      trigger("toggle");
+                      onChange({
+                        ...value,
+                        mode: val as "strict" | "flexible",
+                      });
+                    }
+                  }}
+                  className="w-full"
+                >
+                  <TabsList size="sm" className="grid grid-cols-2 w-full">
+                    <TabsTrigger value="strict">Strict</TabsTrigger>
+                    <TabsTrigger value="flexible">Flexible</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+                <p className="text-[10px] text-muted-foreground/70 mt-1.5 px-1 leading-normal">
+                  {currentMode === "strict"
+                    ? "Repeats from original due date."
+                    : "Repeats from completion date."}
+                </p>
               </div>
-              <Tabs
-                value={currentMode}
-                onValueChange={(val) => {
-                  if (val && val !== currentMode) {
-                    trigger("toggle");
-                    onChange({
-                      ...value,
-                      mode: val as "strict" | "flexible",
-                    });
-                  }
-                }}
-                className="w-full"
-              >
-                <TabsList size="sm" className="grid grid-cols-2 w-full">
-                  <TabsTrigger value="strict">Strict</TabsTrigger>
-                  <TabsTrigger value="flexible">Flexible</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <p className="text-[10px] text-muted-foreground/60 mt-1.5 px-1 leading-tight">
-                {currentMode === "strict"
-                  ? "Repeats from original due date."
-                  : "Repeats from completion date."}
-              </p>
-            </div>
+            </>
           )}
         </div>
       </PopoverContent>

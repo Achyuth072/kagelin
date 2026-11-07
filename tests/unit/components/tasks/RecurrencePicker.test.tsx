@@ -108,4 +108,29 @@ describe("RecurrencePicker Repetition State", () => {
       mode: "strict",
     });
   });
+
+  it("should style chip variant as active when recurrence is set and inactive when null", () => {
+    const { unmount } = render(
+      <RecurrencePicker value={null} onChange={mockOnChange} variant="chip" />,
+    );
+
+    let chip = screen.getByRole("button", { name: /Repeat: None/i });
+    expect(chip.className).toContain("text-muted-foreground");
+    expect(chip.className).not.toContain("text-foreground font-semibold");
+
+    unmount();
+
+    render(
+      <RecurrencePicker
+        value={{ freq: "DAILY", interval: 1 }}
+        onChange={mockOnChange}
+        variant="chip"
+      />,
+    );
+
+    chip = screen.getByRole("button", { name: /Repeat: Daily/i });
+    expect(chip.className).toContain("text-foreground");
+    expect(chip.className).toContain("font-semibold");
+    expect(chip.className).toContain("bg-secondary/70");
+  });
 });
