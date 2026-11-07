@@ -49,6 +49,9 @@ describe("BoardTaskCard", () => {
     expect(glyph).toBeInTheDocument();
     expect(screen.getByText("P1")).toBeInTheDocument();
 
+    // Project chip
+    expect(screen.getByText("Work")).toBeInTheDocument();
+
     // Checkbox toggle
     const checkbox = screen.getByRole("checkbox");
     fireEvent.click(checkbox);

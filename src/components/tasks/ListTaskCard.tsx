@@ -208,7 +208,7 @@ export function ListTaskCard({
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md border transition-colors",
-                isOverdue(task.due_date)
+                !task.is_completed && isOverdue(task.due_date)
                   ? "bg-secondary/70 border-border/80 text-foreground font-semibold"
                   : "bg-secondary/35 border-border/40 text-muted-foreground",
               )}

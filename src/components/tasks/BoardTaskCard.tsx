@@ -182,6 +182,17 @@ export function BoardTaskCard({
             </span>
           )}
 
+          {/* Project Chip */}
+          {project && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md bg-secondary/35 border border-border/40 text-muted-foreground">
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: project.color }}
+              />
+              <span>{project.name || "Inbox"}</span>
+            </span>
+          )}
+
           {/* Evening Chip */}
           {task.is_evening && (
             <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-secondary/35 border border-border/40 text-foreground/80">
