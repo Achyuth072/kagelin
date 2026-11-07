@@ -54,4 +54,87 @@ describe("BoardTaskCard", () => {
     fireEvent.click(checkbox);
     expect(handleComplete).toHaveBeenCalled();
   });
+
+  it("renders planned do_date chip with CalendarClock and accessible high-contrast emphasis", () => {
+    const plannedTask: Task = {
+      ...baseTask,
+      do_date: new Date().toISOString().split("T")[0],
+    };
+    render(
+      <BoardTaskCard
+        task={plannedTask}
+        project={undefined}
+        handleComplete={vi.fn()}
+        handlePlayFocus={vi.fn()}
+      />,
+    );
+
+    const plannedChip = screen.getByText("Planned Today").parentElement;
+    expect(plannedChip).toBeInTheDocument();
+    expect(plannedChip).toHaveClass("bg-secondary/70", "font-semibold");
+  });
+
+  it("renders overdue due_date chip with high-contrast emphasis", () => {
+    const overdueTask: Task = {
+      ...baseTask,
+      due_date: "2020-01-01",
+    };
+    render(
+      <BoardTaskCard
+        task={overdueTask}
+        project={undefined}
+        handleComplete={vi.fn()}
+        handlePlayFocus={vi.fn()}
+      />,
+    );
+
+    const dueChip = screen.getByText("Jan 1").parentElement;
+    expect(dueChip).toHaveClass("bg-secondary/70", "font-semibold");
+  });
+
+  it("renders pre-allocated zero-jump action cluster with play and delete buttons", () => {
+    const handleDelete = vi.fn();
+    const handleFocus = vi.fn();
+
+    render(
+      <BoardTaskCard
+        task={baseTask}
+        project={undefined}
+        handleComplete={vi.fn()}
+        handlePlayFocus={handleFocus}
+        onDeleteRequest={handleDelete}
+      />,
+    );
+
+    const actionCluster = screen.getByTestId("board-hover-actions");
+    expect(actionCluster).toHaveClass("w-14", "justify-end");
+
+    const deleteBtn = screen.getByRole("button", { name: "Delete task" });
+    fireEvent.click(deleteBtn);
+    expect(handleDelete).toHaveBeenCalled();
+
+    const focusBtn = screen.getByRole("button", { name: "Start focus timer" });
+    fireEvent.click(focusBtn);
+    expect(handleFocus).toHaveBeenCalled();
+  });
+
+  it("renders 14x14 squircle checkbox with custom checkmark when completed", () => {
+    const completedTask: Task = {
+      ...baseTask,
+      is_completed: true,
+    };
+    render(
+      <BoardTaskCard
+        task={completedTask}
+        project={undefined}
+        handleComplete={vi.fn()}
+        handlePlayFocus={vi.fn()}
+      />,
+    );
+
+    const checkbox = screen.getByRole("checkbox");
+    expect(checkbox).toHaveAttribute("aria-checked", "true");
+    const squircle = checkbox.querySelector("span");
+    expect(squircle).toHaveClass("w-3.5", "h-3.5", "rounded-[3.5px]");
+  });
 });

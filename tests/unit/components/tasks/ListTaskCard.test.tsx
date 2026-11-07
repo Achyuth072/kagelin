@@ -58,7 +58,9 @@ describe("ListTaskCard", () => {
       />,
     );
 
-    expect(screen.getByText("Planned Today")).toBeDefined();
+    const plannedChip = screen.getByText("Planned Today").parentElement;
+    expect(plannedChip).toBeDefined();
+    expect(plannedChip).toHaveClass("bg-secondary/70", "font-semibold");
     expect(screen.getByText(/Dec 31/)).toBeDefined();
   });
 

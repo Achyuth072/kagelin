@@ -186,7 +186,14 @@ export function ListTaskCard({
         <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
           {/* Do Date (Planned Today) Chip */}
           {task.do_date && (
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md bg-brand/10 border border-brand/20 text-brand">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md border",
+                isPlannedToday
+                  ? "bg-secondary/70 border-border/80 text-foreground font-semibold"
+                  : "bg-secondary/35 border-border/40 text-muted-foreground",
+              )}
+            >
               <CalendarClock className="h-3 w-3 stroke-[2.25]" />
               <span>
                 {isPlannedToday

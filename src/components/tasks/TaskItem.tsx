@@ -158,6 +158,11 @@ function TaskItemBase({
           project={project}
           handleComplete={handleComplete}
           handlePlayFocus={handlePlayFocus}
+          onDeleteRequest={(e) => {
+            e.stopPropagation();
+            setPendingDelete(true);
+            setShowDeleteDialog(true);
+          }}
           onClick={() => onSelect?.(task)}
           shouldAnimate={shouldAnimate}
           isKeyboardSelected={isKeyboardSelected}
