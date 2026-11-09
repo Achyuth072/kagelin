@@ -1,12 +1,24 @@
 "use client";
 
-import { useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { Clock, RotateCcw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useCurrentTime } from "@/lib/hooks/useCurrentTime";
+import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_START_HOUR = 6;
+const DEFAULT_SCROLL_HOUR = 8;
+const STICKY_LABEL_OFFSET_PX = 36; // 32px sticky label + 4px grid gap
 
 function formatHeaderHour(hour: number): string {
   if (hour === 0) return "12a";
@@ -36,6 +48,35 @@ const INTENSITY_CLASSES: Record<number, string> = {
   4: "bg-brand hover:bg-brand/90 text-white",
 };
 
+/**
+ * Determines the target hour column to auto-scroll into view on mobile.
+ * Prioritizes daytime focus hours (6 AM - 11 PM) with 1h leading context,
+ * capped at 8 AM so daytime context is preserved without overshooting into evening.
+ * Falls back to night-shift focus if the user exclusively focuses overnight,
+ * or default 8 AM (start of standard workday).
+ */
+export function getTargetScrollHour(matrix: number[][]): number {
+  const hourlyTotals = Array.from({ length: 24 }, (_, h) =>
+    matrix.reduce((sum, row) => sum + (row[h] ?? 0), 0),
+  );
+
+  // Check for daytime focus activity (6 AM to 11 PM)
+  const daytimeHour = hourlyTotals.findIndex(
+    (mins, h) => h >= DAY_START_HOUR && mins > 0,
+  );
+  if (daytimeHour !== -1) {
+    return Math.min(Math.max(0, daytimeHour - 1), DEFAULT_SCROLL_HOUR);
+  }
+
+  // Pure night owls (only work between 12 AM and 5 AM)
+  const nightHour = hourlyTotals.findIndex((mins) => mins > 0);
+  if (nightHour !== -1) {
+    return Math.max(0, nightHour - 1);
+  }
+
+  return DEFAULT_SCROLL_HOUR;
+}
+
 interface SelectedCell {
   day: string;
   hour: number;
@@ -52,6 +93,32 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
   const [selectedCell, setSelectedCell] = useState<SelectedCell | null>(null);
   const [focusPos, setFocusPos] = useState({ day: 0, hour: 0 });
   const gridRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const horizontalScrollRef = useHorizontalScroll();
+  const hasAutoScrolled = useRef(false);
+
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isMobile = useIsMobile();
+  const currentTime = useCurrentTime();
+  // Safe against SSR hydration mismatch: only identify current hour after client hydration
+  const currentHour = mounted ? currentTime.getHours() : null;
+
+  // Combine refs: useHorizontalScroll for desktop wheel/drag, manual ref for mobile auto-scroll
+  const setScrollContainerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!isMobile) {
+        horizontalScrollRef(node);
+      } else {
+        horizontalScrollRef(null);
+      }
+      scrollContainerRef.current = node;
+    },
+    [horizontalScrollRef, isMobile],
+  );
 
   const focusCell = (day: number, hour: number) => {
     setFocusPos({ day, hour });
@@ -63,6 +130,36 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
   };
 
   const hasData = matrix.some((row) => row.some((minutes) => minutes > 0));
+
+  // Auto-scroll on mobile to the user's active focus window on mount
+  useLayoutEffect(() => {
+    if (!isMobile || hasAutoScrolled.current || !hasData) return;
+
+    const frame = requestAnimationFrame(() => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      const targetHour = getTargetScrollHour(matrix);
+      const targetCell = container.querySelector<HTMLElement>(
+        `[data-hour="${targetHour}"]`,
+      );
+      if (!targetCell) return;
+
+      const containerRect = container.getBoundingClientRect();
+      const cellRect = targetCell.getBoundingClientRect();
+      const targetScrollLeft = Math.max(
+        0,
+        container.scrollLeft +
+          (cellRect.left - containerRect.left) -
+          STICKY_LABEL_OFFSET_PX,
+      );
+
+      container.scrollLeft = targetScrollLeft;
+      hasAutoScrolled.current = true;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [isMobile, hasData, matrix]);
 
   const readoutText = selectedCell
     ? `${selectedCell.day} at ${formatCellHour(selectedCell.hour)} — ${selectedCell.minutes}m focus`
@@ -106,7 +203,11 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
         />
       ) : (
         <>
-          <div className="w-full overflow-x-auto pb-1.5 touch-pan-x custom-scrollbar">
+          <div
+            ref={setScrollContainerRef}
+            data-testid="time-of-day-scroller"
+            className="w-full overflow-x-auto pb-1.5 touch-pan-x custom-scrollbar"
+          >
             <div
               ref={gridRef}
               className="grid gap-1 w-full min-w-[480px] md:min-w-0"
@@ -118,15 +219,42 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
               <span className="sticky left-0 bg-card z-10" />
               {Array.from({ length: 24 }).map((_, hour) => {
                 const isMajor = hour % 3 === 0;
+                const isCurrentHour = hour === currentHour;
+                const showHourLabel = isCurrentHour || isMajor;
+
                 return (
                   <div
                     key={hour}
-                    className="text-center text-[10px] font-mono text-muted-foreground/60 select-none"
+                    data-testid={
+                      isCurrentHour ? "current-hour-header" : undefined
+                    }
+                    className={cn(
+                      "text-center text-[10px] font-mono select-none relative flex flex-col items-center justify-center h-5",
+                      isCurrentHour
+                        ? "text-brand font-semibold"
+                        : "text-muted-foreground/60",
+                    )}
+                    title={
+                      isCurrentHour
+                        ? `Current hour (${formatHeaderHour(hour)})`
+                        : undefined
+                    }
+                    aria-label={
+                      isCurrentHour
+                        ? `Current hour: ${formatCellHour(hour)}`
+                        : undefined
+                    }
                   >
-                    {isMajor ? (
-                      <span>{formatHeaderHour(hour)}</span>
-                    ) : (
-                      <span className="text-[8px] opacity-25">·</span>
+                    <span
+                      className={cn(
+                        "leading-none",
+                        !showHourLabel && "text-[8px] opacity-25",
+                      )}
+                    >
+                      {showHourLabel ? formatHeaderHour(hour) : "·"}
+                    </span>
+                    {isCurrentHour && (
+                      <span className="absolute bottom-0 w-1 h-1 rounded-full bg-brand" />
                     )}
                   </div>
                 );

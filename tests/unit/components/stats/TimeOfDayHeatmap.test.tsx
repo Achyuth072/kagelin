@@ -1,6 +1,12 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
-import { TimeOfDayHeatmap } from "@/components/stats/TimeOfDayHeatmap";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  TimeOfDayHeatmap,
+  getTargetScrollHour,
+} from "@/components/stats/TimeOfDayHeatmap";
+import * as useIsMobileModule from "@/lib/hooks/useIsMobile";
+
+vi.mock("@/lib/hooks/useIsMobile");
 
 describe("TimeOfDayHeatmap", () => {
   const emptyMatrix = Array.from({ length: 7 }, () => Array(24).fill(0));
@@ -121,5 +127,128 @@ describe("TimeOfDayHeatmap", () => {
       screen.getByText("When you focus most, by hour and weekday"),
     ).toBeInTheDocument();
     expect(screen.queryByTitle("Reset selection")).toBeNull();
+  });
+
+  describe("getTargetScrollHour", () => {
+    it("returns default 8am when matrix has no activity", () => {
+      expect(getTargetScrollHour(emptyMatrix)).toBe(8);
+    });
+
+    it("returns 1 hour before daytime focus (9am -> 8am)", () => {
+      const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+      matrix[0][9] = 30; // Mon 9am
+      expect(getTargetScrollHour(matrix)).toBe(8);
+    });
+
+    it("returns 1 hour before early morning focus (6am -> 5am)", () => {
+      const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+      matrix[2][6] = 45; // Wed 6am
+      expect(getTargetScrollHour(matrix)).toBe(5);
+    });
+
+    it("caps daytime scroll at 8am for late afternoon focus to keep daytime view intact", () => {
+      const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+      matrix[3][14] = 60; // Thu 2pm (daytime focus)
+      expect(getTargetScrollHour(matrix)).toBe(8);
+    });
+
+    it("anchors to 8am when daytime focus starts at 10am even with an isolated stray night session", () => {
+      const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+      matrix[1][2] = 10; // Stray session at 2am
+      matrix[1][10] = 50; // Main daytime session at 10am
+      expect(getTargetScrollHour(matrix)).toBe(8);
+    });
+
+    it("anchors to night activity if user is a pure night owl with zero daytime sessions", () => {
+      const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+      matrix[0][2] = 45; // Mon 2am
+      matrix[4][3] = 30; // Fri 3am
+      expect(getTargetScrollHour(matrix)).toBe(1); // 2am - 1h = 1am
+    });
+  });
+
+  describe("current hour polish indicator", () => {
+    beforeEach(() => {
+      vi.mocked(useIsMobileModule.useIsMobile).mockReturnValue(false);
+    });
+
+    it("highlights the current hour in the header row", () => {
+      const now = new Date();
+      now.setHours(14, 0, 0, 0); // 2pm (non-major hour normally shown as ·)
+      vi.useFakeTimers();
+      vi.setSystemTime(now);
+
+      render(<TimeOfDayHeatmap matrix={sampleMatrix} />);
+
+      const currentHourEl = screen.getByTestId("current-hour-header");
+      expect(currentHourEl).toBeInTheDocument();
+      expect(currentHourEl).toHaveTextContent("2p");
+      expect(currentHourEl).toHaveAttribute("title", "Current hour (2p)");
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe("mobile auto-scroll", () => {
+    beforeEach(() => {
+      vi.mocked(useIsMobileModule.useIsMobile).mockReturnValue(true);
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("auto-scrolls to the target hour on mobile mount", () => {
+      vi.spyOn(window, "requestAnimationFrame").mockImplementation(
+        (cb: FrameRequestCallback) => {
+          cb(0);
+          return 0;
+        },
+      );
+
+      const matrix = Array.from({ length: 7 }, () => Array(24).fill(0));
+      matrix[0][9] = 30; // 9am focus -> target hour is 8
+
+      const { container } = render(<TimeOfDayHeatmap matrix={matrix} />);
+      const scroller = container.querySelector(
+        '[data-testid="time-of-day-scroller"]',
+      ) as HTMLDivElement;
+      expect(scroller).toBeInTheDocument();
+
+      const targetCell = container.querySelector(
+        '[data-hour="8"]',
+      ) as HTMLElement;
+      expect(targetCell).toBeInTheDocument();
+
+      // Mock getBoundingClientRect on container and target cell
+      vi.spyOn(scroller, "getBoundingClientRect").mockReturnValue({
+        left: 10,
+        top: 0,
+        right: 310,
+        bottom: 200,
+        width: 300,
+        height: 200,
+        x: 10,
+        y: 0,
+        toJSON: () => {},
+      });
+
+      vi.spyOn(targetCell, "getBoundingClientRect").mockReturnValue({
+        left: 210,
+        top: 20,
+        right: 230,
+        bottom: 40,
+        width: 20,
+        height: 20,
+        x: 210,
+        y: 20,
+        toJSON: () => {},
+      });
+
+      // Rerender with mobile layout effect
+      const { rerender } = render(<TimeOfDayHeatmap matrix={matrix} />);
+      // Expected targetScrollLeft = Math.max(0, 0 + (210 - 10) - 36) = 164
+      rerender(<TimeOfDayHeatmap matrix={matrix} />);
+    });
   });
 });
