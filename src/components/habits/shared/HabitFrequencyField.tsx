@@ -98,7 +98,7 @@ export function HabitFrequencyField({
   };
 
   return (
-    <div className="flex items-start gap-3 px-3 py-2.5 rounded-md mx-2">
+    <div className="flex items-start gap-3 px-3 py-2.5 rounded-md">
       <IconCell className="pt-[7px] items-center">
         <Repeat className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
       </IconCell>

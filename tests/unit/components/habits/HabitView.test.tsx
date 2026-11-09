@@ -95,8 +95,11 @@ describe("HabitView", () => {
   it("renders the property strip containing SlidersHorizontal and property controls", () => {
     render(<HabitView {...baseProps} />);
     expect(screen.getByTestId("property-strip")).toBeInTheDocument();
-    expect(screen.getByText("Icon & color")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Customize habit icon and color"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Yes or No" })).toBeInTheDocument();
+    expect(screen.getByText("Daily")).toBeInTheDocument();
   });
 
   it("does not render the target field for a boolean habit", () => {
@@ -151,7 +154,7 @@ describe("HabitView", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps question, reminder and details behind More options", () => {
+  it("keeps question and reminder behind More options, with details directly accessible", () => {
     render(
       <HabitView
         {...baseProps}
@@ -161,11 +164,10 @@ describe("HabitView", () => {
       />,
     );
     expect(screen.queryByLabelText("Habit question")).toBeNull();
-    expect(screen.queryByLabelText("Habit details")).toBeNull();
+    expect(screen.getByLabelText("Habit details")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("More options"));
     expect(screen.getByLabelText("Habit question")).toBeInTheDocument();
-    expect(screen.getByLabelText("Habit details")).toBeInTheDocument();
     expect(screen.getByText("Off")).toBeInTheDocument();
   });
 

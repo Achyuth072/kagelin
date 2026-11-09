@@ -101,7 +101,7 @@ export function HabitReminderField({
   );
 
   return (
-    <div className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast mx-2">
+    <div className="flex items-start gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast">
       <IconCell className="h-8 items-center pt-0">
         <Bell className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
       </IconCell>
@@ -144,7 +144,7 @@ export function HabitReminderField({
                     aria-pressed={active}
                     aria-label={ariaLabel}
                     className={cn(
-                      "relative h-8 w-8 rounded-full text-xs font-semibold flex items-center justify-center border border-transparent transition-seijaku-fast before:absolute before:-inset-1 before:content-['']",
+                      "relative h-8 w-8 rounded-lg text-xs font-semibold flex items-center justify-center border border-transparent transition-seijaku-fast before:absolute before:-inset-1 before:content-['']",
                       active
                         ? "bg-brand text-brand-foreground"
                         : "text-muted-foreground bg-secondary/10 border-border/40 hover:text-foreground hover:bg-secondary/40",
