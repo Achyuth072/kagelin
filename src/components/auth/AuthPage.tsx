@@ -16,6 +16,7 @@ import {
   SIGNUP_DISABLED_MESSAGE,
   isSignupDisabledError,
 } from "@/lib/auth/format-auth-error";
+import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
 
 export type AuthMode = "sign-in" | "sign-up";
 
@@ -40,6 +41,10 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const error = searchParams?.get("error");
+  const redirectParam = searchParams?.get("redirect");
+  const targetDestination = redirectParam
+    ? sanitizeNextPath(redirectParam)
+    : null;
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [view, setView] = useState<"password" | "magic-link" | "reset">(
     "password",
@@ -66,13 +71,18 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
         profile?.is_admin &&
         (profile.settings as { adminLandingPage?: string } | null)
           ?.adminLandingPage === "metrics";
-      router.push(wantsMetrics ? "/admin/metrics" : "/");
+      const defaultDest = wantsMetrics ? "/admin/metrics" : "/";
+      const destination =
+        targetDestination && targetDestination !== "/"
+          ? targetDestination
+          : defaultDest;
+      router.push(destination);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [user, loading, isGuestMode, router]);
+  }, [user, loading, isGuestMode, router, targetDestination]);
 
   // user && !isGuestMode means the redirect effect above is either about to
   // fire or already awaiting the profile lookup — never flash the form.
@@ -86,7 +96,9 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
 
   const handleGuestSignIn = () => {
     signInAsGuest();
-    router.push("/");
+    const destination =
+      targetDestination && targetDestination !== "/" ? targetDestination : "/";
+    router.push(destination);
   };
 
   const copy = MODE_COPY[mode];

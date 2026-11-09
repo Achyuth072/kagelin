@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { createClient } from "@/lib/supabase/client";
 import { EMAIL_CONFIRMED_PATH } from "@/lib/auth/auth-routes";
+import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
 import { migrationIntent } from "@/lib/migration/intent";
 import type { OAuthProviderId } from "@/lib/auth/providers";
@@ -168,11 +169,21 @@ export function AuthProvider({
     return () => subscription.unsubscribe();
   }, [supabase.auth, queryClient]);
 
+  const getCallbackUrl = () => {
+    if (typeof window === "undefined") return "/auth/callback";
+    const searchParams = new URLSearchParams(window.location.search);
+    const redirectParam = searchParams.get("redirect");
+    const safeRedirect = redirectParam ? sanitizeNextPath(redirectParam) : null;
+    return safeRedirect && safeRedirect !== "/"
+      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`
+      : `${window.location.origin}/auth/callback`;
+  };
+
   const signInWithOAuth = useCallback(
     async (provider: OAuthProviderId) => {
       await supabase.auth.signInWithOAuth({
         provider,
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: { redirectTo: getCallbackUrl() },
       });
     },
     [supabase.auth],
@@ -183,7 +194,7 @@ export function AuthProvider({
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: getCallbackUrl(),
           captchaToken,
         },
       });

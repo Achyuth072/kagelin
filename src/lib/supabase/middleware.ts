@@ -33,7 +33,16 @@ export async function updateSession(request: NextRequest) {
   // redirect() builds a fresh response, so cookies Supabase wrote onto
   // supabaseResponse must be copied across or the browser loops on a stale one.
   const redirectToLogin = () => {
-    const redirect = NextResponse.redirect(new URL("/login", request.url));
+    const loginUrl = new URL("/login", request.url);
+    const destination = request.nextUrl.pathname + request.nextUrl.search;
+    if (
+      destination !== "/" &&
+      !request.nextUrl.pathname.startsWith("/login") &&
+      !request.nextUrl.pathname.startsWith("/signup")
+    ) {
+      loginUrl.searchParams.set("redirect", destination);
+    }
+    const redirect = NextResponse.redirect(loginUrl);
     for (const cookie of supabaseResponse.cookies.getAll()) {
       redirect.cookies.set(cookie);
     }
