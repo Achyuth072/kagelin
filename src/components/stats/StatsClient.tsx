@@ -201,6 +201,7 @@ export function StatsClient() {
           <FocusTrendChart
             data={focusTrendData}
             periodLabel={PERIOD_LABELS[statsPeriod]}
+            period={statsPeriod}
           />
         </div>
 

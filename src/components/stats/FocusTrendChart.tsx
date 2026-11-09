@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
-import { format, parseISO } from "date-fns";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import {
   ComposedChart,
@@ -14,36 +13,76 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { computeTickInterval } from "@/lib/utils/chart-ticks";
+import {
+  aggregateTrendData,
+  type AggregatedTrendPoint,
+  type TrendDataPoint,
+} from "@/lib/utils/chart-aggregation";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { useHaptic } from "@/lib/hooks/useHaptic";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LineChart as LineChartIcon } from "lucide-react";
+import type { StatsPeriod } from "@/lib/types/stats";
 
 interface FocusTrendChartProps {
-  data: Array<{
-    date: string;
-    hours: number;
-    tasksCompleted: number;
-  }>;
+  data: TrendDataPoint[];
   periodLabel?: string;
+  period?: StatsPeriod;
   className?: string;
 }
 
 export function FocusTrendChart({
   data,
   periodLabel = "Last 7 days (ends today)",
+  period = "7d",
   className,
 }: FocusTrendChartProps) {
   const hasData = data.some((d) => d.hours > 0 || d.tasksCompleted > 0);
   const isMobile = useIsMobile();
+  const { trigger } = useHaptic();
 
-  // Avoid an unreadable tick per day once the range grows (e.g. 1y/All).
-  // Mobile has roughly half the plot width, so target half as many labels.
-  const tickInterval = computeTickInterval(data.length, isMobile ? 4 : 8);
+  const [activePoint, setActivePoint] = useState<AggregatedTrendPoint | null>(
+    null,
+  );
+  const revertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearRevertTimer = () => {
+    if (revertTimerRef.current) {
+      clearTimeout(revertTimerRef.current);
+      revertTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => clearRevertTimer, []);
 
   const chartData = useMemo(
-    () => data.map((d) => ({ ...d, label: format(parseISO(d.date), "MMM d") })),
-    [data],
+    () => aggregateTrendData(data, period),
+    [data, period],
   );
+
+  // Avoid an unreadable tick per bucket once the range grows.
+  // Mobile has roughly half the plot width, so target half as many labels.
+  const tickInterval = computeTickInterval(chartData.length, isMobile ? 4 : 8);
+
+  const handleChartMove = (state: { activeTooltipIndex?: unknown }) => {
+    if (typeof state?.activeTooltipIndex === "number") {
+      const point = chartData[state.activeTooltipIndex];
+      if (point && point.date !== activePoint?.date) {
+        clearRevertTimer();
+        setActivePoint(point);
+        if (isMobile) {
+          trigger("tick");
+        }
+      }
+    }
+  };
+
+  const handleChartLeave = () => {
+    clearRevertTimer();
+    revertTimerRef.current = setTimeout(() => {
+      setActivePoint(null);
+    }, 1500);
+  };
 
   return (
     <Card className={cn("p-4 sm:p-6 border-border/50", className)}>
@@ -53,9 +92,28 @@ export function FocusTrendChart({
             <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Trend
             </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {periodLabel} focus and task trend
-            </p>
+            {activePoint ? (
+              <p
+                data-testid="scrub-readout"
+                className="text-sm font-medium text-foreground mt-1 tabular-nums animate-in fade-in duration-150"
+              >
+                <span className="text-muted-foreground mr-1.5">
+                  {activePoint.tooltipLabel}:
+                </span>
+                <span className="text-brand font-semibold">
+                  {activePoint.hours}h
+                </span>
+                <span className="text-muted-foreground mx-1.5">•</span>
+                <span>
+                  {activePoint.tasksCompleted}{" "}
+                  {activePoint.tasksCompleted === 1 ? "task" : "tasks"}
+                </span>
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground mt-1">
+                {periodLabel} focus and task trend
+              </p>
+            )}
           </div>
           {hasData && (
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
@@ -113,6 +171,10 @@ export function FocusTrendChart({
                   bottom: 0,
                   left: isMobile ? -6 : 0,
                 }}
+                onMouseMove={handleChartMove}
+                onTouchMove={handleChartMove}
+                onMouseLeave={handleChartLeave}
+                onTouchEnd={handleChartLeave}
               >
                 <defs>
                   <linearGradient
@@ -168,6 +230,7 @@ export function FocusTrendChart({
                     strokeWidth: 1,
                     strokeDasharray: "2 2",
                   }}
+                  content={isMobile ? () => null : undefined}
                   contentStyle={{
                     backgroundColor: "hsl(var(--background))",
                     border: "1px solid hsl(var(--border))",
@@ -175,6 +238,9 @@ export function FocusTrendChart({
                     fontSize: "12px",
                   }}
                   labelStyle={{ color: "hsl(var(--foreground))" }}
+                  labelFormatter={(_label, payload) =>
+                    payload?.[0]?.payload?.tooltipLabel || _label
+                  }
                   formatter={(value, name) => [
                     value,
                     name === "hours" ? "Focus hours" : "Tasks completed",
