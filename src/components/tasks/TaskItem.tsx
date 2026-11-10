@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
-import { CollapsibleReveal } from "./shared/CollapsibleReveal";
 import { useDeleteTask, useToggleTask } from "@/lib/hooks/useTaskMutations";
 import { useTimerStore } from "@/lib/store/timerStore";
 import {
@@ -61,8 +60,15 @@ function TaskItemBase({
   const [pendingDelete, setPendingDelete] = useState(false);
   const [isSwipeDragging, setIsSwipeDragging] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [hasRenderedSubtasks, setHasRenderedSubtasks] = useState(false);
   const [isHandleActive, setIsHandleActive] = useState(false);
   const [shouldAnimate, setShouldAnimate] = useState(false);
+
+  useEffect(() => {
+    if (isExpanded) {
+      setHasRenderedSubtasks(true);
+    }
+  }, [isExpanded]);
 
   const deleteMutation = useDeleteTask();
   const toggleMutation = useToggleTask();
@@ -242,18 +248,30 @@ function TaskItemBase({
         </SwipeableTaskContent>
       )}
 
-      {/* Skipped while dragging — the motion layer costs per frame, per row. */}
-      <CollapsibleReveal
-        open={isExpanded && !isDndActive}
+      {/* Subtask collapse/expand animated via CSS grid matching sidebar transition */}
+      <div
         className={cn(
-          "mr-2 my-1.5 pl-2.5 border-l-2 border-brand/40 rounded-r-md",
-          isDesktop ? "ml-10" : "ml-11",
+          "grid transition-[grid-template-rows,opacity] duration-300 ease-seijaku",
+          isExpanded && !isDndActive
+            ? "grid-rows-[1fr] opacity-100"
+            : "grid-rows-[0fr] opacity-0 pointer-events-none",
         )}
       >
-        <div className="py-1">
-          <SubtaskList taskId={task.id} projectId={task.project_id} />
+        <div className="overflow-hidden">
+          <div
+            className={cn(
+              "mr-2 my-1.5 pl-2.5 border-l-2 border-brand/40 rounded-r-md",
+              isDesktop ? "ml-10" : "ml-11",
+            )}
+          >
+            <div className="py-1">
+              {hasRenderedSubtasks && (
+                <SubtaskList taskId={task.id} projectId={task.project_id} />
+              )}
+            </div>
+          </div>
         </div>
-      </CollapsibleReveal>
+      </div>
 
       <DeleteConfirmationDialog
         isOpen={showDeleteDialog}

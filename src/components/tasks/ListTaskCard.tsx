@@ -4,7 +4,6 @@ import React from "react";
 import {
   Check,
   ChevronDown,
-  ChevronRight,
   Calendar,
   CalendarClock,
   Moon,
@@ -258,11 +257,12 @@ export function ListTaskCard({
                   : "bg-secondary/40 hover:bg-secondary/70 border-border/50 text-foreground",
               )}
             >
-              {isExpanded ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
+              <ChevronDown
+                className={cn(
+                  "h-3 w-3 shrink-0 transition-transform duration-200 ease-seijaku",
+                  !isExpanded && "-rotate-90",
+                )}
+              />
               <span>
                 {completedSteps}/{totalSteps} steps
               </span>
