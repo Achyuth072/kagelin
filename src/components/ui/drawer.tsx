@@ -35,27 +35,70 @@ const DrawerOverlay = React.forwardRef<
 ));
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 
+function isTouchPointer(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(pointer: coarse)").matches ||
+    !window.matchMedia("(pointer: fine)").matches
+  );
+}
+
+function preventTouchAutoFocus(event: Event) {
+  if (!event.defaultPrevented && isTouchPointer()) {
+    event.preventDefault();
+  }
+}
+
+function blurActiveInput() {
+  const activeEl = document.activeElement;
+  if (
+    activeEl instanceof HTMLInputElement ||
+    activeEl instanceof HTMLTextAreaElement ||
+    (activeEl instanceof HTMLElement && activeEl.isContentEditable)
+  ) {
+    activeEl.blur();
+  }
+}
+
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content> & {
     overlayClassName?: string;
   }
->(({ className, overlayClassName, children, ...props }, ref) => (
-  <DrawerPortal>
-    <DrawerOverlay className={overlayClassName} />
-    <DrawerPrimitive.Content
-      ref={ref}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-60 mt-24 flex h-auto max-h-[85dvh] flex-col overflow-y-auto rounded-t-[14px] border border-border/80 bg-background shadow-none",
-        className,
-      )}
-      {...props}
-    >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
-      {children}
-    </DrawerPrimitive.Content>
-  </DrawerPortal>
-));
+>(
+  (
+    { className, overlayClassName, children, onOpenAutoFocus, ...props },
+    ref,
+  ) => {
+    React.useEffect(() => {
+      if (!isTouchPointer()) return;
+      blurActiveInput();
+      const raf = window.requestAnimationFrame(blurActiveInput);
+      return () => window.cancelAnimationFrame(raf);
+    }, []);
+
+    return (
+      <DrawerPortal>
+        <DrawerOverlay className={overlayClassName} />
+        <DrawerPrimitive.Content
+          ref={ref}
+          className={cn(
+            "fixed inset-x-0 bottom-0 z-60 mt-24 flex h-auto max-h-[85dvh] flex-col overflow-y-auto rounded-t-[14px] border border-border/80 bg-background shadow-none",
+            className,
+          )}
+          onOpenAutoFocus={(event) => {
+            onOpenAutoFocus?.(event);
+            preventTouchAutoFocus(event);
+          }}
+          {...props}
+        >
+          <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
+          {children}
+        </DrawerPrimitive.Content>
+      </DrawerPortal>
+    );
+  },
+);
 DrawerContent.displayName = "DrawerContent";
 
 const DrawerHeader = ({
@@ -118,4 +161,6 @@ export {
   DrawerFooter,
   DrawerTitle,
   DrawerDescription,
+  isTouchPointer,
+  preventTouchAutoFocus,
 };

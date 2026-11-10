@@ -32,7 +32,6 @@ export default function TaskSheet({
   initialContent,
   initialTab,
 }: TaskSheetProps) {
-  // Use the preserved task for rendering during close animation
   const [preservedTask, setPreservedTask] = useState<Task | null | undefined>(
     initialTask,
   );
@@ -95,7 +94,6 @@ export default function TaskSheet({
                 task={effectiveTask}
                 open={open}
                 onClose={onClose}
-                autoFocusTitle={true}
                 initialDate={initialDate}
                 initialContent={initialContent}
               >

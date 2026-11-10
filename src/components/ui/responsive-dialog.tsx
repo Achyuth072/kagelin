@@ -16,6 +16,7 @@ import {
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
+  preventTouchAutoFocus,
 } from "@/components/ui/drawer";
 
 interface ResponsiveDialogProps {
@@ -28,6 +29,7 @@ interface ResponsiveDialogContentProps extends React.HTMLAttributes<HTMLDivEleme
   className?: string;
   overlayClassName?: string;
   children: React.ReactNode;
+  onOpenAutoFocus?: (event: Event) => void;
 }
 
 interface ResponsiveDialogHeaderProps {
@@ -84,6 +86,7 @@ export function ResponsiveDialogContent({
   className,
   overlayClassName,
   children,
+  onOpenAutoFocus,
   ...props
 }: ResponsiveDialogContentProps) {
   const { isMobile } = React.useContext(ResponsiveDialogContext);
@@ -93,6 +96,7 @@ export function ResponsiveDialogContent({
       <DrawerContent
         className={className}
         overlayClassName={overlayClassName}
+        onOpenAutoFocus={onOpenAutoFocus}
         {...props}
       >
         {children}
@@ -104,6 +108,10 @@ export function ResponsiveDialogContent({
     <DialogContent
       className={className}
       overlayClassName={overlayClassName}
+      onOpenAutoFocus={(event) => {
+        onOpenAutoFocus?.(event);
+        preventTouchAutoFocus(event);
+      }}
       {...props}
     >
       {children}
