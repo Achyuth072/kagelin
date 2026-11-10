@@ -6,6 +6,8 @@ import { AuthProvider } from "@/components/AuthProvider";
 import React from "react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
+const mockGetSession = vi.fn();
+
 // Mock Supabase client
 vi.mock("@/lib/supabase/client", () => ({
   createClient: vi.fn(() => ({
@@ -16,7 +18,7 @@ vi.mock("@/lib/supabase/client", () => ({
       eq: vi.fn().mockReturnThis(),
     })),
     auth: {
-      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+      getSession: () => mockGetSession(),
       onAuthStateChange: vi.fn(() => ({
         data: { subscription: { unsubscribe: vi.fn() } },
       })),
@@ -42,6 +44,7 @@ describe("useTasks hook (Task Continuity Data)", () => {
   beforeEach(() => {
     queryClient.clear();
     mockStore.clearData();
+    mockGetSession.mockResolvedValue({ data: { session: null } });
     // Force Guest Mode for testing mockStore logic
     localStorage.setItem("kanso_guest_mode", "true");
   });
@@ -119,5 +122,54 @@ describe("useTasks hook (Task Continuity Data)", () => {
         { id: "sub-2", is_completed: false },
       ]),
     );
+  });
+
+  it("should fetch root tasks and subtasks concurrently via Promise.all in non-guest mode", async () => {
+    localStorage.removeItem("kanso_guest_mode");
+    mockGetSession.mockResolvedValue({
+      data: {
+        session: {
+          user: { id: "test-user-id", email: "test@example.com" },
+        },
+      },
+    });
+
+    const paginate = await import("@/lib/supabase/paginate");
+    let tasksInvoked = false;
+    let stepsInvokedWhileTasksPending = false;
+
+    vi.spyOn(paginate, "fetchAllRows").mockImplementation(async () => {
+      if (!tasksInvoked) {
+        tasksInvoked = true;
+        await new Promise((r) => setTimeout(r, 20));
+        return [
+          {
+            id: "root-1",
+            content: "Root task",
+            parent_id: null,
+            day_order: 0,
+            created_at: "2026-01-01",
+          },
+        ];
+      } else {
+        stepsInvokedWhileTasksPending = true;
+        return [
+          {
+            id: "step-1",
+            parent_id: "root-1",
+            is_completed: true,
+          },
+        ];
+      }
+    });
+
+    const { result } = renderHook(() => useTasks(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(stepsInvokedWhileTasksPending).toBe(true);
+    expect(result.current.data?.[0].subtasks).toEqual([
+      { id: "step-1", is_completed: true },
+    ]);
   });
 });

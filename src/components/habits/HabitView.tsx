@@ -192,7 +192,7 @@ export function HabitView(props: HabitViewProps) {
           >
             {habitIdBadge}
           </span>
-          <span className="text-[10px] text-muted-foreground/60 font-mono">
+          <span className="text-[11px] sm:text-xs text-muted-foreground">
             · tap icon to customize
           </span>
         </div>

@@ -12,14 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
 import type { TaskViewMode } from "@/lib/types/sorting";
-import dynamic from "next/dynamic";
-
-// Lazy-loaded to cut initial render weight (PERF-02).
-const SubtaskList = dynamic(() => import("./SubtaskList"), {
-  loading: () => <div className="h-16 animate-pulse bg-muted/30 rounded-lg" />,
-  ssr: false,
-});
-
+import SubtaskList from "./SubtaskList";
 import { useRouter } from "next/navigation";
 import { BoardTaskCard } from "./BoardTaskCard";
 import { ListTaskCard } from "./ListTaskCard";
