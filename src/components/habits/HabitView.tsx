@@ -400,7 +400,7 @@ export function HabitView(props: HabitViewProps) {
 
         {/* Inline Frequency Expansion */}
         <CollapsibleReveal open={frequencyOpen}>
-          <div className="space-y-2 pt-1.5 pb-2">
+          <div className="space-y-2 pt-1.5 pb-2 my-1 pl-2.5 ml-2 border-l-2 border-brand/40 rounded-r-md">
             <HabitFrequencyField
               count={frequencyCount}
               period={frequencyPeriod}
@@ -427,7 +427,7 @@ export function HabitView(props: HabitViewProps) {
             onOpenChange={setMoreOpen}
           />
           <CollapsibleReveal open={moreOpen}>
-            <div className="space-y-1.5 pt-1.5 pb-1">
+            <div className="space-y-1.5 pt-1.5 pb-1 my-1 pl-2.5 ml-2 border-l-2 border-brand/40 rounded-r-md">
               <HabitQuestionField
                 question={question}
                 onQuestionChange={setQuestion}

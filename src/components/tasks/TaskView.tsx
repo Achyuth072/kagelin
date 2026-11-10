@@ -310,7 +310,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               </span>
             </button>
             <CollapsibleReveal open={showSubtasks}>
-              <div className="space-y-1.5 pt-1">
+              <div className="space-y-1.5 pt-1 my-1 pl-2.5 border-l-2 border-brand/40 rounded-r-md">
                 <SubtaskList
                   taskId={
                     mode === "edit" && initialTask ? initialTask.id : undefined

@@ -441,80 +441,82 @@ export function CreateEventDialog({
           </div>
 
           {/* Property Strip — All-Day & Reminder in a Single Horizontal Line */}
-          <div className="px-4 py-1.5 flex items-center gap-2.5 shrink-0">
-            <div className="w-5 shrink-0 flex items-center justify-center text-muted-foreground">
-              <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={2.25} />
-            </div>
-            <div
-              ref={scrollRef}
-              data-testid="property-strip"
-              className="py-1 px-0.5 flex items-center gap-2 overflow-x-auto scrollbar-hide min-w-0 flex-1 pr-2"
-            >
-              {/* All day switch chip */}
-              <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2.5 py-1 border border-border/50 shrink-0 h-7 sm:h-8">
-                <Sun
-                  className="h-3.5 w-3.5 text-muted-foreground"
-                  strokeWidth={2.25}
-                />
-                <span className="text-xs sm:text-[13px] text-foreground font-medium mr-1">
-                  All day
-                </span>
-                <Switch
-                  id="all-day"
-                  aria-label="All day"
-                  checked={allDay}
-                  disabled={isRecurring}
-                  onCheckedChange={(checked) => {
-                    trigger("toggle");
-                    setValue("all_day", checked);
-                  }}
-                  className="scale-75 origin-right"
-                />
+          <div className="px-4 py-1.5 flex flex-col gap-1 shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-5 shrink-0 flex items-center justify-center text-muted-foreground">
+                <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={2.25} />
               </div>
+              <div
+                ref={scrollRef}
+                data-testid="property-strip"
+                className="py-1 px-0.5 flex items-center gap-2 overflow-x-auto scrollbar-hide min-w-0 flex-1 pr-2"
+              >
+                {/* All day switch chip */}
+                <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2.5 py-1 border border-border/50 shrink-0 h-7 sm:h-8">
+                  <Sun
+                    className="h-3.5 w-3.5 text-muted-foreground"
+                    strokeWidth={2.25}
+                  />
+                  <span className="text-xs sm:text-[13px] text-foreground font-medium mr-1">
+                    All day
+                  </span>
+                  <Switch
+                    id="all-day"
+                    aria-label="All day"
+                    checked={allDay}
+                    disabled={isRecurring}
+                    onCheckedChange={(checked) => {
+                      trigger("toggle");
+                      setValue("all_day", checked);
+                    }}
+                    className="scale-75 origin-right"
+                  />
+                </div>
 
-              {/* Reminder select chip */}
-              <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2.5 py-1 border border-border/50 shrink-0 h-7 sm:h-8">
-                <BellRing
-                  className="h-3.5 w-3.5 text-muted-foreground"
-                  strokeWidth={2.25}
-                />
-                <Select
-                  value={
-                    reminderMinutes === null
-                      ? NO_REMINDER
-                      : String(reminderMinutes)
-                  }
-                  disabled={isRecurring || isGuestMode}
-                  onValueChange={(val) =>
-                    setValue(
-                      "reminder_minutes",
-                      val === NO_REMINDER ? null : Number(val),
-                    )
-                  }
-                >
-                  <SelectTrigger
-                    aria-label="Reminder"
-                    className="h-auto border-0 bg-transparent p-0 text-xs sm:text-[13px] font-medium text-foreground focus-visible:ring-0 shadow-none gap-1 [&>svg]:size-3"
+                {/* Reminder select chip */}
+                <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2.5 py-1 border border-border/50 shrink-0 h-7 sm:h-8">
+                  <BellRing
+                    className="h-3.5 w-3.5 text-muted-foreground"
+                    strokeWidth={2.25}
+                  />
+                  <Select
+                    value={
+                      reminderMinutes === null
+                        ? NO_REMINDER
+                        : String(reminderMinutes)
+                    }
+                    disabled={isRecurring || isGuestMode}
+                    onValueChange={(val) =>
+                      setValue(
+                        "reminder_minutes",
+                        val === NO_REMINDER ? null : Number(val),
+                      )
+                    }
                   >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_REMINDER}>No reminder</SelectItem>
-                    {reminderOptions(allDay).map((o) => (
-                      <SelectItem key={o.value} value={String(o.value)}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    <SelectTrigger
+                      aria-label="Reminder"
+                      className="h-auto border-0 bg-transparent p-0 text-xs sm:text-[13px] font-medium text-foreground focus-visible:ring-0 shadow-none gap-1 [&>svg]:size-3"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_REMINDER}>No reminder</SelectItem>
+                      {reminderOptions(allDay).map((o) => (
+                        <SelectItem key={o.value} value={String(o.value)}>
+                          {o.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-
-              {isGuestMode && (
-                <span className="text-[11px] sm:text-xs text-muted-foreground shrink-0 pl-1">
-                  (Reminders need an account)
-                </span>
-              )}
             </div>
+
+            {isGuestMode && (
+              <p className="text-[11px] sm:text-xs text-muted-foreground pl-[30px]">
+                Reminders need an account
+              </p>
+            )}
           </div>
 
           {/* Portal target inside Dialog for wheel events, outside overflow-y-auto to avoid clipping. */}
