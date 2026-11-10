@@ -24,6 +24,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { IconCell } from "@/components/ui/IconCell";
 import SubtaskList from "./SubtaskList";
@@ -249,7 +250,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
                 setPriorityOpen((prev) => !prev);
               }}
               className={cn(
-                "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-auto shadow-none",
+                "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-7 sm:h-8 shadow-none",
                 priority !== 4
                   ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
                   : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
@@ -283,35 +284,31 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               className="basis-full w-full"
             >
               <div className="space-y-1.5 pt-1.5 pb-2 my-1 pl-2.5 ml-2 border-l-2 border-brand/40 rounded-r-md">
-                <div
-                  role="group"
-                  aria-label="Priority"
-                  data-testid="priority-segmented-toggle"
-                  className="flex items-center gap-1 bg-secondary/50 rounded-md p-0.5 border border-border/50 shrink-0 w-fit"
+                <Tabs
+                  value={String(priority)}
+                  onValueChange={(val) => {
+                    if (val) {
+                      trigger("tick");
+                      setPriority(Number(val) as 1 | 2 | 3 | 4);
+                      setPriorityOpen(false);
+                    }
+                  }}
+                  className="w-fit shrink-0"
                 >
-                  {([1, 2, 3, 4] as const).map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => {
-                        trigger("tick");
-                        setPriority(p);
-                        setPriorityOpen(false);
-                      }}
-                      aria-label={`Priority P${p}`}
-                      aria-pressed={priority === p}
-                      className={cn(
-                        "px-2.5 py-1 rounded text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer",
-                        priority === p
-                          ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
-                          : "text-muted-foreground hover:text-foreground",
-                      )}
-                    >
-                      <PriorityGlyph level={p} />
-                      <span>P{p}</span>
-                    </button>
-                  ))}
-                </div>
+                  <TabsList size="xs" data-testid="priority-segmented-toggle">
+                    {([1, 2, 3, 4] as const).map((p) => (
+                      <TabsTrigger
+                        key={p}
+                        value={String(p)}
+                        aria-label={`Priority P${p}`}
+                        className="font-mono text-xs px-2.5"
+                      >
+                        <PriorityGlyph level={p} />
+                        <span>P{p}</span>
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
               </div>
             </CollapsibleReveal>
           </div>

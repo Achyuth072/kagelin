@@ -70,7 +70,7 @@ export default function RecurrencePicker({
           variant="ghost"
           size="sm"
           className={cn(
-            "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-auto shadow-none",
+            "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-7 sm:h-8 shadow-none",
             hasRecurrence
               ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
               : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
@@ -162,16 +162,9 @@ export default function RecurrencePicker({
                   }}
                   className="w-full"
                 >
-                  <TabsList
-                    size="sm"
-                    className="grid grid-cols-2 w-full h-7 p-0.5"
-                  >
-                    <TabsTrigger value="strict" className="text-xs h-6">
-                      Strict
-                    </TabsTrigger>
-                    <TabsTrigger value="flexible" className="text-xs h-6">
-                      Flexible
-                    </TabsTrigger>
+                  <TabsList size="xs" className="grid grid-cols-2 w-full">
+                    <TabsTrigger value="strict">Strict</TabsTrigger>
+                    <TabsTrigger value="flexible">Flexible</TabsTrigger>
                   </TabsList>
                 </Tabs>
                 <p className="text-[10px] text-muted-foreground/70 leading-normal">
@@ -290,7 +283,7 @@ export default function RecurrencePicker({
                   }}
                   className="w-full"
                 >
-                  <TabsList size="sm" className="grid grid-cols-2 w-full">
+                  <TabsList size="xs" className="grid grid-cols-2 w-full">
                     <TabsTrigger value="strict">Strict</TabsTrigger>
                     <TabsTrigger value="flexible">Flexible</TabsTrigger>
                   </TabsList>

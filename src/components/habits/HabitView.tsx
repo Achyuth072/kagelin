@@ -285,19 +285,9 @@ export function HabitView(props: HabitViewProps) {
             }}
             className="shrink-0"
           >
-            <TabsList size="sm" className="h-7 sm:h-8 p-0.5">
-              <TabsTrigger
-                value="boolean"
-                className="h-6 sm:h-7 px-2.5 text-xs sm:text-[13px]"
-              >
-                Yes or No
-              </TabsTrigger>
-              <TabsTrigger
-                value="measurable"
-                className="h-6 sm:h-7 px-2.5 text-xs sm:text-[13px]"
-              >
-                Measurable
-              </TabsTrigger>
+            <TabsList size="xs">
+              <TabsTrigger value="boolean">Yes or No</TabsTrigger>
+              <TabsTrigger value="measurable">Measurable</TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -374,11 +364,11 @@ export function HabitView(props: HabitViewProps) {
                 }}
                 className="shrink-0"
               >
-                <TabsList size="sm" className="h-8 p-0.5">
+                <TabsList size="xs">
                   <TabsTrigger
                     value="at_least"
                     aria-label="At least"
-                    className="h-7 px-2 text-xs flex items-center gap-1"
+                    className="flex items-center gap-1"
                   >
                     <span>≥</span>
                     <span className="hidden sm:inline text-[11px]">
@@ -388,7 +378,7 @@ export function HabitView(props: HabitViewProps) {
                   <TabsTrigger
                     value="at_most"
                     aria-label="At most"
-                    className="h-7 px-2 text-xs flex items-center gap-1"
+                    className="flex items-center gap-1"
                   >
                     <span>≤</span>
                     <span className="hidden sm:inline text-[11px]">

@@ -376,10 +376,10 @@ describe("TaskView - normalized form patterns & surface parity", () => {
     expect(priorityChip).toBeInTheDocument();
     fireEvent.click(priorityChip);
 
-    const p2Btn = screen.getByRole("button", { name: "Priority P2" });
-    expect(p2Btn).toHaveAttribute("aria-pressed", "false");
+    const p2Btn = screen.getByRole("tab", { name: "Priority P2" });
+    expect(p2Btn).toHaveAttribute("data-state", "inactive");
 
-    fireEvent.click(p2Btn);
+    fireEvent.mouseDown(p2Btn);
     expect(setPriority).toHaveBeenCalledWith(2);
   });
 
