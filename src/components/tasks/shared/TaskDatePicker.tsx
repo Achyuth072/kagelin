@@ -162,6 +162,7 @@ export function TaskDatePicker({
     !isChip && date ? (
       <button
         type="button"
+        tabIndex={0}
         title={`Clear ${title.toLowerCase()}`}
         aria-label={`Clear ${title.toLowerCase()}`}
         className={cn(
@@ -176,6 +177,14 @@ export function TaskDatePicker({
           e.stopPropagation();
           trigger("toggle");
           setDate(undefined);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            trigger("toggle");
+            setDate(undefined);
+          }
         }}
       >
         <X className={cn("h-3 w-3", isCompact && "hover:text-destructive")} />

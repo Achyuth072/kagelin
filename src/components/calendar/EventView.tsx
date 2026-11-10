@@ -1,8 +1,5 @@
 "use client";
 
-"use no memo";
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useEffectEvent, useMemo, useRef } from "react";
 import { useForm, useWatch, useFormState, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -72,8 +69,8 @@ export const CreateEventSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   description: z.string().max(2000).optional(),
   location: z.string().max(200).optional(),
-  all_day: z.boolean().default(false),
-  reminder_minutes: z.number().nullable().default(null),
+  all_day: z.boolean(),
+  reminder_minutes: z.number().nullable(),
 });
 
 export type CreateEventFormData = z.infer<typeof CreateEventSchema>;
@@ -197,7 +194,7 @@ export function EventView({
 
   const { register, handleSubmit, control, setValue, reset } =
     useForm<CreateEventFormData>({
-      resolver: zodResolver(CreateEventSchema) as any,
+      resolver: zodResolver(CreateEventSchema),
       mode: "onChange",
       defaultValues: {
         title: "",
@@ -395,7 +392,7 @@ export function EventView({
   return (
     <>
       <form
-        onSubmit={handleSubmit(onFormSubmit) as any}
+        onSubmit={handleSubmit(onFormSubmit)}
         onKeyDown={handleKeyDown}
         className={cn(
           "flex flex-col h-auto",
@@ -830,7 +827,7 @@ export function EventView({
                   type="button"
                   variant="destructive"
                   size="sm"
-                  className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast"
+                  className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast relative before:absolute before:-inset-1"
                   onClick={handleDeleteClick}
                   disabled={isRecurring || deleteEvent.isPending}
                   aria-label="Delete event"
@@ -851,7 +848,7 @@ export function EventView({
                   createEvent.isPending ||
                   updateEvent.isPending
                 }
-                className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center"
+                className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center relative before:absolute before:-inset-1"
                 aria-label={event ? "Save changes" : "Create event"}
               >
                 {event ? (

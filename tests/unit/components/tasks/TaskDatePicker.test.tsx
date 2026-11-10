@@ -123,6 +123,14 @@ describe("TaskDatePicker", () => {
     setDate.mockClear();
     fireEvent.click(clearBtn);
     expect(setDate).toHaveBeenCalledWith(undefined);
+
+    setDate.mockClear();
+    fireEvent.keyDown(clearBtn, { key: "Enter" });
+    expect(setDate).toHaveBeenCalledWith(undefined);
+
+    setDate.mockClear();
+    fireEvent.keyDown(clearBtn, { key: " " });
+    expect(setDate).toHaveBeenCalledWith(undefined);
   });
 
   it("should pass contextual title to DateTimeWizard", () => {

@@ -9,6 +9,7 @@ import {
 } from "framer-motion";
 import { Trash2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 
 interface SwipeableTaskContentProps {
   children: React.ReactNode;
@@ -92,8 +93,15 @@ export function SwipeableTaskContent({
     }
   });
 
+  const prefersReducedMotion = usePrefersReducedMotion();
+
   useEffect(() => {
     if (!shouldShowHint || isDesktop || isCompleted) return;
+
+    if (prefersReducedMotion) {
+      onHintShown?.();
+      return;
+    }
 
     const timer = setTimeout(() => {
       animate(x, [0, 32, 0, -32, 0], {
@@ -105,7 +113,14 @@ export function SwipeableTaskContent({
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [shouldShowHint, isDesktop, isCompleted, x, onHintShown]);
+  }, [
+    shouldShowHint,
+    isDesktop,
+    isCompleted,
+    prefersReducedMotion,
+    x,
+    onHintShown,
+  ]);
 
   const handleDragStart = () => {
     hasHapticFiredRef.current = false;
@@ -156,7 +171,7 @@ export function SwipeableTaskContent({
       >
         <motion.div
           style={{ opacity: leftIconOpacity, scale: leftIconScale }}
-          className="text-white pointer-events-none"
+          className="text-brand-foreground pointer-events-none"
         >
           <Check className="h-5 w-5" strokeWidth={2.25} />
         </motion.div>
@@ -168,7 +183,7 @@ export function SwipeableTaskContent({
       >
         <motion.div
           style={{ opacity: rightIconOpacity, scale: rightIconScale }}
-          className="text-white pointer-events-none"
+          className="text-destructive-foreground pointer-events-none"
         >
           <Trash2 className="h-5 w-5" strokeWidth={2.25} />
         </motion.div>
