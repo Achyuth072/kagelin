@@ -29,6 +29,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { FrequencyPeriod, HabitType } from "@/lib/types/habit";
 import { HabitReminderField } from "./shared/HabitReminderField";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useOptionalAuth } from "@/components/AuthProvider";
 
 interface HabitViewBaseProps {
   name: string;
@@ -117,6 +118,8 @@ export function HabitView(props: HabitViewProps) {
   } = props;
 
   const { trigger } = useHaptic();
+  const auth = useOptionalAuth();
+  const isGuestMode = auth?.isGuestMode ?? false;
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   const [appearanceOpen, setAppearanceOpen] = useState(false);
@@ -173,7 +176,7 @@ export function HabitView(props: HabitViewProps) {
 
   const moreSummary = [
     question.trim() && "Question",
-    reminderTime && "Reminder",
+    reminderTime && (isGuestMode ? "Reminder (needs account)" : "Reminder"),
   ]
     .filter(Boolean)
     .join(" · ");

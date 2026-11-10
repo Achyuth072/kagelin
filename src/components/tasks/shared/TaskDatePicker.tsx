@@ -81,15 +81,15 @@ export function TaskDatePicker({
     : null;
 
   const buttonContent = isChip ? (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5 min-w-0">
       <Icon
         className={cn(
-          "h-3.5 w-3.5",
+          "h-3.5 w-3.5 shrink-0",
           isDoDateToday ? "text-foreground" : "text-muted-foreground",
           error && "text-destructive",
         )}
       />
-      <span>
+      <span className="truncate max-w-[130px] sm:max-w-none">
         {prefix}: {date ? formattedDate : "None"}
       </span>
     </div>

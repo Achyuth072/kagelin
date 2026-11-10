@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
-import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import { useSubtasks } from "@/lib/hooks/useSubtasks";
 import { CollapsibleReveal } from "./shared/CollapsibleReveal";
 import {
@@ -16,6 +15,7 @@ import {
 import {
   Calendar,
   CalendarClock,
+  ChevronDown,
   Inbox,
   ListTodo,
   Save,
@@ -82,8 +82,8 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
   } = useTaskEditorContext();
 
   const { trigger } = useHaptic();
+  const [priorityOpen, setPriorityOpen] = useState(false);
   const isFinePointer = useMediaQuery("(pointer: fine)");
-  const scrollRef = useHorizontalScroll();
   const notesRowRef = useRef<TaskNotesRowHandle>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
@@ -198,82 +198,123 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
         )}
       </div>
 
-      {/* Property Strip — Dates & Priority in a Single Horizontal Line with Mouse Wheel / Momentum Scroll */}
-      <div className="px-4 py-1.5 flex items-center gap-2.5 shrink-0">
-        <div className="w-5 shrink-0 flex items-center justify-center text-muted-foreground">
+      {/* Property Strip — 2-Row Balanced Grid (Row 1: Dates, Row 2: Priority & Cadence) */}
+      <div className="px-4 py-1.5 flex items-start gap-2.5 shrink-0">
+        <div className="w-5 shrink-0 flex items-center justify-center text-muted-foreground pt-1.5">
           <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={2.25} />
         </div>
         <div
-          ref={scrollRef}
           data-testid="property-strip"
-          className="py-1 px-0.5 flex items-center gap-2 overflow-x-auto scrollbar-hide min-w-0 flex-1 pr-2"
+          className="py-0.5 px-0.5 flex flex-col gap-1.5 min-w-0 flex-1"
         >
-          {/* Do Date Chip */}
-          <TaskDatePicker
-            date={doDate}
-            setDate={setDoDate}
-            isMobile={isMobile}
-            open={doDatePickerOpen}
-            onOpenChange={setDoDatePickerOpen}
-            variant="chip"
-            title="Do Date"
-            icon={CalendarClock}
-            {...createDatePickerPositioning}
-            error={!!errors?.do_date}
-            onEveningSelect={() => setIsEvening(true)}
-          />
+          {/* Row 1: Dates (Do Date & Due Date) */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <TaskDatePicker
+              date={doDate}
+              setDate={setDoDate}
+              isMobile={isMobile}
+              open={doDatePickerOpen}
+              onOpenChange={setDoDatePickerOpen}
+              variant="chip"
+              title="Do Date"
+              icon={CalendarClock}
+              {...createDatePickerPositioning}
+              error={!!errors?.do_date}
+              onEveningSelect={() => setIsEvening(true)}
+            />
 
-          {/* Due Date Chip */}
-          <TaskDatePicker
-            date={dueDate}
-            setDate={setDueDate}
-            isMobile={isMobile}
-            open={datePickerOpen}
-            onOpenChange={setDatePickerOpen}
-            variant="chip"
-            title="Due Date"
-            icon={Calendar}
-            {...createDatePickerPositioning}
-            error={!!errors?.due_date}
-          />
-
-          {/* Priority Segmented Toggle */}
-          <div
-            role="group"
-            aria-label="Priority"
-            data-testid="priority-segmented-toggle"
-            className="flex items-center gap-1 bg-secondary/50 rounded-md p-0.5 border border-border/50 shrink-0"
-          >
-            {([1, 2, 3, 4] as const).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => {
-                  trigger("tick");
-                  setPriority(p);
-                }}
-                aria-label={`Priority P${p}`}
-                aria-pressed={priority === p}
-                className={cn(
-                  "px-2 py-0.5 rounded text-[11px] sm:text-xs font-mono flex items-center gap-1 transition-colors",
-                  priority === p
-                    ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <PriorityGlyph level={p} />
-                <span>P{p}</span>
-              </button>
-            ))}
+            <TaskDatePicker
+              date={dueDate}
+              setDate={setDueDate}
+              isMobile={isMobile}
+              open={datePickerOpen}
+              onOpenChange={setDatePickerOpen}
+              variant="chip"
+              title="Due Date"
+              icon={Calendar}
+              {...createDatePickerPositioning}
+              error={!!errors?.due_date}
+            />
           </div>
 
-          {/* Repeat / Recurrence Chip */}
-          <RecurrencePicker
-            value={recurrence}
-            onChange={setRecurrence}
-            variant="chip"
-            isMobile={isMobile}
-          />
+          {/* Row 2: Priority & Cadence */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Priority Chip */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                trigger("toggle");
+                setPriorityOpen((prev) => !prev);
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-auto shadow-none",
+                priority !== 4
+                  ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
+                  : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+              )}
+              aria-label={`Priority P${priority}`}
+              title={`Priority P${priority}`}
+            >
+              <PriorityGlyph level={priority} />
+              <span>
+                <span className="hidden sm:inline">Priority: </span>P{priority}
+              </span>
+              <ChevronDown
+                className={cn(
+                  "h-3 w-3 text-muted-foreground transition-transform",
+                  priorityOpen && "rotate-180",
+                )}
+              />
+            </Button>
+
+            {/* Repeat / Recurrence Chip */}
+            <RecurrencePicker
+              value={recurrence}
+              onChange={setRecurrence}
+              variant="chip"
+              isMobile={isMobile}
+            />
+
+            {/* Priority Inline Expansion */}
+            <CollapsibleReveal
+              open={priorityOpen}
+              className="basis-full w-full"
+            >
+              <div className="space-y-1.5 pt-1.5 pb-2 my-1 pl-2.5 ml-2 border-l-2 border-brand/40 rounded-r-md">
+                <div
+                  role="group"
+                  aria-label="Priority"
+                  data-testid="priority-segmented-toggle"
+                  className="flex items-center gap-1 bg-secondary/50 rounded-md p-0.5 border border-border/50 shrink-0 w-fit"
+                >
+                  {([1, 2, 3, 4] as const).map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => {
+                        trigger("tick");
+                        setPriority(p);
+                        setPriorityOpen(false);
+                      }}
+                      aria-label={`Priority P${p}`}
+                      aria-pressed={priority === p}
+                      className={cn(
+                        "px-2.5 py-1 rounded text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer",
+                        priority === p
+                          ? "bg-card text-foreground font-bold shadow-xs border border-border/80"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <PriorityGlyph level={p} />
+                      <span>P{p}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </CollapsibleReveal>
+          </div>
         </div>
       </div>
 

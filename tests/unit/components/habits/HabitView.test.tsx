@@ -3,8 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { HabitView } from "@/components/habits/HabitView";
 
+const mockIsGuestMode = vi.fn(() => false);
 vi.mock("@/components/AuthProvider", () => ({
-  useAuth: () => ({ isGuestMode: false }),
+  useAuth: () => ({ isGuestMode: mockIsGuestMode() }),
+  useOptionalAuth: () => ({ isGuestMode: mockIsGuestMode() }),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -172,6 +174,7 @@ describe("HabitView", () => {
   });
 
   it("summarises what is set while More options is collapsed", () => {
+    mockIsGuestMode.mockReturnValue(false);
     render(
       <HabitView
         {...baseProps}
@@ -184,6 +187,24 @@ describe("HabitView", () => {
       />,
     );
     expect(screen.getByText("Question · Reminder")).toBeInTheDocument();
+  });
+
+  it("shows needs account in summary for guest users with a reminder set", () => {
+    mockIsGuestMode.mockReturnValue(true);
+    render(
+      <HabitView
+        {...baseProps}
+        mode="create"
+        habitType="boolean"
+        setHabitType={vi.fn()}
+        question="Did you run?"
+        reminderTime="09:00"
+        description=""
+      />,
+    );
+    expect(
+      screen.getByText("Question · Reminder (needs account)"),
+    ).toBeInTheDocument();
   });
 
   it("marks the active habit type segment", () => {

@@ -372,15 +372,15 @@ describe("TaskView - normalized form patterns & surface parity", () => {
     const propertyStrip = screen.getByTestId("property-strip");
     expect(propertyStrip).toBeInTheDocument();
 
+    const priorityChip = screen.getByRole("button", { name: "Priority P4" });
+    expect(priorityChip).toBeInTheDocument();
+    fireEvent.click(priorityChip);
+
     const p2Btn = screen.getByRole("button", { name: "Priority P2" });
     expect(p2Btn).toHaveAttribute("aria-pressed", "false");
 
     fireEvent.click(p2Btn);
     expect(setPriority).toHaveBeenCalledWith(2);
-
-    const p4Btn = screen.getByRole("button", { name: "Priority P4" });
-    expect(p4Btn).toHaveAttribute("aria-pressed", "true");
-    expect(p4Btn).toHaveClass("bg-card", "font-bold");
   });
 
   it("renders steps counter and toggles showSubtasks on click", () => {
