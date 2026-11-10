@@ -253,11 +253,11 @@ function TaskItemBase({
       <CollapsibleReveal
         open={isExpanded && !isDndActive}
         className={cn(
-          "mr-1 pl-4 border-t border-border/10",
+          "mr-2 my-1.5 pl-2.5 border-l-2 border-brand/40 rounded-r-md",
           isDesktop ? "ml-10" : "ml-11",
         )}
       >
-        <div className="pt-2">
+        <div className="py-1">
           <SubtaskList taskId={task.id} projectId={task.project_id} />
         </div>
       </CollapsibleReveal>

@@ -251,7 +251,12 @@ export function ListTaskCard({
               type="button"
               onClick={toggleExpand}
               aria-label={isExpanded ? "Collapse steps" : "Expand steps"}
-              className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded-md bg-secondary/40 hover:bg-secondary/70 border border-border/50 text-foreground transition-colors"
+              className={cn(
+                "inline-flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded-md border transition-colors",
+                isExpanded
+                  ? "bg-secondary/70 border-border/80 text-foreground font-semibold"
+                  : "bg-secondary/40 hover:bg-secondary/70 border-border/50 text-foreground",
+              )}
             >
               {isExpanded ? (
                 <ChevronDown className="h-3 w-3" />
