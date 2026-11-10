@@ -1,5 +1,43 @@
 [
   {
+    "version": "1.51.0-preview.1",
+    "date": "2026-11-10",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Unify tabs and property strip chip sizing across views",
+        "Universal CSS grid CollapsibleReveal and EventView reminder inline disclosure",
+        "Extend project accent stripe and unify border on expanded subtasks",
+        "Align subtask collapse animation and chevron with sidebar transition",
+        "Responsive 2-row task property strip and habit guest reminder notice",
+        "Fix event reminder truncation and add brand accent lines to task and habit views",
+        "Redesign habit form with header icon avatar and squircle day chips",
+        "Preserve redirect parameter through login and oauth callbacks",
+        "Auto-scroll time of day heatmap to active hours on mobile",
+        "Improve trend chart readability with adaptive bucketing and mobile scrubbing",
+        "Normalize form layouts and scale desktop metadata across views",
+        "Align metatags across list and board views on desktop and mobile",
+        "Bring BoardTaskCard into parity with folio ui/ux spec",
+        "Complete stats dashboard and 24-hour calibrated runway",
+        "Normalize task form and dual-sheet property strip",
+        "Tasks reading and interaction surface with folio continuous and priority glyph"
+      ],
+      "Improved": [
+        "Eliminate subtask loading delay and fix habit text font accessibility",
+        "Extract EventView from CreateEventDialog and add brand spine to list subtasks"
+      ],
+      "Fixed": [
+        "Improve mobile responsiveness across stats cards and trend charts",
+        "Retain pointer-events on docked inspector during portalled select dismissal",
+        "Remove duplicate icon and color dot from task project selector",
+        "Display focus play button by default on mobile in ListTaskCard",
+        "Preserve increasing graph silhouette and fix top padding overflow in PriorityGlyph",
+        "Eliminate low-contrast Kagelin blue on Do Date chip",
+        "Address tasks and stats review findings"
+      ]
+    }
+  },
+  {
     "version": "1.51.0-preview.0",
     "date": "2026-11-05",
     "channel": "preview",
@@ -743,19 +781,6 @@
         "Measurable habits now log a quantity and shade by how close you are to the target in grid view",
         "The target chip logs in one tap",
         "Padded days in the heatmap no longer look like a goal was met"
-      ]
-    }
-  },
-  {
-    "version": "1.44.2-preview.3",
-    "date": "2026-09-24",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Habit card reuses cell actions, popover takes stored entry, drop unused fluid prop"
-      ],
-      "Fixed": [
-        "Target chip logs in one tap, heatmap padded days no longer read as met"
       ]
     }
   }
