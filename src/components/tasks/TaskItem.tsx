@@ -145,12 +145,19 @@ function TaskItemBase({
     <div
       ref={cardRef}
       className={cn(
-        "group/item",
-        isExpanded && "pb-4",
+        "group/item relative",
+        viewMode !== "board" && isExpanded && "pb-4 border-b border-border/40",
         isDragging && "will-change-transform",
         task.is_completed && "task-ink-completed-card",
       )}
     >
+      {/* Accent stripe for list view: extends along full height including expanded subtasks */}
+      {project && viewMode !== "board" && (
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1 sm:w-1.5 pointer-events-none z-10"
+          style={{ backgroundColor: project.color }}
+        />
+      )}
       {viewMode === "board" ? (
         <BoardTaskCard
           task={task}

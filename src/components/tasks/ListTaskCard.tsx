@@ -73,7 +73,8 @@ export function ListTaskCard({
           : undefined
       }
       className={cn(
-        "group relative flex items-start p-3.5 sm:p-4 pl-4 sm:pl-5 transition-colors cursor-pointer select-none border-b border-border/40 hover:bg-secondary/10 w-full touch-manipulation",
+        "group relative flex items-start p-3.5 sm:p-4 pl-4 sm:pl-5 transition-colors cursor-pointer select-none hover:bg-secondary/10 w-full touch-manipulation",
+        !isExpanded && "border-b border-border/40",
         isKeyboardSelected
           ? "ring-2 ring-primary ring-inset bg-secondary/40 z-10 rounded-xl"
           : "",
@@ -84,7 +85,7 @@ export function ListTaskCard({
       {...(!isDesktop ? dragListeners : {})}
     >
       {/* Accent stripe */}
-      {project && (
+      {project && !isExpanded && (
         <div
           className="absolute left-0 top-0 bottom-0 w-1 sm:w-1.5"
           style={{ backgroundColor: project.color }}
