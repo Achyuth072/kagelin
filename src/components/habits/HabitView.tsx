@@ -18,7 +18,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { CollapsibleReveal } from "../tasks/shared/CollapsibleReveal";
+import { CollapsibleReveal } from "@/components/ui/collapsible-reveal";
 import { HabitDisclosureRow } from "./shared/HabitDisclosureRow";
 import { HabitFrequencyField } from "./shared/HabitFrequencyField";
 import { HabitIconPicker, getHabitIcon } from "./shared/HabitIconPicker";

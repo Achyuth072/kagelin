@@ -7,7 +7,7 @@ import {
   afterEach,
   type Mock,
 } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, within } from "@testing-library/react";
 import { CreateEventDialog } from "@/components/calendar/CreateEventDialog";
 import { useProfile } from "@/lib/hooks/useProfile";
 import { useAuth } from "@/components/AuthProvider";
@@ -15,7 +15,6 @@ import { useAuth } from "@/components/AuthProvider";
 const createMutate = vi.fn();
 const updateMutate = vi.fn();
 
-vi.mock("@/components/ui/select", () => import("../../nativeSelectMock"));
 vi.mock("@/lib/hooks/useProfile");
 vi.mock("@/components/AuthProvider");
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -89,16 +88,26 @@ describe("CreateEventDialog — event reminder control", () => {
   it("offers the timed presets plus none", async () => {
     await openDialog();
 
-    const select = screen.getByLabelText("Reminder") as HTMLSelectElement;
-    expect(Array.from(select.options).map((o) => o.value)).toEqual([
-      "none",
-      "0",
-      "5",
-      "10",
-      "15",
-      "30",
-      "60",
-      "1440",
+    const reminderBtn = screen.getByLabelText("Reminder");
+    expect(reminderBtn).toHaveAttribute(
+      "aria-controls",
+      "event-reminder-expansion",
+    );
+    expect(reminderBtn).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(reminderBtn);
+    expect(reminderBtn).toHaveAttribute("aria-expanded", "true");
+    const group = screen.getByRole("group", { name: "Reminder options" });
+    const buttons = within(group).getAllByRole("button");
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      "No reminder",
+      "At start",
+      "5 minutes before",
+      "10 minutes before",
+      "15 minutes before",
+      "30 minutes before",
+      "1 hour before",
+      "1 day before",
     ]);
   });
 
@@ -106,18 +115,22 @@ describe("CreateEventDialog — event reminder control", () => {
     await openDialog();
     fireEvent.click(document.getElementById("all-day")!);
 
-    const select = screen.getByLabelText("Reminder") as HTMLSelectElement;
-    expect(Array.from(select.options).map((o) => o.value)).toEqual([
-      "none",
-      "0",
-      "1440",
+    fireEvent.click(screen.getByLabelText("Reminder"));
+    const group = screen.getByRole("group", { name: "Reminder options" });
+    const buttons = within(group).getAllByRole("button");
+    expect(buttons.map((b) => b.textContent)).toEqual([
+      "No reminder",
+      "On the day (9:00 AM)",
+      "Day before (9:00 AM)",
     ]);
   });
 
   it("starts a new event on the profile default lead time", async () => {
     await openDialog();
 
-    expect(screen.getByLabelText("Reminder")).toHaveValue("15");
+    expect(screen.getByLabelText("Reminder")).toHaveTextContent(
+      "15 minutes before",
+    );
     await submitWithTitle("Standup");
     expect(createMutate).toHaveBeenCalledWith(
       expect.objectContaining({ reminder_minutes: 15 }),
@@ -128,7 +141,7 @@ describe("CreateEventDialog — event reminder control", () => {
     mockProfile({ event_reminders: false, event_reminder_minutes: 15 });
     await openDialog();
 
-    expect(screen.getByLabelText("Reminder")).toHaveValue("none");
+    expect(screen.getByLabelText("Reminder")).toHaveTextContent("No reminder");
     await submitWithTitle("Standup");
     expect(createMutate).toHaveBeenCalledWith(
       expect.objectContaining({ reminder_minutes: null }),
@@ -137,10 +150,12 @@ describe("CreateEventDialog — event reminder control", () => {
 
   it("saves the chosen preset", async () => {
     await openDialog();
-    fireEvent.change(screen.getByLabelText("Reminder"), {
-      target: { value: "60" },
-    });
+    fireEvent.click(screen.getByLabelText("Reminder"));
+    fireEvent.click(screen.getByRole("button", { name: "1 hour before" }));
 
+    expect(screen.getByLabelText("Reminder")).toHaveTextContent(
+      "1 hour before",
+    );
     await submitWithTitle("Standup");
     expect(createMutate).toHaveBeenCalledWith(
       expect.objectContaining({ reminder_minutes: 60 }),
@@ -161,10 +176,13 @@ describe("CreateEventDialog — event reminder control", () => {
       },
     });
 
-    expect(screen.getByLabelText("Reminder")).toHaveValue("5");
-    fireEvent.change(screen.getByLabelText("Reminder"), {
-      target: { value: "none" },
-    });
+    expect(screen.getByLabelText("Reminder")).toHaveTextContent(
+      "5 minutes before",
+    );
+    fireEvent.click(screen.getByLabelText("Reminder"));
+    fireEvent.click(screen.getByRole("button", { name: "No reminder" }));
+    expect(screen.getByLabelText("Reminder")).toHaveTextContent("No reminder");
+
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: /save/i }));
     });
@@ -190,7 +208,9 @@ describe("CreateEventDialog — event reminder control", () => {
     });
 
     expect(screen.getByLabelText("Reminder")).toBeDisabled();
-    expect(screen.getByLabelText("Reminder")).toHaveValue("10");
+    expect(screen.getByLabelText("Reminder")).toHaveTextContent(
+      "10 minutes before",
+    );
   });
 
   it("shows a Guest the control with an account hint and stores no reminder", async () => {

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import { formatRecurrenceRule } from "@/lib/utils/recurrence";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { CollapsibleReveal } from "../shared/CollapsibleReveal";
+import { CollapsibleReveal } from "@/components/ui/collapsible-reveal";
 
 interface RecurrencePickerProps {
   value: RecurrenceRule | null;

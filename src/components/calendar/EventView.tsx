@@ -21,6 +21,7 @@ import {
   Save,
   X,
   SlidersHorizontal,
+  ChevronDown,
 } from "lucide-react";
 import {
   Command,
@@ -37,13 +38,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { CollapsibleReveal } from "@/components/ui/collapsible-reveal";
 import {
   Tooltip,
   TooltipContent,
@@ -82,9 +77,6 @@ export const CreateEventSchema = z.object({
 });
 
 export type CreateEventFormData = z.infer<typeof CreateEventSchema>;
-
-// Radix Select reserves the empty string for "no selection".
-const NO_REMINDER = "none";
 
 const PREDEFINED_LOCATIONS = [
   "Coffee Shop",
@@ -180,6 +172,7 @@ export function EventView({
   const [endDate, setEndDate] = useState<Date | undefined>(initialEndDate);
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
+  const [reminderOpen, setReminderOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
   const [draftLocation, setDraftLocation] = useState("");
   const [locationPortalEl, setLocationPortalEl] =
@@ -221,6 +214,13 @@ export function EventView({
     allDay,
     useWatch({ control, name: "reminder_minutes" }),
   );
+  const activeReminderOption = reminderOptions(allDay).find(
+    (o) => o.value === reminderMinutes,
+  );
+  const reminderLabel =
+    reminderMinutes === null
+      ? "No reminder"
+      : (activeReminderOption?.label ?? `${reminderMinutes}m before`);
   const { errors } = useFormState({ control });
 
   // React Compiler memoizes away formState.isValid proxy access; useWatch subscribes explicitly.
@@ -254,6 +254,7 @@ export function EventView({
     setShowStartPicker(false),
   );
   useBackNavigation(isDrawer && showEndPicker, () => setShowEndPicker(false));
+  useBackNavigation(isDrawer && reminderOpen, () => setReminderOpen(false));
 
   useEffect(() => {
     if (open) {
@@ -459,44 +460,95 @@ export function EventView({
                 />
               </div>
 
-              {/* Reminder select chip */}
-              <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2.5 py-1 border border-border/50 shrink-0 h-7 sm:h-8">
+              {/* Reminder chip button */}
+              <button
+                type="button"
+                aria-label="Reminder"
+                aria-expanded={reminderOpen}
+                aria-controls="event-reminder-expansion"
+                disabled={isRecurring || isGuestMode}
+                onClick={() => {
+                  trigger("toggle");
+                  setReminderOpen((prev) => !prev);
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-2.5 py-1 border transition-colors shrink-0 h-7 sm:h-8 text-xs sm:text-[13px] font-medium cursor-pointer",
+                  reminderMinutes !== null
+                    ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
+                    : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+                  (isRecurring || isGuestMode) &&
+                    "opacity-50 cursor-not-allowed hover:bg-secondary/40 hover:text-muted-foreground",
+                )}
+              >
                 <BellRing
-                  className="h-3.5 w-3.5 text-muted-foreground"
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0",
+                    reminderMinutes !== null
+                      ? "text-brand"
+                      : "text-muted-foreground",
+                  )}
                   strokeWidth={2.25}
                 />
-                <Select
-                  value={
-                    reminderMinutes === null
-                      ? NO_REMINDER
-                      : String(reminderMinutes)
-                  }
-                  disabled={isRecurring || isGuestMode}
-                  onValueChange={(val) =>
-                    setValue(
-                      "reminder_minutes",
-                      val === NO_REMINDER ? null : Number(val),
-                    )
-                  }
-                >
-                  <SelectTrigger
-                    aria-label="Reminder"
-                    className="h-auto border-0 bg-transparent p-0 text-xs sm:text-[13px] font-medium text-foreground focus-visible:ring-0 shadow-none gap-1 [&>svg]:size-3"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_REMINDER}>No reminder</SelectItem>
-                    {reminderOptions(allDay).map((o) => (
-                      <SelectItem key={o.value} value={String(o.value)}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                <span>{reminderLabel}</span>
+                <ChevronDown
+                  className={cn(
+                    "h-3 w-3 text-muted-foreground transition-transform duration-200 ease-seijaku",
+                    reminderOpen && "rotate-180",
+                  )}
+                  strokeWidth={2.25}
+                />
+              </button>
             </div>
           </div>
+
+          {/* Reminder Inline Expansion */}
+          <CollapsibleReveal
+            id="event-reminder-expansion"
+            open={reminderOpen && !isGuestMode && !isRecurring}
+            className="w-full"
+          >
+            <div className="pt-1.5 pb-2 my-1 pl-2.5 ml-7 border-l-2 border-brand/40 rounded-r-md">
+              <div
+                role="group"
+                aria-label="Reminder options"
+                data-testid="reminder-options-group"
+                className="flex flex-wrap gap-1.5"
+              >
+                {[
+                  { value: null, label: "No reminder" },
+                  ...reminderOptions(allDay),
+                ].map((o) => {
+                  const isSelected = reminderMinutes === o.value;
+                  return (
+                    <button
+                      key={o.value ?? "none"}
+                      type="button"
+                      onClick={() => {
+                        trigger("tick");
+                        setValue("reminder_minutes", o.value);
+                        setReminderOpen(false);
+                      }}
+                      aria-pressed={isSelected}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer",
+                        isSelected
+                          ? "bg-secondary border-border/80 text-foreground font-semibold"
+                          : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <span>{o.label}</span>
+                      {isSelected && (
+                        <Check
+                          className="h-3 w-3 text-brand shrink-0"
+                          strokeWidth={2.25}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </CollapsibleReveal>
 
           {isGuestMode && (
             <p className="text-[11px] sm:text-xs text-muted-foreground pl-[30px]">

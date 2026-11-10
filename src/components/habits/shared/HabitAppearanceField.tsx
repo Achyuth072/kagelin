@@ -2,7 +2,7 @@
 
 import { createElement, useState } from "react";
 import { ColorPicker } from "@/components/shared/ColorPicker";
-import { CollapsibleReveal } from "@/components/tasks/shared/CollapsibleReveal";
+import { CollapsibleReveal } from "@/components/ui/collapsible-reveal";
 import { getHabitIcon, HabitIconPicker } from "./HabitIconPicker";
 import { HabitDisclosureRow } from "./HabitDisclosureRow";
 

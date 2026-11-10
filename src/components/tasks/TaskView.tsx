@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useSubtasks } from "@/lib/hooks/useSubtasks";
-import { CollapsibleReveal } from "./shared/CollapsibleReveal";
+import { CollapsibleReveal } from "@/components/ui/collapsible-reveal";
 import {
   Select,
   SelectContent,
