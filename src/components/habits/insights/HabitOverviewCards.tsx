@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { MetricCard } from "@/components/stats/MetricCard";
 import { currentScore } from "@/lib/utils/habit-score";
 import {
@@ -34,38 +33,22 @@ export function HabitOverviewCards({
 }: HabitOverviewCardsProps) {
   const isMeasurable = habit.habit_type === "measurable";
 
-  const booleanMetrics = useMemo(() => {
-    if (isMeasurable) return null;
-    return {
-      score: Math.round(currentScore(habit, entries) * 100),
-      scoreTrend: calculateScoreTrend(habit, entries),
-      currentStreak: getCurrentStreak(habit, entries),
-      streakTrend: calculateStreakTrend(habit, entries),
-      bestStreak: getBestStreaks(habit, entries, 1)[0] ?? 0,
-      totalCompletions: getTotalCompletions(habit, entries),
-    };
-  }, [habit, entries, isMeasurable]);
-
-  const measurableMetrics = useMemo(() => {
-    if (!isMeasurable) return null;
-    return calculateMeasurableOverviewMetrics(habit, entries);
-  }, [habit, entries, isMeasurable]);
-
-  if (isMeasurable && measurableMetrics) {
+  if (isMeasurable) {
+    const metrics = calculateMeasurableOverviewMetrics(habit, entries);
     return (
       <div className="grid grid-cols-2 gap-3">
         <MetricCard
           title="Score"
-          value={`${measurableMetrics.score}%`}
-          trend={measurableMetrics.scoreTrend}
+          value={`${metrics.score}%`}
+          trend={metrics.scoreTrend}
           icon={Target}
           size="compact"
         />
         <MetricCard
-          title={measurableMetrics.targetMetRate.title}
-          value={measurableMetrics.targetMetRate.value}
+          title={metrics.targetMetRate.title}
+          value={metrics.targetMetRate.value}
           icon={
-            measurableMetrics.targetMetRate.title === "Target Met Rate"
+            metrics.targetMetRate.title === "Target Met Rate"
               ? CheckCircle2
               : Calendar
           }
@@ -73,13 +56,13 @@ export function HabitOverviewCards({
         />
         <MetricCard
           title="30-Day Average"
-          value={measurableMetrics.thirtyDayAverage}
+          value={metrics.thirtyDayAverage}
           icon={Activity}
           size="compact"
         />
         <MetricCard
           title="Total Volume"
-          value={measurableMetrics.totalVolume}
+          value={metrics.totalVolume}
           icon={Trophy}
           size="compact"
         />
@@ -87,33 +70,38 @@ export function HabitOverviewCards({
     );
   }
 
-  if (!booleanMetrics) return null;
+  const score = Math.round(currentScore(habit, entries) * 100);
+  const scoreTrend = calculateScoreTrend(habit, entries);
+  const currentStreak = getCurrentStreak(habit, entries);
+  const streakTrend = calculateStreakTrend(habit, entries);
+  const bestStreak = getBestStreaks(habit, entries, 1)[0] ?? 0;
+  const totalCompletions = getTotalCompletions(habit, entries);
 
   return (
     <div className="grid grid-cols-2 gap-3">
       <MetricCard
         title="Score"
-        value={`${booleanMetrics.score}%`}
-        trend={booleanMetrics.scoreTrend}
+        value={`${score}%`}
+        trend={scoreTrend}
         icon={Target}
         size="compact"
       />
       <MetricCard
         title="Current Streak"
-        value={`${booleanMetrics.currentStreak} days`}
-        trend={booleanMetrics.streakTrend}
+        value={`${currentStreak} days`}
+        trend={streakTrend}
         icon={Flame}
         size="compact"
       />
       <MetricCard
         title="Best Streak"
-        value={`${booleanMetrics.bestStreak} days`}
+        value={`${bestStreak} days`}
         icon={Trophy}
         size="compact"
       />
       <MetricCard
         title="Total Completions"
-        value={booleanMetrics.totalCompletions}
+        value={totalCompletions}
         icon={CheckCircle2}
         size="compact"
       />

@@ -44,7 +44,11 @@ function HabitIdentityHeader({ habit }: HabitIdentityHeaderProps) {
       <div className="flex items-center gap-3">
         <div
           className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border border-border/60 shadow-xs"
-          style={{ backgroundColor: `${habit.color}15` }}
+          style={{
+            backgroundColor: habit.color?.startsWith("#")
+              ? `${habit.color.slice(0, 7)}15`
+              : habit.color,
+          }}
         >
           {createElement(getHabitIcon(habit.icon), {
             className: "h-5 w-5",

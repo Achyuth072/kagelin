@@ -26,6 +26,8 @@ const PERIOD_SLICE: Record<Period, number> = {
   year: 365,
 };
 
+const SCRUB_REVERT_DELAY_MS = 2500;
+
 function isPeriod(val: string): val is Period {
   return val === "week" || val === "month" || val === "year";
 }
@@ -87,7 +89,7 @@ export function HabitScoreChart({ habit, entries }: HabitScoreChartProps) {
     clearRevertTimer();
     revertTimerRef.current = setTimeout(() => {
       setActivePoint(null);
-    }, 2500);
+    }, SCRUB_REVERT_DELAY_MS);
   };
 
   const handlePeriodChange = (next: string) => {
