@@ -135,12 +135,12 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
       </div>
 
       <div role="group" aria-label={label} className="w-full">
-        <div className="grid grid-cols-7 gap-1 sm:gap-1.5 lg:gap-2 w-full">
+        <div className="grid grid-cols-7 gap-1 sm:gap-1.5 w-full">
           {WEEKDAYS.map((d, i) => (
             <span
               key={i}
               aria-hidden
-              className="text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground/60 h-4 flex items-center justify-center w-full max-w-[44px] mx-auto"
+              className="text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground/60 h-4 flex items-center justify-center w-full max-w-8 mx-auto"
             >
               {d}
             </span>
@@ -149,11 +149,11 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
             <div
               key={`blank-${i}`}
               aria-hidden
-              className="w-full max-w-[44px] mx-auto"
+              className="w-full max-w-8 mx-auto"
             />
           ))}
           {days.map((day) => (
-            <div key={day.date} className="w-full max-w-[44px] mx-auto">
+            <div key={day.date} className="w-full max-w-8 mx-auto">
               <HabitStripCell
                 day={day}
                 header={day.date.slice(8).replace(/^0/, "")}

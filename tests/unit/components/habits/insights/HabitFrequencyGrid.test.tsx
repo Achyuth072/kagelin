@@ -84,13 +84,13 @@ describe("HabitFrequencyGrid", () => {
     expect(bubbles.length).toBeGreaterThan(0);
   });
 
-  it("wraps the frequency grid in a tactile card container", () => {
+  it("renders the frequency grid in an unboxed container", () => {
     const entries = [entry("2026-06-10", 1)];
     render(<HabitFrequencyGrid habit={dailyHabit} entries={entries} />);
 
-    const card = screen.getByTestId("frequency-grid-card");
-    expect(card).toBeInTheDocument();
-    expect(card).toHaveClass("rounded-xl", "border", "bg-card");
+    const container = screen.getByTestId("frequency-grid-container");
+    expect(container).toBeInTheDocument();
+    expect(container).not.toHaveClass("border", "bg-card");
   });
 
   it("provides sticky weekday column for horizontal scrolling", () => {
@@ -98,7 +98,7 @@ describe("HabitFrequencyGrid", () => {
     render(<HabitFrequencyGrid habit={dailyHabit} entries={entries} />);
 
     const monLabel = screen.getByText("Mon");
-    expect(monLabel).toHaveClass("sticky", "left-0", "bg-card", "z-10");
+    expect(monLabel).toHaveClass("sticky", "left-0", "bg-background", "z-10");
   });
 
   it("auto-scrolls to the current/recent months on mobile mount", () => {

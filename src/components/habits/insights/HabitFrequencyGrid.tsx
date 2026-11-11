@@ -8,7 +8,6 @@ import {
   startOfMonth,
   eachMonthOfInterval,
 } from "date-fns";
-import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
@@ -105,12 +104,9 @@ export function HabitFrequencyGrid({
   }
 
   return (
-    <Card
-      data-testid="frequency-grid-card"
-      className={cn(
-        "p-3.5 sm:p-4 rounded-xl border border-border/80 bg-card overflow-hidden",
-        className,
-      )}
+    <div
+      data-testid="frequency-grid-container"
+      className={cn("w-full overflow-hidden", className)}
     >
       <div
         ref={scrollContainerRef}
@@ -124,7 +120,7 @@ export function HabitFrequencyGrid({
           }}
         >
           {/* Header row */}
-          <div className="sticky left-0 bg-card z-10" />
+          <div className="sticky left-0 bg-background z-10" />
           {months.map((m, idx) => (
             <div
               key={m}
@@ -147,7 +143,7 @@ export function HabitFrequencyGrid({
           ))}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -164,7 +160,7 @@ function FrequencyRow({
 }) {
   return (
     <>
-      <div className="sticky left-0 bg-card z-10 flex items-center text-[11px] text-muted-foreground pr-1 select-none">
+      <div className="sticky left-0 bg-background z-10 flex items-center text-[11px] text-muted-foreground pr-1 select-none">
         {weekday}
       </div>
       {counts.map((c, i) => {

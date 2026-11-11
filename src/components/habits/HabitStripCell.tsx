@@ -61,7 +61,7 @@ export function HabitStripCell({
 
   // Invisible pseudo-element expands touch target to >=44px on coarse pointers.
   const cellSizing = isCompact
-    ? "aspect-square h-8 w-8 sm:h-auto sm:w-full"
+    ? "aspect-square h-8 w-8"
     : "aspect-square w-full max-w-9 lg:aspect-auto lg:h-9 lg:w-9 lg:max-w-none";
 
   const touchTargetClass = coarse
