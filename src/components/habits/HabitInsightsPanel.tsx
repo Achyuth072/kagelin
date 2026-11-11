@@ -88,7 +88,7 @@ export function HabitInsightsPanel({
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="h-32 rounded-xl border border-border/80 bg-card animate-pulse"
+            className="h-32 rounded-xl border border-border/80 bg-card animate-pulse motion-reduce:animate-none"
           />
         ))}
       </div>

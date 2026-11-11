@@ -115,7 +115,9 @@ describe("WebDAV backup for Guests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query.includes("min-width: 768px"),
+      matches:
+        query.includes("min-width: 768px") ||
+        query.includes("min-width: 641px"),
       media: query,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),

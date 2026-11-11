@@ -104,7 +104,9 @@
   --z-status: 30;
   --z-floating: 40;
   --z-prompt: 50;
-  --z-toast: 70;
+  --z-interactive: 60;
+  --z-alert: 65;
+  --z-toast: 80;
 }
 
 /* iOS reserves ~34px for the home indicator; cap the padding at the item's

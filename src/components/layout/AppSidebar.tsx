@@ -51,7 +51,6 @@ import { useProjects } from "@/lib/hooks/useProjects";
 import { useProjectActions } from "@/components/ProjectActionsProvider";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { ArchivedProjectsDialog } from "@/components/projects/ArchivedProjectsDialog";
 import {
   Drawer,
   DrawerContent,
@@ -169,7 +168,7 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
 
   const [mobileActionProject, setMobileActionProject] =
     useState<Project | null>(null);
-  const [isArchivedOpen, setIsArchivedOpen] = useState(false);
+  const setArchivedProjectsOpen = useUiStore((s) => s.setArchivedProjectsOpen);
 
   const currentProjectId = searchParams.get("project");
 
@@ -452,7 +451,7 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                       <SidebarMenuButton
                         onClick={() => {
                           trigger("toggle");
-                          setIsArchivedOpen(true);
+                          setArchivedProjectsOpen(true);
                         }}
                         tooltip="Archived Projects"
                       >
@@ -589,7 +588,7 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                 >
                   <div className="relative flex items-center justify-center w-5 h-5 shrink-0">
                     <Sparkles className="h-4 w-4" strokeWidth={2.25} />
-                    <span className="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
+                    <span className="absolute -top-1 -right-1 h-1.5 w-1.5 rounded-full bg-brand animate-pulse motion-reduce:animate-none" />
                   </div>
                   <span>What&apos;s New</span>
                 </SidebarMenuButton>
@@ -653,10 +652,6 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
           </div>
         </SidebarFooter>
       </Sidebar>
-      <ArchivedProjectsDialog
-        open={isArchivedOpen}
-        onOpenChange={setIsArchivedOpen}
-      />
 
       {/* Mobile Project Action Drawer */}
       <Drawer

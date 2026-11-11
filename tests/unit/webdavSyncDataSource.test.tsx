@@ -145,7 +145,9 @@ describe("WebDAV sync for registered users", () => {
     supabaseWrites.length = 0;
     // Desktop, so the confirmation renders as an AlertDialog rather than a Drawer.
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
-      matches: query.includes("min-width: 768px"),
+      matches:
+        query.includes("min-width: 768px") ||
+        query.includes("min-width: 641px"),
       media: query,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),

@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -89,7 +90,11 @@ function AuthPageContent({ initialMode }: { initialMode: AuthMode }) {
   if (loading || (user && !isGuestMode)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <Loader2
+          className="h-6 w-6 text-muted-foreground animate-spin"
+          strokeWidth={2.25}
+        />
+        <span className="sr-only">Loading...</span>
       </div>
     );
   }

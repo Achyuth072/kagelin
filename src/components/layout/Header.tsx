@@ -55,9 +55,10 @@ const HeaderTimer = React.memo(function HeaderTimer() {
       className="flex items-center gap-2 px-3 py-2 min-h-[40px] rounded-lg bg-transparent hover:bg-accent/40 active:scale-95 transition-all outline-none min-w-0"
     >
       <Timer
+        strokeWidth={2.25}
         className={`h-5 w-5 shrink-0 ${
           state.isRunning
-            ? "text-primary animate-pulse"
+            ? "text-primary animate-pulse motion-reduce:animate-none"
             : "text-muted-foreground"
         }`}
       />
@@ -134,7 +135,7 @@ export const Header = React.memo(function Header({
             aria-label="What's New — new version available"
           >
             <Sparkles className="h-4 w-4 shrink-0" strokeWidth={2.25} />
-            <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
+            <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse motion-reduce:animate-none" />
           </button>
         )}
       </div>
@@ -155,7 +156,7 @@ export const Header = React.memo(function Header({
                 className="h-9 w-9 bg-transparent hover:bg-accent/40 active:scale-95 transition-all"
                 onPointerDown={() => trigger("toggle")}
               >
-                <MoreVertical className="h-5 w-5" />
+                <MoreVertical className="h-5 w-5" strokeWidth={2.25} />
                 <span className="sr-only">More options</span>
               </Button>
             </DropdownMenuTrigger>
@@ -166,7 +167,10 @@ export const Header = React.memo(function Header({
                   setCommandOpen(true);
                 }}
               >
-                <Search className="h-4 w-4 mr-2 text-foreground/70" />
+                <Search
+                  className="h-4 w-4 mr-2 text-foreground/70"
+                  strokeWidth={2.25}
+                />
                 Search
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -181,7 +185,7 @@ export const Header = React.memo(function Header({
                   >
                     <CheckCircle2
                       className="h-4 w-4 mr-2 text-foreground/70"
-                      strokeWidth={2.5}
+                      strokeWidth={2.25}
                     />
                     Completed Tasks
                   </DropdownMenuItem>
@@ -194,7 +198,7 @@ export const Header = React.memo(function Header({
                   router.push("/settings");
                 }}
               >
-                <SettingsIcon className="h-4 w-4 mr-2" />
+                <SettingsIcon className="h-4 w-4 mr-2" strokeWidth={2.25} />
                 Settings
               </DropdownMenuItem>
             </DropdownMenuContent>

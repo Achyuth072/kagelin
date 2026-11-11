@@ -44,7 +44,7 @@ function getEndOfToday(): Date {
 
 export function FocusTaskPicker() {
   const [open, setOpen] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const isDesktop = useMediaQuery("(min-width: 641px)");
   const { trigger } = useHaptic();
   const { isGuestMode } = useAuth();
   const supabase = createClient();

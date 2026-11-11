@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   DndContext,
@@ -109,6 +109,20 @@ function SubtaskItemContent({
   onEditKeyDown,
 }: SubtaskRowProps) {
   const { trigger } = useHaptic();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      const raf = requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          const len = inputRef.current.value.length;
+          inputRef.current.setSelectionRange(len, len);
+        }
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [isEditing]);
 
   return (
     <>
@@ -125,7 +139,7 @@ function SubtaskItemContent({
       />
       {isEditing ? (
         <Input
-          autoFocus
+          ref={inputRef}
           value={editingContent}
           onChange={(e) => onEditingContentChange(e.target.value)}
           onFocus={(e) =>

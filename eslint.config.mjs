@@ -111,7 +111,7 @@ const eslintConfig = defineConfig([
     settings: {
       shadcn: {
         ui: "@/components/ui",
-        note: "Refer to .scratch/product/DESIGN_SYSTEM.md for Kagelin design rules, tokens, and constraints.",
+        note: "Refer to DESIGN.md for Kagelin design rules, tokens, and constraints.",
       },
     },
   },

@@ -103,7 +103,8 @@ vi.mock("@/components/AuthProvider", () => ({
 
 vi.mock("@/lib/hooks/useMediaQuery", () => ({
   useMediaQuery: (query: string) => {
-    if (query === "(min-width: 768px)") return mockIsDesktop;
+    if (query === "(min-width: 641px)" || query === "(min-width: 768px)")
+      return mockIsDesktop;
     return false;
   },
 }));

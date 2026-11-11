@@ -95,7 +95,7 @@ export function CompletedTasksSheet({
   onOpenChange,
 }: CompletedTasksSheetProps) {
   const { data: tasks = [], isLoading } = useTasks({ showCompleted: true });
-  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const isDesktop = useMediaQuery("(min-width: 641px)");
   const clearMutation = useClearCompletedTasks();
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -207,7 +207,7 @@ export function CompletedTasksSheet({
             <DialogTitle className="flex items-center gap-2 cursor-default">
               <CheckCircle2
                 className="h-4 w-4 text-foreground/70"
-                strokeWidth={2.5}
+                strokeWidth={2.25}
               />
               <span className="type-h2">Logbook</span>
             </DialogTitle>
@@ -246,7 +246,10 @@ export function CompletedTasksSheet({
           {completedTasks.length > 0 && (
             <div className="px-6 py-3 border-b border-border/40 bg-secondary/5 shrink-0">
               <div className="relative group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-brand transition-colors" />
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-brand transition-colors"
+                  strokeWidth={2.25}
+                />
                 <Input
                   className="pl-9 bg-secondary/20 border-border/40 focus:border-border/60 focus:bg-secondary/30 h-9 text-sm transition-all placeholder:text-muted-foreground"
                   placeholder="Search completed tasks..."
@@ -279,7 +282,7 @@ export function CompletedTasksSheet({
             <DrawerTitle className="flex items-center gap-2">
               <CheckCircle2
                 className="h-5 w-5 text-foreground/70"
-                strokeWidth={2.5}
+                strokeWidth={2.25}
               />
               <span className="type-h2">Logbook</span>
             </DrawerTitle>
@@ -308,7 +311,7 @@ export function CompletedTasksSheet({
                   aria-label="Close"
                   className="h-10 w-10 text-muted-foreground active:scale-95 transition-seijaku-fast"
                 >
-                  <X className="h-6 w-6" strokeWidth={2} />
+                  <X className="h-6 w-6" strokeWidth={2.25} />
                 </Button>
               </DrawerClose>
             </div>
@@ -317,7 +320,10 @@ export function CompletedTasksSheet({
           {completedTasks.length > 0 && (
             <div className="px-6 py-4 border-b border-border/40 bg-secondary/5 shrink-0">
               <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Search
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"
+                  strokeWidth={2.25}
+                />
                 <Input
                   className="pl-11 bg-secondary/20 h-12 text-base shadow-none border-border/30 focus:border-border/60 focus:bg-secondary/30 rounded-xl transition-all"
                   placeholder="Search completed tasks..."

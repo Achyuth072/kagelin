@@ -27,7 +27,7 @@ const DrawerOverlay = React.forwardRef<
   <DrawerPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-60 bg-black/60 duration-150 ease-out will-change-[opacity]",
+      "fixed inset-0 z-50 bg-black/60 duration-150 ease-out will-change-[opacity] motion-reduce:animate-none",
       className,
     )}
     {...props}
@@ -83,7 +83,7 @@ const DrawerContent = React.forwardRef<
         <DrawerPrimitive.Content
           ref={ref}
           className={cn(
-            "fixed inset-x-0 bottom-0 z-60 mt-24 flex h-auto max-h-[85dvh] flex-col overflow-y-auto rounded-t-[14px] border border-border/80 bg-background shadow-none",
+            "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto max-h-[85dvh] flex-col overflow-y-auto rounded-t-[14px] border border-border/80 bg-background shadow-none motion-reduce:animate-none",
             className,
           )}
           onOpenAutoFocus={(event) => {

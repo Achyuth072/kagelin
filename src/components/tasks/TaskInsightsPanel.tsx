@@ -38,7 +38,7 @@ export function TaskInsightsPanel({ task }: TaskInsightsPanelProps) {
         {Array.from({ length: 2 }).map((_, i) => (
           <div
             key={i}
-            className="h-32 rounded-xl border border-border/80 bg-card animate-pulse"
+            className="h-32 rounded-xl border border-border/80 bg-card animate-pulse motion-reduce:animate-none"
           />
         ))}
       </div>

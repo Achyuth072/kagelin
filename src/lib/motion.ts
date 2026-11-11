@@ -2,5 +2,10 @@
 export const slideUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4 },
+  transition: {
+    type: "spring" as const,
+    mass: 1,
+    stiffness: 280,
+    damping: 60,
+  },
 };

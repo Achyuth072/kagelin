@@ -21,6 +21,7 @@ import { usePiP } from "@/components/providers/PiPProvider";
 import { useFullscreen } from "@/lib/hooks/useFullscreen";
 import { Minimize2, Target, PictureInPicture2 } from "lucide-react";
 import { useTodayFocusSessions } from "@/lib/hooks/useTodayFocusSessions";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useEffect } from "react";
 import { ResetCycleButton } from "@/components/ResetCycleButton";
 
@@ -41,6 +42,7 @@ export default function FocusPage() {
   const { trigger, isPhone } = useHaptic();
   const { isPiPSupported, isPiPActive, openPiP, closePiP } = usePiP();
   const { isFullscreen } = useFullscreen();
+  const prefersReducedMotion = usePrefersReducedMotion();
   // Sourced from the server focus_logs so every device shows the same count.
   const { data: todaySessionsCount = 0 } = useTodayFocusSessions();
 
@@ -92,7 +94,7 @@ export default function FocusPage() {
       <motion.button
         onClick={anchoredBack}
         onTapStart={() => trigger("thud")}
-        whileTap={isPhone ? { scale: 0.95 } : {}}
+        whileTap={!prefersReducedMotion && isPhone ? { scale: 0.95 } : {}}
         className={cn(
           buttonVariants({ variant: "ghost", size: "icon" }),
           "absolute top-4 left-4 h-14 w-14 rounded-full active:scale-95 transition-seijaku cursor-pointer",
@@ -105,7 +107,7 @@ export default function FocusPage() {
         <motion.button
           onClick={handlePiP}
           onTapStart={() => trigger("thud")}
-          whileTap={{ scale: 0.95 }}
+          whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
           className={cn(
             buttonVariants({ variant: "ghost", size: "icon" }),
             "absolute bottom-4 left-4 h-14 w-14 rounded-full active:scale-95 transition-seijaku cursor-pointer",
@@ -124,9 +126,14 @@ export default function FocusPage() {
         {!isPiPActive ? (
           <motion.div
             key="timer-content"
-            initial={{ opacity: 0, y: 10 }}
+            initial={
+              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10 }
+            }
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={
+              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -10 }
+            }
+            transition={prefersReducedMotion ? { duration: 0 } : undefined}
             className="flex flex-col items-center text-center"
           >
             <div className="type-ui font-medium uppercase tracking-widest text-muted-foreground/80">
@@ -182,7 +189,9 @@ export default function FocusPage() {
                   "h-20 w-20 rounded-full transition-seijaku hover:scale-105 active:scale-95 active:opacity-90 cursor-pointer",
                 )}
                 onTapStart={() => trigger("thud")}
-                whileTap={isPhone ? { scale: 0.95 } : {}}
+                whileTap={
+                  !prefersReducedMotion && isPhone ? { scale: 0.95 } : {}
+                }
                 onClick={handlePlayPause}
               >
                 {state.isRunning ? (
@@ -195,7 +204,9 @@ export default function FocusPage() {
               <motion.button
                 className={sideControlCls}
                 onTapStart={() => trigger("thud")}
-                whileTap={isPhone ? { scale: 0.95 } : {}}
+                whileTap={
+                  !prefersReducedMotion && isPhone ? { scale: 0.95 } : {}
+                }
                 onClick={skip}
               >
                 <SkipForward className="h-5 w-5" strokeWidth={2.25} />
@@ -211,13 +222,21 @@ export default function FocusPage() {
         ) : (
           <motion.div
             key="pip-active-indicator"
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={
+              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }
+            }
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
+            exit={
+              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }
+            }
+            transition={prefersReducedMotion ? { duration: 0 } : undefined}
             className="flex flex-col items-center justify-center text-center py-12"
           >
-            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-              <Minimize2 className="h-10 w-10 text-primary animate-pulse" />
+            <div className="w-20 h-20 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
+              <Minimize2
+                className="h-10 w-10 text-primary animate-pulse motion-reduce:animate-none"
+                strokeWidth={2.25}
+              />
             </div>
             <h2 className="text-2xl font-semibold tracking-tight mb-2">
               Viewing in PiP
