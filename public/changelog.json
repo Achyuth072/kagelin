@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.51.0-preview.2",
+    "date": "2026-11-11",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Mobile score chart scrubbing and tactile frequency grid",
+        "Habit identity header and 4-card overview parity"
+      ],
+      "Improved": [
+        "Compact habit month grid and unbox frequency grid"
+      ],
+      "Fixed": [
+        "Prevent automatic virtual keyboard popup when opening mobile drawers",
+        "Address code review findings on standards, a11y, and focus cycle safety"
+      ]
+    }
+  },
+  {
     "version": "1.51.0-preview.1",
     "date": "2026-11-10",
     "channel": "preview",
@@ -762,25 +780,6 @@
       ],
       "Fixed": [
         "Keep habit drawer footer fixed and reminder row on one line on narrow screens"
-      ]
-    }
-  },
-  {
-    "version": "1.44.2",
-    "date": "2026-09-24",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Open and edit any past day from habit insights",
-        "Mark a habit as skipped from every habit screen"
-      ],
-      "Improved": [
-        "The habit card and the day popover share the same logging actions, so habits behave the same everywhere"
-      ],
-      "Fixed": [
-        "Measurable habits now log a quantity and shade by how close you are to the target in grid view",
-        "The target chip logs in one tap",
-        "Padded days in the heatmap no longer look like a goal was met"
       ]
     }
   }
