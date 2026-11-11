@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { createElement, useState } from "react";
 import { BarChart3, Download, Loader2 } from "lucide-react";
 import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { HabitScoreChart } from "@/components/habits/insights/HabitScoreChart";
 import { HabitMonthGrid } from "@/components/habits/insights/HabitMonthGrid";
 import { HabitBestStreaksCard } from "@/components/habits/insights/HabitBestStreaksCard";
 import { HabitFrequencyGrid } from "@/components/habits/insights/HabitFrequencyGrid";
+import { getHabitIcon } from "@/components/habits/shared/HabitIconPicker";
 import { useHabit } from "@/lib/hooks/useHabits";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import {
@@ -19,6 +20,7 @@ import {
   frequencyProgressLabel,
   hasFrequencyTarget,
 } from "@/lib/utils/habit-frequency-progress";
+import { formatHabitFrequencyLabel } from "@/lib/utils/habit-trends";
 import {
   analyticsFilename,
   habitHistoryToCsv,
@@ -28,6 +30,45 @@ import type { Habit, HabitWithEntries } from "@/lib/types/habit";
 
 interface HabitInsightsPanelProps {
   habit: Habit;
+}
+
+interface HabitIdentityHeaderProps {
+  habit: Habit;
+}
+
+function HabitIdentityHeader({ habit }: HabitIdentityHeaderProps) {
+  const frequencyLabel = formatHabitFrequencyLabel(habit);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div
+          className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border border-border/60 shadow-xs"
+          style={{ backgroundColor: `${habit.color}15` }}
+        >
+          {createElement(getHabitIcon(habit.icon), {
+            className: "h-5 w-5",
+            strokeWidth: 2.25,
+            style: { color: habit.color },
+          })}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold tracking-tight text-foreground truncate">
+              {habit.name || "Untitled Habit"}
+            </h2>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary text-muted-foreground border border-border/40 shrink-0">
+              {frequencyLabel}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        data-testid="habit-identity-accent-line"
+        className="h-0.5 w-full bg-brand/20 rounded-full"
+      />
+    </div>
+  );
 }
 
 export function HabitInsightsPanel({
@@ -82,17 +123,21 @@ export function HabitInsightsPanel({
 
   if (entries.length === 0) {
     return (
-      <EmptyState
-        icon={BarChart3}
-        title="No data yet"
-        description="Log this habit to see insights."
-        className="px-4 py-12 md:px-6 gap-3"
-      />
+      <div className="px-4 pt-4 pb-4 md:px-6 space-y-4 contain-layout">
+        <HabitIdentityHeader habit={habit} />
+        <EmptyState
+          icon={BarChart3}
+          title="No data yet"
+          description="Log this habit to see insights."
+          className="py-12 gap-3"
+        />
+      </div>
     );
   }
 
   return (
     <div className="px-4 pt-4 pb-4 md:px-6 space-y-4 contain-layout">
+      <HabitIdentityHeader habit={habit} />
       <HabitOverviewCards habit={habit} entries={entries} />
 
       <InsightSection title="Score">
