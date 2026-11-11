@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   format,
   parseISO,
@@ -8,7 +8,10 @@ import {
   startOfMonth,
   eachMonthOfInterval,
 } from "date-fns";
+import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
+import { cn } from "@/lib/utils";
 import type { Habit, HabitEntry } from "@/lib/types/habit";
 import { dayValue } from "@/lib/utils/habit-score";
 import { BarChart3 } from "lucide-react";
@@ -18,12 +21,17 @@ const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 interface HabitFrequencyGridProps {
   habit: Habit;
   entries: HabitEntry[];
+  className?: string;
 }
 
 export function HabitFrequencyGrid({
   habit,
   entries,
+  className,
 }: HabitFrequencyGridProps) {
+  const isMobile = useIsMobile();
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
   const { matrix, months, maxCount } = useMemo(() => {
     if (entries.length === 0)
       return { matrix: [], months: [] as string[], maxCount: 0 };
@@ -71,6 +79,20 @@ export function HabitFrequencyGrid({
     return { matrix, months, maxCount };
   }, [entries, habit]);
 
+  // Auto-scroll on mobile to the most recent months on mount
+  useEffect(() => {
+    if (!isMobile || entries.length === 0) return;
+
+    const frame = requestAnimationFrame(() => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      container.scrollLeft = container.scrollWidth;
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [isMobile, entries.length, habit.id]);
+
   if (entries.length === 0) {
     return (
       <EmptyState
@@ -83,36 +105,49 @@ export function HabitFrequencyGrid({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <Card
+      data-testid="frequency-grid-card"
+      className={cn(
+        "p-3.5 sm:p-4 rounded-xl border border-border/80 bg-card overflow-hidden",
+        className,
+      )}
+    >
       <div
-        className="grid gap-1"
-        style={{
-          gridTemplateColumns: `auto repeat(${months.length}, minmax(24px, 1fr))`,
-        }}
+        ref={scrollContainerRef}
+        data-testid="frequency-grid-scroller"
+        className="overflow-x-auto touch-pan-x custom-scrollbar"
       >
-        {/* Header row */}
-        <div />
-        {months.map((m) => (
-          <div
-            key={m}
-            className="text-center text-[11px] text-muted-foreground"
-          >
-            {m}
-          </div>
-        ))}
+        <div
+          className="grid gap-1 min-w-[340px] md:min-w-0"
+          style={{
+            gridTemplateColumns: `auto repeat(${months.length}, minmax(24px, 1fr))`,
+          }}
+        >
+          {/* Header row */}
+          <div className="sticky left-0 bg-card z-10" />
+          {months.map((m, idx) => (
+            <div
+              key={m}
+              data-month-index={idx}
+              className="text-center text-[11px] text-muted-foreground"
+            >
+              {m}
+            </div>
+          ))}
 
-        {/* Data rows */}
-        {matrix.map((row, wd) => (
-          <FrequencyRow
-            key={wd}
-            weekday={WEEKDAYS[wd]}
-            counts={row}
-            maxCount={maxCount}
-            color={habit.color}
-          />
-        ))}
+          {/* Data rows */}
+          {matrix.map((row, wd) => (
+            <FrequencyRow
+              key={wd}
+              weekday={WEEKDAYS[wd]}
+              counts={row}
+              maxCount={maxCount}
+              color={habit.color}
+            />
+          ))}
+        </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -129,7 +164,7 @@ function FrequencyRow({
 }) {
   return (
     <>
-      <div className="flex items-center text-[11px] text-muted-foreground pr-1">
+      <div className="sticky left-0 bg-card z-10 flex items-center text-[11px] text-muted-foreground pr-1 select-none">
         {weekday}
       </div>
       {counts.map((c, i) => {

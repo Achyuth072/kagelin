@@ -18,7 +18,7 @@ vi.mock("@/lib/hooks/useMediaQuery", () => ({
 
 vi.mock("recharts", () => ({
   AreaChart: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="area-chart">{children}</div>
+    <svg data-testid="area-chart">{children}</svg>
   ),
   Area: () => <div />,
   XAxis: () => null,
