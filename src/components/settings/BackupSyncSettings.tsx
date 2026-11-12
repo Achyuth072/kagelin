@@ -203,9 +203,12 @@ function CloudSyncCard({
                   strokeWidth={2.25}
                 />
               ) : connectionStatus === "success" ? (
-                <Check className="h-3.5 w-3.5 text-green-500" strokeWidth={3} />
+                <Check
+                  className="h-3.5 w-3.5 text-green-500"
+                  strokeWidth={2.25}
+                />
               ) : connectionStatus === "error" ? (
-                <X className="h-3.5 w-3.5 text-red-500" strokeWidth={3} />
+                <X className="h-3.5 w-3.5 text-red-500" strokeWidth={2.25} />
               ) : (
                 <Server className="h-3.5 w-3.5" strokeWidth={2.25} />
               )}

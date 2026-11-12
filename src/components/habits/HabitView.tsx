@@ -4,6 +4,7 @@ import { createElement, useRef, useState } from "react";
 import { FieldErrors } from "react-hook-form";
 import { CreateHabitInput } from "@/lib/schemas/habit";
 import { Button } from "@/components/ui/button";
+import { NumberField } from "@/components/ui/number-field";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
 import {
@@ -334,17 +335,16 @@ export function HabitView(props: HabitViewProps) {
               <span className="text-xs sm:text-sm font-medium text-muted-foreground">
                 Target:
               </span>
-              <input
-                type="number"
-                inputMode="decimal"
+              <NumberField
+                value={targetValue ?? null}
+                onValueChange={(val) => setTargetValue(val ?? undefined)}
+                min={0}
+                step={1}
+                showSteppers={false}
                 placeholder="0"
                 aria-label="Target value"
-                value={targetValue ?? ""}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  setTargetValue(raw === "" ? undefined : Number(raw));
-                }}
-                className="h-8 w-16 text-center text-xs sm:text-[13px] font-medium rounded-lg border border-border/40 bg-secondary/15 px-1.5 outline-none placeholder:text-muted-foreground/60 text-foreground focus:ring-1 focus:ring-brand"
+                className="w-16"
+                inputClassName="w-16 h-8 text-center text-xs sm:text-[13px] font-medium rounded-lg border border-border/40 bg-secondary/15 px-1.5 outline-none placeholder:text-muted-foreground/60 text-foreground focus:ring-1 focus:ring-brand"
               />
               <input
                 type="text"

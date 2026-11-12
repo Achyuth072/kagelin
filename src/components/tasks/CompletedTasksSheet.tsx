@@ -69,7 +69,7 @@ const CompletedTaskItem = React.memo(({ task }: { task: Task }) => {
       <button onClick={handleUncomplete} aria-label="Mark task incomplete">
         <CheckCircle2
           className="h-5 w-5 text-foreground/50 hover:text-foreground transition-colors"
-          strokeWidth={2.5}
+          strokeWidth={2.25}
         />
       </button>
 

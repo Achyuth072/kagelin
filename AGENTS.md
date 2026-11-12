@@ -8,7 +8,7 @@ Kagelin (codename Kanso) is a Next.js 16 App Router monolith backed by Supabase 
 
 ## Commands
 
-`npm run validate` (format:check → lint:strict → typecheck → test:run, sequentially) is the single verification gate — run it before considering work done. Under WSL2 memory limits use `npm run validate:wsl` / `npm run build:wsl` (stop `npm run dev` first for `build:wsl`). Other scripts live in `package.json`.
+`npm run validate` (format:check → lint:strict → typecheck → ast-grep → test:run, sequentially) is the single verification gate — run it before considering work done. Under WSL2 memory limits use `npm run validate:wsl` / `npm run build:wsl` (stop `npm run dev` first for `build:wsl`). Other scripts live in `package.json`.
 
 Gotchas the environment won't tell you:
 
@@ -42,7 +42,7 @@ Gotchas the environment won't tell you:
 - Unused vars/params: prefix with `_` (linter ignores `^_`).
 - A catch block that only does `console.*` is a lint error — rethrow, surface to the UI, or record a diagnostic error instead of swallowing it silently.
 - React Compiler is on (`eslint-plugin-react-compiler` set to error) — manual `useMemo`/`useCallback` should generally be unnecessary; a compiler bailout is a smell worth checking rather than papering over.
-- **Code Search Constraint**: for _structural_ searches on source files (`.ts`, `.tsx`, `.js`, `.jsx`) — a call pattern, a JSX shape, a catch block, a hook's argument list — use `ast-grep` via `Bash` (`npx ast-grep run -p '<pattern>' -l ts <path>`), not grep; it matches by AST so formatting and string contents that look like code don't fool it. Plain grep/rg is fine for simple lexical lookups (where is `addEvent` called, does this file import `X`) and for non-code files (`.md`, `.json`, `.env`). `npm run ast-grep` runs the repo's custom `.ast-grep/rules/` lint rules (advisory only, not yet part of `validate`).
+- **Code Search Constraint**: for _structural_ searches on source files (`.ts`, `.tsx`, `.js`, `.jsx`) — a call pattern, a JSX shape, a catch block, a hook's argument list — use `ast-grep` via `Bash` (`npx ast-grep run -p '<pattern>' -l ts <path>`), not grep; it matches by AST so formatting and string contents that look like code don't fool it. Plain grep/rg is fine for simple lexical lookups (where is `addEvent` called, does this file import `X`) and for non-code files (`.md`, `.json`, `.env`). `npm run ast-grep` runs the repo's custom `.ast-grep/rules/` lint rules (blocking in `validate` for eager motion, unguarded pulse, raw number inputs, and icon stroke weights).
 - **Batch verification**: run checks together in one composite command (e.g. `npm run validate` or `git status && npm run lint`) rather than across multiple turns to preserve turn budget.
 - **PR size tripwire**: when a branch's diff against `origin/dev` passes ~500 non-test lines, stop and propose the next finished slice as its own PR into `dev` before adding more. Slice by user-visible behavior (schema first, tests in the same PR), not by layer. `.husky/pre-push` prints a warning at the same threshold.
 
@@ -54,7 +54,7 @@ Gotchas the environment won't tell you:
 ## Where to look for more
 
 - [`CONTEXT.md`](CONTEXT.md) — canonical domain glossary (Habit vs Entry, Streak vs Score, Goal vs Frequency, Series/Occurrence, Stats vs Insights, calendar sync terms). Read before naming anything in these domains; conflicting terminology must be resolved, not shrugged off.
-- [`DESIGN.md`](DESIGN.md) — design tokens and Ink & Matte UI rules. Read before touching UI, styling, or components.
+- [`DESIGN.md`](DESIGN.md) — design tokens, approved UI primitives, and Ink & Matte UI rules. Read before touching UI, styling, or components.
 - [`docs/adr/`](docs/adr/) — architecture decisions with the rejected alternatives and consequences (client-side calendar token handling, the server-anchored timer model, habit color overrides, frequency-aware streak computation). Check here before "fixing" something that looks like a bug but was a deliberate tradeoff.
 - [`README.md`](README.md) — product feature list and shortcuts, useful for understanding user-facing scope.
 

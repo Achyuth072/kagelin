@@ -138,11 +138,11 @@ export function HabitCard({
       {isCompletedToday ? (
         <Check
           className="w-5 h-5"
-          strokeWidth={3}
+          strokeWidth={2.25}
           style={{ color: getContrastingColor(habit.color) }}
         />
       ) : isSkippedToday ? (
-        <Pause className="w-4 h-4" strokeWidth={3} />
+        <Pause className="w-4 h-4" strokeWidth={2.25} />
       ) : (
         <Plus className="w-5 h-5" />
       )}

@@ -96,7 +96,7 @@ export function TaskDatePicker({
   ) : (
     <div className="flex items-center gap-1.5">
       <Icon
-        strokeWidth={1.5}
+        strokeWidth={2.25}
         className={cn(
           isCompact
             ? "h-5 w-5"
@@ -249,7 +249,7 @@ export function TaskDatePicker({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-auto p-0 border-none shadow-xl"
+          className="w-auto p-0 border-none"
           align={align}
           side={side}
           sideOffset={sideOffset}

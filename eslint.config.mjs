@@ -64,6 +64,12 @@ const eslintConfig = defineConfig([
               message:
                 "Import from 'motion/react' or 'motion/react-m' instead.",
             },
+            {
+              name: "motion/react",
+              importNames: ["motion"],
+              message:
+                "Import 'm' from 'motion/react-m' under <LazyMotion> instead of eager 'motion'.",
+            },
           ],
         },
       ],
@@ -87,11 +93,47 @@ const eslintConfig = defineConfig([
             "truncate",
             "break-words",
           ],
-          deny: ["backdrop-blur*", "blur-*"],
+          deny: [
+            "backdrop-blur*",
+            "blur-*",
+            "shadow-md",
+            "shadow-md-*",
+            "shadow-lg",
+            "shadow-lg-*",
+            "shadow-xl",
+            "shadow-xl-*",
+            "shadow-2xl",
+            "shadow-2xl-*",
+            "rounded-2xl",
+            "rounded-2xl-*",
+            "rounded-3xl",
+            "rounded-3xl-*",
+          ],
           message: {
             effects:
-              "Effects that violate DESIGN_SYSTEM.md (such as glassmorphism and blurs) are forbidden. Surfaces must be opaque matte.",
+              "Effects that violate DESIGN.md (such as glassmorphism, blurs, and fuzzy elevation shadows shadow-md+) are forbidden. Surfaces must be opaque matte with hairline borders or crisp shadow-xs/shadow-sm.",
+            shape:
+              "Card and surface radii top out at rounded-xl (10px) per DESIGN.md. rounded-2xl+ is forbidden on workspace components.",
           },
+        },
+      ],
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          allow: ["pb-safe"],
+        },
+      ],
+      "shadcn/no-raw-colors": [
+        "error",
+        {
+          allow: [
+            "text-green-500",
+            "text-red-500",
+            "text-emerald-*",
+            "dark:text-emerald-*",
+            "bg-emerald-*",
+            "dark:bg-emerald-*",
+          ],
         },
       ],
       "no-restricted-syntax": [
@@ -125,6 +167,18 @@ const eslintConfig = defineConfig([
     files: ["src/components/ui/**/*.{ts,tsx}"],
     rules: {
       "shadcn/no-restyle": "off",
+      "shadcn/no-raw-colors": "off",
+    },
+  },
+  // Third-party brand and OAuth provider icons retain precise brand colors.
+  {
+    files: [
+      "src/components/calendar/ConnectCalendarDialog.tsx",
+      "src/components/settings/MigrationIcons.tsx",
+      "src/components/auth/ProviderIcons.tsx",
+    ],
+    rules: {
+      "shadcn/no-raw-colors": "off",
     },
   },
   // notify.ts and toaster.tsx are the only files allowed to import sonner

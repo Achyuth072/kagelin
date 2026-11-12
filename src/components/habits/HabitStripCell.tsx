@@ -123,7 +123,7 @@ export function HabitStripCell({
       {complete && (
         <Check
           className={cn(isCompact ? "h-3.5 w-3.5 sm:h-4 sm:w-4" : "h-4 w-4")}
-          strokeWidth={3}
+          strokeWidth={2.25}
           style={{ color: getContrastingColor(color) }}
         />
       )}
@@ -132,13 +132,13 @@ export function HabitStripCell({
           className={cn(
             isCompact ? "h-3 w-3 sm:h-3.5 sm:w-3.5" : "h-3.5 w-3.5",
           )}
-          strokeWidth={3}
+          strokeWidth={2.25}
         />
       )}
       {skipped && (
         <Pause
           className={cn(isCompact ? "h-2.5 w-2.5 sm:h-3 sm:w-3" : "h-3 w-3")}
-          strokeWidth={3}
+          strokeWidth={2.25}
         />
       )}
       {loggedValue !== null && (

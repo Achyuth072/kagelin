@@ -71,10 +71,7 @@ export function HabitOptionsMenu() {
             <span className="sr-only">Habit options</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          className="w-56 shadow-lg border-border/40"
-        >
+        <DropdownMenuContent align="end" className="w-56 border-border/40">
           <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Habit Data
           </DropdownMenuLabel>

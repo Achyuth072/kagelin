@@ -84,7 +84,7 @@ export const TaskGhost = React.memo(
               <div className="flex items-center gap-2.5 flex-wrap ml-6">
                 {task.due_date && (
                   <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
-                    <Calendar className="h-3 w-3" strokeWidth={2.5} />
+                    <Calendar className="h-3 w-3" strokeWidth={2.25} />
                     {formatDueDate(task.due_date)}
                   </span>
                 )}
@@ -95,7 +95,7 @@ export const TaskGhost = React.memo(
                       priorityTextClasses[task.priority],
                     )}
                   >
-                    <Flag className="h-3 w-3" strokeWidth={2.5} />P
+                    <Flag className="h-3 w-3" strokeWidth={2.25} />P
                     {task.priority}
                   </span>
                 )}
@@ -177,7 +177,7 @@ export const TaskGhost = React.memo(
                       : "text-muted-foreground/70",
                   )}
                 >
-                  <Calendar className="h-3 w-3" strokeWidth={2.5} />
+                  <Calendar className="h-3 w-3" strokeWidth={2.25} />
                   {formatDueDate(task.due_date)}
                 </span>
               )}
@@ -188,12 +188,13 @@ export const TaskGhost = React.memo(
                     priorityTextClasses[task.priority],
                   )}
                 >
-                  <Flag className="h-3 w-3" strokeWidth={2.5} />P{task.priority}
+                  <Flag className="h-3 w-3" strokeWidth={2.25} />P
+                  {task.priority}
                 </span>
               )}
               {task.is_evening && (
                 <span className="type-ui flex items-center gap-1.5 text-[11px] font-medium text-foreground/80 uppercase tracking-wider whitespace-nowrap">
-                  <Moon className="h-3 w-3 fill-current" strokeWidth={2.5} />
+                  <Moon className="h-3 w-3 fill-current" strokeWidth={2.25} />
                   Evening
                 </span>
               )}

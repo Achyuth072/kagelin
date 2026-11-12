@@ -182,7 +182,7 @@ function TasksPageHeaderBase({
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-foreground/5 text-[13px] font-medium text-foreground/90 shrink-0">
                 <ArrowUpDown
                   className="h-3.5 w-3.5 opacity-60 shrink-0"
-                  strokeWidth={2.5}
+                  strokeWidth={2.25}
                 />
                 <span className="whitespace-nowrap">
                   {SORT_LABELS[currentSort]}
@@ -201,7 +201,7 @@ function TasksPageHeaderBase({
                 >
                   <Plus
                     className="h-3.5 w-3.5 rotate-45 opacity-50"
-                    strokeWidth={2.5}
+                    strokeWidth={2.25}
                   />
                 </button>
               </div>
@@ -211,7 +211,7 @@ function TasksPageHeaderBase({
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-foreground/5 text-[13px] font-medium text-foreground/90 shrink-0">
                 <SquareStack
                   className="h-3.5 w-3.5 opacity-60 shrink-0"
-                  strokeWidth={2.5}
+                  strokeWidth={2.25}
                 />
                 <span className="whitespace-nowrap">
                   {GROUP_LABELS[currentGroup]}
@@ -230,7 +230,7 @@ function TasksPageHeaderBase({
                 >
                   <Plus
                     className="h-3.5 w-3.5 rotate-45 opacity-50"
-                    strokeWidth={2.5}
+                    strokeWidth={2.25}
                   />
                 </button>
               </div>
@@ -262,7 +262,7 @@ function TasksPageHeaderBase({
         }}
         className="hidden md:flex h-9 items-center gap-2 rounded-lg bg-brand text-brand-foreground hover:bg-brand/90 border-none shadow-sm shadow-brand/10 transition-seijaku shrink-0 px-2.5 lg:px-4 text-[13px] font-semibold"
       >
-        <Plus className="h-4 w-4" strokeWidth={2.5} />
+        <Plus className="h-4 w-4" strokeWidth={2.25} />
         <span className="hidden lg:inline">New Task</span>
       </Button>
     </div>

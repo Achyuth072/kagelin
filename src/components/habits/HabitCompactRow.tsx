@@ -273,12 +273,12 @@ function CompactMatrixCell({
       {(complete || (isMeasurable && filled)) && (
         <Check
           className="h-3.5 w-3.5"
-          strokeWidth={3}
+          strokeWidth={2.25}
           style={{ color: getContrastingColor(color) }}
         />
       )}
-      {missed && <X className="h-3 w-3" strokeWidth={3} />}
-      {skipped && <Pause className="h-2.5 w-2.5" strokeWidth={3} />}
+      {missed && <X className="h-3 w-3" strokeWidth={2.25} />}
+      {skipped && <Pause className="h-2.5 w-2.5" strokeWidth={2.25} />}
       {isMeasurable && loggedValue !== null && !filled && (
         <span className="text-[10px] font-semibold tabular-nums leading-none">
           {loggedValue}

@@ -189,7 +189,7 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
                         <TooltipTrigger asChild>{block}</TooltipTrigger>
                         <TooltipContent
                           side="top"
-                          className="bg-popover text-popover-foreground border-border/60 shadow-md text-[12px] font-medium px-2.5 py-1"
+                          className="bg-popover text-popover-foreground border-border/60 text-[12px] font-medium px-2.5 py-1"
                         >
                           {tooltip}
                         </TooltipContent>

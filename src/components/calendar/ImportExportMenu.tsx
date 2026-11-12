@@ -169,10 +169,7 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
             <span className="sr-only">Calendar options</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent
-          align="end"
-          className="w-48 shadow-lg border-border/40"
-        >
+        <DropdownMenuContent align="end" className="w-48 border-border/40">
           {/* Calendar Management & Sync */}
           <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             Sync & Settings

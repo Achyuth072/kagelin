@@ -297,7 +297,7 @@ export function FocusTaskPicker() {
               Loading...
             </span>
           ) : resolvedActiveTask ? (
-            <span className="text-body text-foreground truncate text-[15px]">
+            <span className="text-foreground truncate text-[15px]">
               {resolvedActiveTask.content}
             </span>
           ) : (

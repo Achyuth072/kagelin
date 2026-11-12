@@ -198,7 +198,7 @@ export default function RecurrencePicker({
             }}
             title={!isMobile ? formatRecurrenceRule(value) : undefined}
           >
-            <Repeat className="h-4 w-4 transition-all" strokeWidth={2} />
+            <Repeat className="h-4 w-4 transition-all" strokeWidth={2.25} />
             {hasRecurrence && badgeLetter && (
               <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 text-[10px] font-bold bg-brand text-brand-foreground rounded-full flex items-center justify-center">
                 {badgeLetter}
@@ -216,7 +216,7 @@ export default function RecurrencePicker({
         )}
       </PopoverTrigger>
       <PopoverContent
-        className="w-52 p-1 rounded-lg border border-border/60 bg-popover text-popover-foreground shadow-md outline-none"
+        className="w-52 p-1 rounded-lg border border-border/60 bg-popover text-popover-foreground outline-none"
         align="start"
         sideOffset={4}
         collisionPadding={16}

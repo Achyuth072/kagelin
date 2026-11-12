@@ -1,0 +1,16 @@
+id: no-unguarded-animate-pulse
+language: Tsx
+severity: error
+files:
+  - "src/**/*.tsx"
+  - "src/**/*.ts"
+  - "app/**/*.tsx"
+  - "app/**/*.ts"
+rule:
+  kind: string_fragment
+  regex: '\banimate-pulse\b'
+  not:
+    regex: '\bmotion-reduce:animate-none\b'
+message: >
+  animate-pulse must always be paired with motion-reduce:animate-none to honor
+  reduced-motion preferences per DESIGN.md.

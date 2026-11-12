@@ -20,7 +20,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
-    "validate": "npm-run-all --serial format:check lint:strict typecheck test:run",
+    "validate": "npm-run-all --serial format:check lint:strict typecheck ast-grep test:run",
     "validate:wsl": "systemd-run --user --scope -p MemoryMax=2500M -p MemorySwapMax=512M npm run validate",
     "validate:fix": "npm run format && npm run validate",
     "ci:validate": "cross-env CI=true npm run validate && npm run build",

@@ -633,7 +633,7 @@ export default function SubtaskList({
           )}
           onClick={() => handleAddSubtask()}
         >
-          <Plus className="h-3 w-3" strokeWidth={2.5} />
+          <Plus className="h-3 w-3" strokeWidth={2.25} />
         </button>
         <Input
           ref={newStepInputRef}

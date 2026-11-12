@@ -32,7 +32,7 @@ export default function AddTaskFab({
     >
       <Plus
         className="h-5 w-5 [@media(max-height:400px)]:h-4 [@media(max-height:400px)]:w-4"
-        strokeWidth={2.5}
+        strokeWidth={2.25}
       />
     </m.button>
   );

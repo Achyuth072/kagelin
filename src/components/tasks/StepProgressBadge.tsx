@@ -27,9 +27,9 @@ export function StepProgressBadge({
       data-testid="step-progress-badge"
     >
       {allCompleted ? (
-        <CheckCircle2 className="h-3 w-3 text-brand" strokeWidth={2.5} />
+        <CheckCircle2 className="h-3 w-3 text-brand" strokeWidth={2.25} />
       ) : (
-        <ListChecks className="h-3 w-3" strokeWidth={2.5} />
+        <ListChecks className="h-3 w-3" strokeWidth={2.25} />
       )}
       {completed}/{total}
     </span>

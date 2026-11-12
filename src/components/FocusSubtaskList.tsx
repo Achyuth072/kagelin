@@ -54,7 +54,7 @@ export function FocusSubtaskList() {
               "h-3.5 w-3.5 transition-all duration-200",
               isExpanded && "rotate-90 text-brand",
             )}
-            strokeWidth={2.5}
+            strokeWidth={2.25}
           />
           <span>
             {completed}/{total} steps
@@ -65,7 +65,7 @@ export function FocusSubtaskList() {
         align="center"
         sideOffset={8}
         collisionPadding={16}
-        className="w-[320px] max-w-[calc(100vw-2rem)] p-2 bg-popover border-border/80 shadow-md max-h-[50vh] overflow-y-auto text-left"
+        className="w-[320px] max-w-[calc(100vw-2rem)] p-2 bg-popover border-border/80 max-h-[50vh] overflow-y-auto text-left"
       >
         <SubtaskList
           taskId={activeTaskId}

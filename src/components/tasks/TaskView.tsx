@@ -413,7 +413,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
           <SelectContent
             className={cn(
               "w-(--radix-select-trigger-width) rounded-lg border-border/80 [&_[role=option]]:text-[13px] [&_[role=option]]:font-medium [&_[role=option]>span:last-child]:min-w-0",
-              mode === "create" ? "shadow-2xl" : "shadow-none",
+              mode === "create" ? "shadow-sm" : "shadow-none",
             )}
           >
             <SelectItem value="inbox">
