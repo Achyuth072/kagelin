@@ -1,6 +1,7 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { useTimer } from "@/components/TimerProvider";
 import { buttonVariants, Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -13,7 +14,7 @@ import { CancelSessionButton } from "@/components/CancelSessionButton";
 import { FullscreenToggle } from "@/components/FullscreenToggle";
 import type { TimerMode } from "@/lib/types/timer";
 import { cn } from "@/lib/utils";
-import { formatTime } from "@/lib/utils/time";
+import { AnimatedCountdown } from "@/components/ui/animated-countdown";
 import { useAnchoredBack } from "@/lib/hooks/useBackAnchor";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimerStore } from "@/lib/store/timerStore";
@@ -81,7 +82,7 @@ export default function FocusPage() {
   };
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={cn(
@@ -91,7 +92,7 @@ export default function FocusPage() {
           : "absolute inset-0",
       )}
     >
-      <motion.button
+      <m.button
         onClick={anchoredBack}
         onTapStart={() => trigger("thud")}
         whileTap={!prefersReducedMotion && isPhone ? { scale: 0.95 } : {}}
@@ -101,10 +102,10 @@ export default function FocusPage() {
         )}
       >
         <X className="h-6 w-6" strokeWidth={2.25} />
-      </motion.button>
+      </m.button>
 
       {isPiPSupported && !isPhone && (
-        <motion.button
+        <m.button
           onClick={handlePiP}
           onTapStart={() => trigger("thud")}
           whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
@@ -117,14 +118,14 @@ export default function FocusPage() {
           }
         >
           <PictureInPicture2 className="h-6 w-6" strokeWidth={2.25} />
-        </motion.button>
+        </m.button>
       )}
 
       <FullscreenToggle />
 
       <AnimatePresence mode="wait">
         {!isPiPActive ? (
-          <motion.div
+          <m.div
             key="timer-content"
             initial={
               prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10 }
@@ -148,7 +149,7 @@ export default function FocusPage() {
             <FocusSubtaskList />
 
             <div className="text-7xl sm:text-8xl md:text-[10rem] font-extralight font-mono tracking-tighter text-foreground tabular-nums mt-6 leading-none">
-              {formatTime(state.remainingSeconds)}
+              <AnimatedCountdown seconds={state.remainingSeconds} />
             </div>
 
             <div className="w-full max-w-[240px] mt-12 mb-6">
@@ -183,7 +184,7 @@ export default function FocusPage() {
                 }}
               />
 
-              <motion.button
+              <m.button
                 className={cn(
                   buttonVariants({ variant: "default", size: "icon" }),
                   "h-20 w-20 rounded-full transition-seijaku hover:scale-105 active:scale-95 active:opacity-90 cursor-pointer",
@@ -199,9 +200,9 @@ export default function FocusPage() {
                 ) : (
                   <Play className="h-8 w-8 ml-0.5" strokeWidth={2.25} />
                 )}
-              </motion.button>
+              </m.button>
 
-              <motion.button
+              <m.button
                 className={sideControlCls}
                 onTapStart={() => trigger("thud")}
                 whileTap={
@@ -210,7 +211,7 @@ export default function FocusPage() {
                 onClick={skip}
               >
                 <SkipForward className="h-5 w-5" strokeWidth={2.25} />
-              </motion.button>
+              </m.button>
             </div>
 
             <CancelSessionButton />
@@ -218,9 +219,9 @@ export default function FocusPage() {
             <div className="mt-16">
               <FocusSettingsDialog />
             </div>
-          </motion.div>
+          </m.div>
         ) : (
-          <motion.div
+          <m.div
             key="pip-active-indicator"
             initial={
               prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }
@@ -252,9 +253,9 @@ export default function FocusPage() {
             >
               Return to main view
             </Button>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </m.div>
   );
 }

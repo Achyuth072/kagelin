@@ -39,14 +39,15 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/", // not "/focus", so FloatingTimer is eligible to show
 }));
 
-vi.mock("framer-motion", () => ({
-  motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-      <div {...props}>{children}</div>
-    ),
-  },
+vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
+  ),
+}));
+
+vi.mock("motion/react-m", () => ({
+  div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+    <div {...props}>{children}</div>
   ),
 }));
 

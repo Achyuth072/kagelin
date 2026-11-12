@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from "react";
 import {
   animate,
-  motion,
-  PanInfo,
+  type PanInfo,
   useMotionValue,
   useMotionValueEvent,
   useTransform,
-} from "framer-motion";
+} from "motion/react";
+import * as m from "motion/react-m";
 import { Trash2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
@@ -165,31 +165,31 @@ export function SwipeableTaskContent({
 
   return (
     <div className="relative overflow-hidden">
-      <motion.div
+      <m.div
         className="absolute inset-0 bg-brand flex items-center pl-4"
         style={{ opacity: completeBgOpacity }}
       >
-        <motion.div
+        <m.div
           style={{ opacity: leftIconOpacity, scale: leftIconScale }}
           className="text-brand-foreground pointer-events-none"
         >
           <Check className="h-5 w-5" strokeWidth={2.25} />
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
 
-      <motion.div
+      <m.div
         className="absolute inset-0 bg-destructive flex items-center justify-end pr-4"
         style={{ opacity: deleteBgOpacity }}
       >
-        <motion.div
+        <m.div
           style={{ opacity: rightIconOpacity, scale: rightIconScale }}
           className="text-destructive-foreground pointer-events-none"
         >
           <Trash2 className="h-5 w-5" strokeWidth={2.25} />
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
 
-      <motion.div
+      <m.div
         key={`content-${isCompleted}`}
         style={{ x }}
         drag={isDesktop ? false : "x"}
@@ -213,7 +213,7 @@ export function SwipeableTaskContent({
         onClick={onClick}
       >
         {children}
-      </motion.div>
+      </m.div>
     </div>
   );
 }

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { AuthCaptcha } from "@/components/auth/AuthCaptcha";
 import { AuthErrorMessage } from "@/components/auth/AuthErrorMessage";
 import { AUTH_LINK_CLASS } from "@/components/auth/authLinkClass";
@@ -62,7 +63,7 @@ export function MagicLinkAuth({
     <div className="w-full space-y-4">
       <AnimatePresence mode="wait">
         {!sent ? (
-          <motion.form
+          <m.form
             key="login-form"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -110,7 +111,7 @@ export function MagicLinkAuth({
                 "Continue"
               )}
             </Button>
-          </motion.form>
+          </m.form>
         ) : (
           <AuthConfirmationCard
             motionKey="success-message"

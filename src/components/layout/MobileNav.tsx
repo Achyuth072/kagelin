@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { CheckSquare, Calendar, BarChart3 } from "lucide-react";
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +31,7 @@ export function MobileNav() {
           const isActive = pathname === item.path;
 
           return (
-            <motion.button
+            <m.button
               key={item.path}
               onTapStart={() => trigger("toggle")} // Subtle vibration for nav
               whileTap={isPhone ? { scale: 0.95 } : {}}
@@ -47,7 +47,7 @@ export function MobileNav() {
               <span className="text-xs font-medium leading-4">
                 {item.label}
               </span>
-            </motion.button>
+            </m.button>
           );
         })}
       </div>

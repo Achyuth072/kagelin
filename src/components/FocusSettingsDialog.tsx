@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import {
   Settings,
   Timer,
@@ -456,7 +456,7 @@ export function FocusSettingsDialog() {
   };
 
   const triggerButton = (
-    <motion.button
+    <m.button
       className={cn(
         buttonVariants({ variant: "ghost" }),
         "text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-all cursor-pointer",
@@ -466,7 +466,7 @@ export function FocusSettingsDialog() {
     >
       <Settings className="h-4 w-4 mr-2" />
       Adjust Settings
-    </motion.button>
+    </m.button>
   );
 
   if (isDesktop) {

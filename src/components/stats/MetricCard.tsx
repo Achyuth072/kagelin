@@ -3,6 +3,7 @@
 import { LucideIcon, Minus, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface MetricCardProps {
   title: string;
@@ -51,7 +52,7 @@ export function MetricCard({
               compact ? "text-2xl" : "text-2xl md:text-4xl",
             )}
           >
-            {value}
+            <AnimatedNumber value={value} />
           </p>
           {trend && (
             <div
@@ -77,7 +78,9 @@ export function MetricCard({
               ) : (
                 <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
               )}
-              <span className="tracking-tight">{Math.abs(trend.value)}%</span>
+              <span className="tracking-tight">
+                <AnimatedNumber value={Math.abs(trend.value)} suffix="%" />
+              </span>
             </div>
           )}
         </div>

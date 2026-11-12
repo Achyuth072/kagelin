@@ -2,7 +2,8 @@
 
 import { useRef } from "react";
 import { ShieldCheck, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { Button } from "@/components/ui/button";
 import { PrivacyPolicyLink } from "@/components/ui/privacy-policy-link";
 import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
@@ -35,7 +36,7 @@ export function TelemetryConsentPrompt() {
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.aside
+        <m.aside
           role="region"
           aria-label="Telemetry consent"
           data-testid="telemetry-consent-prompt"
@@ -109,7 +110,7 @@ export function TelemetryConsentPrompt() {
               </button>
             </div>
           </div>
-        </motion.aside>
+        </m.aside>
       )}
     </AnimatePresence>
   );

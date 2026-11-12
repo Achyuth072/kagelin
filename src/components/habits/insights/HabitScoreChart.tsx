@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { computeScores } from "@/lib/utils/habit-score";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -131,7 +132,12 @@ export function HabitScoreChart({ habit, entries }: HabitScoreChartProps) {
             </span>
             <span className="text-muted-foreground mx-1.5">·</span>
             <span className="font-semibold" style={{ color: habit.color }}>
-              {activePoint.score}% Score
+              <AnimatedNumber
+                value={activePoint.score}
+                suffix="%"
+                duration={160}
+              />{" "}
+              Score
             </span>
           </div>
         )}

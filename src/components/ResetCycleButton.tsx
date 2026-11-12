@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import { Square } from "lucide-react";
 import {
   Tooltip,
@@ -74,7 +74,7 @@ export function ResetCycleButton({
     <>
       <Tooltip>
         <TooltipTrigger asChild>
-          <motion.button
+          <m.button
             className={cn(
               "h-12 w-12 rounded-full border border-border/80 bg-background/50 hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-seijaku active:scale-95 text-muted-foreground hover:text-foreground cursor-pointer",
               className,
@@ -85,7 +85,7 @@ export function ResetCycleButton({
             aria-label="Reset timer and cycle"
           >
             <Square className="h-5 w-5" strokeWidth={2.25} />
-          </motion.button>
+          </m.button>
         </TooltipTrigger>
         <TooltipContent side="top">Reset timer and cycle</TooltipContent>
       </Tooltip>

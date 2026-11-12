@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,7 @@ export default function AddEventFab({ onClick }: AddEventFabProps) {
   const { trigger, isPhone } = useHaptic();
 
   return (
-    <motion.button
+    <m.button
       data-testid="fab"
       onTapStart={() => trigger("thud")}
       whileTap={isPhone ? { scale: 0.95 } : {}}
@@ -30,6 +30,6 @@ export default function AddEventFab({ onClick }: AddEventFabProps) {
       aria-label="Create event"
     >
       <Plus className="h-5 w-5 [@media(max-height:400px)]:h-4 [@media(max-height:400px)]:w-4" />
-    </motion.button>
+    </m.button>
   );
 }

@@ -14,6 +14,7 @@ import {
 } from "@/lib/utils/projections";
 import { cn } from "@/lib/utils";
 import { ReadableText } from "@/components/encryption/ReadableText";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface ProjectionsCardProps {
   className?: string;
@@ -137,7 +138,7 @@ function ProjectionMetric({
           {label}
         </span>
         <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums">
-          {projected}
+          <AnimatedNumber value={projected} />
         </span>
       </div>
       <div className="h-2 sm:h-1.5 overflow-hidden rounded-[3px] bg-secondary/40">

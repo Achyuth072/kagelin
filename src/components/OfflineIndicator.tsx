@@ -2,7 +2,8 @@
 
 import { useRef } from "react";
 import { WifiOff } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { useIsOnline } from "@/lib/hooks/useIsOnline";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
@@ -28,7 +29,7 @@ export function OfflineIndicator() {
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.div
+        <m.div
           data-testid="offline-indicator"
           initial={{ y: offscreenY, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -70,7 +71,7 @@ export function OfflineIndicator() {
               </span>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

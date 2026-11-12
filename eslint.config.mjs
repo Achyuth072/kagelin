@@ -59,6 +59,11 @@ const eslintConfig = defineConfig([
               message:
                 "Import notify from '@/lib/notify' instead — see docs/adr/0008-toasts-behind-owned-notify-interface.md.",
             },
+            {
+              name: "framer-motion",
+              message:
+                "Import from 'motion/react' or 'motion/react-m' instead.",
+            },
           ],
         },
       ],

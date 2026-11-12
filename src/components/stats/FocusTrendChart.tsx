@@ -23,6 +23,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LineChart as LineChartIcon } from "lucide-react";
 import type { StatsPeriod } from "@/lib/types/stats";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface FocusTrendChartProps {
   data: TrendDataPoint[];
@@ -101,11 +102,18 @@ export function FocusTrendChart({
                   {activePoint.tooltipLabel}:
                 </span>
                 <span className="text-brand font-semibold">
-                  {activePoint.hours}h
+                  <AnimatedNumber
+                    value={activePoint.hours}
+                    suffix="h"
+                    duration={160}
+                  />
                 </span>
                 <span className="text-muted-foreground mx-1.5">•</span>
                 <span>
-                  {activePoint.tasksCompleted}{" "}
+                  <AnimatedNumber
+                    value={activePoint.tasksCompleted}
+                    duration={160}
+                  />{" "}
                   {activePoint.tasksCompleted === 1 ? "task" : "tasks"}
                 </span>
               </p>

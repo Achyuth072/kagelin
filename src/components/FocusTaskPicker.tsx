@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import {
   Dialog,
   DialogContent,
@@ -276,7 +276,7 @@ export function FocusTaskPicker() {
   return (
     <>
       <div className="flex justify-center mt-4 mb-0">
-        <motion.button
+        <m.button
           onClick={handleChipTap}
           whileTap={{ scale: 0.97 }}
           className={cn(
@@ -305,7 +305,7 @@ export function FocusTaskPicker() {
               Add task
             </span>
           )}
-        </motion.button>
+        </m.button>
       </div>
 
       {isDesktop ? (

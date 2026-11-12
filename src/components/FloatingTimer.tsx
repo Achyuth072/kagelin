@@ -2,22 +2,16 @@
 
 import React, { memo, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { Play, Pause, X, Maximize2 } from "lucide-react";
+import { AnimatedCountdown } from "@/components/ui/animated-countdown";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMeasuredOffset } from "@/lib/hooks/useMeasuredOffset";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimer } from "@/components/TimerProvider";
-
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, "0")}:${secs
-    .toString()
-    .padStart(2, "0")}`;
-}
 
 export const FloatingTimer = memo(function FloatingTimer() {
   const mode = useTimerStore((s) => s.state.mode);
@@ -69,7 +63,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
   return (
     <AnimatePresence>
       {shouldShow && (
-        <motion.div
+        <m.div
           ref={timerRef}
           data-testid="floating-timer"
           initial={
@@ -100,7 +94,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
           </div>
 
           <div className="text-3xl font-light font-mono tracking-tight text-foreground tabular-nums text-center mb-3">
-            {formatTime(remainingSeconds)}
+            <AnimatedCountdown seconds={remainingSeconds} />
           </div>
 
           <div className="flex items-center justify-center gap-2">
@@ -143,7 +137,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
                 ? "Cycle Complete"
                 : `Break after Session ${completedSessions}`}
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

@@ -3,57 +3,56 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SwipeableTaskContent } from "@/components/tasks/SwipeableTaskContent";
 import React from "react";
-import { useTransform } from "framer-motion";
+import { useTransform } from "motion/react";
 
-// Mock framer-motion to capture props
-vi.mock("framer-motion", async () => {
+// Mock motion/react and motion/react-m to capture props
+vi.mock("motion/react", () => ({
+  useMotionValue: vi.fn(() => ({ get: () => 0, set: vi.fn(), on: vi.fn() })),
+  useMotionValueEvent: vi.fn(),
+  animate: vi.fn(),
+  useTransform: vi.fn((_val, _from, _to) => ({ get: () => 0 })),
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
+
+vi.mock("motion/react-m", async () => {
   const React = await import("react");
-  return {
-    motion: {
-      div: (() => {
-        const Div = React.forwardRef(
-          (
-            {
-              children,
-              drag,
-              dragElastic,
-              dragConstraints,
-              _initial,
-              _animate,
-              _exit,
-              _transition,
-              ...props
-            }: any,
-            ref: any,
-          ) => {
-            return (
-              <div
-                {...props}
-                ref={ref}
-                data-drag={drag}
-                data-drag-elastic={
-                  dragElastic ? JSON.stringify(dragElastic) : undefined
-                }
-                data-drag-constraints={
-                  dragConstraints ? JSON.stringify(dragConstraints) : undefined
-                }
-              >
-                {children}
-              </div>
-            );
-          },
-        );
-        Div.displayName = "MotionDiv";
-        return Div;
-      })(),
+  const Div = React.forwardRef(
+    (
+      {
+        children,
+        drag,
+        dragElastic,
+        dragConstraints,
+        _initial,
+        _animate,
+        _exit,
+        _transition,
+        ...props
+      }: any,
+      ref: any,
+    ) => {
+      return (
+        <div
+          {...props}
+          ref={ref}
+          data-drag={drag}
+          data-drag-elastic={
+            dragElastic ? JSON.stringify(dragElastic) : undefined
+          }
+          data-drag-constraints={
+            dragConstraints ? JSON.stringify(dragConstraints) : undefined
+          }
+        >
+          {children}
+        </div>
+      );
     },
-    useMotionValue: vi.fn(() => ({ get: () => 0, set: vi.fn(), on: vi.fn() })),
-    useMotionValueEvent: vi.fn(),
-    animate: vi.fn(),
-    useTransform: vi.fn((_val, _from, _to) => ({ get: () => 0 })),
-    AnimatePresence: ({ children }: { children: React.ReactNode }) => (
-      <>{children}</>
-    ),
+  );
+  Div.displayName = "MotionDiv";
+  return {
+    div: Div,
   };
 });
 

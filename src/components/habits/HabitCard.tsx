@@ -27,6 +27,7 @@ import {
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { ReadableText } from "@/components/encryption/ReadableText";
 import { isUnreadable } from "@/lib/crypto/unreadable";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface HabitCardProps {
   habit: HabitWithEntries;
@@ -247,7 +248,7 @@ export function HabitCard({
             )}
             <span>
               <span className="font-semibold text-foreground/90">
-                {currentStreak}
+                <AnimatedNumber value={currentStreak} />
               </span>{" "}
               streak
             </span>

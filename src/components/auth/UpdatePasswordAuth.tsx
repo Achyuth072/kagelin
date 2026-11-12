@@ -7,7 +7,7 @@ import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2 } from "lucide-react";
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import { AuthPasswordField } from "@/components/auth/AuthPasswordField";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { AuthErrorMessage } from "@/components/auth/AuthErrorMessage";
@@ -81,7 +81,7 @@ export function UpdatePasswordAuth() {
 
   return (
     <div className="h-dvh w-full flex items-center justify-center px-4 bg-background">
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md w-full space-y-4 px-4 py-8 sm:p-8 rounded-2xl border border-border bg-card shadow-sm"
@@ -168,7 +168,7 @@ export function UpdatePasswordAuth() {
             </form>
           </>
         )}
-      </motion.div>
+      </m.div>
     </div>
   );
 }
