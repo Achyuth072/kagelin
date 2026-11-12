@@ -10,7 +10,7 @@ import { FocusSettingsDialog } from "@/components/FocusSettingsDialog";
 import { FocusTaskPicker } from "@/components/FocusTaskPicker";
 import { FocusSubtaskList } from "@/components/FocusSubtaskList";
 import { FocusSyncIndicator } from "@/components/FocusSyncIndicator";
-import { CancelSessionButton } from "@/components/CancelSessionButton";
+import { StopSessionButton } from "@/components/StopSessionButton";
 import { FullscreenToggle } from "@/components/FullscreenToggle";
 import type { TimerMode } from "@/lib/types/timer";
 import { cn } from "@/lib/utils";
@@ -176,7 +176,7 @@ export default function FocusPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <ResetCycleButton
+              <StopSessionButton
                 className={sideControlCls}
                 isPhone={isPhone}
                 onStopExecuted={() => {
@@ -214,7 +214,11 @@ export default function FocusPage() {
               </m.button>
             </div>
 
-            <CancelSessionButton />
+            <ResetCycleButton
+              onResetExecuted={() => {
+                if (isPiPActive) closePiP();
+              }}
+            />
 
             <div className="mt-16">
               <FocusSettingsDialog />

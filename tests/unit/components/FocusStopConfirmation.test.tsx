@@ -5,18 +5,22 @@ import FocusPage from "@/../app/focus/page";
 
 const {
   mockStop,
+  mockCancel,
   mockStart,
   mockPause,
   mockSkip,
   mockTrigger,
+  mockNotify,
   mockStateRef,
   mockSettingsRef,
 } = vi.hoisted(() => ({
   mockStop: vi.fn(),
+  mockCancel: vi.fn(),
   mockStart: vi.fn(),
   mockPause: vi.fn(),
   mockSkip: vi.fn(),
   mockTrigger: vi.fn(),
+  mockNotify: vi.fn(),
   mockStateRef: {
     current: {
       mode: "focus" as const,
@@ -50,7 +54,7 @@ vi.mock("@/components/TimerProvider", () => ({
     skip: mockSkip,
   }),
   useTimerActions: () => ({
-    cancel: vi.fn(),
+    cancel: mockCancel,
   }),
 }));
 
@@ -60,6 +64,10 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
     isPhone: false,
     hapticsEnabled: true,
   }),
+}));
+
+vi.mock("@/lib/notify", () => ({
+  notify: mockNotify,
 }));
 
 vi.mock("@/components/providers/PiPProvider", () => ({
@@ -124,7 +132,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/focus",
 }));
 
-describe("FocusPage Stop & Reset Cycle Confirmation", () => {
+describe("FocusPage Stop & Reset Cycle Controls", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStateRef.current = {
@@ -136,61 +144,56 @@ describe("FocusPage Stop & Reset Cycle Confirmation", () => {
     };
   });
 
-  it("has accessible label for the square stop button", () => {
+  it("has accessible label for the square stop button and is disabled when idle", () => {
     render(<FocusPage />);
     const stopBtn = screen.getByRole("button", {
-      name: "Reset timer and cycle",
+      name: "Stop session",
     });
     expect(stopBtn).toBeInTheDocument();
+    expect(stopBtn).toBeDisabled();
   });
 
-  it("stops immediately if timer is idle and completedSessions is 0", () => {
+  it("stops active session via cancel() safely without dialog when running", () => {
+    mockStateRef.current.isRunning = true;
+    mockStateRef.current.remainingSeconds = 1200;
+    mockStateRef.current.completedSessions = 2;
+
     render(<FocusPage />);
     const stopBtn = screen.getByRole("button", {
-      name: "Reset timer and cycle",
+      name: "Stop session",
     });
+    expect(stopBtn).toBeEnabled();
+
     fireEvent.click(stopBtn);
-    expect(mockStop).toHaveBeenCalledTimes(1);
+    expect(mockCancel).toHaveBeenCalledTimes(1);
+    expect(mockStop).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("hides Reset cycle button when completedSessions is 0", () => {
+    render(<FocusPage />);
     expect(
-      screen.queryByText(/Reset all completed sessions/i),
+      screen.queryByRole("button", { name: /Reset cycle/i }),
     ).not.toBeInTheDocument();
   });
 
-  it("prompts confirmation when completedSessions > 0", () => {
+  it("shows Reset cycle button when completedSessions > 0 and prompts confirmation before calling stop()", () => {
     mockStateRef.current.completedSessions = 2;
     render(<FocusPage />);
-    const stopBtn = screen.getByRole("button", {
-      name: "Reset timer and cycle",
+
+    const resetCycleBtn = screen.getByRole("button", {
+      name: "Reset cycle (starts from Session 1)",
     });
-    fireEvent.click(stopBtn);
+    expect(resetCycleBtn).toBeInTheDocument();
 
+    fireEvent.click(resetCycleBtn);
+
+    expect(screen.getByText("Reset focus cycle?")).toBeInTheDocument();
     expect(mockStop).not.toHaveBeenCalled();
-    expect(screen.getByText("Reset timer and cycle?")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Reset all completed sessions and restart cycle/i),
-    ).toBeInTheDocument();
 
-    // Clicking confirm resets cycle
+    // Clicking confirm executes stop
     const confirmBtn = screen.getByRole("button", { name: "Reset cycle" });
     fireEvent.click(confirmBtn);
     expect(mockStop).toHaveBeenCalledTimes(1);
-  });
-
-  it("prompts confirmation when a session is actively running", () => {
-    mockStateRef.current.isRunning = true;
-    mockStateRef.current.completedSessions = 0;
-    render(<FocusPage />);
-    const stopBtn = screen.getByRole("button", {
-      name: "Reset timer and cycle",
-    });
-    fireEvent.click(stopBtn);
-
-    expect(mockStop).not.toHaveBeenCalled();
-    expect(screen.getByText("Reset timer and cycle?")).toBeInTheDocument();
-
-    // Clicking cancel retains progress
-    const cancelBtn = screen.getByRole("button", { name: "Keep progress" });
-    fireEvent.click(cancelBtn);
-    expect(mockStop).not.toHaveBeenCalled();
   });
 });

@@ -53,6 +53,7 @@ type PgPayload = { new: Record<string, unknown> };
 let pgCallback: ((payload: PgPayload) => void) | null = null;
 let pgConfig: Record<string, unknown> | null = null;
 let _statusCallback: ((status: string) => void) | null = null;
+let mockSubscribeStatus: string | null = "SUBSCRIBED";
 
 vi.mock("@/components/AuthProvider", () => ({
   useAuth: mockUseAuth,
@@ -74,7 +75,7 @@ vi.mock("@/lib/supabase/client", () => ({
       ),
       subscribe: vi.fn((callback: (status: string) => void) => {
         _statusCallback = callback || null;
-        if (callback) callback("SUBSCRIBED");
+        if (callback && mockSubscribeStatus) callback(mockSubscribeStatus);
         return { unsubscribe: vi.fn() };
       }),
     };
@@ -117,6 +118,7 @@ describe("useTimerSync", () => {
     pgCallback = null;
     pgConfig = null;
     _statusCallback = null;
+    mockSubscribeStatus = "SUBSCRIBED";
     hydrate.row = null;
     setServerOffset(0);
     mockRpc.mockImplementation(async () => ({ data: Date.now(), error: null }));
@@ -598,5 +600,114 @@ describe("useTimerSync", () => {
     // unless REPLICA IDENTITY FULL is set; RLS already scopes delivery to the
     // user's own row, so no filter is needed.
     expect(pgConfig?.filter).toBeUndefined();
+  });
+
+  // --- Regression: guest mode, signed-out, and failed realtime must not strand at 00:00 ---
+
+  it("marks server clock ready in guest mode so sessions complete instead of sticking at 00:00", () => {
+    vi.useFakeTimers();
+    resetServerClock();
+    mockUseAuth.mockReturnValueOnce({
+      user: { id: "guest" },
+      isGuestMode: true,
+      loading: false,
+    });
+
+    useTimerStore.setState((s) => ({
+      state: {
+        ...s.state,
+        mode: "focus",
+        isRunning: true,
+        remainingSeconds: 60,
+        completedSessions: 0,
+        endsAt: Date.now() - 1000,
+      },
+    }));
+
+    renderHook(() => useTimerSync());
+
+    expect(isServerClockReady()).toBe(true);
+    expect(getServerOffset()).toBe(0);
+
+    act(() => {
+      useTimerStore.getState().reconcile();
+    });
+
+    const state = useTimerStore.getState().state;
+    expect(state.mode).toBe("shortBreak");
+    expect(state.completedSessions).toBe(1);
+  });
+
+  it("marks server clock ready when signed out (not loading, no user)", () => {
+    resetServerClock();
+    mockUseAuth.mockReturnValueOnce({
+      user: null,
+      isGuestMode: false,
+      loading: false,
+    });
+
+    renderHook(() => useTimerSync());
+
+    expect(isServerClockReady()).toBe(true);
+    expect(getServerOffset()).toBe(0);
+  });
+
+  it("defers server clock readiness while auth is still loading", () => {
+    resetServerClock();
+    mockUseAuth.mockReturnValueOnce({
+      user: null,
+      isGuestMode: false,
+      loading: true,
+    });
+
+    renderHook(() => useTimerSync());
+
+    expect(isServerClockReady()).toBe(false);
+  });
+
+  it("probes server clock on mount even when Realtime never reaches SUBSCRIBED", async () => {
+    vi.useFakeTimers();
+    resetServerClock();
+    mockSubscribeStatus = "TIMED_OUT";
+
+    useTimerStore.setState((s) => ({
+      state: {
+        ...s.state,
+        mode: "focus",
+        isRunning: true,
+        remainingSeconds: 5,
+        completedSessions: 0,
+        endsAt: Date.now() - 1000,
+      },
+    }));
+
+    renderHook(() => useTimerSync());
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(isServerClockReady()).toBe(true);
+
+    act(() => {
+      useTimerStore.getState().reconcile();
+    });
+
+    const state = useTimerStore.getState().state;
+    expect(state.mode).toBe("shortBreak");
+    expect(state.completedSessions).toBe(1);
+  });
+
+  it("times out hanging server_now_ms RPC and falls back to local clock", async () => {
+    vi.useFakeTimers();
+    resetServerClock();
+    mockRpc.mockImplementation(() => new Promise(() => {}));
+
+    renderHook(() => useTimerSync());
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(isServerClockReady()).toBe(true);
+    expect(getServerOffset()).toBe(0);
   });
 });

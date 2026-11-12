@@ -1,13 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import * as m from "motion/react-m";
-import { Square } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,89 +14,66 @@ import {
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimer } from "@/components/TimerProvider";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 
 export interface ResetCycleButtonProps {
   className?: string;
-  isPhone?: boolean;
-  onStopExecuted?: () => void;
+  onResetExecuted?: () => void;
 }
+
+const ACTIVE_CLASSES =
+  "text-[11px] font-medium uppercase tracking-widest text-muted-foreground/70 hover:text-muted-foreground hover:underline underline-offset-4 transition-colors duration-150 cursor-pointer";
 
 export function ResetCycleButton({
   className,
-  isPhone = false,
-  onStopExecuted,
+  onResetExecuted,
 }: ResetCycleButtonProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const state = useTimerStore((s) => s.state);
-  const totalSeconds = useTimerStore((s) => {
-    const settings = s.settings;
-    switch (s.state.mode) {
-      case "focus":
-        return settings.focusDuration * 60;
-      case "shortBreak":
-        return settings.shortBreakDuration * 60;
-      case "longBreak":
-        return settings.longBreakDuration * 60;
-    }
-  });
+  const completedSessions = useTimerStore((s) => s.state.completedSessions);
+  const mode = useTimerStore((s) => s.state.mode);
 
   const { stop } = useTimer();
   const { trigger } = useHaptic();
 
-  const handleStop = () => {
-    const isSessionActive =
-      state.isRunning || state.remainingSeconds < totalSeconds;
-    const hasProgress = state.completedSessions > 0 || isSessionActive;
+  const hasCycleProgress = completedSessions > 0 || mode === "longBreak";
 
-    if (hasProgress) {
-      setConfirmOpen(true);
-    } else {
-      stop();
-      onStopExecuted?.();
-    }
-  };
+  if (!hasCycleProgress) return null;
 
-  const executeStop = () => {
+  const handleReset = () => {
+    trigger("thud");
     stop();
-    onStopExecuted?.();
+    onResetExecuted?.();
     setConfirmOpen(false);
+    notify("Cycle reset", {
+      duration: 1500,
+    });
   };
 
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <m.button
-            className={cn(
-              "h-12 w-12 rounded-full border border-border/80 bg-background/50 hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-seijaku active:scale-95 text-muted-foreground hover:text-foreground cursor-pointer",
-              className,
-            )}
-            onTapStart={() => trigger("thud")}
-            whileTap={isPhone ? { scale: 0.95 } : {}}
-            onClick={handleStop}
-            aria-label="Reset timer and cycle"
-          >
-            <Square className="h-5 w-5" strokeWidth={2.25} />
-          </m.button>
-        </TooltipTrigger>
-        <TooltipContent side="top">Reset timer and cycle</TooltipContent>
-      </Tooltip>
+      <div className="py-4 flex justify-center">
+        <button
+          onClick={() => setConfirmOpen(true)}
+          className={cn(ACTIVE_CLASSES, className)}
+          type="button"
+          aria-label="Reset cycle (starts from Session 1)"
+        >
+          Reset cycle
+        </button>
+      </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset timer and cycle?</AlertDialogTitle>
+            <AlertDialogTitle>Reset focus cycle?</AlertDialogTitle>
             <AlertDialogDescription>
-              Reset all completed sessions and restart cycle? This will wipe
-              your multi-session progress. To abort only the active interval
-              while preserving your completed sessions, use Cancel session
-              instead.
+              Reset all completed sessions and start a new cycle from Session 1?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep progress</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={executeStop}>
+            <AlertDialogAction variant="destructive" onClick={handleReset}>
               Reset cycle
             </AlertDialogAction>
           </AlertDialogFooter>

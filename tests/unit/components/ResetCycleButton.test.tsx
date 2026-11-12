@@ -1,17 +1,26 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import React from "react";
 import { ResetCycleButton } from "@/components/ResetCycleButton";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { DEFAULT_TIMER_SETTINGS } from "@/lib/types/timer";
 
-const mockStop = vi.fn();
+const { mockStop, mockTrigger, mockNotify } = vi.hoisted(() => ({
+  mockStop: vi.fn(),
+  mockTrigger: vi.fn(),
+  mockNotify: vi.fn(),
+}));
+
 vi.mock("@/components/TimerProvider", () => ({
   useTimer: () => ({ stop: mockStop }),
 }));
 
-const mockTrigger = vi.fn();
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: mockTrigger }),
+}));
+
+vi.mock("@/lib/notify", () => ({
+  notify: mockNotify,
 }));
 
 describe("ResetCycleButton", () => {
@@ -31,23 +40,15 @@ describe("ResetCycleButton", () => {
     });
   });
 
-  it("calls stop directly when no progress has been made", () => {
-    const onStopExecuted = vi.fn();
-    render(<ResetCycleButton onStopExecuted={onStopExecuted} />);
-
-    const button = screen.getByRole("button", {
-      name: "Reset timer and cycle",
-    });
-    fireEvent.click(button);
-
-    expect(mockStop).toHaveBeenCalledTimes(1);
-    expect(onStopExecuted).toHaveBeenCalledTimes(1);
+  it("does not render when there is no cycle progress", () => {
+    const { container } = render(<ResetCycleButton />);
+    expect(container.innerHTML).toBe("");
     expect(
-      screen.queryByText("Reset timer and cycle?"),
+      screen.queryByRole("button", { name: /Reset cycle/i }),
     ).not.toBeInTheDocument();
   });
 
-  it("opens confirmation dialog when timer has progress", () => {
+  it("renders when completedSessions > 0 and prompts confirmation dialog", () => {
     useTimerStore.setState((s) => ({
       ...s,
       state: {
@@ -59,11 +60,13 @@ describe("ResetCycleButton", () => {
     render(<ResetCycleButton />);
 
     const button = screen.getByRole("button", {
-      name: "Reset timer and cycle",
+      name: "Reset cycle (starts from Session 1)",
     });
+    expect(button).toBeInTheDocument();
+
     fireEvent.click(button);
 
-    expect(screen.getByText("Reset timer and cycle?")).toBeInTheDocument();
+    expect(screen.getByText("Reset focus cycle?")).toBeInTheDocument();
     expect(mockStop).not.toHaveBeenCalled();
 
     const cancelBtn = screen.getByRole("button", { name: "Keep progress" });
@@ -72,26 +75,50 @@ describe("ResetCycleButton", () => {
     expect(mockStop).not.toHaveBeenCalled();
   });
 
-  it("executes stop on confirmation", () => {
+  it("renders when mode is longBreak even if completedSessions was adjusted", () => {
     useTimerStore.setState((s) => ({
       ...s,
       state: {
         ...s.state,
-        isRunning: true,
-        remainingSeconds: 20 * 60,
+        mode: "longBreak",
+        completedSessions: 4,
       },
     }));
 
-    const onStopExecuted = vi.fn();
-    render(<ResetCycleButton onStopExecuted={onStopExecuted} />);
+    render(<ResetCycleButton />);
+
+    expect(
+      screen.getByRole("button", {
+        name: "Reset cycle (starts from Session 1)",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("executes stop and notification on confirmation", () => {
+    useTimerStore.setState((s) => ({
+      ...s,
+      state: {
+        ...s.state,
+        completedSessions: 3,
+      },
+    }));
+
+    const onResetExecuted = vi.fn();
+    render(<ResetCycleButton onResetExecuted={onResetExecuted} />);
 
     fireEvent.click(
-      screen.getByRole("button", { name: "Reset timer and cycle" }),
+      screen.getByRole("button", {
+        name: "Reset cycle (starts from Session 1)",
+      }),
     );
     const confirmBtn = screen.getByRole("button", { name: "Reset cycle" });
     fireEvent.click(confirmBtn);
 
     expect(mockStop).toHaveBeenCalledTimes(1);
-    expect(onStopExecuted).toHaveBeenCalledTimes(1);
+    expect(onResetExecuted).toHaveBeenCalledTimes(1);
+    expect(mockTrigger).toHaveBeenCalledWith("thud");
+    expect(mockNotify).toHaveBeenCalledWith("Cycle reset", {
+      duration: 1500,
+    });
   });
 });
