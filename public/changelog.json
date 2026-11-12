@@ -1,5 +1,40 @@
 [
   {
+    "version": "1.51.0",
+    "date": "2026-11-12",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "History & Log tab in habit insights explaining that tapping a date records a past entry",
+        "Habit identity header with icon, name, and frequency, plus trend deltas on the overview cards",
+        "Reset cycle control on the focus screen that restarts from Session 1"
+      ],
+      "Improved": [
+        "Habit month grid rebuilt as a compact matrix with calendar-matched controls, and the frequency grid scrolls to recent months on mobile",
+        "Habit form redesigned with an icon avatar header and rounded day chips",
+        "Task cards across list and board share one visual language, with a continuous reading surface and priority glyph",
+        "Two-row task property strip, with tuned swipe physics and clearer affordances on mobile cards",
+        "Stats trends bucket adaptively, support mobile scrubbing, and the time-of-day heatmap is rebuilt as a full 24-hour weekday grid",
+        "Project create, edit, and archive dialogs now match the rest of the app's form layout",
+        "Surfaces, overlays, and the command menu share one matte look and no longer clip",
+        "Event reminder controls expand inline inside the event view",
+        "Subtask groups load without the previous delay and collapse in step with the sidebar",
+        "Guest-mode habit reminders are labeled as needing an account"
+      ],
+      "Fixed": [
+        "Mobile drawers no longer pop the virtual keyboard open on launch",
+        "Toasts resist text selection and gain a desktop close button",
+        "Task selection rings appear only for keyboard focus",
+        "Event reminders no longer truncate",
+        "The Do Date chip meets contrast",
+        "The task project selector lost its duplicate icon and color dot",
+        "The focus play button shows by default on mobile list cards",
+        "Signing in returns you to the page you started from",
+        "Disconnecting a calendar account asks for confirmation"
+      ]
+    }
+  },
+  {
     "version": "1.51.0-preview.3",
     "date": "2026-11-12",
     "channel": "preview",
@@ -781,16 +816,6 @@
     "sections": {
       "Added": [
         "Five-option frequency authoring and last-done/next display for 1-in-D habits"
-      ]
-    }
-  },
-  {
-    "version": "1.45.0-preview.1",
-    "date": "2026-09-25",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Lossless N-in-D habit frequency via frequency_days"
       ]
     }
   }
