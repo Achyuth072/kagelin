@@ -39,4 +39,32 @@ describe("AnimatedCountdown", () => {
     expect(div).not.toBeNull();
     expect(div?.className).toContain("font-mono");
   });
+
+  it("constrains the tens digit (position 1) to max 5 so the ones digit (position 0) is not clipped", () => {
+    const { container } = render(<AnimatedCountdown seconds={59} />);
+    const flows = container.querySelectorAll("number-flow-react");
+    const secondsFlow = flows[1] as HTMLElement & {
+      digits?: Record<number, { max?: number }>;
+    };
+    expect(secondsFlow.digits).toEqual({ 1: { max: 5 } });
+  });
+
+  it("renders 120:00 for 7200 seconds (120 minutes maximum)", () => {
+    const { container } = render(<AnimatedCountdown seconds={7200} />);
+    expect(getRenderedTime(container)).toBe("120:00");
+  });
+
+  it("renders 119:59 for 7199 seconds", () => {
+    const { container } = render(<AnimatedCountdown seconds={7199} />);
+    expect(getRenderedTime(container)).toBe("119:59");
+  });
+
+  it("leaves minutes unconstrained so 3 digits and tens digits >= 6 render without clipping", () => {
+    const { container } = render(<AnimatedCountdown seconds={7200} />);
+    const flows = container.querySelectorAll("number-flow-react");
+    const minutesFlow = flows[0] as HTMLElement & {
+      digits?: Record<number, { max?: number }>;
+    };
+    expect(minutesFlow.digits).toBeUndefined();
+  });
 });

@@ -39,7 +39,7 @@ export function AnimatedCountdown({
           value={secs}
           format={{ minimumIntegerDigits: 2 }}
           trend={-1}
-          digits={{ 0: { max: 5 } }}
+          digits={{ 1: { max: 5 } }}
           transformTiming={SEIJAKU_TIMING}
           spinTiming={SEIJAKU_TIMING}
           respectMotionPreference
