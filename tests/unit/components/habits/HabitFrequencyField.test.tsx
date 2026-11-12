@@ -181,7 +181,9 @@ describe("HabitFrequencyField — legacy N per day", () => {
   it("shows the count for a D=1 habit with count > 1", () => {
     renderField({ count: 3, period: "day" });
     expect(isSelected(/daily/i)).toBe(true);
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: /habit frequency count/i }),
+    ).toHaveValue("3");
     expect(screen.getByText(/times per day/i)).toBeInTheDocument();
   });
 

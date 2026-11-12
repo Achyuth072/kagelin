@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import { VirtuosoMockContext } from "react-virtuoso";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import type { Task, Project } from "@/lib/types/task";
 import type { ProcessedTasks, TaskGroup } from "@/lib/hooks/useTaskViewData";
@@ -145,5 +146,42 @@ describe("TaskListView", () => {
     expect(section).toBeInTheDocument();
     expect(screen.getByText("Today")).toBeInTheDocument();
     expect(screen.getByText("Grouped Task 2")).toBeInTheDocument();
+  });
+
+  it("virtualizes grouped sections when total tasks meet or exceed threshold", () => {
+    const tasks = Array.from({ length: 55 }, (_, i) =>
+      makeTask(`task-${i}`, `Virtualized Task ${i}`),
+    );
+    const virtualizedProps = {
+      ...defaultProps,
+      groupTasks: [
+        {
+          title: "Inbox",
+          tasks,
+        },
+      ],
+      processedTasks: {
+        active: [],
+        evening: [],
+        completed: [],
+        groups: [
+          {
+            title: "Inbox",
+            tasks,
+          },
+        ],
+      } as ProcessedTasks,
+    };
+
+    render(
+      <VirtuosoMockContext.Provider
+        value={{ viewportHeight: 1000, itemHeight: 50 }}
+      >
+        <TaskListView {...virtualizedProps} />
+      </VirtuosoMockContext.Provider>,
+    );
+    // With GroupedVirtuoso, sticky opaque section headers render
+    expect(screen.getByText("Inbox")).toBeInTheDocument();
+    expect(screen.getByText("Virtualized Task 1")).toBeInTheDocument();
   });
 });

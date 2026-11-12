@@ -7,12 +7,20 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { GroupedVirtuoso } from "react-virtuoso";
 import { TaskItem } from "./TaskItem";
 import SortableListTaskCard from "./SortableListTaskCard";
 import type { Task, Project } from "@/lib/types/task";
 import type { ProcessedTasks, TaskGroup } from "@/lib/hooks/useTaskViewData";
 import { cn } from "@/lib/utils";
 import { isSwipeHintDismissed, dismissSwipeHint } from "@/lib/utils/swipeHint";
+
+/**
+ * Threshold of total tasks across groups before virtualization activates.
+ * For smaller lists, native rendering preserves DOM compactness and zero scroll overhead.
+ * When above threshold, GroupedVirtuoso virtualizes rows while keeping sticky headers.
+ */
+const VIRTUALIZATION_THRESHOLD = 50;
 
 /**
  * DroppableContainer is a lightweight wrapper for dnd-kit drop zones.
@@ -131,13 +139,82 @@ function TaskListViewBase({
     setHintTaskId(null);
   };
 
+  const totalGroupedTasks = useMemo(
+    () => groups?.reduce((acc, g) => acc + g.tasks.length, 0) ?? 0,
+    [groups],
+  );
+  const shouldVirtualizeGroups =
+    groups != null && totalGroupedTasks >= VIRTUALIZATION_THRESHOLD;
+
+  const flattenedGroupTasks = useMemo(
+    () => (shouldVirtualizeGroups ? groups.flatMap((g) => g.tasks) : []),
+    [groups, shouldVirtualizeGroups],
+  );
+
+  const groupCounts = useMemo(
+    () => (shouldVirtualizeGroups ? groups.map((g) => g.tasks.length) : []),
+    [groups, shouldVirtualizeGroups],
+  );
+
   return (
     <div
       className="px-4 md:px-6 pb-12 md:pb-8 flex flex-col gap-8 touch-manipulation"
       data-testid="task-list-container"
     >
-      {/* 1. Grouped Tasks (Sortable) */}
+      {/* 1. Grouped Tasks (Sortable & Virtualized when above threshold) */}
+      {groups && shouldVirtualizeGroups && (
+        <GroupedVirtuoso
+          useWindowScroll
+          groupCounts={groupCounts}
+          data={flattenedGroupTasks}
+          computeItemKey={(index, item) =>
+            item ? (item as Task).id : `group-${index}`
+          }
+          groupContent={(groupIndex) => {
+            const group = groups[groupIndex];
+            if (!group) return null;
+            return (
+              <div className="bg-background pt-4 pb-2 z-10">
+                <SectionHeader title={group.title} count={group.tasks.length} />
+              </div>
+            );
+          }}
+          itemContent={(_index, groupIndex, task) => {
+            const group = groups[groupIndex];
+            const project = projectsMap?.get?.(task.project_id || "inbox");
+            const groupTaskIds = group ? group.tasks.map((t) => t.id) : [];
+
+            return (
+              <SortableContext
+                id={group?.title ?? "group"}
+                items={groupTaskIds}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="rounded-xl border border-border bg-background/50 overflow-hidden mb-1">
+                  <SortableListTaskCard
+                    key={task.id}
+                    task={task}
+                    onSelect={handleTaskClick}
+                    isKeyboardSelected={task.id === keyboardSelectedId}
+                    isDndActive={isDndActive}
+                    project={project}
+                    isDesktop={isDesktop}
+                    triggerHaptic={triggerHaptic}
+                    setActiveTaskId={setActiveTaskId}
+                    shouldShowHint={task.id === hintTaskId}
+                    onHintShown={
+                      task.id === hintTaskId ? handleHintShown : undefined
+                    }
+                  />
+                </div>
+              </SortableContext>
+            );
+          }}
+        />
+      )}
+
       {groups &&
+        !shouldVirtualizeGroups &&
         groups.map((group: TaskGroup) => {
           const groupTaskIds = group.tasks.map((t: Task) => t.id);
           return (

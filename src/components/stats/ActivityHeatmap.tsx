@@ -2,15 +2,19 @@
 
 import { useMemo, useRef, useLayoutEffect, useCallback } from "react";
 import { ActivityCalendar, type Activity } from "react-activity-calendar";
-import "react-activity-calendar/tooltips.css";
 import { useTheme } from "next-themes";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useHeatmapData } from "@/lib/hooks/useHeatmapData";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
 import { cn } from "@/lib/utils";
-import { Tooltip as ReactTooltip } from "react-tooltip";
 
 const BRAND_SCALE = [
   "hsl(var(--secondary))",
@@ -160,38 +164,42 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
         </div>
 
         <div className="relative">
-          <div
-            ref={setRefs}
-            className="w-full overflow-x-auto pb-4 custom-scrollbar min-w-0"
-          >
-            <div className="w-max mx-auto">
-              <ActivityCalendar
-                data={calendarData}
-                theme={theme}
-                colorScheme={(resolvedTheme as "light" | "dark") || "light"}
-                blockSize={15}
-                blockMargin={5}
-                blockRadius={2}
-                fontSize={13}
-                showColorLegend={true}
-                showMonthLabels={true}
-                showTotalCount={false}
-                labels={CALENDAR_LABELS}
-                renderBlock={(block, activity) => {
-                  const tooltip = renderTooltip(activity);
-                  return (
-                    <g
-                      data-tooltip-id="activity-tooltip"
-                      data-tooltip-content={tooltip}
-                    >
-                      {block}
-                    </g>
-                  );
-                }}
-              />
+          <TooltipProvider delayDuration={100}>
+            <div
+              ref={setRefs}
+              className="w-full overflow-x-auto pb-4 custom-scrollbar min-w-0"
+            >
+              <div className="w-max mx-auto">
+                <ActivityCalendar
+                  data={calendarData}
+                  theme={theme}
+                  colorScheme={(resolvedTheme as "light" | "dark") || "light"}
+                  blockSize={15}
+                  blockMargin={5}
+                  blockRadius={2}
+                  fontSize={13}
+                  showColorLegend={true}
+                  showMonthLabels={true}
+                  showTotalCount={false}
+                  labels={CALENDAR_LABELS}
+                  renderBlock={(block, activity) => {
+                    const tooltip = renderTooltip(activity);
+                    return (
+                      <Tooltip key={activity.date}>
+                        <TooltipTrigger asChild>{block}</TooltipTrigger>
+                        <TooltipContent
+                          side="top"
+                          className="bg-popover text-popover-foreground border-border/60 shadow-md text-[12px] font-medium px-2.5 py-1"
+                        >
+                          {tooltip}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  }}
+                />
+              </div>
             </div>
-          </div>
-          <ReactTooltip id="activity-tooltip" />
+          </TooltipProvider>
         </div>
       </div>
     </Card>

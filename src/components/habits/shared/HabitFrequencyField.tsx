@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Repeat, Minus, Plus } from "lucide-react";
+import { Repeat } from "lucide-react";
 import { IconCell } from "@/components/ui/IconCell";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { NumberField } from "@/components/ui/number-field";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { MAX_FREQUENCY_DAYS, type FrequencyPeriod } from "@/lib/types/habit";
 import {
@@ -64,10 +65,10 @@ export function HabitFrequencyField({
   });
   const mode = customPicked ? "custom" : deriveMode(days);
 
-  const setCount = (next: number) => {
+  const setCount = (next: number | null) => {
+    if (next == null) return;
     const clamped = Math.max(MIN_COUNT, Math.min(MAX_COUNT, next));
     if (clamped !== count) {
-      trigger("tick");
       onCountChange(clamped);
     }
   };
@@ -124,11 +125,16 @@ export function HabitFrequencyField({
         {/* Daily is 1-in-1, but pre-D habits may still be N per day. */}
         {(mode !== "daily" || count > 1) && (
           <div className="flex items-center gap-2 flex-wrap text-[13px] text-muted-foreground">
-            <CountStepper
+            <NumberField
               value={count}
               min={MIN_COUNT}
               max={MAX_COUNT}
-              onChange={setCount}
+              onValueChange={setCount}
+              aria-label="Habit frequency count"
+              decrementAriaLabel="Fewer times"
+              incrementAriaLabel="More times"
+              showSteppers
+              inputClassName="w-6 text-center"
             />
             <span className="shrink-0">
               {count === 1 ? "time" : "times"}
@@ -139,7 +145,28 @@ export function HabitFrequencyField({
             </span>
             {mode === "custom" && (
               <>
-                <DayInput value={days} onChange={onFrequencyDaysChange} />
+                <NumberField
+                  value={days}
+                  min={MIN_DAYS}
+                  max={MAX_FREQUENCY_DAYS}
+                  allowOutOfRange
+                  onValueChange={(val, details) => {
+                    if (details.reason === "input-blur") {
+                      if (val != null) {
+                        onFrequencyDaysChange(
+                          Math.max(MIN_DAYS, Math.min(MAX_FREQUENCY_DAYS, val)),
+                        );
+                      }
+                    } else if (val != null) {
+                      if (val >= MIN_DAYS && val <= MAX_FREQUENCY_DAYS) {
+                        onFrequencyDaysChange(val);
+                      }
+                    }
+                  }}
+                  showSteppers={false}
+                  aria-label="Number of days"
+                  inputClassName="w-16 text-center"
+                />
                 <span className="shrink-0">days</span>
               </>
             )}
@@ -147,83 +174,5 @@ export function HabitFrequencyField({
         )}
       </div>
     </div>
-  );
-}
-
-function CountStepper({
-  value,
-  min,
-  max,
-  onChange,
-}: {
-  value: number;
-  min: number;
-  max: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <div className="inline-flex items-center h-8 rounded-lg border border-border/40 bg-secondary/10 shrink-0">
-      <button
-        type="button"
-        onClick={() => onChange(value - 1)}
-        disabled={value <= min}
-        aria-label="Fewer times"
-        className="h-8 w-8 flex items-center justify-center rounded-l-lg text-muted-foreground transition-seijaku-fast hover:text-foreground hover:bg-secondary/40 disabled:opacity-40 disabled:pointer-events-none"
-      >
-        <Minus className="h-4 w-4" strokeWidth={2.25} />
-      </button>
-      <span className="w-6 text-center text-[13px] font-medium tabular-nums text-foreground">
-        {value}
-      </span>
-      <button
-        type="button"
-        onClick={() => onChange(value + 1)}
-        disabled={value >= max}
-        aria-label="More times"
-        className="h-8 w-8 flex items-center justify-center rounded-r-lg text-muted-foreground transition-seijaku-fast hover:text-foreground hover:bg-secondary/40 disabled:opacity-40 disabled:pointer-events-none"
-      >
-        <Plus className="h-4 w-4" strokeWidth={2.25} />
-      </button>
-    </div>
-  );
-}
-
-function DayInput({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (days: number) => void;
-}) {
-  // Clamping per keystroke would turn a leading "1" into 2 (MIN_DAYS).
-  const [draft, setDraft] = useState<string | null>(null);
-  const inRange = (n: number) => n >= MIN_DAYS && n <= MAX_FREQUENCY_DAYS;
-
-  const change = (raw: string) => {
-    setDraft(raw);
-    const n = parseInt(raw, 10);
-    if (inRange(n)) onChange(n);
-  };
-
-  const blur = () => {
-    if (draft === null) return;
-    const n = parseInt(draft, 10);
-    if (!isNaN(n) && !inRange(n)) {
-      onChange(Math.max(MIN_DAYS, Math.min(MAX_FREQUENCY_DAYS, n)));
-    }
-    setDraft(null);
-  };
-
-  return (
-    <input
-      type="number"
-      value={draft ?? value}
-      min={MIN_DAYS}
-      max={MAX_FREQUENCY_DAYS}
-      onChange={(e) => change(e.target.value)}
-      onBlur={blur}
-      aria-label="Number of days"
-      className="h-8 w-16 rounded-lg border border-border/40 bg-secondary/10 text-center text-[13px] font-medium tabular-nums text-foreground outline-none focus:ring-1 focus:ring-brand/50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-    />
   );
 }

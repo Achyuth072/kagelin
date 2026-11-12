@@ -3,6 +3,7 @@
 import { Target } from "lucide-react";
 import { IconCell } from "@/components/ui/IconCell";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { NumberField } from "@/components/ui/number-field";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 
 export type TargetType = "at_least" | "at_most";
@@ -44,17 +45,16 @@ export function HabitTargetField({
         <Target className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
       </IconCell>
       <div className="flex-1 min-w-0 flex items-center gap-2">
-        <input
-          type="number"
-          inputMode="decimal"
+        <NumberField
+          value={targetValue ?? null}
+          onValueChange={(val) => onTargetValueChange(val ?? undefined)}
+          min={0}
+          step={1}
+          showSteppers={false}
           placeholder="0"
           aria-label="Target value"
-          value={targetValue ?? ""}
-          onChange={(e) => {
-            const raw = e.target.value;
-            onTargetValueChange(raw === "" ? undefined : Number(raw));
-          }}
-          className="h-8 w-16 text-center text-[13px] font-medium rounded-lg border border-border/40 bg-secondary/10 p-0 outline-none placeholder:text-muted-foreground/60"
+          className="w-16"
+          inputClassName="w-16"
         />
 
         <input

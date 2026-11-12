@@ -18,7 +18,7 @@ describe("HabitTargetField", () => {
 
   it("renders the target value and unit inputs", () => {
     render(<HabitTargetField {...baseProps} />);
-    expect(screen.getByLabelText("Target value")).toHaveValue(10);
+    expect(screen.getByLabelText("Target value")).toHaveValue("10");
     expect(screen.getByLabelText("Target unit")).toHaveValue("pages");
   });
 
