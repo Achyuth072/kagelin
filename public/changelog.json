@@ -1,5 +1,29 @@
 [
   {
+    "version": "1.51.0-preview.3",
+    "date": "2026-11-12",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Unify ProjectView to form patterns and refine archive and logbook lists",
+        "Align habit month grid controls with calendar toolbar",
+        "Clarify past-day logging affordance in habit history and insights",
+        "Harden Ink & Matte guardrails in lint, ast-grep, and AGENTS.md",
+        "Add Base UI NumberField, remove react-tooltip, virtualize grouped tasks",
+        "Migrate motion runtime to LazyMotion and add number-flow numerals",
+        "Ink & matte compliance, overlay layering, and command menu bounds"
+      ],
+      "Fixed": [
+        "Remove ghost button disabled background and prevent focus cycle layout shift",
+        "Safe focus stop control, secondary cycle reset, and unblock completion sync",
+        "Suppress leading zero artifact and normalize NumberFlow transitions",
+        "Correct seconds tens digit position constraint in AnimatedCountdown",
+        "Ink and matte surface tokens, virtualized dnd indexing, and responsive dialogs",
+        "Address code review findings on React Compiler useMemo and constants"
+      ]
+    }
+  },
+  {
     "version": "1.51.0-preview.2",
     "date": "2026-11-11",
     "channel": "preview",
@@ -767,19 +791,6 @@
     "sections": {
       "Added": [
         "Lossless N-in-D habit frequency via frequency_days"
-      ]
-    }
-  },
-  {
-    "version": "1.45.0-preview.0",
-    "date": "2026-09-25",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Archive and restore habits, re-import matches by Loop identity"
-      ],
-      "Fixed": [
-        "Keep habit drawer footer fixed and reminder row on one line on narrow screens"
       ]
     }
   }
