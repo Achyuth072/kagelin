@@ -32,4 +32,96 @@ describe("AnimatedNumber", () => {
     expect(container.textContent).toBe("Not a number");
     expect(container.querySelector(".text-muted-foreground")).not.toBeNull();
   });
+
+  it("defaults trend to 0 (shortest path / neutral)", () => {
+    const { container } = render(<AnimatedNumber value={42} />);
+    const el = container.querySelector("number-flow-react") as
+      (HTMLElement & { trend?: unknown }) | null;
+    expect(el?.trend).toBe(0);
+  });
+
+  it("allows overriding trend explicitly", () => {
+    const { container } = render(<AnimatedNumber value={42} trend={-1} />);
+    const el = container.querySelector("number-flow-react") as
+      (HTMLElement & { trend?: unknown }) | null;
+    expect(el?.trend).toBe(-1);
+  });
+
+  it("passes opacityTiming matching transformTiming", () => {
+    const { container } = render(<AnimatedNumber value={42} />);
+    const el = container.querySelector("number-flow-react") as
+      | (HTMLElement & {
+          opacityTiming?: unknown;
+          transformTiming?: unknown;
+        })
+      | null;
+    expect(el?.opacityTiming).toBeDefined();
+    expect(el?.opacityTiming).toEqual(el?.transformTiming);
+  });
+
+  it("keeps animation enabled while setting opacityTiming duration to 0 when digit count decreases", () => {
+    const { container, rerender } = render(<AnimatedNumber value="163hr" />);
+    let el = container.querySelector("number-flow-react") as
+      | (HTMLElement & {
+          animated?: boolean;
+          opacityTiming?: { duration?: number };
+          transformTiming?: unknown;
+        })
+      | null;
+    expect(el?.animated).toBe(true);
+    expect(el?.opacityTiming).toEqual(el?.transformTiming);
+
+    rerender(<AnimatedNumber value="16hr" />);
+    el = container.querySelector("number-flow-react") as
+      | (HTMLElement & {
+          animated?: boolean;
+          opacityTiming?: { duration?: number };
+        })
+      | null;
+    expect(el?.animated).toBe(true);
+    expect(el?.opacityTiming).toEqual({ duration: 0 });
+
+    rerender(<AnimatedNumber value="1200" />);
+    rerender(<AnimatedNumber value="636" />);
+    el = container.querySelector("number-flow-react") as
+      | (HTMLElement & {
+          animated?: boolean;
+          opacityTiming?: { duration?: number };
+        })
+      | null;
+    expect(el?.animated).toBe(true);
+    expect(el?.opacityTiming).toEqual({ duration: 0 });
+  });
+
+  it("keeps animation enabled with full timing when integer digit count remains the same", () => {
+    const { container, rerender } = render(<AnimatedNumber value="16hr" />);
+    let el = container.querySelector("number-flow-react") as
+      | (HTMLElement & {
+          animated?: boolean;
+          opacityTiming?: unknown;
+          transformTiming?: unknown;
+        })
+      | null;
+    expect(el?.animated).toBe(true);
+
+    rerender(<AnimatedNumber value="24hr" />);
+    el = container.querySelector("number-flow-react") as
+      | (HTMLElement & {
+          animated?: boolean;
+          opacityTiming?: unknown;
+          transformTiming?: unknown;
+        })
+      | null;
+    expect(el?.animated).toBe(true);
+    expect(el?.opacityTiming).toEqual(el?.transformTiming);
+  });
+
+  it("allows overriding animated explicitly", () => {
+    const { container } = render(
+      <AnimatedNumber value="16hr" animated={false} />,
+    );
+    const el = container.querySelector("number-flow-react") as
+      (HTMLElement & { animated?: boolean }) | null;
+    expect(el?.animated).toBe(false);
+  });
 });

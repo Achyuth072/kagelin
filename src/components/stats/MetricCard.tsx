@@ -13,7 +13,7 @@ interface MetricCardProps {
     value: number;
     isPositive: boolean;
   };
-  /** "compact" tightens padding/scale for dense contexts (e.g. insights panels); "default" is the stats-page scale. */
+  // "compact" tightens padding/scale for dense contexts (e.g. insights); "default" is the stats-page scale.
   size?: "default" | "compact";
   className?: string;
 }
@@ -48,7 +48,7 @@ export function MetricCard({
           </p>
           <p
             className={cn(
-              "font-semibold tracking-[-0.02em]",
+              "font-semibold tracking-[-0.02em] tabular-nums",
               compact ? "text-2xl" : "text-2xl md:text-4xl",
             )}
           >

@@ -65,4 +65,11 @@ describe("MetricCard", () => {
     expect(container.querySelector(".h-6")).toBeNull();
     expect(container.querySelector("[data-spacer]")).toBeNull();
   });
+
+  it("applies tabular-nums to value container to prevent layout shifting", () => {
+    const { container } = render(<MetricCard title="Tasks" value="42" />);
+    const valueEl = container.querySelector(".tabular-nums");
+    expect(valueEl).toBeInTheDocument();
+    expect(valueEl).toHaveTextContent("42");
+  });
 });

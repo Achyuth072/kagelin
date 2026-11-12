@@ -13,6 +13,7 @@ export interface AnimatedNumberProps {
   duration?: number;
   className?: string;
   isolate?: boolean;
+  animated?: boolean;
   "data-testid"?: string;
 }
 
@@ -34,23 +35,51 @@ function parseNumericValue(raw: string | number): {
 export function AnimatedNumber({
   value,
   format,
-  trend,
+  trend = 0,
   prefix: prefixProp,
   suffix: suffixProp,
   duration,
   className,
   isolate = true,
+  animated: animatedProp,
   "data-testid": testId,
 }: AnimatedNumberProps) {
   const parsed = parseNumericValue(value);
+
+  const [history, setHistory] = React.useState<{
+    prevNum: number | null;
+    currentNum: number | null;
+  }>(() => ({
+    prevNum: null,
+    currentNum: parsed?.num ?? null,
+  }));
+
+  if (parsed && parsed.num !== history.currentNum) {
+    setHistory({
+      prevNum: history.currentNum,
+      currentNum: parsed.num,
+    });
+  }
 
   if (!parsed) {
     return <span className={className}>{value}</span>;
   }
 
+  const currentIntLength = Math.abs(Math.trunc(parsed.num)).toString().length;
+  const prevIntLength =
+    history.prevNum !== null
+      ? Math.abs(Math.trunc(history.prevNum)).toString().length
+      : currentIntLength;
+
   const timing = duration
     ? { duration, easing: SEIJAKU_TIMING.easing }
     : SEIJAKU_TIMING;
+
+  // NumberFlow resets vanished integer digits to 0 (163 -> "016"), so fade them out instantly.
+  const opacityTiming =
+    history.prevNum !== null && currentIntLength < prevIntLength
+      ? { duration: 0 }
+      : timing;
 
   return (
     <NumberFlow
@@ -63,7 +92,9 @@ export function AnimatedNumber({
       className={className}
       transformTiming={timing}
       spinTiming={timing}
+      opacityTiming={opacityTiming}
       isolate={isolate}
+      animated={animatedProp ?? true}
       respectMotionPreference
     />
   );
