@@ -149,7 +149,8 @@ export function HabitInsightsPanel({
       </InsightSection>
 
       <InsightSection
-        title="History"
+        title="History & Log"
+        description="Tap any date to record or update past entries."
         action={
           <Button
             variant="ghost"

@@ -8,9 +8,14 @@ export type SheetTab = "edit" | "insights";
 interface SheetTabToggleProps {
   value: SheetTab;
   onValueChange: (value: SheetTab) => void;
+  insightsLabel?: string;
 }
 
-export function SheetTabToggle({ value, onValueChange }: SheetTabToggleProps) {
+export function SheetTabToggle({
+  value,
+  onValueChange,
+  insightsLabel = "Insights",
+}: SheetTabToggleProps) {
   return (
     <Tabs
       value={value}
@@ -21,9 +26,9 @@ export function SheetTabToggle({ value, onValueChange }: SheetTabToggleProps) {
           <Pencil strokeWidth={2.25} aria-hidden="true" />
           <span className="hidden sm:inline">Edit</span>
         </TabsTrigger>
-        <TabsTrigger value="insights" aria-label="Insights">
+        <TabsTrigger value="insights" aria-label={insightsLabel}>
           <BarChart3 strokeWidth={2.25} aria-hidden="true" />
-          <span className="hidden sm:inline">Insights</span>
+          <span className="hidden sm:inline">{insightsLabel}</span>
         </TabsTrigger>
       </TabsList>
     </Tabs>

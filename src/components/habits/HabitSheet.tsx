@@ -317,6 +317,7 @@ export function HabitSheet({
               <SheetTabToggle
                 value={tab}
                 onValueChange={(next) => startTransition(() => setTab(next))}
+                insightsLabel="History & Insights"
               />
             </div>
           )}

@@ -105,12 +105,12 @@ export function HabitStripCell({
       className={cn(
         "flex h-full w-full items-center justify-center rounded-md border transition-seijaku-fast",
         filled
-          ? "border-transparent"
+          ? "border-transparent group-hover:opacity-90"
           : missed
             ? "bg-destructive-surface border border-destructive-surface-border text-destructive-surface-foreground"
             : skipped
-              ? "border-border bg-secondary/40 text-muted-foreground"
-              : "border-border bg-secondary/40 text-muted-foreground group-hover:bg-secondary",
+              ? "border-border bg-secondary/40 text-muted-foreground group-hover:bg-secondary"
+              : "border-border bg-secondary/40 text-muted-foreground group-hover:bg-secondary group-hover:border-foreground/30",
         isToday && "ring-2 ring-offset-2 ring-offset-background",
       )}
       style={{
@@ -168,7 +168,7 @@ export function HabitStripCell({
       aria-label={cellLabel}
       title={stateText}
       className={cn(
-        "group relative flex items-center justify-center rounded-md transition-seijaku-fast",
+        "group relative flex items-center justify-center rounded-md transition-seijaku-fast cursor-pointer",
         touchTargetClass,
         cellSizing,
       )}

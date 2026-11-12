@@ -112,7 +112,10 @@ describe("HabitInsightsPanel", () => {
     expect(screen.getByText("Best Streak")).toBeInTheDocument();
     expect(screen.getByText("Total Completions")).toBeInTheDocument();
 
-    expect(screen.getByText("History")).toBeInTheDocument();
+    expect(screen.getByText("History & Log")).toBeInTheDocument();
+    expect(
+      screen.getByText("Tap any date to record or update past entries."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Best Streaks")).toBeInTheDocument();
     expect(screen.getByText("Frequency")).toBeInTheDocument();
 
