@@ -56,10 +56,10 @@ const CompletedTaskItem = React.memo(({ task }: { task: Task }) => {
       : `${format(completedDate, "MMM d")} · ${formatTime(completedDate)}`;
 
   return (
-    <div className="flex items-start gap-3 py-2 md:py-2 px-4 border-b border-border/40 hover:bg-secondary/30 transition-colors group min-h-[44px]">
+    <div className="flex items-start gap-3 py-2 px-4 mx-2 rounded-md hover:bg-muted/40 transition-seijaku-fast group min-h-[44px]">
       <button onClick={handleUncomplete} aria-label="Mark task incomplete">
         <CheckCircle2
-          className="h-5 w-5 text-foreground/50 hover:text-foreground transition-colors"
+          className="h-5 w-5 text-foreground/50 hover:text-foreground transition-seijaku-fast"
           strokeWidth={2.25}
         />
       </button>
@@ -156,7 +156,7 @@ function CompletedTasksSheetBody({
     }
     if (item.type === "header") {
       return (
-        <h3 className="type-micro font-semibold uppercase px-6 py-3 border-b border-border/40 bg-background sticky top-0 z-10">
+        <h3 className="type-micro font-semibold uppercase px-6 py-2.5 text-muted-foreground bg-background sticky top-0 z-10">
           {item.title}
         </h3>
       );
