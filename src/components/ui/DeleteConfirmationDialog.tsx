@@ -42,7 +42,7 @@ export function DeleteConfirmationDialog({
   description = "Are you sure you want to delete this task? This action cannot be undone.",
   confirmLabel = "Delete",
 }: DeleteConfirmationDialogProps) {
-  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const isDesktop = useMediaQuery("(min-width: 641px)");
   const { trigger } = useHaptic();
 
   // Handle back navigation on mobile to close drawer instead of navigating away
@@ -85,7 +85,7 @@ export function DeleteConfirmationDialog({
   }
 
   return (
-    <Drawer open={isOpen} onOpenChange={onClose} repositionInputs={false}>
+    <Drawer open={isOpen} onOpenChange={onClose}>
       <DrawerContent>
         <DrawerHeader className="text-left">
           <DrawerTitle>{title}</DrawerTitle>

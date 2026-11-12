@@ -194,7 +194,10 @@ export function RotateContentKeyDialog({
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    <Loader2
+                      className="mr-1.5 h-3.5 w-3.5 animate-spin"
+                      strokeWidth={2.25}
+                    />
                     Rotating...
                   </>
                 ) : (

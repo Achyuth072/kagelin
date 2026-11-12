@@ -16,6 +16,7 @@ const VALID_MODES: TimerMode[] = ["focus", "shortBreak", "longBreak"];
 
 const PROBE_MAX_ATTEMPTS = 3;
 const PROBE_RETRY_DELAY_MS = 200;
+const PROBE_ATTEMPT_TIMEOUT_MS = 3000;
 
 function timerStateToRow(
   userId: string,
@@ -84,10 +85,11 @@ function remoteRowToSettings(
 }
 
 export function useTimerSync() {
-  const { user, isGuestMode } = useAuth();
+  const { user, isGuestMode, loading } = useAuth();
   const supabase = createClient();
 
   const lastKnownUpdatedAt = useRef<string | null>(null);
+  const resyncPromiseRef = useRef<Promise<void> | null>(null);
 
   const upsertTimerState = useCallback(async () => {
     if (!user) return;
@@ -111,12 +113,25 @@ export function useTimerSync() {
     [user],
   );
 
-  // Fall back to local clock if the RPC fails so reconcile() does not stall at 00:00.
+  // Fall back to local clock if offline, RPC times out, or RPC fails so reconcile() does not stall at 00:00.
   const probeServerOffset = useCallback(async () => {
     for (let attempt = 1; attempt <= PROBE_MAX_ATTEMPTS; attempt++) {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        break;
+      }
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       try {
         const t0 = Date.now();
-        const { data, error } = await supabase.rpc("server_now_ms");
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(
+            () => reject(new Error("server_now_ms timeout")),
+            PROBE_ATTEMPT_TIMEOUT_MS,
+          );
+        });
+        const { data, error } = await Promise.race([
+          supabase.rpc("server_now_ms"),
+          timeoutPromise,
+        ]);
         const t1 = Date.now();
         // PostgREST may serialize BIGINT as a string.
         const serverMs = Number(data);
@@ -125,7 +140,9 @@ export function useTimerSync() {
           return;
         }
       } catch {
-        // Network/transport error
+        // Network/transport error or timeout
+      } finally {
+        if (timeoutId !== undefined) clearTimeout(timeoutId);
       }
       if (attempt < PROBE_MAX_ATTEMPTS) {
         await new Promise((r) => setTimeout(r, PROBE_RETRY_DELAY_MS * attempt));
@@ -156,18 +173,43 @@ export function useTimerSync() {
     useTimerStore.getState().reconcile();
   }, [user, supabase]);
 
-  // Refresh clock and state when foregrounded to recover dropped realtime connections.
+  // Refresh clock and state when foregrounded or connecting to recover dropped realtime connections.
   const resync = useCallback(async () => {
-    await Promise.all([probeServerOffset(), hydrate()]);
+    if (resyncPromiseRef.current) return resyncPromiseRef.current;
+    const promise = Promise.allSettled([probeServerOffset(), hydrate()])
+      .then(() => {
+        useTimerStore.getState().reconcile();
+      })
+      .finally(() => {
+        resyncPromiseRef.current = null;
+      });
+    resyncPromiseRef.current = promise;
+    return promise;
   }, [probeServerOffset, hydrate]);
 
   useEffect(() => {
-    if (isGuestMode || !user) return;
+    // Wait until auth resolves before trusting local clock over a persisted session on reload.
+    if (loading) return;
+
+    // Guest and signed-out users have no server clock to probe; mark local clock ready immediately.
+    if (isGuestMode || !user) {
+      setServerOffset(0);
+      useTimerStore.getState().reconcile();
+      return;
+    }
 
     const handleVisibility = () => {
-      if (document.visibilityState === "visible") resync();
+      if (document.visibilityState === "visible") void resync();
+    };
+    const handleOnline = () => {
+      void resync();
     };
     document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("online", handleOnline);
+
+    // Probe clock and hydrate immediately instead of waiting solely for Realtime SUBSCRIBED,
+    // which never arrives when offline or when WebSocket connection fails/delays.
+    void resync();
 
     const channel = supabase
       .channel(`timer-sync:${user.id}`)
@@ -219,16 +261,17 @@ export function useTimerSync() {
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           useUiStore.getState().setIsSynced(true);
-          resync();
+          void resync();
         }
       });
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("online", handleOnline);
       supabase.removeChannel(channel);
       useUiStore.getState().setIsSynced(false);
     };
-  }, [isGuestMode, user, supabase, resync]);
+  }, [loading, isGuestMode, user, supabase, resync]);
 
   return { upsertTimerState, claimTimerCompletion, hydrate };
 }

@@ -170,7 +170,7 @@ describe("Keyboard focus model (aria-activedescendant)", () => {
     localStorage.setItem("kanso_guest_mode", "true");
   });
 
-  it("list view: container is a listbox whose aria-activedescendant tracks j/k, and the selected row is an aria-selected option", async () => {
+  it("list view: container is a grid whose aria-activedescendant tracks j/k, and the selected row is an aria-selected row", async () => {
     useUiStore.setState({
       viewMode: "list",
       isDesktop: true,
@@ -185,7 +185,7 @@ describe("Keyboard focus model (aria-activedescendant)", () => {
       "[data-task-list-scroll-container='true']",
     ) as HTMLElement;
     expect(scrollContainer).not.toBeNull();
-    expect(scrollContainer.getAttribute("role")).toBe("listbox");
+    expect(scrollContainer.getAttribute("role")).toBe("grid");
     expect(scrollContainer.getAttribute("aria-activedescendant")).toBeNull();
 
     fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
@@ -201,7 +201,7 @@ describe("Keyboard focus model (aria-activedescendant)", () => {
     expect(document.activeElement).toBe(scrollContainer);
 
     const firstRow = document.getElementById(firstId);
-    expect(firstRow?.getAttribute("role")).toBe("option");
+    expect(firstRow?.getAttribute("role")).toBe("row");
     expect(firstRow?.getAttribute("aria-selected")).toBe("true");
 
     fireEvent.keyDown(document, { key: "j", code: "KeyJ" });

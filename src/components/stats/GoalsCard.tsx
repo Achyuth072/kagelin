@@ -5,6 +5,7 @@ import { Target } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CircularProgress } from "@/components/ui/circular-progress";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useGoalProgress } from "@/lib/hooks/useGoalProgress";
 import { cn } from "@/lib/utils";
@@ -84,7 +85,7 @@ export function GoalsCard({ className }: GoalsCardProps) {
   }
 
   return (
-    <Card className={cn("p-6 border-border/50", className)}>
+    <Card className={cn("p-4 sm:p-6 border-border/50", className)}>
       <div className="space-y-4">
         <div>
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -117,7 +118,7 @@ export function GoalsCard({ className }: GoalsCardProps) {
                     label={`${displayValue} of ${ring.target}${ring.unit} — ${ring.label}`}
                   >
                     <span className="text-sm font-bold text-foreground tabular-nums">
-                      {displayValue}/{ring.target}
+                      <AnimatedNumber value={displayValue} />/{ring.target}
                       {ring.unit}
                     </span>
                   </CircularProgress>

@@ -205,7 +205,7 @@ export function AccountSection() {
           role="alert"
           className="flex items-center gap-2 p-3.5 rounded-lg border border-destructive-surface-border bg-destructive-surface text-destructive text-sm font-medium"
         >
-          <AlertCircle className="h-4 w-4 shrink-0" />
+          <AlertCircle className="h-4 w-4 shrink-0" strokeWidth={2.25} />
           <span>{displayError}</span>
         </div>
       )}
@@ -227,7 +227,10 @@ export function AccountSection() {
             // password is set — that's the card below.
             <div className={cn(ICON_LED_ROW_CLASS, "justify-between")}>
               <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 text-foreground/70" />
+                <Mail
+                  className="h-5 w-5 text-foreground/70"
+                  strokeWidth={2.25}
+                />
                 <div>
                   <p className="text-sm font-medium">Email</p>
                   <p className="text-xs text-muted-foreground">Connected</p>
@@ -275,12 +278,15 @@ export function AccountSection() {
                   >
                     {loadingProvider === provider.id ? (
                       <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2
+                          className="h-3.5 w-3.5 animate-spin"
+                          strokeWidth={2.25}
+                        />
                         Disconnecting...
                       </>
                     ) : (
                       <>
-                        <Unlink className="h-3.5 w-3.5" />
+                        <Unlink className="h-3.5 w-3.5" strokeWidth={2.25} />
                         Disconnect
                       </>
                     )}
@@ -297,12 +303,18 @@ export function AccountSection() {
                   >
                     {loadingProvider === provider.id ? (
                       <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2
+                          className="h-3.5 w-3.5 animate-spin"
+                          strokeWidth={2.25}
+                        />
                         Connecting...
                       </>
                     ) : (
                       <>
-                        <Link2 className="h-3.5 w-3.5 text-brand" />
+                        <Link2
+                          className="h-3.5 w-3.5 text-brand"
+                          strokeWidth={2.25}
+                        />
                         Connect
                       </>
                     )}
@@ -408,7 +420,10 @@ export function AccountSection() {
             >
               {passwordSubmitting ? (
                 <>
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                  <Loader2
+                    className="mr-1.5 h-3.5 w-3.5 animate-spin"
+                    strokeWidth={2.25}
+                  />
                   {reauthRequired
                     ? "Confirming..."
                     : hasPassword

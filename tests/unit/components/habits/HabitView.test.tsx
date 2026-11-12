@@ -3,8 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import { HabitView } from "@/components/habits/HabitView";
 
+const mockIsGuestMode = vi.fn(() => false);
 vi.mock("@/components/AuthProvider", () => ({
-  useAuth: () => ({ isGuestMode: false }),
+  useAuth: () => ({ isGuestMode: mockIsGuestMode() }),
+  useOptionalAuth: () => ({ isGuestMode: mockIsGuestMode() }),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -63,12 +65,44 @@ describe("HabitView", () => {
     setReminderTime: vi.fn(),
     reminderDays: 127,
     setReminderDays: vi.fn(),
+    habitType: "boolean" as const,
+    setHabitType: vi.fn(),
     hasContent: true,
     isPending: false,
     onSubmit: vi.fn(),
     onKeyDown: vi.fn(),
     mode: "create" as const,
   };
+
+  it("renders header badge HABIT-NEW in create mode and HABIT-XXXX in edit mode", () => {
+    const { rerender } = render(<HabitView {...baseProps} mode="create" />);
+    expect(screen.getByTestId("habit-header-badge")).toHaveTextContent(
+      "HABIT-NEW",
+    );
+
+    rerender(
+      <HabitView
+        {...baseProps}
+        mode="edit"
+        habitId="habit-abcd-1234"
+        onArchive={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("habit-header-badge")).toHaveTextContent(
+      "HABIT-ABCD",
+    );
+  });
+
+  it("renders the property strip containing SlidersHorizontal and property controls", () => {
+    render(<HabitView {...baseProps} />);
+    expect(screen.getByTestId("property-strip")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Customize habit icon and color"),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Yes or No" })).toBeInTheDocument();
+    expect(screen.getByText("Daily")).toBeInTheDocument();
+  });
 
   it("does not render the target field for a boolean habit", () => {
     render(
@@ -122,7 +156,7 @@ describe("HabitView", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps question, reminder and details behind More options", () => {
+  it("keeps question and reminder behind More options, with details directly accessible", () => {
     render(
       <HabitView
         {...baseProps}
@@ -132,15 +166,15 @@ describe("HabitView", () => {
       />,
     );
     expect(screen.queryByLabelText("Habit question")).toBeNull();
-    expect(screen.queryByLabelText("Habit details")).toBeNull();
+    expect(screen.getByLabelText("Habit details")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("More options"));
     expect(screen.getByLabelText("Habit question")).toBeInTheDocument();
-    expect(screen.getByLabelText("Habit details")).toBeInTheDocument();
     expect(screen.getByText("Off")).toBeInTheDocument();
   });
 
   it("summarises what is set while More options is collapsed", () => {
+    mockIsGuestMode.mockReturnValue(false);
     render(
       <HabitView
         {...baseProps}
@@ -153,6 +187,24 @@ describe("HabitView", () => {
       />,
     );
     expect(screen.getByText("Question · Reminder")).toBeInTheDocument();
+  });
+
+  it("shows needs account in summary for guest users with a reminder set", () => {
+    mockIsGuestMode.mockReturnValue(true);
+    render(
+      <HabitView
+        {...baseProps}
+        mode="create"
+        habitType="boolean"
+        setHabitType={vi.fn()}
+        question="Did you run?"
+        reminderTime="09:00"
+        description=""
+      />,
+    );
+    expect(
+      screen.getByText("Question · Reminder (needs account)"),
+    ).toBeInTheDocument();
   });
 
   it("marks the active habit type segment", () => {

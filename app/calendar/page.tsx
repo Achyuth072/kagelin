@@ -12,6 +12,7 @@ import { MonthView } from "@/components/calendar/MonthView";
 import { ScheduleView } from "@/components/calendar/ScheduleView";
 import { useCalendarEvents } from "@/lib/hooks/useCalendarEvents";
 import { useCalendarSync } from "@/lib/hooks/useCalendarSync";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
 import { useTask } from "@/lib/hooks/useTasks";
 import TaskSheet from "@/components/tasks/TaskSheet";
@@ -20,7 +21,7 @@ import { notify } from "@/lib/notify";
 export default function CalendarPage() {
   const { currentDate, view, events, setView, setDate, openCreateEvent } =
     useCalendarStore();
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const { data: fullTask } = useTask(selectedTaskId);
   useCalendarEvents();
@@ -36,13 +37,6 @@ export default function CalendarPage() {
       notify.error(`Calendar connection failed: ${oauthError}`);
       window.history.replaceState({}, "", "/calendar");
     }
-  }, []);
-
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   useEffect(() => {

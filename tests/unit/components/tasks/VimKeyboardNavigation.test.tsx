@@ -8,6 +8,7 @@ import { ListTaskCard } from "@/components/tasks/ListTaskCard";
 import { taskDomId } from "@/components/tasks/task-utils";
 import type { ProcessedTasks } from "@/lib/hooks/useTaskViewData";
 import type { Task } from "@/lib/types/task";
+import { useTimerStore } from "@/lib/store/timerStore";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -259,6 +260,40 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
       expect(selectedId(["a", "b", "c"])).toBe("a");
     });
 
+    it("a primary pointer press clears the keyboard-selected row", async () => {
+      uiState.viewMode = "list";
+      taskState.tasks = [
+        buildTask({ id: "a", content: "Alpha", day_order: 0 }),
+        buildTask({ id: "b", content: "Bravo", day_order: 1 }),
+      ];
+      await renderTaskList();
+
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      expect(selectedId(["a", "b"])).toBe("a");
+
+      fireEvent.pointerDown(screen.getByText("Bravo"), { button: 0 });
+
+      expect(selectedId(["a", "b"])).toBeUndefined();
+    });
+
+    it("clicking a row opens it without marking it as keyboard-selected", async () => {
+      uiState.viewMode = "list";
+      taskState.tasks = [
+        buildTask({ id: "a", content: "Alpha", day_order: 0 }),
+        buildTask({ id: "b", content: "Bravo", day_order: 1 }),
+      ];
+      await renderTaskList();
+
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      expect(selectedId(["a", "b"])).toBe("a");
+
+      // Click only, to isolate handleTaskClick from the pointerdown clear.
+      fireEvent.click(screen.getByText("Bravo"));
+
+      expect(isSelected("b")).toBe(false);
+      expect(screen.getByTestId("task-sheet")).toHaveTextContent("open");
+    });
+
     it("h/l in Board view move between columns; j/k move within the active column", async () => {
       uiState.viewMode = "board";
       taskState.tasks = [
@@ -393,6 +428,21 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
 
       fireEvent.keyDown(document, { key: "d", code: "KeyD" });
       expect(mutations.deleteMutate).not.toHaveBeenCalled();
+    });
+
+    it("pressing 'f' requests focus session for selected task", async () => {
+      uiState.viewMode = "list";
+      taskState.tasks = [
+        buildTask({ id: "a", content: "Alpha", day_order: 0 }),
+      ];
+      await renderTaskList();
+
+      fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+      expect(selectedId(["a"])).toBe("a");
+
+      fireEvent.keyDown(document, { key: "f", code: "KeyF" });
+      expect(useTimerStore.getState().state.activeTaskId).toBe("a");
+      expect(useTimerStore.getState().pendingFocusStart).toBe(true);
     });
 
     it("Arrow keys and Space are not swallowed when nothing is selected", async () => {

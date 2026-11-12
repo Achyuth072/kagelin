@@ -2,6 +2,7 @@
 
 import { Toaster as SonnerToaster } from "sonner";
 import { Inter } from "next/font/google";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/store/uiStore";
 import { NOTIFICATION_LINK_BUTTON_CLASS } from "@/components/ui/notification-link-button";
@@ -36,11 +37,15 @@ export function Toaster() {
       position={position}
       expand={false}
       visibleToasts={isDesktop ? 3 : 2}
+      closeButton={isDesktop}
       duration={isChangelogOpen ? Infinity : 4000}
       style={{ zIndex: "var(--z-toast)" }}
       offset={offset}
       mobileOffset={offset}
       swipeDirections={["left", "right", "bottom"]}
+      icons={{
+        close: <X className="h-3.5 w-3.5" strokeWidth={2.25} />,
+      }}
       toastOptions={{
         unstyled: true,
         style: {
@@ -51,6 +56,7 @@ export function Toaster() {
           toast: cn(
             inter.variable,
             "font-sans",
+            "select-none cursor-default",
             "bg-card border border-border/80 text-foreground",
             "rounded-md shadow-sm inline-flex items-center gap-3",
             "py-2.5 px-4 sm:py-3 sm:px-5",
@@ -65,7 +71,10 @@ export function Toaster() {
             "font-semibold text-[13px] sm:text-sm tracking-tight leading-tight",
           description:
             "text-[12px] sm:text-sm text-muted-foreground leading-normal",
-          error: cn("[&_[data-icon]]:text-destructive"),
+          error: cn(
+            "[&_[data-icon]]:text-destructive",
+            "select-text cursor-auto",
+          ),
           actionButton: cn(
             NOTIFICATION_LINK_BUTTON_CLASS,
             "text-brand ml-auto sm:ml-0",
@@ -73,6 +82,13 @@ export function Toaster() {
           cancelButton: cn(
             NOTIFICATION_LINK_BUTTON_CLASS,
             "text-muted-foreground ml-auto sm:ml-0",
+          ),
+          closeButton: cn(
+            "order-last shrink-0",
+            "flex size-6 items-center justify-center rounded-md",
+            "cursor-pointer text-muted-foreground/80 hover:bg-muted/60 hover:text-foreground",
+            "transition-seijaku-fast",
+            "focus:outline-hidden focus-visible:ring-1 focus-visible:ring-ring",
           ),
         },
       }}

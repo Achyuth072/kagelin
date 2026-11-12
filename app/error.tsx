@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Check, Copy } from "lucide-react";
@@ -26,10 +26,13 @@ export default function ErrorBoundary({
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <motion.div {...slideUp} className="text-center space-y-6">
+      <m.div {...slideUp} className="text-center space-y-6">
         <div className="flex justify-center">
           <div className="h-20 w-20 rounded-full bg-destructive-surface flex items-center justify-center">
-            <AlertTriangle className="h-10 w-10 text-destructive" />
+            <AlertTriangle
+              className="h-10 w-10 text-destructive"
+              strokeWidth={2.25}
+            />
           </div>
         </div>
 
@@ -47,19 +50,19 @@ export default function ErrorBoundary({
           <Button variant="outline" className="gap-2" onClick={copyDiagnostics}>
             {copied ? (
               <>
-                <Check className="h-4 w-4" />
+                <Check className="h-4 w-4" strokeWidth={2.25} />
                 Copied
               </>
             ) : (
               <>
-                <Copy className="h-4 w-4" />
+                <Copy className="h-4 w-4" strokeWidth={2.25} />
                 Copy diagnostics
               </>
             )}
           </Button>
           <Button onClick={reset}>Try again</Button>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

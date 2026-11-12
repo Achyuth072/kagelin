@@ -296,7 +296,7 @@ export function AppMigrationDialog({
               disabled={isImportingTodoist}
             >
               {isImportingTodoist ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
               ) : (
                 `Import ${todoistPreview.totalTasks} tasks`
               )}
@@ -369,7 +369,7 @@ export function AppMigrationDialog({
             </Button>
             <Button onClick={handleConfirmIcsImport} disabled={isImportingIcs}>
               {isImportingIcs ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
               ) : (
                 `Import ${preview.toCreate.length} events`
               )}
@@ -404,7 +404,7 @@ export function AppMigrationDialog({
                 className="h-full px-2"
                 aria-label="Import from other apps"
               >
-                <ArrowDownToLine aria-hidden="true" />
+                <ArrowDownToLine aria-hidden="true" strokeWidth={2.25} />
                 <span className="truncate">Import</span>
               </TabsTrigger>
               <TabsTrigger
@@ -412,22 +412,40 @@ export function AppMigrationDialog({
                 className="h-full px-2"
                 aria-label="Export to other apps"
               >
-                <ArrowUpFromLine aria-hidden="true" />
+                <ArrowUpFromLine aria-hidden="true" strokeWidth={2.25} />
                 <span className="truncate">Export</span>
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="import" className="space-y-4 m-0">
               <div
-                className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group"
-                onClick={() => {
+                role="button"
+                tabIndex={isAnyImporting ? -1 : 0}
+                aria-disabled={isAnyImporting}
+                aria-label="Import ICS calendar file"
+                className={cn(
+                  "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                  isAnyImporting &&
+                    "opacity-60 cursor-not-allowed pointer-events-none",
+                )}
+                onClick={(e) => {
+                  if (isAnyImporting || e.target === icsInputRef.current)
+                    return;
                   trigger("toggle");
                   icsInputRef.current?.click();
+                }}
+                onKeyDown={(e) => {
+                  if (isAnyImporting) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    trigger("toggle");
+                    icsInputRef.current?.click();
+                  }
                 }}
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-full bg-brand/10 text-brand shrink-0">
-                    <Calendar className="h-5 w-5" />
+                    <Calendar className="h-5 w-5" strokeWidth={2.25} />
                   </div>
                   <div>
                     <p className="text-sm font-medium">ICS (Calendar)</p>
@@ -439,19 +457,23 @@ export function AppMigrationDialog({
                 <Button
                   variant="ghost"
                   size="sm"
+                  tabIndex={-1}
+                  aria-hidden="true"
                   className={cn(
-                    "h-8 transition-opacity text-brand",
+                    "h-8 transition-opacity text-brand pointer-events-none",
                     isImportingIcs
                       ? "opacity-100"
                       : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
                   )}
                   disabled={isAnyImporting}
-                  aria-label="Select iCalendar ICS file"
                 >
                   {isImportingIcs ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      strokeWidth={2.25}
+                    />
                   ) : (
-                    <FileUp className="h-4 w-4" />
+                    <FileUp className="h-4 w-4" strokeWidth={2.25} />
                   )}
                 </Button>
                 <input
@@ -460,15 +482,34 @@ export function AppMigrationDialog({
                   accept=".ics,text/calendar"
                   className="hidden"
                   aria-label="Upload iCalendar ICS file"
+                  onClick={(e) => e.stopPropagation()}
                   onChange={handleImportIcs}
                 />
               </div>
 
               <div
-                className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group"
-                onClick={() => {
+                role="button"
+                tabIndex={isAnyImporting ? -1 : 0}
+                aria-disabled={isAnyImporting}
+                aria-label="Import Loop Habit Tracker database"
+                className={cn(
+                  "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                  isAnyImporting &&
+                    "opacity-60 cursor-not-allowed pointer-events-none",
+                )}
+                onClick={(e) => {
+                  if (isAnyImporting || e.target === fileInputRef.current)
+                    return;
                   trigger("toggle");
                   fileInputRef.current?.click();
+                }}
+                onKeyDown={(e) => {
+                  if (isAnyImporting) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    trigger("toggle");
+                    fileInputRef.current?.click();
+                  }
                 }}
               >
                 <div className="flex items-center gap-3">
@@ -486,19 +527,23 @@ export function AppMigrationDialog({
                 <Button
                   variant="ghost"
                   size="sm"
+                  tabIndex={-1}
+                  aria-hidden="true"
                   className={cn(
-                    "h-8 transition-opacity text-brand",
+                    "h-8 transition-opacity text-brand pointer-events-none",
                     isImportingUhabits
                       ? "opacity-100"
                       : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
                   )}
                   disabled={isAnyImporting}
-                  aria-label="Select Loop Habit Tracker database file"
                 >
                   {isImportingUhabits ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      strokeWidth={2.25}
+                    />
                   ) : (
-                    <FileUp className="h-4 w-4" />
+                    <FileUp className="h-4 w-4" strokeWidth={2.25} />
                   )}
                 </Button>
                 <input
@@ -507,15 +552,34 @@ export function AppMigrationDialog({
                   accept=".db"
                   className="hidden"
                   aria-label="Upload Loop Habit Tracker database file"
+                  onClick={(e) => e.stopPropagation()}
                   onChange={handleImportUhabits}
                 />
               </div>
 
               <div
-                className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group"
-                onClick={() => {
+                role="button"
+                tabIndex={isAnyImporting ? -1 : 0}
+                aria-disabled={isAnyImporting}
+                aria-label="Import Todoist tasks from CSV or ZIP"
+                className={cn(
+                  "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                  isAnyImporting &&
+                    "opacity-60 cursor-not-allowed pointer-events-none",
+                )}
+                onClick={(e) => {
+                  if (isAnyImporting || e.target === todoistInputRef.current)
+                    return;
                   trigger("toggle");
                   todoistInputRef.current?.click();
+                }}
+                onKeyDown={(e) => {
+                  if (isAnyImporting) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    trigger("toggle");
+                    todoistInputRef.current?.click();
+                  }
                 }}
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -546,19 +610,23 @@ export function AppMigrationDialog({
                 <Button
                   variant="ghost"
                   size="sm"
+                  tabIndex={-1}
+                  aria-hidden="true"
                   className={cn(
-                    "h-8 transition-opacity text-brand",
+                    "h-8 transition-opacity text-brand pointer-events-none",
                     isImportingTodoist
                       ? "opacity-100"
                       : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
                   )}
                   disabled={isAnyImporting}
-                  aria-label="Select Todoist CSV or ZIP backup file"
                 >
                   {isImportingTodoist ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      strokeWidth={2.25}
+                    />
                   ) : (
-                    <FileUp className="h-4 w-4" />
+                    <FileUp className="h-4 w-4" strokeWidth={2.25} />
                   )}
                 </Button>
                 <input
@@ -567,6 +635,7 @@ export function AppMigrationDialog({
                   accept=".csv,.zip,text/csv,application/zip"
                   className="hidden"
                   aria-label="Upload Todoist CSV or ZIP backup file"
+                  onClick={(e) => e.stopPropagation()}
                   onChange={handleImportTodoist}
                 />
               </div>

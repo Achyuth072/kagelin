@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ShieldAlert } from "lucide-react";
@@ -11,10 +11,13 @@ export default function AccessDeniedPage() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <motion.div {...slideUp} className="text-center space-y-6">
+      <m.div {...slideUp} className="text-center space-y-6">
         <div className="flex justify-center">
           <div className="h-20 w-20 rounded-full bg-destructive-surface flex items-center justify-center">
-            <ShieldAlert className="h-10 w-10 text-destructive" />
+            <ShieldAlert
+              className="h-10 w-10 text-destructive"
+              strokeWidth={2.25}
+            />
           </div>
         </div>
 
@@ -28,7 +31,7 @@ export default function AccessDeniedPage() {
         <Button variant="outline" onClick={() => router.push("/login")}>
           Back to Login
         </Button>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

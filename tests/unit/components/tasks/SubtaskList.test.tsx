@@ -1,13 +1,27 @@
 import { useState } from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
 import SubtaskList from "@/components/tasks/SubtaskList";
 
-const { mockTrigger, mockUseSubtasks, mockToggleMutate } = vi.hoisted(() => ({
-  mockTrigger: vi.fn(),
-  mockUseSubtasks: vi.fn((): { data: unknown[] } => ({ data: [] })),
-  mockToggleMutate: vi.fn(),
+const { mockTrigger, mockUseSubtasks, mockToggleMutate, mockNotify } =
+  vi.hoisted(() => ({
+    mockTrigger: vi.fn(),
+    mockUseSubtasks: vi.fn((): { data: unknown[] } => ({ data: [] })),
+    mockToggleMutate: vi.fn(),
+    mockNotify: vi.fn(),
+  }));
+
+vi.mock("@/lib/notify", () => ({
+  notify: Object.assign((...args: unknown[]) => mockNotify(...args), {
+    success: vi.fn(),
+    error: vi.fn(),
+    warning: vi.fn(),
+    info: vi.fn(),
+    loading: vi.fn(),
+    dismiss: vi.fn(),
+    promise: vi.fn(),
+  }),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -190,8 +204,9 @@ describe("SubtaskList - keyboard navigation contract", () => {
     expect(onCollapse).toHaveBeenCalledTimes(1);
   });
 
-  it("deletes the last step and focuses previous step when Backspace is pressed on empty input", () => {
+  it("does not delete prior step and collapses or blurs when Backspace is pressed on empty input", () => {
     const queryClient = new QueryClient();
+    const onCollapse = vi.fn();
 
     function Wrapper() {
       const [draftSubtasks, setDraftSubtasks] = useState<string[]>([
@@ -203,6 +218,7 @@ describe("SubtaskList - keyboard navigation contract", () => {
           projectId={null}
           draftSubtasks={draftSubtasks}
           onDraftSubtasksChange={setDraftSubtasks}
+          onCollapse={onCollapse}
         />
       );
     }
@@ -218,18 +234,18 @@ describe("SubtaskList - keyboard navigation contract", () => {
 
     fireEvent.keyDown(input, { key: "Backspace" });
 
-    expect(screen.queryByText("Second step")).toBeNull();
-    const editInput = screen.getByLabelText("Edit step");
-    expect(editInput).toBeInTheDocument();
-    expect(editInput).toHaveValue("First step");
+    // Prior steps must remain untouched
+    expect(screen.getByText("First step")).toBeInTheDocument();
+    expect(screen.getByText("Second step")).toBeInTheDocument();
+    expect(onCollapse).toHaveBeenCalledTimes(1);
   });
 
-  it("deletes the only step and leaves focus on new step input when Backspace is pressed on empty input", () => {
+  it("reverts to original content when cleared and blurred during edit", () => {
     const queryClient = new QueryClient();
 
     function Wrapper() {
       const [draftSubtasks, setDraftSubtasks] = useState<string[]>([
-        "Only step",
+        "Original Step Content",
       ]);
       return (
         <SubtaskList
@@ -246,11 +262,62 @@ describe("SubtaskList - keyboard navigation contract", () => {
       </QueryClientProvider>,
     );
 
-    const input = screen.getByPlaceholderText("Add a step...");
-    fireEvent.keyDown(input, { key: "Backspace" });
+    fireEvent.click(screen.getByText("Original Step Content"));
+    const editInput = screen.getByLabelText("Edit step");
+    expect(editInput).toHaveValue("Original Step Content");
 
-    expect(screen.queryByText("Only step")).toBeNull();
-    expect(screen.getByPlaceholderText("Add a step...")).toBeInTheDocument();
+    fireEvent.change(editInput, { target: { value: "" } });
+    fireEvent.blur(editInput);
+
+    // Should revert to original content instead of deleting
+    expect(screen.getByText("Original Step Content")).toBeInTheDocument();
+  });
+
+  it("triggers an undo toast when a subtask is deleted via trash button", () => {
+    const queryClient = new QueryClient();
+    mockNotify.mockClear();
+
+    function Wrapper() {
+      const [draftSubtasks, setDraftSubtasks] = useState<string[]>([
+        "Step to delete",
+      ]);
+      return (
+        <SubtaskList
+          projectId={null}
+          draftSubtasks={draftSubtasks}
+          onDraftSubtasksChange={setDraftSubtasks}
+        />
+      );
+    }
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Wrapper />
+      </QueryClientProvider>,
+    );
+
+    const deleteBtn = screen.getByRole("button", { name: "Delete step" });
+    fireEvent.click(deleteBtn);
+
+    expect(screen.queryByText("Step to delete")).toBeNull();
+    expect(mockNotify).toHaveBeenCalledWith(
+      "Step deleted",
+      expect.objectContaining({
+        action: expect.objectContaining({
+          label: "Undo",
+          onClick: expect.any(Function),
+        }),
+      }),
+    );
+
+    // Call the undo action to verify restoration
+    const undoCall = mockNotify.mock.calls[0];
+    const undoAction = undoCall[1].action.onClick;
+    act(() => {
+      undoAction();
+    });
+
+    expect(screen.getByText("Step to delete")).toBeInTheDocument();
   });
 
   it("deletes step and focuses preceding step when Backspace is pressed on empty edit input", () => {
@@ -473,5 +540,18 @@ describe("SubtaskList - completion haptics", () => {
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
 
     expect(mockTrigger).not.toHaveBeenCalledWith("success");
+  });
+
+  it("activates edit mode when pressing Enter or Space on step title role='button'", () => {
+    renderDraftSubtaskList();
+    const input = screen.getByPlaceholderText("Add a step...");
+    fireEvent.change(input, { target: { value: "First step" } });
+    fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
+
+    const stepButton = screen.getByRole("button", { name: "First step" });
+    expect(stepButton).toBeInTheDocument();
+
+    fireEvent.keyDown(stepButton, { key: "Enter", code: "Enter" });
+    expect(screen.getByLabelText("Edit step")).toBeInTheDocument();
   });
 });

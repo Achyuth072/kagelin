@@ -52,11 +52,51 @@ import { TaskListView } from "./TaskListView";
 import { TaskBoard } from "./TaskBoard";
 import { TaskGhost } from "./TaskGhost";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { useRouter } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   taskDomId,
   focusTextareaToEnd,
   TASK_TITLE_EDIT_ID,
 } from "./task-utils";
+
+export function BoardViewSkeleton() {
+  return (
+    <div
+      data-testid="board-view-skeleton"
+      className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-3 gap-4 h-full"
+    >
+      {[1, 2, 3].map((col) => (
+        <div
+          key={col}
+          className="flex flex-col gap-3 rounded-xl border border-border/40 bg-secondary/10 p-4"
+        >
+          <div className="flex items-center justify-between pb-2 border-b border-border/30">
+            <Skeleton className="h-4 w-24 rounded" />
+            <Skeleton className="h-4 w-6 rounded-full" />
+          </div>
+          <div className="space-y-3 pt-2">
+            {[1, 2, 3].map((card) => (
+              <div
+                key={card}
+                className="p-3 rounded-lg border border-border/30 bg-background/60 space-y-2"
+              >
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-3.5 w-3.5 rounded-sm shrink-0" />
+                  <Skeleton className="h-3.5 w-full rounded" />
+                </div>
+                <div className="flex items-center gap-2 pt-1">
+                  <Skeleton className="h-3 w-12 rounded" />
+                  <Skeleton className="h-3 w-16 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // Suppress onDragOver announcements to prevent aria-live thrashing.
 const dndAnnouncements = {
@@ -102,7 +142,7 @@ function InspectorCardShell({
   return (
     <div
       className={cn(
-        "h-full w-full rounded-2xl border border-border/80 bg-card overflow-hidden",
+        "h-full w-full rounded-xl border border-border/80 bg-card overflow-hidden",
         shadowClass,
       )}
     >
@@ -157,6 +197,7 @@ function TaskListBase({
   const { data: tasks = [], isLoading } = useTasks({ projectId, filter });
   const { data: projectsData } = useProjects();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [selection, setSelectedTask] = useState<Task | null>(null);
   const selectedTask = useSyncExternalStore(
     (notify) => queryClient.getQueryCache().subscribe(notify),
@@ -167,6 +208,11 @@ function TaskListBase({
     null,
   );
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollParent, setScrollParent] = useState<HTMLDivElement | null>(null);
+  const handleScrollContainerRef = useCallback((el: HTMLDivElement | null) => {
+    scrollContainerRef.current = el;
+    setScrollParent((prev) => (prev === el ? prev : el));
+  }, []);
   const pendingDoublePressRef = useRef<{
     key: "g" | "y";
     timestamp: number;
@@ -335,7 +381,6 @@ function TaskListBase({
         onTaskSelect(task);
       } else {
         setSelectedTask(task);
-        setKeyboardSelectedId(task.id);
         if (isDesktopInspector) {
           scrollContainerRef.current?.focus({ preventScroll: true });
         }
@@ -344,11 +389,13 @@ function TaskListBase({
     [onTaskSelect, isDesktopInspector],
   );
 
-  // Clear id only once found; the list may still be loading on initial navigation.
+  // Wait for the task to load before consuming the requested id.
   useEffect(() => {
     if (!selectedTaskId) return;
     const task = tasks.find((t) => t.id === selectedTaskId);
     if (!task) return;
+    // Clear stale Vim focus so the next j/k starts from this task.
+    setKeyboardSelectedId(null);
     handleTaskClick(task);
     setSelectedTaskId(null);
   }, [selectedTaskId, tasks, setSelectedTaskId, handleTaskClick]);
@@ -372,11 +419,13 @@ function TaskListBase({
     [processedTasks],
   );
 
+  // A click leaves no Vim cursor, so navigation continues from the inspected task.
+  const navOriginId =
+    keyboardSelectedId ?? (isDesktopInspector ? selectedTask?.id : null);
+
   const handleListNav = (direction: 1 | -1) => {
     if (navigableTasks.length === 0) return;
-    const currentIndex = navigableTasks.findIndex(
-      (t) => t.id === keyboardSelectedId,
-    );
+    const currentIndex = navigableTasks.findIndex((t) => t.id === navOriginId);
     if (currentIndex === -1) {
       setKeyboardSelectedId(navigableTasks[0].id);
       return;
@@ -397,11 +446,9 @@ function TaskListBase({
     let currentColIndex = -1;
     let currentRowIndex = -1;
 
-    if (keyboardSelectedId) {
+    if (navOriginId) {
       for (let c = 0; c < boardColumns.length; c++) {
-        const r = boardColumns[c].tasks.findIndex(
-          (t) => t.id === keyboardSelectedId,
-        );
+        const r = boardColumns[c].tasks.findIndex((t) => t.id === navOriginId);
         if (r !== -1) {
           currentColIndex = c;
           currentRowIndex = r;
@@ -519,6 +566,19 @@ function TaskListBase({
     }
   }, [hasSelection]);
 
+  // Primary pointer presses end Vim mode; the ring is keyboard-only focus.
+  useEffect(() => {
+    if (!hasSelection) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
+      setKeyboardSelectedId(null);
+    };
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [hasSelection]);
+
   // Arrow keys scroll until a task is selected; vim keys always claim keypress.
   const hotkeyOptions = {
     preventDefault: true,
@@ -593,6 +653,27 @@ function TaskListBase({
         focusInspectorTitle();
       } else {
         handleTaskClick(task);
+      }
+    },
+    hotkeyOptions,
+  );
+
+  useHotkeys(
+    "f",
+    () => {
+      clearPendingDoublePress();
+      if (!keyboardSelectedId) return;
+      const task = navigableTasks.find((t) => t.id === keyboardSelectedId);
+      if (task) {
+        const timerState = useTimerStore.getState().state;
+        triggerHaptic("thud");
+        if (timerState.isRunning && timerState.activeTaskId === task.id) {
+          useTimerStore.getState().stop();
+          return;
+        }
+        useTimerStore.getState().setActiveTaskId(task.id);
+        useTimerStore.getState().requestFocusStart();
+        router.push("/focus");
       }
     },
     hotkeyOptions,
@@ -764,8 +845,8 @@ function TaskListBase({
       initialUrlCheckedRef.current = true;
       const matchingTask = tasks.find((t) => t.id === taskIdFromUrl);
       if (matchingTask) {
+        // Deep links are not keyboard navigation; don't mark the task as Vim-selected.
         setSelectedTask(matchingTask);
-        setKeyboardSelectedId(matchingTask.id);
       }
     }
   }, [onTaskSelect, tasks]);
@@ -863,13 +944,16 @@ function TaskListBase({
   }, [dnd.activeTask, dnd.activeWidth, projectsMap, isDesktop, viewMode]);
 
   if (isLoading) {
+    if (viewMode === "board") {
+      return <BoardViewSkeleton />;
+    }
     return (
       <div className="px-4 md:px-6 py-4">
         <div className="space-y-0">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="h-12 md:h-8 md:border-b md:border-border/40 rounded-xl md:rounded-sm mx-2 md:mx-0 mb-2 md:mb-0 bg-muted/30 animate-pulse"
+              className="h-12 md:h-8 md:border-b md:border-border/40 rounded-xl md:rounded-sm mx-2 md:mx-0 mb-2 md:mb-0 bg-muted/30 animate-pulse motion-reduce:animate-none"
             />
           ))}
         </div>
@@ -928,9 +1012,9 @@ function TaskListBase({
       >
         <div className="flex h-full w-full overflow-hidden relative">
           <div
-            ref={scrollContainerRef}
+            ref={handleScrollContainerRef}
             data-task-list-scroll-container="true"
-            role={viewMode === "board" ? "grid" : "listbox"}
+            role="grid"
             aria-label={viewMode === "board" ? "Task board" : "Task list"}
             tabIndex={0}
             onScroll={handleContainerScroll}
@@ -963,8 +1047,11 @@ function TaskListBase({
                 setActiveTaskId={setActiveTaskId}
                 groupBy={groupBy}
                 keyboardSelectedId={keyboardSelectedId}
+                inspectedTaskId={selectedTask?.id ?? null}
                 isDndActive={dnd.isDragging}
                 onScroll={handleContainerScroll}
+                hasOverlayDrawer={isBoardOverlay && !!selectedTask}
+                onAddTask={() => openAddTask()}
               />
             ) : (
               <TaskListView
@@ -975,6 +1062,7 @@ function TaskListBase({
                 handleTaskClick={handleTaskClick}
                 keyboardSelectedId={keyboardSelectedId}
                 isDndActive={dnd.isDragging}
+                scrollParent={scrollParent}
                 projectsMap={projectsMap}
                 isDesktop={isDesktop}
                 triggerHaptic={triggerHaptic}
@@ -990,7 +1078,7 @@ function TaskListBase({
               className={cn(
                 "h-full overflow-hidden shrink-0 transition-[width,opacity,padding] duration-200 motion-reduce:transition-none",
                 selectedTask
-                  ? "w-[40%] opacity-100 pt-2 pr-4 md:pr-6 pb-8 pl-0"
+                  ? "w-[40%] opacity-100 pt-2 pr-4 md:pr-6 pb-8 pl-0 pointer-events-auto"
                   : "w-0 opacity-0 p-0 pointer-events-none",
               )}
               style={{ transitionTimingFunction: "var(--ease-seijaku)" }}
@@ -1019,7 +1107,7 @@ function TaskListBase({
               <InspectorCardShell
                 task={activeInspectorTask}
                 onClose={handleCloseDetail}
-                shadowClass="shadow-xl"
+                shadowClass="shadow-sm"
               />
             </div>
           )}

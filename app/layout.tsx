@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import QueryProvider from "@/components/QueryProvider";
 import { TimerProvider } from "@/components/TimerProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { MotionProvider } from "@/components/providers/MotionProvider";
 import AppShell from "@/components/layout/AppShell";
 
 const inter = Inter({
@@ -89,7 +90,9 @@ export default async function RootLayout({
           <QueryProvider>
             <AuthProvider initialIsGuest={initialIsGuest}>
               <TimerProvider>
-                <AppShell>{children}</AppShell>
+                <MotionProvider>
+                  <AppShell>{children}</AppShell>
+                </MotionProvider>
               </TimerProvider>
             </AuthProvider>
           </QueryProvider>

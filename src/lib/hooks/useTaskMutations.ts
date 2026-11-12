@@ -470,8 +470,13 @@ export function useDeleteTask() {
             content: requireReadable(taskToRestore.content),
           });
           queryClient.invalidateQueries({ queryKey: ["tasks"] });
+          if (taskToRestore.parent_id) {
+            queryClient.invalidateQueries({
+              queryKey: ["subtasks", taskToRestore.parent_id],
+            });
+          }
           trigger("success");
-          notify("Task restored");
+          notify(taskToRestore.parent_id ? "Step restored" : "Task restored");
           return;
         }
 
@@ -484,17 +489,23 @@ export function useDeleteTask() {
           trigger("success");
           notify(
             leftOut === 0
-              ? "Task restored"
-              : `Task restored. ${leftOut === 1 ? "1 subtask" : `${leftOut} subtasks`} that can't be read stayed deleted.`,
+              ? taskToRestore.parent_id
+                ? "Step restored"
+                : "Task restored"
+              : `${taskToRestore.parent_id ? "Step" : "Task"} restored. ${leftOut === 1 ? "1 subtask" : `${leftOut} subtasks`} that can't be read stayed deleted.`,
           );
         } catch (err) {
           console.error("Failed to restore task:", err);
           trigger("thud");
-          notify.error("Failed to restore task");
+          notify.error(
+            taskToRestore.parent_id
+              ? "Failed to restore step"
+              : "Failed to restore task",
+          );
         }
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
         queryClient.invalidateQueries({
-          queryKey: ["subtasks", taskToRestore.id],
+          queryKey: ["subtasks", taskToRestore.parent_id || taskToRestore.id],
         });
       };
 
@@ -507,7 +518,7 @@ export function useDeleteTask() {
       }, UNDO_TOAST_DURATION_MS);
 
       // Dropped, not folded into the title — task content is unbounded user text (ADR 0008).
-      notify("Task deleted", {
+      notify(taskToRestore.parent_id ? "Step deleted" : "Task deleted", {
         duration: UNDO_TOAST_DURATION_MS,
         action: {
           label: "Undo",

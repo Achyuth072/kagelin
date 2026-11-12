@@ -215,8 +215,8 @@ describe("TaskSheet", () => {
       fireEvent.change(titleInput, { target: { value: "New Parent Task" } });
     });
 
-    // Open subtasks section
-    const subtasksToggle = screen.getByRole("button", { name: /subtasks/i });
+    // Open steps section
+    const subtasksToggle = screen.getByRole("button", { name: /^steps \(/i });
     await act(async () => {
       fireEvent.click(subtasksToggle);
     });
@@ -292,8 +292,8 @@ describe("TaskSheet", () => {
       );
     });
 
-    // Open subtasks section
-    const subtasksToggle = screen.getByRole("button", { name: /subtasks/i });
+    // Open steps section
+    const subtasksToggle = screen.getByRole("button", { name: /^steps \(/i });
     await act(async () => {
       fireEvent.click(subtasksToggle);
     });
@@ -341,7 +341,7 @@ describe("TaskSheet", () => {
       fireEvent.change(titleInput, { target: { value: "Discard Me" } });
     });
 
-    const subtasksToggle = screen.getByRole("button", { name: /subtasks/i });
+    const subtasksToggle = screen.getByRole("button", { name: /^steps \(/i });
     await act(async () => {
       fireEvent.click(subtasksToggle);
     });
@@ -371,7 +371,9 @@ describe("TaskSheet", () => {
       );
     });
 
-    const newSubtasksToggle = screen.getByRole("button", { name: /subtasks/i });
+    const newSubtasksToggle = screen.getByRole("button", {
+      name: /^steps \(/i,
+    });
     await act(async () => {
       fireEvent.click(newSubtasksToggle);
     });

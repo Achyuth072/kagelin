@@ -14,6 +14,7 @@ import {
 } from "@/lib/utils/projections";
 import { cn } from "@/lib/utils";
 import { ReadableText } from "@/components/encryption/ReadableText";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface ProjectionsCardProps {
   className?: string;
@@ -33,7 +34,7 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
   const hasProjection = tasks.soFar > 0 || focusHours.soFar > 0;
 
   return (
-    <Card className={cn("p-6 border-border/50", className)}>
+    <Card className={cn("p-4 sm:p-6 border-border/50", className)}>
       <div className="space-y-5">
         <div>
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -79,20 +80,22 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
                 <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   Streaks at risk
                 </h4>
-                <ul className="space-y-1.5">
+                <ul className="space-y-2 sm:space-y-1.5">
                   {streaksAtRisk.map((risk) => (
                     <li
                       key={risk.habitId}
-                      className="flex items-center gap-2 text-sm"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 text-sm py-1.5 sm:py-0 border-b border-border/20 last:border-0 sm:border-0"
                     >
-                      <Flame
-                        className="h-3.5 w-3.5 text-destructive shrink-0"
-                        strokeWidth={2.25}
-                      />
-                      <span className="truncate">
-                        <ReadableText text={risk.name} />
-                      </span>
-                      <span className="text-muted-foreground shrink-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Flame
+                          className="h-3.5 w-3.5 text-destructive shrink-0"
+                          strokeWidth={2.25}
+                        />
+                        <span className="truncate font-medium sm:font-normal">
+                          <ReadableText text={risk.name} />
+                        </span>
+                      </div>
+                      <span className="text-xs sm:text-sm text-muted-foreground shrink-0 pl-5.5 sm:pl-0">
                         {risk.currentStreak}d streak — log today to keep it
                       </span>
                     </li>
@@ -135,10 +138,10 @@ function ProjectionMetric({
           {label}
         </span>
         <span className="text-2xl font-semibold tracking-[-0.02em] tabular-nums">
-          {projected}
+          <AnimatedNumber value={projected} />
         </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-[3px] bg-secondary/40">
+      <div className="h-2 sm:h-1.5 overflow-hidden rounded-[3px] bg-secondary/40">
         <div
           className="h-full rounded-[3px] bg-foreground/70"
           style={{

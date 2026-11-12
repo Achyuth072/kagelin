@@ -143,7 +143,7 @@ export function MetricsDashboard({
             href="/"
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-2 transition-colors"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-3.5 h-3.5" strokeWidth={2.25} />
             Tasks
           </Link>
           <div className="flex items-center gap-2.5">
@@ -151,7 +151,7 @@ export function MetricsDashboard({
               Operator Metrics
             </h1>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-brand/10 text-brand border border-brand/20">
-              <ShieldCheck className="w-3 h-3" />
+              <ShieldCheck className="w-3 h-3" strokeWidth={2.25} />
               Admin
             </span>
           </div>
@@ -168,7 +168,10 @@ export function MetricsDashboard({
             </div>
           )}
           <div className="flex items-center gap-1.5 bg-secondary/30 px-2.5 py-1 rounded-md border border-border/30">
-            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+            <Clock
+              className="w-3.5 h-3.5 text-muted-foreground"
+              strokeWidth={2.25}
+            />
             <span>Updated: {formattedGeneratedAt}</span>
           </div>
         </div>
@@ -457,7 +460,10 @@ export function MetricsDashboard({
       {/* Footer Info */}
       <div className="pt-2 text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-border/30">
         <div className="flex items-center gap-1.5">
-          <TrendingUp className="w-3.5 h-3.5 text-muted-foreground/70" />
+          <TrendingUp
+            className="w-3.5 h-3.5 text-muted-foreground/70"
+            strokeWidth={2.25}
+          />
           <span>
             Calculated from zero-PII client telemetry & daily database rollups.
           </span>

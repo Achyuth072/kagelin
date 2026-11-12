@@ -5,15 +5,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import React from "react";
 
-vi.mock("framer-motion", () => ({
-  motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
-      return <div {...props}>{children}</div>;
-    },
-  },
+vi.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
   ),
+}));
+
+vi.mock("motion/react-m", () => ({
+  div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
+    return <div {...props}>{children}</div>;
+  },
 }));
 
 function renderOffline() {

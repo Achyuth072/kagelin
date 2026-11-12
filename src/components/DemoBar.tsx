@@ -36,7 +36,10 @@ export function DemoBar() {
             "bg-card text-foreground border-border/80",
           )}
         >
-          <Sparkles className="w-4 h-4 text-muted-foreground shrink-0" />
+          <Sparkles
+            className="w-4 h-4 text-muted-foreground shrink-0"
+            strokeWidth={2.25}
+          />
           <span className="text-[13px] font-medium tracking-[0.01em] whitespace-nowrap">
             <span className="hidden sm:inline">
               You&apos;re exploring with demo data

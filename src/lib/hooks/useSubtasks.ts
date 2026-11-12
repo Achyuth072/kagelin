@@ -18,6 +18,23 @@ export function useSubtasks<TData = Task[]>(
   return useQuery({
     queryKey: ["subtasks", parentId, isGuestMode],
     select: options?.select,
+    initialData: () => {
+      const isGuest =
+        isGuestMode ||
+        (typeof window !== "undefined" &&
+          localStorage.getItem("kanso_guest_mode") === "true");
+      if (isGuest && parentId) {
+        return mockStore
+          .getTasks()
+          .filter((t) => t.parent_id === parentId)
+          .sort(
+            (a, b) =>
+              (a.day_order ?? 0) - (b.day_order ?? 0) ||
+              a.created_at.localeCompare(b.created_at),
+          );
+      }
+      return undefined;
+    },
     queryFn: async (): Promise<Task[]> => {
       if (!parentId) return [];
 

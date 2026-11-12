@@ -5,6 +5,8 @@ import { recommended as tailwindRecommended } from "@poupe/eslint-plugin-tailwin
 import reactCompiler from "eslint-plugin-react-compiler";
 import { plugin as shadcnPlugin } from "@shadcn/lint";
 import noUnboundedSupabaseSelect from "./eslint-rules/no-unbounded-supabase-select.mjs";
+import noElevatedMatteTokens from "./eslint-rules/no-elevated-matte-tokens.mjs";
+import lucideStrokeWidth from "./eslint-rules/lucide-stroke-width.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -59,6 +61,17 @@ const eslintConfig = defineConfig([
               message:
                 "Import notify from '@/lib/notify' instead — see docs/adr/0008-toasts-behind-owned-notify-interface.md.",
             },
+            {
+              name: "framer-motion",
+              message:
+                "Import from 'motion/react' or 'motion/react-m' instead.",
+            },
+            {
+              name: "motion/react",
+              importNames: ["motion"],
+              message:
+                "Import 'm' from 'motion/react-m' under <LazyMotion> instead of eager 'motion'.",
+            },
           ],
         },
       ],
@@ -82,11 +95,47 @@ const eslintConfig = defineConfig([
             "truncate",
             "break-words",
           ],
-          deny: ["backdrop-blur*", "blur-*"],
+          deny: [
+            "backdrop-blur*",
+            "blur-*",
+            "shadow-md",
+            "shadow-md-*",
+            "shadow-lg",
+            "shadow-lg-*",
+            "shadow-xl",
+            "shadow-xl-*",
+            "shadow-2xl",
+            "shadow-2xl-*",
+            "rounded-2xl",
+            "rounded-2xl-*",
+            "rounded-3xl",
+            "rounded-3xl-*",
+          ],
           message: {
             effects:
-              "Effects that violate DESIGN_SYSTEM.md (such as glassmorphism and blurs) are forbidden. Surfaces must be opaque matte.",
+              "Effects that violate DESIGN.md (such as glassmorphism, blurs, and fuzzy elevation shadows shadow-md+) are forbidden. Surfaces must be opaque matte with hairline borders or crisp shadow-xs/shadow-sm.",
+            shape:
+              "Card and surface radii top out at rounded-xl (10px) per DESIGN.md. rounded-2xl+ is forbidden on workspace components.",
           },
+        },
+      ],
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          allow: ["pb-safe"],
+        },
+      ],
+      "shadcn/no-raw-colors": [
+        "error",
+        {
+          allow: [
+            "text-green-500",
+            "text-red-500",
+            "text-emerald-*",
+            "dark:text-emerald-*",
+            "bg-emerald-*",
+            "dark:bg-emerald-*",
+          ],
         },
       ],
       "no-restricted-syntax": [
@@ -105,14 +154,24 @@ const eslintConfig = defineConfig([
       local: {
         rules: {
           "no-unbounded-supabase-select": noUnboundedSupabaseSelect,
+          "no-elevated-matte-tokens": noElevatedMatteTokens,
+          "lucide-stroke-width": lucideStrokeWidth,
         },
       },
     },
     settings: {
       shadcn: {
         ui: "@/components/ui",
-        note: "Refer to .scratch/product/DESIGN_SYSTEM.md for Kagelin design rules, tokens, and constraints.",
+        note: "Refer to DESIGN.md for Kagelin design rules, tokens, and constraints.",
       },
+    },
+  },
+  // Ink & Matte guardrails enforced deterministically across app & source code.
+  {
+    files: ["src/**/*.{ts,tsx}", "app/**/*.{ts,tsx}"],
+    rules: {
+      "local/no-elevated-matte-tokens": "error",
+      "local/lucide-stroke-width": "error",
     },
   },
   // src/components/ui contains primitives (Radix wrappers) which own base styling.
@@ -120,6 +179,18 @@ const eslintConfig = defineConfig([
     files: ["src/components/ui/**/*.{ts,tsx}"],
     rules: {
       "shadcn/no-restyle": "off",
+      "shadcn/no-raw-colors": "off",
+    },
+  },
+  // Third-party brand and OAuth provider icons retain precise brand colors.
+  {
+    files: [
+      "src/components/calendar/ConnectCalendarDialog.tsx",
+      "src/components/settings/MigrationIcons.tsx",
+      "src/components/auth/ProviderIcons.tsx",
+    ],
+    rules: {
+      "shadcn/no-raw-colors": "off",
     },
   },
   // notify.ts and toaster.tsx are the only files allowed to import sonner

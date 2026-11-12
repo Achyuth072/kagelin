@@ -23,6 +23,16 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   CalendarProvider,
   CALDAV_PROVIDERS,
   DiscoveredCalendar,
@@ -68,6 +78,10 @@ export function ConnectCalendarDialog({
   const queryClient = useQueryClient();
   const [selectedProvider, setSelectedProvider] =
     useState<CalendarProvider | null>(null);
+  const [providerToDisconnect, setProviderToDisconnect] = useState<
+    string | null
+  >(null);
+  const [isDisconnecting, setIsDisconnecting] = useState<string | null>(null);
 
   const [pickerCalendars, setPickerCalendars] = useState<DiscoveredCalendar[]>(
     [],
@@ -187,7 +201,7 @@ export function ConnectCalendarDialog({
             variant="outline"
             className={cn("gap-2", "w-10 px-0 md:w-auto md:px-4")}
           >
-            <CalendarSync className="w-4 h-4" />
+            <CalendarSync className="w-4 h-4" strokeWidth={2.25} />
             <span className="hidden md:inline">Connect Calendar</span>
           </Button>
         </Trigger>
@@ -229,6 +243,7 @@ export function ConnectCalendarDialog({
                     size="sm"
                     className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
                     title={`Choose ${p} calendars`}
+                    disabled={isDisconnecting !== null}
                     onClick={() => openCalendarPicker(p as CalendarProvider)}
                   >
                     <Calendars className="w-3.5 h-3.5" strokeWidth={2.25} />
@@ -240,12 +255,18 @@ export function ConnectCalendarDialog({
                     className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive-surface-hover"
                     title={`Disconnect ${p}`}
                     aria-label={`Disconnect ${p}`}
-                    onClick={async () => {
-                      await disconnect(p);
-                      notify.success(`${capitalize(p)} disconnected`);
-                    }}
+                    disabled={isDisconnecting !== null}
+                    aria-busy={isDisconnecting === p}
+                    onClick={() => setProviderToDisconnect(p)}
                   >
-                    <Trash2 className="w-3.5 h-3.5" strokeWidth={2.25} />
+                    {isDisconnecting === p ? (
+                      <Loader2
+                        className="w-3.5 h-3.5 animate-spin"
+                        strokeWidth={2.25}
+                      />
+                    ) : (
+                      <Trash2 className="w-3.5 h-3.5" strokeWidth={2.25} />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -298,7 +319,7 @@ export function ConnectCalendarDialog({
           <div className="px-4 py-6 sm:px-6 space-y-4">
             {pickerLoading ? (
               <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.25} />
                 Loading calendars…
               </div>
             ) : pickerError ? (
@@ -353,7 +374,10 @@ export function ConnectCalendarDialog({
               >
                 {pickerSaving ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <Loader2
+                      className="w-4 h-4 animate-spin mr-2"
+                      strokeWidth={2.25}
+                    />
                     Saving…
                   </>
                 ) : (
@@ -364,6 +388,61 @@ export function ConnectCalendarDialog({
           </div>
         )}
       </ResponsiveDialogContent>
+
+      <AlertDialog
+        open={providerToDisconnect !== null}
+        onOpenChange={(isOpen) => {
+          if (!isOpen && !isDisconnecting) setProviderToDisconnect(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Disconnect{" "}
+              {providerToDisconnect ? capitalize(providerToDisconnect) : ""}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Your synced events will no longer be refreshed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDisconnecting !== null}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDisconnecting !== null}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!providerToDisconnect) return;
+                const p = providerToDisconnect;
+                setIsDisconnecting(p);
+                try {
+                  await disconnect(p as CalendarProvider);
+                  notify.success(`${capitalize(p)} disconnected`);
+                  setProviderToDisconnect(null);
+                } catch {
+                  notify.error(`Failed to disconnect ${capitalize(p)}`);
+                } finally {
+                  setIsDisconnecting(null);
+                }
+              }}
+            >
+              {isDisconnecting ? (
+                <>
+                  <Loader2
+                    className="w-4 h-4 mr-2 animate-spin"
+                    strokeWidth={2.25}
+                  />
+                  Disconnecting...
+                </>
+              ) : (
+                "Disconnect"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ResponsiveDialog>
   );
 }
@@ -383,7 +462,7 @@ function ProviderButton({
     <button
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center justify-center p-6 rounded-2xl border bg-card/50",
+        "flex flex-col items-center justify-center p-6 rounded-xl border bg-card/50",
         "transition-all duration-300 ease-out",
         "hover:border-border/80 hover:bg-accent/30 hover:shadow-sm",
         "active:scale-[0.98] group relative",

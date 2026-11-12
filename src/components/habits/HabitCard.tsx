@@ -27,6 +27,7 @@ import {
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { ReadableText } from "@/components/encryption/ReadableText";
 import { isUnreadable } from "@/lib/crypto/unreadable";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface HabitCardProps {
   habit: HabitWithEntries;
@@ -137,13 +138,13 @@ export function HabitCard({
       {isCompletedToday ? (
         <Check
           className="w-5 h-5"
-          strokeWidth={3}
+          strokeWidth={2.25}
           style={{ color: getContrastingColor(habit.color) }}
         />
       ) : isSkippedToday ? (
-        <Pause className="w-4 h-4" strokeWidth={3} />
+        <Pause className="w-4 h-4" strokeWidth={2.25} />
       ) : (
-        <Plus className="w-5 h-5" />
+        <Plus className="w-5 h-5" strokeWidth={2.25} />
       )}
     </button>
   );
@@ -247,7 +248,7 @@ export function HabitCard({
             )}
             <span>
               <span className="font-semibold text-foreground/90">
-                {currentStreak}
+                <AnimatedNumber value={currentStreak} />
               </span>{" "}
               streak
             </span>

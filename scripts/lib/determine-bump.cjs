@@ -1,3 +1,4 @@
+const semver = require("semver");
 const { CONVENTIONAL_COMMIT_RE, COMMIT_TYPES } = require("./commit-types.cjs");
 
 const BUMP_RANK = { patch: 0, minor: 1, major: 2 };
@@ -22,4 +23,22 @@ function determineBump(subjects) {
   return bump;
 }
 
-module.exports = { determineBump };
+function getPrereleaseTargetRank(version) {
+  const parsed = semver.parse(version);
+  if (!parsed) return 0;
+  if (parsed.minor === 0 && parsed.patch === 0) return 2;
+  if (parsed.patch === 0) return 1;
+  return 0;
+}
+
+function shouldEscalatePrerelease(currentVersion, bump) {
+  if (!bump) return false;
+  return BUMP_RANK[bump] > getPrereleaseTargetRank(currentVersion);
+}
+
+module.exports = {
+  determineBump,
+  BUMP_RANK,
+  getPrereleaseTargetRank,
+  shouldEscalatePrerelease,
+};

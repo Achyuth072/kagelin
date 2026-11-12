@@ -66,9 +66,9 @@ export const PiPTimer = memo(function PiPTimer({ onClose }: PiPTimerProps) {
           className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 active:scale-95 transition-all"
         >
           {isRunning ? (
-            <Pause className="h-5 w-5" />
+            <Pause className="h-5 w-5" strokeWidth={2.25} />
           ) : (
-            <Play className="h-5 w-5 ml-0.5" />
+            <Play className="h-5 w-5 ml-0.5" strokeWidth={2.25} />
           )}
         </button>
 
@@ -78,7 +78,7 @@ export const PiPTimer = memo(function PiPTimer({ onClose }: PiPTimerProps) {
             aria-label="Close Picture-in-Picture"
             className="h-10 w-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center hover:bg-secondary/80 active:scale-95 transition-all"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" strokeWidth={2.25} />
           </button>
         )}
       </div>

@@ -89,7 +89,7 @@ export function StatsExportMenu({ stats, period }: StatsExportMenuProps) {
           disabled={isExporting === "csv"}
           className="cursor-pointer gap-2 py-2"
         >
-          <FileDown className="h-4 w-4 text-brand" />
+          <FileDown className="h-4 w-4 text-brand" strokeWidth={2.25} />
           <span>
             {isExporting === "csv" ? "Exporting…" : "Daily rollup (CSV)"}
           </span>
@@ -99,7 +99,7 @@ export function StatsExportMenu({ stats, period }: StatsExportMenuProps) {
           disabled={isExporting === "json"}
           className="cursor-pointer gap-2 py-2"
         >
-          <FileJson className="h-4 w-4 text-brand" />
+          <FileJson className="h-4 w-4 text-brand" strokeWidth={2.25} />
           <span>
             {isExporting === "json" ? "Exporting…" : "Full stats (JSON)"}
           </span>

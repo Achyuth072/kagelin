@@ -44,12 +44,15 @@ function TaskDetailPanelContent({ onClose }: { onClose?: () => void }) {
             >
               {isOverlay ? (
                 <>
-                  <Columns2 className="h-4 w-4 opacity-80" strokeWidth={2} />
+                  <Columns2 className="h-4 w-4 opacity-80" strokeWidth={2.25} />
                   <span className="hidden sm:inline">Split</span>
                 </>
               ) : (
                 <>
-                  <PanelRight className="h-4 w-4 opacity-80" strokeWidth={2} />
+                  <PanelRight
+                    className="h-4 w-4 opacity-80"
+                    strokeWidth={2.25}
+                  />
                   <span className="hidden sm:inline">Overlay</span>
                 </>
               )}

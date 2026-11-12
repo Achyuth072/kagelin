@@ -216,13 +216,13 @@ describe("TaskView - create mode", () => {
     expect(containerKeyDown).not.toHaveBeenCalled();
   });
 
-  it("replaces newlines with spaces when text with newlines is entered or pasted", () => {
+  it("replaces newlines with spaces when text with newlines is pasted into title", () => {
     const setContent = vi.fn();
-    renderTaskView({ mode: "create", setContent });
+    renderTaskView({ mode: "create", content: "", setContent });
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
-    fireEvent.change(titleInput, {
-      target: { value: "Line 1\nLine 2\r\nLine 3" },
+    fireEvent.paste(titleInput, {
+      clipboardData: { getData: () => "Line 1\nLine 2\r\nLine 3" },
     });
 
     expect(setContent).toHaveBeenCalledWith("Line 1 Line 2 Line 3");
@@ -290,13 +290,14 @@ describe("TaskView - edit mode", () => {
     expect(setDescription).toHaveBeenCalledWith("Updated notes");
   });
 
-  it("pressing bare Enter in the title focuses the notes field", () => {
-    renderTaskView(baseEditOverrides);
+  it("pressing bare Enter in the title submits the form in edit mode too", () => {
+    const onSubmit = vi.fn();
+    renderTaskView({ ...baseEditOverrides, onSubmit });
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
     fireEvent.keyDown(titleInput, { key: "Enter" });
 
-    expect(screen.getByRole("textbox", { name: /notes/i })).toBeInTheDocument();
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
   it("pressing Cmd+Enter or Ctrl+Enter in edit mode title submits the form", () => {
@@ -337,5 +338,120 @@ describe("TaskView - edit mode", () => {
     const picker = screen.getByTestId("recurrence-picker");
     expect(picker.getAttribute("data-recurrence")).toBe("WEEKLY");
     expect(picker.getAttribute("data-mobile")).toBe("true");
+  });
+});
+
+describe("TaskView - normalized form patterns & surface parity", () => {
+  it("renders monospace tracking badge with task id or TASK-NEW", () => {
+    const { unmount } = renderTaskView({ mode: "create" });
+    const createBadge = screen.getByTestId("task-header-badge");
+    expect(createBadge).toHaveTextContent("TASK-NEW");
+    expect(createBadge).toHaveClass("font-mono", "uppercase", "text-brand");
+    unmount();
+
+    renderTaskView({
+      mode: "edit",
+      task: { ...baseTask, id: "task-102" } as Task,
+    });
+    const editBadge = screen.getByTestId("task-header-badge");
+    expect(editBadge).toHaveTextContent("TASK-102");
+    expect(editBadge).toHaveClass("font-mono", "uppercase", "text-brand");
+  });
+
+  it("renders unboxed standalone native input with border-b border-border/40", () => {
+    renderTaskView({ mode: "create" });
+    const input = screen.getByLabelText("Task content");
+    expect(input.tagName).toBe("INPUT");
+    expect(input).toHaveClass("border-b", "border-border/40", "bg-transparent");
+  });
+
+  it("renders single-line property strip with priority segmented toggle and updates state", () => {
+    const setPriority = vi.fn();
+    renderTaskView({ mode: "edit", priority: 4, setPriority });
+
+    const propertyStrip = screen.getByTestId("property-strip");
+    expect(propertyStrip).toBeInTheDocument();
+
+    const priorityChip = screen.getByRole("button", { name: "Priority P4" });
+    expect(priorityChip).toBeInTheDocument();
+    fireEvent.click(priorityChip);
+
+    const p2Btn = screen.getByRole("tab", { name: "Priority P2" });
+    expect(p2Btn).toHaveAttribute("data-state", "inactive");
+
+    fireEvent.mouseDown(p2Btn);
+    expect(setPriority).toHaveBeenCalledWith(2);
+  });
+
+  it("renders steps counter and toggles showSubtasks on click", () => {
+    const setShowSubtasks = vi.fn();
+    renderTaskView({
+      mode: "create",
+      draftSubtasks: ["Step A", "Step B"],
+      showSubtasks: false,
+      setShowSubtasks,
+    });
+
+    const stepsBtn = screen.getByRole("button", { name: /steps \(0\/2\)/i });
+    expect(stepsBtn).toBeInTheDocument();
+
+    fireEvent.click(stepsBtn);
+    expect(setShowSubtasks).toHaveBeenCalledWith(true);
+  });
+
+  it("renders anchored footer with project selector and square action CTAs", () => {
+    const projects = [
+      {
+        id: "proj-1",
+        name: "Design System",
+        color: "#6366f1",
+        is_inbox: false,
+        is_archived: false,
+        created_at: "",
+        updated_at: "",
+        user_id: "user-1",
+        view_style: "list" as const,
+      },
+    ];
+    renderTaskView({
+      mode: "edit",
+      selectedProjectId: "proj-1",
+      projects,
+      hasContent: true,
+      task: baseTask,
+    });
+
+    const projectTrigger = screen.getByRole("combobox");
+    expect(projectTrigger).toHaveClass("max-w-[180px]", "rounded-lg");
+    expect(projectTrigger.querySelector(".lucide-folder")).toBeNull();
+    // Only one color indicator dot (from SelectValue), not duplicate dots
+    expect(projectTrigger.querySelectorAll(".rounded-full")).toHaveLength(1);
+
+    const deleteBtn = screen.getByRole("button", { name: /delete task/i });
+    expect(deleteBtn).toHaveClass("h-9", "w-9");
+
+    const saveBtn = screen.getByRole("button", { name: /save changes/i });
+    expect(saveBtn).toHaveClass("h-9", "w-9", "bg-brand");
+  });
+
+  it("renders project selector for inbox without duplicate folder icons or dots", () => {
+    renderTaskView({
+      mode: "create",
+      selectedProjectId: null,
+      hasContent: false,
+    });
+
+    const projectTrigger = screen.getByRole("combobox");
+    expect(projectTrigger.querySelector(".lucide-folder")).toBeNull();
+    expect(projectTrigger.querySelectorAll(".rounded-full")).toHaveLength(0);
+    expect(projectTrigger.querySelector(".lucide-inbox")).toBeInTheDocument();
+  });
+
+  it("renders with panel layout without error", () => {
+    const { container } = renderTaskView(
+      { mode: "edit", task: baseTask },
+      "panel",
+    );
+    expect(container.firstChild).toHaveClass("bg-card");
   });
 });

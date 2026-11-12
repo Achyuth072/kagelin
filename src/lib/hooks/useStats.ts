@@ -282,7 +282,7 @@ export function calculateStats(
     const diff = ((curr - prev) / prev) * 100;
     return {
       value: Math.abs(Math.round(diff * 10) / 10),
-      isPositive: diff >= 0,
+      isPositive: diff > 0,
     };
   };
 

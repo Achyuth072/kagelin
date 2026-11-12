@@ -52,32 +52,35 @@ vi.mock("@/lib/hooks/useTaskMutations", () => ({
   }),
 }));
 
-vi.mock("framer-motion", async () => {
+vi.mock("motion/react", () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  useMotionValue: vi.fn(() => ({ get: () => 0, set: vi.fn() })),
+  useMotionValueEvent: vi.fn(),
+  animate: vi.fn(),
+  useTransform: vi.fn(() => ({ get: () => 0 })),
+}));
+
+vi.mock("motion/react-m", async () => {
   const React = await import("react");
   return {
-    motion: {
-      div: React.forwardRef(({ children, ...props }: any, ref: any) => {
+    div: React.forwardRef(({ children, ...props }: any, ref: any) => {
+      return (
+        <div {...props} ref={ref}>
+          {children}
+        </div>
+      );
+    }),
+    button: React.forwardRef(
+      ({ children, onClick, ...props }: any, ref: any) => {
         return (
-          <div {...props} ref={ref}>
+          <button ref={ref} onClick={onClick} {...props}>
             {children}
-          </div>
+          </button>
         );
-      }),
-      button: React.forwardRef(
-        ({ children, onClick, ...props }: any, ref: any) => {
-          return (
-            <button ref={ref} onClick={onClick} {...props}>
-              {children}
-            </button>
-          );
-        },
-      ),
-    },
-    AnimatePresence: ({ children }: { children: React.ReactNode }) => (
-      <>{children}</>
+      },
     ),
-    useMotionValue: vi.fn(() => ({ get: () => 0, set: vi.fn() })),
-    useTransform: vi.fn(() => ({ get: () => 0 })),
   };
 });
 

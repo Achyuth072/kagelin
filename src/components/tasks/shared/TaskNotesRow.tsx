@@ -8,10 +8,10 @@ import {
   useImperativeHandle,
   type ReactNode,
 } from "react";
-import { AlignLeft } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { IconCell } from "@/components/ui/IconCell";
 import { ReadableText } from "@/components/encryption/ReadableText";
+import { IconCell } from "@/components/ui/IconCell";
 import { cn } from "@/lib/utils";
 
 export interface TaskNotesRowHandle {
@@ -116,21 +116,18 @@ export const TaskNotesRow = forwardRef<TaskNotesRowHandle, TaskNotesRowProps>(
             }
           }}
         >
-          <IconCell className="pt-[5px]">
-            <AlignLeft
-              className="h-4 w-4 text-muted-foreground"
-              strokeWidth={2.25}
-            />
+          <IconCell className="pt-[5px] text-muted-foreground">
+            <FileText className="h-4 w-4" strokeWidth={2.25} />
           </IconCell>
           {unreadable ? (
-            <span className="text-sm flex-1 min-w-0">
+            <span className="text-xs flex-1 min-w-0">
               <ReadableText text={null} />
             </span>
           ) : (
-            <>
+            <div className="flex-1 text-xs">
               {showPreview && (
                 <div
-                  className="text-sm flex-1 min-w-0 text-foreground whitespace-pre-wrap break-words leading-normal"
+                  className="w-full text-foreground whitespace-pre-wrap break-words leading-relaxed font-sans text-xs"
                   tabIndex={0}
                   role="button"
                   aria-label="Edit notes"
@@ -157,14 +154,13 @@ export const TaskNotesRow = forwardRef<TaskNotesRowHandle, TaskNotesRowProps>(
                 onChange={(e) => setDescription(e.target.value)}
                 onFocus={() => setIsEditing(true)}
                 onBlur={() => setIsEditing(false)}
-                rows={1}
                 hidden={showPreview}
                 className={cn(
-                  "flex-1 bg-transparent border-0 outline-none resize-none text-sm text-foreground placeholder:text-muted-foreground/70 leading-normal p-0 min-h-6 field-sizing-content max-h-32",
+                  "w-full field-sizing-content max-h-32 p-0 bg-transparent border-0 outline-none resize-none leading-relaxed text-foreground placeholder:text-muted-foreground/60 font-sans text-xs",
                   showPreview && "hidden",
                 )}
               />
-            </>
+            </div>
           )}
         </div>
       </div>

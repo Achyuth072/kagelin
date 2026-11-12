@@ -97,7 +97,8 @@ export function useTaskEditor({
   const deleteMutation = useDeleteTask();
   const { data: inboxProject } = useInboxProject();
   const { data: projects } = useProjects();
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useMediaQuery("(max-width: 640px)");
+  const isFinePointer = useMediaQuery("(pointer: fine)");
   const { trigger: triggerHaptic } = useHaptic();
 
   const [prevOpen, setPrevOpen] = useState(open);
@@ -350,7 +351,7 @@ export function useTaskEditor({
     inboxProjectId: inboxProject?.id || null,
     projects,
     isMobile,
-    autoFocusTitle: autoFocusTitle ?? true,
+    autoFocusTitle: autoFocusTitle ?? isFinePointer,
 
     isPending,
     hasContent,

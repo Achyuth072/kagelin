@@ -61,7 +61,7 @@ export function HabitStripCell({
 
   // Invisible pseudo-element expands touch target to >=44px on coarse pointers.
   const cellSizing = isCompact
-    ? "aspect-square h-8 w-8 sm:h-auto sm:w-full"
+    ? "aspect-square h-8 w-8"
     : "aspect-square w-full max-w-9 lg:aspect-auto lg:h-9 lg:w-9 lg:max-w-none";
 
   const touchTargetClass = coarse
@@ -105,12 +105,12 @@ export function HabitStripCell({
       className={cn(
         "flex h-full w-full items-center justify-center rounded-md border transition-seijaku-fast",
         filled
-          ? "border-transparent"
+          ? "border-transparent group-hover:opacity-90"
           : missed
             ? "bg-destructive-surface border border-destructive-surface-border text-destructive-surface-foreground"
             : skipped
-              ? "border-border bg-secondary/40 text-muted-foreground"
-              : "border-border bg-secondary/40 text-muted-foreground group-hover:bg-secondary",
+              ? "border-border bg-secondary/40 text-muted-foreground group-hover:bg-secondary"
+              : "border-border bg-secondary/40 text-muted-foreground group-hover:bg-secondary group-hover:border-foreground/30",
         isToday && "ring-2 ring-offset-2 ring-offset-background",
       )}
       style={{
@@ -123,7 +123,7 @@ export function HabitStripCell({
       {complete && (
         <Check
           className={cn(isCompact ? "h-3.5 w-3.5 sm:h-4 sm:w-4" : "h-4 w-4")}
-          strokeWidth={3}
+          strokeWidth={2.25}
           style={{ color: getContrastingColor(color) }}
         />
       )}
@@ -132,13 +132,13 @@ export function HabitStripCell({
           className={cn(
             isCompact ? "h-3 w-3 sm:h-3.5 sm:w-3.5" : "h-3.5 w-3.5",
           )}
-          strokeWidth={3}
+          strokeWidth={2.25}
         />
       )}
       {skipped && (
         <Pause
           className={cn(isCompact ? "h-2.5 w-2.5 sm:h-3 sm:w-3" : "h-3 w-3")}
-          strokeWidth={3}
+          strokeWidth={2.25}
         />
       )}
       {loggedValue !== null && (
@@ -168,7 +168,7 @@ export function HabitStripCell({
       aria-label={cellLabel}
       title={stateText}
       className={cn(
-        "group relative flex items-center justify-center rounded-md transition-seijaku-fast",
+        "group relative flex items-center justify-center rounded-md transition-seijaku-fast cursor-pointer",
         touchTargetClass,
         cellSizing,
       )}

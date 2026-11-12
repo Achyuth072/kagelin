@@ -65,6 +65,11 @@ describe("HabitMonthGrid", () => {
     expect(nextBtn).toBeDisabled();
     expect(todayBtn).toBeDisabled();
     expect(todayBtn.className).not.toContain("text-brand font-semibold");
+    expect(todayBtn.querySelector("svg")).toBeInTheDocument();
+    expect(within(todayBtn).getByText("Today")).toHaveClass(
+      "hidden",
+      "sm:inline",
+    );
   });
 
   it("navigates to earlier months with previous button and stops at start date", () => {
@@ -78,8 +83,8 @@ describe("HabitMonthGrid", () => {
     const month = screen.getByRole("group");
     expect(month).toHaveAttribute("aria-label", "May 2026");
     expect(todayBtn).not.toBeDisabled();
-    expect(todayBtn.className).toContain("text-brand");
-    expect(todayBtn.className).toContain("bg-brand/10");
+    expect(todayBtn.className).toContain("text-foreground");
+    expect(todayBtn.className).not.toContain("text-brand");
     expect(nextBtn).not.toBeDisabled();
     expect(prevBtn).toBeDisabled();
   });

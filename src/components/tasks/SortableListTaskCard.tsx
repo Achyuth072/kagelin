@@ -17,6 +17,8 @@ interface SortableListTaskCardProps {
   isDesktop?: boolean;
   triggerHaptic?: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   setActiveTaskId?: (taskId: string) => void;
+  shouldShowHint?: boolean;
+  onHintShown?: () => void;
 }
 
 // Memoized — useSortable re-renders the parent every frame during drag.
@@ -35,6 +37,8 @@ const TaskItemContent = memo(
     isDesktop,
     triggerHaptic,
     setActiveTaskId,
+    shouldShowHint,
+    onHintShown,
   }: SortableListTaskCardProps & {
     attributes: import("@dnd-kit/core").DraggableAttributes;
     listeners: import("@dnd-kit/core").DraggableSyntheticListeners | undefined;
@@ -56,6 +60,8 @@ const TaskItemContent = memo(
         isDesktop={isDesktop}
         triggerHaptic={triggerHaptic}
         setActiveTaskId={setActiveTaskId}
+        shouldShowHint={shouldShowHint}
+        onHintShown={onHintShown}
       />
     );
   },
@@ -71,7 +77,8 @@ const TaskItemContent = memo(
       prev.isDragging === next.isDragging &&
       prev.isDndActive === next.isDndActive &&
       prev.project?.color === next.project?.color &&
-      prev.isDesktop === next.isDesktop
+      prev.isDesktop === next.isDesktop &&
+      prev.shouldShowHint === next.shouldShowHint
     );
   },
 );
@@ -88,6 +95,8 @@ export default function SortableListTaskCard({
   isDesktop,
   triggerHaptic,
   setActiveTaskId,
+  shouldShowHint,
+  onHintShown,
 }: SortableListTaskCardProps) {
   const {
     attributes,
@@ -127,6 +136,8 @@ export default function SortableListTaskCard({
         isDesktop={isDesktop}
         triggerHaptic={triggerHaptic}
         setActiveTaskId={setActiveTaskId}
+        shouldShowHint={shouldShowHint}
+        onHintShown={onHintShown}
       />
     </div>
   );

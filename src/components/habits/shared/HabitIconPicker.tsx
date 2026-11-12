@@ -113,7 +113,7 @@ const IconButton = memo(
         )}
       >
         <Icon
-          strokeWidth={isSelected ? 2.5 : 2}
+          strokeWidth={2.25}
           className={cn("h-5 w-5", isSelected ? "scale-110" : "")}
         />
       </button>

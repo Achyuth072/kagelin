@@ -48,8 +48,24 @@ describe("Tabs Component", () => {
     expect(overviewTab.className).toContain("data-[state=active]:bg-brand");
   });
 
-  it("supports size variants (sm, default, lg)", () => {
+  it("supports size variants (xs, sm, default, lg)", () => {
     const { rerender } = render(
+      <Tabs defaultValue="tab1">
+        <TabsList size="xs">
+          <TabsTrigger value="tab1">Extra Small</TabsTrigger>
+        </TabsList>
+      </Tabs>,
+    );
+
+    let list = screen.getByRole("tablist");
+    expect(list.className).toContain("h-7");
+    expect(list.className).toContain("sm:h-8");
+
+    let tab = screen.getByRole("tab", { name: "Extra Small" });
+    expect(tab.className).toContain("h-6");
+    expect(tab.className).toContain("sm:h-7");
+
+    rerender(
       <Tabs defaultValue="tab1">
         <TabsList size="sm">
           <TabsTrigger value="tab1">Small</TabsTrigger>
@@ -57,10 +73,10 @@ describe("Tabs Component", () => {
       </Tabs>,
     );
 
-    const list = screen.getByRole("tablist");
+    list = screen.getByRole("tablist");
     expect(list.className).toContain("h-9");
 
-    let tab = screen.getByRole("tab", { name: "Small" });
+    tab = screen.getByRole("tab", { name: "Small" });
     expect(tab.className).toContain("h-7");
 
     rerender(

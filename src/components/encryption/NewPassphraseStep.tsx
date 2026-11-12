@@ -50,7 +50,7 @@ export function NewPassphraseStep({
     <AuthShell>
       <form onSubmit={handleSubmit} className="w-full space-y-5">
         <div className="text-center space-y-1.5">
-          <Lock className="h-8 w-8 mx-auto text-brand" strokeWidth={1.75} />
+          <Lock className="h-8 w-8 mx-auto text-brand" strokeWidth={2.25} />
           <h1 className="text-xl font-bold tracking-tight">
             Set a new passphrase
           </h1>
@@ -87,7 +87,10 @@ export function NewPassphraseStep({
         >
           {submitting ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2
+                className="mr-2 h-4 w-4 animate-spin"
+                strokeWidth={2.25}
+              />
               Setting passphrase...
             </>
           ) : (

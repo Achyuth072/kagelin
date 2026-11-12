@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import {
   Settings,
   Timer,
@@ -15,33 +15,24 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+  useIsDrawer,
+} from "@/components/ui/responsive-dialog";
+import { DrawerFooter } from "@/components/ui/drawer";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTimer } from "@/components/TimerProvider";
 import { useTimerStore } from "@/lib/store/timerStore";
-import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
 
 import {
   useForm,
@@ -378,11 +369,84 @@ function SettingsForm() {
   );
 }
 
+function FocusSettingsBody({
+  isValid,
+  onReset,
+  onFormSubmit,
+}: {
+  isValid: boolean;
+  onReset: () => void;
+  onFormSubmit: () => void;
+}) {
+  const isDrawer = useIsDrawer();
+
+  if (isDrawer) {
+    return (
+      <>
+        <div className="px-4 overflow-y-auto flex-1 scrollbar-hide">
+          <SettingsForm />
+        </div>
+        <DrawerFooter className="flex-row items-center gap-3 pt-2 shrink-0 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <Button
+            type="button"
+            variant="outline"
+            className={resetBtnCls}
+            onClick={onReset}
+            aria-label="Reset to saved settings"
+          >
+            <RotateCcw strokeWidth={2.25} />
+          </Button>
+          <div className="flex-1" />
+          <Button
+            type="button"
+            onClick={onFormSubmit}
+            disabled={!isValid}
+            className={saveBtnCls}
+            aria-label="Save changes"
+          >
+            <Save className="h-5 w-5" strokeWidth={2.25} />
+          </Button>
+        </DrawerFooter>
+      </>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onFormSubmit();
+      }}
+    >
+      <SettingsForm />
+      <div className="flex items-center gap-3 pt-4 border-t border-border/40 mt-2">
+        <div className="flex-1" />
+        <Button
+          type="button"
+          variant="outline"
+          className={resetBtnCls}
+          onClick={onReset}
+          aria-label="Reset to saved settings"
+        >
+          <RotateCcw strokeWidth={2.25} />
+        </Button>
+        <Button
+          type="submit"
+          disabled={!isValid}
+          className={saveBtnCls}
+          aria-label="Save changes"
+        >
+          <Save className="h-5 w-5" strokeWidth={2.25} />
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export function FocusSettingsDialog() {
   const { settings, updateSettings } = useTimer();
   const { trigger, isPhone } = useHaptic();
   const [open, setOpen] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const methods = useForm<TimerSettings>({
     resolver: zodResolver(FocusSettingsSchema),
@@ -440,8 +504,6 @@ export function FocusSettingsDialog() {
     return () => subscription.unsubscribe();
   }, [watch]);
 
-  useBackNavigation(open && !isDesktop, () => setOpen(false));
-
   const onFormSubmit = () => {
     trigger("thud");
     setOpen(false);
@@ -456,7 +518,7 @@ export function FocusSettingsDialog() {
   };
 
   const triggerButton = (
-    <motion.button
+    <m.button
       className={cn(
         buttonVariants({ variant: "ghost" }),
         "text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-all cursor-pointer",
@@ -464,90 +526,32 @@ export function FocusSettingsDialog() {
       onTapStart={() => trigger("thud")}
       whileTap={isPhone ? { scale: 0.95 } : {}}
     >
-      <Settings className="h-4 w-4 mr-2" />
+      <Settings className="h-4 w-4 mr-2" strokeWidth={2.25} />
       Adjust Settings
-    </motion.button>
+    </m.button>
   );
 
-  if (isDesktop) {
-    return (
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>{triggerButton}</DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Timer Settings</DialogTitle>
-            <DialogDescription>
-              Customize your focus and break durations
-              <span id="settings-desc" className="sr-only">
-                Form to update timer durations and transitions
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <FormProvider {...methods}>
-            <form onSubmit={handleSubmit(onFormSubmit)}>
-              <SettingsForm />
-              <div className="flex items-center gap-3 pt-4 border-t border-border/40 mt-2">
-                <div className="flex-1" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={resetBtnCls}
-                  onClick={handleReset}
-                  aria-label="Reset to saved settings"
-                >
-                  <RotateCcw strokeWidth={2.25} />
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={!isValid}
-                  className={saveBtnCls}
-                  aria-label="Save changes"
-                >
-                  <Save className="h-5 w-5 stroke-[2.25px]" />
-                </Button>
-              </div>
-            </form>
-          </FormProvider>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
   return (
-    <Drawer open={open} onOpenChange={setOpen} repositionInputs={false}>
-      <DrawerTrigger asChild>{triggerButton}</DrawerTrigger>
-      <DrawerContent className="max-h-[92dvh] flex flex-col">
-        <DrawerHeader className="text-left shrink-0">
-          <DrawerTitle>Timer Settings</DrawerTitle>
-          <DrawerDescription>
+    <ResponsiveDialog open={open} onOpenChange={setOpen}>
+      <ResponsiveDialogTrigger asChild>{triggerButton}</ResponsiveDialogTrigger>
+      <ResponsiveDialogContent className="sm:max-w-[425px] max-h-[92dvh] flex flex-col">
+        <ResponsiveDialogHeader className="text-left shrink-0">
+          <ResponsiveDialogTitle>Timer Settings</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             Customize your focus and break durations
-          </DrawerDescription>
-        </DrawerHeader>
-        <div className="px-4 overflow-y-auto flex-1 scrollbar-hide">
-          <FormProvider {...methods}>
-            <SettingsForm />
-          </FormProvider>
-        </div>
-        <DrawerFooter className="flex-row items-center gap-3 pt-2 shrink-0 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-          <Button
-            variant="outline"
-            className={resetBtnCls}
-            onClick={handleReset}
-            aria-label="Reset to saved settings"
-          >
-            <RotateCcw strokeWidth={2.25} />
-          </Button>
-          <div className="flex-1" />
-          <Button
-            onClick={handleSubmit(onFormSubmit)}
-            disabled={!isValid}
-            className={saveBtnCls}
-            aria-label="Save changes"
-          >
-            <Save className="h-5 w-5 stroke-[2.25px]" />
-          </Button>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
+            <span id="settings-desc" className="sr-only">
+              Form to update timer durations and transitions
+            </span>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <FormProvider {...methods}>
+          <FocusSettingsBody
+            isValid={isValid}
+            onReset={handleReset}
+            onFormSubmit={handleSubmit(onFormSubmit)}
+          />
+        </FormProvider>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

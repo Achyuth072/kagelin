@@ -7,7 +7,7 @@ import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { useAuth } from "@/components/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2 } from "lucide-react";
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import { AuthPasswordField } from "@/components/auth/AuthPasswordField";
 import { PasswordField } from "@/components/auth/PasswordField";
 import { AuthErrorMessage } from "@/components/auth/AuthErrorMessage";
@@ -56,7 +56,11 @@ export function UpdatePasswordAuth() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <Loader2
+          className="h-6 w-6 text-muted-foreground animate-spin"
+          strokeWidth={2.25}
+        />
+        <span className="sr-only">Loading...</span>
       </div>
     );
   }
@@ -65,7 +69,7 @@ export function UpdatePasswordAuth() {
   if (!updated && (!user || isGuestMode)) {
     return (
       <div className="h-dvh w-full flex items-center justify-center px-4 bg-background">
-        <div className="max-w-md w-full space-y-4 text-center px-4 py-8 sm:p-8 rounded-2xl border border-border bg-card shadow-sm">
+        <div className="max-w-md w-full space-y-4 text-center px-4 py-8 sm:p-8 rounded-xl border border-border bg-card shadow-sm">
           <h1 className="text-xl font-semibold">Link expired</h1>
           <p className="text-sm text-muted-foreground">
             This password reset link is invalid or has expired. Request a new
@@ -81,10 +85,10 @@ export function UpdatePasswordAuth() {
 
   return (
     <div className="h-dvh w-full flex items-center justify-center px-4 bg-background">
-      <motion.div
+      <m.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full space-y-4 px-4 py-8 sm:p-8 rounded-2xl border border-border bg-card shadow-sm"
+        className="max-w-md w-full space-y-4 px-4 py-8 sm:p-8 rounded-xl border border-border bg-card shadow-sm"
       >
         {updated ? (
           <div className="flex flex-col items-center justify-center text-center space-y-4">
@@ -158,7 +162,10 @@ export function UpdatePasswordAuth() {
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2
+                      className="mr-2 h-4 w-4 animate-spin"
+                      strokeWidth={2.25}
+                    />
                     Updating...
                   </>
                 ) : (
@@ -168,7 +175,7 @@ export function UpdatePasswordAuth() {
             </form>
           </>
         )}
-      </motion.div>
+      </m.div>
     </div>
   );
 }

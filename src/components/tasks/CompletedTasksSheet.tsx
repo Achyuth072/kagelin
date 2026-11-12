@@ -14,26 +14,19 @@ import {
   useClearCompletedTasks,
 } from "@/lib/hooks/useTaskMutations";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogClose,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerTitle,
-  DrawerClose,
-  DrawerDescription,
-} from "@/components/ui/drawer";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+  ResponsiveDialog,
+  ResponsiveDialogClose,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogTitle,
+  useIsDrawer,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
 import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface CompletedTasksSheetProps {
@@ -63,11 +56,11 @@ const CompletedTaskItem = React.memo(({ task }: { task: Task }) => {
       : `${format(completedDate, "MMM d")} · ${formatTime(completedDate)}`;
 
   return (
-    <div className="flex items-start gap-3 py-2 md:py-2 px-4 border-b border-border/40 hover:bg-secondary/30 transition-colors group min-h-[44px]">
+    <div className="flex items-start gap-3 py-2 px-4 mx-2 rounded-md hover:bg-muted/40 transition-seijaku-fast group min-h-[44px]">
       <button onClick={handleUncomplete} aria-label="Mark task incomplete">
         <CheckCircle2
-          className="h-5 w-5 text-foreground/50 hover:text-foreground transition-colors"
-          strokeWidth={2.5}
+          className="h-5 w-5 text-foreground/50 hover:text-foreground transition-seijaku-fast"
+          strokeWidth={2.25}
         />
       </button>
 
@@ -77,7 +70,7 @@ const CompletedTaskItem = React.memo(({ task }: { task: Task }) => {
         </p>
         {completedDate && (
           <div className="flex items-center gap-1 mt-1 text-xs text-foreground/60 font-medium">
-            <Clock className="h-3 w-3" />
+            <Clock className="h-3 w-3" strokeWidth={2.25} />
             {formattedDate}
           </div>
         )}
@@ -92,15 +85,44 @@ export function CompletedTasksSheet({
   open,
   onOpenChange,
 }: CompletedTasksSheetProps) {
-  const { data: tasks = [], isLoading } = useTasks({ showCompleted: true });
-  const isDesktop = useMediaQuery("(min-width: 768px)");
-  const clearMutation = useClearCompletedTasks();
   const [showClearDialog, setShowClearDialog] = useState(false);
+  const clearMutation = useClearCompletedTasks();
+
+  const handleClearHistory = () => {
+    setShowClearDialog(false);
+    onOpenChange(false);
+    clearMutation.mutate();
+  };
+
+  return (
+    <>
+      <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+        <CompletedTasksSheetBody
+          onRequestClearHistory={() => setShowClearDialog(true)}
+        />
+      </ResponsiveDialog>
+
+      <DeleteConfirmationDialog
+        isOpen={showClearDialog}
+        onClose={() => setShowClearDialog(false)}
+        onConfirm={handleClearHistory}
+        title="Clear History"
+        description="Are you sure you want to delete all completed tasks? This action cannot be undone and will remove these tasks from your statistics."
+      />
+    </>
+  );
+}
+
+function CompletedTasksSheetBody({
+  onRequestClearHistory,
+}: {
+  onRequestClearHistory: () => void;
+}) {
+  const { data: tasks = [], isLoading } = useTasks({ showCompleted: true });
+  const isMobile = useIsDrawer();
   const [searchQuery, setSearchQuery] = useState("");
   const [showOlder, setShowOlder] = useState(false);
   const { trigger } = useHaptic();
-
-  useBackNavigation(open && !isDesktop, () => onOpenChange(false));
 
   const completedTasks = tasks.filter(
     (task) =>
@@ -120,12 +142,6 @@ export function CompletedTasksSheet({
 
   const hasResults = flattenedItems.length > 0;
 
-  const handleClearHistory = () => {
-    setShowClearDialog(false);
-    onOpenChange(false);
-    clearMutation.mutate();
-  };
-
   const renderItem = (_index: number, item: LogbookItem) => {
     if (item.type === "more") {
       return (
@@ -140,7 +156,7 @@ export function CompletedTasksSheet({
     }
     if (item.type === "header") {
       return (
-        <h3 className="type-micro font-semibold uppercase px-6 py-3 border-b border-border/40 bg-background sticky top-0 z-10">
+        <h3 className="type-micro font-semibold uppercase px-6 py-2.5 text-muted-foreground bg-background sticky top-0 z-10">
           {item.title}
         </h3>
       );
@@ -151,25 +167,37 @@ export function CompletedTasksSheet({
   const content = (
     <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="p-4 space-y-3" data-testid="completed-tasks-skeleton">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-secondary/10"
+            >
+              <Skeleton className="h-4 w-4 rounded-sm shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4 rounded" />
+                <Skeleton className="h-3 w-1/4 rounded" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : completedTasks.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-          <CheckCircle2 className="h-16 w-16 text-muted-foreground/50 mb-4" />
-          <h2 className="text-xl font-semibold mb-2">No Completed Tasks</h2>
-          <p className="text-muted-foreground max-w-md">
-            Tasks you complete will appear here. Start checking off items from
-            your task list!
-          </p>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <EmptyState
+            icon={CheckCircle2}
+            title="No Completed Tasks"
+            description="Tasks you complete will appear here. Start checking off items from your task list!"
+            className="py-12"
+          />
         </div>
       ) : !hasResults && isSearching ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-          <Search className="h-12 w-12 text-muted-foreground/30 mb-4" />
-          <h2 className="text-lg font-medium mb-1">No tasks found</h2>
-          <p className="text-sm text-muted-foreground">
-            Try searching for something else
-          </p>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <EmptyState
+            icon={Search}
+            title="No tasks found"
+            description="Try searching for something else"
+            className="py-12"
+          />
         </div>
       ) : (
         <Virtuoso
@@ -185,146 +213,94 @@ export function CompletedTasksSheet({
     </div>
   );
 
-  if (isDesktop) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg h-[80vh] flex flex-col p-0 overflow-hidden border-border bg-background [&>button:last-child]:hidden">
-          <DialogHeader className="flex-row items-center justify-between space-y-0 px-6 py-4 border-b border-border/50 shrink-0">
-            <DialogTitle className="flex items-center gap-2 cursor-default">
-              <CheckCircle2
-                className="h-4 w-4 text-foreground/70"
-                strokeWidth={2.5}
-              />
-              <span className="type-h2">Logbook</span>
-            </DialogTitle>
-            <DialogDescription className="sr-only">
-              View and manage your completed task history.
-            </DialogDescription>
-            <div className="flex items-center gap-3">
-              {completedTasks.length > 0 && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    trigger("thud");
-                    setShowClearDialog(true);
-                  }}
-                  className="h-8 gap-2 rounded-sm shadow-none font-medium px-3"
-                >
-                  <Trash2 className="h-3.5 w-3.5" strokeWidth={2.25} />
-                  <span className="text-xs">Clear History</span>
-                </Button>
-              )}
-              <DialogClose asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 text-muted-foreground hover:text-foreground transition-seijaku-fast rounded-sm"
-                  title="Close"
-                  aria-label="Close"
-                >
-                  <X className="h-4 w-4" strokeWidth={2.25} />
-                </Button>
-              </DialogClose>
-            </div>
-          </DialogHeader>
-
-          {completedTasks.length > 0 && (
-            <div className="px-6 py-3 border-b border-border/40 bg-secondary/5 shrink-0">
-              <div className="relative group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-brand transition-colors" />
-                <Input
-                  className="pl-9 bg-secondary/20 border-border/40 focus:border-border/60 focus:bg-secondary/30 h-9 text-sm transition-all placeholder:text-muted-foreground"
-                  placeholder="Search completed tasks..."
-                  aria-label="Search completed tasks"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-          <div className="flex-1 overflow-hidden">{content}</div>
-        </DialogContent>
-
-        <DeleteConfirmationDialog
-          isOpen={showClearDialog}
-          onClose={() => setShowClearDialog(false)}
-          onConfirm={handleClearHistory}
-          title="Clear History"
-          description="Are you sure you want to delete all completed tasks? This action cannot be undone and will remove these tasks from your statistics."
-        />
-      </Dialog>
-    );
-  }
-
   return (
-    <>
-      <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
-        <DrawerContent className="max-h-[92dvh] h-[92dvh] flex flex-col overflow-hidden">
-          <div className="flex flex-row items-center justify-between border-b border-border px-6 py-4 shrink-0">
-            <DrawerTitle className="flex items-center gap-2">
-              <CheckCircle2
-                className="h-5 w-5 text-foreground/70"
-                strokeWidth={2.5}
+    <ResponsiveDialogContent
+      showClose={false}
+      className={
+        isMobile
+          ? "max-h-[92dvh] h-[92dvh] flex flex-col overflow-hidden"
+          : "max-w-lg h-[80vh] flex flex-col p-0 overflow-hidden border-border bg-background"
+      }
+    >
+      <div className="flex flex-row items-center justify-between border-b border-border/50 px-6 py-4 shrink-0">
+        <ResponsiveDialogTitle className="flex items-center gap-2 cursor-default">
+          <CheckCircle2
+            className="h-5 w-5 sm:h-4 sm:w-4 text-foreground/70"
+            strokeWidth={2.25}
+          />
+          <span className="type-h2">Logbook</span>
+        </ResponsiveDialogTitle>
+        <ResponsiveDialogDescription className="sr-only">
+          View and manage your completed task history.
+        </ResponsiveDialogDescription>
+        <div className="flex items-center gap-3">
+          {completedTasks.length > 0 &&
+            (isMobile ? (
+              <Button
+                variant="destructive"
+                size="icon"
+                aria-label="Clear history"
+                className="h-10 w-10 active:scale-95 transition-seijaku-fast rounded-md shadow-none"
+                onClick={() => {
+                  trigger("thud");
+                  onRequestClearHistory();
+                }}
+              >
+                <Trash2 className="h-5 w-5" strokeWidth={2.25} />
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  trigger("thud");
+                  onRequestClearHistory();
+                }}
+                className="h-8 gap-2 rounded-sm shadow-none font-medium px-3"
+              >
+                <Trash2 className="h-3.5 w-3.5" strokeWidth={2.25} />
+                <span className="text-xs">Clear History</span>
+              </Button>
+            ))}
+          <ResponsiveDialogClose asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Close"
+              title={isMobile ? undefined : "Close"}
+              className={
+                isMobile
+                  ? "h-10 w-10 text-muted-foreground active:scale-95 transition-seijaku-fast"
+                  : "h-10 w-10 text-muted-foreground hover:text-foreground transition-seijaku-fast rounded-sm"
+              }
+            >
+              <X
+                className={isMobile ? "h-6 w-6" : "h-4 w-4"}
+                strokeWidth={2.25}
               />
-              <span className="type-h2">Logbook</span>
-            </DrawerTitle>
-            <DrawerDescription className="sr-only">
-              View and manage your completed task history.
-            </DrawerDescription>
-            <div className="flex items-center gap-3">
-              {completedTasks.length > 0 && (
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  aria-label="Clear history"
-                  className="h-10 w-10 active:scale-95 transition-seijaku-fast rounded-md shadow-none"
-                  onClick={() => {
-                    trigger("thud");
-                    setShowClearDialog(true);
-                  }}
-                >
-                  <Trash2 className="h-5 w-5" strokeWidth={2.25} />
-                </Button>
-              )}
-              <DrawerClose asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Close"
-                  className="h-10 w-10 text-muted-foreground active:scale-95 transition-seijaku-fast"
-                >
-                  <X className="h-6 w-6" strokeWidth={2} />
-                </Button>
-              </DrawerClose>
-            </div>
+            </Button>
+          </ResponsiveDialogClose>
+        </div>
+      </div>
+
+      {completedTasks.length > 0 && (
+        <div className="px-6 py-4 sm:py-3 border-b border-border/40 bg-secondary/5 shrink-0">
+          <div className="relative group">
+            <Search
+              className="absolute left-3.5 sm:left-3 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-4 sm:w-4 text-muted-foreground sm:group-focus-within:text-brand transition-colors"
+              strokeWidth={2.25}
+            />
+            <Input
+              className="pl-11 sm:pl-9 bg-secondary/20 h-12 sm:h-9 text-base sm:text-sm shadow-none border-border/30 sm:border-border/40 focus:border-border/60 focus:bg-secondary/30 rounded-xl sm:rounded-md transition-all placeholder:text-muted-foreground"
+              placeholder="Search completed tasks..."
+              aria-label="Search completed tasks"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-
-          {completedTasks.length > 0 && (
-            <div className="px-6 py-4 border-b border-border/40 bg-secondary/5 shrink-0">
-              <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  className="pl-11 bg-secondary/20 h-12 text-base shadow-none border-border/30 focus:border-border/60 focus:bg-secondary/30 rounded-xl transition-all"
-                  placeholder="Search completed tasks..."
-                  aria-label="Search completed tasks"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-          <div className="flex-1 overflow-hidden">{content}</div>
-        </DrawerContent>
-      </Drawer>
-
-      <DeleteConfirmationDialog
-        isOpen={showClearDialog}
-        onClose={() => setShowClearDialog(false)}
-        onConfirm={handleClearHistory}
-        title="Clear History"
-        description="Are you sure you want to delete all completed tasks? This action cannot be undone and will remove these tasks from your statistics."
-      />
-    </>
+        </div>
+      )}
+      <div className="flex-1 overflow-hidden">{content}</div>
+    </ResponsiveDialogContent>
   );
 }

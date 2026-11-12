@@ -2,21 +2,17 @@
 
 import React, { memo, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { Play, Pause, X, Maximize2 } from "lucide-react";
+import { AnimatedCountdown } from "@/components/ui/animated-countdown";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMeasuredOffset } from "@/lib/hooks/useMeasuredOffset";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimer } from "@/components/TimerProvider";
-
-function formatTime(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins.toString().padStart(2, "0")}:${secs
-    .toString()
-    .padStart(2, "0")}`;
-}
+import { SEIJAKU_SPRING } from "@/lib/motion";
 
 export const FloatingTimer = memo(function FloatingTimer() {
   const mode = useTimerStore((s) => s.state.mode);
@@ -30,6 +26,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
   const pathname = usePathname();
   const router = useRouter();
   const { trigger } = useHaptic();
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const isPipActive = useUiStore((state) => state.isPipActive);
   const isDesktop = useUiStore((state) => state.isDesktop);
@@ -67,14 +64,22 @@ export const FloatingTimer = memo(function FloatingTimer() {
   return (
     <AnimatePresence>
       {shouldShow && (
-        <motion.div
+        <m.div
           ref={timerRef}
           data-testid="floating-timer"
-          initial={{ opacity: 0, y: 100, scale: 0.8 }}
+          initial={
+            prefersReducedMotion
+              ? { opacity: 0 }
+              : { opacity: 0, y: 100, scale: 0.8 }
+          }
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 100, scale: 0.8 }}
-          transition={{ type: "spring", stiffness: 280, damping: 60 }}
-          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[var(--z-floating)] bg-card border border-border rounded-2xl shadow-2xl p-4 min-w-[200px] select-none"
+          exit={
+            prefersReducedMotion
+              ? { opacity: 0 }
+              : { opacity: 0, y: 100, scale: 0.8 }
+          }
+          transition={prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING}
+          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[var(--z-floating)] bg-card border border-border rounded-xl shadow-sm p-4 min-w-[200px] select-none"
           style={{ touchAction: "none" }}
         >
           <div className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground mb-1 text-center">
@@ -86,14 +91,14 @@ export const FloatingTimer = memo(function FloatingTimer() {
           </div>
 
           <div className="text-3xl font-light font-mono tracking-tight text-foreground tabular-nums text-center mb-3">
-            {formatTime(remainingSeconds)}
+            <AnimatedCountdown seconds={remainingSeconds} />
           </div>
 
           <div className="flex items-center justify-center gap-2">
             <button
               onClick={handlePlayPause}
               aria-label={isRunning ? "Pause timer" : "Start timer"}
-              className="h-10 w-10 rounded-full bg-brand text-brand-foreground flex items-center justify-center hover:shadow-brand/20 active:scale-95 transition-all shadow-md"
+              className="h-10 w-10 rounded-full bg-brand text-brand-foreground flex items-center justify-center hover:shadow-brand/20 active:scale-95 transition-all shadow-xs"
             >
               {isRunning ? (
                 <Pause className="h-4 w-4 fill-current" strokeWidth={2.25} />
@@ -110,7 +115,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
               aria-label="Maximize timer"
               className="h-8 w-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center hover:bg-secondary/80 active:scale-95 transition-all"
             >
-              <Maximize2 className="h-3.5 w-3.5" />
+              <Maximize2 className="h-3.5 w-3.5" strokeWidth={2.25} />
             </button>
 
             <button
@@ -118,7 +123,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
               aria-label="Close timer"
               className="h-8 w-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center hover:bg-secondary/80 active:scale-95 transition-all"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-3.5 w-3.5" strokeWidth={2.25} />
             </button>
           </div>
 
@@ -129,7 +134,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
                 ? "Cycle Complete"
                 : `Break after Session ${completedSessions}`}
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

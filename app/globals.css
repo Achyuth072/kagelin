@@ -104,7 +104,9 @@
   --z-status: 30;
   --z-floating: 40;
   --z-prompt: 50;
-  --z-toast: 70;
+  --z-interactive: 60;
+  --z-alert: 65;
+  --z-toast: 80;
 }
 
 /* iOS reserves ~34px for the home indicator; cap the padding at the item's
@@ -548,12 +550,14 @@ input[type="password"]:has(+ button)::-ms-clear {
   }
 }
 
-/* Sonner's toast <li> defaults to left:0 inside the centered <ol>; recenter it here.
-   Keep Sonner's own --y stacking transform: overriding it collapses the stack onto one spot. */
+/* Sonner's toast <li> defaults to left:0 inside the centered <ol>; recenter it here
+   using left:0 / right:0 and auto margins so transform is left entirely to Sonner
+   (preserving stacking offsets, swipe gesture tracking, and exit keyframes). */
 /* eslint-disable tailwindcss/no-important */
 [data-sonner-toaster][data-x-position="center"] [data-sonner-toast] {
-  left: 50% !important;
-  transform: translateX(-50%) var(--y) !important;
+  left: 0 !important;
+  right: 0 !important;
+  margin-inline: auto !important;
 }
 /* eslint-enable tailwindcss/no-important */
 

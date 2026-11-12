@@ -1,5 +1,116 @@
 [
   {
+    "version": "1.51.0-preview.3",
+    "date": "2026-11-12",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Unify ProjectView to form patterns and refine archive and logbook lists",
+        "Align habit month grid controls with calendar toolbar",
+        "Clarify past-day logging affordance in habit history and insights",
+        "Harden Ink & Matte guardrails in lint, ast-grep, and AGENTS.md",
+        "Add Base UI NumberField, remove react-tooltip, virtualize grouped tasks",
+        "Migrate motion runtime to LazyMotion and add number-flow numerals",
+        "Ink & matte compliance, overlay layering, and command menu bounds"
+      ],
+      "Fixed": [
+        "Remove ghost button disabled background and prevent focus cycle layout shift",
+        "Safe focus stop control, secondary cycle reset, and unblock completion sync",
+        "Suppress leading zero artifact and normalize NumberFlow transitions",
+        "Correct seconds tens digit position constraint in AnimatedCountdown",
+        "Ink and matte surface tokens, virtualized dnd indexing, and responsive dialogs",
+        "Address code review findings on React Compiler useMemo and constants"
+      ]
+    }
+  },
+  {
+    "version": "1.51.0-preview.2",
+    "date": "2026-11-11",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Mobile score chart scrubbing and tactile frequency grid",
+        "Habit identity header and 4-card overview parity"
+      ],
+      "Improved": [
+        "Compact habit month grid and unbox frequency grid"
+      ],
+      "Fixed": [
+        "Prevent automatic virtual keyboard popup when opening mobile drawers",
+        "Address code review findings on standards, a11y, and focus cycle safety"
+      ]
+    }
+  },
+  {
+    "version": "1.51.0-preview.1",
+    "date": "2026-11-10",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Unify tabs and property strip chip sizing across views",
+        "Universal CSS grid CollapsibleReveal and EventView reminder inline disclosure",
+        "Extend project accent stripe and unify border on expanded subtasks",
+        "Align subtask collapse animation and chevron with sidebar transition",
+        "Responsive 2-row task property strip and habit guest reminder notice",
+        "Fix event reminder truncation and add brand accent lines to task and habit views",
+        "Redesign habit form with header icon avatar and squircle day chips",
+        "Preserve redirect parameter through login and oauth callbacks",
+        "Auto-scroll time of day heatmap to active hours on mobile",
+        "Improve trend chart readability with adaptive bucketing and mobile scrubbing",
+        "Normalize form layouts and scale desktop metadata across views",
+        "Align metatags across list and board views on desktop and mobile",
+        "Bring BoardTaskCard into parity with folio ui/ux spec",
+        "Complete stats dashboard and 24-hour calibrated runway",
+        "Normalize task form and dual-sheet property strip",
+        "Tasks reading and interaction surface with folio continuous and priority glyph"
+      ],
+      "Improved": [
+        "Eliminate subtask loading delay and fix habit text font accessibility",
+        "Extract EventView from CreateEventDialog and add brand spine to list subtasks"
+      ],
+      "Fixed": [
+        "Improve mobile responsiveness across stats cards and trend charts",
+        "Retain pointer-events on docked inspector during portalled select dismissal",
+        "Remove duplicate icon and color dot from task project selector",
+        "Display focus play button by default on mobile in ListTaskCard",
+        "Preserve increasing graph silhouette and fix top padding overflow in PriorityGlyph",
+        "Eliminate low-contrast Kagelin blue on Do Date chip",
+        "Address tasks and stats review findings"
+      ]
+    }
+  },
+  {
+    "version": "1.51.0-preview.0",
+    "date": "2026-11-05",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Align swipeable task content with mobile touch standards",
+        "Improve mobile swipe physics and gesture discoverability",
+        "Calendar and settings safety, confirmations, and accessibility",
+        "Tasks module UX, gestures and interaction polish"
+      ],
+      "Fixed": [
+        "Escalate prerelease when new commits require higher bump",
+        "Restore mobile toast swipe gesture and exit animations",
+        "Prevent text selection on toasts and add desktop close button",
+        "Improve habit affordances, touch targets, and focus stop safety",
+        "Align task sheet background tokens with standard dialog styling"
+      ]
+    }
+  },
+  {
+    "version": "1.50.1-preview.0",
+    "date": "2026-11-04",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Keep task selection ring keyboard-only",
+        "Board inspector scroll clearance, split bring-into-view, and shadow outline"
+      ]
+    }
+  },
+  {
     "version": "1.50.0",
     "date": "2026-11-03",
     "channel": "stable",
@@ -680,71 +791,6 @@
     "sections": {
       "Added": [
         "Lossless N-in-D habit frequency via frequency_days"
-      ]
-    }
-  },
-  {
-    "version": "1.45.0-preview.0",
-    "date": "2026-09-25",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Archive and restore habits, re-import matches by Loop identity"
-      ],
-      "Fixed": [
-        "Keep habit drawer footer fixed and reminder row on one line on narrow screens"
-      ]
-    }
-  },
-  {
-    "version": "1.44.2",
-    "date": "2026-09-24",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Open and edit any past day from habit insights",
-        "Mark a habit as skipped from every habit screen"
-      ],
-      "Improved": [
-        "The habit card and the day popover share the same logging actions, so habits behave the same everywhere"
-      ],
-      "Fixed": [
-        "Measurable habits now log a quantity and shade by how close you are to the target in grid view",
-        "The target chip logs in one tap",
-        "Padded days in the heatmap no longer look like a goal was met"
-      ]
-    }
-  },
-  {
-    "version": "1.44.2-preview.3",
-    "date": "2026-09-24",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Habit card reuses cell actions, popover takes stored entry, drop unused fluid prop"
-      ],
-      "Fixed": [
-        "Target chip logs in one tap, heatmap padded days no longer read as met"
-      ]
-    }
-  },
-  {
-    "version": "1.44.2-preview.2",
-    "date": "2026-09-23",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Any past day is reachable and editable from habit insights"
-      ]
-    }
-  },
-  {
-    "version": "1.44.2-preview.1",
-    "date": "2026-09-23",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Skipped is reachable on every habit surface"
       ]
     }
   }

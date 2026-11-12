@@ -108,4 +108,72 @@ describe("RecurrencePicker Repetition State", () => {
       mode: "strict",
     });
   });
+
+  it("should style chip variant as active when recurrence is set and inactive when null", () => {
+    const { unmount } = render(
+      <RecurrencePicker value={null} onChange={mockOnChange} variant="chip" />,
+    );
+
+    let chip = screen.getByRole("button", {
+      name: /(?:Repeat|Recurrence): None/i,
+    });
+    expect(chip.className).toContain("text-muted-foreground");
+    expect(chip.className).not.toContain("text-foreground font-semibold");
+
+    unmount();
+
+    render(
+      <RecurrencePicker
+        value={{ freq: "DAILY", interval: 1 }}
+        onChange={mockOnChange}
+        variant="chip"
+      />,
+    );
+
+    chip = screen.getByRole("button", {
+      name: /(?:Repeat|Recurrence): Daily/i,
+    });
+    expect(chip.className).toContain("text-foreground");
+    expect(chip.className).toContain("font-semibold");
+    expect(chip.className).toContain("bg-secondary/70");
+  });
+
+  it("should toggle inline expansion on chip click and allow selecting presets and modes", () => {
+    const { rerender } = render(
+      <RecurrencePicker value={null} onChange={mockOnChange} variant="chip" />,
+    );
+
+    const chip = screen.getByRole("button", {
+      name: /(?:Repeat|Recurrence): None/i,
+    });
+    fireEvent.click(chip);
+
+    // Preset buttons are rendered in the inline reveal
+    const weeklyBtn = screen.getByRole("button", { name: "Weekly" });
+    expect(weeklyBtn).toBeInTheDocument();
+
+    fireEvent.click(weeklyBtn);
+    expect(mockOnChange).toHaveBeenCalledWith({
+      freq: "WEEKLY",
+      interval: 1,
+      mode: "flexible",
+    });
+
+    // Rerender with the active value
+    rerender(
+      <RecurrencePicker
+        value={{ freq: "WEEKLY", interval: 1, mode: "flexible" }}
+        onChange={mockOnChange}
+        variant="chip"
+      />,
+    );
+
+    const strictTab = screen.getByRole("tab", { name: "Strict" });
+    fireEvent.mouseDown(strictTab);
+    expect(mockOnChange).toHaveBeenCalledWith({
+      freq: "WEEKLY",
+      interval: 1,
+      mode: "strict",
+    });
+  });
 });

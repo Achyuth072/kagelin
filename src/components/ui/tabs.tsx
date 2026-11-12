@@ -17,6 +17,7 @@ const tabsListVariants = cva(
       size: {
         default: "h-10",
         sm: "h-9",
+        xs: "h-7 sm:h-8 p-0.5",
         lg: "h-11",
       },
     },
@@ -39,6 +40,7 @@ const tabsTriggerVariants = cva(
       size: {
         default: "h-8 px-3 text-[13px]",
         sm: "h-7 px-2 text-xs [&_svg]:size-3",
+        xs: "h-6 sm:h-7 px-2.5 text-xs sm:text-[13px]",
         lg: "h-9 px-2.5 sm:px-3 text-[13px]",
       },
     },

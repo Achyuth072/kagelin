@@ -1,8 +1,9 @@
 "use client";
 
-import { LucideIcon } from "lucide-react";
+import { LucideIcon, Minus, TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 interface MetricCardProps {
   title: string;
@@ -12,7 +13,7 @@ interface MetricCardProps {
     value: number;
     isPositive: boolean;
   };
-  /** "compact" tightens padding/scale for dense contexts (e.g. insights panels); "default" is the stats-page scale. */
+  // "compact" tightens padding/scale for dense contexts (e.g. insights); "default" is the stats-page scale.
   size?: "default" | "compact";
   className?: string;
 }
@@ -47,29 +48,51 @@ export function MetricCard({
           </p>
           <p
             className={cn(
-              "font-semibold tracking-[-0.02em]",
+              "font-semibold tracking-[-0.02em] tabular-nums",
               compact ? "text-2xl" : "text-2xl md:text-4xl",
             )}
           >
-            {value}
+            <AnimatedNumber value={value} />
           </p>
           {trend && (
             <div
               role="img"
-              aria-label={`${trend.isPositive ? "Increased" : "Decreased"} by ${Math.abs(trend.value)}% compared to last period`}
+              aria-label={
+                trend.value === 0
+                  ? "Unchanged compared to last period"
+                  : `${trend.isPositive ? "Increased" : "Decreased"} by ${Math.abs(trend.value)}% compared to last period`
+              }
               className={cn(
                 "text-[11px] md:text-xs font-bold flex items-center gap-1 w-fit px-2 py-0.5 rounded-md mt-1.5 border transition-all",
                 trend.value === 0
-                  ? "text-muted-foreground bg-secondary/50 border-border/50"
+                  ? "text-muted-foreground bg-secondary/60 border-border/60"
                   : trend.isPositive
                     ? "text-brand bg-brand/15 border-brand/20"
                     : "text-destructive bg-destructive-surface border-destructive-surface-border",
               )}
             >
-              <span className="text-xs md:text-sm" aria-hidden="true">
-                {trend.isPositive ? "↑" : "↓"}
+              {trend.value === 0 ? (
+                <Minus
+                  className="h-3 w-3 shrink-0"
+                  aria-hidden="true"
+                  strokeWidth={2.25}
+                />
+              ) : trend.isPositive ? (
+                <TrendingUp
+                  className="h-3 w-3 shrink-0"
+                  aria-hidden="true"
+                  strokeWidth={2.25}
+                />
+              ) : (
+                <TrendingDown
+                  className="h-3 w-3 shrink-0"
+                  aria-hidden="true"
+                  strokeWidth={2.25}
+                />
+              )}
+              <span className="tracking-tight">
+                <AnimatedNumber value={Math.abs(trend.value)} suffix="%" />
               </span>
-              <span className="tracking-tight">{Math.abs(trend.value)}%</span>
             </div>
           )}
         </div>

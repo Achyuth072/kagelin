@@ -52,7 +52,7 @@ function PassphraseStep({
       <div className="text-center space-y-1.5">
         <ShieldCheck
           className="h-8 w-8 mx-auto text-brand"
-          strokeWidth={1.75}
+          strokeWidth={2.25}
         />
         <h1 className="text-xl font-bold tracking-tight">
           Protect your content
@@ -79,7 +79,7 @@ function PassphraseStep({
         role="alert"
         className="flex gap-2.5 text-xs text-destructive-surface-foreground bg-destructive-surface border border-destructive-surface-border rounded-lg p-3.5"
       >
-        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" strokeWidth={2.25} />
         <p>
           If you lose <span className="font-medium">both</span> your passphrase
           and your recovery code, your data is unrecoverable — Kagelin cannot
@@ -114,7 +114,7 @@ function PassphraseStep({
       >
         {submitting ? (
           <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" strokeWidth={2.25} />
             Setting up...
           </>
         ) : (

@@ -1,7 +1,15 @@
-import React from "react";
-import { motion, PanInfo, useMotionValue, useTransform } from "framer-motion";
-import { Trash2, Pencil } from "lucide-react";
+import React, { useEffect, useRef } from "react";
+import {
+  animate,
+  type PanInfo,
+  useMotionValue,
+  useMotionValueEvent,
+  useTransform,
+} from "motion/react";
+import * as m from "motion/react-m";
+import { Trash2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 
 interface SwipeableTaskContentProps {
   children: React.ReactNode;
@@ -16,13 +24,18 @@ interface SwipeableTaskContentProps {
   onClick?: () => void;
   suspended?: boolean;
   isCompleted?: boolean;
+  triggerHaptic?: (signature?: "tick" | "toggle" | "thud" | "success") => void;
+  shouldShowHint?: boolean;
+  onHintShown?: () => void;
 }
 
-const SWIPE_THRESHOLD = 150;
-const SCHEDULE_SWIPE_THRESHOLD = 150;
+const SWIPE_THRESHOLD = 75;
+const SWIPE_VELOCITY_THRESHOLD = 350;
+const SWIPE_MIN_OFFSET_FOR_VELOCITY = 30;
 
 export function SwipeableTaskContent({
   children,
+  isDesktop,
   _isDragging,
   _isHandleActive,
   onSwipeLeft,
@@ -33,29 +46,112 @@ export function SwipeableTaskContent({
   onClick,
   suspended = false,
   isCompleted = false,
+  triggerHaptic,
+  shouldShowHint = false,
+  onHintShown,
 }: SwipeableTaskContentProps) {
   const x = useMotionValue(0);
+  const hasHapticFiredRef = useRef(false);
 
-  const completeBgOpacity = useTransform(x, [0, 5, 25, 30], [0, 0.1, 1, 1]);
-  const deleteBgOpacity = useTransform(x, [-30, -25, -5, 0], [1, 1, 0.1, 0]);
+  const completeBgOpacity = useTransform(
+    x,
+    [0, 15, SWIPE_THRESHOLD],
+    [0, 0.4, 1],
+    { clamp: true },
+  );
+  const deleteBgOpacity = useTransform(
+    x,
+    [-SWIPE_THRESHOLD, -15, 0],
+    [1, 0.4, 0],
+    { clamp: true },
+  );
 
-  const leftIconOpacity = useTransform(x, [5, 20], [0, 1]);
-  const rightIconOpacity = useTransform(x, [-20, -5], [1, 0]);
-  const leftIconScale = useTransform(x, [0, 25], [0.8, 1]);
-  const rightIconScale = useTransform(x, [-25, 0], [1, 0.8]);
+  const leftIconOpacity = useTransform(x, [0, 15], [0, 1], { clamp: true });
+  const rightIconOpacity = useTransform(x, [-15, 0], [1, 0], { clamp: true });
+
+  const leftIconScale = useTransform(
+    x,
+    [0, SWIPE_THRESHOLD - 15, SWIPE_THRESHOLD],
+    [0.85, 1, 1.15],
+    { clamp: true },
+  );
+  const rightIconScale = useTransform(
+    x,
+    [-SWIPE_THRESHOLD, -SWIPE_THRESHOLD + 15, 0],
+    [1.15, 1, 0.85],
+    { clamp: true },
+  );
+
+  useMotionValueEvent(x, "change", (latestX) => {
+    if (isCompleted) return;
+    const absX = Math.abs(latestX);
+    if (absX >= SWIPE_THRESHOLD && !hasHapticFiredRef.current) {
+      hasHapticFiredRef.current = true;
+      triggerHaptic?.("tick");
+    } else if (absX < SWIPE_THRESHOLD - 20) {
+      hasHapticFiredRef.current = false;
+    }
+  });
+
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  useEffect(() => {
+    if (!shouldShowHint || isDesktop || isCompleted) return;
+
+    if (prefersReducedMotion) {
+      onHintShown?.();
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      animate(x, [0, 32, 0, -32, 0], {
+        duration: 0.9,
+        times: [0, 0.25, 0.5, 0.75, 1],
+        ease: "easeInOut",
+        onComplete: onHintShown,
+      });
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [
+    shouldShowHint,
+    isDesktop,
+    isCompleted,
+    prefersReducedMotion,
+    x,
+    onHintShown,
+  ]);
+
+  const handleDragStart = () => {
+    hasHapticFiredRef.current = false;
+    onSwipeStart?.();
+  };
 
   const handleDragEnd = (
     _: MouseEvent | TouchEvent | PointerEvent,
     info: PanInfo,
   ) => {
+    hasHapticFiredRef.current = false;
     onSwipeEnd?.();
     if (isCompleted) return;
-    if (info.offset.x < -SWIPE_THRESHOLD) {
+
+    const isLeftTriggered =
+      info.offset.x < -SWIPE_THRESHOLD ||
+      (info.offset.x < -SWIPE_MIN_OFFSET_FOR_VELOCITY &&
+        info.velocity.x < -SWIPE_VELOCITY_THRESHOLD);
+
+    const isRightTriggered =
+      info.offset.x > SWIPE_THRESHOLD ||
+      (info.offset.x > SWIPE_MIN_OFFSET_FOR_VELOCITY &&
+        info.velocity.x > SWIPE_VELOCITY_THRESHOLD);
+
+    if (isLeftTriggered || isRightTriggered) {
       (document.activeElement as HTMLElement)?.blur();
-      onSwipeLeft();
-    } else if (info.offset.x > SCHEDULE_SWIPE_THRESHOLD) {
-      (document.activeElement as HTMLElement)?.blur();
-      onSwipeRight();
+      if (isLeftTriggered) {
+        onSwipeLeft();
+      } else {
+        onSwipeRight();
+      }
     }
   };
 
@@ -69,51 +165,55 @@ export function SwipeableTaskContent({
 
   return (
     <div className="relative overflow-hidden">
-      {/* Swipe backgrounds (Siblings) */}
-      <motion.div
+      <m.div
         className="absolute inset-0 bg-brand flex items-center pl-4"
         style={{ opacity: completeBgOpacity }}
       >
-        <motion.div
+        <m.div
           style={{ opacity: leftIconOpacity, scale: leftIconScale }}
-          className="text-white pointer-events-none"
+          className="text-brand-foreground pointer-events-none"
         >
-          <Pencil className="h-5 w-5" strokeWidth={2.25} />
-        </motion.div>
-      </motion.div>
+          <Check className="h-5 w-5" strokeWidth={2.25} />
+        </m.div>
+      </m.div>
 
-      <motion.div
+      <m.div
         className="absolute inset-0 bg-destructive flex items-center justify-end pr-4"
         style={{ opacity: deleteBgOpacity }}
       >
-        <motion.div
+        <m.div
           style={{ opacity: rightIconOpacity, scale: rightIconScale }}
-          className="text-white pointer-events-none"
+          className="text-destructive-foreground pointer-events-none"
         >
           <Trash2 className="h-5 w-5" strokeWidth={2.25} />
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
 
-      {/* Main content */}
-      <motion.div
+      <m.div
         key={`content-${isCompleted}`}
         style={{ x }}
-        drag="x"
+        drag={isDesktop ? false : "x"}
         dragDirectionLock
-        dragConstraints={{ left: 0, right: 0 }}
+        dragConstraints={{
+          left: isCompleted ? 0 : -100,
+          right: isCompleted ? 0 : 100,
+        }}
         dragElastic={{
-          left: isCompleted ? 0 : 0.2,
-          right: isCompleted ? 0 : 0.2,
+          left: isCompleted ? 0 : 0.25,
+          right: isCompleted ? 0 : 0.25,
         }}
         dragMomentum={false}
         dragSnapToOrigin={true}
-        onDragStart={onSwipeStart}
+        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
-        className={cn("relative z-10 bg-background", className)}
+        className={cn(
+          "relative z-10 bg-background touch-pan-y select-none",
+          className,
+        )}
         onClick={onClick}
       >
         {children}
-      </motion.div>
+      </m.div>
     </div>
   );
 }

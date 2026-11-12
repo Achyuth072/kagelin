@@ -2,7 +2,8 @@
 
 import { useRef } from "react";
 import { WifiOff } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { useIsOnline } from "@/lib/hooks/useIsOnline";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
@@ -12,6 +13,7 @@ import {
 } from "@/components/bannerSlot";
 import { useStatusPillOffset } from "@/lib/hooks/useStatusPillOffset";
 import { cn } from "@/lib/utils";
+import { SEIJAKU_SPRING } from "@/lib/motion";
 
 export function OfflineIndicator() {
   const isOnline = useIsOnline();
@@ -28,21 +30,12 @@ export function OfflineIndicator() {
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.div
+        <m.div
           data-testid="offline-indicator"
           initial={{ y: offscreenY, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: offscreenY, opacity: 0 }}
-          transition={
-            prefersReducedMotion
-              ? { duration: 0 }
-              : {
-                  type: "spring",
-                  mass: 1,
-                  stiffness: 280,
-                  damping: 60,
-                }
-          }
+          transition={prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING}
           className={BANNER_SLOT_WRAPPER_CLASS}
         >
           <div
@@ -53,7 +46,7 @@ export function OfflineIndicator() {
             )}
           >
             <div className="flex-shrink-0 flex items-center justify-center text-muted-foreground md:w-8 md:h-8 md:rounded-md md:bg-muted">
-              <WifiOff className="w-4 h-4" />
+              <WifiOff className="w-4 h-4" strokeWidth={2.25} />
             </div>
             <div className="flex items-center gap-1.5 md:flex-col md:items-start md:gap-0 md:leading-tight">
               <span className="text-[13px] font-medium tracking-[0.01em]">
@@ -70,7 +63,7 @@ export function OfflineIndicator() {
               </span>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

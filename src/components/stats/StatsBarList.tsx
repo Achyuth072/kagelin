@@ -29,28 +29,36 @@ export function StatsBarList({
   const reduced = usePrefersReducedMotion();
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn("space-y-3.5 sm:space-y-3", className)}>
       {items.map((item) => (
-        <div key={item.key} className="flex items-center gap-3">
-          <div
-            className={cn(
-              "flex shrink-0 items-center gap-2",
-              labelWidthClassName,
-            )}
-          >
-            <span
-              aria-hidden
-              className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
-              style={{ backgroundColor: item.color }}
-            />
-            <span
-              className="truncate text-sm text-muted-foreground"
-              title={item.label ?? UNREADABLE_LABEL}
+        <div
+          key={item.key}
+          className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3"
+        >
+          <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto min-w-0">
+            <div
+              className={cn(
+                "flex items-center gap-2 min-w-0 sm:shrink-0",
+                labelWidthClassName,
+              )}
             >
-              <ReadableText text={item.label} />
-            </span>
+              <span
+                aria-hidden
+                className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
+                style={{ backgroundColor: item.color }}
+              />
+              <span
+                className="truncate text-sm text-muted-foreground"
+                title={item.label ?? UNREADABLE_LABEL}
+              >
+                <ReadableText text={item.label} />
+              </span>
+            </div>
+            <div className="sm:hidden text-right text-sm tabular-nums text-muted-foreground shrink-0 font-medium">
+              {item.displayValue}
+            </div>
           </div>
-          <div className="flex-1 h-5 rounded-[3px] bg-secondary/40 overflow-hidden">
+          <div className="w-full sm:w-auto sm:flex-1 h-3 sm:h-4 shrink-0 rounded-[3px] bg-secondary/50 overflow-hidden">
             <div
               className="h-full rounded-[3px] bg-foreground/70"
               style={{
@@ -59,7 +67,7 @@ export function StatsBarList({
               }}
             />
           </div>
-          <div className="w-12 shrink-0 text-right text-sm tabular-nums text-muted-foreground">
+          <div className="hidden sm:block w-12 shrink-0 text-right text-sm tabular-nums text-muted-foreground">
             {item.displayValue}
           </div>
         </div>

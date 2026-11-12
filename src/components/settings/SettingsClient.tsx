@@ -224,6 +224,7 @@ function CollapsibleSection({
               isOpen && "rotate-180",
             )}
             aria-hidden="true"
+            strokeWidth={2.25}
           />
         </button>
       </h3>
@@ -640,12 +641,18 @@ export function SettingsClient({ version }: SettingsClientProps) {
               >
                 {isAllExpanded ? (
                   <>
-                    <ChevronsDownUp className="h-3.5 w-3.5" />
+                    <ChevronsDownUp
+                      className="h-3.5 w-3.5"
+                      strokeWidth={2.25}
+                    />
                     <span>Collapse all</span>
                   </>
                 ) : (
                   <>
-                    <ChevronsUpDown className="h-3.5 w-3.5" />
+                    <ChevronsUpDown
+                      className="h-3.5 w-3.5"
+                      strokeWidth={2.25}
+                    />
                     <span>Expand all</span>
                   </>
                 )}
@@ -665,7 +672,10 @@ export function SettingsClient({ version }: SettingsClientProps) {
               {!isDesktop && (
                 <div className="flex items-center justify-between p-3 min-h-[44px] rounded-lg border border-border/60 bg-background">
                   <div className="flex items-center gap-3">
-                    <Vibrate className="h-4 w-4 text-muted-foreground" />
+                    <Vibrate
+                      className="h-4 w-4 text-muted-foreground"
+                      strokeWidth={2.25}
+                    />
                     <div>
                       <p className="text-sm font-medium">Haptic Feedback</p>
                       <p className="type-micro text-muted-foreground">
@@ -683,7 +693,10 @@ export function SettingsClient({ version }: SettingsClientProps) {
 
               <div className="space-y-2.5 p-3 md:py-2.5 md:px-3 rounded-lg border border-border/60 bg-background">
                 <div className="flex items-center gap-3">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <Clock
+                    className="h-4 w-4 text-muted-foreground"
+                    strokeWidth={2.25}
+                  />
                   <div>
                     <p className="text-sm font-medium">Time Format</p>
                     <p className="type-micro text-muted-foreground">
@@ -820,12 +833,18 @@ export function SettingsClient({ version }: SettingsClientProps) {
               >
                 {isAllExpanded ? (
                   <>
-                    <ChevronsDownUp className="h-3.5 w-3.5" />
+                    <ChevronsDownUp
+                      className="h-3.5 w-3.5"
+                      strokeWidth={2.25}
+                    />
                     <span>Collapse all</span>
                   </>
                 ) : (
                   <>
-                    <ChevronsUpDown className="h-3.5 w-3.5" />
+                    <ChevronsUpDown
+                      className="h-3.5 w-3.5"
+                      strokeWidth={2.25}
+                    />
                     <span>Expand all</span>
                   </>
                 )}
@@ -857,7 +876,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
                   router.push("/signup");
                 }}
               >
-                <User className="h-4 w-4 mr-2" />
+                <User className="h-4 w-4 mr-2" strokeWidth={2.25} />
                 <span>Sync to Account</span>
               </Button>
             </div>
@@ -953,7 +972,10 @@ export function SettingsClient({ version }: SettingsClientProps) {
                           resetDemoData();
                         }}
                       >
-                        <RotateCcw className="h-4 w-4 mr-2" />
+                        <RotateCcw
+                          className="h-4 w-4 mr-2"
+                          strokeWidth={2.25}
+                        />
                         <span>Reset Demo Data</span>
                       </Button>
 
@@ -981,7 +1003,10 @@ export function SettingsClient({ version }: SettingsClientProps) {
                       }}
                       disabled={isSigningOut}
                     >
-                      <LogOut className="h-4 w-4 mr-2 text-destructive" />
+                      <LogOut
+                        className="h-4 w-4 mr-2 text-destructive"
+                        strokeWidth={2.25}
+                      />
                       <span>Exit Guest Mode</span>
                     </Button>
                   </>
@@ -1012,7 +1037,10 @@ export function SettingsClient({ version }: SettingsClientProps) {
                         }}
                         disabled={isSigningOut}
                       >
-                        <LogOut className="h-4 w-4 mr-2 text-destructive" />
+                        <LogOut
+                          className="h-4 w-4 mr-2 text-destructive"
+                          strokeWidth={2.25}
+                        />
                         <span>Sign Out</span>
                       </Button>
 
@@ -1026,7 +1054,10 @@ export function SettingsClient({ version }: SettingsClientProps) {
                         }}
                         disabled={isSigningOut}
                       >
-                        <LogOut className="h-4 w-4 mr-2 text-destructive" />
+                        <LogOut
+                          className="h-4 w-4 mr-2 text-destructive"
+                          strokeWidth={2.25}
+                        />
                         <span>Sign Out All Devices</span>
                       </Button>
                     </div>
@@ -1061,7 +1092,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
             <PreviewBadge version={version} />
           </div>
           <span className="flex items-center gap-1.5 type-micro text-muted-foreground group-hover:text-foreground transition-colors uppercase font-medium">
-            <Info className="h-3 w-3" />
+            <Info className="h-3 w-3" strokeWidth={2.25} />
             About
           </span>
         </button>
@@ -1090,7 +1121,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
               className="h-10 w-10 min-h-[44px] min-w-[44px] md:h-9 md:w-9 md:min-h-0 md:min-w-0 shadow-none transition-seijaku-fast"
               aria-label="Back"
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className="h-4 w-4" strokeWidth={2.25} />
             </Button>
             <h1 className="type-h1">Settings</h1>
           </div>

@@ -44,7 +44,7 @@ vi.mock("@/lib/supabase/client", () => ({
 
 // Mock hooks that might cause issues
 vi.mock("@/lib/hooks/useMediaQuery", () => ({
-  useMediaQuery: vi.fn(() => true), // Desktop mode
+  useMediaQuery: vi.fn((query: string) => !query.includes("max-width")), // Desktop mode
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({

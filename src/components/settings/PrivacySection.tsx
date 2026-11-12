@@ -22,7 +22,10 @@ export function PrivacySection() {
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div className="p-2 rounded-full bg-secondary/30 shrink-0">
-            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+            <ShieldCheck
+              className="h-4 w-4 text-muted-foreground"
+              strokeWidth={2.25}
+            />
           </div>
           <p className="text-sm font-medium">Share Anonymous Telemetry</p>
         </div>

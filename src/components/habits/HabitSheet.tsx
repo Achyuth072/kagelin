@@ -283,6 +283,7 @@ export function HabitSheet({
     onSubmit: handleSubmit(onFormSubmit),
     onKeyDown: handleKeyDown,
     errors,
+    habitId: effectiveHabit?.id,
   };
 
   return (
@@ -316,6 +317,7 @@ export function HabitSheet({
               <SheetTabToggle
                 value={tab}
                 onValueChange={(next) => startTransition(() => setTab(next))}
+                insightsLabel="History & Insights"
               />
             </div>
           )}

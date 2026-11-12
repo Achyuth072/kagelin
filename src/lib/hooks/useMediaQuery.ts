@@ -5,17 +5,30 @@ import { useSyncExternalStore, useCallback } from "react";
 export function useMediaQuery(query: string): boolean {
   const subscribe = useCallback(
     (callback: () => void) => {
+      if (
+        typeof window === "undefined" ||
+        typeof window.matchMedia !== "function"
+      ) {
+        return () => {};
+      }
       const matchMedia = window.matchMedia(query);
-      matchMedia.addEventListener("change", callback);
+      if (!matchMedia) return () => {};
+      matchMedia.addEventListener?.("change", callback);
       return () => {
-        matchMedia.removeEventListener("change", callback);
+        matchMedia.removeEventListener?.("change", callback);
       };
     },
     [query],
   );
 
   const getSnapshot = () => {
-    return window.matchMedia(query).matches;
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    ) {
+      return false;
+    }
+    return window.matchMedia(query)?.matches ?? false;
   };
 
   const getServerSnapshot = () => {

@@ -1,19 +1,20 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { useTimer } from "@/components/TimerProvider";
 import { buttonVariants, Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Play, Pause, Square, SkipForward, X } from "lucide-react";
+import { Play, Pause, SkipForward, X } from "lucide-react";
 import { FocusSettingsDialog } from "@/components/FocusSettingsDialog";
 import { FocusTaskPicker } from "@/components/FocusTaskPicker";
 import { FocusSubtaskList } from "@/components/FocusSubtaskList";
 import { FocusSyncIndicator } from "@/components/FocusSyncIndicator";
-import { CancelSessionButton } from "@/components/CancelSessionButton";
+import { StopSessionButton } from "@/components/StopSessionButton";
 import { FullscreenToggle } from "@/components/FullscreenToggle";
 import type { TimerMode } from "@/lib/types/timer";
 import { cn } from "@/lib/utils";
-import { formatTime } from "@/lib/utils/time";
+import { AnimatedCountdown } from "@/components/ui/animated-countdown";
 import { useAnchoredBack } from "@/lib/hooks/useBackAnchor";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimerStore } from "@/lib/store/timerStore";
@@ -21,7 +22,9 @@ import { usePiP } from "@/components/providers/PiPProvider";
 import { useFullscreen } from "@/lib/hooks/useFullscreen";
 import { Minimize2, Target, PictureInPicture2 } from "lucide-react";
 import { useTodayFocusSessions } from "@/lib/hooks/useTodayFocusSessions";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useEffect } from "react";
+import { ResetCycleButton } from "@/components/ResetCycleButton";
 
 const MODE_LABELS: Record<TimerMode, string> = {
   focus: "Focus",
@@ -31,15 +34,16 @@ const MODE_LABELS: Record<TimerMode, string> = {
 
 const sideControlCls = cn(
   buttonVariants({ variant: "ghost", size: "icon" }),
-  "h-14 w-14 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-seijaku cursor-pointer",
+  "h-14 w-14 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-seijaku cursor-pointer disabled:bg-transparent",
 );
 
 export default function FocusPage() {
   const anchoredBack = useAnchoredBack();
-  const { state, settings, start, pause, stop, skip } = useTimer();
+  const { state, settings, start, pause, skip } = useTimer();
   const { trigger, isPhone } = useHaptic();
   const { isPiPSupported, isPiPActive, openPiP, closePiP } = usePiP();
   const { isFullscreen } = useFullscreen();
+  const prefersReducedMotion = usePrefersReducedMotion();
   // Sourced from the server focus_logs so every device shows the same count.
   const { data: todaySessionsCount = 0 } = useTodayFocusSessions();
 
@@ -78,7 +82,7 @@ export default function FocusPage() {
   };
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={cn(
@@ -88,23 +92,23 @@ export default function FocusPage() {
           : "absolute inset-0",
       )}
     >
-      <motion.button
+      <m.button
         onClick={anchoredBack}
         onTapStart={() => trigger("thud")}
-        whileTap={isPhone ? { scale: 0.95 } : {}}
+        whileTap={!prefersReducedMotion && isPhone ? { scale: 0.95 } : {}}
         className={cn(
           buttonVariants({ variant: "ghost", size: "icon" }),
           "absolute top-4 left-4 h-14 w-14 rounded-full active:scale-95 transition-seijaku cursor-pointer",
         )}
       >
         <X className="h-6 w-6" strokeWidth={2.25} />
-      </motion.button>
+      </m.button>
 
       {isPiPSupported && !isPhone && (
-        <motion.button
+        <m.button
           onClick={handlePiP}
           onTapStart={() => trigger("thud")}
-          whileTap={{ scale: 0.95 }}
+          whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
           className={cn(
             buttonVariants({ variant: "ghost", size: "icon" }),
             "absolute bottom-4 left-4 h-14 w-14 rounded-full active:scale-95 transition-seijaku cursor-pointer",
@@ -114,18 +118,23 @@ export default function FocusPage() {
           }
         >
           <PictureInPicture2 className="h-6 w-6" strokeWidth={2.25} />
-        </motion.button>
+        </m.button>
       )}
 
       <FullscreenToggle />
 
       <AnimatePresence mode="wait">
         {!isPiPActive ? (
-          <motion.div
+          <m.div
             key="timer-content"
-            initial={{ opacity: 0, y: 10 }}
+            initial={
+              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10 }
+            }
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={
+              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -10 }
+            }
+            transition={prefersReducedMotion ? { duration: 0 } : undefined}
             className="flex flex-col items-center text-center"
           >
             <div className="type-ui font-medium uppercase tracking-widest text-muted-foreground/80">
@@ -140,7 +149,7 @@ export default function FocusPage() {
             <FocusSubtaskList />
 
             <div className="text-7xl sm:text-8xl md:text-[10rem] font-extralight font-mono tracking-tighter text-foreground tabular-nums mt-6 leading-none">
-              {formatTime(state.remainingSeconds)}
+              <AnimatedCountdown seconds={state.remainingSeconds} />
             </div>
 
             <div className="w-full max-w-[240px] mt-12 mb-6">
@@ -167,25 +176,23 @@ export default function FocusPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <motion.button
+              <StopSessionButton
                 className={sideControlCls}
-                onTapStart={() => trigger("thud")}
-                whileTap={isPhone ? { scale: 0.95 } : {}}
-                onClick={() => {
-                  stop();
+                isPhone={isPhone}
+                onStopExecuted={() => {
                   if (isPiPActive) closePiP();
                 }}
-              >
-                <Square className="h-5 w-5" strokeWidth={2.25} />
-              </motion.button>
+              />
 
-              <motion.button
+              <m.button
                 className={cn(
                   buttonVariants({ variant: "default", size: "icon" }),
                   "h-20 w-20 rounded-full transition-seijaku hover:scale-105 active:scale-95 active:opacity-90 cursor-pointer",
                 )}
                 onTapStart={() => trigger("thud")}
-                whileTap={isPhone ? { scale: 0.95 } : {}}
+                whileTap={
+                  !prefersReducedMotion && isPhone ? { scale: 0.95 } : {}
+                }
                 onClick={handlePlayPause}
               >
                 {state.isRunning ? (
@@ -193,34 +200,48 @@ export default function FocusPage() {
                 ) : (
                   <Play className="h-8 w-8 ml-0.5" strokeWidth={2.25} />
                 )}
-              </motion.button>
+              </m.button>
 
-              <motion.button
+              <m.button
                 className={sideControlCls}
                 onTapStart={() => trigger("thud")}
-                whileTap={isPhone ? { scale: 0.95 } : {}}
+                whileTap={
+                  !prefersReducedMotion && isPhone ? { scale: 0.95 } : {}
+                }
                 onClick={skip}
               >
                 <SkipForward className="h-5 w-5" strokeWidth={2.25} />
-              </motion.button>
+              </m.button>
             </div>
 
-            <CancelSessionButton />
+            <ResetCycleButton
+              onResetExecuted={() => {
+                if (isPiPActive) closePiP();
+              }}
+            />
 
             <div className="mt-16">
               <FocusSettingsDialog />
             </div>
-          </motion.div>
+          </m.div>
         ) : (
-          <motion.div
+          <m.div
             key="pip-active-indicator"
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={
+              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }
+            }
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
+            exit={
+              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }
+            }
+            transition={prefersReducedMotion ? { duration: 0 } : undefined}
             className="flex flex-col items-center justify-center text-center py-12"
           >
-            <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
-              <Minimize2 className="h-10 w-10 text-primary animate-pulse" />
+            <div className="w-20 h-20 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
+              <Minimize2
+                className="h-10 w-10 text-primary animate-pulse motion-reduce:animate-none"
+                strokeWidth={2.25}
+              />
             </div>
             <h2 className="text-2xl font-semibold tracking-tight mb-2">
               Viewing in PiP
@@ -236,9 +257,9 @@ export default function FocusPage() {
             >
               Return to main view
             </Button>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </m.div>
   );
 }

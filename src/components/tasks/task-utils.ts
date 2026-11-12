@@ -27,7 +27,9 @@ export const priorityCheckboxClasses: Record<1 | 2 | 3 | 4, string> = {
 export const TASK_TITLE_CREATE_ID = "task-content";
 export const TASK_TITLE_EDIT_ID = "task-content-edit";
 
-export function focusTextareaToEnd(el: HTMLTextAreaElement | null): boolean {
+export function focusTextareaToEnd(
+  el: HTMLTextAreaElement | HTMLInputElement | null,
+): boolean {
   if (!el) return false;
   el.focus();
   const end = el.value.length;

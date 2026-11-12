@@ -1,0 +1,21 @@
+id: no-raw-number-input
+language: Tsx
+severity: error
+files:
+  - "src/**/*.tsx"
+  - "app/**/*.tsx"
+ignores:
+  - "src/components/ui/number-field.tsx"
+  - "src/components/FocusSettingsDialog.tsx"
+  - "src/components/settings/SettingsClient.tsx"
+rule:
+  any:
+    - pattern: <input $$$A type="number" $$$B />
+    - pattern: <input $$$A type="number" $$$B>$$$C</input>
+    - pattern: <input $$$A type={'number'} $$$B />
+    - pattern: <input $$$A type={'number'} $$$B>$$$C</input>
+    - pattern: <input $$$A type={"number"} $$$B />
+    - pattern: <input $$$A type={"number"} $$$B>$$$C</input>
+message: >
+  Use <NumberField> from '@/components/ui/number-field' instead of raw
+  <input type="number"> per DESIGN.md.

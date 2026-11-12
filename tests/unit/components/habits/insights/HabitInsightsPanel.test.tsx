@@ -18,7 +18,7 @@ vi.mock("@/lib/hooks/useMediaQuery", () => ({
 
 vi.mock("recharts", () => ({
   AreaChart: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="area-chart">{children}</div>
+    <svg data-testid="area-chart">{children}</svg>
   ),
   Area: () => <div />,
   XAxis: () => null,
@@ -64,7 +64,7 @@ describe("HabitInsightsPanel", () => {
     );
   });
 
-  it("shows empty state when entries are empty", () => {
+  it("shows empty state when entries are empty but renders identity banner", () => {
     vi.mocked(useHabitsModule.useHabit).mockReturnValue({
       data: { ...mockHabit, entries: [] },
       isLoading: false,
@@ -73,9 +73,14 @@ describe("HabitInsightsPanel", () => {
     render(<HabitInsightsPanel habit={mockHabit} />);
 
     expect(screen.getByText("No data yet")).toBeInTheDocument();
+    expect(screen.getByText("Exercise")).toBeInTheDocument();
+    expect(screen.getByText("Daily")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("habit-identity-accent-line"),
+    ).toBeInTheDocument();
   });
 
-  it("renders all 5 cards with entries", () => {
+  it("renders all 5 cards with entries and identity banner", () => {
     vi.mocked(useHabitsModule.useHabit).mockReturnValue({
       data: {
         ...mockHabit,
@@ -94,13 +99,23 @@ describe("HabitInsightsPanel", () => {
 
     render(<HabitInsightsPanel habit={mockHabit} />);
 
+    // Identity banner
+    expect(screen.getByText("Exercise")).toBeInTheDocument();
+    expect(screen.getByText("Daily")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("habit-identity-accent-line"),
+    ).toBeInTheDocument();
+
     // MetricCard and section title both match "Score".
     expect(screen.getAllByText("Score")).toHaveLength(2);
     expect(screen.getByText("Current Streak")).toBeInTheDocument();
     expect(screen.getByText("Best Streak")).toBeInTheDocument();
     expect(screen.getByText("Total Completions")).toBeInTheDocument();
 
-    expect(screen.getByText("History")).toBeInTheDocument();
+    expect(screen.getByText("History & Log")).toBeInTheDocument();
+    expect(
+      screen.getByText("Tap any date to record or update past entries."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Best Streaks")).toBeInTheDocument();
     expect(screen.getByText("Frequency")).toBeInTheDocument();
 
@@ -110,5 +125,33 @@ describe("HabitInsightsPanel", () => {
       screen.getByRole("group", { name: format(new Date(), "MMMM yyyy") }),
     ).toBeInTheDocument();
     expect(screen.queryByTestId("habit-heatmap")).toBeNull();
+  });
+
+  it("displays weekly frequency label in identity banner", () => {
+    const weeklyHabit: Habit = {
+      ...mockHabit,
+      frequency_count: 3,
+      frequency_period: "week",
+    };
+
+    vi.mocked(useHabitsModule.useHabit).mockReturnValue({
+      data: {
+        ...weeklyHabit,
+        entries: [
+          {
+            id: "e1",
+            habit_id: "h1",
+            date: "2026-06-10",
+            value: 1,
+            created_at: "2026-06-10T00:00:00.000Z",
+          },
+        ],
+      },
+      isLoading: false,
+    } as unknown as ReturnType<typeof useHabitsModule.useHabit>);
+
+    render(<HabitInsightsPanel habit={weeklyHabit} />);
+
+    expect(screen.getByText("3× / week")).toBeInTheDocument();
   });
 });

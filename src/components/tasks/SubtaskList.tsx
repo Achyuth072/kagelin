@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   DndContext,
@@ -43,6 +43,7 @@ import { DragHandle } from "@/components/tasks/DragHandle";
 import { computeReorderPairs } from "@/lib/utils/task-dnd";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Task } from "@/lib/types/task";
+import { notify } from "@/lib/notify";
 import {
   ReadableText,
   UNREADABLE_LABEL,
@@ -53,9 +54,9 @@ const dndAnnouncements = {
   onDragOver: () => undefined,
 };
 
-// Extends touch target without bleeding into adjacent rows (~36px pitch).
+// Extends touch target to 44x44px bounding box.
 const touchTargetClasses = {
-  default: "after:absolute after:-inset-2.5 after:content-['']",
+  default: "after:absolute after:-inset-[15px] after:content-['']",
   delete: "after:absolute after:-inset-1 after:content-['']",
 };
 
@@ -108,6 +109,20 @@ function SubtaskItemContent({
   onEditKeyDown,
 }: SubtaskRowProps) {
   const { trigger } = useHaptic();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      const raf = requestAnimationFrame(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          const len = inputRef.current.value.length;
+          inputRef.current.setSelectionRange(len, len);
+        }
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [isEditing]);
 
   return (
     <>
@@ -117,14 +132,14 @@ function SubtaskItemContent({
         disabled={isDraftMode}
         aria-label={`Mark "${content ?? UNREADABLE_LABEL}" complete`}
         className={cn(
-          "relative mt-0.5 h-3.5 w-3.5 !rounded-sm",
-          !isDesktop && touchTargetClasses.default,
+          "relative mt-0.5 h-3.5 w-3.5 !rounded-[3.5px] border",
+          touchTargetClasses.default,
           priorityCheckboxClasses[4],
         )}
       />
       {isEditing ? (
         <Input
-          autoFocus
+          ref={inputRef}
           value={editingContent}
           onChange={(e) => onEditingContentChange(e.target.value)}
           onFocus={(e) =>
@@ -139,16 +154,24 @@ function SubtaskItemContent({
           className="flex-1 h-7 py-0 px-0 text-[14px] bg-transparent border-none shadow-none focus-visible:ring-0"
         />
       ) : (
-        <span
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => onStartEdit(id, content ?? "")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onStartEdit(id, content ?? "");
+            }
+          }}
           className={cn(
-            "flex-1 text-[14px] leading-snug transition-all break-all cursor-text",
+            "flex-1 text-[14px] leading-snug transition-all break-all cursor-text focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm",
             isCompleted &&
               "text-muted-foreground/60 line-through decoration-muted-foreground/20",
           )}
         >
           <ReadableText text={content} />
-        </span>
+        </div>
       )}
       <Button
         variant="ghost"
@@ -163,7 +186,7 @@ function SubtaskItemContent({
           onDelete(id);
         }}
       >
-        <Trash2 className="h-3.5 w-3.5" />
+        <Trash2 className="h-3.5 w-3.5" strokeWidth={2.25} />
       </Button>
     </>
   );
@@ -185,7 +208,7 @@ function SortableSubtaskItem(props: SubtaskRowProps) {
       ref={setNodeRef}
       style={dndStyle}
       className={cn(
-        "group relative flex items-center gap-2.5 py-1.5 px-3 hover:bg-secondary/10 rounded-lg transition-colors",
+        "group relative flex min-h-11 items-center gap-2.5 py-1.5 px-3 hover:bg-secondary/10 rounded-lg transition-colors",
         isDragging ? "z-20 opacity-30" : "z-10 opacity-100",
         isDragging && "will-change-transform",
         dropLineClasses(dropLine),
@@ -205,7 +228,7 @@ function SortableSubtaskItem(props: SubtaskRowProps) {
 
 function StaticSubtaskItem(props: SubtaskRowProps) {
   return (
-    <div className="group flex items-center gap-3 py-1.5 px-3 hover:bg-secondary/10 rounded-lg transition-colors">
+    <div className="group flex min-h-11 items-center gap-3 py-1.5 px-3 hover:bg-secondary/10 rounded-lg transition-colors">
       <SubtaskItemContent {...props} />
     </div>
   );
@@ -372,7 +395,19 @@ export default function SubtaskList({
     if (isDraftMode) {
       const index = parseDraftIndex(id);
       if (!isNaN(index)) {
-        onDraftSubtasksChange?.(draftSubtasks.filter((_, i) => i !== index));
+        const deletedItem = draftSubtasks[index];
+        const newDrafts = draftSubtasks.filter((_, i) => i !== index);
+        onDraftSubtasksChange?.(newDrafts);
+        notify("Step deleted", {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              const restored = [...newDrafts];
+              restored.splice(index, 0, deletedItem);
+              onDraftSubtasksChange?.(restored);
+            },
+          },
+        });
       }
     } else {
       deleteMutation.mutate(id);
@@ -408,7 +443,8 @@ export default function SubtaskList({
     if (!trimmed && wasUnreadable) {
       setEditingId(null);
     } else if (!trimmed) {
-      handleDeleteSubtask(id);
+      // Revert to original content rather than deleting
+      setEditingId(null);
     } else if (isDraftMode) {
       const index = parseDraftIndex(id);
       if (!isNaN(index)) {
@@ -457,11 +493,13 @@ export default function SubtaskList({
         onCollapse?.();
       }
     } else if (e.key === "Backspace") {
-      if (!newSubtaskContent && items.length > 0) {
+      if (!newSubtaskContent) {
         e.preventDefault();
-        const lastIndex = items.length - 1;
-        handleDeleteSubtask(getItemId(items[lastIndex], lastIndex));
-        focusPreviousStepOrInput(lastIndex - 1);
+        if (onCollapse) {
+          onCollapse();
+        } else {
+          newStepInputRef.current?.blur();
+        }
       }
     } else if (e.key === "Escape") {
       e.preventDefault();
@@ -557,7 +595,7 @@ export default function SubtaskList({
                 }}
               >
                 {activeContent && (
-                  <div className="flex items-center gap-2.5 py-1.5 px-3 bg-background rounded-lg border border-border shadow-sm">
+                  <div className="flex min-h-11 items-center gap-2.5 py-1.5 px-3 bg-background rounded-lg border border-border shadow-sm">
                     <DragHandle
                       variant={isDesktop ? "desktop" : "mobile"}
                       className="shrink-0 opacity-100"
@@ -567,7 +605,7 @@ export default function SubtaskList({
                       disabled
                       aria-label={`Step "${activeContent}"`}
                       className={cn(
-                        "mt-0.5 h-3.5 w-3.5 !rounded-sm",
+                        "mt-0.5 h-3.5 w-3.5 !rounded-[3.5px] border",
                         priorityCheckboxClasses[4],
                       )}
                     />
@@ -595,7 +633,7 @@ export default function SubtaskList({
           )}
           onClick={() => handleAddSubtask()}
         >
-          <Plus className="h-3 w-3" strokeWidth={2.5} />
+          <Plus className="h-3 w-3" strokeWidth={2.25} />
         </button>
         <Input
           ref={newStepInputRef}

@@ -89,7 +89,7 @@ describe("Habit Views Footer Layout", () => {
     );
 
     const footer = screen.getByLabelText(/save/i).closest("div")!;
-    fireEvent.click(screen.getByText("Icon & color"));
+    fireEvent.click(screen.getByLabelText("Customize habit icon and color"));
     const colorPicker = screen.getByTestId("color-picker");
     expect(footer.contains(colorPicker)).toBe(false);
   });
@@ -98,16 +98,16 @@ describe("Habit Views Footer Layout", () => {
     render(<HabitView {...commonProps} mode="create" />);
 
     const footer = screen.getByLabelText(/start habit/i).closest("div")!;
-    fireEvent.click(screen.getByText("Icon & color"));
+    fireEvent.click(screen.getByLabelText("Customize habit icon and color"));
     const colorPicker = screen.getByTestId("color-picker");
     expect(footer.contains(colorPicker)).toBe(false);
   });
 
-  it("Icon & color pickers stay collapsed until the row is opened", () => {
+  it("Icon & color pickers stay collapsed until the icon button is opened", () => {
     render(<HabitView {...commonProps} mode="create" />);
 
     expect(screen.queryByTestId("color-picker")).toBeNull();
-    fireEvent.click(screen.getByText("Icon & color"));
+    fireEvent.click(screen.getByLabelText("Customize habit icon and color"));
     expect(screen.getByTestId("color-picker")).toBeDefined();
     expect(screen.getByTestId("icon-picker")).toBeDefined();
   });
@@ -115,7 +115,7 @@ describe("Habit Views Footer Layout", () => {
   it("Color picker should be in the view (structural verification)", () => {
     render(<HabitView {...commonProps} mode="create" />);
 
-    fireEvent.click(screen.getByText("Icon & color"));
+    fireEvent.click(screen.getByLabelText("Customize habit icon and color"));
     const colorPicker = screen.getByTestId("color-picker");
     expect(colorPicker).toBeDefined();
 

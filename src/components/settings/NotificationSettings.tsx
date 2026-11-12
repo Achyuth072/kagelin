@@ -226,7 +226,10 @@ export function NotificationSettings() {
     return (
       <div className="p-4 rounded-lg border border-border/50 bg-muted/30">
         <div className="flex items-center gap-3 mb-2">
-          <BellOff className="h-4 w-4 text-muted-foreground" />
+          <BellOff
+            className="h-4 w-4 text-muted-foreground"
+            strokeWidth={2.25}
+          />
           <p className="text-sm font-medium text-muted-foreground">
             {iosNeedsInstall
               ? "Add Kagelin to your Home Screen to turn on notifications"
@@ -258,7 +261,10 @@ export function NotificationSettings() {
             <div className="flex items-center justify-between p-4 rounded-lg border border-border/50 bg-background">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-full bg-secondary/30">
-                  <Bell className="h-4 w-4 text-muted-foreground" />
+                  <Bell
+                    className="h-4 w-4 text-muted-foreground"
+                    strokeWidth={2.25}
+                  />
                 </div>
                 <div>
                   <p className="text-sm font-medium">Push Notifications</p>
@@ -300,7 +306,7 @@ export function NotificationSettings() {
                 className="w-full"
                 onClick={handleTestNotification}
               >
-                <Bell className="h-4 w-4 mr-2" />
+                <Bell className="h-4 w-4 mr-2" strokeWidth={2.25} />
                 Send Test Notification (Server)
               </Button>
               <Button
@@ -331,7 +337,10 @@ export function NotificationSettings() {
       {!isGuestMode && (
         <div className="space-y-3 pt-2 border-t border-border/50">
           <div className="flex items-center gap-2 mb-1">
-            <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+            <Globe
+              className="h-3.5 w-3.5 text-muted-foreground"
+              strokeWidth={2.25}
+            />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Local Time
             </h3>
@@ -398,7 +407,10 @@ export function NotificationSettings() {
       {permission === "granted" && notificationsEnabled && !isGuestMode && (
         <div className="space-y-3 pt-2 border-t border-border/50">
           <div className="flex items-center gap-2 mb-1">
-            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <Clock
+              className="h-3.5 w-3.5 text-muted-foreground"
+              strokeWidth={2.25}
+            />
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Schedules
             </h3>

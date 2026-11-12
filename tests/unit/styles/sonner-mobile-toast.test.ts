@@ -9,12 +9,13 @@ describe("Sonner mobile toast override", () => {
     expect(css).toMatch(
       /\[data-sonner-toaster\]\[data-x-position="center"\]\s+\[data-sonner-toast\]/,
     );
-    // Composed with var(--y), not a bare translateX: overriding transform
-    // outright wipes out Sonner's own per-toast vertical stacking offset,
-    // collapsing every stacked toast onto the same spot. (The toaster
-    // container itself, further below, still gets a bare translateX(-50%) —
-    // that one doesn't touch per-toast stacking.)
-    expect(css).toContain("transform: translateX(-50%) var(--y) !important;");
+    // Center via left:0/right:0 and margin-inline:auto so Sonner's transform is
+    // left untouched. Overriding transform with !important suppresses Sonner's
+    // touch-tracking swipe offsets and swipe-out @keyframes exit animations.
+    expect(css).toContain("margin-inline: auto !important;");
+    expect(css).toContain("left: 0 !important;");
+    expect(css).toContain("right: 0 !important;");
+    expect(css).not.toContain("translateX(-50%) var(--y)");
     expect(css).not.toContain("translate: -50% 0 !important;");
     expect(css).not.toContain('[data-sonner-toast][data-mounted="true"]');
   });

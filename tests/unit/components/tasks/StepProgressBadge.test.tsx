@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
-import { ListTaskCard } from "@/components/tasks/ListTaskCard";
+import { StepProgressBadge } from "@/components/tasks/StepProgressBadge";
 import { BoardTaskCard } from "@/components/tasks/BoardTaskCard";
 import type { Task } from "@/lib/types/task";
 
@@ -27,48 +27,22 @@ const baseTask: Task = {
 };
 
 describe("Step Progress Badge", () => {
-  describe("ListTaskCard", () => {
+  describe("StepProgressBadge direct component", () => {
     it("does not render a step progress badge when task has no steps", () => {
-      render(
-        <ListTaskCard
-          task={{ ...baseTask, subtasks: [] }}
-          isDesktop={true}
-          isExpanded={false}
-          toggleExpand={() => {}}
-          handleComplete={() => {}}
-          handlePlayFocus={() => {}}
-          onDeleteRequest={() => {}}
-          project={undefined}
-        />,
-      );
-
-      expect(screen.queryByTestId("step-progress-badge")).toBeNull();
+      const { container } = render(<StepProgressBadge subtasks={[]} />);
+      expect(container.firstChild).toBeNull();
     });
 
     it("renders partial progress badge (e.g. 2/5) with ListChecks icon when some steps are incomplete", () => {
-      const taskWithSteps: Task = {
-        ...baseTask,
-        subtasks: [
-          { id: "s1", is_completed: true },
-          { id: "s2", is_completed: true },
-          { id: "s3", is_completed: false },
-          { id: "s4", is_completed: false },
-          { id: "s5", is_completed: false },
-        ],
-      };
+      const subtasks = [
+        { id: "s1", is_completed: true },
+        { id: "s2", is_completed: true },
+        { id: "s3", is_completed: false },
+        { id: "s4", is_completed: false },
+        { id: "s5", is_completed: false },
+      ];
 
-      render(
-        <ListTaskCard
-          task={taskWithSteps}
-          isDesktop={true}
-          isExpanded={false}
-          toggleExpand={() => {}}
-          handleComplete={() => {}}
-          handlePlayFocus={() => {}}
-          onDeleteRequest={() => {}}
-          project={undefined}
-        />,
-      );
+      render(<StepProgressBadge subtasks={subtasks} />);
 
       const badge = screen.getByTestId("step-progress-badge");
       expect(badge).toBeTruthy();
@@ -79,29 +53,15 @@ describe("Step Progress Badge", () => {
     });
 
     it("renders completed progress badge (e.g. 5/5) with CheckCircle2 icon and brand color when all steps are completed", () => {
-      const taskWithAllCompletedSteps: Task = {
-        ...baseTask,
-        subtasks: [
-          { id: "s1", is_completed: true },
-          { id: "s2", is_completed: true },
-          { id: "s3", is_completed: true },
-          { id: "s4", is_completed: true },
-          { id: "s5", is_completed: true },
-        ],
-      };
+      const subtasks = [
+        { id: "s1", is_completed: true },
+        { id: "s2", is_completed: true },
+        { id: "s3", is_completed: true },
+        { id: "s4", is_completed: true },
+        { id: "s5", is_completed: true },
+      ];
 
-      render(
-        <ListTaskCard
-          task={taskWithAllCompletedSteps}
-          isDesktop={true}
-          isExpanded={false}
-          toggleExpand={() => {}}
-          handleComplete={() => {}}
-          handlePlayFocus={() => {}}
-          onDeleteRequest={() => {}}
-          project={undefined}
-        />,
-      );
+      render(<StepProgressBadge subtasks={subtasks} />);
 
       const badge = screen.getByTestId("step-progress-badge");
       expect(badge.querySelector("svg")?.getAttribute("class")).toContain(

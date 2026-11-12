@@ -47,7 +47,7 @@ export function DeleteProjectDialog({
   open,
   onOpenChange,
 }: DeleteProjectDialogProps) {
-  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const isDesktop = useMediaQuery("(min-width: 641px)");
   const archiveProject = useArchiveProject();
   const moveTasksToInbox = useMoveTasksToInbox();
   const deleteProjectTasks = useDeleteProjectTasks();
@@ -146,7 +146,7 @@ export function DeleteProjectDialog({
               className="gap-2"
             >
               {activeAction === "keep" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
               ) : (
                 <Archive
                   className="h-4 w-4 text-muted-foreground"
@@ -162,7 +162,7 @@ export function DeleteProjectDialog({
               className="gap-2"
             >
               {activeAction === "inbox" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
               ) : (
                 <Inbox
                   className="h-4 w-4 text-muted-foreground"
@@ -178,7 +178,7 @@ export function DeleteProjectDialog({
               className="gap-2"
             >
               {activeAction === "delete" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
               ) : (
                 <Trash2 className="h-4 w-4" strokeWidth={2.25} />
               )}
@@ -191,7 +191,7 @@ export function DeleteProjectDialog({
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
+    <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <DrawerHeader className="text-left">
           <DrawerTitle>Delete Project</DrawerTitle>
@@ -205,7 +205,7 @@ export function DeleteProjectDialog({
             disabled={isPending}
           >
             {activeAction === "delete" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
             ) : (
               <Trash2 className="h-4 w-4" strokeWidth={2.25} />
             )}
@@ -218,7 +218,7 @@ export function DeleteProjectDialog({
             onClick={handleInbox}
           >
             {activeAction === "inbox" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
             ) : (
               <Inbox
                 className="h-4 w-4 text-muted-foreground"
@@ -234,7 +234,7 @@ export function DeleteProjectDialog({
             onClick={handleKeepArchived}
           >
             {activeAction === "keep" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
             ) : (
               <Archive
                 className="h-4 w-4 text-muted-foreground"

@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { parseISO } from "date-fns";
@@ -81,6 +80,8 @@ interface CommandSearchResultsProps {
   setDate: (date: Date) => void;
 }
 
+const MAX_SEARCH_RESULTS_PER_GROUP = 8;
+
 // Rendered on open so data hooks fetch on demand rather than on page load.
 function CommandSearchResults({
   search,
@@ -94,83 +95,130 @@ function CommandSearchResults({
   const { data: habits = [] } = useHabits();
   const events = useCalendarEventsList();
 
-  // cmdk filters client-side; memoized independently of search query.
-  const taskItems = useMemo(
-    () =>
-      tasks.map((task) => (
-        <CommandItem
-          key={task.id}
-          // Ids in value keep duplicate names individually navigable in cmdk.
-          value={`task-${task.id}`}
-          keywords={task.content === null ? [] : [task.content]}
-          onSelect={() =>
-            runCommand(() => {
-              setSelectedTaskId(task.id);
-              router.push("/");
-            })
-          }
-        >
-          <CheckCircle2 className="mr-2 h-5 w-5" />
-          <span>
-            <ReadableText text={task.content} />
-          </span>
-        </CommandItem>
-      )),
-    [tasks, runCommand, setSelectedTaskId, router],
-  );
+  const trimmed = search.trim();
+  const lower = trimmed.toLowerCase();
+  const isTaskOnly = lower.startsWith("t:");
+  const isHabitOnly = lower.startsWith("h:");
+  const isEventOnly = lower.startsWith("e:");
+  const hasTypePrefix = isTaskOnly || isHabitOnly || isEventOnly;
+  const rawTerm = hasTypePrefix ? trimmed.slice(2).trim() : trimmed;
+  const searchTerm = rawTerm.toLowerCase();
 
-  const habitItems = useMemo(
-    () =>
-      habits.map((habit) => {
-        const Icon = getHabitIcon(habit.icon);
-        return (
-          <CommandItem
-            key={habit.id}
-            value={`habit-${habit.id}`}
-            keywords={habit.name === null ? [] : [habit.name]}
-            onSelect={() => runCommand(() => openEditHabit(habit))}
-          >
-            <Icon className="mr-2 h-5 w-5" />
-            <span>
-              <ReadableText text={habit.name} />
-            </span>
-          </CommandItem>
-        );
-      }),
-    [habits, runCommand, openEditHabit],
-  );
+  const filteredTasks =
+    isHabitOnly || isEventOnly
+      ? []
+      : !searchTerm
+        ? tasks.slice(0, MAX_SEARCH_RESULTS_PER_GROUP)
+        : tasks
+            .filter((task) =>
+              (task.content ?? "").toLowerCase().includes(searchTerm),
+            )
+            .slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
 
-  const eventItems = useMemo(
-    () =>
-      events.map((event) => (
-        <CommandItem
-          key={event.id}
-          value={`event-${event.id}`}
-          keywords={event.title === null ? [] : [event.title]}
-          onSelect={() =>
-            runCommand(() => {
-              // Local-time parse avoids timezone shift on UTC-stored all-day dates.
-              setDate(parseISO(event.date.slice(0, 10)));
-              router.push("/calendar");
-            })
-          }
-        >
-          <CalendarIcon className="mr-2 h-5 w-5" />
-          <span>
-            <ReadableText text={event.title} />
-          </span>
-        </CommandItem>
-      )),
-    [events, runCommand, setDate, router],
-  );
+  const filteredHabits =
+    isTaskOnly || isEventOnly
+      ? []
+      : !searchTerm
+        ? habits.slice(0, MAX_SEARCH_RESULTS_PER_GROUP)
+        : habits
+            .filter((habit) =>
+              (habit.name ?? "").toLowerCase().includes(searchTerm),
+            )
+            .slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
+
+  const filteredEvents =
+    isTaskOnly || isHabitOnly
+      ? []
+      : !searchTerm
+        ? events.slice(0, MAX_SEARCH_RESULTS_PER_GROUP)
+        : events
+            .filter((event) =>
+              (event.title ?? "").toLowerCase().includes(searchTerm),
+            )
+            .slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
+
+  const taskItems = filteredTasks.map((task) => (
+    <CommandItem
+      key={task.id}
+      // Ids and content in value keep individual items matchable and navigable in cmdk.
+      value={`task-${task.id} ${task.content ?? ""}`}
+      keywords={
+        task.content === null
+          ? []
+          : [task.content, `t:${task.content}`, `t: ${task.content}`]
+      }
+      onSelect={() =>
+        runCommand(() => {
+          setSelectedTaskId(task.id);
+          router.push("/");
+        })
+      }
+    >
+      <CheckCircle2 className="mr-2 h-5 w-5" strokeWidth={2.25} />
+      <span>
+        <ReadableText text={task.content} />
+      </span>
+    </CommandItem>
+  ));
+
+  const habitItems = filteredHabits.map((habit) => {
+    const Icon = getHabitIcon(habit.icon);
+    return (
+      <CommandItem
+        key={habit.id}
+        value={`habit-${habit.id} ${habit.name ?? ""}`}
+        keywords={
+          habit.name === null
+            ? []
+            : [habit.name, `h:${habit.name}`, `h: ${habit.name}`]
+        }
+        onSelect={() => runCommand(() => openEditHabit(habit))}
+      >
+        <Icon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+        <span>
+          <ReadableText text={habit.name} />
+        </span>
+      </CommandItem>
+    );
+  });
+
+  const eventItems = filteredEvents.map((event) => (
+    <CommandItem
+      key={event.id}
+      value={`event-${event.id} ${event.title ?? ""}`}
+      keywords={
+        event.title === null
+          ? []
+          : [event.title, `e:${event.title}`, `e: ${event.title}`]
+      }
+      onSelect={() =>
+        runCommand(() => {
+          // Local-time parse avoids timezone shift on UTC-stored all-day dates.
+          setDate(parseISO(event.date.slice(0, 10)));
+          router.push("/calendar");
+        })
+      }
+    >
+      <CalendarIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+      <span>
+        <ReadableText text={event.title} />
+      </span>
+    </CommandItem>
+  ));
 
   if (search.length === 0) return null;
 
   return (
     <>
-      <CommandGroup heading="Tasks">{taskItems}</CommandGroup>
-      <CommandGroup heading="Habits">{habitItems}</CommandGroup>
-      <CommandGroup heading="Events">{eventItems}</CommandGroup>
+      {taskItems.length > 0 && (
+        <CommandGroup heading="Tasks">{taskItems}</CommandGroup>
+      )}
+      {habitItems.length > 0 && (
+        <CommandGroup heading="Habits">{habitItems}</CommandGroup>
+      )}
+      {eventItems.length > 0 && (
+        <CommandGroup heading="Events">{eventItems}</CommandGroup>
+      )}
     </>
   );
 }
@@ -216,7 +264,10 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
       <CommandDialog open={open} onOpenChange={onOpenChange}>
         <div className="p-6 pb-3 border-b border-border/80 bg-muted/20">
           <div className="flex items-center gap-2.5">
-            <CommandIcon className="h-5 w-5 text-muted-foreground/70" />
+            <CommandIcon
+              className="h-5 w-5 text-muted-foreground/70"
+              strokeWidth={2.25}
+            />
             <h2 className="text-[24px] font-semibold tracking-[-0.02em] text-foreground">
               Command Menu
             </h2>
@@ -226,7 +277,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
           </p>
         </div>
         <CommandInput
-          placeholder="Type a command or search..."
+          placeholder="Type a command or search (or t:, h:, e:)..."
           value={search}
           onValueChange={setSearch}
         />
@@ -235,43 +286,66 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             <EmptyState
               icon={SearchX}
               title="No results found"
-              description="Try a different search term."
+              description="Try a different search term or prefix (t:, h:, e:)."
               className="py-8 gap-3"
             />
           </CommandEmpty>
 
+          {search === "" && (
+            <>
+              <CommandGroup heading="Filter by Type">
+                <CommandItem onSelect={() => setSearch("t: ")}>
+                  <CheckCircle2 className="mr-2 h-5 w-5" strokeWidth={2.25} />
+                  <span>Filter Tasks (t:)</span>
+                  <CommandShortcut>t:</CommandShortcut>
+                </CommandItem>
+                <CommandItem onSelect={() => setSearch("h: ")}>
+                  <Layers className="mr-2 h-5 w-5" strokeWidth={2.25} />
+                  <span>Filter Habits (h:)</span>
+                  <CommandShortcut>h:</CommandShortcut>
+                </CommandItem>
+                <CommandItem onSelect={() => setSearch("e: ")}>
+                  <CalendarIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+                  <span>Filter Events (e:)</span>
+                  <CommandShortcut>e:</CommandShortcut>
+                </CommandItem>
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          )}
+
           <CommandGroup heading="Actions">
             <CommandItem onSelect={() => runCommand(() => openAddTask())}>
-              <PlusIcon className="mr-2 h-5 w-5" />
+              <PlusIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>New Task</span>
               <CommandShortcut>N</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => openAddHabit())}>
-              <PlusIcon className="mr-2 h-5 w-5" />
+              <PlusIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>New Habit</span>
               <CommandShortcut>H</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => openCreateEvent())}>
-              <CalendarPlus className="mr-2 h-5 w-5" />
+              <CalendarPlus className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>New Event</span>
               <CommandShortcut>E</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => openCreateProject())}>
-              <FolderPlus className="mr-2 h-5 w-5" />
+              <FolderPlus className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>New Project</span>
               <CommandShortcut>P</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => setArchivedProjectsOpen(true))}
             >
-              <ArchiveRestore className="mr-2 h-5 w-5" />
+              <ArchiveRestore className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Archived Projects</span>
               <CommandShortcut>A</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => openCompletedSheet())}
             >
-              <CheckCircle2 className="mr-2 h-5 w-5" />
+              <CheckCircle2 className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Show Completed Tasks</span>
               <CommandShortcut>C</CommandShortcut>
             </CommandItem>
@@ -279,7 +353,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
               keywords={["tutorial", "help", "learn", "guide"]}
               onSelect={() => runCommand(() => void addMeetKagelin())}
             >
-              <GraduationCap className="mr-2 h-5 w-5" />
+              <GraduationCap className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Add Meet Kagelin Project</span>
             </CommandItem>
             {user && !isGuestMode && (
@@ -291,7 +365,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                   })
                 }
               >
-                <RefreshCw className="mr-2 h-5 w-5" />
+                <RefreshCw className="mr-2 h-5 w-5" strokeWidth={2.25} />
                 <span>Sync Now</span>
               </CommandItem>
             )}
@@ -303,13 +377,13 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 })
               }
             >
-              <Monitor className="mr-2 h-5 w-5" />
+              <Monitor className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>
                 {isPiPActive ? "Close PiP Window" : "Open PiP Window"}
               </span>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => toggleSidebar())}>
-              <Columns className="mr-2 h-5 w-5" />
+              <Columns className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Toggle Sidebar</span>
               <CommandShortcut>{formatModChord("B")}</CommandShortcut>
             </CommandItem>
@@ -333,7 +407,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 runCommand(() => router.push("/focus?duration=25"))
               }
             >
-              <Clock className="mr-2 h-5 w-5" />
+              <Clock className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Pomodoro (25m)</span>
               <CommandShortcut>F</CommandShortcut>
             </CommandItem>
@@ -342,13 +416,13 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 runCommand(() => router.push("/focus?duration=50"))
               }
             >
-              <Clock className="mr-2 h-5 w-5" />
+              <Clock className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Deep Work (50m)</span>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => router.push("/focus"))}
             >
-              <Clock className="mr-2 h-5 w-5" />
+              <Clock className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Focus Session</span>
               <CommandShortcut>5</CommandShortcut>
             </CommandItem>
@@ -365,7 +439,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 })
               }
             >
-              <ListFilter className="mr-2 h-5 w-5" />
+              <ListFilter className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Sort by Date</span>
             </CommandItem>
             <CommandItem
@@ -376,7 +450,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 })
               }
             >
-              <ListFilter className="mr-2 h-5 w-5" />
+              <ListFilter className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Sort by Priority</span>
             </CommandItem>
             <CommandItem
@@ -387,7 +461,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 })
               }
             >
-              <Layers className="mr-2 h-5 w-5" />
+              <Layers className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Group by Project</span>
             </CommandItem>
             <CommandItem
@@ -398,7 +472,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 })
               }
             >
-              <Layers className="mr-2 h-5 w-5" />
+              <Layers className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Ungroup Tasks</span>
             </CommandItem>
             <CommandItem
@@ -409,9 +483,9 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
               }
             >
               {resolvedTheme === "light" ? (
-                <MoonIcon className="mr-2 h-5 w-5" />
+                <MoonIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
               ) : (
-                <SunIcon className="mr-2 h-5 w-5" />
+                <SunIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
               )}
               <span>Toggle Dark Mode</span>
               <CommandShortcut>T</CommandShortcut>
@@ -422,28 +496,28 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
 
           <CommandGroup heading="Navigation">
             <CommandItem onSelect={() => runCommand(() => router.push("/"))}>
-              <HomeIcon className="mr-2 h-5 w-5" />
+              <HomeIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Home</span>
               <CommandShortcut>1</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => router.push("/habits"))}
             >
-              <Layers className="mr-2 h-5 w-5" />
+              <Layers className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Habits</span>
               <CommandShortcut>2</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => router.push("/calendar"))}
             >
-              <CalendarIcon className="mr-2 h-5 w-5" />
+              <CalendarIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Calendar</span>
               <CommandShortcut>3</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => router.push("/stats"))}
             >
-              <LayoutGridIcon className="mr-2 h-5 w-5" />
+              <LayoutGridIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Statistics</span>
               <CommandShortcut>4</CommandShortcut>
             </CommandItem>
@@ -455,14 +529,14 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             <CommandItem
               onSelect={() => runCommand(() => router.push("/settings"))}
             >
-              <SettingsIcon className="mr-2 h-5 w-5" />
+              <SettingsIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Settings</span>
               <CommandShortcut>6</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => setShortcutsHelpOpen(true))}
             >
-              <Keyboard className="mr-2 h-5 w-5" />
+              <Keyboard className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Keyboard Shortcuts</span>
               <CommandShortcut>?</CommandShortcut>
             </CommandItem>
@@ -477,9 +551,12 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 }
               >
                 {copied ? (
-                  <Check className="mr-2 h-4 w-4 text-green-500" />
+                  <Check
+                    className="mr-2 h-4 w-4 text-green-500"
+                    strokeWidth={2.25}
+                  />
                 ) : (
-                  <Copy className="mr-2 h-5 w-5" />
+                  <Copy className="mr-2 h-5 w-5" strokeWidth={2.25} />
                 )}
                 <span>Copy My User ID</span>
               </CommandItem>
@@ -488,7 +565,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
               onSelect={() => runCommand(() => setShowSignOutConfirm(true))}
               className="sumi-red-action"
             >
-              <LogOut className="mr-2 h-5 w-5" />
+              <LogOut className="mr-2 h-5 w-5" strokeWidth={2.25} />
               <span>Sign Out</span>
             </CommandItem>
           </CommandGroup>

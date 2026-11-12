@@ -1,0 +1,20 @@
+id: no-eager-motion
+language: TypeScript
+severity: error
+files:
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+  - "app/**/*.ts"
+  - "app/**/*.tsx"
+ignores:
+  - "src/components/providers/MotionProvider.tsx"
+rule:
+  any:
+    - pattern: import { $$$A, motion, $$$B } from "motion/react"
+    - pattern: import { motion } from "motion/react"
+    - pattern: import motion from "motion/react"
+    - pattern: import * as motion from "motion/react"
+    - pattern: import $$$A from "framer-motion"
+message: >
+  Do not import eager motion or legacy framer-motion. Import 'm' from
+  'motion/react-m' under <LazyMotion> instead.

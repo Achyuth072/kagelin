@@ -21,7 +21,7 @@ export function HabitQuestionField({
   habitType,
 }: HabitQuestionFieldProps) {
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast mx-2">
+    <div className="flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-seijaku-fast">
       <IconCell className="items-center pt-0">
         <HelpCircle
           className="h-4 w-4 text-muted-foreground"

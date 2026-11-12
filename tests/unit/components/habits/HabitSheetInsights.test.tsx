@@ -117,7 +117,9 @@ describe("HabitSheet — Insights tab", () => {
     );
 
     await act(async () => {
-      fireEvent.mouseDown(screen.getByRole("tab", { name: "Insights" }));
+      fireEvent.mouseDown(
+        screen.getByRole("tab", { name: "History & Insights" }),
+      );
     });
 
     expect(screen.queryByPlaceholderText("Habit name")).not.toBeInTheDocument();
@@ -143,7 +145,7 @@ describe("HabitSheet — Insights tab", () => {
     });
 
     expect(
-      screen.queryByRole("tab", { name: "Insights" }),
+      screen.queryByRole("tab", { name: "History & Insights" }),
     ).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Habit name")).toBeInTheDocument();
     expect(screen.getByTestId("dialog-content").className).toContain(
@@ -163,10 +165,9 @@ describe("HabitSheet — Insights tab", () => {
       );
     });
 
-    expect(screen.getByRole("tab", { name: "Insights" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(
+      screen.getByRole("tab", { name: "History & Insights" }),
+    ).toHaveAttribute("aria-selected", "true");
     expect(screen.queryByPlaceholderText("Habit name")).not.toBeInTheDocument();
   });
 });

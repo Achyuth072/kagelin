@@ -9,6 +9,7 @@ import {
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import TaskList from "@/components/tasks/TaskList";
+import { taskDomId } from "@/components/tasks/task-utils";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Task } from "@/lib/types/task";
 
@@ -184,7 +185,7 @@ describe("DynamicDualSheet in TaskList", () => {
       expect(screen.getByText("Alpha task")).toBeInTheDocument();
     });
 
-    const scrollContainer = screen.getByRole("listbox");
+    const scrollContainer = screen.getByRole("grid");
     expect(scrollContainer).toHaveClass("w-full");
     const inspector = screen.getByTestId("docked-task-inspector");
     expect(inspector).toHaveClass("w-0");
@@ -212,8 +213,9 @@ describe("DynamicDualSheet in TaskList", () => {
     const inspector = screen.getByTestId("docked-task-inspector");
     expect(inspector).toHaveClass("pt-2");
     expect(inspector).toHaveClass("duration-200");
+    expect(inspector).toHaveClass("pointer-events-auto");
 
-    const scrollContainer = screen.getByRole("listbox");
+    const scrollContainer = screen.getByRole("grid");
     expect(scrollContainer).toHaveClass("w-[60%]");
   });
 
@@ -237,7 +239,7 @@ describe("DynamicDualSheet in TaskList", () => {
     fireEvent.click(closeBtn);
 
     await waitFor(() => {
-      const scrollContainer = screen.getByRole("listbox");
+      const scrollContainer = screen.getByRole("grid");
       expect(scrollContainer).toHaveClass("w-full");
       const inspector = screen.getByTestId("docked-task-inspector");
       expect(inspector).toHaveClass("w-0");
@@ -313,7 +315,7 @@ describe("DynamicDualSheet in TaskList", () => {
     });
 
     await waitFor(() => {
-      const scrollContainer = screen.getByRole("listbox");
+      const scrollContainer = screen.getByRole("grid");
       expect(scrollContainer).toHaveClass("w-full");
       const inspector = screen.getByTestId("docked-task-inspector");
       expect(inspector).toHaveClass("w-0");
@@ -335,6 +337,29 @@ describe("DynamicDualSheet in TaskList", () => {
     });
 
     expect(inspector).toHaveClass("w-[40%]");
+  });
+
+  it("DDS-08: Pointerdown inside inspector does not dismiss it even when document.body pointer-events are disabled", async () => {
+    renderTaskList();
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Alpha task")[0]).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getAllByText("Alpha task")[0]);
+    const inspector = await screen.findByTestId("docked-task-inspector");
+
+    // Simulate modal dropdown disabling body pointer events
+    document.body.style.pointerEvents = "none";
+    try {
+      act(() => {
+        fireEvent.pointerDown(inspector, { button: 0 });
+      });
+      expect(inspector).toHaveClass("w-[40%]");
+      expect(inspector).toHaveClass("pointer-events-auto");
+    } finally {
+      document.body.style.pointerEvents = "";
+    }
   });
 });
 
@@ -397,5 +422,11 @@ describe("TaskList deep-link hydration (?task=)", () => {
       expect(inspector).toHaveClass("w-[40%]");
       expect(inspector).toHaveClass("opacity-100");
     });
+
+    // Deep links must not mark the task as Vim-selected.
+    expect(document.getElementById(taskDomId("task-1"))).not.toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 });

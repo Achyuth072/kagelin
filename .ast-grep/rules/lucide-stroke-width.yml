@@ -1,0 +1,29 @@
+id: lucide-stroke-width
+language: Tsx
+severity: error
+files:
+  - "src/components/**/*.tsx"
+  - "app/**/*.tsx"
+ignores:
+  - "src/components/ui/**"
+rule:
+  all:
+    - any:
+        - pattern: <$TAG $$$A strokeWidth={$VAL} $$$B />
+        - pattern: <$TAG $$$A strokeWidth="$VAL" $$$B />
+    - not:
+        any:
+          - pattern: <$TAG $$$A strokeWidth={2.25} $$$B />
+          - pattern: <CircularProgress $$$ATTRS />
+          - pattern: <Line $$$ATTRS />
+          - pattern: <Area $$$ATTRS />
+          - pattern: <Bar $$$ATTRS />
+          - pattern: <RadialBar $$$ATTRS />
+          - pattern: <circle $$$ATTRS />
+          - pattern: <path $$$ATTRS />
+          - pattern: <line $$$ATTRS />
+          - pattern: <rect $$$ATTRS />
+          - pattern: <polyline $$$ATTRS />
+message: >
+  Lucide icons in Kagelin must use strokeWidth={2.25} for visual ink weight
+  consistency per DESIGN.md.

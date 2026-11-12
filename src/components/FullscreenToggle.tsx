@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import { Maximize2, Minimize2 } from "lucide-react";
 import { useFullscreen } from "@/lib/hooks/useFullscreen";
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -23,7 +23,7 @@ export function FullscreenToggle() {
   };
 
   return (
-    <motion.button
+    <m.button
       onClick={handleClick}
       whileTap={{ scale: 0.95 }}
       className={cn(
@@ -37,6 +37,6 @@ export function FullscreenToggle() {
       ) : (
         <Maximize2 className="h-6 w-6" strokeWidth={2.25} />
       )}
-    </motion.button>
+    </m.button>
   );
 }

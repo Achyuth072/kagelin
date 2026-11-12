@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import { cn } from "@/lib/utils";
+import { SEIJAKU_SPRING } from "@/lib/motion";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 
 interface SegmentedTimePickerProps {
   value: Date;
@@ -22,6 +25,7 @@ export function SegmentedTimePicker({
   timeFormat: timeFormatProp,
 }: SegmentedTimePickerProps) {
   const { trigger } = useHaptic();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const { timeFormat: defaultTimeFormat } = useTimeFormat();
 
   const effectiveFormat = timeFormatProp ?? defaultTimeFormat ?? "12h";
@@ -235,18 +239,20 @@ export function SegmentedTimePicker({
                   : "text-foreground/80 border-transparent",
               )}
             >
-              <motion.span
+              <m.span
                 key={`h-${is24hr ? hours : h12}`}
                 initial={{ y: lastDelta > 0 ? -2 : 2, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                transition={
+                  prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING
+                }
                 className={cn(
                   "leading-none block font-semibold tracking-tight",
                   compact ? "text-2xl" : "text-4xl md:text-5xl",
                 )}
               >
                 {(is24hr ? hours : h12).toString().padStart(2, "0")}
-              </motion.span>
+              </m.span>
             </div>
             <input
               type="text"
@@ -290,18 +296,20 @@ export function SegmentedTimePicker({
                   : "text-foreground/80 border-transparent",
               )}
             >
-              <motion.span
+              <m.span
                 key={`m-${minutes}`}
                 initial={{ y: lastDelta > 0 ? -2 : 2, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                transition={
+                  prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING
+                }
                 className={cn(
                   "leading-none block font-semibold tracking-tight",
                   compact ? "text-2xl" : "text-4xl md:text-5xl",
                 )}
               >
                 {minutes.toString().padStart(2, "0")}
-              </motion.span>
+              </m.span>
             </div>
             <input
               type="text"
@@ -349,7 +357,7 @@ export function SegmentedTimePicker({
             )}
           >
             <AnimatePresence mode="wait">
-              <motion.span
+              <m.span
                 key={isPM ? "pm" : "am"}
                 initial={{ opacity: 0, y: 1 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -358,7 +366,7 @@ export function SegmentedTimePicker({
                 className="absolute"
               >
                 {isPM ? "PM" : "AM"}
-              </motion.span>
+              </m.span>
             </AnimatePresence>
           </button>
         )}

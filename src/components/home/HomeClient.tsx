@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { TasksPageHeader } from "@/components/tasks/TasksPageHeader";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useTaskActions } from "@/components/TaskActionsProvider";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, Loader2 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { PwaInstallHint } from "@/components/home/PwaInstallHint";
 import { StartHereCard } from "@/components/home/StartHereCard";
@@ -60,7 +60,11 @@ export function HomeClient() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <Loader2
+          className="h-6 w-6 text-muted-foreground animate-spin"
+          strokeWidth={2.25}
+        />
+        <span className="sr-only">Loading...</span>
       </div>
     );
   }
@@ -95,7 +99,10 @@ export function HomeClient() {
                   title="Clear filter"
                   aria-label="Clear filter"
                 >
-                  <PlusIcon className="h-3.5 w-3.5 rotate-45" />
+                  <PlusIcon
+                    className="h-3.5 w-3.5 rotate-45"
+                    strokeWidth={2.25}
+                  />
                 </button>
               </span>
             )}

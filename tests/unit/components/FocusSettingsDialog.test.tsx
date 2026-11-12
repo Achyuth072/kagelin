@@ -104,7 +104,7 @@ vi.mock("@/components/ui/switch", () => ({
 }));
 
 vi.mock("@/lib/hooks/useMediaQuery", () => ({
-  useMediaQuery: vi.fn(() => true), // Default to desktop
+  useMediaQuery: vi.fn((query: string) => !query.includes("max-width")), // Default to desktop
 }));
 
 describe("FocusSettingsDialog", () => {

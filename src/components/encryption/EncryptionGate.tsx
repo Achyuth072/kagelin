@@ -61,7 +61,7 @@ export function EncryptionGate({ children }: { children: React.ReactNode }) {
         <div className="w-full space-y-5 text-center">
           <CloudOff
             className="h-8 w-8 mx-auto text-muted-foreground"
-            strokeWidth={1.75}
+            strokeWidth={2.25}
           />
           <div className="space-y-1.5">
             <h1 className="text-xl font-bold tracking-tight">

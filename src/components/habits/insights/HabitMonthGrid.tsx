@@ -10,7 +10,11 @@ import {
   startOfMonth,
   subMonths,
 } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useHabitCellActions } from "@/lib/hooks/useHabitCellActions";
@@ -92,55 +96,64 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
 
   return (
     <div {...swipeHandlers} className="w-full space-y-2.5 touch-pan-y">
-      <div className="flex items-center justify-between mb-1">
-        <p className="text-xs sm:text-sm font-semibold text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <p className="text-xs sm:text-sm font-semibold text-foreground">
           {label}
         </p>
-        <div className="inline-flex items-center rounded-lg border border-border/60 bg-secondary/30 p-0.5 shadow-xs">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Previous month"
-            disabled={!canGoPrev}
-            onClick={handlePrev}
-            className="h-7 w-7 sm:h-8 sm:w-8 rounded-md text-muted-foreground hover:text-brand hover:bg-brand/10 transition-seijaku-fast focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40 disabled:bg-transparent"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-1.5 shrink-0">
           <Button
             variant="ghost"
             size="sm"
+            aria-label="Today"
             disabled={isCurrentMonth}
             onClick={handleToday}
             className={cn(
-              "h-7 sm:h-8 px-2.5 sm:px-3 text-xs font-medium rounded-md transition-seijaku-fast focus-visible:ring-2 focus-visible:ring-brand disabled:bg-transparent",
+              "h-7 sm:h-8 text-xs font-medium rounded-lg border border-border/50 bg-secondary/40 shadow-none transition-seijaku-fast focus-visible:ring-2 focus-visible:ring-brand",
+              "w-7 sm:w-auto px-0 sm:px-2.5",
               isCurrentMonth
-                ? "text-muted-foreground/60 disabled:opacity-40"
-                : "text-brand font-semibold bg-brand/10 hover:bg-brand/20 shadow-xs",
+                ? "text-muted-foreground/50 disabled:opacity-40"
+                : "text-foreground hover:bg-secondary/60",
             )}
           >
-            Today
+            <CalendarIcon
+              className="h-3.5 w-3.5 sm:mr-1.5"
+              strokeWidth={2.25}
+            />
+            <span className="hidden sm:inline">Today</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Next month"
-            disabled={!canGoNext}
-            onClick={handleNext}
-            className="h-7 w-7 sm:h-8 sm:w-8 rounded-md text-muted-foreground hover:text-brand hover:bg-brand/10 transition-seijaku-fast focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40 disabled:bg-transparent"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Previous month"
+              disabled={!canGoPrev}
+              onClick={handlePrev}
+              className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg text-muted-foreground hover:text-brand hover:bg-brand/10 transition-seijaku-fast focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+            >
+              <ChevronLeft className="h-4 w-4" strokeWidth={2.25} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Next month"
+              disabled={!canGoNext}
+              onClick={handleNext}
+              className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg text-muted-foreground hover:text-brand hover:bg-brand/10 transition-seijaku-fast focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground"
+            >
+              <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+            </Button>
+          </div>
         </div>
       </div>
 
       <div role="group" aria-label={label} className="w-full">
-        <div className="grid grid-cols-7 gap-1 sm:gap-1.5 lg:gap-2 w-full">
+        <div className="grid grid-cols-7 gap-1 sm:gap-1.5 w-full">
           {WEEKDAYS.map((d, i) => (
             <span
               key={i}
               aria-hidden
-              className="text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground/60 h-4 flex items-center justify-center w-full max-w-[44px] mx-auto"
+              className="text-center text-[10px] sm:text-xs font-bold uppercase tracking-wider text-muted-foreground/60 h-4 flex items-center justify-center w-full max-w-8 mx-auto"
             >
               {d}
             </span>
@@ -149,11 +162,11 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
             <div
               key={`blank-${i}`}
               aria-hidden
-              className="w-full max-w-[44px] mx-auto"
+              className="w-full max-w-8 mx-auto"
             />
           ))}
           {days.map((day) => (
-            <div key={day.date} className="w-full max-w-[44px] mx-auto">
+            <div key={day.date} className="w-full max-w-8 mx-auto">
               <HabitStripCell
                 day={day}
                 header={day.date.slice(8).replace(/^0/, "")}

@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
-import { CollapsibleReveal } from "./shared/CollapsibleReveal";
 import { useDeleteTask, useToggleTask } from "@/lib/hooks/useTaskMutations";
 import { useTimerStore } from "@/lib/store/timerStore";
 import {
@@ -12,19 +11,13 @@ import {
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
 import type { TaskViewMode } from "@/lib/types/sorting";
-import dynamic from "next/dynamic";
-
-// Lazy-loaded to cut initial render weight (PERF-02).
-const SubtaskList = dynamic(() => import("./SubtaskList"), {
-  loading: () => <div className="h-16 animate-pulse bg-muted/30 rounded-lg" />,
-  ssr: false,
-});
-
+import SubtaskList from "./SubtaskList";
 import { useRouter } from "next/navigation";
 import { BoardTaskCard } from "./BoardTaskCard";
 import { ListTaskCard } from "./ListTaskCard";
 import { SwipeableTaskContent } from "./SwipeableTaskContent";
 import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
+import { notify } from "@/lib/notify";
 
 interface TaskItemProps {
   task: Task;
@@ -40,6 +33,8 @@ interface TaskItemProps {
   isDesktop?: boolean;
   triggerHaptic?: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   setActiveTaskId?: (taskId: string) => void;
+  shouldShowHint?: boolean;
+  onHintShown?: () => void;
 }
 
 function TaskItemBase({
@@ -56,6 +51,8 @@ function TaskItemBase({
   isDesktop = false,
   triggerHaptic,
   setActiveTaskId,
+  shouldShowHint = false,
+  onHintShown,
 }: TaskItemProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [_isChecking, setIsChecking] = useState(false);
@@ -63,8 +60,15 @@ function TaskItemBase({
   const [pendingDelete, setPendingDelete] = useState(false);
   const [isSwipeDragging, setIsSwipeDragging] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [hasRenderedSubtasks, setHasRenderedSubtasks] = useState(false);
   const [isHandleActive, setIsHandleActive] = useState(false);
   const [shouldAnimate, setShouldAnimate] = useState(false);
+
+  useEffect(() => {
+    if (isExpanded) {
+      setHasRenderedSubtasks(true);
+    }
+  }, [isExpanded]);
 
   const deleteMutation = useDeleteTask();
   const toggleMutation = useToggleTask();
@@ -87,12 +91,25 @@ function TaskItemBase({
     router.push("/focus");
   };
 
-  const handleComplete = (checked: boolean) => {
+  const handleComplete = (
+    checked: boolean,
+    options?: { showToast?: boolean },
+  ) => {
     triggerHaptic?.(checked ? "success" : "toggle");
     setIsChecking(true);
     if (checked) {
       setShouldAnimate(true);
       setTimeout(() => setShouldAnimate(false), 1000);
+      if (options?.showToast) {
+        notify("Task completed", {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              handleComplete(false);
+            },
+          },
+        });
+      }
     } else {
       setShouldAnimate(false);
     }
@@ -128,18 +145,30 @@ function TaskItemBase({
     <div
       ref={cardRef}
       className={cn(
-        "group/item",
-        isExpanded && "pb-4",
+        "group/item relative",
+        viewMode !== "board" && isExpanded && "pb-4 border-b border-border/40",
         isDragging && "will-change-transform",
         task.is_completed && "task-ink-completed-card",
       )}
     >
+      {/* Accent stripe for list view: extends along full height including expanded subtasks */}
+      {project && viewMode !== "board" && (
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1 sm:w-1.5 pointer-events-none z-10"
+          style={{ backgroundColor: project.color }}
+        />
+      )}
       {viewMode === "board" ? (
         <BoardTaskCard
           task={task}
           project={project}
           handleComplete={handleComplete}
           handlePlayFocus={handlePlayFocus}
+          onDeleteRequest={(e) => {
+            e.stopPropagation();
+            setPendingDelete(true);
+            setShowDeleteDialog(true);
+          }}
           onClick={() => onSelect?.(task)}
           shouldAnimate={shouldAnimate}
           isKeyboardSelected={isKeyboardSelected}
@@ -181,14 +210,16 @@ function TaskItemBase({
           _isDragging={isDragging}
           _isHandleActive={isHandleActive}
           isCompleted={task.is_completed}
+          triggerHaptic={triggerHaptic}
+          shouldShowHint={shouldShowHint}
+          onHintShown={onHintShown}
           onSwipeLeft={() => {
             triggerHaptic?.("thud");
             setPendingDelete(true);
             setShowDeleteDialog(true);
           }}
           onSwipeRight={() => {
-            triggerHaptic?.("thud");
-            onSelect?.(task);
+            handleComplete(true, { showToast: true });
           }}
           onSwipeStart={() => setIsSwipeDragging(true)}
           onSwipeEnd={() => setIsSwipeDragging(false)}
@@ -224,18 +255,30 @@ function TaskItemBase({
         </SwipeableTaskContent>
       )}
 
-      {/* Skipped while dragging — the motion layer costs per frame, per row. */}
-      <CollapsibleReveal
-        open={isExpanded && !isDndActive}
+      {/* Subtask collapse/expand animated via CSS grid matching sidebar transition */}
+      <div
         className={cn(
-          "mr-1 pl-4 border-t border-border/10",
-          isDesktop ? "ml-10" : "ml-11",
+          "grid transition-[grid-template-rows,opacity] duration-300 ease-seijaku",
+          isExpanded && !isDndActive
+            ? "grid-rows-[1fr] opacity-100"
+            : "grid-rows-[0fr] opacity-0 pointer-events-none",
         )}
       >
-        <div className="pt-2">
-          <SubtaskList taskId={task.id} projectId={task.project_id} />
+        <div className="overflow-hidden">
+          <div
+            className={cn(
+              "mr-2 my-1.5 pl-2.5 border-l-2 border-brand/40 rounded-r-md",
+              isDesktop ? "ml-10" : "ml-11",
+            )}
+          >
+            <div className="py-1">
+              {hasRenderedSubtasks && (
+                <SubtaskList taskId={task.id} projectId={task.project_id} />
+              )}
+            </div>
+          </div>
         </div>
-      </CollapsibleReveal>
+      </div>
 
       <DeleteConfirmationDialog
         isOpen={showDeleteDialog}

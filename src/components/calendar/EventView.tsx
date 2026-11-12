@@ -1,0 +1,881 @@
+"use client";
+
+import { useState, useEffect, useEffectEvent, useMemo, useRef } from "react";
+import { useForm, useWatch, useFormState, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { format, isValid } from "date-fns";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  AlignLeft,
+  BellRing,
+  Sun,
+  Trash2,
+  Check,
+  Send,
+  Save,
+  X,
+  SlidersHorizontal,
+  ChevronDown,
+} from "lucide-react";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CollapsibleReveal } from "@/components/ui/collapsible-reveal";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { DateTimeWizard } from "@/components/ui/date-time-wizard";
+import {
+  useCreateCalendarEvent,
+  useUpdateCalendarEvent,
+  useDeleteCalendarEvent,
+} from "@/lib/hooks/useCalendarEventMutations";
+import { notify } from "@/lib/notify";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
+import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useProfile } from "@/lib/hooks/useProfile";
+import { useAuth } from "@/components/AuthProvider";
+import { DEFAULT_EVENT_REMINDER_MINUTES } from "@/lib/types/profile";
+import { reminderOptions, snapAllDayReminder } from "@/lib/utils/eventReminder";
+import { parseEventInput } from "@/lib/utils/nlp-event";
+import { cn } from "@/lib/utils";
+import { IconCell } from "@/components/ui/IconCell";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useCalendarStore } from "@/lib/calendar/store";
+import { useLocationHistoryStore } from "@/lib/store/locationHistoryStore";
+import { useScrollIsolation } from "@/lib/hooks/useScrollIsolation";
+import { useHorizontalScroll } from "@/lib/hooks/useHorizontalScroll";
+import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
+import type { CalendarEventUI } from "@/lib/types/calendar-event";
+
+export const CreateEventSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200),
+  description: z.string().max(2000).optional(),
+  location: z.string().max(200).optional(),
+  all_day: z.boolean(),
+  reminder_minutes: z.number().nullable(),
+});
+
+export type CreateEventFormData = z.infer<typeof CreateEventSchema>;
+
+const PREDEFINED_LOCATIONS = [
+  "Coffee Shop",
+  "Office",
+  "Zoom Meeting",
+  "Google Meet",
+  "Home",
+  "Library",
+  "Gym",
+];
+
+export interface EventViewProps {
+  open?: boolean;
+  defaultDate?: Date;
+  event?: CalendarEventUI;
+  onClose?: () => void;
+  layout?: "sheet" | "panel";
+}
+
+function coerceValidDate(value: unknown): Date | undefined {
+  if (value instanceof Date) return isValid(value) ? value : undefined;
+  if (typeof value === "string" || typeof value === "number") {
+    const parsed = new Date(value);
+    return isValid(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+function getDefaultEndDate(start: Date) {
+  return new Date(start.getTime() + 3600000);
+}
+
+function RecurringTooltip({
+  isRecurring,
+  children,
+}: {
+  isRecurring: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className={isRecurring ? "cursor-not-allowed" : undefined}>
+          {children}
+        </span>
+      </TooltipTrigger>
+      {isRecurring && (
+        <TooltipContent side="top">
+          Recurring events can only be edited in the source calendar
+        </TooltipContent>
+      )}
+    </Tooltip>
+  );
+}
+
+export function EventView({
+  open = true,
+  defaultDate,
+  event,
+  onClose,
+  layout = "sheet",
+}: EventViewProps) {
+  const { trigger } = useHaptic();
+  const { isGuestMode } = useAuth();
+  const { profile } = useProfile();
+  const notificationSettings = profile?.settings?.notifications;
+  const defaultReminder =
+    !isGuestMode && (notificationSettings?.event_reminders ?? true)
+      ? (notificationSettings?.event_reminder_minutes ??
+        DEFAULT_EVENT_REMINDER_MINUTES)
+      : null;
+  // Read at open time only: a late profile load must not reset a half-filled form.
+  const getDefaultReminder = useEffectEvent(() => defaultReminder);
+  const createEvent = useCreateCalendarEvent();
+  const updateEvent = useUpdateCalendarEvent();
+  const deleteEvent = useDeleteCalendarEvent();
+  const isFinePointer = useMediaQuery("(pointer: fine)");
+  const normalizedDefaultDate = coerceValidDate(defaultDate);
+  const normalizedEventStart = coerceValidDate(event?.start);
+  const normalizedEventEnd = coerceValidDate(event?.end);
+  const initialStartDate = useMemo(
+    () => normalizedEventStart ?? normalizedDefaultDate ?? new Date(),
+    [normalizedDefaultDate, normalizedEventStart],
+  );
+  const initialEndDate = useMemo(
+    () => normalizedEventEnd ?? getDefaultEndDate(initialStartDate),
+    [initialStartDate, normalizedEventEnd],
+  );
+
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    initialStartDate,
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(initialEndDate);
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [draftLocation, setDraftLocation] = useState("");
+  const [locationPortalEl, setLocationPortalEl] =
+    useState<HTMLDivElement | null>(null);
+  const locationListRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useHorizontalScroll();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const events = useCalendarStore((state) => state.events);
+  const locationHistory = useLocationHistoryStore((state) => state.locations);
+  const addLocation = useLocationHistoryStore((state) => state.addLocation);
+  const safeStartDate = coerceValidDate(startDate);
+  const safeEndDate = coerceValidDate(endDate);
+
+  const uniqueLocations = useMemo(() => {
+    const fromEvents = events
+      .map((e) => e.location)
+      .filter((loc): loc is string => Boolean(loc && loc.trim() !== ""));
+    return Array.from(
+      new Set([...PREDEFINED_LOCATIONS, ...locationHistory, ...fromEvents]),
+    );
+  }, [events, locationHistory]);
+
+  const { register, handleSubmit, control, setValue, reset } =
+    useForm<CreateEventFormData>({
+      resolver: zodResolver(CreateEventSchema),
+      mode: "onChange",
+      defaultValues: {
+        title: "",
+        description: "",
+        location: "",
+        all_day: false,
+        reminder_minutes: null,
+      },
+    });
+
+  const allDay = useWatch({ control, name: "all_day" });
+  const title = useWatch({ control, name: "title" });
+  const reminderMinutes = snapAllDayReminder(
+    allDay,
+    useWatch({ control, name: "reminder_minutes" }),
+  );
+  const activeReminderOption = reminderOptions(allDay).find(
+    (o) => o.value === reminderMinutes,
+  );
+  const reminderLabel =
+    reminderMinutes === null
+      ? "No reminder"
+      : (activeReminderOption?.label ?? `${reminderMinutes}m before`);
+  const { errors } = useFormState({ control });
+
+  // React Compiler memoizes away formState.isValid proxy access; useWatch subscribes explicitly.
+  const isFormValid =
+    !!title && title.trim().length >= 1 && title.length <= 200;
+
+  const isRecurring = !!event?.metadata?.recurring_series_id;
+
+  useEffect(() => {
+    if (event || !title || title.length < 3) return;
+    const parsed = parseEventInput(title);
+    const start = parsed.start;
+    const end = parsed.end;
+    const isAllDay = parsed.allDay;
+    if (start) {
+      const timer = setTimeout(() => {
+        setStartDate(start);
+        setEndDate(coerceValidDate(end) ?? getDefaultEndDate(start));
+        if (isAllDay) setValue("all_day", true);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [title, setValue, event]);
+
+  useScrollIsolation(locationListRef, locationOpen);
+
+  // On mobile, back gesture closes an open popover before dismissing the drawer.
+  const isDrawer = useMediaQuery("(max-width: 640px)");
+  useBackNavigation(isDrawer && locationOpen, () => setLocationOpen(false));
+  useBackNavigation(isDrawer && showStartPicker, () =>
+    setShowStartPicker(false),
+  );
+  useBackNavigation(isDrawer && showEndPicker, () => setShowEndPicker(false));
+  useBackNavigation(isDrawer && reminderOpen, () => setReminderOpen(false));
+
+  useEffect(() => {
+    if (open) {
+      const timer = setTimeout(() => {
+        if (event) {
+          setStartDate(normalizedEventStart ?? initialStartDate);
+          setEndDate(
+            normalizedEventEnd ??
+              getDefaultEndDate(normalizedEventStart ?? initialStartDate),
+          );
+          reset({
+            title: event.title ?? "",
+            description: event.description || "",
+            location: event.location || "",
+            all_day: event.allDay || false,
+            reminder_minutes: event.reminderMinutes ?? null,
+          });
+          setDraftLocation(event.location || "");
+        } else {
+          const now = normalizedDefaultDate ?? new Date();
+          setStartDate(now);
+          setEndDate(getDefaultEndDate(now));
+          reset({
+            title: "",
+            description: "",
+            location: "",
+            all_day: false,
+            reminder_minutes: getDefaultReminder(),
+          });
+          setDraftLocation("");
+        }
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [
+    event,
+    initialStartDate,
+    normalizedDefaultDate,
+    normalizedEventEnd,
+    normalizedEventStart,
+    open,
+    reset,
+  ]);
+
+  const onFormSubmit = (data: CreateEventFormData) => {
+    if (!safeStartDate || !safeEndDate) return;
+    trigger("thud");
+    if (data.location) addLocation(data.location);
+    const reminderPayload = isGuestMode
+      ? {}
+      : {
+          reminder_minutes: snapAllDayReminder(
+            data.all_day,
+            data.reminder_minutes,
+          ),
+        };
+    if (event) {
+      updateEvent.mutate({
+        id: event.id,
+        title: data.title,
+        description: data.description || undefined,
+        location: data.location || undefined,
+        start_time: safeStartDate.toISOString(),
+        end_time: safeEndDate.toISOString(),
+        all_day: data.all_day,
+        ...reminderPayload,
+      });
+    } else {
+      createEvent.mutate({
+        title: data.title,
+        description: data.description || undefined,
+        location: data.location || undefined,
+        start_time: safeStartDate.toISOString(),
+        end_time: safeEndDate.toISOString(),
+        all_day: data.all_day,
+        ...reminderPayload,
+      });
+    }
+    trigger("success");
+    onClose?.();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      handleSubmit(onFormSubmit)();
+    }
+  };
+
+  const handleDeleteClick = () => {
+    if (!event) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!event) return;
+    const eventToRestore = { ...event };
+    deleteEvent.mutate(event.id, {
+      onSuccess: () => {
+        notify("Event deleted", {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              createEvent.mutate({
+                title: eventToRestore.title ?? "",
+                description: eventToRestore.description ?? undefined,
+                location: eventToRestore.location ?? undefined,
+                start_time: eventToRestore.start.toISOString(),
+                end_time: eventToRestore.end.toISOString(),
+                all_day: eventToRestore.allDay,
+                color: eventToRestore.color,
+                category: eventToRestore.category ?? undefined,
+                reminder_minutes: eventToRestore.reminderMinutes ?? undefined,
+              });
+            },
+          },
+        });
+      },
+    });
+    setShowDeleteConfirm(false);
+    onClose?.();
+  };
+
+  const trimmedSearch = draftLocation.trim();
+
+  const eventIdBadge = !event
+    ? "EVENT-NEW"
+    : (() => {
+        const raw = event.id
+          .replace(/^evt-|^event-/i, "")
+          .replace(/-/g, "")
+          .toUpperCase();
+        return `EVENT-${raw.slice(0, 4)}`;
+      })();
+
+  const hoverCls = isRecurring ? "" : "hover:bg-muted/40";
+
+  return (
+    <>
+      <form
+        onSubmit={handleSubmit(onFormSubmit)}
+        onKeyDown={handleKeyDown}
+        className={cn(
+          "flex flex-col h-auto",
+          layout === "sheet" ? "max-h-[85dvh]" : "h-full",
+        )}
+      >
+        <div className="px-4 pt-4 pb-2 shrink-0">
+          <span
+            data-testid="event-header-badge"
+            className="text-[10px] sm:text-xs font-mono uppercase text-brand tracking-wider font-semibold block mb-0.5"
+          >
+            {eventIdBadge}
+          </span>
+          <input
+            {...register("title")}
+            id="event-title"
+            placeholder="Add title"
+            autoFocus={isFinePointer && !isRecurring}
+            disabled={isRecurring}
+            className={cn(
+              "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border/40 pb-2 pt-0.5 outline-none placeholder:text-muted-foreground/50 text-foreground",
+              errors.title && "placeholder:text-destructive/60",
+            )}
+          />
+          {errors.title && (
+            <p className="text-xs text-destructive mt-1">
+              {errors.title.message}
+            </p>
+          )}
+        </div>
+
+        {/* Property Strip — All-Day & Reminder in a Single Horizontal Line */}
+        <div className="px-4 py-1.5 flex flex-col gap-1 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-5 shrink-0 flex items-center justify-center text-muted-foreground">
+              <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={2.25} />
+            </div>
+            <div
+              ref={scrollRef}
+              data-testid="property-strip"
+              className="py-1 px-0.5 flex items-center gap-2 overflow-x-auto scrollbar-hide min-w-0 flex-1 pr-2"
+            >
+              {/* All day switch chip */}
+              <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2.5 py-1 border border-border/50 shrink-0 h-7 sm:h-8">
+                <Sun
+                  className="h-3.5 w-3.5 text-muted-foreground"
+                  strokeWidth={2.25}
+                />
+                <span className="text-xs sm:text-[13px] text-foreground font-medium mr-1">
+                  All day
+                </span>
+                <Switch
+                  id="all-day"
+                  aria-label="All day"
+                  checked={allDay}
+                  disabled={isRecurring}
+                  onCheckedChange={(checked) => {
+                    trigger("toggle");
+                    setValue("all_day", checked);
+                  }}
+                  className="scale-75 origin-right"
+                />
+              </div>
+
+              {/* Reminder chip button */}
+              <button
+                type="button"
+                aria-label="Reminder"
+                aria-expanded={reminderOpen}
+                aria-controls="event-reminder-expansion"
+                disabled={isRecurring || isGuestMode}
+                onClick={() => {
+                  trigger("toggle");
+                  setReminderOpen((prev) => !prev);
+                }}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-2.5 py-1 border transition-colors shrink-0 h-7 sm:h-8 text-xs sm:text-[13px] font-medium cursor-pointer",
+                  reminderMinutes !== null
+                    ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
+                    : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+                  (isRecurring || isGuestMode) &&
+                    "opacity-50 cursor-not-allowed hover:bg-secondary/40 hover:text-muted-foreground",
+                )}
+              >
+                <BellRing
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0",
+                    reminderMinutes !== null
+                      ? "text-brand"
+                      : "text-muted-foreground",
+                  )}
+                  strokeWidth={2.25}
+                />
+                <span>{reminderLabel}</span>
+                <ChevronDown
+                  className={cn(
+                    "h-3 w-3 text-muted-foreground transition-transform duration-200 ease-seijaku",
+                    reminderOpen && "rotate-180",
+                  )}
+                  strokeWidth={2.25}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Reminder Inline Expansion */}
+          <CollapsibleReveal
+            id="event-reminder-expansion"
+            open={reminderOpen && !isGuestMode && !isRecurring}
+            className="w-full"
+          >
+            <div className="pt-1.5 pb-2 my-1 pl-2.5 ml-7 border-l-2 border-brand/40 rounded-r-md">
+              <div
+                role="group"
+                aria-label="Reminder options"
+                data-testid="reminder-options-group"
+                className="flex flex-wrap gap-1.5"
+              >
+                {[
+                  { value: null, label: "No reminder" },
+                  ...reminderOptions(allDay),
+                ].map((o) => {
+                  const isSelected = reminderMinutes === o.value;
+                  return (
+                    <button
+                      key={o.value ?? "none"}
+                      type="button"
+                      onClick={() => {
+                        trigger("tick");
+                        setValue("reminder_minutes", o.value);
+                        setReminderOpen(false);
+                      }}
+                      aria-pressed={isSelected}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer",
+                        isSelected
+                          ? "bg-secondary border-border/80 text-foreground font-semibold"
+                          : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <span>{o.label}</span>
+                      {isSelected && (
+                        <Check
+                          className="h-3 w-3 text-brand shrink-0"
+                          strokeWidth={2.25}
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </CollapsibleReveal>
+
+          {isGuestMode && (
+            <p className="text-[11px] sm:text-xs text-muted-foreground pl-[30px]">
+              Reminders need an account
+            </p>
+          )}
+        </div>
+
+        {/* Portal target inside Dialog for wheel events, outside overflow-y-auto to avoid clipping. */}
+        <div ref={setLocationPortalEl} />
+
+        <div className="flex-1 overflow-y-auto min-h-0 py-2">
+          <div
+            className={cn(
+              "mx-2 my-1 pl-3 border-l-2 border-brand/40 rounded-r-md",
+              !isRecurring && "hover:bg-muted/40 transition-seijaku-fast",
+            )}
+          >
+            <Popover open={showStartPicker} onOpenChange={setShowStartPicker}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  disabled={isRecurring}
+                  onClick={() => trigger("tick")}
+                  className="w-full flex items-center gap-3 px-2 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <IconCell>
+                    <Calendar
+                      className="h-4 w-4 text-muted-foreground"
+                      strokeWidth={2.25}
+                    />
+                  </IconCell>
+                  <span className="text-sm text-foreground">
+                    {safeStartDate
+                      ? allDay
+                        ? format(safeStartDate, "PPP")
+                        : format(safeStartDate, "PPP p")
+                      : "Pick a date"}
+                  </span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-auto p-0 overflow-hidden"
+                align="start"
+                collisionPadding={16}
+                style={{
+                  maxHeight:
+                    "min(380px, var(--radix-popover-content-available-height, 80dvh))",
+                }}
+              >
+                <DateTimeWizard
+                  date={safeStartDate}
+                  setDate={setStartDate}
+                  onClose={() => setShowStartPicker(false)}
+                  showTime={!allDay}
+                  compact
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Popover open={showEndPicker} onOpenChange={setShowEndPicker}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  disabled={isRecurring}
+                  onClick={() => trigger("tick")}
+                  className="w-full flex items-center gap-3 px-2 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <IconCell>
+                    <Clock
+                      className="h-4 w-4 text-muted-foreground"
+                      strokeWidth={2.25}
+                    />
+                  </IconCell>
+                  <span className="text-sm text-muted-foreground">
+                    {safeEndDate
+                      ? allDay
+                        ? format(safeEndDate, "PPP")
+                        : format(safeEndDate, "PPP p")
+                      : "Pick an end time"}
+                  </span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-auto p-0 overflow-hidden"
+                align="start"
+                collisionPadding={16}
+                style={{
+                  maxHeight:
+                    "min(380px, var(--radix-popover-content-available-height, 80dvh))",
+                }}
+              >
+                <DateTimeWizard
+                  date={safeEndDate}
+                  setDate={setEndDate}
+                  onClose={() => setShowEndPicker(false)}
+                  showTime={!allDay}
+                  compact
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div className="h-1" />
+
+          <div className="mx-2">
+            <Controller
+              name="location"
+              control={control}
+              render={({ field }) => (
+                <Popover
+                  open={locationOpen}
+                  onOpenChange={setLocationOpen}
+                  modal={false}
+                >
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      role="combobox"
+                      aria-expanded={locationOpen}
+                      aria-controls="location-combobox-list"
+                      disabled={isRecurring}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast",
+                        hoverCls,
+                        "w-full text-left",
+                        "disabled:opacity-50 disabled:cursor-not-allowed",
+                      )}
+                    >
+                      <IconCell>
+                        <MapPin
+                          className="h-4 w-4 text-muted-foreground"
+                          strokeWidth={2.25}
+                        />
+                      </IconCell>
+                      <span
+                        className={cn(
+                          "text-sm flex-1 truncate",
+                          field.value
+                            ? "text-foreground"
+                            : "text-muted-foreground/60",
+                        )}
+                      >
+                        {field.value || "Add location"}
+                      </span>
+                      {field.value && (
+                        <span
+                          className="ml-auto mr-1 flex-shrink-0 rounded p-0.5 text-muted-foreground/50 hover:text-foreground hover:bg-muted transition-seijaku-fast cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            field.onChange("");
+                            setDraftLocation("");
+                          }}
+                          tabIndex={-1}
+                          aria-label="Clear location"
+                        >
+                          <X className="h-3.5 w-3.5" strokeWidth={2.25} />
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    id="location-combobox-list"
+                    className="p-0 w-[var(--radix-popover-trigger-width)]"
+                    align="start"
+                    container={locationPortalEl}
+                    onOpenAutoFocus={
+                      isFinePointer ? undefined : (e) => e.preventDefault()
+                    }
+                  >
+                    <Command shouldFilter={true}>
+                      <CommandInput
+                        placeholder="Search or enter location..."
+                        value={draftLocation}
+                        onValueChange={setDraftLocation}
+                      />
+                      <CommandList
+                        ref={locationListRef}
+                        className="overscroll-contain"
+                      >
+                        <CommandEmpty>
+                          {trimmedSearch ? "" : "No locations found"}
+                        </CommandEmpty>
+                        {trimmedSearch &&
+                          !uniqueLocations.some(
+                            (loc) =>
+                              loc.toLowerCase() === trimmedSearch.toLowerCase(),
+                          ) && (
+                            <CommandGroup heading="Custom">
+                              <CommandItem
+                                value={trimmedSearch}
+                                className="text-foreground data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground"
+                                onSelect={() => {
+                                  field.onChange(trimmedSearch);
+                                  setDraftLocation(trimmedSearch);
+                                  setLocationOpen(false);
+                                }}
+                              >
+                                <MapPin
+                                  className="mr-2 h-4 w-4"
+                                  strokeWidth={2.25}
+                                />
+                                Use &quot;{trimmedSearch}&quot;
+                              </CommandItem>
+                            </CommandGroup>
+                          )}
+                        <CommandGroup heading="Suggestions">
+                          {uniqueLocations.map((loc) => (
+                            <CommandItem
+                              key={loc}
+                              value={loc}
+                              className="text-foreground data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground"
+                              onSelect={() => {
+                                field.onChange(loc);
+                                setDraftLocation(loc);
+                                setLocationOpen(false);
+                              }}
+                            >
+                              <MapPin
+                                className="mr-2 h-4 w-4"
+                                strokeWidth={2.25}
+                              />
+                              {loc}
+                              <Check
+                                className={cn(
+                                  "ml-auto h-4 w-4",
+                                  field.value === loc
+                                    ? "opacity-100"
+                                    : "opacity-0",
+                                )}
+                                strokeWidth={2.25}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
+            />
+          </div>
+
+          <div className="mx-2">
+            <div
+              className={cn(
+                "flex items-start gap-3 px-3 py-2.5 rounded-md transition-colors",
+                !isRecurring && "hover:bg-muted/40",
+              )}
+            >
+              <IconCell className="pt-[5px]">
+                <AlignLeft
+                  className="h-4 w-4 text-muted-foreground"
+                  strokeWidth={2.25}
+                />
+              </IconCell>
+              <textarea
+                {...register("description")}
+                id="event-description"
+                placeholder="Add notes"
+                aria-label="Event notes"
+                disabled={isRecurring}
+                rows={1}
+                style={{ fontSize: "0.875rem" }}
+                className={cn(
+                  "flex-1 bg-transparent border-0 outline-none resize-none",
+                  "text-sm text-foreground placeholder:text-muted-foreground",
+                  "leading-normal p-0 min-h-6 field-sizing-content max-h-32",
+                )}
+              />
+            </div>
+          </div>
+
+          <div className="h-1" />
+        </div>
+
+        <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background sm:rounded-b-lg w-full max-w-full">
+          <div className="flex items-center gap-2">
+            {/* Left slot aligned with TaskView */}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {event && (
+              <RecurringTooltip isRecurring={isRecurring}>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="h-9 w-9 p-0 [&_svg]:size-5! rounded-lg shadow-sm shadow-destructive/10 transition-seijaku-fast relative before:absolute before:-inset-1"
+                  onClick={handleDeleteClick}
+                  disabled={isRecurring || deleteEvent.isPending}
+                  aria-label="Delete event"
+                >
+                  <Trash2 strokeWidth={2.25} />
+                </Button>
+              </RecurringTooltip>
+            )}
+            <RecurringTooltip isRecurring={isRecurring}>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={
+                  isRecurring ||
+                  !isFormValid ||
+                  !safeStartDate ||
+                  !safeEndDate ||
+                  createEvent.isPending ||
+                  updateEvent.isPending
+                }
+                className="h-9 w-9 p-0 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground shadow-sm shadow-brand/10 transition-seijaku flex items-center justify-center relative before:absolute before:-inset-1"
+                aria-label={event ? "Save changes" : "Create event"}
+              >
+                {event ? (
+                  <Save className="h-5 w-5" strokeWidth={2.25} />
+                ) : (
+                  <Send className="h-5 w-5" strokeWidth={2.25} />
+                )}
+              </Button>
+            </RecurringTooltip>
+          </div>
+        </div>
+      </form>
+      <DeleteConfirmationDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Event"
+        description="Are you sure you want to delete this event?"
+        confirmLabel="Delete"
+      />
+    </>
+  );
+}

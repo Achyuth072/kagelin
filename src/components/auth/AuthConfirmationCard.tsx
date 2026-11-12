@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ export function AuthConfirmationCard({
   onAction: () => void;
 }) {
   return (
-    <motion.div
+    <m.div
       key={motionKey}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -49,6 +49,6 @@ export function AuthConfirmationCard({
       >
         {actionLabel}
       </Button>
-    </motion.div>
+    </m.div>
   );
 }

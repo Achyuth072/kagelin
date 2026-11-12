@@ -13,6 +13,7 @@ import { Calendar as CalendarIcon, Clock, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DateTimeWizardProps {
+  title?: string;
   date: Date | undefined;
   setDate: (date: Date | undefined) => void;
   onClose: () => void;
@@ -25,6 +26,7 @@ interface DateTimeWizardProps {
 }
 
 export function DateTimeWizard({
+  title,
   date,
   setDate,
   onClose,
@@ -79,7 +81,12 @@ export function DateTimeWizard({
   return (
     <div className="flex flex-col w-full max-w-[320px] mx-auto bg-popover rounded-md overflow-hidden">
       {/* Header / Tabs */}
-      <div className="flex items-center justify-between p-2 border-b bg-muted/40">
+      <div className="flex flex-col p-2 border-b bg-muted/40 gap-1.5">
+        {title && (
+          <div className="px-1 text-xs font-semibold text-foreground/85 tracking-wide">
+            {title}
+          </div>
+        )}
         <Tabs
           value={step}
           onValueChange={(v) => {
@@ -98,7 +105,7 @@ export function DateTimeWizard({
               value="date"
               className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm"
             >
-              <CalendarIcon aria-hidden="true" />
+              <CalendarIcon aria-hidden="true" strokeWidth={2.25} />
               {tempDate ? format(tempDate, "MMM d") : "Date"}
             </TabsTrigger>
             {showTime && (
@@ -107,7 +114,7 @@ export function DateTimeWizard({
                 disabled={!tempDate}
                 className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Clock aria-hidden="true" />
+                <Clock aria-hidden="true" strokeWidth={2.25} />
                 {tempDate ? formatTime(tempDate) : "Time"}
               </TabsTrigger>
             )}
@@ -203,7 +210,7 @@ export function DateTimeWizard({
             {/* Date View Footer */}
             <div className="mt-2 w-full flex justify-end">
               <Button size="sm" className="gap-1.5 w-full" onClick={onSave}>
-                <Check className="w-3.5 h-3.5" />
+                <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
                 Done
               </Button>
             </div>
@@ -253,7 +260,7 @@ export function DateTimeWizard({
 
             <div className="mt-2 w-full flex justify-end">
               <Button size="sm" className="gap-1.5 w-full" onClick={onSave}>
-                <Check className="w-3.5 h-3.5" />
+                <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
                 Done
               </Button>
             </div>

@@ -6,7 +6,6 @@ import {
   type Activity,
   type BlockElement,
 } from "react-activity-calendar";
-import "react-activity-calendar/tooltips.css";
 import { useTheme } from "next-themes";
 import { subMonths, format } from "date-fns";
 import { ENTRY_VALUE_SKIPPED, type Habit } from "@/lib/types/habit";

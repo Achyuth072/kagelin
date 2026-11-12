@@ -1,22 +1,15 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { motion } from "framer-motion";
+import * as m from "motion/react-m";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { useHaptic } from "@/lib/hooks/useHaptic";
-import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
 import { useActiveTask } from "@/lib/hooks/useActiveTask";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimerActions } from "@/components/TimerProvider";
@@ -44,7 +37,6 @@ function getEndOfToday(): Date {
 
 export function FocusTaskPicker() {
   const [open, setOpen] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
   const { trigger } = useHaptic();
   const { isGuestMode } = useAuth();
   const supabase = createClient();
@@ -160,8 +152,6 @@ export function FocusTaskPicker() {
     [taskSwitchBehavior, pause, cancel, setActiveTaskId, trigger],
   );
 
-  useBackNavigation(open && !isDesktop, () => setOpen(false));
-
   const chipLabel = resolvedActiveTask
     ? `Change focus task: ${resolvedActiveTask?.content || ""}`
     : "Select focus task";
@@ -276,7 +266,7 @@ export function FocusTaskPicker() {
   return (
     <>
       <div className="flex justify-center mt-4 mb-0">
-        <motion.button
+        <m.button
           onClick={handleChipTap}
           whileTap={{ scale: 0.97 }}
           className={cn(
@@ -293,11 +283,9 @@ export function FocusTaskPicker() {
             strokeWidth={2.25}
           />
           {resolvedActiveTaskLoading ? (
-            <span className="text-[13px] text-muted-foreground/60">
-              Loading...
-            </span>
+            <Skeleton className="h-3.5 w-20" />
           ) : resolvedActiveTask ? (
-            <span className="text-body text-foreground truncate text-[15px]">
+            <span className="text-foreground truncate text-[15px]">
               {resolvedActiveTask.content}
             </span>
           ) : (
@@ -305,32 +293,22 @@ export function FocusTaskPicker() {
               Add task
             </span>
           )}
-        </motion.button>
+        </m.button>
       </div>
 
-      {isDesktop ? (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-sm flex flex-col max-h-[60vh]">
-            <DialogHeader>
-              <DialogTitle>Focus on</DialogTitle>
-            </DialogHeader>
-            <div className="overflow-y-auto flex-1 scrollbar-hide">
-              {renderTaskList()}
-            </div>
-          </DialogContent>
-        </Dialog>
-      ) : (
-        <Drawer open={open} onOpenChange={setOpen} repositionInputs={false}>
-          <DrawerContent className="max-h-[55dvh]">
-            <DrawerHeader>
-              <DrawerTitle>Focus on</DrawerTitle>
-            </DrawerHeader>
-            <div className="overflow-y-auto flex-1 scrollbar-hide pb-safe">
-              {renderTaskList()}
-            </div>
-          </DrawerContent>
-        </Drawer>
-      )}
+      <ResponsiveDialog open={open} onOpenChange={setOpen}>
+        <ResponsiveDialogContent className="flex flex-col max-h-[55dvh] sm:max-w-sm sm:max-h-[60vh]">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Focus on</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription className="sr-only">
+              Choose a task for your focus session
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+          <div className="overflow-y-auto flex-1 scrollbar-hide pb-safe sm:pb-0">
+            {renderTaskList()}
+          </div>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </>
   );
 }

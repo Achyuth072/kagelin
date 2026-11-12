@@ -98,7 +98,10 @@ export function useTasks(options: UseTasksOptions = {}) {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
 
-      let tasks = await fetchAllRows<
+      // Fetched concurrently rather than sequentially to eliminate network waterfall (PERF-03).
+      // PostgREST resolves recursive embeds toward the parent, which would silently yield
+      // null if embedded directly, so steps are queried separately by parent_id IS NOT NULL.
+      const tasksPromise = fetchAllRows<
         Task & { projects: { is_archived: boolean } | null }
       >((from, to) => {
         let query = supabase
@@ -135,14 +138,7 @@ export function useTasks(options: UseTasksOptions = {}) {
         return query.range(from, to);
       });
 
-      if (projectId === "all" || !projectId) {
-        tasks = tasks.filter((t) => !t.projects?.is_archived);
-      }
-
-      // Fetched separately rather than as a `tasks!parent_id` embed: PostgREST
-      // resolves recursive embeds toward the parent, which would silently yield
-      // null here (every row above has parent_id IS NULL) instead of the steps.
-      const steps = await fetchAllRows<SubtaskSummary & { parent_id: string }>(
+      const stepsPromise = fetchAllRows<SubtaskSummary & { parent_id: string }>(
         (from, to) =>
           supabase
             .from("tasks")
@@ -151,6 +147,13 @@ export function useTasks(options: UseTasksOptions = {}) {
             .order("id", { ascending: true })
             .range(from, to),
       );
+
+      const [rawTasks, steps] = await Promise.all([tasksPromise, stepsPromise]);
+
+      let tasks = rawTasks;
+      if (projectId === "all" || !projectId) {
+        tasks = tasks.filter((t) => !t.projects?.is_archived);
+      }
 
       const stepsByParent = new Map<string, SubtaskSummary[]>();
       for (const step of steps) {

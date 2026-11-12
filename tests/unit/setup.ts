@@ -79,3 +79,17 @@ vi.stubGlobal("localStorage", localStorageMock);
 // Mock Supabase environment variables
 process.env.NEXT_PUBLIC_SUPABASE_URL = "https://mock-project.supabase.co";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "mock-anon-key";
+
+// Default mock for next/navigation so components consuming useRouter can be tested without boilerplate
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));

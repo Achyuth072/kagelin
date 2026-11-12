@@ -74,7 +74,7 @@ function EnvelopeWarning() {
       role="alert"
       className="flex gap-2.5 text-xs text-destructive-surface-foreground bg-destructive-surface border border-destructive-surface-border rounded-lg p-3.5"
     >
-      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+      <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" strokeWidth={2.25} />
       <p>
         This file is not covered by your content passphrase — it&apos;s plain,
         readable data. Store or share it as carefully as you would the data
@@ -190,7 +190,7 @@ function CloudSyncCard({
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
             <Button
               variant="outline"
               onClick={onTestConnection}
@@ -203,9 +203,12 @@ function CloudSyncCard({
                   strokeWidth={2.25}
                 />
               ) : connectionStatus === "success" ? (
-                <Check className="h-3.5 w-3.5 text-green-500" strokeWidth={3} />
+                <Check
+                  className="h-3.5 w-3.5 text-green-500"
+                  strokeWidth={2.25}
+                />
               ) : connectionStatus === "error" ? (
-                <X className="h-3.5 w-3.5 text-red-500" strokeWidth={3} />
+                <X className="h-3.5 w-3.5 text-red-500" strokeWidth={2.25} />
               ) : (
                 <Server className="h-3.5 w-3.5" strokeWidth={2.25} />
               )}
@@ -216,11 +219,11 @@ function CloudSyncCard({
                 variant="destructive"
                 size="icon"
                 onClick={onResetCredentials}
-                className="h-9 w-9"
+                className="h-9 w-9 shrink-0 ml-1.5"
                 title="Forget credentials"
                 aria-label="Forget credentials"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" strokeWidth={2.25} />
               </Button>
             )}
           </div>
@@ -380,6 +383,7 @@ export function BackupSyncSettings() {
   >("idle");
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingRestore, setPendingRestore] = useState<BackupData | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const invalidateDataQueries = async () => {
     await Promise.all([
@@ -475,7 +479,6 @@ export function BackupSyncSettings() {
   };
 
   const resetCredentials = () => {
-    trigger("toggle");
     setWebdavCredentials({ serverUrl: "", username: "", password: "" });
     setConnectionStatus("idle");
     notify.success("Credentials cleared");
@@ -631,7 +634,7 @@ export function BackupSyncSettings() {
             onClick={() => trigger("toggle")}
             className="h-full px-2"
           >
-            <HardDrive aria-hidden="true" />
+            <HardDrive aria-hidden="true" strokeWidth={2.25} />
             <span className="truncate">Local Storage</span>
           </TabsTrigger>
           <TabsTrigger
@@ -639,7 +642,7 @@ export function BackupSyncSettings() {
             onClick={() => trigger("toggle")}
             className="h-full px-2"
           >
-            <Cloud aria-hidden="true" />
+            <Cloud aria-hidden="true" strokeWidth={2.25} />
             <span className="truncate">WebDAV</span>
           </TabsTrigger>
         </TabsList>
@@ -721,7 +724,10 @@ export function BackupSyncSettings() {
                   }}
                   className="w-full flex items-center gap-3 p-3 rounded-md border border-border/40 hover:bg-secondary/20 transition-all cursor-pointer select-none min-h-[44px] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background text-left"
                 >
-                  <ArrowLeftRight className="h-5 w-5 text-brand shrink-0" />
+                  <ArrowLeftRight
+                    className="h-5 w-5 text-brand shrink-0"
+                    strokeWidth={2.25}
+                  />
                   <div className="flex flex-col text-left">
                     <span className="font-medium text-sm text-foreground">
                       Third-party app migration
@@ -745,7 +751,7 @@ export function BackupSyncSettings() {
           connectionStatus={connectionStatus}
           isSyncing={isSyncing}
           onTestConnection={handleTestConnection}
-          onResetCredentials={resetCredentials}
+          onResetCredentials={() => setShowResetConfirm(true)}
           onSyncUpload={handleSyncUpload}
           onSyncDownload={handleSyncDownload}
           showEnvelopeWarning={!isGuestMode}
@@ -755,6 +761,15 @@ export function BackupSyncSettings() {
       <AppMigrationDialog
         open={showMigrationDialog}
         onOpenChange={setShowMigrationDialog}
+      />
+
+      <DeleteConfirmationDialog
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        onConfirm={resetCredentials}
+        title="Forget WebDAV credentials?"
+        description="You will need to re-enter your server details to sync."
+        confirmLabel="Forget"
       />
 
       <DeleteConfirmationDialog

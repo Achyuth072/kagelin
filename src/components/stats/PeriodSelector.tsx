@@ -46,6 +46,7 @@ export function PeriodSelector({
               <Loader2
                 className={cn("h-3 w-3", !reduced && "animate-spin")}
                 aria-label="Loading all-time data"
+                strokeWidth={2.25}
               />
             )}
           </TabsTrigger>

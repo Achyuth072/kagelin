@@ -166,7 +166,7 @@ describe("HabitStripCell", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button"));
-    expect(screen.getByLabelText("Log amount")).toHaveValue(0);
+    expect(screen.getByLabelText("Log amount")).toHaveValue("0");
   });
 
   it("renders a measurable skip as a pause only, without a value badge", () => {

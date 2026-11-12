@@ -150,12 +150,14 @@ describe("TaskBoard Overlay Drawer and Architecture Consolidation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    window.history.replaceState({}, "", "/");
     mockIsWide = true;
     useUiStore.setState({
       viewMode: "board",
       sortBy: "date",
       groupBy: "none",
       boardInspectMode: "overlay",
+      selectedTaskId: null,
     });
     storeState.tasks = [
       makeTask("task-1", "Task Alpha", 1),
@@ -195,13 +197,21 @@ describe("TaskBoard Overlay Drawer and Architecture Consolidation", () => {
     expect(drawer).toHaveClass("z-30");
     expect(drawer).toHaveClass("absolute");
     expect(drawer).toHaveClass("right-0");
-    // Zero background blur: ensure no backdrop-blur class
+    // Zero background blur: ensure no backdrop-blur class and no heavy shadow-xl outline blur
     expect(drawer.className).not.toMatch(/backdrop-blur/);
+    const shell = drawer.firstElementChild;
+    expect(shell).toHaveClass("shadow-sm");
+    expect(shell).not.toHaveClass("shadow-md");
+    expect(shell).not.toHaveClass("shadow-xl");
 
     // Background board container remains full width without horizontal compression
     const scrollContainer = screen.getByRole("grid");
     expect(scrollContainer).toHaveClass("w-full");
     expect(scrollContainer).not.toHaveClass("w-[60%]");
+
+    // Board container gains right clearance for the 440px overlay drawer
+    const boardContainer = screen.getByTestId("task-board-container");
+    expect(boardContainer).toHaveClass("pr-[464px]");
   });
 
   it("TB-02: Clicking another task card in the background immediately switches inspection without closing drawer", async () => {
@@ -249,6 +259,8 @@ describe("TaskBoard Overlay Drawer and Architecture Consolidation", () => {
     await waitFor(() => {
       const drawer = screen.getByTestId("board-overlay-drawer");
       expect(drawer).toHaveClass("translate-x-full");
+      const boardContainer = screen.getByTestId("task-board-container");
+      expect(boardContainer).not.toHaveClass("pr-[464px]");
     });
   });
 
@@ -361,6 +373,184 @@ describe("TaskBoard Overlay Drawer and Architecture Consolidation", () => {
     await waitFor(() => {
       expect(screen.getByTestId("board-overlay-drawer")).toBeInTheDocument();
       expect(screen.getByDisplayValue("Task Alpha")).toBeInTheDocument();
+    });
+  });
+
+  it("TB-07: In Board view with multiple columns (guest mode & multi-task), overlay drawer adds pr-[464px] clearance so tasks are not covered", async () => {
+    storeState.tasks = [
+      makeTask("task-1", "Inbox Task", 1),
+      {
+        ...makeTask("task-2", "Today Task", 2),
+        due_date: "2026-05-06T12:00:00.000Z",
+      },
+      {
+        ...makeTask("task-3", "Tomorrow Task", 3),
+        due_date: "2026-05-07T12:00:00.000Z",
+      },
+    ];
+    queryClient.setQueryData(
+      ["tasks", { projectId: undefined, filter: undefined }],
+      storeState.tasks,
+    );
+
+    renderTaskBoard();
+
+    await waitFor(() => {
+      expect(screen.getByText("Tomorrow Task")).toBeInTheDocument();
+    });
+
+    const boardContainer = screen.getByTestId("task-board-container");
+    expect(boardContainer).not.toHaveClass("pr-[464px]");
+
+    // Select the task in the rightmost column
+    fireEvent.click(screen.getByText("Tomorrow Task"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("board-overlay-drawer")).toBeInTheDocument();
+      expect(boardContainer).toHaveClass("pr-[464px]");
+    });
+
+    // Close the inspector
+    const closeBtn = screen.getByRole("button", {
+      name: "Close task details",
+    });
+    fireEvent.click(closeBtn);
+
+    await waitFor(() => {
+      expect(boardContainer).not.toHaveClass("pr-[464px]");
+    });
+  });
+
+  it("TB-08: When inspecting a task in a column within the 440px drawer zone, auto-scrolls to bring it clear of the drawer", async () => {
+    storeState.tasks = [
+      makeTask("task-1", "Inbox Task", 1),
+      {
+        ...makeTask("task-2", "Today Task", 2),
+        due_date: "2026-05-06T12:00:00.000Z",
+      },
+    ];
+    queryClient.setQueryData(
+      ["tasks", { projectId: undefined, filter: undefined }],
+      storeState.tasks,
+    );
+
+    renderTaskBoard();
+
+    await waitFor(() => {
+      expect(screen.getByText("Today Task")).toBeInTheDocument();
+    });
+
+    const boardContainer = screen.getByTestId("task-board-container");
+    const scrollBySpy = vi.fn();
+    boardContainer.scrollBy = scrollBySpy;
+
+    // Simulate container at right: 1280 (drawer covers 840 to 1280)
+    vi.spyOn(boardContainer, "getBoundingClientRect").mockReturnValue({
+      right: 1280,
+      left: 0,
+      top: 0,
+      bottom: 800,
+      width: 1280,
+      height: 800,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    // Simulate Today Task's column ending at 1000 (overlapping drawer by 160px)
+    const todayCard = screen.getByText("Today Task");
+    const todayColumn = todayCard.closest("section");
+    if (todayColumn) {
+      vi.spyOn(todayColumn, "getBoundingClientRect").mockReturnValue({
+        right: 1000,
+        left: 680,
+        top: 0,
+        bottom: 800,
+        width: 320,
+        height: 800,
+        x: 680,
+        y: 0,
+        toJSON: () => {},
+      });
+    }
+
+    fireEvent.click(todayCard);
+
+    await waitFor(() => {
+      // drawerLeft = 1280 - 440 = 840; overlap = 1000 - 840 + 24 = 184
+      expect(scrollBySpy).toHaveBeenCalledWith({
+        left: 184,
+        behavior: "smooth",
+      });
+    });
+  });
+
+  it("TB-09: In Board view under Split view mode, inspecting an overflowing column auto-scrolls to keep it in view", async () => {
+    useUiStore.setState({
+      viewMode: "board",
+      boardInspectMode: "split",
+      selectedTaskId: null,
+    });
+
+    storeState.tasks = [
+      makeTask("task-1", "Inbox Task", 1),
+      {
+        ...makeTask("task-2", "Today Task", 2),
+        due_date: "2026-05-06T12:00:00.000Z",
+      },
+    ];
+    queryClient.setQueryData(
+      ["tasks", { projectId: undefined, filter: undefined }],
+      storeState.tasks,
+    );
+
+    renderTaskBoard();
+
+    await waitFor(() => {
+      expect(screen.getByText("Today Task")).toBeInTheDocument();
+    });
+
+    const boardContainer = screen.getByTestId("task-board-container");
+    const scrollBySpy = vi.fn();
+    boardContainer.scrollBy = scrollBySpy;
+
+    // Simulate 60% container ending at right: 768
+    vi.spyOn(boardContainer, "getBoundingClientRect").mockReturnValue({
+      right: 768,
+      left: 0,
+      top: 0,
+      bottom: 800,
+      width: 768,
+      height: 800,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    const todayCard = screen.getByText("Today Task");
+    const todayColumn = todayCard.closest("section");
+    if (todayColumn) {
+      vi.spyOn(todayColumn, "getBoundingClientRect").mockReturnValue({
+        right: 900,
+        left: 580,
+        top: 0,
+        bottom: 800,
+        width: 320,
+        height: 800,
+        x: 580,
+        y: 0,
+        toJSON: () => {},
+      });
+    }
+
+    fireEvent.click(todayCard);
+
+    await waitFor(() => {
+      // In split view: overlap = 900 - 768 + 24 = 156
+      expect(scrollBySpy).toHaveBeenCalledWith({
+        left: 156,
+        behavior: "smooth",
+      });
     });
   });
 });

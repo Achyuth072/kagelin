@@ -57,7 +57,11 @@ describe("HabitReminderField", () => {
       />,
     );
     expect(screen.getByLabelText("Reminder time")).toHaveTextContent(/8:30/);
-    expect(screen.getByLabelText("Sunday")).toBeInTheDocument();
+    const sundayBtn = screen.getByLabelText("Sunday");
+    expect(sundayBtn).toBeInTheDocument();
+    expect(sundayBtn).toHaveClass("h-8", "w-8");
+    expect(sundayBtn).toHaveClass("before:absolute", "before:-inset-1");
+    expect(sundayBtn.parentElement).toHaveClass("gap-2");
     expect(screen.getByLabelText("Saturday")).toBeInTheDocument();
   });
 

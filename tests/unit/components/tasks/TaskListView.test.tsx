@@ -1,19 +1,54 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import { VirtuosoMockContext } from "react-virtuoso";
 import { TaskListView } from "@/components/tasks/TaskListView";
 import type { Task, Project } from "@/lib/types/task";
 import type { ProcessedTasks, TaskGroup } from "@/lib/hooks/useTaskViewData";
 
+const droppableIds = new Set<string>();
+
 vi.mock("@dnd-kit/core", () => ({
-  useDroppable: () => ({ setNodeRef: vi.fn() }),
+  useDroppable: ({ id }: { id: string }) => {
+    droppableIds.add(id);
+    return { setNodeRef: vi.fn() };
+  },
 }));
 
 vi.mock("@dnd-kit/sortable", () => ({
-  SortableContext: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
+  SortableContext: ({
+    id,
+    items,
+    children,
+  }: {
+    id?: string;
+    items: string[];
+    children: React.ReactNode;
+  }) => (
+    <div
+      data-testid={`sortable-context-${id ?? "unnamed"}`}
+      data-items-count={items.length}
+    >
+      {children}
+    </div>
   ),
   verticalListSortingStrategy: {},
 }));
+
+const groupedVirtuosoPropsHistory: Record<string, unknown>[] = [];
+vi.mock("react-virtuoso", async () => {
+  const actual =
+    await vi.importActual<typeof import("react-virtuoso")>("react-virtuoso");
+  return {
+    ...actual,
+    GroupedVirtuoso: (props: Record<string, unknown>) => {
+      groupedVirtuosoPropsHistory.push(props);
+      const Grouped = actual.GroupedVirtuoso as React.ComponentType<
+        Record<string, unknown>
+      >;
+      return <Grouped {...props} />;
+    },
+  };
+});
 
 vi.mock("@/components/tasks/SortableListTaskCard", () => ({
   default: ({
@@ -145,5 +180,60 @@ describe("TaskListView", () => {
     expect(section).toBeInTheDocument();
     expect(screen.getByText("Today")).toBeInTheDocument();
     expect(screen.getByText("Grouped Task 2")).toBeInTheDocument();
+  });
+
+  it("virtualizes grouped sections inside scrollParent with one outer SortableContext and droppable group headers", () => {
+    droppableIds.clear();
+    groupedVirtuosoPropsHistory.length = 0;
+    const scrollParent = document.createElement("div");
+
+    const inboxTasks = Array.from({ length: 30 }, (_, i) =>
+      makeTask(`inbox-${i}`, `Inbox Task ${i}`),
+    );
+    const todayTasks = Array.from({ length: 25 }, (_, i) =>
+      makeTask(`today-${i}`, `Today Task ${i}`),
+    );
+    const groups = [
+      { title: "Inbox", tasks: inboxTasks },
+      { title: "Today", tasks: todayTasks },
+    ];
+    const virtualizedProps = {
+      ...defaultProps,
+      groupTasks: groups,
+      processedTasks: {
+        active: [],
+        evening: [],
+        completed: [],
+        groups,
+      } as ProcessedTasks,
+      scrollParent,
+    };
+
+    render(
+      <VirtuosoMockContext.Provider
+        value={{ viewportHeight: 1000, itemHeight: 50 }}
+      >
+        <TaskListView {...virtualizedProps} />
+      </VirtuosoMockContext.Provider>,
+    );
+    // With GroupedVirtuoso, sticky opaque section headers render
+    expect(screen.getByText("Inbox")).toBeInTheDocument();
+    expect(screen.getByText("Inbox Task 1")).toBeInTheDocument();
+
+    // Must scroll via TaskList's scroll container, never window
+    const lastGroupedProps = groupedVirtuosoPropsHistory.at(-1);
+    expect(lastGroupedProps?.useWindowScroll).toBeFalsy();
+    expect(lastGroupedProps?.customScrollParent).toBe(scrollParent);
+
+    // Must wrap the virtualized list in one outer SortableContext, not per-item duplicates
+    const outerContexts = screen.getAllByTestId(
+      "sortable-context-grouped-tasks",
+    );
+    expect(outerContexts).toHaveLength(1);
+    expect(outerContexts[0]).toHaveAttribute("data-items-count", "55");
+    expect(screen.queryByTestId("sortable-context-Inbox")).toBeNull();
+
+    // Group headers must register DroppableContainer targets for cross-group drops
+    expect(droppableIds.has("Inbox")).toBe(true);
   });
 });

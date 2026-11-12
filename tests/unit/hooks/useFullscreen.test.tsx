@@ -48,7 +48,13 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   }),
 }));
 
-vi.mock("framer-motion", () => {
+vi.mock("motion/react", () => ({
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
+
+vi.mock("motion/react-m", () => {
   const MotionButton = React.forwardRef<
     HTMLButtonElement,
     React.ComponentProps<"button">
@@ -62,12 +68,7 @@ vi.mock("framer-motion", () => {
   MotionButton.displayName = "MotionButton";
 
   return {
-    motion: {
-      button: MotionButton,
-    },
-    AnimatePresence: ({ children }: { children: React.ReactNode }) => (
-      <>{children}</>
-    ),
+    button: MotionButton,
   };
 });
 

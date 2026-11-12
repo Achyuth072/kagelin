@@ -1,6 +1,7 @@
 "use client";
 
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -60,7 +61,10 @@ function SyncIndicatorContent() {
         pointerEvents: visible ? "auto" : "none",
       }}
     >
-      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      <Loader2
+        className="h-3.5 w-3.5 animate-spin text-primary"
+        strokeWidth={2.25}
+      />
       <span className="text-xs hidden sm:inline font-medium text-muted-foreground">
         Syncing...
       </span>

@@ -37,7 +37,7 @@ export function DeleteUserDataDialog({
   onOpenChange,
   onConfirm,
 }: DeleteUserDataDialogProps) {
-  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const isDesktop = useMediaQuery("(min-width: 641px)");
   const { trigger } = useHaptic();
   const { isGuestMode } = useAuth();
   const [confirmText, setConfirmText] = useState("");
@@ -73,7 +73,10 @@ export function DeleteUserDataDialog({
   const content = (
     <div className="space-y-4 py-2">
       <div className="p-3 rounded-lg bg-destructive-surface border border-destructive-surface-border flex items-start gap-3">
-        <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+        <AlertTriangle
+          className="h-5 w-5 text-destructive shrink-0 mt-0.5"
+          strokeWidth={2.25}
+        />
         <p className="text-sm text-foreground/90 font-medium leading-relaxed">
           {description}
         </p>
@@ -130,7 +133,7 @@ export function DeleteUserDataDialog({
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
+    <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent onOpenAutoFocus={(e) => e.preventDefault()}>
         <div className="mx-auto w-full max-w-md">
           <DrawerHeader className="text-left">
