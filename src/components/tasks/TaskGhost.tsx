@@ -101,7 +101,7 @@ export const TaskGhost = React.memo(
                 )}
                 {task.is_evening && (
                   <span className="flex items-center gap-1 text-[11px] font-medium text-foreground/80 uppercase tracking-wider">
-                    <Moon className="h-3 w-3 fill-current" />
+                    <Moon className="h-3 w-3 fill-current" strokeWidth={2.25} />
                     Evening
                   </span>
                 )}

@@ -205,7 +205,11 @@ export function AuthPage({ initialMode }: { initialMode: AuthMode }) {
     <Suspense
       fallback={
         <div className="min-h-screen flex items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
+          <Loader2
+            className="h-6 w-6 text-muted-foreground animate-spin"
+            strokeWidth={2.25}
+          />
+          <span className="sr-only">Loading...</span>
         </div>
       }
     >

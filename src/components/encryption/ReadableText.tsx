@@ -20,7 +20,11 @@ export function ReadableText({ text }: { text: string | null }) {
           className="inline-flex items-center gap-1 italic opacity-70"
           data-testid="unreadable-text"
         >
-          <ShieldAlert className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <ShieldAlert
+            className="h-3.5 w-3.5 shrink-0"
+            aria-hidden
+            strokeWidth={2.25}
+          />
           {UNREADABLE_LABEL}
         </span>
       </TooltipTrigger>

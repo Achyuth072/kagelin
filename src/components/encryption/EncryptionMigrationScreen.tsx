@@ -87,7 +87,10 @@ export function EncryptionMigrationScreen({
             role="alert"
             className="flex gap-2.5 text-left text-xs text-destructive bg-destructive/10 border border-destructive/25 rounded-lg p-3.5"
           >
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <AlertTriangle
+              className="h-4 w-4 shrink-0 mt-0.5"
+              strokeWidth={2.25}
+            />
             <p>{error}</p>
           </div>
         )}

@@ -162,9 +162,15 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
             disabled={isImporting}
           >
             {isImporting ? (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <Loader2
+                className="h-4 w-4 animate-spin text-muted-foreground"
+                strokeWidth={2.25}
+              />
             ) : (
-              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+              <MoreVertical
+                className="h-4 w-4 text-muted-foreground"
+                strokeWidth={2.25}
+              />
             )}
             <span className="sr-only">Calendar options</span>
           </Button>
@@ -183,6 +189,7 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
             >
               <RefreshCw
                 className={`h-4 w-4 text-brand${isSyncing ? " animate-spin" : ""}`}
+                strokeWidth={2.25}
               />
               <span>{isSyncing ? "Syncing…" : "Sync Now"}</span>
             </DropdownMenuItem>
@@ -192,7 +199,7 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
             onClick={() => setManageOpen(true)}
             className="cursor-pointer gap-2 py-2"
           >
-            <CalendarSync className="h-4 w-4 text-brand" />
+            <CalendarSync className="h-4 w-4 text-brand" strokeWidth={2.25} />
             <span>Manage Calendars</span>
           </DropdownMenuItem>
 
@@ -207,7 +214,7 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
             disabled={isImporting}
             className="cursor-pointer gap-2 py-2"
           >
-            <FileUp className="h-4 w-4 text-brand" />
+            <FileUp className="h-4 w-4 text-brand" strokeWidth={2.25} />
             <span>Import .ics file</span>
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -215,7 +222,7 @@ export function ImportExportMenu({ events }: ImportExportMenuProps) {
             disabled={events.length === 0 || isImporting}
             className="cursor-pointer gap-2 py-2"
           >
-            <FileDown className="h-4 w-4 text-brand" />
+            <FileDown className="h-4 w-4 text-brand" strokeWidth={2.25} />
             <span>Export to .ics</span>
           </DropdownMenuItem>
         </DropdownMenuContent>

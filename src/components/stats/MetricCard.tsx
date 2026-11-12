@@ -72,11 +72,23 @@ export function MetricCard({
               )}
             >
               {trend.value === 0 ? (
-                <Minus className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <Minus
+                  className="h-3 w-3 shrink-0"
+                  aria-hidden="true"
+                  strokeWidth={2.25}
+                />
               ) : trend.isPositive ? (
-                <TrendingUp className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <TrendingUp
+                  className="h-3 w-3 shrink-0"
+                  aria-hidden="true"
+                  strokeWidth={2.25}
+                />
               ) : (
-                <TrendingDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <TrendingDown
+                  className="h-3 w-3 shrink-0"
+                  aria-hidden="true"
+                  strokeWidth={2.25}
+                />
               )}
               <span className="tracking-tight">
                 <AnimatedNumber value={Math.abs(trend.value)} suffix="%" />

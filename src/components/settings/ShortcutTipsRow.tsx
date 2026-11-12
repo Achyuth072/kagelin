@@ -14,7 +14,10 @@ export function ShortcutTipsRow() {
     <div className="hidden md:flex items-center justify-between p-4 rounded-lg border border-border/50 bg-background">
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-full bg-secondary/30">
-          <Keyboard className="h-4 w-4 text-muted-foreground" />
+          <Keyboard
+            className="h-4 w-4 text-muted-foreground"
+            strokeWidth={2.25}
+          />
         </div>
         <div>
           <p className="text-sm font-medium">Shortcut Tips</p>

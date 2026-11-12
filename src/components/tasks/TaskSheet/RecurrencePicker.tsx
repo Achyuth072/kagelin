@@ -87,6 +87,7 @@ export default function RecurrencePicker({
               "h-3.5 w-3.5",
               hasRecurrence ? "text-foreground" : "text-muted-foreground",
             )}
+            strokeWidth={2.25}
           />
           <span>
             <span className="hidden sm:inline">Recurrence: </span>
@@ -97,6 +98,7 @@ export default function RecurrencePicker({
               "h-3 w-3 text-muted-foreground transition-transform",
               open && "rotate-180",
             )}
+            strokeWidth={2.25}
           />
         </Button>
 
@@ -210,7 +212,7 @@ export default function RecurrencePicker({
             variant="outline"
             className="w-full justify-start text-left font-normal h-9 text-[13px]"
           >
-            <Repeat className="mr-2 h-4 w-4" />
+            <Repeat className="mr-2 h-4 w-4" strokeWidth={2.25} />
             {formatRecurrenceRule(value)}
           </Button>
         )}

@@ -5,17 +5,21 @@ import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerHeader,
   DrawerTitle,
+  DrawerTrigger,
   preventTouchAutoFocus,
 } from "@/components/ui/drawer";
 
@@ -28,11 +32,12 @@ interface ResponsiveDialogProps {
 interface ResponsiveDialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
   overlayClassName?: string;
+  showClose?: boolean;
   children: React.ReactNode;
   onOpenAutoFocus?: (event: Event) => void;
 }
 
-interface ResponsiveDialogHeaderProps {
+interface ResponsiveDialogHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
   className?: string;
   children: React.ReactNode;
 }
@@ -82,54 +87,120 @@ export function ResponsiveDialog({
   );
 }
 
-export function ResponsiveDialogContent({
-  className,
-  overlayClassName,
-  children,
-  onOpenAutoFocus,
-  ...props
-}: ResponsiveDialogContentProps) {
+export const ResponsiveDialogTrigger = React.forwardRef<
+  React.ElementRef<typeof DialogTrigger>,
+  React.ComponentPropsWithoutRef<typeof DialogTrigger>
+>(({ children, asChild, ...props }, ref) => {
   const { isMobile } = React.useContext(ResponsiveDialogContext);
 
   if (isMobile) {
     return (
-      <DrawerContent
-        className={className}
-        overlayClassName={overlayClassName}
-        onOpenAutoFocus={onOpenAutoFocus}
-        {...props}
-      >
+      <DrawerTrigger ref={ref} asChild={asChild} {...props}>
         {children}
-      </DrawerContent>
+      </DrawerTrigger>
     );
   }
 
   return (
-    <DialogContent
-      className={className}
-      overlayClassName={overlayClassName}
-      onOpenAutoFocus={(event) => {
-        onOpenAutoFocus?.(event);
-        preventTouchAutoFocus(event);
-      }}
-      {...props}
-    >
+    <DialogTrigger ref={ref} asChild={asChild} {...props}>
       {children}
-    </DialogContent>
+    </DialogTrigger>
   );
-}
+});
+ResponsiveDialogTrigger.displayName = "ResponsiveDialogTrigger";
+
+export const ResponsiveDialogClose = React.forwardRef<
+  React.ElementRef<typeof DialogClose>,
+  React.ComponentPropsWithoutRef<typeof DialogClose>
+>(({ children, asChild, ...props }, ref) => {
+  const { isMobile } = React.useContext(ResponsiveDialogContext);
+
+  if (isMobile) {
+    return (
+      <DrawerClose ref={ref} asChild={asChild} {...props}>
+        {children}
+      </DrawerClose>
+    );
+  }
+
+  return (
+    <DialogClose ref={ref} asChild={asChild} {...props}>
+      {children}
+    </DialogClose>
+  );
+});
+ResponsiveDialogClose.displayName = "ResponsiveDialogClose";
+
+export const ResponsiveDialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogContent>,
+  ResponsiveDialogContentProps
+>(
+  (
+    {
+      className,
+      overlayClassName,
+      showClose = true,
+      children,
+      onOpenAutoFocus,
+      ...props
+    },
+    ref,
+  ) => {
+    const { isMobile } = React.useContext(ResponsiveDialogContext);
+
+    if (isMobile) {
+      return (
+        <DrawerContent
+          ref={ref}
+          className={className}
+          overlayClassName={overlayClassName}
+          onOpenAutoFocus={onOpenAutoFocus}
+          {...props}
+        >
+          {children}
+        </DrawerContent>
+      );
+    }
+
+    return (
+      <DialogContent
+        ref={ref}
+        className={className}
+        overlayClassName={overlayClassName}
+        showClose={showClose}
+        onOpenAutoFocus={(event) => {
+          onOpenAutoFocus?.(event);
+          preventTouchAutoFocus(event);
+        }}
+        {...props}
+      >
+        {children}
+      </DialogContent>
+    );
+  },
+);
+ResponsiveDialogContent.displayName = "ResponsiveDialogContent";
 
 export function ResponsiveDialogHeader({
   className,
   children,
+  ...props
 }: ResponsiveDialogHeaderProps) {
   const { isMobile } = React.useContext(ResponsiveDialogContext);
 
   if (isMobile) {
-    return <DrawerHeader className={className}>{children}</DrawerHeader>;
+    return (
+      <DrawerHeader className={className} {...props}>
+        {children}
+      </DrawerHeader>
+    );
   }
 
-  return <DialogHeader className={className}>{children}</DialogHeader>;
+  return (
+    <DialogHeader className={className} {...props}>
+      {children}
+    </DialogHeader>
+  );
 }
 
 export function ResponsiveDialogTitle({

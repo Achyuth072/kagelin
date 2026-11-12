@@ -382,4 +382,69 @@ describe("useTaskDnd", () => {
       expect.objectContaining({ onSettled: expect.any(Function) }),
     );
   });
+
+  it("ignores global flattened sortable indices from shared grouped-tasks context", () => {
+    const t3: Task = {
+      ...t1,
+      id: "t3",
+      content: "Task 3",
+      priority: 3,
+      day_order: 2,
+    };
+    const t4: Task = {
+      ...t1,
+      id: "t4",
+      content: "Task 4",
+      priority: 3,
+      day_order: 3,
+    };
+    const virtualizedPresentation: TaskPresentation = {
+      active: [t1, t2, t3, t4],
+      evening: [],
+      completed: [],
+      groups: [
+        { title: "High", tasks: [t1, t2] },
+        { title: "Medium", tasks: [t3, t4] },
+      ],
+    };
+
+    const { result } = renderHook(() =>
+      useTaskDnd({
+        presentation: virtualizedPresentation,
+        groupBy: "priority",
+        sortBy: "custom",
+        isDesktop: true,
+      }),
+    );
+
+    act(() => {
+      result.current.onDragStart({
+        active: { id: "t4" },
+      } as unknown as DragStartEvent);
+    });
+
+    // In virtualized GroupedVirtuoso, dnd-kit reports flattened global indices (e.g. t3 is global index 2,
+    // even though it is index 0 inside the Medium group). Reordering within Group 1+ must stay in-bounds.
+    act(() => {
+      result.current.onDragOver({
+        active: {
+          id: "t4",
+          data: {
+            current: { sortable: { containerId: "grouped-tasks", index: 3 } },
+          },
+        },
+        over: {
+          id: "t3",
+          data: {
+            current: { sortable: { containerId: "grouped-tasks", index: 2 } },
+          },
+        },
+      } as unknown as DragOverEvent);
+    });
+
+    const mediumGroup = result.current.displayPresentation.groups?.find(
+      (g) => g.title === "Medium",
+    );
+    expect(mediumGroup?.tasks.map((t) => t.id)).toEqual(["t4", "t3"]);
+  });
 });

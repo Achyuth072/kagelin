@@ -5,6 +5,8 @@ import { recommended as tailwindRecommended } from "@poupe/eslint-plugin-tailwin
 import reactCompiler from "eslint-plugin-react-compiler";
 import { plugin as shadcnPlugin } from "@shadcn/lint";
 import noUnboundedSupabaseSelect from "./eslint-rules/no-unbounded-supabase-select.mjs";
+import noElevatedMatteTokens from "./eslint-rules/no-elevated-matte-tokens.mjs";
+import lucideStrokeWidth from "./eslint-rules/lucide-stroke-width.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -152,6 +154,8 @@ const eslintConfig = defineConfig([
       local: {
         rules: {
           "no-unbounded-supabase-select": noUnboundedSupabaseSelect,
+          "no-elevated-matte-tokens": noElevatedMatteTokens,
+          "lucide-stroke-width": lucideStrokeWidth,
         },
       },
     },
@@ -160,6 +164,14 @@ const eslintConfig = defineConfig([
         ui: "@/components/ui",
         note: "Refer to DESIGN.md for Kagelin design rules, tokens, and constraints.",
       },
+    },
+  },
+  // Ink & Matte guardrails enforced deterministically across app & source code.
+  {
+    files: ["src/**/*.{ts,tsx}", "app/**/*.{ts,tsx}"],
+    rules: {
+      "local/no-elevated-matte-tokens": "error",
+      "local/lucide-stroke-width": "error",
     },
   },
   // src/components/ui contains primitives (Radix wrappers) which own base styling.

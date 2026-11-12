@@ -105,7 +105,7 @@ export function DateTimeWizard({
               value="date"
               className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm"
             >
-              <CalendarIcon aria-hidden="true" />
+              <CalendarIcon aria-hidden="true" strokeWidth={2.25} />
               {tempDate ? format(tempDate, "MMM d") : "Date"}
             </TabsTrigger>
             {showTime && (
@@ -114,7 +114,7 @@ export function DateTimeWizard({
                 disabled={!tempDate}
                 className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <Clock aria-hidden="true" />
+                <Clock aria-hidden="true" strokeWidth={2.25} />
                 {tempDate ? formatTime(tempDate) : "Time"}
               </TabsTrigger>
             )}
@@ -210,7 +210,7 @@ export function DateTimeWizard({
             {/* Date View Footer */}
             <div className="mt-2 w-full flex justify-end">
               <Button size="sm" className="gap-1.5 w-full" onClick={onSave}>
-                <Check className="w-3.5 h-3.5" />
+                <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
                 Done
               </Button>
             </div>
@@ -260,7 +260,7 @@ export function DateTimeWizard({
 
             <div className="mt-2 w-full flex justify-end">
               <Button size="sm" className="gap-1.5 w-full" onClick={onSave}>
-                <Check className="w-3.5 h-3.5" />
+                <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
                 Done
               </Button>
             </div>

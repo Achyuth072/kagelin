@@ -14,7 +14,10 @@ export default function AccessDeniedPage() {
       <m.div {...slideUp} className="text-center space-y-6">
         <div className="flex justify-center">
           <div className="h-20 w-20 rounded-full bg-destructive-surface flex items-center justify-center">
-            <ShieldAlert className="h-10 w-10 text-destructive" />
+            <ShieldAlert
+              className="h-10 w-10 text-destructive"
+              strokeWidth={2.25}
+            />
           </div>
         </div>
 

@@ -311,6 +311,7 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                 className={`h-4 w-4 shrink-0 transition-transform ${
                   isProjectsOpen ? "" : "-rotate-90"
                 }`}
+                strokeWidth={2.25}
               />
               <button
                 type="button"
@@ -322,7 +323,7 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                   openCreateProject();
                 }}
               >
-                <Plus className="h-5 w-5 md:h-4 md:w-4" />
+                <Plus className="h-5 w-5 md:h-4 md:w-4" strokeWidth={2.25} />
               </button>
             </SidebarGroupLabel>
             <div
@@ -437,7 +438,10 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                                   }}
                                   className="flex items-center gap-2"
                                 >
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2
+                                    className="h-4 w-4"
+                                    strokeWidth={2.25}
+                                  />
                                   <span>Delete Project</span>
                                 </DropdownMenuItem>
                               </DropdownMenuContent>

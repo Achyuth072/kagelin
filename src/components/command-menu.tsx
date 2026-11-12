@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { parseISO } from "date-fns";
@@ -105,116 +104,107 @@ function CommandSearchResults({
   const rawTerm = hasTypePrefix ? trimmed.slice(2).trim() : trimmed;
   const searchTerm = rawTerm.toLowerCase();
 
-  const filteredTasks = useMemo(() => {
-    if (isHabitOnly || isEventOnly) return [];
-    if (!searchTerm) {
-      return tasks.slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
-    }
-    return tasks
-      .filter((task) => (task.content ?? "").toLowerCase().includes(searchTerm))
-      .slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
-  }, [tasks, isHabitOnly, isEventOnly, searchTerm]);
+  const filteredTasks =
+    isHabitOnly || isEventOnly
+      ? []
+      : !searchTerm
+        ? tasks.slice(0, MAX_SEARCH_RESULTS_PER_GROUP)
+        : tasks
+            .filter((task) =>
+              (task.content ?? "").toLowerCase().includes(searchTerm),
+            )
+            .slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
 
-  const filteredHabits = useMemo(() => {
-    if (isTaskOnly || isEventOnly) return [];
-    if (!searchTerm) {
-      return habits.slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
-    }
-    return habits
-      .filter((habit) => (habit.name ?? "").toLowerCase().includes(searchTerm))
-      .slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
-  }, [habits, isTaskOnly, isEventOnly, searchTerm]);
+  const filteredHabits =
+    isTaskOnly || isEventOnly
+      ? []
+      : !searchTerm
+        ? habits.slice(0, MAX_SEARCH_RESULTS_PER_GROUP)
+        : habits
+            .filter((habit) =>
+              (habit.name ?? "").toLowerCase().includes(searchTerm),
+            )
+            .slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
 
-  const filteredEvents = useMemo(() => {
-    if (isTaskOnly || isHabitOnly) return [];
-    if (!searchTerm) {
-      return events.slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
-    }
-    return events
-      .filter((event) => (event.title ?? "").toLowerCase().includes(searchTerm))
-      .slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
-  }, [events, isTaskOnly, isHabitOnly, searchTerm]);
+  const filteredEvents =
+    isTaskOnly || isHabitOnly
+      ? []
+      : !searchTerm
+        ? events.slice(0, MAX_SEARCH_RESULTS_PER_GROUP)
+        : events
+            .filter((event) =>
+              (event.title ?? "").toLowerCase().includes(searchTerm),
+            )
+            .slice(0, MAX_SEARCH_RESULTS_PER_GROUP);
 
-  const taskItems = useMemo(
-    () =>
-      filteredTasks.map((task) => (
-        <CommandItem
-          key={task.id}
-          // Ids and content in value keep individual items matchable and navigable in cmdk.
-          value={`task-${task.id} ${task.content ?? ""}`}
-          keywords={
-            task.content === null
-              ? []
-              : [task.content, `t:${task.content}`, `t: ${task.content}`]
-          }
-          onSelect={() =>
-            runCommand(() => {
-              setSelectedTaskId(task.id);
-              router.push("/");
-            })
-          }
-        >
-          <CheckCircle2 className="mr-2 h-5 w-5" strokeWidth={2.25} />
-          <span>
-            <ReadableText text={task.content} />
-          </span>
-        </CommandItem>
-      )),
-    [filteredTasks, runCommand, setSelectedTaskId, router],
-  );
+  const taskItems = filteredTasks.map((task) => (
+    <CommandItem
+      key={task.id}
+      // Ids and content in value keep individual items matchable and navigable in cmdk.
+      value={`task-${task.id} ${task.content ?? ""}`}
+      keywords={
+        task.content === null
+          ? []
+          : [task.content, `t:${task.content}`, `t: ${task.content}`]
+      }
+      onSelect={() =>
+        runCommand(() => {
+          setSelectedTaskId(task.id);
+          router.push("/");
+        })
+      }
+    >
+      <CheckCircle2 className="mr-2 h-5 w-5" strokeWidth={2.25} />
+      <span>
+        <ReadableText text={task.content} />
+      </span>
+    </CommandItem>
+  ));
 
-  const habitItems = useMemo(
-    () =>
-      filteredHabits.map((habit) => {
-        const Icon = getHabitIcon(habit.icon);
-        return (
-          <CommandItem
-            key={habit.id}
-            value={`habit-${habit.id} ${habit.name ?? ""}`}
-            keywords={
-              habit.name === null
-                ? []
-                : [habit.name, `h:${habit.name}`, `h: ${habit.name}`]
-            }
-            onSelect={() => runCommand(() => openEditHabit(habit))}
-          >
-            <Icon className="mr-2 h-5 w-5" strokeWidth={2.25} />
-            <span>
-              <ReadableText text={habit.name} />
-            </span>
-          </CommandItem>
-        );
-      }),
-    [filteredHabits, runCommand, openEditHabit],
-  );
+  const habitItems = filteredHabits.map((habit) => {
+    const Icon = getHabitIcon(habit.icon);
+    return (
+      <CommandItem
+        key={habit.id}
+        value={`habit-${habit.id} ${habit.name ?? ""}`}
+        keywords={
+          habit.name === null
+            ? []
+            : [habit.name, `h:${habit.name}`, `h: ${habit.name}`]
+        }
+        onSelect={() => runCommand(() => openEditHabit(habit))}
+      >
+        <Icon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+        <span>
+          <ReadableText text={habit.name} />
+        </span>
+      </CommandItem>
+    );
+  });
 
-  const eventItems = useMemo(
-    () =>
-      filteredEvents.map((event) => (
-        <CommandItem
-          key={event.id}
-          value={`event-${event.id} ${event.title ?? ""}`}
-          keywords={
-            event.title === null
-              ? []
-              : [event.title, `e:${event.title}`, `e: ${event.title}`]
-          }
-          onSelect={() =>
-            runCommand(() => {
-              // Local-time parse avoids timezone shift on UTC-stored all-day dates.
-              setDate(parseISO(event.date.slice(0, 10)));
-              router.push("/calendar");
-            })
-          }
-        >
-          <CalendarIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
-          <span>
-            <ReadableText text={event.title} />
-          </span>
-        </CommandItem>
-      )),
-    [filteredEvents, runCommand, setDate, router],
-  );
+  const eventItems = filteredEvents.map((event) => (
+    <CommandItem
+      key={event.id}
+      value={`event-${event.id} ${event.title ?? ""}`}
+      keywords={
+        event.title === null
+          ? []
+          : [event.title, `e:${event.title}`, `e: ${event.title}`]
+      }
+      onSelect={() =>
+        runCommand(() => {
+          // Local-time parse avoids timezone shift on UTC-stored all-day dates.
+          setDate(parseISO(event.date.slice(0, 10)));
+          router.push("/calendar");
+        })
+      }
+    >
+      <CalendarIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+      <span>
+        <ReadableText text={event.title} />
+      </span>
+    </CommandItem>
+  ));
 
   if (search.length === 0) return null;
 

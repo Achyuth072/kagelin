@@ -115,7 +115,7 @@ export function ChangelogPopup({ open, onOpenChange }: ChangelogPopupProps) {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-[13px] font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
-            <MessageSquare className="h-4 w-4 shrink-0" />
+            <MessageSquare className="h-4 w-4 shrink-0" strokeWidth={2.25} />
             Discuss this release on GitHub
           </a>
           <a

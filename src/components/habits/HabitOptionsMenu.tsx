@@ -64,9 +64,15 @@ export function HabitOptionsMenu() {
             disabled={isBusy}
           >
             {isBusy ? (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <Loader2
+                className="h-4 w-4 animate-spin text-muted-foreground"
+                strokeWidth={2.25}
+              />
             ) : (
-              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+              <MoreVertical
+                className="h-4 w-4 text-muted-foreground"
+                strokeWidth={2.25}
+              />
             )}
             <span className="sr-only">Habit options</span>
           </Button>
@@ -81,7 +87,7 @@ export function HabitOptionsMenu() {
             onClick={() => setArchivedOpen(true)}
             className="cursor-pointer gap-2 py-2"
           >
-            <Archive className="h-4 w-4 text-brand" />
+            <Archive className="h-4 w-4 text-brand" strokeWidth={2.25} />
             <span>Archived habits</span>
           </DropdownMenuItem>
 
@@ -90,7 +96,7 @@ export function HabitOptionsMenu() {
             disabled={isBusy}
             className="cursor-pointer gap-2 py-2"
           >
-            <Upload className="h-4 w-4 text-brand" />
+            <Upload className="h-4 w-4 text-brand" strokeWidth={2.25} />
             <span>Import Loop (.db)</span>
           </DropdownMenuItem>
 
@@ -99,7 +105,7 @@ export function HabitOptionsMenu() {
             disabled={isBusy}
             className="cursor-pointer gap-2 py-2"
           >
-            <Database className="h-4 w-4 text-brand" />
+            <Database className="h-4 w-4 text-brand" strokeWidth={2.25} />
             <span>Export Loop (.db)</span>
           </DropdownMenuItem>
 
@@ -108,7 +114,7 @@ export function HabitOptionsMenu() {
             disabled={isBusy}
             className="cursor-pointer gap-2 py-2"
           >
-            <Download className="h-4 w-4 text-brand" />
+            <Download className="h-4 w-4 text-brand" strokeWidth={2.25} />
             <span>Export Loop (CSV Zip)</span>
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -296,7 +296,7 @@ export function AppMigrationDialog({
               disabled={isImportingTodoist}
             >
               {isImportingTodoist ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
               ) : (
                 `Import ${todoistPreview.totalTasks} tasks`
               )}
@@ -369,7 +369,7 @@ export function AppMigrationDialog({
             </Button>
             <Button onClick={handleConfirmIcsImport} disabled={isImportingIcs}>
               {isImportingIcs ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
               ) : (
                 `Import ${preview.toCreate.length} events`
               )}
@@ -404,7 +404,7 @@ export function AppMigrationDialog({
                 className="h-full px-2"
                 aria-label="Import from other apps"
               >
-                <ArrowDownToLine aria-hidden="true" />
+                <ArrowDownToLine aria-hidden="true" strokeWidth={2.25} />
                 <span className="truncate">Import</span>
               </TabsTrigger>
               <TabsTrigger
@@ -412,7 +412,7 @@ export function AppMigrationDialog({
                 className="h-full px-2"
                 aria-label="Export to other apps"
               >
-                <ArrowUpFromLine aria-hidden="true" />
+                <ArrowUpFromLine aria-hidden="true" strokeWidth={2.25} />
                 <span className="truncate">Export</span>
               </TabsTrigger>
             </TabsList>
@@ -445,7 +445,7 @@ export function AppMigrationDialog({
               >
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-full bg-brand/10 text-brand shrink-0">
-                    <Calendar className="h-5 w-5" />
+                    <Calendar className="h-5 w-5" strokeWidth={2.25} />
                   </div>
                   <div>
                     <p className="text-sm font-medium">ICS (Calendar)</p>
@@ -468,9 +468,12 @@ export function AppMigrationDialog({
                   disabled={isAnyImporting}
                 >
                   {isImportingIcs ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      strokeWidth={2.25}
+                    />
                   ) : (
-                    <FileUp className="h-4 w-4" />
+                    <FileUp className="h-4 w-4" strokeWidth={2.25} />
                   )}
                 </Button>
                 <input
@@ -535,9 +538,12 @@ export function AppMigrationDialog({
                   disabled={isAnyImporting}
                 >
                   {isImportingUhabits ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      strokeWidth={2.25}
+                    />
                   ) : (
-                    <FileUp className="h-4 w-4" />
+                    <FileUp className="h-4 w-4" strokeWidth={2.25} />
                   )}
                 </Button>
                 <input
@@ -615,9 +621,12 @@ export function AppMigrationDialog({
                   disabled={isAnyImporting}
                 >
                   {isImportingTodoist ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      strokeWidth={2.25}
+                    />
                   ) : (
-                    <FileUp className="h-4 w-4" />
+                    <FileUp className="h-4 w-4" strokeWidth={2.25} />
                   )}
                 </Button>
                 <input

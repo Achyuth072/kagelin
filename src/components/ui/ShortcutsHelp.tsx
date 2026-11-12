@@ -181,7 +181,10 @@ export function ShortcutsHelp({
       <ResponsiveDialogContent className="sm:max-w-[720px] border-border/80 shadow-none p-0">
         <ResponsiveDialogHeader className="p-6 pb-2 border-b border-border/80">
           <ResponsiveDialogTitle className="flex items-center gap-2.5 text-[24px] font-semibold tracking-[-0.02em] text-foreground">
-            <Keyboard className="h-5 w-5 text-muted-foreground/70" />
+            <Keyboard
+              className="h-5 w-5 text-muted-foreground/70"
+              strokeWidth={2.25}
+            />
             Keyboard Shortcuts
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="text-[11px] uppercase tracking-[0.02em] text-muted-foreground font-medium pt-1">

@@ -117,7 +117,10 @@ export const EventOverflowPopover = memo(
                               : "text-white/70",
                           )}
                         >
-                          <MapPin className="h-2.5 w-2.5 shrink-0" />
+                          <MapPin
+                            className="h-2.5 w-2.5 shrink-0"
+                            strokeWidth={2.25}
+                          />
                           <ReadableText text={event.location ?? null} />
                         </span>
                       )}

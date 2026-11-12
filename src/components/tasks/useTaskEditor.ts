@@ -97,7 +97,7 @@ export function useTaskEditor({
   const deleteMutation = useDeleteTask();
   const { data: inboxProject } = useInboxProject();
   const { data: projects } = useProjects();
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useMediaQuery("(max-width: 640px)");
   const isFinePointer = useMediaQuery("(pointer: fine)");
   const { trigger: triggerHaptic } = useHaptic();
 

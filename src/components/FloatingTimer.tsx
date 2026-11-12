@@ -12,6 +12,7 @@ import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimer } from "@/components/TimerProvider";
+import { SEIJAKU_SPRING } from "@/lib/motion";
 
 export const FloatingTimer = memo(function FloatingTimer() {
   const mode = useTimerStore((s) => s.state.mode);
@@ -77,11 +78,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
               ? { opacity: 0 }
               : { opacity: 0, y: 100, scale: 0.8 }
           }
-          transition={
-            prefersReducedMotion
-              ? { duration: 0 }
-              : { type: "spring", stiffness: 280, damping: 60 }
-          }
+          transition={prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING}
           className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[var(--z-floating)] bg-card border border-border rounded-xl shadow-sm p-4 min-w-[200px] select-none"
           style={{ touchAction: "none" }}
         >

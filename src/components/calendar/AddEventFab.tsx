@@ -21,7 +21,7 @@ export default function AddEventFab({ onClick }: AddEventFabProps) {
       onClick={onClick}
       className={cn(
         buttonVariants({ size: "lg" }),
-        "fixed right-6 h-12 w-12 rounded-xl shadow-lg md:hidden cursor-pointer z-[var(--z-floating)] will-change-transform",
+        "fixed right-6 h-12 w-12 rounded-xl shadow-sm md:hidden cursor-pointer z-[var(--z-floating)] will-change-transform",
         "[@media(max-height:400px)]:right-3 [@media(max-height:400px)]:h-10 [@media(max-height:400px)]:w-10",
       )}
       style={{
@@ -29,7 +29,10 @@ export default function AddEventFab({ onClick }: AddEventFabProps) {
       }}
       aria-label="Create event"
     >
-      <Plus className="h-5 w-5 [@media(max-height:400px)]:h-4 [@media(max-height:400px)]:w-4" />
+      <Plus
+        className="h-5 w-5 [@media(max-height:400px)]:h-4 [@media(max-height:400px)]:w-4"
+        strokeWidth={2.25}
+      />
     </m.button>
   );
 }

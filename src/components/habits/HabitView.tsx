@@ -24,10 +24,9 @@ import { HabitDisclosureRow } from "./shared/HabitDisclosureRow";
 import { HabitFrequencyField } from "./shared/HabitFrequencyField";
 import { HabitIconPicker, getHabitIcon } from "./shared/HabitIconPicker";
 import { ColorPicker } from "@/components/shared/ColorPicker";
-import { type TargetType } from "./shared/HabitTargetField";
 import { HabitQuestionField } from "./shared/HabitQuestionField";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { FrequencyPeriod, HabitType } from "@/lib/types/habit";
+import type { FrequencyPeriod, HabitType, TargetType } from "@/lib/types/habit";
 import { HabitReminderField } from "./shared/HabitReminderField";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useOptionalAuth } from "@/components/AuthProvider";
@@ -318,6 +317,7 @@ export function HabitView(props: HabitViewProps) {
                 "h-3 w-3 text-muted-foreground transition-transform",
                 frequencyOpen && "rotate-180",
               )}
+              strokeWidth={2.25}
             />
           </Button>
         </div>
@@ -344,7 +344,7 @@ export function HabitView(props: HabitViewProps) {
                 placeholder="0"
                 aria-label="Target value"
                 className="w-16"
-                inputClassName="w-16 h-8 text-center text-xs sm:text-[13px] font-medium rounded-lg border border-border/40 bg-secondary/15 px-1.5 outline-none placeholder:text-muted-foreground/60 text-foreground focus:ring-1 focus:ring-brand"
+                inputClassName="w-16 text-center text-xs sm:text-[13px] px-1.5"
               />
               <input
                 type="text"
@@ -526,9 +526,9 @@ export function HabitView(props: HabitViewProps) {
             }
           >
             {mode === "create" ? (
-              <Send className="h-5 w-5 stroke-[2.25px]" />
+              <Send className="h-5 w-5" strokeWidth={2.25} />
             ) : (
-              <Save className="h-5 w-5 stroke-[2.25px]" />
+              <Save className="h-5 w-5" strokeWidth={2.25} />
             )}
           </Button>
         </div>

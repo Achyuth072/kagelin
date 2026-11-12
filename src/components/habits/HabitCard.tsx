@@ -144,7 +144,7 @@ export function HabitCard({
       ) : isSkippedToday ? (
         <Pause className="w-4 h-4" strokeWidth={2.25} />
       ) : (
-        <Plus className="w-5 h-5" />
+        <Plus className="w-5 h-5" strokeWidth={2.25} />
       )}
     </button>
   );

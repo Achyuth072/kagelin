@@ -217,13 +217,18 @@ export function useTaskDnd({
 
         if (activeGroupIndex === -1 || overGroupIndex === -1) return;
 
+        const overSortableIndex =
+          over.data?.current?.sortable?.containerId === "grouped-tasks"
+            ? undefined
+            : over.data?.current?.sortable?.index;
+
         if (activeGroupIndex === overGroupIndex) {
           const group = localGroups[activeGroupIndex];
           const oldIndex = group.tasks.findIndex((t) => t.id === activeIdStr);
           const newIndex = resolveTargetIndex(
             group.tasks,
             overIdStr,
-            over.data?.current?.sortable?.index,
+            overSortableIndex,
           );
 
           if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
@@ -252,7 +257,7 @@ export function useTaskDnd({
           const newIndex = resolveTargetIndex(
             overTasks,
             overIdStr,
-            over.data?.current?.sortable?.index,
+            overSortableIndex,
           );
           overTasks.splice(newIndex, 0, updatedTask);
 

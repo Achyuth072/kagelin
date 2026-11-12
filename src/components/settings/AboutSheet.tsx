@@ -59,7 +59,10 @@ function AboutRow({
         <p className="text-xs text-muted-foreground truncate">{detail}</p>
       </div>
       {href && (
-        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+        <ExternalLink
+          className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0"
+          strokeWidth={2.25}
+        />
       )}
     </>
   );
@@ -98,7 +101,10 @@ export function AboutSheet({
       <ResponsiveDialogContent className="sm:max-w-110 border-border/80 shadow-none p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
         <ResponsiveDialogHeader className="p-6 pb-3 border-b border-border/80 shrink-0">
           <ResponsiveDialogTitle className="flex items-center gap-2.5 text-[20px] font-semibold tracking-[-0.02em] text-foreground">
-            <Info className="h-4.5 w-4.5 text-muted-foreground" />
+            <Info
+              className="h-4.5 w-4.5 text-muted-foreground"
+              strokeWidth={2.25}
+            />
             About Kagelin
           </ResponsiveDialogTitle>
           <ResponsiveDialogDescription className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.01em] text-foreground pt-1">

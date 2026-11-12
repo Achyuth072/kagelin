@@ -702,7 +702,7 @@ export function EventView({
                           tabIndex={-1}
                           aria-label="Clear location"
                         >
-                          <X className="h-3.5 w-3.5" />
+                          <X className="h-3.5 w-3.5" strokeWidth={2.25} />
                         </span>
                       )}
                     </button>
@@ -744,7 +744,10 @@ export function EventView({
                                   setLocationOpen(false);
                                 }}
                               >
-                                <MapPin className="mr-2 h-4 w-4" />
+                                <MapPin
+                                  className="mr-2 h-4 w-4"
+                                  strokeWidth={2.25}
+                                />
                                 Use &quot;{trimmedSearch}&quot;
                               </CommandItem>
                             </CommandGroup>
@@ -761,7 +764,10 @@ export function EventView({
                                 setLocationOpen(false);
                               }}
                             >
-                              <MapPin className="mr-2 h-4 w-4" />
+                              <MapPin
+                                className="mr-2 h-4 w-4"
+                                strokeWidth={2.25}
+                              />
                               {loc}
                               <Check
                                 className={cn(
@@ -770,6 +776,7 @@ export function EventView({
                                     ? "opacity-100"
                                     : "opacity-0",
                                 )}
+                                strokeWidth={2.25}
                               />
                             </CommandItem>
                           ))}
@@ -852,9 +859,9 @@ export function EventView({
                 aria-label={event ? "Save changes" : "Create event"}
               >
                 {event ? (
-                  <Save className="h-5 w-5 stroke-[2.25px]" />
+                  <Save className="h-5 w-5" strokeWidth={2.25} />
                 ) : (
-                  <Send className="h-5 w-5 stroke-[2.25px]" />
+                  <Send className="h-5 w-5" strokeWidth={2.25} />
                 )}
               </Button>
             </RecurringTooltip>

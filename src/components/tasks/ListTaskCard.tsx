@@ -131,7 +131,7 @@ export function ListTaskCard({
             )}
           >
             {task.is_completed && (
-              <Check className="h-2.5 w-2.5 stroke-[3.5]" />
+              <Check className="h-2.5 w-2.5" strokeWidth={2.25} />
             )}
           </span>
         </button>
@@ -168,7 +168,7 @@ export function ListTaskCard({
               onClick={handlePlayFocus}
               className="p-1 rounded text-muted-foreground hover:text-brand hover:bg-secondary/50 transition-colors"
             >
-              <Play className="h-3.5 w-3.5 fill-current" />
+              <Play className="h-3.5 w-3.5 fill-current" strokeWidth={2.25} />
             </button>
             <button
               type="button"
@@ -177,7 +177,7 @@ export function ListTaskCard({
               onClick={onDeleteRequest}
               className="hidden md:inline-flex p-1 rounded text-muted-foreground hover:text-destructive hover:bg-secondary/50 transition-colors"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={2.25} />
             </button>
           </div>
         </div>
@@ -194,7 +194,7 @@ export function ListTaskCard({
                   : "bg-secondary/35 border-border/40 text-muted-foreground",
               )}
             >
-              <CalendarClock className="h-3 w-3 stroke-[2.25]" />
+              <CalendarClock className="h-3 w-3" strokeWidth={2.25} />
               <span>
                 {isPlannedToday
                   ? "Planned Today"
@@ -213,7 +213,7 @@ export function ListTaskCard({
                   : "bg-secondary/35 border-border/40 text-muted-foreground",
               )}
             >
-              <Calendar className="h-3 w-3 stroke-[2.25]" />
+              <Calendar className="h-3 w-3" strokeWidth={2.25} />
               <span>Due {formatDueDate(task.due_date)}</span>
             </span>
           )}
@@ -240,7 +240,7 @@ export function ListTaskCard({
           {/* Evening Chip */}
           {task.is_evening && (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md bg-secondary/35 border border-border/40 text-muted-foreground">
-              <Moon className="h-3 w-3 fill-current" />
+              <Moon className="h-3 w-3 fill-current" strokeWidth={2.25} />
               <span>Evening</span>
             </span>
           )}
@@ -263,6 +263,7 @@ export function ListTaskCard({
                   "h-3 w-3 shrink-0 transition-transform duration-200 ease-seijaku",
                   !isExpanded && "-rotate-90",
                 )}
+                strokeWidth={2.25}
               />
               <span>
                 {completedSteps}/{totalSteps} steps

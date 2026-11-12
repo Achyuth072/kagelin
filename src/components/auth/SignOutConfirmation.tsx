@@ -39,7 +39,7 @@ export function SignOutConfirmation({
   onConfirm,
   allDevices = false,
 }: SignOutConfirmationProps) {
-  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const isDesktop = useMediaQuery("(min-width: 641px)");
   const { trigger } = useHaptic();
 
   useBackNavigation(isOpen && !isDesktop, onClose);
@@ -55,7 +55,7 @@ export function SignOutConfirmation({
         <AlertDialogContent className="max-w-md border-border/40">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <LogOut className="h-5 w-5" />
+              <LogOut className="h-5 w-5" strokeWidth={2.25} />
               {title}
             </AlertDialogTitle>
             <AlertDialogDescription>{description}</AlertDialogDescription>
@@ -83,11 +83,11 @@ export function SignOutConfirmation({
   }
 
   return (
-    <Drawer open={isOpen} onOpenChange={onClose} repositionInputs={false}>
+    <Drawer open={isOpen} onOpenChange={onClose}>
       <DrawerContent>
         <DrawerHeader className="text-left">
           <DrawerTitle className="flex items-center gap-2">
-            <LogOut className="h-5 w-5" />
+            <LogOut className="h-5 w-5" strokeWidth={2.25} />
             {title}
           </DrawerTitle>
           <DrawerDescription>{description}</DrawerDescription>

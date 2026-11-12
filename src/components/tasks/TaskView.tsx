@@ -267,6 +267,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
                   "h-3 w-3 text-muted-foreground transition-transform",
                   priorityOpen && "rotate-180",
                 )}
+                strokeWidth={2.25}
               />
             </Button>
 
@@ -457,7 +458,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               title="Delete task"
               className="h-9 w-9 p-0 shadow-sm shadow-destructive/10"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" strokeWidth={2.25} />
             </Button>
           )}
 
@@ -475,13 +476,11 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
             )}
           >
             {mode === "create" ? (
-              <Send className="h-5 w-5 stroke-[2.25px]" />
+              <Send className="h-5 w-5" strokeWidth={2.25} />
             ) : (
               <Save
-                className={cn(
-                  "h-5 w-5 stroke-[2.25px]",
-                  isPending && "opacity-50",
-                )}
+                className={cn("h-5 w-5", isPending && "opacity-50")}
+                strokeWidth={2.25}
               />
             )}
           </button>

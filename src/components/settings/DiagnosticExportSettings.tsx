@@ -190,6 +190,7 @@ export function DiagnosticExportSettings() {
               <Bug
                 className="h-4 w-4 text-muted-foreground"
                 aria-hidden="true"
+                strokeWidth={2.25}
               />
             </div>
             <p className="text-sm font-medium">Report a Problem</p>
@@ -200,7 +201,7 @@ export function DiagnosticExportSettings() {
             className="shrink-0 gap-2"
             onClick={handleOpen}
           >
-            <Eye className="h-4 w-4" aria-hidden="true" />
+            <Eye className="h-4 w-4" aria-hidden="true" strokeWidth={2.25} />
             Open Report
           </Button>
         </div>
@@ -238,6 +239,7 @@ export function DiagnosticExportSettings() {
                 <AlertTriangle
                   className="h-4 w-4 shrink-0 mt-0.5"
                   aria-hidden="true"
+                  strokeWidth={2.25}
                 />
                 <p>
                   <strong>Notice:</strong> Structural metadata includes your
@@ -255,6 +257,7 @@ export function DiagnosticExportSettings() {
                 <Check
                   className="h-4 w-4 text-primary shrink-0"
                   aria-hidden="true"
+                  strokeWidth={2.25}
                 />
                 <span>
                   Safe for public bug reports on GitHub. Stack traces and error
@@ -298,6 +301,7 @@ export function DiagnosticExportSettings() {
                           <Loader2
                             className="h-3.5 w-3.5 animate-spin mr-1 motion-reduce:animate-none"
                             aria-hidden="true"
+                            strokeWidth={2.25}
                           />
                         )}
                         Confirm
@@ -334,6 +338,7 @@ export function DiagnosticExportSettings() {
                             isRefreshing && "animate-spin",
                           )}
                           aria-hidden="true"
+                          strokeWidth={2.25}
                         />
                         <span className="hidden sm:inline">Refresh</span>
                       </Button>
@@ -372,6 +377,7 @@ export function DiagnosticExportSettings() {
                     <Loader2
                       className="h-5 w-5 animate-spin motion-reduce:animate-none text-muted-foreground"
                       aria-hidden="true"
+                      strokeWidth={2.25}
                     />
                     <p className="text-xs text-muted-foreground">
                       Loading diagnostics…
@@ -406,6 +412,7 @@ export function DiagnosticExportSettings() {
                         <Loader2
                           className="h-5 w-5 animate-spin motion-reduce:animate-none text-muted-foreground"
                           aria-hidden="true"
+                          strokeWidth={2.25}
                         />
                         <p className="text-xs text-muted-foreground">
                           Compiling state bundle…
@@ -469,7 +476,11 @@ export function DiagnosticExportSettings() {
                 }}
                 disabled={isBusy || !bundle}
               >
-                <Download className="h-4 w-4" aria-hidden="true" />
+                <Download
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                  strokeWidth={2.25}
+                />
                 Download JSON
               </Button>
             )}
@@ -484,12 +495,20 @@ export function DiagnosticExportSettings() {
             >
               {copied ? (
                 <>
-                  <Check className="h-4 w-4" aria-hidden="true" />
+                  <Check
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                    strokeWidth={2.25}
+                  />
                   Copied
                 </>
               ) : (
                 <>
-                  <Copy className="h-4 w-4" aria-hidden="true" />
+                  <Copy
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                    strokeWidth={2.25}
+                  />
                   {includeDataStructure
                     ? "Copy Full Bundle"
                     : "Copy for GitHub"}

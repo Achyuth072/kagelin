@@ -187,7 +187,10 @@ export function TaskDatePicker({
           }
         }}
       >
-        <X className={cn("h-3 w-3", isCompact && "hover:text-destructive")} />
+        <X
+          className={cn("h-3 w-3", isCompact && "hover:text-destructive")}
+          strokeWidth={2.25}
+        />
       </button>
     ) : null;
 

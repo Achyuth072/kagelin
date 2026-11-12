@@ -201,7 +201,7 @@ export function ConnectCalendarDialog({
             variant="outline"
             className={cn("gap-2", "w-10 px-0 md:w-auto md:px-4")}
           >
-            <CalendarSync className="w-4 h-4" />
+            <CalendarSync className="w-4 h-4" strokeWidth={2.25} />
             <span className="hidden md:inline">Connect Calendar</span>
           </Button>
         </Trigger>
@@ -260,7 +260,10 @@ export function ConnectCalendarDialog({
                     onClick={() => setProviderToDisconnect(p)}
                   >
                     {isDisconnecting === p ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2
+                        className="w-3.5 h-3.5 animate-spin"
+                        strokeWidth={2.25}
+                      />
                     ) : (
                       <Trash2 className="w-3.5 h-3.5" strokeWidth={2.25} />
                     )}
@@ -316,7 +319,7 @@ export function ConnectCalendarDialog({
           <div className="px-4 py-6 sm:px-6 space-y-4">
             {pickerLoading ? (
               <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" strokeWidth={2.25} />
                 Loading calendars…
               </div>
             ) : pickerError ? (
@@ -371,7 +374,10 @@ export function ConnectCalendarDialog({
               >
                 {pickerSaving ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <Loader2
+                      className="w-4 h-4 animate-spin mr-2"
+                      strokeWidth={2.25}
+                    />
                     Saving…
                   </>
                 ) : (
@@ -424,7 +430,10 @@ export function ConnectCalendarDialog({
             >
               {isDisconnecting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2
+                    className="w-4 h-4 mr-2 animate-spin"
+                    strokeWidth={2.25}
+                  />
                   Disconnecting...
                 </>
               ) : (
@@ -453,7 +462,7 @@ function ProviderButton({
     <button
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center justify-center p-6 rounded-2xl border bg-card/50",
+        "flex flex-col items-center justify-center p-6 rounded-xl border bg-card/50",
         "transition-all duration-300 ease-out",
         "hover:border-border/80 hover:bg-accent/30 hover:shadow-sm",
         "active:scale-[0.98] group relative",

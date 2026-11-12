@@ -42,6 +42,7 @@ export function NumberField({
   max,
   step = 1,
   disabled,
+  autoFocus,
   ...rootProps
 }: NumberFieldProps) {
   const { trigger } = useHaptic();
@@ -62,6 +63,19 @@ export function NumberField({
     }
     onValueChange?.(nextVal, eventDetails);
   };
+
+  const inputElement = (
+    <BaseNumberField.Input
+      aria-label={ariaLabel}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      className={cn(
+        "h-8 min-w-10 text-center text-[13px] font-medium tabular-nums text-foreground bg-transparent p-0 outline-none placeholder:text-muted-foreground/60 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+        !showSteppers && "px-2.5",
+        inputClassName,
+      )}
+    />
+  );
 
   return (
     <BaseNumberField.Root
@@ -94,27 +108,11 @@ export function NumberField({
             direction="horizontal"
             className="relative flex items-center cursor-ew-resize"
           >
-            <BaseNumberField.Input
-              aria-label={ariaLabel}
-              placeholder={placeholder}
-              className={cn(
-                "h-8 min-w-10 text-center text-[13px] font-medium tabular-nums text-foreground bg-transparent p-0 outline-none placeholder:text-muted-foreground/60 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-                !showSteppers && "px-2.5",
-                inputClassName,
-              )}
-            />
+            {inputElement}
             <BaseNumberField.ScrubAreaCursor className="hidden" />
           </BaseNumberField.ScrubArea>
         ) : (
-          <BaseNumberField.Input
-            aria-label={ariaLabel}
-            placeholder={placeholder}
-            className={cn(
-              "h-8 min-w-10 text-center text-[13px] font-medium tabular-nums text-foreground bg-transparent p-0 outline-none placeholder:text-muted-foreground/60 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-              !showSteppers && "px-2.5",
-              inputClassName,
-            )}
-          />
+          inputElement
         )}
 
         {showSteppers && (

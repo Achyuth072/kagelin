@@ -103,6 +103,7 @@ vi.mock("@/components/AuthProvider", () => ({
 
 vi.mock("@/lib/hooks/useMediaQuery", () => ({
   useMediaQuery: (query: string) => {
+    if (query === "(max-width: 640px)") return !mockIsDesktop;
     if (query === "(min-width: 641px)" || query === "(min-width: 768px)")
       return mockIsDesktop;
     return false;
@@ -171,6 +172,12 @@ vi.mock("@/components/ui/dialog", () => ({
   DialogTitle: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
+  DialogDescription: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DialogClose: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
   DialogTrigger: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
@@ -189,6 +196,16 @@ vi.mock("@/components/ui/drawer", () => ({
   DrawerTitle: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
+  DrawerDescription: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DrawerClose: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DrawerTrigger: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  preventTouchAutoFocus: vi.fn(),
 }));
 
 vi.mock("@/components/ui/skeleton", () => ({

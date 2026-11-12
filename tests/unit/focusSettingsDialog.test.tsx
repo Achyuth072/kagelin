@@ -50,7 +50,7 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
 }));
 
 vi.mock("@/lib/hooks/useMediaQuery", () => ({
-  useMediaQuery: vi.fn(() => true),
+  useMediaQuery: vi.fn((query: string) => !query.includes("max-width")),
 }));
 
 vi.mock("@/lib/store/uiStore", () => ({

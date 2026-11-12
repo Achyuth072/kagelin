@@ -99,7 +99,10 @@ export function HomeClient() {
                   title="Clear filter"
                   aria-label="Clear filter"
                 >
-                  <PlusIcon className="h-3.5 w-3.5 rotate-45" />
+                  <PlusIcon
+                    className="h-3.5 w-3.5 rotate-45"
+                    strokeWidth={2.25}
+                  />
                 </button>
               </span>
             )}

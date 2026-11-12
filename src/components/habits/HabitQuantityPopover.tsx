@@ -7,13 +7,13 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import {
-  Drawer,
-  DrawerTrigger,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-} from "@/components/ui/drawer";
+  ResponsiveDialog,
+  ResponsiveDialogTrigger,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+} from "@/components/ui/responsive-dialog";
 import { NumberField } from "@/components/ui/number-field";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -119,25 +119,23 @@ export function HabitQuantityPopover({
 
   if (isMobile) {
     return (
-      <Drawer
-        open={open}
-        onOpenChange={handleOpenChange}
-        repositionInputs={false}
-      >
-        <DrawerTrigger asChild>{children}</DrawerTrigger>
-        <DrawerContent className="p-4 flex flex-col gap-3">
-          <DrawerHeader className="p-0 sr-only">
-            <DrawerTitle>Log amount</DrawerTitle>
-            <DrawerDescription>Log quantity for this habit</DrawerDescription>
-          </DrawerHeader>
+      <ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
+        <ResponsiveDialogTrigger asChild>{children}</ResponsiveDialogTrigger>
+        <ResponsiveDialogContent className="p-4 flex flex-col gap-3">
+          <ResponsiveDialogHeader className="p-0 sr-only">
+            <ResponsiveDialogTitle>Log amount</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              Log quantity for this habit
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
           <div
             className="flex flex-col gap-3 pt-2"
             onClick={(e) => e.stopPropagation()}
           >
             {formContent}
           </div>
-        </DrawerContent>
-      </Drawer>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     );
   }
 

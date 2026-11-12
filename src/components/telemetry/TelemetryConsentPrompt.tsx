@@ -11,6 +11,7 @@ import { useMeasuredOffset } from "@/lib/hooks/useMeasuredOffset";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
+import { SEIJAKU_SPRING } from "@/lib/motion";
 import { NOTIFICATION_LINK_BUTTON_CLASS } from "@/components/ui/notification-link-button";
 
 export function TelemetryConsentPrompt() {
@@ -43,16 +44,7 @@ export function TelemetryConsentPrompt() {
           initial={{ y: 24, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 24, opacity: 0 }}
-          transition={
-            prefersReducedMotion
-              ? { duration: 0 }
-              : {
-                  type: "spring",
-                  mass: 1,
-                  stiffness: 280,
-                  damping: 60,
-                }
-          }
+          transition={prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING}
           className={cn(
             "fixed inset-x-0 bottom-[calc(var(--mobile-nav-height)+0.75rem)] md:bottom-[calc(1.5rem+var(--offline-pill-offset,0px))] z-[var(--z-prompt)]",
             "flex justify-center px-4 pointer-events-none",
@@ -71,7 +63,10 @@ export function TelemetryConsentPrompt() {
             )}
           >
             <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
-              <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
+              <ShieldCheck
+                className="h-4 w-4 text-muted-foreground shrink-0"
+                strokeWidth={2.25}
+              />
               <div className="flex-1 min-w-0 pr-1 sm:pr-0">
                 <p className="text-xs sm:text-sm text-foreground/90 font-normal leading-relaxed">
                   Kagelin is open source &amp; privacy-first. Share anonymous
@@ -86,7 +81,7 @@ export function TelemetryConsentPrompt() {
                 className="sm:hidden h-7 w-7 -mr-1 -mt-1 shrink-0 text-muted-foreground hover:text-foreground"
                 aria-label="Dismiss"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3.5 w-3.5" strokeWidth={2.25} />
               </Button>
             </div>
 

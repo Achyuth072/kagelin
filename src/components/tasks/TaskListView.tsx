@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useMemo, useState, useEffect } from "react";
+import React, { memo, useState, useEffect } from "react";
 import { Moon } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import {
@@ -90,6 +90,7 @@ interface TaskListViewProps {
   handleTaskClick: (task: Task) => void;
   keyboardSelectedId: string | null;
   isDndActive?: boolean;
+  scrollParent?: HTMLDivElement | null;
   // Shared props for performance
   projectsMap: Map<string, Project>;
   isDesktop: boolean;
@@ -109,6 +110,7 @@ function TaskListViewBase({
   handleTaskClick,
   keyboardSelectedId,
   isDndActive,
+  scrollParent,
   projectsMap,
   isDesktop,
   triggerHaptic,
@@ -119,8 +121,8 @@ function TaskListViewBase({
   const active = activeTasks;
   const evening = eveningTasks;
 
-  const activeIds = useMemo(() => active.map((t) => t.id), [active]);
-  const eveningIds = useMemo(() => evening.map((t) => t.id), [evening]);
+  const activeIds = active.map((t) => t.id);
+  const eveningIds = evening.map((t) => t.id);
 
   const [hintTaskId, setHintTaskId] = useState<string | null>(null);
 
@@ -139,22 +141,36 @@ function TaskListViewBase({
     setHintTaskId(null);
   };
 
-  const totalGroupedTasks = useMemo(
-    () => groups?.reduce((acc, g) => acc + g.tasks.length, 0) ?? 0,
-    [groups],
-  );
+  const renderSortableTask = (task: Task) => {
+    const project = projectsMap?.get?.(task.project_id || "inbox");
+    return (
+      <SortableListTaskCard
+        key={task.id}
+        task={task}
+        onSelect={handleTaskClick}
+        isKeyboardSelected={task.id === keyboardSelectedId}
+        isDndActive={isDndActive}
+        project={project}
+        isDesktop={isDesktop}
+        triggerHaptic={triggerHaptic}
+        setActiveTaskId={setActiveTaskId}
+        shouldShowHint={task.id === hintTaskId}
+        onHintShown={task.id === hintTaskId ? handleHintShown : undefined}
+      />
+    );
+  };
+
+  const totalGroupedTasks =
+    groups?.reduce((acc, g) => acc + g.tasks.length, 0) ?? 0;
   const shouldVirtualizeGroups =
     groups != null && totalGroupedTasks >= VIRTUALIZATION_THRESHOLD;
 
-  const flattenedGroupTasks = useMemo(
-    () => (shouldVirtualizeGroups ? groups.flatMap((g) => g.tasks) : []),
-    [groups, shouldVirtualizeGroups],
-  );
+  const flattenedGroupTasks =
+    shouldVirtualizeGroups && groups ? groups.flatMap((g) => g.tasks) : [];
+  const flattenedGroupIds = flattenedGroupTasks.map((t) => t.id);
 
-  const groupCounts = useMemo(
-    () => (shouldVirtualizeGroups ? groups.map((g) => g.tasks.length) : []),
-    [groups, shouldVirtualizeGroups],
-  );
+  const groupCounts =
+    shouldVirtualizeGroups && groups ? groups.map((g) => g.tasks.length) : [];
 
   return (
     <div
@@ -163,54 +179,40 @@ function TaskListViewBase({
     >
       {/* 1. Grouped Tasks (Sortable & Virtualized when above threshold) */}
       {groups && shouldVirtualizeGroups && (
-        <GroupedVirtuoso
-          useWindowScroll
-          groupCounts={groupCounts}
-          data={flattenedGroupTasks}
-          computeItemKey={(index, item) =>
-            item ? (item as Task).id : `group-${index}`
-          }
-          groupContent={(groupIndex) => {
-            const group = groups[groupIndex];
-            if (!group) return null;
-            return (
-              <div className="bg-background pt-4 pb-2 z-10">
-                <SectionHeader title={group.title} count={group.tasks.length} />
-              </div>
-            );
-          }}
-          itemContent={(_index, groupIndex, task) => {
-            const group = groups[groupIndex];
-            const project = projectsMap?.get?.(task.project_id || "inbox");
-            const groupTaskIds = group ? group.tasks.map((t) => t.id) : [];
-
-            return (
-              <SortableContext
-                id={group?.title ?? "group"}
-                items={groupTaskIds}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="rounded-xl border border-border bg-background/50 overflow-hidden mb-1">
-                  <SortableListTaskCard
-                    key={task.id}
-                    task={task}
-                    onSelect={handleTaskClick}
-                    isKeyboardSelected={task.id === keyboardSelectedId}
-                    isDndActive={isDndActive}
-                    project={project}
-                    isDesktop={isDesktop}
-                    triggerHaptic={triggerHaptic}
-                    setActiveTaskId={setActiveTaskId}
-                    shouldShowHint={task.id === hintTaskId}
-                    onHintShown={
-                      task.id === hintTaskId ? handleHintShown : undefined
-                    }
+        <SortableContext
+          id="grouped-tasks"
+          items={flattenedGroupIds}
+          strategy={verticalListSortingStrategy}
+        >
+          <GroupedVirtuoso
+            customScrollParent={scrollParent ?? undefined}
+            groupCounts={groupCounts}
+            data={flattenedGroupTasks}
+            computeItemKey={(index, item) =>
+              item ? (item as Task).id : `group-${index}`
+            }
+            groupContent={(groupIndex) => {
+              const group = groups[groupIndex];
+              if (!group) return null;
+              return (
+                <DroppableContainer
+                  id={group.title}
+                  className="bg-background pt-4 pb-2 z-10"
+                >
+                  <SectionHeader
+                    title={group.title}
+                    count={group.tasks.length}
                   />
-                </div>
-              </SortableContext>
-            );
-          }}
-        />
+                </DroppableContainer>
+              );
+            }}
+            itemContent={(_index, _groupIndex, task) => (
+              <div className="rounded-xl border border-border bg-background/50 overflow-hidden mb-1">
+                {renderSortableTask(task)}
+              </div>
+            )}
+          />
+        </SortableContext>
       )}
 
       {groups &&
@@ -229,28 +231,7 @@ function TaskListViewBase({
                   id={group.title}
                   className="flex flex-col gap-0 rounded-xl border border-border bg-background/50 overflow-hidden"
                 >
-                  {group.tasks.map((task: Task) => {
-                    const project = projectsMap?.get?.(
-                      task.project_id || "inbox",
-                    );
-                    return (
-                      <SortableListTaskCard
-                        key={task.id}
-                        task={task}
-                        onSelect={handleTaskClick}
-                        isKeyboardSelected={task.id === keyboardSelectedId}
-                        isDndActive={isDndActive}
-                        project={project}
-                        isDesktop={isDesktop}
-                        triggerHaptic={triggerHaptic}
-                        setActiveTaskId={setActiveTaskId}
-                        shouldShowHint={task.id === hintTaskId}
-                        onHintShown={
-                          task.id === hintTaskId ? handleHintShown : undefined
-                        }
-                      />
-                    );
-                  })}
+                  {group.tasks.map((task: Task) => renderSortableTask(task))}
                 </DroppableContainer>
               </SortableContext>
             </section>
@@ -267,28 +248,7 @@ function TaskListViewBase({
           >
             <DroppableContainer id="active-section" className="flex flex-col">
               <div className="flex flex-col gap-0 rounded-xl border border-border bg-background/50 overflow-hidden">
-                {active.map((task) => {
-                  const project = projectsMap?.get?.(
-                    task.project_id || "inbox",
-                  );
-                  return (
-                    <SortableListTaskCard
-                      key={task.id}
-                      task={task}
-                      onSelect={handleTaskClick}
-                      isKeyboardSelected={task.id === keyboardSelectedId}
-                      isDndActive={isDndActive}
-                      project={project}
-                      isDesktop={isDesktop}
-                      triggerHaptic={triggerHaptic}
-                      setActiveTaskId={setActiveTaskId}
-                      shouldShowHint={task.id === hintTaskId}
-                      onHintShown={
-                        task.id === hintTaskId ? handleHintShown : undefined
-                      }
-                    />
-                  );
-                })}
+                {active.map((task) => renderSortableTask(task))}
               </div>
             </DroppableContainer>
           </SortableContext>
@@ -306,7 +266,7 @@ function TaskListViewBase({
           <SectionHeader
             title="This Evening"
             count={evening.length > 0 ? evening.length : undefined}
-            icon={<Moon className="h-4 w-4" />}
+            icon={<Moon className="h-4 w-4" strokeWidth={2.25} />}
           />
           <SortableContext
             id="evening-section"
@@ -315,30 +275,9 @@ function TaskListViewBase({
           >
             <DroppableContainer id="evening-section" className="flex flex-col">
               <div className="flex flex-col gap-0 rounded-xl border border-border bg-background/50 overflow-hidden">
-                {evening.map((task) => {
-                  const project = projectsMap?.get?.(
-                    task.project_id || "inbox",
-                  );
-                  return (
-                    <SortableListTaskCard
-                      key={task.id}
-                      task={task}
-                      onSelect={handleTaskClick}
-                      isKeyboardSelected={task.id === keyboardSelectedId}
-                      isDndActive={isDndActive}
-                      project={project}
-                      isDesktop={isDesktop}
-                      triggerHaptic={triggerHaptic}
-                      setActiveTaskId={setActiveTaskId}
-                      shouldShowHint={task.id === hintTaskId}
-                      onHintShown={
-                        task.id === hintTaskId ? handleHintShown : undefined
-                      }
-                    />
-                  );
-                })}
+                {evening.map((task) => renderSortableTask(task))}
                 {evening.length === 0 && (
-                  <div className="h-12 flex items-center justify-center border-2 border-dashed border-primary/20 rounded-2xl mx-1">
+                  <div className="h-12 flex items-center justify-center border-2 border-dashed border-primary/20 rounded-xl mx-1">
                     <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest">
                       Drop here for evening
                     </span>

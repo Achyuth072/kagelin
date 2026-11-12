@@ -229,7 +229,7 @@ const KanbanColumn = memo(function KanbanColumn({
   return (
     <section
       ref={setNodeRef}
-      className="w-[85vw] md:w-[320px] shrink-0 snap-center bg-sidebar border border-border rounded-2xl flex flex-col p-0.5 max-h-[calc(100dvh-200px)] md:max-h-full"
+      className="w-[85vw] md:w-[320px] shrink-0 snap-center bg-sidebar border border-border rounded-xl flex flex-col p-0.5 max-h-[calc(100dvh-200px)] md:max-h-full"
     >
       <div className="px-3 py-2.5 flex items-center justify-between">
         <h3 className="type-h3 lowercase tracking-tight text-foreground/70">
@@ -269,7 +269,7 @@ const KanbanColumn = memo(function KanbanColumn({
             );
           })}
           {group.tasks.length === 0 && (
-            <div className="h-24 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border/40 rounded-2xl">
+            <div className="h-24 flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border/40 rounded-xl">
               <span className="text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest">
                 Ma (Void)
               </span>

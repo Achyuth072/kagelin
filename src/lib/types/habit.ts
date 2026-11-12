@@ -15,7 +15,7 @@ export interface Habit extends MaybeUnreadable {
   frequency_count?: number | null;
   frequency_days?: number | null;
   frequency_period?: FrequencyPeriod | null;
-  target_type?: "at_least" | "at_most" | null;
+  target_type?: TargetType | null;
   target_value?: number | null;
   unit?: string | null;
   question?: string | null;
@@ -39,6 +39,8 @@ export interface HabitWithEntries extends Habit {
 }
 
 export type HabitType = "boolean" | "measurable";
+
+export type TargetType = "at_least" | "at_most";
 
 export const FREQUENCY_PERIODS = ["day", "week", "month"] as const;
 export type FrequencyPeriod = (typeof FREQUENCY_PERIODS)[number];

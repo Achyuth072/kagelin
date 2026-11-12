@@ -200,7 +200,8 @@ describe("TaskBoard Overlay Drawer and Architecture Consolidation", () => {
     // Zero background blur: ensure no backdrop-blur class and no heavy shadow-xl outline blur
     expect(drawer.className).not.toMatch(/backdrop-blur/);
     const shell = drawer.firstElementChild;
-    expect(shell).toHaveClass("shadow-md");
+    expect(shell).toHaveClass("shadow-sm");
+    expect(shell).not.toHaveClass("shadow-md");
     expect(shell).not.toHaveClass("shadow-xl");
 
     // Background board container remains full width without horizontal compression

@@ -52,9 +52,9 @@ export function RecoveryCodeDisplay({
           onClick={handleCopy}
         >
           {copied ? (
-            <Check className="h-4 w-4" />
+            <Check className="h-4 w-4" strokeWidth={2.25} />
           ) : (
-            <Copy className="h-4 w-4" />
+            <Copy className="h-4 w-4" strokeWidth={2.25} />
           )}
           Copy
         </Button>
@@ -64,7 +64,7 @@ export function RecoveryCodeDisplay({
           className="flex-1 gap-2"
           onClick={() => downloadRecoveryCode(recoveryCode)}
         >
-          <Download className="h-4 w-4" />
+          <Download className="h-4 w-4" strokeWidth={2.25} />
           Download
         </Button>
       </div>

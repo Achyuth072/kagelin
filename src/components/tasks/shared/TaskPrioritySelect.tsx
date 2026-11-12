@@ -104,6 +104,7 @@ export function TaskPrioritySelect({
                     ? "text-muted-foreground"
                     : p.color.split(" ")[0].replace("bg-", "text-"),
                 )}
+                strokeWidth={2.25}
               />
               <span className="font-medium">
                 {p.label} —{" "}

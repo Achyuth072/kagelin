@@ -186,7 +186,7 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
                 className="text-[11px] font-mono text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary/40 border border-border/50"
                 title="Reset selection"
               >
-                <RotateCcw className="h-2.5 w-2.5" />
+                <RotateCcw className="h-2.5 w-2.5" strokeWidth={2.25} />
                 <span>Reset</span>
               </button>
             )}

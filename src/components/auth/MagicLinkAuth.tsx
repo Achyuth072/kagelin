@@ -104,7 +104,10 @@ export function MagicLinkAuth({
             >
               {loading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2
+                    className="mr-2 h-4 w-4 animate-spin"
+                    strokeWidth={2.25}
+                  />
                   Continuing...
                 </>
               ) : (

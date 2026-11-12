@@ -55,7 +55,10 @@ export const DragHandle = React.forwardRef<HTMLDivElement, DragHandleProps>(
         )}
         style={isDesktop ? undefined : { touchAction: "none" }}
       >
-        <GripVertical className={cn(isDesktop ? "h-4 w-4" : "h-5 w-5")} />
+        <GripVertical
+          className={cn(isDesktop ? "h-4 w-4" : "h-5 w-5")}
+          strokeWidth={2.25}
+        />
       </div>
     );
   },

@@ -4,8 +4,10 @@ import React, { useState, useCallback, useMemo } from "react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import { cn } from "@/lib/utils";
+import { SEIJAKU_SPRING } from "@/lib/motion";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
+import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 
 interface SegmentedTimePickerProps {
   value: Date;
@@ -23,6 +25,7 @@ export function SegmentedTimePicker({
   timeFormat: timeFormatProp,
 }: SegmentedTimePickerProps) {
   const { trigger } = useHaptic();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const { timeFormat: defaultTimeFormat } = useTimeFormat();
 
   const effectiveFormat = timeFormatProp ?? defaultTimeFormat ?? "12h";
@@ -240,7 +243,9 @@ export function SegmentedTimePicker({
                 key={`h-${is24hr ? hours : h12}`}
                 initial={{ y: lastDelta > 0 ? -2 : 2, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                transition={
+                  prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING
+                }
                 className={cn(
                   "leading-none block font-semibold tracking-tight",
                   compact ? "text-2xl" : "text-4xl md:text-5xl",
@@ -295,7 +300,9 @@ export function SegmentedTimePicker({
                 key={`m-${minutes}`}
                 initial={{ y: lastDelta > 0 ? -2 : 2, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                transition={
+                  prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING
+                }
                 className={cn(
                   "leading-none block font-semibold tracking-tight",
                   compact ? "text-2xl" : "text-4xl md:text-5xl",

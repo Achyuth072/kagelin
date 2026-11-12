@@ -208,6 +208,11 @@ function TaskListBase({
     null,
   );
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollParent, setScrollParent] = useState<HTMLDivElement | null>(null);
+  const handleScrollContainerRef = useCallback((el: HTMLDivElement | null) => {
+    scrollContainerRef.current = el;
+    setScrollParent((prev) => (prev === el ? prev : el));
+  }, []);
   const pendingDoublePressRef = useRef<{
     key: "g" | "y";
     timestamp: number;
@@ -1007,7 +1012,7 @@ function TaskListBase({
       >
         <div className="flex h-full w-full overflow-hidden relative">
           <div
-            ref={scrollContainerRef}
+            ref={handleScrollContainerRef}
             data-task-list-scroll-container="true"
             role="grid"
             aria-label={viewMode === "board" ? "Task board" : "Task list"}
@@ -1057,6 +1062,7 @@ function TaskListBase({
                 handleTaskClick={handleTaskClick}
                 keyboardSelectedId={keyboardSelectedId}
                 isDndActive={dnd.isDragging}
+                scrollParent={scrollParent}
                 projectsMap={projectsMap}
                 isDesktop={isDesktop}
                 triggerHaptic={triggerHaptic}
@@ -1101,7 +1107,7 @@ function TaskListBase({
               <InspectorCardShell
                 task={activeInspectorTask}
                 onClose={handleCloseDetail}
-                shadowClass="shadow-md"
+                shadowClass="shadow-sm"
               />
             </div>
           )}

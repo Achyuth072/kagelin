@@ -42,7 +42,7 @@ export function AnimatedNumber({
   isolate = true,
   "data-testid": testId,
 }: AnimatedNumberProps) {
-  const parsed = React.useMemo(() => parseNumericValue(value), [value]);
+  const parsed = parseNumericValue(value);
 
   if (!parsed) {
     return <span className={className}>{value}</span>;

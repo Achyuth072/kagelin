@@ -186,9 +186,10 @@ export function EditProjectDialog({
             >
               <Save
                 className={cn(
-                  "h-5 w-5 stroke-[2.25px]",
+                  "h-5 w-5",
                   updateProject.isPending && "opacity-50",
                 )}
+                strokeWidth={2.25}
               />
             </Button>
           </div>

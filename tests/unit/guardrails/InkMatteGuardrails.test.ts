@@ -35,6 +35,100 @@ export const BadComponent = () => (
     ).toBe(true);
   });
 
+  it("ESLint blocks rounded-2xl and elevated shadows on raw HTML/Motion elements and shadowClass props", async () => {
+    const eslint = new ESLint();
+    const [badResult] = await eslint.lintText(
+      `import { m } from "motion/react";
+export const BadRawSurfaces = () => (
+  <div className="rounded-2xl shadow-lg backdrop-blur-md">
+    <m.div className="shadow-md" />
+    <FloatingPanel shadowClass="shadow-md" />
+  </div>
+);`,
+      { filePath: path.join(rootDir, "src/components/BadRawSurfaces.tsx") },
+    );
+
+    const surfaceErrors = badResult.messages.filter(
+      (m) => m.ruleId === "local/no-elevated-matte-tokens" && m.severity === 2,
+    );
+    expect(surfaceErrors.length).toBeGreaterThanOrEqual(4);
+    expect(surfaceErrors.some((m) => m.message.includes("rounded-2xl"))).toBe(
+      true,
+    );
+    expect(surfaceErrors.some((m) => m.message.includes("shadow-lg"))).toBe(
+      true,
+    );
+    expect(surfaceErrors.some((m) => m.message.includes("shadow-md"))).toBe(
+      true,
+    );
+    expect(
+      surfaceErrors.some((m) => m.message.includes("backdrop-blur-md")),
+    ).toBe(true);
+
+    const [goodResult] = await eslint.lintText(
+      `export const GoodMatteSurface = () => (
+  <div className="rounded-xl shadow-sm border border-border">
+    <FloatingPanel shadowClass="shadow-sm" />
+  </div>
+);`,
+      { filePath: path.join(rootDir, "src/components/GoodMatteSurface.tsx") },
+    );
+    expect(
+      goodResult.messages.filter(
+        (m) => m.ruleId === "local/no-elevated-matte-tokens",
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("ESLint enforces strokeWidth={2.25} on lucide-react icons across stats/ while sparing Recharts and CircularProgress", async () => {
+    const eslint = new ESLint();
+    const [statsResult] = await eslint.lintText(
+      `import { Sparkles, Calendar as CalendarIcon, Flame } from "lucide-react";
+import { Line } from "recharts";
+import { CircularProgress } from "@/components/ui/circular-progress";
+
+export const BadStatsChart = () => (
+  <div>
+    <Sparkles className="h-4 w-4" />
+    <CalendarIcon className="h-4 w-4" strokeWidth={2} />
+    <Flame className="h-4 w-4" strokeWidth={2.25} />
+    <Line type="monotone" dataKey="value" strokeWidth={2} />
+    <CircularProgress value={50} strokeWidth={3} />
+  </div>
+);`,
+      {
+        filePath: path.join(rootDir, "src/components/stats/BadStatsChart.tsx"),
+      },
+    );
+
+    const lucideErrors = statsResult.messages.filter(
+      (m) => m.ruleId === "local/lucide-stroke-width" && m.severity === 2,
+    );
+    expect(lucideErrors).toHaveLength(2);
+    expect(lucideErrors.some((m) => m.message.includes("Sparkles"))).toBe(true);
+    expect(lucideErrors.some((m) => m.message.includes("CalendarIcon"))).toBe(
+      true,
+    );
+
+    const [uiResult] = await eslint.lintText(
+      `import { Check, X } from "lucide-react";
+export const UiPrimitiveIcons = () => (
+  <>
+    <Check className="h-4 w-4" strokeWidth={3} />
+    <X className="h-4 w-4" />
+  </>
+);`,
+      {
+        filePath: path.join(rootDir, "src/components/ui/UiPrimitiveIcons.tsx"),
+      },
+    );
+    const uiErrors = uiResult.messages.filter(
+      (m) => m.ruleId === "local/lucide-stroke-width" && m.severity === 2,
+    );
+    expect(uiErrors).toHaveLength(1);
+    expect(uiErrors[0].message).toContain("X");
+  });
+
   it("ESLint blocks eager motion and legacy framer-motion imports", async () => {
     const eslint = new ESLint();
     const [result] = await eslint.lintText(

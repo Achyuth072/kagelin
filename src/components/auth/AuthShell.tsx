@@ -34,7 +34,7 @@ export function AuthShell({
                 width={64}
                 height={64}
                 priority
-                className="h-12 w-12 sm:h-16 sm:w-16 rounded-2xl shrink-0"
+                className="h-12 w-12 sm:h-16 sm:w-16 rounded-xl shrink-0"
               />
               {children}
             </div>

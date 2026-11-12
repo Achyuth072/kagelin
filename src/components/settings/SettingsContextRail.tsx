@@ -110,9 +110,17 @@ export function SettingsContextRail({
       className="w-full h-8 text-xs font-medium border-border/80 hover:bg-secondary/40 transition-seijaku-fast gap-1.5 focus-visible:ring-2 focus-visible:ring-ring"
     >
       {isExporting ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+        <Loader2
+          className="h-3.5 w-3.5 animate-spin"
+          aria-hidden="true"
+          strokeWidth={2.25}
+        />
       ) : (
-        <Download className="h-3.5 w-3.5" aria-hidden="true" />
+        <Download
+          className="h-3.5 w-3.5"
+          aria-hidden="true"
+          strokeWidth={2.25}
+        />
       )}
       {label}
     </Button>
@@ -168,7 +176,11 @@ export function SettingsContextRail({
       {activeTab === "preferences" && (
         <div className="flex flex-col gap-4">
           <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <Sliders className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+            <Sliders
+              className="h-3.5 w-3.5 text-brand"
+              aria-hidden="true"
+              strokeWidth={2.25}
+            />
             <span>Signals & Shortcuts</span>
           </h2>
 
@@ -184,6 +196,7 @@ export function SettingsContextRail({
               <Bell
                 className="h-3.5 w-3.5 text-muted-foreground"
                 aria-hidden="true"
+                strokeWidth={2.25}
               />
             </div>
 
@@ -309,6 +322,7 @@ export function SettingsContextRail({
                 <Keyboard
                   className="h-3.5 w-3.5 text-brand"
                   aria-hidden="true"
+                  strokeWidth={2.25}
                 />
                 <span>Quick Hotkeys</span>
               </h3>
@@ -322,7 +336,11 @@ export function SettingsContextRail({
                 title="View all shortcuts (?)"
                 aria-label="View all keyboard shortcuts"
               >
-                <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                <HelpCircle
+                  className="h-3.5 w-3.5"
+                  aria-hidden="true"
+                  strokeWidth={2.25}
+                />
                 <span>All (?)</span>
               </button>
             </div>
@@ -358,6 +376,7 @@ export function SettingsContextRail({
             <ShieldCheck
               className="h-3.5 w-3.5 text-brand"
               aria-hidden="true"
+              strokeWidth={2.25}
             />
             <span>Account & Data Health</span>
           </h2>
@@ -377,6 +396,7 @@ export function SettingsContextRail({
                   <HardDrive
                     className="h-3.5 w-3.5 text-brand"
                     aria-hidden="true"
+                    strokeWidth={2.25}
                   />
                 </div>
 
@@ -438,6 +458,7 @@ export function SettingsContextRail({
                   <CheckCircle2
                     className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400"
                     aria-hidden="true"
+                    strokeWidth={2.25}
                   />
                   <span>Local-First Persistence</span>
                 </h3>
@@ -463,6 +484,7 @@ export function SettingsContextRail({
                   <Activity
                     className="h-3.5 w-3.5 text-brand"
                     aria-hidden="true"
+                    strokeWidth={2.25}
                   />
                 </div>
 
@@ -506,7 +528,11 @@ export function SettingsContextRail({
                 aria-label="Encryption status"
               >
                 <h3 className="flex items-center gap-2 text-xs font-medium text-foreground">
-                  <Lock className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+                  <Lock
+                    className="h-3.5 w-3.5 text-brand"
+                    aria-hidden="true"
+                    strokeWidth={2.25}
+                  />
                   <span>Content Encryption</span>
                 </h3>
                 <p className="type-micro text-muted-foreground leading-relaxed">

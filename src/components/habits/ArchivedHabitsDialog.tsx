@@ -56,7 +56,10 @@ export function ArchivedHabitsDialog({
           <div className="flex-1 overflow-y-auto min-h-0 px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             {isLoading ? (
               <div className="flex justify-center p-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Loader2
+                  className="h-6 w-6 animate-spin text-muted-foreground"
+                  strokeWidth={2.25}
+                />
               </div>
             ) : archivedHabits && archivedHabits.length > 0 ? (
               <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2">
@@ -84,7 +87,10 @@ export function ArchivedHabitsDialog({
                           onClick={() => unarchiveHabit.mutate(habit.id)}
                           disabled={unarchiveHabit.isPending}
                         >
-                          <ArchiveRestore className="h-4 w-4" />
+                          <ArchiveRestore
+                            className="h-4 w-4"
+                            strokeWidth={2.25}
+                          />
                           Restore
                         </Button>
                         <Button
@@ -94,7 +100,7 @@ export function ArchivedHabitsDialog({
                           onClick={() => setHabitToDelete(habit)}
                           aria-label={`Delete ${habit.name ?? UNREADABLE_LABEL}`}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" strokeWidth={2.25} />
                         </Button>
                       </div>
                     </div>

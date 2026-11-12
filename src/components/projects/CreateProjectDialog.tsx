@@ -157,7 +157,7 @@ export function CreateProjectDialog({
                 createProject.isPending ? "Creating project" : "Create project"
               }
             >
-              <Send className="h-5 w-5 stroke-[2.25px]" />
+              <Send className="h-5 w-5" strokeWidth={2.25} />
             </Button>
           </div>
         </form>

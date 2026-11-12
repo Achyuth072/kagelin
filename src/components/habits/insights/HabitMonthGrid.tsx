@@ -105,7 +105,7 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
             onClick={handlePrev}
             className="h-7 w-7 sm:h-8 sm:w-8 rounded-md text-muted-foreground hover:text-brand hover:bg-brand/10 transition-seijaku-fast focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40 disabled:bg-transparent"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-4 w-4" strokeWidth={2.25} />
           </Button>
           <Button
             variant="ghost"
@@ -129,7 +129,7 @@ export function HabitMonthGrid({ habit }: HabitMonthGridProps) {
             onClick={handleNext}
             className="h-7 w-7 sm:h-8 sm:w-8 rounded-md text-muted-foreground hover:text-brand hover:bg-brand/10 transition-seijaku-fast focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-40 disabled:bg-transparent"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
           </Button>
         </div>
       </div>
