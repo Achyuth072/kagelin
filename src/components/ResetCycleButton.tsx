@@ -38,8 +38,6 @@ export function ResetCycleButton({
 
   const hasCycleProgress = completedSessions > 0 || mode === "longBreak";
 
-  if (!hasCycleProgress) return null;
-
   const handleReset = () => {
     trigger("thud");
     stop();
@@ -52,15 +50,17 @@ export function ResetCycleButton({
 
   return (
     <>
-      <div className="py-4 flex justify-center">
-        <button
-          onClick={() => setConfirmOpen(true)}
-          className={cn(ACTIVE_CLASSES, className)}
-          type="button"
-          aria-label="Reset cycle (starts from Session 1)"
-        >
-          Reset cycle
-        </button>
+      <div className="h-12 flex items-center justify-center">
+        {hasCycleProgress && (
+          <button
+            onClick={() => setConfirmOpen(true)}
+            className={cn(ACTIVE_CLASSES, className)}
+            type="button"
+            aria-label="Reset cycle (starts from Session 1)"
+          >
+            Reset cycle
+          </button>
+        )}
       </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

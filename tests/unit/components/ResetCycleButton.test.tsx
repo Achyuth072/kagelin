@@ -40,9 +40,9 @@ describe("ResetCycleButton", () => {
     });
   });
 
-  it("does not render when there is no cycle progress", () => {
+  it("reserves layout slot without rendering button when there is no cycle progress", () => {
     const { container } = render(<ResetCycleButton />);
-    expect(container.innerHTML).toBe("");
+    expect(container.firstElementChild).toHaveClass("h-12");
     expect(
       screen.queryByRole("button", { name: /Reset cycle/i }),
     ).not.toBeInTheDocument();

@@ -57,8 +57,9 @@ export function StopSessionButton({
       <TooltipTrigger asChild>
         <m.button
           className={cn(
-            "h-12 w-12 rounded-full border border-border/80 bg-background/50 hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-seijaku active:scale-95 text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-background/50 disabled:hover:text-muted-foreground",
+            "h-12 w-12 rounded-full hover:bg-accent hover:text-accent-foreground flex items-center justify-center transition-seijaku active:scale-95 text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-muted-foreground",
             className,
+            "disabled:bg-transparent",
           )}
           onTapStart={() => isSessionActive && trigger("thud")}
           whileTap={isPhone && isSessionActive ? { scale: 0.95 } : {}}

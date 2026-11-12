@@ -34,7 +34,7 @@ const MODE_LABELS: Record<TimerMode, string> = {
 
 const sideControlCls = cn(
   buttonVariants({ variant: "ghost", size: "icon" }),
-  "h-14 w-14 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-seijaku cursor-pointer",
+  "h-14 w-14 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-seijaku cursor-pointer disabled:bg-transparent",
 );
 
 export default function FocusPage() {

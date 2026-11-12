@@ -40,14 +40,27 @@ describe("StopSessionButton", () => {
     });
   });
 
-  it("is disabled when timer is idle", () => {
+  it("is disabled when timer is idle and does not render a background disc", () => {
     render(<StopSessionButton />);
 
     const button = screen.getByRole("button", { name: "Stop session" });
     expect(button).toBeDisabled();
+    expect(button.className).not.toContain("border-border");
+    expect(button.className).toContain("disabled:bg-transparent");
+    expect(button.className).not.toContain("disabled:bg-muted");
 
     fireEvent.click(button);
     expect(mockCancel).not.toHaveBeenCalled();
+  });
+
+  it("retains disabled:bg-transparent even when ghost buttonVariants are passed as className", () => {
+    const ghostCls = "inline-flex disabled:bg-muted text-muted-foreground";
+    render(<StopSessionButton className={ghostCls} />);
+
+    const button = screen.getByRole("button", { name: "Stop session" });
+    expect(button).toBeDisabled();
+    expect(button.className).not.toContain("disabled:bg-muted");
+    expect(button.className).toContain("disabled:bg-transparent");
   });
 
   it("is enabled and calls cancel() when timer is running", () => {
