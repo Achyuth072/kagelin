@@ -104,9 +104,7 @@ describe("ListTaskCard", () => {
     expect(cluster.className).toContain("flex-shrink-0");
 
     // Stepped priority glyph and P1 chip
-    expect(
-      screen.getAllByRole("img", { name: "Priority P1" }).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByRole("img", { name: "Priority P1" })).toHaveLength(1);
     expect(screen.getByText("P1")).toBeInTheDocument();
 
     // Steps fraction chip button
