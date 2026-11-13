@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.51.1",
+    "date": "2026-11-13",
+    "channel": "stable",
+    "sections": {
+      "Improved": [
+        "Optimize number-flow animations for mobile and background tabs"
+      ],
+      "Fixed": [
+        "Dismiss floating timer when session is stopped and enable manual close",
+        "Remove duplicate priority glyph from list task card",
+        "Security: hardened database function permissions after a report from GuardLayer (https://guardlayer.io). Internal reminder and briefing functions are no longer callable with the public anon key, edge-function invocation is allowlisted, and default function grants are locked down."
+      ]
+    }
+  },
+  {
     "version": "1.51.1-preview.0",
     "date": "2026-11-13",
     "channel": "preview",
@@ -811,18 +826,6 @@
         "Reminder actions save, frequency field typing, export keeps edited frequency",
         "Reminder deep link keeps the back anchor, name all-skipped imports, share habit link contract",
         "Reminders open their habit, import names skipped habits, and review cleanups"
-      ]
-    }
-  },
-  {
-    "version": "1.45.0-preview.3",
-    "date": "2026-09-26",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Habit reminders follow frequency window",
-        "Done/skip actions on habit reminders",
-        "Habit reminders name the habit via encrypted title envelope"
       ]
     }
   }
