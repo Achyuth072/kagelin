@@ -19,6 +19,12 @@ vi.mock("@/lib/store/timerStore", () => ({
         remainingSeconds: number;
         completedSessions: number;
       };
+      settings: {
+        focusDuration: number;
+        shortBreakDuration: number;
+        longBreakDuration: number;
+        sessionsBeforeLongBreak: number;
+      };
     }) => unknown,
   ) =>
     selector({
@@ -27,6 +33,12 @@ vi.mock("@/lib/store/timerStore", () => ({
         isRunning: true,
         remainingSeconds: 1500,
         completedSessions: 0,
+      },
+      settings: {
+        focusDuration: 25,
+        shortBreakDuration: 5,
+        longBreakDuration: 15,
+        sessionsBeforeLongBreak: 4,
       },
     }),
 }));

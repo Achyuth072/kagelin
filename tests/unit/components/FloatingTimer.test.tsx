@@ -76,6 +76,12 @@ interface MockTimerStoreState {
     remainingSeconds: number;
     completedSessions: number;
   };
+  settings: {
+    focusDuration: number;
+    shortBreakDuration: number;
+    longBreakDuration: number;
+    sessionsBeforeLongBreak: number;
+  };
   start: typeof mockRawStart;
   pause: typeof mockRawPause;
 }
@@ -88,6 +94,12 @@ vi.mock("@/lib/store/timerStore", () => ({
         isRunning: mockIsRunning,
         remainingSeconds: mockRemainingSeconds,
         completedSessions: mockCompletedSessions,
+      },
+      settings: {
+        focusDuration: 25,
+        shortBreakDuration: 5,
+        longBreakDuration: 15,
+        sessionsBeforeLongBreak: 4,
       },
       // Raw store actions — must NOT be the ones this component invokes.
       start: mockRawStart,
@@ -130,6 +142,7 @@ describe("FloatingTimer", () => {
 
   it("calls the synced start() (not the raw store) when paused and play/pause is tapped", () => {
     mockIsRunning = false;
+    mockRemainingSeconds = 1200;
 
     render(<FloatingTimer />);
     fireEvent.click(screen.getByRole("button", { name: "Start timer" }));
@@ -138,14 +151,36 @@ describe("FloatingTimer", () => {
     expect(mockRawStart).not.toHaveBeenCalled();
   });
 
-  it("calls the synced pause() (not the raw store) when the close button is tapped", () => {
+  it("calls the synced pause() (not the raw store) and dismisses the timer when the close button is tapped", () => {
     mockIsRunning = true;
+    mockRemainingSeconds = 1200;
 
     render(<FloatingTimer />);
+    expect(screen.getByTestId("floating-timer")).toBeInTheDocument();
+
     fireEvent.click(screen.getByRole("button", { name: "Close timer" }));
 
     expect(mockSyncedPause).toHaveBeenCalledTimes(1);
     expect(mockRawPause).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("floating-timer")).not.toBeInTheDocument();
+  });
+
+  it("does not render when session is idle/cancelled even if completedSessions > 0", () => {
+    mockIsRunning = false;
+    mockRemainingSeconds = 1500; // at full duration (not started or cancelled)
+    mockCompletedSessions = 2;
+
+    render(<FloatingTimer />);
+    expect(screen.queryByTestId("floating-timer")).not.toBeInTheDocument();
+  });
+
+  it("renders when paused mid-session (remainingSeconds < totalSeconds)", () => {
+    mockIsRunning = false;
+    mockRemainingSeconds = 1200; // mid-session
+    mockCompletedSessions = 1;
+
+    render(<FloatingTimer />);
+    expect(screen.getByTestId("floating-timer")).toBeInTheDocument();
   });
 
   it("does not render when isDesktop is false", () => {
