@@ -60,6 +60,37 @@ export function findVulnerableSecurityDefinerFunctions(sqlContent: string): {
   return violations;
 }
 
+/** Collects every RPC name passed to `.rpc("...")` in the given directories. */
+export function findClientRpcCalls(dirs: string[]): string[] {
+  const rpcs = new Set<string>();
+  const regex = /\.rpc\s*(?:<[^>]+>)?\s*\(\s*["`]([a-zA-Z0-9_]+)["`]/g;
+
+  function walk(dir: string) {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (
+        /\.(ts|tsx)$/.test(entry.name) &&
+        !/\.(test|spec)\.ts$/.test(entry.name)
+      ) {
+        const content = fs.readFileSync(full, "utf8");
+        let match: RegExpExecArray | null;
+        while ((match = regex.exec(content)) !== null) {
+          rpcs.add(match[1]);
+        }
+      }
+    }
+  }
+
+  for (const d of dirs) {
+    walk(d);
+  }
+
+  return Array.from(rpcs).sort();
+}
+
 describe("Security Definer Privilege Guardrails (Supabase Advisor 0028/0029)", () => {
   const rootDir = path.resolve(__dirname, "../../..");
   const schemaPath = path.join(rootDir, "supabase/schema.sql");
@@ -140,5 +171,34 @@ GRANT EXECUTE ON FUNCTION public.user_helper() TO authenticated;
 
     const violations = findVulnerableSecurityDefinerFunctions(invokerSnippet);
     expect(violations).toEqual([]);
+  });
+
+  it("verifies all client-called RPCs in src/ and app/ have explicit GRANT EXECUTE ... TO authenticated in schema.sql", () => {
+    const srcDir = path.join(rootDir, "src");
+    const appDir = path.join(rootDir, "app");
+    const clientRpcs = findClientRpcCalls([srcDir, appDir]);
+
+    const schemaSql = fs.readFileSync(schemaPath, "utf8");
+
+    const missingGrants: string[] = [];
+    for (const rpc of clientRpcs) {
+      const grantRegex = new RegExp(
+        `GRANT\\s+(?:EXECUTE|ALL)\\s+ON\\s+FUNCTION\\s+(?:public\\.)?${rpc}\\b[^;]*TO\\s+[^;]*\\bauthenticated\\b`,
+        "i",
+      );
+      if (!grantRegex.test(schemaSql)) {
+        missingGrants.push(rpc);
+      }
+    }
+
+    expect(
+      missingGrants,
+      `The following RPCs are called by frontend code (src/ or app/) but are missing explicit "GRANT EXECUTE ... TO authenticated" in supabase/schema.sql:\n${missingGrants
+        .map(
+          (r) =>
+            ` - ${r}: add GRANT EXECUTE ON FUNCTION public.${r}(...) TO authenticated;`,
+        )
+        .join("\n")}`,
+    ).toEqual([]);
   });
 });

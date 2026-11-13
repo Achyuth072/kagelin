@@ -1617,6 +1617,18 @@ CREATE POLICY "Users can update own timer state" ON public.user_timer_state
 -- Add to realtime publication (required for postgres_changes events)
 ALTER PUBLICATION supabase_realtime ADD TABLE public.user_timer_state;
 
+-- Server clock probe for timer synchronization (ADR 0002)
+CREATE OR REPLACE FUNCTION public.server_now_ms()
+RETURNS BIGINT
+LANGUAGE sql
+STABLE
+SET search_path = ''
+AS $$
+  SELECT (EXTRACT(EPOCH FROM clock_timestamp()) * 1000)::BIGINT;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.server_now_ms() TO authenticated;
+
 -- =============================================================================
 -- 16. TIMER NOTIFICATION CHAIN TRIGGER (server-derived timer_end scheduling)
 -- =============================================================================
