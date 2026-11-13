@@ -6,6 +6,7 @@ Full feature list for [Kagelin](../README.md).
 
 - **Search** (`Ctrl/Cmd+K`): instant search across tasks, habits, and events, plus navigation and actions.
 - **Task views**: Board and List view with 2D keyboard navigation.
+- **Touch gestures**: swipeable task cards on mobile to complete or reschedule, with long-press drag-and-drop reordering.
 - **Logbook**: completed tasks grouped and paginated by completion date.
 - **Vim navigation & task controls**: `gg`/`G` navigation, `yy` yank, `p` paste, and `u` undo.
 - **Split View**: Desktop List opens a master-detail panel automatically.
@@ -19,7 +20,7 @@ Full feature list for [Kagelin](../README.md).
 
 ## Focus & Habits
 
-- **Focus Timer**: PiP-enabled Pomodoro engine that hands off between your devices, so pausing on one pauses on all of them. Shows a step checklist for the task you're focusing on.
+- **Focus Timer**: PiP-enabled Pomodoro engine that hands off between your devices, so pausing on one pauses on all of them. Shows a step checklist for the task you're focusing on and a persistent floating countdown across other views.
 - **Push notifications**: server-derived Web Push notifications for timer completions and task, event, and habit reminders (supporting desktop, Android, and iOS standalone PWA). Done, Snooze, and Skip buttons appear where the platform supports notification actions; iOS ignores them, so tapping the notification opens the app instead.
 - **Daily briefings**: a morning brief (today's tasks, overdue items, events, pending habits) and an evening plan (what you finished, what's planned for tomorrow).
 - **Habit tracking**: Yes/No and Measurable habits with frequency-aware streaks, targets, entry notes, and archive/restore.
@@ -51,7 +52,7 @@ Full feature list for [Kagelin](../README.md).
 
 ## Stats & Insights
 
-- **Stats page**: period selector, breakdowns by project and priority, time-of-day heatmap.
+- **Stats page**: period selector, focus and task completion trend charts, breakdowns by project and priority, and 24-hour time-of-day heatmap.
 - **Item insights**: per-habit and per-recurring-task stats — score history, streaks, frequency, on-time rate.
 - **Goal tracking**: progress rings on habit cards, global focus and task goals.
 - **Export**: analytics CSV and JSON from stats and insights panels.
