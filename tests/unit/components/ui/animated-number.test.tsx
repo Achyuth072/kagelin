@@ -1,6 +1,5 @@
 import { render } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
-import React from "react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
 
 function getRenderedText(container: HTMLElement): string {
@@ -123,5 +122,36 @@ describe("AnimatedNumber", () => {
     const el = container.querySelector("number-flow-react") as
       (HTMLElement & { animated?: boolean }) | null;
     expect(el?.animated).toBe(false);
+  });
+
+  it("allows setting willChange prop for GPU layer promotion", () => {
+    const { container } = render(
+      <AnimatedNumber value={42} willChange={true} />,
+    );
+    const el = container.querySelector("number-flow-react");
+    expect(el?.hasAttribute("data-will-change")).toBe(true);
+  });
+
+  it("disables animation when document is hidden to conserve resources", () => {
+    const originalHidden = Object.getOwnPropertyDescriptor(document, "hidden");
+    try {
+      Object.defineProperty(document, "hidden", {
+        configurable: true,
+        value: true,
+      });
+      const { container } = render(<AnimatedNumber value={42} />);
+      const el = container.querySelector("number-flow-react") as
+        (HTMLElement & { animated?: boolean }) | null;
+      expect(el?.animated).toBe(false);
+    } finally {
+      if (originalHidden) {
+        Object.defineProperty(document, "hidden", originalHidden);
+      } else {
+        Object.defineProperty(document, "hidden", {
+          configurable: true,
+          value: false,
+        });
+      }
+    }
   });
 });

@@ -1,8 +1,9 @@
 "use client";
 
-import * as React from "react";
+import { useState } from "react";
 import NumberFlow, { type Trend, type Format } from "@number-flow/react";
 import { SEIJAKU_TIMING } from "@/lib/motion";
+import { useIsDocumentVisible } from "@/lib/hooks/useIsDocumentVisible";
 
 export interface AnimatedNumberProps {
   value: number | string;
@@ -14,6 +15,7 @@ export interface AnimatedNumberProps {
   className?: string;
   isolate?: boolean;
   animated?: boolean;
+  willChange?: boolean;
   "data-testid"?: string;
 }
 
@@ -23,13 +25,12 @@ function parseNumericValue(raw: string | number): {
   suffix?: string;
 } | null {
   if (typeof raw === "number") return { num: raw };
-  const trimmed = raw.trim();
-  const match = trimmed.match(/^([^\d-]*)(-?\d+(?:\.\d+)?)(.*)$/);
+  const match = raw.trim().match(/^([^\d-]*)(-?\d+(?:\.\d+)?)(.*)$/);
   if (!match) return null;
-  const prefix = match[1] || undefined;
   const num = parseFloat(match[2]);
-  const suffix = match[3] || undefined;
-  return Number.isNaN(num) ? null : { num, prefix, suffix };
+  return Number.isNaN(num)
+    ? null
+    : { num, prefix: match[1] || undefined, suffix: match[3] || undefined };
 }
 
 export function AnimatedNumber({
@@ -42,11 +43,14 @@ export function AnimatedNumber({
   className,
   isolate = true,
   animated: animatedProp,
+  willChange,
   "data-testid": testId,
 }: AnimatedNumberProps) {
+  const isVisible = useIsDocumentVisible();
+  const animated = animatedProp ?? isVisible;
   const parsed = parseNumericValue(value);
 
-  const [history, setHistory] = React.useState<{
+  const [history, setHistory] = useState<{
     prevNum: number | null;
     currentNum: number | null;
   }>(() => ({
@@ -75,7 +79,6 @@ export function AnimatedNumber({
     ? { duration, easing: SEIJAKU_TIMING.easing }
     : SEIJAKU_TIMING;
 
-  // NumberFlow resets vanished integer digits to 0 (163 -> "016"), so fade them out instantly.
   const opacityTiming =
     history.prevNum !== null && currentIntLength < prevIntLength
       ? { duration: 0 }
@@ -94,7 +97,8 @@ export function AnimatedNumber({
       spinTiming={timing}
       opacityTiming={opacityTiming}
       isolate={isolate}
-      animated={animatedProp ?? true}
+      animated={animated}
+      willChange={willChange}
       respectMotionPreference
     />
   );

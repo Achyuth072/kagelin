@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo, useRef } from "react";
+import React, { memo, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
@@ -19,6 +19,19 @@ export const FloatingTimer = memo(function FloatingTimer() {
   const isRunning = useTimerStore((s) => s.state.isRunning);
   const remainingSeconds = useTimerStore((s) => s.state.remainingSeconds);
   const completedSessions = useTimerStore((s) => s.state.completedSessions);
+  const totalSeconds = useTimerStore((s) => {
+    const settings = s.settings;
+    switch (s.state.mode) {
+      case "focus":
+        return (settings?.focusDuration ?? 25) * 60;
+      case "shortBreak":
+        return (settings?.shortBreakDuration ?? 5) * 60;
+      case "longBreak":
+        return (settings?.longBreakDuration ?? 15) * 60;
+      default:
+        return 25 * 60;
+    }
+  });
   // useTimer(), not useTimerActions(): needs `start`, which isn't in the
   // stable actions-only slice.
   const { start, pause } = useTimer();
@@ -31,8 +44,19 @@ export const FloatingTimer = memo(function FloatingTimer() {
   const isPipActive = useUiStore((state) => state.isPipActive);
   const isDesktop = useUiStore((state) => state.isDesktop);
 
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  useEffect(() => {
+    if (isRunning || pathname === "/focus") {
+      setIsDismissed(false);
+    }
+  }, [isRunning, pathname]);
+
+  const isSessionActive = isRunning || remainingSeconds < totalSeconds;
+
   const shouldShow =
-    (isRunning || completedSessions > 0) &&
+    isSessionActive &&
+    !isDismissed &&
     pathname !== "/focus" &&
     isDesktop &&
     !isPipActive;
@@ -59,6 +83,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
   const handleClose = () => {
     trigger("thud");
     pause();
+    setIsDismissed(true);
   };
 
   return (

@@ -6,6 +6,15 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_cron";
 CREATE EXTENSION IF NOT EXISTS "pg_net";
 
+-- Secure-by-default function privileges: new functions created by postgres get
+-- no EXECUTE for PUBLIC, anon, or authenticated. User-facing RPCs grant it
+-- explicitly. The PUBLIC revoke must be global, since a per-schema revoke
+-- cannot remove the global default.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated;
+
 -- =============================================================================
 -- 1. PROFILES TABLE (Extends Supabase Auth)
 -- =============================================================================
@@ -210,9 +219,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 -- handle_new_user runs only as an AFTER INSERT trigger on auth.users; trigger
--- firing does not check EXECUTE, so drop the implicit PUBLIC grant that would
--- otherwise expose it on /rest/v1/rpc/*.
-REVOKE EXECUTE ON FUNCTION handle_new_user() FROM PUBLIC;
+-- firing does not check EXECUTE, so drop the implicit PUBLIC and default role
+-- grants that would otherwise expose it on /rest/v1/rpc/*.
+REVOKE EXECUTE ON FUNCTION handle_new_user() FROM PUBLIC, anon, authenticated;
 
 -- Grant necessary permissions to the function
 GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
@@ -280,10 +289,10 @@ END;
 $$;
 
 -- Briefing helpers are called only by the daily-briefing edge function as
--- service_role; drop the implicit PUBLIC grant so anon/authenticated can't
--- reach them over /rest/v1/rpc/*.
-REVOKE EXECUTE ON FUNCTION get_users_for_morning_briefing() FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION get_users_for_evening_plan()     FROM PUBLIC;
+-- service_role; drop the implicit PUBLIC and default role grants so anon/authenticated
+-- can't reach them over /rest/v1/rpc/*.
+REVOKE EXECUTE ON FUNCTION get_users_for_morning_briefing() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION get_users_for_evening_plan()     FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION get_users_for_morning_briefing() TO service_role;
 GRANT EXECUTE ON FUNCTION get_users_for_evening_plan()     TO service_role;
 
@@ -331,7 +340,7 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.claim_due_notifications(INT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.claim_due_notifications(INT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_due_notifications(INT) TO service_role;
 
 -- B3. Scheduler
@@ -352,6 +361,10 @@ DECLARE
   v_url TEXT;
   v_key TEXT;
 BEGIN
+  IF p_function IS NULL OR p_function NOT IN ('process-queue', 'daily-briefing') THEN
+    RAISE EXCEPTION 'invoke_edge_function: unauthorized function name "%"', p_function;
+  END IF;
+
   SELECT decrypted_secret INTO v_url
   FROM vault.decrypted_secrets WHERE name = 'project_url';
 
@@ -377,7 +390,7 @@ BEGIN
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.invoke_edge_function(TEXT) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.invoke_edge_function(TEXT) FROM PUBLIC, anon, authenticated;
 
 -- Unschedule first so a re-run of this file doesn't error on a duplicate
 -- jobname. Overlapping process-queue runs are safe: claim_due_notifications
@@ -427,6 +440,10 @@ AS $$
   END;
 $$;
 
+-- Called from SECURITY INVOKER notification triggers, which run as authenticated.
+REVOKE EXECUTE ON FUNCTION public.encrypted_notification_body(TEXT, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.encrypted_notification_body(TEXT, TEXT) TO authenticated;
+
 -- An unrecognised profile timezone must skip that user, not abort the per-minute batch.
 CREATE OR REPLACE FUNCTION public.at_timezone_or_null(ts TIMESTAMPTZ, tz TEXT)
 RETURNS TIMESTAMP
@@ -440,6 +457,10 @@ EXCEPTION WHEN invalid_parameter_value THEN
   RETURN NULL;
 END;
 $$;
+
+-- Called from SECURITY INVOKER notification triggers, which run as authenticated.
+REVOKE EXECUTE ON FUNCTION public.at_timezone_or_null(TIMESTAMPTZ, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.at_timezone_or_null(TIMESTAMPTZ, TEXT) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.enqueue_due_habit_reminders()
 RETURNS void
@@ -1607,6 +1628,18 @@ CREATE POLICY "Users can update own timer state" ON public.user_timer_state
 -- Add to realtime publication (required for postgres_changes events)
 ALTER PUBLICATION supabase_realtime ADD TABLE public.user_timer_state;
 
+-- Server clock probe for timer synchronization (ADR 0002)
+CREATE OR REPLACE FUNCTION public.server_now_ms()
+RETURNS BIGINT
+LANGUAGE sql
+STABLE
+SET search_path = ''
+AS $$
+  SELECT (EXTRACT(EPOCH FROM clock_timestamp()) * 1000)::BIGINT;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.server_now_ms() TO authenticated;
+
 -- =============================================================================
 -- 16. TIMER NOTIFICATION CHAIN TRIGGER (server-derived timer_end scheduling)
 -- =============================================================================
@@ -1841,7 +1874,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
-REVOKE EXECUTE ON FUNCTION handle_email_confirmed() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION handle_email_confirmed() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS on_auth_user_email_confirmed ON auth.users;
 CREATE TRIGGER on_auth_user_email_confirmed
@@ -1895,7 +1928,7 @@ AS $$
   WHERE id = auth.uid();
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.has_password() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.has_password() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.has_password() TO authenticated;
 
 -- =============================================================================

@@ -84,7 +84,6 @@ export function ListTaskCard({
       {...(!isDesktop ? dragAttributes : {})}
       {...(!isDesktop ? dragListeners : {})}
     >
-      {/* Accent stripe */}
       {project && !isExpanded && (
         <div
           className="absolute left-0 top-0 bottom-0 w-1 sm:w-1.5"
@@ -104,7 +103,6 @@ export function ListTaskCard({
         />
       )}
 
-      {/* Left: Accessible 44px Checkbox Container with Left & Right Breathing Room */}
       <div
         role="gridcell"
         className="pt-0.5 pl-1 sm:pl-2 pr-3 sm:pr-4 flex-shrink-0"
@@ -137,9 +135,7 @@ export function ListTaskCard({
         </button>
       </div>
 
-      {/* Center: Full-Width Vertical Stack */}
       <div role="gridcell" className="flex-1 min-w-0 pr-1">
-        {/* Top row: Title + Priority Glyph + Desktop Hover Actions (ZERO JUMP) */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <p className="text-[14px] sm:text-[15px] font-medium leading-snug break-words transition-colors flex-1 min-w-0">
@@ -153,10 +149,8 @@ export function ListTaskCard({
                 <ReadableText text={task.content} />
               </span>
             </p>
-            {task.priority < 4 && <PriorityGlyph level={task.priority} />}
           </div>
 
-          {/* Action Cluster (Mobile: play button visible; Desktop: hover fade with zero layout shift) */}
           <div
             data-testid="hover-action-cluster"
             className="flex w-14 justify-end items-center gap-1 flex-shrink-0 opacity-100 pointer-events-auto md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto transition-opacity duration-150"
@@ -182,9 +176,7 @@ export function ListTaskCard({
           </div>
         </div>
 
-        {/* Bottom row: Tactile Metadata Chip Stack (Properly Padded) */}
         <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
-          {/* Do Date (Planned Today) Chip */}
           {task.do_date && (
             <span
               className={cn(
@@ -203,7 +195,6 @@ export function ListTaskCard({
             </span>
           )}
 
-          {/* Due Date Chip */}
           {task.due_date && (
             <span
               className={cn(
@@ -218,7 +209,6 @@ export function ListTaskCard({
             </span>
           )}
 
-          {/* Priority Meta Tag Chip */}
           {task.priority < 4 && (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-medium px-2 py-0.5 rounded-md bg-secondary/35 border border-border/40 text-foreground">
               <PriorityGlyph level={task.priority} />
@@ -226,7 +216,6 @@ export function ListTaskCard({
             </span>
           )}
 
-          {/* Project Chip */}
           {project && (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md bg-secondary/35 border border-border/40 text-muted-foreground">
               <span
@@ -237,7 +226,6 @@ export function ListTaskCard({
             </span>
           )}
 
-          {/* Evening Chip */}
           {task.is_evening && (
             <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md bg-secondary/35 border border-border/40 text-muted-foreground">
               <Moon className="h-3 w-3 fill-current" strokeWidth={2.25} />
@@ -245,7 +233,6 @@ export function ListTaskCard({
             </span>
           )}
 
-          {/* Steps fraction button */}
           {totalSteps > 0 && (
             <button
               type="button"

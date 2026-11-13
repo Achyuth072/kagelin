@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.51.1-preview.0",
+    "date": "2026-11-13",
+    "channel": "preview",
+    "sections": {
+      "Improved": [
+        "Optimize number-flow animations for mobile and background tabs"
+      ],
+      "Fixed": [
+        "Dismiss floating timer when session is stopped and enable manual close",
+        "Remove duplicate priority glyph from list task card",
+        "Correct function grant defaults and guard invoker helpers",
+        "Guard client rpc grants and document convention in agents md",
+        "Revoke security definer execute grants from anon and authenticated"
+      ]
+    }
+  },
+  {
     "version": "1.51.0",
     "date": "2026-11-12",
     "channel": "stable",
@@ -806,16 +823,6 @@
         "Habit reminders follow frequency window",
         "Done/skip actions on habit reminders",
         "Habit reminders name the habit via encrypted title envelope"
-      ]
-    }
-  },
-  {
-    "version": "1.45.0-preview.2",
-    "date": "2026-09-25",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Five-option frequency authoring and last-done/next display for 1-in-D habits"
       ]
     }
   }
