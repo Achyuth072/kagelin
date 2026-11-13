@@ -1,6 +1,5 @@
 import { render } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
-import React from "react";
 import { AnimatedCountdown } from "@/components/ui/animated-countdown";
 
 function getRenderedTime(container: HTMLElement): string {
@@ -66,5 +65,58 @@ describe("AnimatedCountdown", () => {
       digits?: Record<number, { max?: number }>;
     };
     expect(minutesFlow.digits).toBeUndefined();
+  });
+
+  it("enables willChange by default for GPU layer promotion", () => {
+    const { container } = render(<AnimatedCountdown seconds={60} />);
+    const flows = container.querySelectorAll("number-flow-react");
+    expect(flows[0]?.hasAttribute("data-will-change")).toBe(true);
+    expect(flows[1]?.hasAttribute("data-will-change")).toBe(true);
+  });
+
+  it("allows disabling willChange via prop", () => {
+    const { container } = render(
+      <AnimatedCountdown seconds={60} willChange={false} />,
+    );
+    const flows = container.querySelectorAll("number-flow-react");
+    expect(flows[0]?.hasAttribute("data-will-change")).toBe(false);
+    expect(flows[1]?.hasAttribute("data-will-change")).toBe(false);
+  });
+
+  it("passes animated=false when animated prop is false", () => {
+    const { container } = render(
+      <AnimatedCountdown seconds={60} animated={false} />,
+    );
+    const flows = container.querySelectorAll("number-flow-react");
+    const minsFlow = flows[0] as HTMLElement & { animated?: boolean };
+    const secsFlow = flows[1] as HTMLElement & { animated?: boolean };
+    expect(minsFlow.animated).toBe(false);
+    expect(secsFlow.animated).toBe(false);
+  });
+
+  it("disables animation when document is hidden to save mobile battery", () => {
+    const originalHidden = Object.getOwnPropertyDescriptor(document, "hidden");
+    try {
+      Object.defineProperty(document, "hidden", {
+        configurable: true,
+        value: true,
+      });
+
+      const { container } = render(<AnimatedCountdown seconds={60} />);
+      const flows = container.querySelectorAll("number-flow-react");
+      const minsFlow = flows[0] as HTMLElement & { animated?: boolean };
+      const secsFlow = flows[1] as HTMLElement & { animated?: boolean };
+      expect(minsFlow.animated).toBe(false);
+      expect(secsFlow.animated).toBe(false);
+    } finally {
+      if (originalHidden) {
+        Object.defineProperty(document, "hidden", originalHidden);
+      } else {
+        Object.defineProperty(document, "hidden", {
+          configurable: true,
+          value: false,
+        });
+      }
+    }
   });
 });
