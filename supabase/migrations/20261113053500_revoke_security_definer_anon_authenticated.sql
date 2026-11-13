@@ -22,7 +22,7 @@ DECLARE
   v_url TEXT;
   v_key TEXT;
 BEGIN
-  IF p_function NOT IN ('process-queue', 'daily-briefing') THEN
+  IF p_function IS NULL OR p_function NOT IN ('process-queue', 'daily-briefing') THEN
     RAISE EXCEPTION 'invoke_edge_function: unauthorized function name "%"', p_function;
   END IF;
 
@@ -63,10 +63,21 @@ GRANT EXECUTE ON FUNCTION public.get_users_for_evening_plan()     TO service_rol
 REVOKE EXECUTE ON FUNCTION public.handle_new_user()        FROM PUBLIC, anon, authenticated;
 REVOKE EXECUTE ON FUNCTION public.handle_email_confirmed() FROM PUBLIC, anon, authenticated;
 
+-- Called from SECURITY INVOKER notification triggers, which run as authenticated.
+REVOKE EXECUTE ON FUNCTION public.encrypted_notification_body(TEXT, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.encrypted_notification_body(TEXT, TEXT) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.at_timezone_or_null(TIMESTAMPTZ, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.at_timezone_or_null(TIMESTAMPTZ, TEXT) TO authenticated;
+
 -- Called by the client as authenticated; anon must not execute.
 REVOKE EXECUTE ON FUNCTION public.has_password() FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.has_password() TO authenticated;
 
--- Secure-by-default for future functions created by postgres in schema public.
+-- Secure-by-default for future functions. The PUBLIC revoke must be global: a
+-- per-schema revoke cannot remove the global default, leaving new functions
+-- executable through PUBLIC. The per-schema revoke clears Supabase's explicit
+-- anon and authenticated grants.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+  REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated;

@@ -6,11 +6,14 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pg_cron";
 CREATE EXTENSION IF NOT EXISTS "pg_net";
 
--- Secure-by-default function privileges: new functions in schema public do not
--- automatically grant EXECUTE to anon or authenticated. User-facing RPCs must
--- explicitly grant EXECUTE to authenticated.
+-- Secure-by-default function privileges: new functions created by postgres get
+-- no EXECUTE for PUBLIC, anon, or authenticated. User-facing RPCs grant it
+-- explicitly. The PUBLIC revoke must be global, since a per-schema revoke
+-- cannot remove the global default.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
+  REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated;
 
 -- =============================================================================
 -- 1. PROFILES TABLE (Extends Supabase Auth)
@@ -358,7 +361,7 @@ DECLARE
   v_url TEXT;
   v_key TEXT;
 BEGIN
-  IF p_function NOT IN ('process-queue', 'daily-briefing') THEN
+  IF p_function IS NULL OR p_function NOT IN ('process-queue', 'daily-briefing') THEN
     RAISE EXCEPTION 'invoke_edge_function: unauthorized function name "%"', p_function;
   END IF;
 
@@ -437,6 +440,10 @@ AS $$
   END;
 $$;
 
+-- Called from SECURITY INVOKER notification triggers, which run as authenticated.
+REVOKE EXECUTE ON FUNCTION public.encrypted_notification_body(TEXT, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.encrypted_notification_body(TEXT, TEXT) TO authenticated;
+
 -- An unrecognised profile timezone must skip that user, not abort the per-minute batch.
 CREATE OR REPLACE FUNCTION public.at_timezone_or_null(ts TIMESTAMPTZ, tz TEXT)
 RETURNS TIMESTAMP
@@ -450,6 +457,10 @@ EXCEPTION WHEN invalid_parameter_value THEN
   RETURN NULL;
 END;
 $$;
+
+-- Called from SECURITY INVOKER notification triggers, which run as authenticated.
+REVOKE EXECUTE ON FUNCTION public.at_timezone_or_null(TIMESTAMPTZ, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.at_timezone_or_null(TIMESTAMPTZ, TEXT) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.enqueue_due_habit_reminders()
 RETURNS void
