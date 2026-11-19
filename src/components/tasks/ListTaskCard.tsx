@@ -12,8 +12,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
-import { format, isToday, parseISO } from "date-fns";
-import { formatDueDate, isOverdue, taskDomId } from "./task-utils";
+import {
+  formatDueDate,
+  formatDoDate,
+  isOverdue,
+  taskDomId,
+} from "./task-utils";
 import {
   DraggableAttributes,
   DraggableSyntheticListeners,
@@ -57,7 +61,9 @@ export function ListTaskCard({
   shouldAnimate = false,
   isKeyboardSelected = false,
 }: ListTaskCardProps) {
-  const isPlannedToday = !!task.do_date && isToday(parseISO(task.do_date));
+  const doDateInfo = task.do_date
+    ? formatDoDate(task.do_date, task.is_completed)
+    : null;
   const completedSteps =
     task.subtasks?.filter((s) => s.is_completed).length ?? 0;
   const totalSteps = task.subtasks?.length ?? 0;
@@ -177,21 +183,27 @@ export function ListTaskCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
-          {task.do_date && (
+          {task.do_date && doDateInfo && (
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md border",
-                isPlannedToday
+                doDateInfo.isPlannedToday
                   ? "bg-secondary/70 border-border/80 text-foreground font-semibold"
-                  : "bg-secondary/35 border-border/40 text-muted-foreground",
+                  : doDateInfo.isRescheduleNeeded
+                    ? "bg-secondary/40 border-border/60 text-muted-foreground border-dashed"
+                    : "bg-secondary/35 border-border/40 text-muted-foreground",
               )}
+              title={
+                doDateInfo.isRescheduleNeeded ? "Needs rescheduling" : undefined
+              }
+              aria-label={
+                doDateInfo.isRescheduleNeeded
+                  ? `${doDateInfo.text} (Needs rescheduling)`
+                  : undefined
+              }
             >
               <CalendarClock className="h-3 w-3" strokeWidth={2.25} />
-              <span>
-                {isPlannedToday
-                  ? "Planned Today"
-                  : format(parseISO(task.do_date), "MMM d")}
-              </span>
+              <span>{doDateInfo.text}</span>
             </span>
           )}
 

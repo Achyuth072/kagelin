@@ -218,6 +218,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               onOpenChange={setDoDatePickerOpen}
               variant="chip"
               title="Do Date"
+              description="Operational schedule (when to work on it)"
               icon={CalendarClock}
               {...createDatePickerPositioning}
               error={!!errors?.do_date}
@@ -232,6 +233,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               onOpenChange={setDatePickerOpen}
               variant="chip"
               title="Due Date"
+              description="Deadline (external commitment)"
               icon={Calendar}
               {...createDatePickerPositioning}
               error={!!errors?.due_date}

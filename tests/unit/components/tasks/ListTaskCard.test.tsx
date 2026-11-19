@@ -64,6 +64,97 @@ describe("ListTaskCard", () => {
     expect(screen.getByText(/Dec 31/)).toBeDefined();
   });
 
+  it("flags expired do_date on uncompleted task with operational replanning styling and prompt without overdue breach badge", () => {
+    const task: Task = {
+      ...baseTask,
+      do_date: "2020-01-15",
+      due_date: null,
+      is_completed: false,
+    };
+
+    render(
+      <ListTaskCard
+        task={task}
+        isDesktop={true}
+        isExpanded={false}
+        toggleExpand={vi.fn()}
+        handleComplete={vi.fn()}
+        handlePlayFocus={vi.fn()}
+        onDeleteRequest={vi.fn()}
+        project={undefined}
+      />,
+    );
+
+    const replanChip = screen.getByText("Planned for Jan 15").parentElement;
+    expect(replanChip).toBeInTheDocument();
+    expect(replanChip).toHaveAttribute("title", "Needs rescheduling");
+    expect(replanChip).toHaveClass("border-dashed");
+    expect(replanChip).not.toHaveClass("font-semibold", "bg-secondary/70");
+    expect(screen.queryByText(/due/i)).not.toBeInTheDocument();
+  });
+
+  it("retains high-visibility overdue badge when due_date is expired and task is uncompleted", () => {
+    const task: Task = {
+      ...baseTask,
+      do_date: null,
+      due_date: "2020-01-15",
+      is_completed: false,
+    };
+
+    render(
+      <ListTaskCard
+        task={task}
+        isDesktop={true}
+        isExpanded={false}
+        toggleExpand={vi.fn()}
+        handleComplete={vi.fn()}
+        handlePlayFocus={vi.fn()}
+        onDeleteRequest={vi.fn()}
+        project={undefined}
+      />,
+    );
+
+    const overdueChip = screen.getByText("Due Jan 15").parentElement;
+    expect(overdueChip).toBeInTheDocument();
+    expect(overdueChip).toHaveClass("bg-secondary/70", "font-semibold");
+    expect(overdueChip).not.toHaveClass("border-dashed");
+  });
+
+  it("clearly disambiguates when both do_date and due_date are expired on uncompleted task", () => {
+    const task: Task = {
+      ...baseTask,
+      do_date: "2020-01-10",
+      due_date: "2020-01-15",
+      is_completed: false,
+    };
+
+    render(
+      <ListTaskCard
+        task={task}
+        isDesktop={true}
+        isExpanded={false}
+        toggleExpand={vi.fn()}
+        handleComplete={vi.fn()}
+        handlePlayFocus={vi.fn()}
+        onDeleteRequest={vi.fn()}
+        project={undefined}
+      />,
+    );
+
+    // Operational schedule replan chip
+    const replanChip = screen.getByText("Planned for Jan 10").parentElement;
+    expect(replanChip).toBeInTheDocument();
+    expect(replanChip).toHaveAttribute("title", "Needs rescheduling");
+    expect(replanChip).toHaveClass("border-dashed");
+    expect(replanChip).not.toHaveClass("font-semibold", "bg-secondary/70");
+
+    // Hard contractual deadline overdue chip
+    const overdueChip = screen.getByText("Due Jan 15").parentElement;
+    expect(overdueChip).toBeInTheDocument();
+    expect(overdueChip).toHaveClass("bg-secondary/70", "font-semibold");
+    expect(overdueChip).not.toHaveClass("border-dashed");
+  });
+
   it("renders Folio Continuous geometry, breathing padding, 44px tap bounds, and hover cluster", () => {
     const handleComplete = vi.fn();
     const handlePlayFocus = vi.fn();

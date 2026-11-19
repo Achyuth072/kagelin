@@ -108,4 +108,59 @@ describe("TaskGhost", () => {
     expect(screen.queryByText("Evening")).not.toBeInTheDocument();
     expect(screen.queryByText("1/2")).not.toBeInTheDocument();
   });
+
+  it("renders expired do_date with replanning indicator and prompts rescheduling in ghost overlay", () => {
+    const replanTask: Task = {
+      ...baseTask,
+      due_date: null,
+      do_date: "2020-01-10",
+      is_completed: false,
+    };
+
+    render(
+      <TaskGhost
+        task={replanTask}
+        isDesktop={true}
+        project={project}
+        viewMode="list"
+      />,
+    );
+
+    const replanChip = screen.getByText("Planned for Jan 10");
+    expect(replanChip).toBeInTheDocument();
+    expect(replanChip.closest("span")).toHaveAttribute(
+      "title",
+      "Needs rescheduling",
+    );
+    expect(replanChip.closest("span")?.className).not.toContain("font-bold");
+  });
+
+  it("disambiguates expired do_date and overdue due_date in board ghost overlay", () => {
+    const dualTask: Task = {
+      ...baseTask,
+      due_date: "2020-01-15",
+      do_date: "2020-01-10",
+      is_completed: false,
+    };
+
+    render(
+      <TaskGhost
+        task={dualTask}
+        isDesktop={true}
+        project={project}
+        viewMode="board"
+      />,
+    );
+
+    const replanChip = screen.getByText("Planned for Jan 10");
+    expect(replanChip).toBeInTheDocument();
+    expect(replanChip.closest("span")).toHaveAttribute(
+      "title",
+      "Needs rescheduling",
+    );
+
+    const dueChip = screen.getByText("Jan 15");
+    expect(dueChip).toBeInTheDocument();
+    expect(dueChip.closest("span")?.className).toContain("font-bold");
+  });
 });

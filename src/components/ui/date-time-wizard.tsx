@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 
 interface DateTimeWizardProps {
   title?: string;
+  description?: string;
   date: Date | undefined;
   setDate: (date: Date | undefined) => void;
   onClose: () => void;
@@ -29,6 +30,7 @@ interface DateTimeWizardProps {
 
 export function DateTimeWizard({
   title,
+  description,
   date,
   setDate,
   onClose,
@@ -97,6 +99,11 @@ export function DateTimeWizard({
         {title && (
           <div className="px-1 text-xs font-semibold text-foreground/85 tracking-wide">
             {title}
+          </div>
+        )}
+        {description && (
+          <div className="px-1 text-[11px] text-muted-foreground leading-normal">
+            {description}
           </div>
         )}
         <Tabs

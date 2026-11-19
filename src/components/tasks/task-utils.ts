@@ -4,9 +4,11 @@ import {
   isTomorrow,
   format,
   isBefore,
+  isSameDay,
   startOfDay,
 } from "date-fns";
 import type { Task } from "@/lib/types/task";
+import { categorizeTaskSchedule } from "@/lib/utils/task-metrics";
 
 export const priorityTextClasses: Record<1 | 2 | 3 | 4, string> = {
   1: "text-foreground font-bold",
@@ -48,6 +50,56 @@ export function isOverdue(dateString: string | null | undefined): boolean {
   if (!dateString) return false;
   const date = parseISO(dateString);
   return isBefore(date, startOfDay(new Date())) && !isToday(date);
+}
+
+export function isRescheduleNeeded(
+  dateString: string | null | undefined,
+  isCompleted?: boolean,
+  today: Date = new Date(),
+): boolean {
+  if (!dateString || isCompleted) return false;
+  return (
+    categorizeTaskSchedule(
+      { do_date: dateString, is_completed: isCompleted },
+      today,
+    ) === "reschedule_needed"
+  );
+}
+
+export function formatDoDate(
+  dateString: string,
+  isCompleted?: boolean,
+  today: Date = new Date(),
+): { text: string; isPlannedToday: boolean; isRescheduleNeeded: boolean } {
+  const date = parseISO(dateString);
+  if (isNaN(date.getTime())) {
+    return {
+      text: dateString,
+      isPlannedToday: false,
+      isRescheduleNeeded: false,
+    };
+  }
+  const plannedToday = isSameDay(date, today);
+  if (plannedToday) {
+    return {
+      text: "Planned Today",
+      isPlannedToday: true,
+      isRescheduleNeeded: false,
+    };
+  }
+  const rescheduleNeeded = isRescheduleNeeded(dateString, isCompleted, today);
+  if (rescheduleNeeded) {
+    return {
+      text: `Planned for ${format(date, "MMM d")}`,
+      isPlannedToday: false,
+      isRescheduleNeeded: true,
+    };
+  }
+  return {
+    text: format(date, "MMM d"),
+    isPlannedToday: false,
+    isRescheduleNeeded: false,
+  };
 }
 
 /**

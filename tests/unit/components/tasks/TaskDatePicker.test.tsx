@@ -261,7 +261,7 @@ describe("TaskDatePicker", () => {
 
     // Overdue due date
     const pastDate = new Date("2020-01-01T00:00:00Z");
-    render(
+    const { unmount: unmountPastDue } = render(
       <TaskDatePicker
         {...defaultProps}
         variant="chip"
@@ -272,5 +272,44 @@ describe("TaskDatePicker", () => {
     );
     const overdueChip = screen.getByTitle("Set due date");
     expect(overdueChip).toHaveClass("bg-secondary/70", "font-semibold");
+    unmountPastDue();
+
+    // Past Do Date should NOT have overdue highlight, but operational replanning dashed border
+    const pastDoDate = new Date("2020-01-01T00:00:00Z");
+    render(
+      <TaskDatePicker
+        {...defaultProps}
+        variant="chip"
+        title="Do Date"
+        date={pastDoDate}
+        open={false}
+      />,
+    );
+    const pastDoChip = screen.getByTitle("Set do date");
+    expect(pastDoChip).not.toHaveClass("bg-secondary/70", "font-semibold");
+    expect(pastDoChip).toHaveClass("border-dashed");
+  });
+
+  it("distinguishes operational schedule from external deadline in wizard descriptions", () => {
+    mockDateTimeWizard.mockClear();
+    const { unmount } = render(
+      <TaskDatePicker {...defaultProps} title="Do Date" open={true} />,
+    );
+    expect(mockDateTimeWizard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Set Do Date",
+        description: "Operational schedule (when to work on it)",
+      }),
+    );
+    unmount();
+
+    mockDateTimeWizard.mockClear();
+    render(<TaskDatePicker {...defaultProps} title="Due Date" open={true} />);
+    expect(mockDateTimeWizard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Set Due Date",
+        description: "Deadline (external commitment)",
+      }),
+    );
   });
 });

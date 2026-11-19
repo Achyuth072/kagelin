@@ -28,6 +28,7 @@ interface TaskDatePickerProps {
   onOpenChange: (open: boolean) => void;
   variant?: "icon" | "compact" | "chip";
   title?: string;
+  description?: string;
   activeClassName?: string;
   icon?: LucideIcon;
   side?: "top" | "bottom" | "left" | "right";
@@ -48,6 +49,7 @@ export function TaskDatePicker({
   onOpenChange,
   variant = "icon",
   title = "Due Date",
+  description,
   activeClassName = "text-brand bg-brand/10 hover:bg-brand/20 hover:text-brand",
   icon: Icon = CalendarIcon,
   side = "bottom",
@@ -66,7 +68,20 @@ export function TaskDatePicker({
   const isOverdue =
     !isDoDate && !!date && isBefore(date, startOfDay(new Date()));
   const isDoDateToday = isDoDate && !!date && isToday(date);
+  const isDoDateReschedule =
+    isDoDate &&
+    !!date &&
+    isBefore(startOfDay(date), startOfDay(new Date())) &&
+    !isToday(date);
   const isHighlighted = isDoDateToday || isOverdue;
+
+  const effectiveDescription =
+    description ??
+    (isDoDate
+      ? "Operational schedule (when to work on it)"
+      : title.toLowerCase().includes("due")
+        ? "Deadline (external commitment)"
+        : undefined);
   const { trigger } = useHaptic();
   const { formatDateWithTime } = useTimeFormat();
 
@@ -143,7 +158,9 @@ export function TaskDatePicker({
         "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 border transition-colors shrink-0 h-7 sm:h-8 shadow-none",
         isHighlighted
           ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
-          : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-foreground",
+          : isDoDateReschedule
+            ? "bg-secondary/40 border-border/60 text-muted-foreground border-dashed"
+            : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-foreground",
         hasChipClear
           ? "rounded-l-md rounded-r-none border-r-0 pr-2"
           : "rounded-md",
@@ -243,6 +260,7 @@ export function TaskDatePicker({
             </ResponsiveDialogHeader>
             <DateTimeWizard
               title={`Set ${title}`}
+              description={effectiveDescription}
               date={date}
               setDate={setDate}
               onClose={() => onOpenChange(false)}
@@ -281,6 +299,7 @@ export function TaskDatePicker({
         >
           <DateTimeWizard
             title={`Set ${title}`}
+            description={effectiveDescription}
             date={date}
             setDate={setDate}
             onClose={() => onOpenChange(false)}
