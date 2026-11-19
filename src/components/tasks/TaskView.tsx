@@ -223,6 +223,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               {...createDatePickerPositioning}
               error={!!errors?.do_date}
               onEveningSelect={() => setIsEvening(true)}
+              isCompleted={initialTask?.is_completed}
             />
 
             <TaskDatePicker
@@ -237,6 +238,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               icon={Calendar}
               {...createDatePickerPositioning}
               error={!!errors?.due_date}
+              isCompleted={initialTask?.is_completed}
             />
           </div>
 

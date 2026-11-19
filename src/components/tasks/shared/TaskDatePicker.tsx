@@ -39,6 +39,7 @@ interface TaskDatePickerProps {
   error?: boolean;
   onEveningSelect?: () => void;
   allowClear?: boolean;
+  isCompleted?: boolean;
 }
 
 export function TaskDatePicker({
@@ -61,14 +62,19 @@ export function TaskDatePicker({
   error = false,
   onEveningSelect,
   allowClear = true,
+  isCompleted = false,
 }: TaskDatePickerProps) {
   const isCompact = variant === "compact";
   const isChip = variant === "chip";
   const isDoDate = title === "Do Date" || title.toLowerCase().includes("start");
   const isOverdue =
-    !isDoDate && !!date && isBefore(date, startOfDay(new Date()));
+    !isCompleted &&
+    !isDoDate &&
+    !!date &&
+    isBefore(date, startOfDay(new Date()));
   const isDoDateToday = isDoDate && !!date && isToday(date);
   const isDoDateReschedule =
+    !isCompleted &&
     isDoDate &&
     !!date &&
     isBefore(startOfDay(date), startOfDay(new Date())) &&

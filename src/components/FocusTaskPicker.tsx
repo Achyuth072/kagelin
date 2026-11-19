@@ -19,7 +19,8 @@ import { fetchAllRows } from "@/lib/supabase/paginate";
 import { notify } from "@/lib/notify";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
-import { isBefore, isToday, parseISO, startOfDay } from "date-fns";
+import { isSameDay, parseISO } from "date-fns";
+import { categorizeTaskSchedule } from "@/lib/utils/task-metrics";
 import { Target, Check, Repeat, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/AuthProvider";
@@ -108,18 +109,28 @@ export function FocusTaskPicker() {
   });
 
   const groupedTasks = useMemo(() => {
-    const todayStart = startOfDay(new Date());
     const overdue: Task[] = [];
     const today: Task[] = [];
+    const now = new Date();
     for (const task of pickerTasks || []) {
-      const dateStr = task.do_date || task.due_date;
-      if (!dateStr) {
-        overdue.push(task);
+      const isDoToday = Boolean(
+        task.do_date && isSameDay(parseISO(task.do_date), now),
+      );
+      const isDueToday = Boolean(
+        task.due_date && isSameDay(parseISO(task.due_date), now),
+      );
+
+      if (isDoToday || isDueToday) {
+        today.push(task);
         continue;
       }
-      const date = parseISO(dateStr);
-      if (isToday(date)) today.push(task);
-      else if (isBefore(date, todayStart)) overdue.push(task);
+
+      const category = categorizeTaskSchedule(task, now);
+      if (category === "overdue" || category === "reschedule_needed") {
+        overdue.push(task);
+      } else if (category === "unscheduled") {
+        today.push(task);
+      }
     }
     return { overdue, today };
   }, [pickerTasks]);

@@ -93,11 +93,18 @@ export const TaskGhost = React.memo(
                       "flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider",
                       doDateInfo.isPlannedToday
                         ? "text-foreground font-semibold"
-                        : "text-muted-foreground/70",
+                        : doDateInfo.isRescheduleNeeded
+                          ? "text-muted-foreground border-b border-dashed border-border/80"
+                          : "text-muted-foreground/70",
                     )}
                     title={
                       doDateInfo.isRescheduleNeeded
                         ? "Needs rescheduling"
+                        : undefined
+                    }
+                    aria-label={
+                      doDateInfo.isRescheduleNeeded
+                        ? `${doDateInfo.text} (Needs rescheduling)`
                         : undefined
                     }
                   >
@@ -204,11 +211,18 @@ export const TaskGhost = React.memo(
                     "type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider whitespace-nowrap",
                     doDateInfo.isPlannedToday
                       ? "text-foreground font-semibold"
-                      : "text-muted-foreground/70",
+                      : doDateInfo.isRescheduleNeeded
+                        ? "text-muted-foreground border-b border-dashed border-border/80"
+                        : "text-muted-foreground/70",
                   )}
                   title={
                     doDateInfo.isRescheduleNeeded
                       ? "Needs rescheduling"
+                      : undefined
+                  }
+                  aria-label={
+                    doDateInfo.isRescheduleNeeded
+                      ? `${doDateInfo.text} (Needs rescheduling)`
                       : undefined
                   }
                 >

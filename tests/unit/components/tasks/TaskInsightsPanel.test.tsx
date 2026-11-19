@@ -124,7 +124,10 @@ describe("TaskInsightsPanel", () => {
     render(<TaskInsightsPanel task={mockTask} />);
 
     expect(screen.getByText("On time")).toBeInTheDocument();
-    expect(screen.getByText("Late")).toBeInTheDocument();
+    const lateBadge = screen.getByText("Late");
+    expect(lateBadge).toBeInTheDocument();
+    expect(lateBadge).toHaveClass("text-muted-foreground");
+    expect(lateBadge).not.toHaveClass("text-destructive");
   });
 
   it("shows empty completion state when occurrences exist but none are completed", () => {

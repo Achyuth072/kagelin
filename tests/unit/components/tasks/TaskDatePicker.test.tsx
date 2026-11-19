@@ -312,4 +312,22 @@ describe("TaskDatePicker", () => {
       }),
     );
   });
+
+  it("does not render dashed reschedule styling on completed tasks with past do_date", () => {
+    const pastDoDate = new Date();
+    pastDoDate.setDate(pastDoDate.getDate() - 3);
+
+    render(
+      <TaskDatePicker
+        {...defaultProps}
+        variant="chip"
+        title="Do Date"
+        date={pastDoDate}
+        open={false}
+        isCompleted={true}
+      />,
+    );
+    const pastDoChip = screen.getByTitle("Set do date");
+    expect(pastDoChip).not.toHaveClass("border-dashed");
+  });
 });

@@ -148,4 +148,17 @@ describe("HomeClient Architecture Consolidation", () => {
     fireEvent.click(screen.getByText("Change ViewMode"));
     expect(useUiStore.getState().viewMode).toBe("board");
   });
+
+  it("HC-06: Strict day surface segregation: isolates tasks and never interleaves habits or habit trackers", () => {
+    const { container } = render(<HomeClient />);
+
+    // Renders the dedicated tasks list
+    expect(screen.getByTestId("consolidated-task-list")).toBeInTheDocument();
+
+    // Verifies zero habit elements, habit cards, habit heatmaps, or streak chips
+    expect(container.querySelector("[data-testid*='habit']")).toBeNull();
+    expect(container.querySelector("[data-testid*='streak']")).toBeNull();
+    expect(screen.queryByText(/habit/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/streak/i)).not.toBeInTheDocument();
+  });
 });

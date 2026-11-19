@@ -132,6 +132,7 @@ describe("TaskGhost", () => {
       "title",
       "Needs rescheduling",
     );
+    expect(replanChip.closest("span")?.className).toContain("border-dashed");
     expect(replanChip.closest("span")?.className).not.toContain("font-bold");
   });
 
@@ -158,6 +159,7 @@ describe("TaskGhost", () => {
       "title",
       "Needs rescheduling",
     );
+    expect(replanChip.closest("span")?.className).toContain("border-dashed");
 
     const dueChip = screen.getByText("Jan 15");
     expect(dueChip).toBeInTheDocument();

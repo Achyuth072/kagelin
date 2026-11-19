@@ -135,7 +135,7 @@ export function TaskInsightsPanel({
                         "text-[10px] md:text-[11px] font-medium px-2 py-0.5 rounded-full shrink-0 border",
                         isOnTime
                           ? "text-brand bg-brand/10 border-brand/20"
-                          : "text-destructive bg-destructive-surface border-destructive-surface-border",
+                          : "text-muted-foreground bg-secondary/50 border-border/50",
                       )}
                     >
                       {isOnTime ? "On time" : "Late"}

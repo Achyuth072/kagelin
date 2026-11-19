@@ -787,4 +787,102 @@ describe("FocusTaskPicker", () => {
     expect(guestTaskQuery).toBeDefined();
     expect(guestTaskQuery!.enabled).toBe(false);
   });
+
+  describe("Day-Planner Orthogonality & Segregation", () => {
+    it("segregates expired schedules into overdue and today's commitments into today", () => {
+      mockActiveTaskId = null;
+      const todayISO = new Date().toISOString();
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayISO = yesterday.toISOString();
+
+      const taskPlannedToday = createMockTask({
+        id: "task-planned-today",
+        content: "Planned for today",
+        do_date: todayISO,
+      });
+      const taskDueToday = createMockTask({
+        id: "task-due-today",
+        content: "Due today",
+        due_date: todayISO,
+      });
+      const taskRescheduleNeeded = createMockTask({
+        id: "task-reschedule",
+        content: "Expired do_date",
+        do_date: yesterdayISO,
+      });
+      const taskOverdue = createMockTask({
+        id: "task-overdue",
+        content: "Expired due_date",
+        due_date: yesterdayISO,
+      });
+
+      mockUseQuery.mockImplementation((options: MockQueryOptions) => {
+        if (options.queryKey?.[0] === "focus-tasks") {
+          return {
+            data: [
+              taskPlannedToday,
+              taskDueToday,
+              taskRescheduleNeeded,
+              taskOverdue,
+            ],
+            isLoading: false,
+          };
+        }
+        return { data: null, isLoading: false };
+      });
+
+      render(<FocusTaskPicker />);
+      const chip = screen.getByRole("button", { name: "Select focus task" });
+      fireEvent.click(chip);
+
+      expect(screen.getByText("Planned for today")).toBeInTheDocument();
+      expect(screen.getByText("Due today")).toBeInTheDocument();
+      expect(screen.getByText("Expired do_date")).toBeInTheDocument();
+      expect(screen.getByText("Expired due_date")).toBeInTheDocument();
+
+      // Check section labels
+      expect(screen.getByText("overdue")).toBeInTheDocument();
+      expect(screen.getByText("today")).toBeInTheDocument();
+    });
+
+    it("presents tasks with visual reduction on completion and never displays habit progress rings", () => {
+      mockActiveTaskId = null;
+      const completedTask = createMockTask({
+        id: "comp-1",
+        content: "Completed item",
+        is_completed: true,
+        do_date: new Date().toISOString(),
+      });
+
+      mockUseQuery.mockImplementation((options: MockQueryOptions) => {
+        if (options.queryKey?.[0] === "focus-tasks") {
+          return {
+            data: [completedTask],
+            isLoading: false,
+          };
+        }
+        return { data: null, isLoading: false };
+      });
+
+      const { container } = render(<FocusTaskPicker />);
+      const chip = screen.getByRole("button", { name: "Select focus task" });
+      fireEvent.click(chip);
+
+      const completedRow = screen.getByTestId("task-row");
+      expect(completedRow).toHaveClass("opacity-40");
+      expect(completedRow).toHaveClass("pointer-events-none");
+      expect(completedRow).toBeDisabled();
+
+      const textEl = screen.getByText("Completed item");
+      expect(textEl).toHaveClass("line-through");
+
+      // Verify no habit rings, heatmaps, streaks, or habit classes
+      expect(
+        container.querySelector("[data-testid='circular-progress']"),
+      ).toBeNull();
+      expect(screen.queryByText(/streak/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/habit/i)).not.toBeInTheDocument();
+    });
+  });
 });
