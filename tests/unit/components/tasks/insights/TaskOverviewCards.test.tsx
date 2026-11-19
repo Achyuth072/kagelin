@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import { TaskOverviewCards } from "@/components/tasks/insights/TaskOverviewCards";
-import type { TaskOccurrence } from "@/lib/utils/task-streak";
+import type { TaskOccurrence } from "@/lib/utils/task-metrics";
 
 function occ(
   dueDate: string,
@@ -16,34 +16,57 @@ function occ(
 }
 
 describe("TaskOverviewCards", () => {
-  it("renders all five metric cards with correct labels", () => {
+  it("renders outcome metrics without streak cards or habit icons", () => {
     render(<TaskOverviewCards occurrences={[]} />);
 
-    expect(screen.getByText("Completion Rate")).toBeInTheDocument();
-    expect(screen.getByText("On-Time")).toBeInTheDocument();
-    expect(screen.getByText("Current Streak")).toBeInTheDocument();
-    expect(screen.getByText("Best Streak")).toBeInTheDocument();
     expect(screen.getByText("Total Completions")).toBeInTheDocument();
+    expect(screen.getByText("On-Time Delivery Rate")).toBeInTheDocument();
+    expect(screen.getByText("Completion Breakdown")).toBeInTheDocument();
+
+    expect(screen.queryByText(/streak/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Current Streak")).not.toBeInTheDocument();
+    expect(screen.queryByText("Best Streak")).not.toBeInTheDocument();
   });
 
-  it("shows placeholder rates with no decided Occurrences", () => {
+  it("shows placeholder rates and zero completions for empty occurrences", () => {
     render(<TaskOverviewCards occurrences={[]} />);
 
-    expect(screen.getAllByText("—")).toHaveLength(2);
+    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getAllByText("—")).toHaveLength(2); // On-Time Delivery Rate and Breakdown
   });
 
-  it("computes rates and streaks from a mixed history", () => {
+  it("computes outcome metrics from occurrences without streak logic", () => {
     const occurrences = [
-      occ("2026-06-04", true, "2026-06-04"),
-      occ("2026-06-11", true, "2026-06-11"),
-      occ("2026-06-18", true, "2026-06-18"),
+      occ("2026-06-04", true, "2026-06-04"), // on-time
+      occ("2026-06-11", true, "2026-06-12"), // late
+      occ("2026-06-18", false), // uncompleted
     ];
 
     render(<TaskOverviewCards occurrences={occurrences} />);
 
-    // completion rate + on-time rate
-    expect(screen.getAllByText("100%")).toHaveLength(2);
-    // current streak + best streak + total completions
-    expect(screen.getAllByText("3")).toHaveLength(3);
+    expect(screen.getByText("Total Completions")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument(); // 2 completed
+    expect(screen.getByText("50%")).toBeInTheDocument(); // 1 of 2 on-time
+    expect(screen.getByText("2 / 3")).toBeInTheDocument(); // 2 of 3 breakdown
+    expect(screen.queryByText(/streak/i)).not.toBeInTheDocument();
+  });
+
+  it("renders Total Focus Duration when focus sessions are present", () => {
+    const occurrences = [
+      occ("2026-06-04", true, "2026-06-04"),
+      occ("2026-06-11", true, "2026-06-11"),
+    ];
+
+    render(
+      <TaskOverviewCards
+        occurrences={occurrences}
+        totalFocusDuration={5400} // 1 hour 30 minutes
+      />,
+    );
+
+    expect(screen.getByText("Total Focus Duration")).toBeInTheDocument();
+    expect(screen.getByText("1h 30m")).toBeInTheDocument();
+    expect(screen.queryByText("Completion Breakdown")).not.toBeInTheDocument();
+    expect(screen.queryByText(/streak/i)).not.toBeInTheDocument();
   });
 });
