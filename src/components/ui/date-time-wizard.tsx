@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { SegmentedTimePicker } from "@/components/ui/segmented-time-picker";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar as CalendarIcon, Clock, Check } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DateTimeWizardProps {
@@ -23,6 +23,8 @@ interface DateTimeWizardProps {
   compact?: boolean;
   /** Called when the "Evening" quick preset is selected */
   onEveningSelect?: () => void;
+  /** Whether to show a Clear button to unset the date */
+  allowClear?: boolean;
 }
 
 export function DateTimeWizard({
@@ -34,6 +36,7 @@ export function DateTimeWizard({
   allowPastDates = false,
   compact = false,
   onEveningSelect,
+  allowClear = false,
 }: DateTimeWizardProps) {
   const { trigger } = useHaptic();
   const { formatTime } = useTimeFormat();
@@ -77,6 +80,15 @@ export function DateTimeWizard({
     setDate(tempDate);
     onClose();
   };
+
+  const handleClear = () => {
+    trigger("toggle");
+    setDate(undefined);
+    onClose();
+  };
+
+  const showClear =
+    allowClear && (tempDate !== undefined || date !== undefined);
 
   return (
     <div className="flex flex-col w-full max-w-[320px] mx-auto bg-popover rounded-md overflow-hidden">
@@ -208,8 +220,24 @@ export function DateTimeWizard({
             </div>
 
             {/* Date View Footer */}
-            <div className="mt-2 w-full flex justify-end">
-              <Button size="sm" className="gap-1.5 w-full" onClick={onSave}>
+            <div className="mt-2 w-full flex items-center gap-2">
+              {showClear && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 flex-1 text-muted-foreground hover:text-destructive hover:bg-destructive-surface-hover hover:border-destructive/30"
+                  onClick={handleClear}
+                >
+                  <X className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  Clear
+                </Button>
+              )}
+              <Button
+                size="sm"
+                className={cn("gap-1.5", showClear ? "flex-1" : "w-full")}
+                onClick={onSave}
+              >
                 <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
                 Done
               </Button>
@@ -258,8 +286,24 @@ export function DateTimeWizard({
               ))}
             </div>
 
-            <div className="mt-2 w-full flex justify-end">
-              <Button size="sm" className="gap-1.5 w-full" onClick={onSave}>
+            <div className="mt-2 w-full flex items-center gap-2">
+              {showClear && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 flex-1 text-muted-foreground hover:text-destructive hover:bg-destructive-surface-hover hover:border-destructive/30"
+                  onClick={handleClear}
+                >
+                  <X className="w-3.5 h-3.5" strokeWidth={2.25} />
+                  Clear
+                </Button>
+              )}
+              <Button
+                size="sm"
+                className={cn("gap-1.5", showClear ? "flex-1" : "w-full")}
+                onClick={onSave}
+              >
                 <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
                 Done
               </Button>

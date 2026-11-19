@@ -37,6 +37,7 @@ interface TaskDatePickerProps {
   allowPastDates?: boolean;
   error?: boolean;
   onEveningSelect?: () => void;
+  allowClear?: boolean;
 }
 
 export function TaskDatePicker({
@@ -57,6 +58,7 @@ export function TaskDatePicker({
   allowPastDates = false,
   error = false,
   onEveningSelect,
+  allowClear = true,
 }: TaskDatePickerProps) {
   const isCompact = variant === "compact";
   const isChip = variant === "chip";
@@ -134,12 +136,17 @@ export function TaskDatePicker({
     ? `${title}: ${formattedDate}`
     : `Set ${title.toLowerCase()}`;
 
+  const hasChipClear = isChip && !!date && allowClear;
+
   const buttonClassName = isChip
     ? cn(
-        "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-7 sm:h-8 shadow-none",
+        "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 border transition-colors shrink-0 h-7 sm:h-8 shadow-none",
         isHighlighted
           ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
           : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-foreground",
+        hasChipClear
+          ? "rounded-l-md rounded-r-none border-r-0 pr-2"
+          : "rounded-md",
         error && "border-destructive text-destructive",
       )
     : cn(
@@ -159,19 +166,29 @@ export function TaskDatePicker({
       );
 
   const clearButton =
-    !isChip && date ? (
+    allowClear && date ? (
       <button
         type="button"
         tabIndex={0}
         title={`Clear ${title.toLowerCase()}`}
         aria-label={`Clear ${title.toLowerCase()}`}
-        className={cn(
-          "relative ml-1 p-0.5 rounded cursor-pointer before:absolute before:-inset-2 before:content-['']",
-          isCompact
-            ? "hover:bg-destructive-surface-hover"
-            : "rounded-full hover:bg-current/10",
-          error && "hover:bg-destructive-surface-hover",
-        )}
+        className={
+          isChip
+            ? cn(
+                "inline-flex items-center justify-center h-7 sm:h-8 px-1.5 rounded-r-md rounded-l-none border border-l transition-colors cursor-pointer shrink-0 outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                isHighlighted
+                  ? "bg-secondary/70 border-border/80 hover:bg-secondary/90 border-l-border/60 text-foreground"
+                  : "bg-secondary/40 hover:bg-secondary/60 border-border/50 border-l-border/30 text-muted-foreground hover:text-foreground",
+                error && "border-destructive text-destructive",
+              )
+            : cn(
+                "relative ml-1 p-0.5 rounded cursor-pointer before:absolute before:-inset-2 before:content-[''] transition-colors",
+                isCompact
+                  ? "hover:bg-destructive-surface-hover text-muted-foreground hover:text-destructive"
+                  : "rounded-full hover:bg-current/10",
+                error && "hover:bg-destructive-surface-hover",
+              )
+        }
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -188,7 +205,10 @@ export function TaskDatePicker({
         }}
       >
         <X
-          className={cn("h-3 w-3", isCompact && "hover:text-destructive")}
+          className={cn(
+            "h-3 w-3",
+            !isChip && isCompact && "hover:text-destructive",
+          )}
           strokeWidth={2.25}
         />
       </button>
@@ -229,6 +249,7 @@ export function TaskDatePicker({
               showTime={showTime}
               allowPastDates={allowPastDates}
               onEveningSelect={onEveningSelect}
+              allowClear={allowClear}
             />
           </ResponsiveDialogContent>
         </ResponsiveDialog>
@@ -266,6 +287,7 @@ export function TaskDatePicker({
             showTime={showTime}
             allowPastDates={allowPastDates}
             onEveningSelect={onEveningSelect}
+            allowClear={allowClear}
           />
         </PopoverContent>
       </Popover>
