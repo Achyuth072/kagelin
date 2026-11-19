@@ -19,7 +19,6 @@ import { fetchAllRows } from "@/lib/supabase/paginate";
 import { notify } from "@/lib/notify";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
-import { isSameDay, parseISO } from "date-fns";
 import { categorizeTaskSchedule } from "@/lib/utils/task-metrics";
 import { Target, Check, Repeat, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -110,29 +109,24 @@ export function FocusTaskPicker() {
 
   const groupedTasks = useMemo(() => {
     const overdue: Task[] = [];
+    const rescheduleNeeded: Task[] = [];
     const today: Task[] = [];
     const now = new Date();
     for (const task of pickerTasks || []) {
-      const isDoToday = Boolean(
-        task.do_date && isSameDay(parseISO(task.do_date), now),
-      );
-      const isDueToday = Boolean(
-        task.due_date && isSameDay(parseISO(task.due_date), now),
-      );
-
-      if (isDoToday || isDueToday) {
-        today.push(task);
-        continue;
-      }
-
       const category = categorizeTaskSchedule(task, now);
-      if (category === "overdue" || category === "reschedule_needed") {
+      if (category === "overdue") {
         overdue.push(task);
-      } else if (category === "unscheduled") {
+      } else if (category === "reschedule_needed") {
+        rescheduleNeeded.push(task);
+      } else if (
+        category === "planned_today" ||
+        category === "due_today" ||
+        category === "unscheduled"
+      ) {
         today.push(task);
       }
     }
-    return { overdue, today };
+    return { overdue, rescheduleNeeded, today };
   }, [pickerTasks]);
 
   const handleChipTap = useCallback(() => {
@@ -269,6 +263,7 @@ export function FocusTaskPicker() {
     return (
       <div className="py-1">
         {renderSection("overdue", groupedTasks.overdue)}
+        {renderSection("needs rescheduling", groupedTasks.rescheduleNeeded)}
         {renderSection("today", groupedTasks.today)}
       </div>
     );

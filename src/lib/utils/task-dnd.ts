@@ -8,13 +8,14 @@ export type TaskPlacement = Partial<
   Pick<Task, "due_date" | "do_date" | "is_evening" | "priority" | "project_id">
 >;
 
-// "Overdue" is derived with no settable property; cross-group drops cannot enter without back-dating.
+// "Overdue" and "Needs Rescheduling" are derived with no settable property; cross-group drops cannot enter without back-dating.
 export function isDropBlockedGroup(
   groupTitle: string,
   groupBy?: GroupOption,
 ): boolean {
   if (groupBy !== undefined && groupBy !== "date") return false;
-  return groupTitle.toLowerCase() === "overdue";
+  const lower = groupTitle.toLowerCase();
+  return lower === "overdue" || lower === "needs rescheduling";
 }
 
 const dateBucketUpdates = (groupKey: string): TaskPlacement | null => {

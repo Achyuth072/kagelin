@@ -225,30 +225,6 @@ export function DateTimeWizard({
                 Evening
               </Button>
             </div>
-
-            {/* Date View Footer */}
-            <div className="mt-2 w-full flex items-center gap-2">
-              {showClear && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 flex-1 text-muted-foreground hover:text-destructive hover:bg-destructive-surface-hover hover:border-destructive/30"
-                  onClick={handleClear}
-                >
-                  <X className="w-3.5 h-3.5" strokeWidth={2.25} />
-                  Clear
-                </Button>
-              )}
-              <Button
-                size="sm"
-                className={cn("gap-1.5", showClear ? "flex-1" : "w-full")}
-                onClick={onSave}
-              >
-                <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
-                Done
-              </Button>
-            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center animate-in slide-in-from-right-5 fade-in duration-200">
@@ -292,31 +268,34 @@ export function DateTimeWizard({
                 </Button>
               ))}
             </div>
-
-            <div className="mt-2 w-full flex items-center gap-2">
-              {showClear && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 flex-1 text-muted-foreground hover:text-destructive hover:bg-destructive-surface-hover hover:border-destructive/30"
-                  onClick={handleClear}
-                >
-                  <X className="w-3.5 h-3.5" strokeWidth={2.25} />
-                  Clear
-                </Button>
-              )}
-              <Button
-                size="sm"
-                className={cn("gap-1.5", showClear ? "flex-1" : "w-full")}
-                onClick={onSave}
-              >
-                <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
-                Done
-              </Button>
-            </div>
           </div>
         )}
+
+        <div className="mt-2 w-full flex items-center gap-2">
+          {showClear && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 flex-1 h-9 sm:h-8 text-muted-foreground hover:text-foreground"
+              onClick={handleClear}
+            >
+              <X className="w-3.5 h-3.5" strokeWidth={2.25} />
+              Clear
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className={cn(
+              "gap-1.5 h-9 sm:h-8",
+              showClear ? "flex-1" : "w-full",
+            )}
+            onClick={onSave}
+          >
+            <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
+            Done
+          </Button>
+        </div>
       </div>
     </div>
   );

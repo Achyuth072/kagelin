@@ -841,8 +841,9 @@ describe("FocusTaskPicker", () => {
       expect(screen.getByText("Expired do_date")).toBeInTheDocument();
       expect(screen.getByText("Expired due_date")).toBeInTheDocument();
 
-      // Check section labels
+      // Check section labels: overdue commitment, operational reschedule needed, and today are segregated
       expect(screen.getByText("overdue")).toBeInTheDocument();
+      expect(screen.getByText("needs rescheduling")).toBeInTheDocument();
       expect(screen.getByText("today")).toBeInTheDocument();
     });
 

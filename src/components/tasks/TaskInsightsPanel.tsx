@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { format, parseISO, isAfter } from "date-fns";
 import { useTaskSeries } from "@/lib/hooks/useTasks";
 import { useFocusHistoryStore } from "@/lib/store/focusHistoryStore";
@@ -10,6 +9,7 @@ import { TaskOverviewCards } from "@/components/tasks/insights/TaskOverviewCards
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
 import { CheckSquare, CheckCircle2 } from "lucide-react";
+import { getTaskTotalFocusDuration } from "@/lib/utils/task-metrics";
 
 interface TaskInsightsPanelProps {
   task: Task;
@@ -24,16 +24,14 @@ export function TaskInsightsPanel({
   const { data: occurrences, isLoading } = useTaskSeries(seriesId);
   const focusSessions = useFocusHistoryStore((state) => state.sessions);
 
-  const seriesTaskIds = useMemo(
-    () => new Set((occurrences ?? []).map((o) => o.id).concat(task.id)),
-    [occurrences, task.id],
+  const seriesTaskIds = new Set(
+    (occurrences ?? []).map((o) => o.id).concat(task.id),
   );
 
-  const storeFocusDuration = useMemo(() => {
-    return focusSessions
-      .filter((s) => s.taskId && seriesTaskIds.has(s.taskId))
-      .reduce((sum, s) => sum + s.duration, 0);
-  }, [focusSessions, seriesTaskIds]);
+  const storeFocusDuration = getTaskTotalFocusDuration(
+    seriesTaskIds,
+    focusSessions,
+  );
 
   const effectiveFocusDuration =
     totalFocusDuration !== undefined
@@ -42,17 +40,13 @@ export function TaskInsightsPanel({
         ? storeFocusDuration
         : undefined;
 
-  const completedOccurrences = useMemo(
-    () =>
-      (occurrences ?? [])
-        .filter((o) => o.is_completed && o.completed_at)
-        .sort(
-          (a, b) =>
-            parseISO(b.completed_at!).getTime() -
-            parseISO(a.completed_at!).getTime(),
-        ),
-    [occurrences],
-  );
+  const completedOccurrences = (occurrences ?? [])
+    .filter((o) => o.is_completed && o.completed_at)
+    .sort(
+      (a, b) =>
+        parseISO(b.completed_at!).getTime() -
+        parseISO(a.completed_at!).getTime(),
+    );
 
   if (isLoading) {
     return (

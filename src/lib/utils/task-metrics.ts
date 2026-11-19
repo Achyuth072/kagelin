@@ -20,6 +20,11 @@ export type TaskScheduleInput = {
   is_completed?: boolean;
 };
 
+export type FocusSessionInput = {
+  taskId?: string | null;
+  duration: number;
+};
+
 /**
  * Accurately counts completed occurrences in a series regardless of schedule.
  */
@@ -42,6 +47,19 @@ export function getTaskOnTimeRate(
     (o) => !isAfter(parseISO(o.completed_at!), parseISO(o.due_date!)),
   ).length;
   return onTime / completed.length;
+}
+
+/**
+ * Aggregates total logged focus duration (in seconds) for a task or an array/set of task IDs.
+ */
+export function getTaskTotalFocusDuration(
+  taskIds: string[] | Set<string>,
+  sessions: FocusSessionInput[],
+): number {
+  const idSet = taskIds instanceof Set ? taskIds : new Set(taskIds);
+  return sessions
+    .filter((s) => s.taskId && idSet.has(s.taskId))
+    .reduce((sum, s) => sum + s.duration, 0);
 }
 
 /**

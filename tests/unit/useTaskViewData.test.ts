@@ -19,7 +19,7 @@ const mockTasks: Task[] = [
     priority: 4,
     is_completed: false,
     is_evening: false,
-    do_date: "2026-04-20",
+    due_date: "2026-04-20",
   } as Task,
   {
     id: "3",
@@ -206,6 +206,42 @@ describe("useTaskViewData", () => {
     expect(todayGroup?.tasks.map((t) => t.id)).toContain("4");
     expect(tomorrowGroup?.tasks.map((t) => t.id)).toEqual(["5"]);
     expect(overdueGroup?.tasks.map((t) => t.id)).toEqual(["2"]); // 2026-04-20 is before 2026-04-21
+  });
+
+  it("differentiates overdue commitments from tasks needing rescheduling in date grouping", () => {
+    const tasks: Task[] = [
+      {
+        id: "due-past",
+        content: "Overdue",
+        priority: 1,
+        is_completed: false,
+        due_date: "2026-04-20",
+      } as Task,
+      {
+        id: "do-past",
+        content: "Needs reschedule",
+        priority: 2,
+        is_completed: false,
+        do_date: "2026-04-20",
+      } as Task,
+    ];
+
+    const { result } = renderHook(() =>
+      useTaskViewData({
+        tasks,
+        sortBy: "custom",
+        groupBy: "date",
+      }),
+    );
+
+    const groups = result.current.groups!;
+    const overdueGroup = groups.find((g) => g.title === "Overdue");
+    const rescheduleGroup = groups.find(
+      (g) => g.title === "Needs Rescheduling",
+    );
+
+    expect(overdueGroup?.tasks.map((t) => t.id)).toEqual(["due-past"]);
+    expect(rescheduleGroup?.tasks.map((t) => t.id)).toEqual(["do-past"]);
   });
 
   it("headings a project whose name can't be read with the label and a short id", () => {

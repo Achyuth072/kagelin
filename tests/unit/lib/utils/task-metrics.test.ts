@@ -3,6 +3,7 @@ import {
   getTaskTotalCompletions,
   getTaskOnTimeRate,
   categorizeTaskSchedule,
+  getTaskTotalFocusDuration,
   type TaskOccurrence,
 } from "@/lib/utils/task-metrics";
 import * as taskMetricsModule from "@/lib/utils/task-metrics";
@@ -195,6 +196,34 @@ describe("categorizeTaskSchedule", () => {
     expect(
       categorizeTaskSchedule({ do_date: "2026-06-26T09:00:00.000Z" }, today),
     ).toBe("scheduled");
+  });
+});
+
+describe("getTaskTotalFocusDuration", () => {
+  it("returns 0 when session array is empty", () => {
+    expect(getTaskTotalFocusDuration(["task-1"], [])).toBe(0);
+  });
+
+  it("returns 0 when no sessions match the task IDs", () => {
+    const sessions = [
+      { taskId: "other-task", duration: 1500 },
+      { taskId: null, duration: 600 },
+    ];
+    expect(getTaskTotalFocusDuration(["task-1"], sessions)).toBe(0);
+  });
+
+  it("aggregates duration across matched tasks correctly for array or set", () => {
+    const sessions = [
+      { taskId: "task-1", duration: 1500 },
+      { taskId: "task-2", duration: 900 },
+      { taskId: "task-3", duration: 1200 },
+    ];
+    expect(getTaskTotalFocusDuration(["task-1", "task-2"], sessions)).toBe(
+      2400,
+    );
+    expect(
+      getTaskTotalFocusDuration(new Set(["task-2", "task-3"]), sessions),
+    ).toBe(2100);
   });
 });
 

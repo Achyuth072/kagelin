@@ -6,7 +6,6 @@ import { useMemo } from "react";
 import {
   compareAsc,
   parseISO,
-  isBefore,
   isToday,
   isTomorrow,
   startOfDay,
@@ -14,6 +13,7 @@ import {
 import type { Task, Project } from "@/lib/types/task";
 import type { SortOption, GroupOption } from "@/lib/types/sorting";
 import type { TaskGroup, TaskPresentation } from "@/lib/types/task-view";
+import { categorizeTaskSchedule } from "@/lib/utils/task-metrics";
 
 export type { TaskGroup, TaskPresentation };
 export type ProcessedTasks = TaskPresentation;
@@ -81,7 +81,14 @@ export function useTaskViewData({
         groupOrder.push(key);
       });
     } else if (groupBy === "date") {
-      groupOrder.push("Overdue", "Today", "Tomorrow", "Upcoming", "No Date");
+      groupOrder.push(
+        "Overdue",
+        "Needs Rescheduling",
+        "Today",
+        "Tomorrow",
+        "Upcoming",
+        "No Date",
+      );
       groupOrder.forEach((k) => (groupMap[k] = []));
     }
 
@@ -135,14 +142,22 @@ export function useTaskViewData({
         const key = labels[task.priority];
         groupMap[key].push(task);
       } else if (groupBy === "date") {
-        const date = getParsedDate(task);
-        if (!date) {
-          groupMap["No Date"].push(task);
+        const category = categorizeTaskSchedule(task, today);
+        if (category === "overdue") {
+          groupMap["Overdue"].push(task);
+        } else if (category === "reschedule_needed") {
+          groupMap["Needs Rescheduling"].push(task);
+        } else if (category === "planned_today" || category === "due_today") {
+          groupMap["Today"].push(task);
         } else {
-          if (isBefore(date, today)) groupMap["Overdue"].push(task);
-          else if (isToday(date)) groupMap["Today"].push(task);
-          else if (isTomorrow(date)) groupMap["Tomorrow"].push(task);
-          else groupMap["Upcoming"].push(task);
+          const date = getParsedDate(task);
+          if (!date) {
+            groupMap["No Date"].push(task);
+          } else if (isTomorrow(date)) {
+            groupMap["Tomorrow"].push(task);
+          } else {
+            groupMap["Upcoming"].push(task);
+          }
         }
       } else if (groupBy === "project") {
         const projectId = task.project_id || "inbox";

@@ -1,23 +1,11 @@
 "use client";
 
 import React from "react";
-import {
-  Check,
-  ChevronDown,
-  Calendar,
-  CalendarClock,
-  Moon,
-  Play,
-  Trash2,
-} from "lucide-react";
+import { Check, ChevronDown, Calendar, Moon, Play, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
-import {
-  formatDueDate,
-  formatDoDate,
-  isOverdue,
-  taskDomId,
-} from "./task-utils";
+import { formatDueDate, isOverdue, taskDomId } from "./task-utils";
+import { DoDateChip } from "./shared/DoDateChip";
 import {
   DraggableAttributes,
   DraggableSyntheticListeners,
@@ -61,9 +49,6 @@ export function ListTaskCard({
   shouldAnimate = false,
   isKeyboardSelected = false,
 }: ListTaskCardProps) {
-  const doDateInfo = task.do_date
-    ? formatDoDate(task.do_date, task.is_completed)
-    : null;
   const completedSteps =
     task.subtasks?.filter((s) => s.is_completed).length ?? 0;
   const totalSteps = task.subtasks?.length ?? 0;
@@ -183,29 +168,7 @@ export function ListTaskCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
-          {task.do_date && doDateInfo && (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md border",
-                doDateInfo.isPlannedToday
-                  ? "bg-secondary/70 border-border/80 text-foreground font-semibold"
-                  : doDateInfo.isRescheduleNeeded
-                    ? "bg-secondary/40 border-border/60 text-muted-foreground border-dashed"
-                    : "bg-secondary/35 border-border/40 text-muted-foreground",
-              )}
-              title={
-                doDateInfo.isRescheduleNeeded ? "Needs rescheduling" : undefined
-              }
-              aria-label={
-                doDateInfo.isRescheduleNeeded
-                  ? `${doDateInfo.text} (Needs rescheduling)`
-                  : undefined
-              }
-            >
-              <CalendarClock className="h-3 w-3" strokeWidth={2.25} />
-              <span>{doDateInfo.text}</span>
-            </span>
-          )}
+          <DoDateChip doDate={task.do_date} isCompleted={task.is_completed} />
 
           {task.due_date && (
             <span

@@ -1,6 +1,6 @@
 "use client";
 
-import { format, isBefore, isToday, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { DateTimeWizard } from "@/components/ui/date-time-wizard";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { categorizeTaskSchedule } from "@/lib/utils/task-metrics";
 
 interface TaskDatePickerProps {
   date: Date | undefined;
@@ -67,18 +68,17 @@ export function TaskDatePicker({
   const isCompact = variant === "compact";
   const isChip = variant === "chip";
   const isDoDate = title === "Do Date" || title.toLowerCase().includes("start");
-  const isOverdue =
-    !isCompleted &&
-    !isDoDate &&
-    !!date &&
-    isBefore(date, startOfDay(new Date()));
-  const isDoDateToday = isDoDate && !!date && isToday(date);
+  const scheduleCategory = date
+    ? categorizeTaskSchedule(
+        isDoDate
+          ? { do_date: date.toISOString(), is_completed: isCompleted }
+          : { due_date: date.toISOString(), is_completed: isCompleted },
+      )
+    : "unscheduled";
+  const isOverdue = scheduleCategory === "overdue";
+  const isDoDateToday = isDoDate && scheduleCategory === "planned_today";
   const isDoDateReschedule =
-    !isCompleted &&
-    isDoDate &&
-    !!date &&
-    isBefore(startOfDay(date), startOfDay(new Date())) &&
-    !isToday(date);
+    isDoDate && scheduleCategory === "reschedule_needed";
   const isHighlighted = isDoDateToday || isOverdue;
 
   const effectiveDescription =

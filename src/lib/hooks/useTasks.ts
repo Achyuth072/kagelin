@@ -28,7 +28,9 @@ export function useTasks(options: UseTasksOptions = {}) {
           const today = new Date();
           today.setHours(23, 59, 59, 999);
           tasks = tasks.filter(
-            (t) => t.due_date && new Date(t.due_date) <= today,
+            (t) =>
+              (t.do_date && new Date(t.do_date) <= today) ||
+              (t.due_date && new Date(t.due_date) <= today),
           );
         } else if (filter === "p1") {
           tasks = tasks.filter((t) => t.priority === 1);
@@ -118,7 +120,9 @@ export function useTasks(options: UseTasksOptions = {}) {
           .order("id", { ascending: true });
 
         if (filter === "today") {
-          query = query.lte("due_date", todayEnd.toISOString());
+          query = query.or(
+            `do_date.lte.${todayEnd.toISOString()},due_date.lte.${todayEnd.toISOString()}`,
+          );
         } else if (filter === "p1") {
           query = query.eq("priority", 1);
         }
