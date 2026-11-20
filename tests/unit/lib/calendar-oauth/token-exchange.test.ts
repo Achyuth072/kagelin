@@ -121,4 +121,44 @@ describe("exchangeForAccessToken", () => {
       }),
     ).rejects.toThrow(/429/);
   });
+
+  it("exchanges refresh token for google_tasks using Google endpoint and credentials", async () => {
+    process.env.GOOGLE_CLIENT_ID = "mock-google-id";
+    process.env.GOOGLE_CLIENT_SECRET = "mock-google-secret";
+
+    const { ciphertext, iv } = await makeStoredToken();
+    let capturedUrl = "";
+    let capturedBody: URLSearchParams | undefined;
+
+    vi.spyOn(global, "fetch").mockImplementation(async (url, init) => {
+      capturedUrl = url.toString();
+      capturedBody = new URLSearchParams(init?.body as string);
+      return {
+        ok: true,
+        json: async () => ({
+          access_token: "ya29.tasks-refreshed",
+          expires_in: 3600,
+        }),
+      } as Response;
+    });
+
+    const result = await exchangeForAccessToken({
+      provider: "google_tasks",
+      encryptedToken: ciphertext,
+      tokenIv: iv,
+      encryptionKey: TEST_KEY,
+    });
+
+    expect(capturedUrl).toBe("https://oauth2.googleapis.com/token");
+    expect(
+      (capturedBody as URLSearchParams | undefined)?.get("client_id"),
+    ).toBe("mock-google-id");
+    expect(
+      (capturedBody as URLSearchParams | undefined)?.get("client_secret"),
+    ).toBe("mock-google-secret");
+    expect(result.disconnected).toBe(false);
+    if (!result.disconnected) {
+      expect(result.accessToken).toBe("ya29.tasks-refreshed");
+    }
+  });
 });

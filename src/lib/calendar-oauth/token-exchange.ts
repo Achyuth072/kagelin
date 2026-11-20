@@ -2,6 +2,7 @@ import { decryptRefreshToken, encryptRefreshToken } from "./token-crypto";
 
 const TOKEN_ENDPOINTS: Record<string, string> = {
   google: "https://oauth2.googleapis.com/token",
+  google_tasks: "https://oauth2.googleapis.com/token",
   outlook: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
 };
 
@@ -35,11 +36,22 @@ export async function exchangeForAccessToken(
   const endpoint = TOKEN_ENDPOINTS[provider];
   if (!endpoint) throw new Error(`Unknown provider: ${provider}`);
 
+  const clientId =
+    process.env[`${provider.toUpperCase()}_CLIENT_ID`] ??
+    (provider === "google_tasks" ? process.env.GOOGLE_CLIENT_ID : undefined) ??
+    "";
+  const clientSecret =
+    process.env[`${provider.toUpperCase()}_CLIENT_SECRET`] ??
+    (provider === "google_tasks"
+      ? process.env.GOOGLE_CLIENT_SECRET
+      : undefined) ??
+    "";
+
   const body = new URLSearchParams({
     grant_type: "refresh_token",
     refresh_token: refreshToken,
-    client_id: process.env[`${provider.toUpperCase()}_CLIENT_ID`] ?? "",
-    client_secret: process.env[`${provider.toUpperCase()}_CLIENT_SECRET`] ?? "",
+    client_id: clientId,
+    client_secret: clientSecret,
   });
 
   const response = await fetch(endpoint, {

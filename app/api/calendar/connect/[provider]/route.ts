@@ -6,14 +6,23 @@ import { getOAuthRedirectUri } from "@/lib/calendar-oauth/app-url";
 
 const PROVIDER_AUTH_URLS: Record<string, string> = {
   google: "https://accounts.google.com/o/oauth2/v2/auth",
+  google_tasks: "https://accounts.google.com/o/oauth2/v2/auth",
   outlook: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
 };
 
 const PROVIDER_SCOPES: Record<string, string> = {
   google: "https://www.googleapis.com/auth/calendar openid email",
+  google_tasks: "https://www.googleapis.com/auth/tasks.readonly openid email",
   outlook:
     "https://graph.microsoft.com/Calendars.ReadWrite offline_access openid email",
 };
+
+function isValidReturnTo(path: string | null): boolean {
+  if (!path) return false;
+  return /^\/settings\?tab=[a-zA-Z0-9_.~%-]+(&[a-zA-Z0-9_.~%-]+=[a-zA-Z0-9_.~%-]*)*$/.test(
+    path,
+  );
+}
 
 export async function GET(
   request: Request,
@@ -54,12 +63,25 @@ export async function GET(
     path: "/",
   });
 
+  const returnTo = new URL(request.url).searchParams.get("return_to");
+  if (isValidReturnTo(returnTo)) {
+    cookieStore.set("calendar_oauth_return_to", returnTo!, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 10,
+      path: "/",
+    });
+  }
+
+  const clientId =
+    process.env[`${provider.toUpperCase()}_CLIENT_ID`] ??
+    (provider === "google_tasks" ? process.env.GOOGLE_CLIENT_ID : undefined) ??
+    "";
+
   const redirectUri = getOAuthRedirectUri(request);
   const url = new URL(PROVIDER_AUTH_URLS[provider]);
-  url.searchParams.set(
-    "client_id",
-    process.env[`${provider.toUpperCase()}_CLIENT_ID`] ?? "",
-  );
+  url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", PROVIDER_SCOPES[provider]);
@@ -67,7 +89,7 @@ export async function GET(
   url.searchParams.set("code_challenge", codeChallenge);
   url.searchParams.set("code_challenge_method", "S256");
 
-  if (provider === "google") {
+  if (provider === "google" || provider === "google_tasks") {
     url.searchParams.set("access_type", "offline");
     url.searchParams.set("prompt", "consent");
   }
