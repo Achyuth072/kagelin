@@ -689,7 +689,7 @@ export function AppMigrationDialog({
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-brand/10 text-brand shrink-0">
+                  <div className="h-9 w-9 rounded-full bg-brand/10 text-brand shrink-0 flex items-center justify-center">
                     <Calendar className="h-5 w-5" strokeWidth={2.25} />
                   </div>
                   <div>
