@@ -16,3 +16,27 @@ export function getAppBaseUrl(request: Request): string {
 export function getOAuthRedirectUri(request: Request): string {
   return `${getAppBaseUrl(request)}/api/calendar/oauth/callback`;
 }
+
+export function isValidReturnTo(path: string | null | undefined): boolean {
+  if (!path) return false;
+  return /^\/settings\?tab=[a-zA-Z0-9_.~%-]+(&[a-zA-Z0-9_.~%-]+=[a-zA-Z0-9_.~%-]*)*$/.test(
+    path,
+  );
+}
+
+export function getOAuthCredentials(provider: string): {
+  clientId: string;
+  clientSecret: string;
+} {
+  const clientId =
+    process.env[`${provider.toUpperCase()}_CLIENT_ID`] ??
+    (provider === "google_tasks" ? process.env.GOOGLE_CLIENT_ID : undefined) ??
+    "";
+  const clientSecret =
+    process.env[`${provider.toUpperCase()}_CLIENT_SECRET`] ??
+    (provider === "google_tasks"
+      ? process.env.GOOGLE_CLIENT_SECRET
+      : undefined) ??
+    "";
+  return { clientId, clientSecret };
+}

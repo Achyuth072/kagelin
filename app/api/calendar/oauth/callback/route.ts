@@ -4,14 +4,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { exchangeAuthCode } from "@/lib/calendar-oauth/auth-code-exchange";
 import { encryptRefreshToken } from "@/lib/calendar-oauth/token-crypto";
-import { getAppBaseUrl } from "@/lib/calendar-oauth/app-url";
-
-function isValidReturnTo(path: string | null | undefined): boolean {
-  if (!path) return false;
-  return /^\/settings\?tab=[a-zA-Z0-9_.~%-]+(&[a-zA-Z0-9_.~%-]+=[a-zA-Z0-9_.~%-]*)*$/.test(
-    path,
-  );
-}
+import { getAppBaseUrl, isValidReturnTo } from "@/lib/calendar-oauth/app-url";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -78,7 +71,7 @@ export async function GET(request: Request) {
 
     if (provider === "google_tasks") {
       cookieStore.set("google_tasks_temp_token", accessToken, {
-        httpOnly: false,
+        httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         maxAge: 60 * 10,

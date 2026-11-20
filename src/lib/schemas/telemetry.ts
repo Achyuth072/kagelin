@@ -93,6 +93,17 @@ export const ContentUnreadableEventSchema = z
   })
   .strict();
 
+export const MigrationErrorCodeSchema = z.enum([
+  "parse_failed",
+  "fetch_failed",
+  "commit_failed",
+  "rate_limited",
+  "aborted",
+  "unknown",
+]);
+
+export type MigrationErrorCode = z.infer<typeof MigrationErrorCodeSchema>;
+
 export const MigrationEventSchema = z
   .object({
     name: z.literal("migration_event"),
@@ -105,7 +116,7 @@ export const MigrationEventSchema = z
         status: z.enum(["started", "completed", "failed"]),
         task_count: z.number().int().nonnegative().optional(),
         duration_ms: z.number().int().nonnegative().optional(),
-        error_code: z.string().optional(),
+        error_code: MigrationErrorCodeSchema.optional(),
       })
       .strict(),
   })

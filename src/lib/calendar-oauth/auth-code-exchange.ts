@@ -1,3 +1,5 @@
+import { getOAuthCredentials } from "./app-url";
+
 const TOKEN_ENDPOINTS: Record<string, string> = {
   google: "https://oauth2.googleapis.com/token",
   google_tasks: "https://oauth2.googleapis.com/token",
@@ -25,16 +27,7 @@ export async function exchangeAuthCode(
   const endpoint = TOKEN_ENDPOINTS[provider];
   if (!endpoint) throw new Error(`Unknown provider: ${provider}`);
 
-  const clientId =
-    process.env[`${provider.toUpperCase()}_CLIENT_ID`] ??
-    (provider === "google_tasks" ? process.env.GOOGLE_CLIENT_ID : undefined) ??
-    "";
-  const clientSecret =
-    process.env[`${provider.toUpperCase()}_CLIENT_SECRET`] ??
-    (provider === "google_tasks"
-      ? process.env.GOOGLE_CLIENT_SECRET
-      : undefined) ??
-    "";
+  const { clientId, clientSecret } = getOAuthCredentials(provider);
 
   const body = new URLSearchParams({
     grant_type: "authorization_code",

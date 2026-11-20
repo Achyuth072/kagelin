@@ -43,6 +43,25 @@ const TODOIST_PROJECT_STATUS_LABELS: Record<TodoistProjectStatus, string> = {
   new: "New",
 };
 
+function formatDateRange(
+  earliest: string | null | undefined,
+  latest: string | null | undefined,
+): string | null {
+  if (!earliest || !latest) return null;
+  const parseCalendarDate = (isoStr: string) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoStr);
+    if (match) {
+      return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    }
+    return new Date(isoStr);
+  };
+  const d1 = parseCalendarDate(earliest);
+  const d2 = parseCalendarDate(latest);
+  const f1 = format(d1, "MMM d, yyyy");
+  const f2 = format(d2, "MMM d, yyyy");
+  return f1 === f2 ? f1 : `${f1} – ${f2}`;
+}
+
 export interface AppMigrationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -175,9 +194,14 @@ export function AppMigrationDialog({
     await processGoogleTasksFile(file);
   };
 
+  const [includeCompletedGoogleTasks, setIncludeCompletedGoogleTasks] =
+    useState(true);
+
   const handleConfirmGoogleTasksImport = async () => {
     trigger("toggle");
-    const success = await commitGoogleTasksImport();
+    const success = await commitGoogleTasksImport(undefined, {
+      includeCompleted: includeCompletedGoogleTasks,
+    });
     if (success) onOpenChange(false);
   };
 
@@ -204,12 +228,19 @@ export function AppMigrationDialog({
         acc + project.tasks.filter((task) => task.originalDepth >= 2).length,
       0,
     );
-    const dateRange =
-      googleTasksPreview.earliestDate && googleTasksPreview.latestDate
-        ? googleTasksPreview.earliestDate === googleTasksPreview.latestDate
-          ? format(new Date(googleTasksPreview.earliestDate), "MMM d, yyyy")
-          : `${format(new Date(googleTasksPreview.earliestDate), "MMM d, yyyy")} – ${format(new Date(googleTasksPreview.latestDate), "MMM d, yyyy")}`
-        : null;
+    const completedTasksCount = googleTasksPreview.projects.reduce(
+      (acc, project) =>
+        acc + project.tasks.filter((task) => task.isCompleted).length,
+      0,
+    );
+    const importableTasksCount = includeCompletedGoogleTasks
+      ? googleTasksPreview.totalTasks
+      : googleTasksPreview.totalTasks - completedTasksCount;
+
+    const dateRange = formatDateRange(
+      googleTasksPreview.earliestDate,
+      googleTasksPreview.latestDate,
+    );
 
     return (
       <ResponsiveDialog
@@ -291,6 +322,26 @@ export function AppMigrationDialog({
                   <dd>{googleTasksPreview.subtasksReassigned}</dd>
                 </div>
               )}
+              {completedTasksCount > 0 && (
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  <label
+                    htmlFor="google-tasks-include-completed"
+                    className="cursor-pointer text-sm text-muted-foreground"
+                  >
+                    Include completed tasks ({completedTasksCount})
+                  </label>
+                  <input
+                    id="google-tasks-include-completed"
+                    type="checkbox"
+                    checked={includeCompletedGoogleTasks}
+                    onChange={(e) =>
+                      setIncludeCompletedGoogleTasks(e.target.checked)
+                    }
+                    className="h-4 w-4 rounded border-border"
+                    disabled={isImportingGoogleTasks}
+                  />
+                </div>
+              )}
             </dl>
 
             {googleTasksPreview.projects.length > 0 && (
@@ -325,7 +376,6 @@ export function AppMigrationDialog({
               variant="ghost"
               onClick={handleCancelGoogleTasksImport}
               className="text-muted-foreground hover:text-foreground"
-              disabled={isImportingGoogleTasks}
             >
               Cancel
             </Button>
@@ -336,7 +386,7 @@ export function AppMigrationDialog({
               {isImportingGoogleTasks ? (
                 <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
               ) : (
-                `Import ${googleTasksPreview.totalTasks} tasks`
+                `Import ${importableTasksCount} tasks`
               )}
             </Button>
           </div>
@@ -347,12 +397,10 @@ export function AppMigrationDialog({
 
   if (todoistPreview) {
     const isArchive = isArchivePreview(todoistPreview);
-    const dateRange =
-      todoistPreview.earliestDate && todoistPreview.latestDate
-        ? todoistPreview.earliestDate === todoistPreview.latestDate
-          ? format(new Date(todoistPreview.earliestDate), "MMM d, yyyy")
-          : `${format(new Date(todoistPreview.earliestDate), "MMM d, yyyy")} – ${format(new Date(todoistPreview.latestDate), "MMM d, yyyy")}`
-        : null;
+    const dateRange = formatDateRange(
+      todoistPreview.earliestDate,
+      todoistPreview.latestDate,
+    );
 
     return (
       <ResponsiveDialog
@@ -510,12 +558,7 @@ export function AppMigrationDialog({
   }
 
   if (preview) {
-    const dateRange =
-      preview.earliest && preview.latest
-        ? preview.earliest === preview.latest
-          ? format(new Date(preview.earliest), "MMM d, yyyy")
-          : `${format(new Date(preview.earliest), "MMM d, yyyy")} – ${format(new Date(preview.latest), "MMM d, yyyy")}`
-        : null;
+    const dateRange = formatDateRange(preview.earliest, preview.latest);
 
     return (
       <ResponsiveDialog

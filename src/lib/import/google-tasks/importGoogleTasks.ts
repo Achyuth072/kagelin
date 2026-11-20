@@ -1,17 +1,7 @@
 import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { taskMutations } from "@/lib/mutations/task";
 import { projectMutations } from "@/lib/mutations/project";
-import { persistImportSource } from "@/lib/mutations/importSource";
 import type { GoogleTasksImportPreview, ParentRedirect } from "./types";
-
-const GUEST_MODE_KEY = "kanso_guest_mode";
-
-function detectGuestMode(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    localStorage.getItem(GUEST_MODE_KEY) === "true"
-  );
-}
 
 /**
  * Split an array of items into batches of at most `chunkSize`.
@@ -93,11 +83,7 @@ export async function rollbackGoogleTasksImport(
   // 2. Delete created projects
   for (const projectId of createdProjectIds) {
     try {
-      if (typeof projectMutations.delete === "function") {
-        await projectMutations.delete(projectId);
-      } else if (typeof projectMutations.deleteMany === "function") {
-        await projectMutations.deleteMany([projectId]);
-      }
+      await projectMutations.delete(projectId);
     } catch (err) {
       success = false;
       void recordDiagnosticError(err);
@@ -111,6 +97,7 @@ export interface ExecuteGoogleTasksImportOptions {
   isGuest?: boolean;
   fileName?: string;
   signal?: AbortSignal;
+  includeCompleted?: boolean;
 }
 
 /**
@@ -125,22 +112,7 @@ export async function executeGoogleTasksImport(
   preview: GoogleTasksImportPreview,
   options: ExecuteGoogleTasksImportOptions = {},
 ): Promise<{ importedCount: number; createdProjectCount: number }> {
-  const isGuest = options.isGuest ?? detectGuestMode();
-
-  // ADR 0006 provenance capture (non-fatal)
-  try {
-    await persistImportSource(
-      {
-        source_app: "google_tasks",
-        file_name: options.fileName ?? null,
-        raw: preview.rawSource,
-      },
-      { isGuest },
-    );
-  } catch (error) {
-    void recordDiagnosticError(error);
-  }
-
+  const includeCompleted = options.includeCompleted ?? true;
   const createdTaskIds: string[] = [];
   const createdProjectIds: string[] = [];
 
@@ -150,7 +122,11 @@ export async function executeGoogleTasksImport(
     }
 
     for (const project of preview.projects) {
-      if (project.tasks.length === 0) continue;
+      const eligibleTasks = includeCompleted
+        ? project.tasks
+        : project.tasks.filter((task) => !task.isCompleted);
+
+      if (eligibleTasks.length === 0) continue;
 
       if (options.signal?.aborted) {
         throw new Error("Import aborted by user");
@@ -170,8 +146,8 @@ export async function executeGoogleTasksImport(
         createdProjectIds.push(createdProject.id);
       }
 
-      const roots = project.tasks.filter((task) => !task.tempParentId);
-      const subtasks = project.tasks.filter((task) =>
+      const roots = eligibleTasks.filter((task) => !task.tempParentId);
+      const subtasks = eligibleTasks.filter((task) =>
         Boolean(task.tempParentId),
       );
 
@@ -182,6 +158,9 @@ export async function executeGoogleTasksImport(
         description: task.description ?? undefined,
         due_date: task.dueDate ?? undefined,
         project_id: projectId,
+        is_completed: task.isCompleted,
+        completed_at: task.completedAt ?? undefined,
+        day_order: task.dayOrder,
         _clientId: rootClientIds[index],
       }));
 
@@ -215,6 +194,9 @@ export async function executeGoogleTasksImport(
             due_date: task.dueDate ?? undefined,
             project_id: projectId,
             parent_id: resolvedParent,
+            is_completed: task.isCompleted,
+            completed_at: task.completedAt ?? undefined,
+            day_order: task.dayOrder,
             _clientId: crypto.randomUUID(),
           };
         });

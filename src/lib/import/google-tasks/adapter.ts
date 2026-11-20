@@ -248,7 +248,7 @@ export async function fetchGoogleTasksDataset(
     options.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF_MS;
   const fetchFn = options.fetchFn ?? globalThis.fetch;
   const signal = options.signal;
-  const skipEmptyLists = options.skipEmptyLists ?? false;
+  const skipEmptyLists = options.skipEmptyLists ?? true;
 
   const dispatcher = new ThrottledDispatcher(
     maxConcurrency,

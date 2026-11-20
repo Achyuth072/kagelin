@@ -85,8 +85,9 @@ export const taskMutations = {
           recurrence: input.recurrence || null,
           recurring_series_id: input.recurrence ? crypto.randomUUID() : null,
           reminder_days: input.reminder_days ?? 127,
-          is_completed: false,
-          completed_at: null,
+          is_completed: input.is_completed ?? false,
+          completed_at: input.completed_at || null,
+          day_order: input.day_order,
           google_event_id: null,
           google_etag: null,
         })),
@@ -124,7 +125,10 @@ export const taskMutations = {
       recurrence: input.recurrence || null,
       recurring_series_id: input.recurrence ? crypto.randomUUID() : null,
       reminder_days: input.reminder_days ?? 127,
-      day_order: firstDayOrder + index,
+      is_completed: input.is_completed ?? false,
+      completed_at: input.completed_at || null,
+      day_order:
+        input.day_order !== undefined ? input.day_order : firstDayOrder + index,
     }));
 
     const { data, error } = await supabase.from("tasks").insert(rows).select();

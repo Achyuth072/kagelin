@@ -8,7 +8,6 @@ import { planGoogleTasksImport } from "../plan";
 import type { GoogleTasksDataset, ExistingWorkspace } from "../types";
 import { taskMutations } from "@/lib/mutations/task";
 import { projectMutations } from "@/lib/mutations/project";
-import { persistImportSource } from "@/lib/mutations/importSource";
 
 vi.mock("@/lib/mutations/task", () => ({
   taskMutations: {
@@ -23,10 +22,6 @@ vi.mock("@/lib/mutations/project", () => ({
     delete: vi.fn(),
     deleteMany: vi.fn(),
   },
-}));
-
-vi.mock("@/lib/mutations/importSource", () => ({
-  persistImportSource: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/lib/errors/diagnostics", () => ({
@@ -79,51 +74,74 @@ describe("executeGoogleTasksImport & rollbackGoogleTasksImport", () => {
     vi.mocked(projectMutations.deleteMany).mockResolvedValue(undefined);
   });
 
-  it("captures raw source provenance via persistImportSource per ADR 0006", async () => {
+  it("preserves completion state, completed_at, and day_order in taskMutations.createMany inputs", async () => {
     const dataset: GoogleTasksDataset = {
       lists: [{ id: "@default", title: "My Tasks" }],
       tasksByListId: {
-        "@default": [{ id: "t1", title: "Buy milk", status: "needsAction" }],
+        "@default": [
+          {
+            id: "t1",
+            title: "Task 1",
+            status: "completed",
+            completed: "2026-11-20T12:00:00.000Z",
+            position: "00000000000000000001",
+          },
+          {
+            id: "t2",
+            title: "Task 2",
+            status: "needsAction",
+            position: "00000000000000000002",
+          },
+        ],
       },
     };
 
     const preview = planGoogleTasksImport(dataset);
+    const result = await executeGoogleTasksImport(preview, { isGuest: false });
 
-    const result = await executeGoogleTasksImport(preview, {
-      isGuest: false,
-      fileName: "Takeout.json",
-    });
+    expect(result.importedCount).toBe(2);
+    expect(taskMutations.createMany).toHaveBeenCalledTimes(1);
+    const inputs = vi.mocked(taskMutations.createMany).mock.calls[0][0];
+    expect(inputs[0].is_completed).toBe(true);
+    expect(inputs[0].completed_at).toBe("2026-11-20T12:00:00.000Z");
+    expect(inputs[0].day_order).toBe(0);
 
-    expect(result.importedCount).toBe(1);
-    expect(persistImportSource).toHaveBeenCalledWith(
-      {
-        source_app: "google_tasks",
-        file_name: "Takeout.json",
-        raw: dataset,
-      },
-      { isGuest: false },
-    );
+    expect(inputs[1].is_completed).toBe(false);
+    expect(inputs[1].completed_at).toBeUndefined();
+    expect(inputs[1].day_order).toBe(1);
   });
 
-  it("does not abort import if provenance capture fails", async () => {
-    vi.mocked(persistImportSource).mockRejectedValueOnce(
-      new Error("Storage unavailable"),
-    );
-
+  it("filters out completed tasks when includeCompleted is false", async () => {
     const dataset: GoogleTasksDataset = {
       lists: [{ id: "@default", title: "My Tasks" }],
       tasksByListId: {
-        "@default": [{ id: "t1", title: "Buy milk", status: "needsAction" }],
+        "@default": [
+          {
+            id: "t1",
+            title: "Completed Task",
+            status: "completed",
+          },
+          {
+            id: "t2",
+            title: "Active Task",
+            status: "needsAction",
+          },
+        ],
       },
     };
 
     const preview = planGoogleTasksImport(dataset);
-
     const result = await executeGoogleTasksImport(preview, {
-      isGuest: true,
+      isGuest: false,
+      includeCompleted: false,
     });
 
     expect(result.importedCount).toBe(1);
+    expect(taskMutations.createMany).toHaveBeenCalledTimes(1);
+    const inputs = vi.mocked(taskMutations.createMany).mock.calls[0][0];
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0].content).toBe("Active Task");
+    expect(inputs[0].is_completed).toBe(false);
   });
 
   it("creates projects sequentially and associates task project_ids correctly", async () => {

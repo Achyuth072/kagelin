@@ -54,6 +54,9 @@ export interface CreateTaskInput {
   parent_id?: string;
   recurrence?: RecurrenceRule | null;
   reminder_days?: number;
+  is_completed?: boolean;
+  completed_at?: string | null;
+  day_order?: number;
 }
 
 export interface UpdateTaskInput {

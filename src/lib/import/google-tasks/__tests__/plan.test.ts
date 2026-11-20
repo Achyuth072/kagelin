@@ -336,4 +336,41 @@ describe("planGoogleTasksImport (Deduplication & Planning Engine)", () => {
     expect(preview.totalTasks).toBe(1);
     expect(preview.projects[0].tasks[0].content).toBe("Inbox Task 3");
   });
+
+  it("does not treat a non-default list titled 'Inbox' as system inbox", () => {
+    const dataset = createDataset(
+      [{ id: "list-custom-inbox", title: "Inbox" }],
+      {
+        "list-custom-inbox": [{ id: "task-1", title: "Some task" }],
+      },
+    );
+
+    const preview = planGoogleTasksImport(dataset, emptyWorkspace);
+
+    expect(preview.projects).toHaveLength(1);
+    const plan = preview.projects[0];
+    expect(plan.isInbox).toBe(false);
+    expect(plan.status).toBe("new");
+    expect(plan.name).toBe("Inbox");
+  });
+
+  it("skips empty task lists", () => {
+    const dataset = createDataset(
+      [
+        { id: "empty-list-1", title: "Empty List 1" },
+        { id: "active-list", title: "Active List" },
+        { id: "empty-list-2", title: "Empty List 2" },
+      ],
+      {
+        "empty-list-1": [],
+        "active-list": [{ id: "task-1", title: "Active task" }],
+        "empty-list-2": [],
+      },
+    );
+
+    const preview = planGoogleTasksImport(dataset, emptyWorkspace);
+
+    expect(preview.projects).toHaveLength(1);
+    expect(preview.projects[0].name).toBe("Active List");
+  });
 });

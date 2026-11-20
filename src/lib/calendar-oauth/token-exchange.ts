@@ -1,4 +1,5 @@
 import { decryptRefreshToken, encryptRefreshToken } from "./token-crypto";
+import { getOAuthCredentials } from "./app-url";
 
 const TOKEN_ENDPOINTS: Record<string, string> = {
   google: "https://oauth2.googleapis.com/token",
@@ -36,16 +37,7 @@ export async function exchangeForAccessToken(
   const endpoint = TOKEN_ENDPOINTS[provider];
   if (!endpoint) throw new Error(`Unknown provider: ${provider}`);
 
-  const clientId =
-    process.env[`${provider.toUpperCase()}_CLIENT_ID`] ??
-    (provider === "google_tasks" ? process.env.GOOGLE_CLIENT_ID : undefined) ??
-    "";
-  const clientSecret =
-    process.env[`${provider.toUpperCase()}_CLIENT_SECRET`] ??
-    (provider === "google_tasks"
-      ? process.env.GOOGLE_CLIENT_SECRET
-      : undefined) ??
-    "";
+  const { clientId, clientSecret } = getOAuthCredentials(provider);
 
   const body = new URLSearchParams({
     grant_type: "refresh_token",

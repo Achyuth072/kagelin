@@ -159,7 +159,7 @@ describe("fetchGoogleTasksDataset (Throttled Google Tasks API Transport)", () =>
           ok: true,
           status: 200,
           json: async () => ({
-            items: [],
+            items: [{ id: "t3", title: "Task 3", status: "needsAction" }],
           }),
         } as Response;
       }
@@ -173,7 +173,7 @@ describe("fetchGoogleTasksDataset (Throttled Google Tasks API Transport)", () =>
 
     expect(dataset.lists).toHaveLength(2);
     expect(dataset.tasksByListId["list-p1"]).toHaveLength(2);
-    expect(dataset.tasksByListId["list-p2"]).toHaveLength(0);
+    expect(dataset.tasksByListId["list-p2"]).toHaveLength(1);
   });
 
   it("retries with exponential backoff on HTTP 429 and 503", async () => {
@@ -207,7 +207,9 @@ describe("fetchGoogleTasksDataset (Throttled Google Tasks API Transport)", () =>
       return {
         ok: true,
         status: 200,
-        json: async () => ({ items: [] }),
+        json: async () => ({
+          items: [{ id: "t1", title: "Task 1", status: "needsAction" }],
+        }),
       } as Response;
     });
 
@@ -297,7 +299,9 @@ describe("fetchGoogleTasksDataset (Throttled Google Tasks API Transport)", () =>
       return {
         ok: true,
         status: 200,
-        json: async () => ({ items: [] }),
+        json: async () => ({
+          items: [{ id: "t1", title: "Task 1", status: "needsAction" }],
+        }),
       } as Response;
     });
 
@@ -308,5 +312,52 @@ describe("fetchGoogleTasksDataset (Throttled Google Tasks API Transport)", () =>
     });
 
     expect(maxActiveSeen).toBeLessThanOrEqual(2);
+  });
+
+  it("skips empty task lists by default per Spec L200", async () => {
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("/users/@me/lists")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            items: [
+              { id: "active-list", title: "Active List" },
+              { id: "empty-list", title: "Empty List" },
+            ],
+          }),
+        } as Response;
+      }
+      if (urlStr.includes("/lists/active-list/tasks")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            items: [{ id: "t1", title: "Task 1", status: "needsAction" }],
+          }),
+        } as Response;
+      }
+      if (urlStr.includes("/lists/empty-list/tasks")) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            items: [],
+          }),
+        } as Response;
+      }
+      return { ok: false, status: 404 } as Response;
+    });
+
+    const dataset = await fetchGoogleTasksDataset("mock-token", {
+      fetchFn: fetchMock as unknown as typeof fetch,
+      interRequestDelayMs: 0,
+    });
+
+    expect(dataset.lists).toHaveLength(1);
+    expect(dataset.lists[0].id).toBe("active-list");
+    expect(dataset.tasksByListId["active-list"]).toHaveLength(1);
+    expect(dataset.tasksByListId["empty-list"]).toBeUndefined();
   });
 });

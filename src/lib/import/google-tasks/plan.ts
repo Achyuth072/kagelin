@@ -88,10 +88,9 @@ export function planGoogleTasksImport(
   for (const list of allLists) {
     const rawTasks = dataset.tasksByListId[list.id] ?? [];
     const mappedTasks = mapGoogleTaskList(rawTasks, list.id);
+    if (mappedTasks.length === 0) continue;
 
-    const isDefault =
-      list.id === "@default" || normalizeName(list.title) === "@default";
-    const isInbox = isDefault || normalizeName(list.title) === "inbox";
+    const isInbox = list.id === "@default";
 
     let name = list.title.trim();
     if (isInbox) {

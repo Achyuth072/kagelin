@@ -2,7 +2,11 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api/require-user";
 import { generatePKCE } from "@/lib/calendar-oauth/pkce";
-import { getOAuthRedirectUri } from "@/lib/calendar-oauth/app-url";
+import {
+  getOAuthRedirectUri,
+  isValidReturnTo,
+  getOAuthCredentials,
+} from "@/lib/calendar-oauth/app-url";
 
 const PROVIDER_AUTH_URLS: Record<string, string> = {
   google: "https://accounts.google.com/o/oauth2/v2/auth",
@@ -16,13 +20,6 @@ const PROVIDER_SCOPES: Record<string, string> = {
   outlook:
     "https://graph.microsoft.com/Calendars.ReadWrite offline_access openid email",
 };
-
-function isValidReturnTo(path: string | null): boolean {
-  if (!path) return false;
-  return /^\/settings\?tab=[a-zA-Z0-9_.~%-]+(&[a-zA-Z0-9_.~%-]+=[a-zA-Z0-9_.~%-]*)*$/.test(
-    path,
-  );
-}
 
 export async function GET(
   request: Request,
@@ -74,10 +71,7 @@ export async function GET(
     });
   }
 
-  const clientId =
-    process.env[`${provider.toUpperCase()}_CLIENT_ID`] ??
-    (provider === "google_tasks" ? process.env.GOOGLE_CLIENT_ID : undefined) ??
-    "";
+  const { clientId } = getOAuthCredentials(provider);
 
   const redirectUri = getOAuthRedirectUri(request);
   const url = new URL(PROVIDER_AUTH_URLS[provider]);
@@ -89,7 +83,7 @@ export async function GET(
   url.searchParams.set("code_challenge", codeChallenge);
   url.searchParams.set("code_challenge_method", "S256");
 
-  if (provider === "google" || provider === "google_tasks") {
+  if (provider === "google") {
     url.searchParams.set("access_type", "offline");
     url.searchParams.set("prompt", "consent");
   }

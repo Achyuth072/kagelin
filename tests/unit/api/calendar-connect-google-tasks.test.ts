@@ -57,8 +57,8 @@ describe("GET /api/calendar/connect/google_tasks", () => {
     );
     expect(url.searchParams.get("client_id")).toBe("mock-google-client-id");
     expect(url.searchParams.get("response_type")).toBe("code");
-    expect(url.searchParams.get("access_type")).toBe("offline");
-    expect(url.searchParams.get("prompt")).toBe("consent");
+    expect(url.searchParams.has("access_type")).toBe(false);
+    expect(url.searchParams.has("prompt")).toBe(false);
 
     expect(h.cookieStore.get("calendar_oauth_provider")?.value).toBe(
       "google_tasks",

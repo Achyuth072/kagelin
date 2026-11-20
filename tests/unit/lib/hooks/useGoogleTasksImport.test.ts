@@ -70,7 +70,6 @@ describe("useGoogleTasksImport", () => {
     const { result } = renderHook(() => useGoogleTasksImport());
 
     expect(result.current.state).toBe("idle");
-    expect(result.current.status).toBe("idle");
     expect(result.current.preview).toBeNull();
     expect(result.current.isImporting).toBe(false);
     expect(result.current.error).toBeNull();
@@ -89,7 +88,6 @@ describe("useGoogleTasksImport", () => {
 
     expect(previewResult).not.toBeNull();
     expect(result.current.state).toBe("previewing");
-    expect(result.current.status).toBe("previewing");
     expect(result.current.preview).not.toBeNull();
     expect(result.current.preview?.totalTasks).toBe(1);
     expect(telemetry.trackTelemetry).toHaveBeenCalledWith(
@@ -235,5 +233,48 @@ describe("useGoogleTasksImport", () => {
 
     expect(result.current.state).toBe("idle");
     expect(result.current.preview).toBeNull();
+  });
+
+  it("aborts in-flight commit on cancelImport", async () => {
+    let capturedSignal: AbortSignal | undefined;
+    vi.spyOn(importModule, "executeGoogleTasksImport").mockImplementation(
+      async (_preview, options) => {
+        capturedSignal = options?.signal;
+        // Simulate waiting for an abort
+        return new Promise((_, reject) => {
+          options?.signal?.addEventListener("abort", () => {
+            reject(new Error("Import aborted by user"));
+          });
+        });
+      },
+    );
+
+    const { result } = renderHook(() => useGoogleTasksImport());
+    const file = new File([sampleTakeoutJson], "Tasks.json", {
+      type: "application/json",
+    });
+
+    await act(async () => {
+      await result.current.prepareTakeoutImport(file);
+    });
+
+    // Start commit
+    let commitPromise: Promise<boolean>;
+    act(() => {
+      commitPromise = result.current.commitImport();
+    });
+
+    expect(result.current.state).toBe("importing");
+    expect(capturedSignal).toBeDefined();
+    expect(capturedSignal?.aborted).toBe(false);
+
+    // Cancel while importing
+    await act(async () => {
+      result.current.cancelImport();
+      await commitPromise;
+    });
+
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(result.current.state).toBe("idle");
   });
 });

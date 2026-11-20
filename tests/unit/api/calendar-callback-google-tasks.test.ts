@@ -104,6 +104,9 @@ describe("GET /api/calendar/oauth/callback (google_tasks ephemeral OAuth)", () =
     expect(tempCookie).toBeDefined();
     expect(tempCookie?.value).toBe("mock-google-tasks-access-token");
     expect((tempCookie?.options as { maxAge?: number })?.maxAge).toBe(600);
+    expect((tempCookie?.options as { httpOnly?: boolean })?.httpOnly).toBe(
+      true,
+    );
 
     // OAuth state cookies cleaned up
     expect(h.cookieStore.has("calendar_oauth_state")).toBe(false);
