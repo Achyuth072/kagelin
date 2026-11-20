@@ -675,6 +675,7 @@ class MockStore {
       day_order: task.day_order ?? baseDayOrder + index,
       recurrence: task.recurrence ?? null,
       recurring_series_id: task.recurring_series_id ?? null,
+      reminder_days: task.reminder_days ?? 127,
       google_event_id: task.google_event_id ?? null,
       google_etag: task.google_etag ?? null,
       content: task.content,

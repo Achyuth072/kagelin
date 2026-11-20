@@ -40,6 +40,11 @@ describe("handle_task_notification_sync", () => {
       "jsonb_set(payload, '{encrypted,ciphertext}', to_jsonb(NEW.content))",
     );
   });
+
+  it("suppresses alerts when the task date's day of week is disabled in reminder_days", () => {
+    expect(body).toContain("reminder_days");
+    expect(body).toMatch(/reminder_days.*>>/);
+  });
 });
 
 describe("handle_event_notification_sync", () => {
@@ -157,16 +162,24 @@ describe("task and event notification actions migrations", () => {
   const third = read(
     "supabase/migrations/20261008120700_snooze_rebuilds_text.sql",
   );
+  const taskReminderDaysMigration = read(
+    "supabase/migrations/20261120063000_task_reminder_days.sql",
+  );
 
   it("matches the schema's complete_task_from_notification", () => {
     const name = "public.complete_task_from_notification";
     expect(functionBody(first, name)).toBe(functionBody(schemaSql, name));
   });
 
-  it.each([
-    "handle_task_notification_sync",
-    "public.handle_event_notification_sync",
-  ])("matches the schema's %s", (name) => {
+  it("matches the schema's handle_task_notification_sync", () => {
+    const name = "handle_task_notification_sync";
+    expect(functionBody(taskReminderDaysMigration, name)).toBe(
+      functionBody(schemaSql, name),
+    );
+  });
+
+  it("matches the schema's public.handle_event_notification_sync", () => {
+    const name = "public.handle_event_notification_sync";
     expect(functionBody(second, name)).toBe(functionBody(schemaSql, name));
   });
 
@@ -479,7 +492,7 @@ describe("reminder triggers ignore updates that change nothing a reminder shows"
   it.each([
     [
       "handle_task_notification_sync",
-      ["is_completed", "due_date", "do_date", "recurrence"],
+      ["is_completed", "due_date", "do_date", "recurrence", "reminder_days"],
     ],
     [
       "public.handle_event_notification_sync",

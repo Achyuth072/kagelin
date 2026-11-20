@@ -25,6 +25,7 @@ export const CreateTaskSchema = z.object({
   is_evening: z.boolean().default(false).optional(),
   project_id: z.string().nullable().optional(),
   parent_id: z.string().optional(),
+  reminder_days: z.number().int().min(0).max(127).optional(),
   recurrence: z
     .object({
       freq: z.enum(["DAILY", "WEEKLY", "MONTHLY", "YEARLY"]),

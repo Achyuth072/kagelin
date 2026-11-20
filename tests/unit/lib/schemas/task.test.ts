@@ -89,4 +89,18 @@ describe("CreateTaskSchema", () => {
     const result = CreateTaskSchema.safeParse(input);
     expect(result.success).toBe(true);
   });
+
+  it("validates with reminder_days bitmask", () => {
+    const valid = CreateTaskSchema.safeParse({
+      content: "Task with reminder days",
+      reminder_days: 62, // Mon-Fri
+    });
+    expect(valid.success).toBe(true);
+
+    const invalid = CreateTaskSchema.safeParse({
+      content: "Task with invalid reminder days",
+      reminder_days: 128,
+    });
+    expect(invalid.success).toBe(false);
+  });
 });

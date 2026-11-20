@@ -118,6 +118,22 @@ describe("recurring_series_id", () => {
       expect(newRecurringTask!.recurring_series_id).toBe(seriesId);
     });
 
+    it("preserves reminder_days on spawned Occurrence", async () => {
+      const task = await taskMutations.create({
+        content: "Weekly review with custom reminder days",
+        recurrence: { freq: "WEEKLY", interval: 1 },
+        reminder_days: 62,
+      });
+
+      const { newRecurringTask } = await taskMutations.toggle({
+        id: task.id,
+        is_completed: true,
+      });
+
+      expect(newRecurringTask).toBeDefined();
+      expect(newRecurringTask!.reminder_days).toBe(62);
+    });
+
     it("self-heals when parent lacks series id", async () => {
       const task = await taskMutations.create({
         content: "Legacy recurring",

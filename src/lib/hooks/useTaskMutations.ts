@@ -228,6 +228,7 @@ export function useCreateTask() {
         day_order: 0,
         recurrence: null,
         recurring_series_id: null,
+        reminder_days: newTask.reminder_days ?? 127,
         google_event_id: null,
         google_etag: null,
         created_at: now,

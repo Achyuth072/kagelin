@@ -88,6 +88,8 @@ export function useTaskEditor({
     control,
     name: "recurrence",
   }) as RecurrenceRule | null;
+  const watchedReminderDays = useWatch({ control, name: "reminder_days" });
+  const reminderDays = watchedReminderDays ?? 127;
   const selectedProjectId = useWatch({ control, name: "project_id" }) ?? null;
   const description = useWatch({ control, name: "description" }) || "";
   const isEvening = useWatch({ control, name: "is_evening" }) ?? false;
@@ -204,6 +206,7 @@ export function useTaskEditor({
           project_id: data.project_id ?? undefined,
           parent_id: data.parent_id,
           recurrence: recurrence,
+          reminder_days: data.reminder_days ?? 127,
           _clientId: clientId,
         };
 
@@ -303,6 +306,11 @@ export function useTaskEditor({
       setValue("recurrence", value, { shouldValidate: true }),
     [setValue],
   );
+  const setReminderDays = useCallback(
+    (value: number) =>
+      setValue("reminder_days", value, { shouldValidate: true }),
+    [setValue],
+  );
   const setSelectedProjectId = useCallback(
     (value: string | null) =>
       setValue("project_id", value, { shouldValidate: true }),
@@ -334,6 +342,8 @@ export function useTaskEditor({
     setPriority,
     recurrence,
     setRecurrence,
+    reminderDays,
+    setReminderDays,
     selectedProjectId,
     setSelectedProjectId,
 

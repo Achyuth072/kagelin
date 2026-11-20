@@ -23,6 +23,7 @@ export interface Task extends MaybeUnreadable {
   day_order: number;
   recurrence: RecurrenceRule | null;
   recurring_series_id: string | null;
+  reminder_days?: number;
   google_event_id: string | null;
   google_etag: string | null;
   created_at: string;
@@ -52,6 +53,7 @@ export interface CreateTaskInput {
   project_id?: string;
   parent_id?: string;
   recurrence?: RecurrenceRule | null;
+  reminder_days?: number;
 }
 
 export interface UpdateTaskInput {
@@ -67,4 +69,5 @@ export interface UpdateTaskInput {
   project_id?: string | null;
   recurrence?: RecurrenceRule | null;
   recurring_series_id?: string | null;
+  reminder_days?: number;
 }

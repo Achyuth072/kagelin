@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   day_order INT DEFAULT 0,
   recurrence JSONB,
   recurrence_settings JSONB,
+  reminder_days INT NOT NULL DEFAULT 127,
   google_event_id TEXT,
   google_etag TEXT,
   created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
@@ -709,13 +710,19 @@ SET search_path = public
 AS $$
 DECLARE
   user_settings JSONB;
+  tz TEXT;
+  due_dow INT;
+  do_dow INT;
+  local_due TIMESTAMP;
+  local_do TIMESTAMP;
 BEGIN
   -- Reorders and sync touches change nothing a reminder shows; leave pending ones, snoozes included.
   IF TG_OP = 'UPDATE'
      AND OLD.is_completed IS NOT DISTINCT FROM NEW.is_completed
      AND OLD.due_date IS NOT DISTINCT FROM NEW.due_date
      AND OLD.do_date IS NOT DISTINCT FROM NEW.do_date
-     AND OLD.recurrence IS NOT DISTINCT FROM NEW.recurrence THEN
+     AND OLD.recurrence IS NOT DISTINCT FROM NEW.recurrence
+     AND OLD.reminder_days IS NOT DISTINCT FROM NEW.reminder_days THEN
     -- Preserve pending reminders across text changes and re-seals by refreshing ciphertext.
     IF OLD.content IS DISTINCT FROM NEW.content AND NEW.content ~ '^xchacha20poly1305-v[12]:' THEN
       UPDATE public.notification_queue
@@ -740,10 +747,16 @@ BEGIN
   END IF;
 
   IF (TG_OP IN ('INSERT', 'UPDATE')) AND (NEW.is_completed = FALSE) THEN
-    SELECT settings INTO user_settings FROM profiles WHERE id = NEW.user_id;
+    SELECT settings, timezone INTO user_settings, tz FROM profiles WHERE id = NEW.user_id;
+
+    IF NEW.due_date IS NOT NULL THEN
+      local_due := COALESCE(public.at_timezone_or_null(NEW.due_date, tz), NEW.due_date AT TIME ZONE 'UTC');
+      due_dow := EXTRACT(DOW FROM local_due)::int;
+    END IF;
 
     IF (user_settings->'notifications'->>'due_date_alerts')::boolean IS NOT FALSE 
-       AND NEW.due_date IS NOT NULL AND NEW.due_date > now() THEN
+       AND NEW.due_date IS NOT NULL AND NEW.due_date > now()
+       AND ((COALESCE(NEW.reminder_days, 127) >> due_dow) & 1 = 1) THEN
       INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
       VALUES (NEW.user_id, NEW.due_date, 'due_date',
               jsonb_strip_nulls(jsonb_build_object(
@@ -757,8 +770,14 @@ BEGIN
       ON CONFLICT (user_id, type, scheduled_at, reference_id) WHERE status = 'pending' AND type IN ('due_date', 'do_date') DO NOTHING;
     END IF;
 
+    IF NEW.do_date IS NOT NULL THEN
+      local_do := COALESCE(public.at_timezone_or_null(NEW.do_date, tz), NEW.do_date AT TIME ZONE 'UTC');
+      do_dow := EXTRACT(DOW FROM local_do)::int;
+    END IF;
+
     IF (user_settings->'notifications'->>'do_date_alerts')::boolean IS NOT FALSE
-       AND NEW.do_date IS NOT NULL AND NEW.do_date > now() THEN
+       AND NEW.do_date IS NOT NULL AND NEW.do_date > now()
+       AND ((COALESCE(NEW.reminder_days, 127) >> do_dow) & 1 = 1) THEN
       INSERT INTO public.notification_queue (user_id, scheduled_at, type, payload, reference_id)
       VALUES (NEW.user_id, NEW.do_date, 'do_date',
               jsonb_strip_nulls(jsonb_build_object(

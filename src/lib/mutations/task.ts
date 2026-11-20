@@ -23,6 +23,7 @@ function toRestorePayload(task: Task) {
     completed_at: task.completed_at,
     day_order: task.day_order,
     recurrence: task.recurrence,
+    reminder_days: task.reminder_days,
     google_event_id: task.google_event_id,
     google_etag: task.google_etag,
   };
@@ -83,6 +84,7 @@ export const taskMutations = {
           parent_id: input.parent_id || null,
           recurrence: input.recurrence || null,
           recurring_series_id: input.recurrence ? crypto.randomUUID() : null,
+          reminder_days: input.reminder_days ?? 127,
           is_completed: false,
           completed_at: null,
           google_event_id: null,
@@ -121,6 +123,7 @@ export const taskMutations = {
       parent_id: input.parent_id || null,
       recurrence: input.recurrence || null,
       recurring_series_id: input.recurrence ? crypto.randomUUID() : null,
+      reminder_days: input.reminder_days ?? 127,
       day_order: firstDayOrder + index,
     }));
 
@@ -213,6 +216,7 @@ export const taskMutations = {
             is_evening: updatedTask.is_evening || false,
             recurrence: recurrenceRule,
             recurring_series_id: seriesId,
+            reminder_days: updatedTask.reminder_days ?? 127,
             is_completed: false,
             completed_at: null,
             google_event_id: null,
@@ -331,6 +335,7 @@ export const taskMutations = {
             is_evening: currentTask.is_evening || false,
             recurrence: recurrenceRule,
             recurring_series_id: seriesId,
+            reminder_days: currentTask.reminder_days ?? 127,
             is_completed: false,
             day_order: nextDayOrder,
           })

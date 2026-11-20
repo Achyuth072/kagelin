@@ -124,6 +124,7 @@ export function taskToFormValues(task: Task): TaskFormValues {
     priority: task.priority,
     project_id: task.project_id ?? undefined,
     recurrence: task.recurrence ?? null,
+    reminder_days: task.reminder_days ?? 127,
   };
 }
 
@@ -140,5 +141,6 @@ export function defaultTaskFormValues(initial?: {
     priority: 4,
     project_id: undefined,
     recurrence: null,
+    reminder_days: 127,
   };
 }
