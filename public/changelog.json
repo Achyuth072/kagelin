@@ -1,5 +1,25 @@
 [
   {
+    "version": "1.52.0-preview.0",
+    "date": "2026-11-20",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Allow configuring allowed notification days for tasks",
+        "Verify day-planner segregation and remove deprecated task-streak",
+        "Disambiguate lapsed schedule from overdue deadline on task cards",
+        "Purge habit encroachment from task insights UI",
+        "Add task metrics and date classifier utility with orthogonality rules"
+      ],
+      "Fixed": [
+        "Resolve task orthogonality review findings and align date-time wizard",
+        "Allow clearing task dates on chip variant and in date picker wizard",
+        "Update screenshot assets for various views",
+        "Add --remote and --yes flags to supabase db push command"
+      ]
+    }
+  },
+  {
     "version": "1.51.1",
     "date": "2026-11-13",
     "channel": "stable",
@@ -813,19 +833,6 @@
       "Fixed": [
         "Uhabits export writes empty strings not null, matches colors by hue",
         "Overdue 1-in-D habits say due now instead of counting days late"
-      ]
-    }
-  },
-  {
-    "version": "1.45.0-preview.4",
-    "date": "2026-09-26",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Old clients' period edits reach frequency_days, measurable reminders match dayValue",
-        "Reminder actions save, frequency field typing, export keeps edited frequency",
-        "Reminder deep link keeps the back anchor, name all-skipped imports, share habit link contract",
-        "Reminders open their habit, import names skipped habits, and review cleanups"
       ]
     }
   }
