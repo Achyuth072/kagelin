@@ -15,6 +15,10 @@ vi.mock("@/lib/hooks/useBackNavigation", () => ({
   useBackNavigation: vi.fn(),
 }));
 
+vi.mock("@/components/AuthProvider", () => ({
+  useAuth: () => ({ isGuestMode: false, user: { id: "test-user" } }),
+}));
+
 let mockIcsImporting = false;
 
 vi.mock("@/lib/hooks/useIcsImport", () => ({
@@ -43,6 +47,18 @@ vi.mock("@/lib/hooks/useTodoistImport", () => ({
 vi.mock("@/lib/hooks/useUhabitsImport", () => ({
   useUhabitsImport: () => ({
     parseDatabase: vi.fn(),
+    isImporting: false,
+  }),
+}));
+
+vi.mock("@/lib/hooks/useGoogleTasksImport", () => ({
+  useGoogleTasksImport: () => ({
+    prepareOAuthImport: vi.fn(),
+    prepareTakeoutImport: vi.fn(),
+    commitImport: vi.fn(),
+    cancelImport: vi.fn(),
+    preview: null,
+    state: "idle",
     isImporting: false,
   }),
 }));

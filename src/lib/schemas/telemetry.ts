@@ -93,6 +93,24 @@ export const ContentUnreadableEventSchema = z
   })
   .strict();
 
+export const MigrationEventSchema = z
+  .object({
+    name: z.literal("migration_event"),
+    deviceId: z.string().uuid(),
+    properties: z
+      .object({
+        source: z.literal("google_tasks"),
+        ingress: z.enum(["oauth", "takeout_json"]),
+        phase: z.enum(["connect", "fetch", "plan", "commit"]),
+        status: z.enum(["started", "completed", "failed"]),
+        task_count: z.number().int().nonnegative().optional(),
+        duration_ms: z.number().int().nonnegative().optional(),
+        error_code: z.string().optional(),
+      })
+      .strict(),
+  })
+  .strict();
+
 export const TelemetryEventSchema = z.discriminatedUnion("name", [
   AppOpenedEventSchema,
   PwaInstalledEventSchema,
@@ -101,6 +119,7 @@ export const TelemetryEventSchema = z.discriminatedUnion("name", [
   FocusSessionEventSchema,
   SignupCompletedEventSchema,
   ContentUnreadableEventSchema,
+  MigrationEventSchema,
 ]);
 
 export const TelemetryBatchRequestSchema = z

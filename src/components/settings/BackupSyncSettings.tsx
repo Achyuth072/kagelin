@@ -371,7 +371,14 @@ export function BackupSyncSettings() {
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const params = new URLSearchParams(window.location.search);
+    return (
+      params.get("connected") === "google_tasks" ||
+      params.get("migration") === "google_tasks"
+    );
+  });
 
   // Kept in memory only to avoid persisting credentials locally.
   const [webdavCredentials, setWebdavCredentials] = useState<WebDAVCredentials>(

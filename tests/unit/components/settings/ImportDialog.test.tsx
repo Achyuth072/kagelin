@@ -25,8 +25,24 @@ vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: vi.fn() }),
 }));
 
+vi.mock("@/components/AuthProvider", () => ({
+  useAuth: () => ({ isGuestMode: false, user: { id: "test-user" } }),
+}));
+
 vi.mock("@/lib/hooks/useUhabitsImport", () => ({
   useUhabitsImport: () => ({ importUhabits: vi.fn(), isImporting: false }),
+}));
+
+vi.mock("@/lib/hooks/useGoogleTasksImport", () => ({
+  useGoogleTasksImport: () => ({
+    prepareOAuthImport: vi.fn(),
+    prepareTakeoutImport: vi.fn(),
+    commitImport: vi.fn(),
+    cancelImport: vi.fn(),
+    preview: null,
+    state: "idle",
+    isImporting: false,
+  }),
 }));
 
 vi.mock("@/lib/hooks/useTodoistImport", () => {

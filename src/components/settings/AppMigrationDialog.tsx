@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { format } from "date-fns";
 import {
   ResponsiveDialog,
@@ -20,15 +20,21 @@ import {
   ArrowUpFromLine,
 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { useAuth } from "@/components/AuthProvider";
 import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
 import { useIcsImport, ICS_CONFIRM_THRESHOLD } from "@/lib/hooks/useIcsImport";
 import { useTodoistImport } from "@/lib/hooks/useTodoistImport";
+import { useGoogleTasksImport } from "@/lib/hooks/useGoogleTasksImport";
 import {
   isArchivePreview,
   type TodoistProjectStatus,
 } from "@/lib/import/todoist/plan";
 import { cn } from "@/lib/utils";
-import { LoopIcon, TodoistIcon } from "@/components/settings/MigrationIcons";
+import {
+  LoopIcon,
+  TodoistIcon,
+  GoogleTasksIcon,
+} from "@/components/settings/MigrationIcons";
 import { MigrationExportTab } from "@/components/settings/MigrationExportTab";
 
 const TODOIST_PROJECT_STATUS_LABELS: Record<TodoistProjectStatus, string> = {
@@ -52,7 +58,9 @@ export function AppMigrationDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const icsInputRef = useRef<HTMLInputElement>(null);
   const todoistInputRef = useRef<HTMLInputElement>(null);
+  const googleTasksInputRef = useRef<HTMLInputElement>(null);
   const { trigger } = useHaptic();
+  const { isGuestMode } = useAuth();
 
   const [prevOpen, setPrevOpen] = useState(open);
   if (open && !prevOpen) {
@@ -77,6 +85,14 @@ export function AppMigrationDialog({
     preview: todoistPreview,
     isImporting: isImportingTodoist,
   } = useTodoistImport();
+  const {
+    prepareOAuthImport,
+    prepareTakeoutImport,
+    commitImport: commitGoogleTasksImport,
+    cancelImport: cancelGoogleTasksImport,
+    preview: googleTasksPreview,
+    isImporting: isImportingGoogleTasks,
+  } = useGoogleTasksImport();
 
   const handleTabChange = (val: string) => {
     trigger("toggle");
@@ -140,8 +156,194 @@ export function AppMigrationDialog({
     cancelTodoistImport();
   };
 
+  const handleConnectGoogleTasks = async () => {
+    if (isGuestMode || isAnyImporting) return;
+    trigger("toggle");
+    await prepareOAuthImport();
+  };
+
+  const processGoogleTasksFile = async (file: File) => {
+    await prepareTakeoutImport(file);
+    if (googleTasksInputRef.current) googleTasksInputRef.current.value = "";
+  };
+
+  const handleImportGoogleTasksTakeout = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processGoogleTasksFile(file);
+  };
+
+  const handleConfirmGoogleTasksImport = async () => {
+    trigger("toggle");
+    const success = await commitGoogleTasksImport();
+    if (success) onOpenChange(false);
+  };
+
+  const handleCancelGoogleTasksImport = () => {
+    trigger("tick");
+    cancelGoogleTasksImport();
+  };
+
+  useEffect(() => {
+    if (googleTasksPreview && !open) {
+      onOpenChange(true);
+    }
+  }, [googleTasksPreview, open, onOpenChange]);
+
   const isAnyImporting =
-    isImportingUhabits || isImportingIcs || isImportingTodoist;
+    isImportingUhabits ||
+    isImportingIcs ||
+    isImportingTodoist ||
+    isImportingGoogleTasks;
+
+  if (googleTasksPreview) {
+    const subtasksFlattened = googleTasksPreview.projects.reduce(
+      (acc, project) =>
+        acc + project.tasks.filter((task) => task.originalDepth >= 2).length,
+      0,
+    );
+    const dateRange =
+      googleTasksPreview.earliestDate && googleTasksPreview.latestDate
+        ? googleTasksPreview.earliestDate === googleTasksPreview.latestDate
+          ? format(new Date(googleTasksPreview.earliestDate), "MMM d, yyyy")
+          : `${format(new Date(googleTasksPreview.earliestDate), "MMM d, yyyy")} – ${format(new Date(googleTasksPreview.latestDate), "MMM d, yyyy")}`
+        : null;
+
+    return (
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) cancelGoogleTasksImport();
+          onOpenChange(next);
+        }}
+      >
+        <ResponsiveDialogContent className="sm:max-w-[425px]">
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle className="type-h2">
+              Confirm Google Tasks Import
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              Review detected tasks before importing into Kagelin.
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <div className="px-4 py-4 sm:px-0">
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Total tasks found</dt>
+                <dd className="font-medium">{googleTasksPreview.totalTasks}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Top-level tasks</dt>
+                <dd>{googleTasksPreview.rootTasksCount}</dd>
+              </div>
+              {googleTasksPreview.subtasksCount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Steps</dt>
+                  <dd>{googleTasksPreview.subtasksCount}</dd>
+                </div>
+              )}
+              {subtasksFlattened > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">
+                    Nested steps flattened
+                  </dt>
+                  <dd>{subtasksFlattened}</dd>
+                </div>
+              )}
+              {dateRange && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Scheduled range</dt>
+                  <dd>{dateRange}</dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Projects detected</dt>
+                <dd>{googleTasksPreview.projects.length}</dd>
+              </div>
+              {googleTasksPreview.newProjectCount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">New projects</dt>
+                  <dd>{googleTasksPreview.newProjectCount}</dd>
+                </div>
+              )}
+              {googleTasksPreview.mergedProjectCount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">
+                    Merged into existing
+                  </dt>
+                  <dd>{googleTasksPreview.mergedProjectCount}</dd>
+                </div>
+              )}
+              {googleTasksPreview.duplicateTasksSkipped > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Duplicates skipped</dt>
+                  <dd>{googleTasksPreview.duplicateTasksSkipped}</dd>
+                </div>
+              )}
+              {googleTasksPreview.subtasksReassigned > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">
+                    Steps re-attached to matching tasks
+                  </dt>
+                  <dd>{googleTasksPreview.subtasksReassigned}</dd>
+                </div>
+              )}
+            </dl>
+
+            {googleTasksPreview.projects.length > 0 && (
+              <div className="mt-4 space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Detected lists
+                </p>
+                <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
+                  {googleTasksPreview.projects.map((project) => (
+                    <li
+                      key={`${project.status}:${project.name}`}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span className="truncate">{project.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {project.status === "inbox"
+                          ? "Inbox"
+                          : project.status === "merged"
+                            ? "Merge"
+                            : "New"}{" "}
+                        · {project.tasks.length} tasks
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="ghost"
+              onClick={handleCancelGoogleTasksImport}
+              className="text-muted-foreground hover:text-foreground"
+              disabled={isImportingGoogleTasks}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmGoogleTasksImport}
+              disabled={isImportingGoogleTasks}
+            >
+              {isImportingGoogleTasks ? (
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+              ) : (
+                `Import ${googleTasksPreview.totalTasks} tasks`
+              )}
+            </Button>
+          </div>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+    );
+  }
 
   if (todoistPreview) {
     const isArchive = isArchivePreview(todoistPreview);
@@ -638,6 +840,79 @@ export function AppMigrationDialog({
                   onClick={(e) => e.stopPropagation()}
                   onChange={handleImportTodoist}
                 />
+              </div>
+
+              <div
+                className={cn(
+                  "p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all",
+                  isAnyImporting && "opacity-60 pointer-events-none",
+                )}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const file = e.dataTransfer.files?.[0];
+                  if (file) {
+                    trigger("toggle");
+                    void processGoogleTasksFile(file);
+                  }
+                }}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <GoogleTasksIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+                  <div>
+                    <p className="text-sm font-medium flex items-center gap-1.5">
+                      Google Tasks
+                      <BetaBadge />
+                    </p>
+                    <p className="text-xs text-muted-foreground lowercase">
+                      Import from Google Tasks or Takeout .json
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    disabled={isGuestMode || isAnyImporting}
+                    title={
+                      isGuestMode
+                        ? "Sign up or log in to connect via Google OAuth"
+                        : undefined
+                    }
+                    onClick={handleConnectGoogleTasks}
+                  >
+                    Connect Google Tasks
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    disabled={isAnyImporting}
+                    onClick={() => googleTasksInputRef.current?.click()}
+                  >
+                    Drop Takeout Tasks.json
+                  </Button>
+                  <input
+                    ref={googleTasksInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    className="hidden"
+                    aria-label="Upload Google Takeout Tasks.json file"
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={handleImportGoogleTasksTakeout}
+                  />
+                </div>
+                {isGuestMode && (
+                  <p className="type-micro text-muted-foreground mt-2">
+                    OAuth import requires a registered account. Sign up or use
+                    Takeout Tasks.json.
+                  </p>
+                )}
               </div>
             </TabsContent>
 

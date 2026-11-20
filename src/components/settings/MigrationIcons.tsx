@@ -48,3 +48,26 @@ export function TodoistIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function GoogleTasksIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      {...props}
+    >
+      <rect width="32" height="32" rx="7" fill="#FFFFFF" />
+      <path
+        d="M16 4C9.37 4 4 9.37 4 16C4 22.63 9.37 28 16 28C22.63 28 28 22.63 28 16C28 15.17 27.91 14.37 27.76 13.6C27.34 13.86 26.84 14 26.31 14C24.49 14 23 12.51 23 10.69C23 10.16 23.14 9.66 23.4 9.24C21.36 6.04 18.84 4 16 4Z"
+        fill="#E8F0FE"
+      />
+      <path
+        d="M13.8 20.8L9.2 16.2C8.6 15.6 7.6 15.6 7 16.2C6.4 16.8 6.4 17.8 7 18.4L12.7 24.1C13.3 24.7 14.3 24.7 14.9 24.1L24.5 14.5C25.1 13.9 25.1 12.9 24.5 12.3C23.9 11.7 22.9 11.7 22.3 12.3L13.8 20.8Z"
+        fill="#1A73E8"
+      />
+      <circle cx="23" cy="9" r="3" fill="#FBBC04" />
+    </svg>
+  );
+}

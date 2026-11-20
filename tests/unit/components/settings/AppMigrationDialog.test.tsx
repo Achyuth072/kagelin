@@ -7,6 +7,7 @@ import {
 } from "@/components/settings/AppMigrationDialog";
 import type { IcsImportPreview } from "@/lib/hooks/useIcsImport";
 import type { TodoistPreview } from "@/lib/hooks/useTodoistImport";
+import type { GoogleTasksImportPreview } from "@/lib/import/google-tasks/types";
 
 const {
   triggerMock,
@@ -16,6 +17,10 @@ const {
   prepareTodoistImportMock,
   commitTodoistImportMock,
   cancelTodoistImportMock,
+  prepareOAuthImportMock,
+  prepareGoogleTasksTakeoutImportMock,
+  commitGoogleTasksImportMock,
+  cancelGoogleTasksImportMock,
 } = vi.hoisted(() => ({
   triggerMock: vi.fn(),
   prepareImportMock: vi.fn(),
@@ -24,14 +29,14 @@ const {
   prepareTodoistImportMock: vi.fn(),
   commitTodoistImportMock: vi.fn(),
   cancelTodoistImportMock: vi.fn(),
+  prepareOAuthImportMock: vi.fn(),
+  prepareGoogleTasksTakeoutImportMock: vi.fn(),
+  commitGoogleTasksImportMock: vi.fn(),
+  cancelGoogleTasksImportMock: vi.fn(),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
   useHaptic: () => ({ trigger: triggerMock }),
-}));
-
-vi.mock("@/components/AuthProvider", () => ({
-  useAuth: () => ({ isGuestMode: false, user: { id: "test-user" } }),
 }));
 
 vi.mock("@/lib/hooks/useHabits", () => ({
@@ -121,10 +126,42 @@ vi.mock("@/lib/hooks/useIcsImport", async (importOriginal) => {
   };
 });
 
+let mockGoogleTasksPreview: GoogleTasksImportPreview | null = null;
+let mockIsGuestMode = false;
+
+vi.mock("@/components/AuthProvider", () => ({
+  useAuth: () => ({ isGuestMode: mockIsGuestMode, user: { id: "test-user" } }),
+}));
+
+vi.mock("@/lib/hooks/useGoogleTasksImport", () => ({
+  useGoogleTasksImport: () => {
+    return {
+      prepareOAuthImport: async (token?: string) => {
+        return prepareOAuthImportMock(token);
+      },
+      prepareTakeoutImport: async (file: File) => {
+        return prepareGoogleTasksTakeoutImportMock(file);
+      },
+      commitImport: async () => {
+        return commitGoogleTasksImportMock();
+      },
+      cancelImport: () => {
+        cancelGoogleTasksImportMock();
+      },
+      preview: mockGoogleTasksPreview,
+      state: "idle",
+      isImporting: false,
+    };
+  },
+}));
+
 describe("AppMigrationDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGoogleTasksPreview = null;
+    mockIsGuestMode = false;
     commitImportMock.mockResolvedValue(true);
+    commitGoogleTasksImportMock.mockResolvedValue(true);
   });
 
   it("exports ImportDialog as backwards-compatible alias", () => {
@@ -147,6 +184,7 @@ describe("AppMigrationDialog", () => {
     expect(screen.getByText("ICS (Calendar)")).toBeInTheDocument();
     expect(screen.getByText("Loop Habit Tracker")).toBeInTheDocument();
     expect(screen.getByText("Todoist")).toBeInTheDocument();
+    expect(screen.getByText("Google Tasks")).toBeInTheDocument();
   });
 
   it("switches to Export tab, plays haptics, and displays export cards", () => {
@@ -216,5 +254,114 @@ describe("AppMigrationDialog", () => {
         name: "Export Todoist ZIP archive",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("renders Google Tasks card with dual actions and disabled state for guests", () => {
+    mockIsGuestMode = false;
+    const { rerender } = render(
+      <AppMigrationDialog open onOpenChange={vi.fn()} />,
+    );
+
+    expect(screen.getByText("Google Tasks")).toBeInTheDocument();
+    const connectButton = screen.getByRole("button", {
+      name: "Connect Google Tasks",
+    });
+    const takeoutButton = screen.getByRole("button", {
+      name: "Drop Takeout Tasks.json",
+    });
+
+    expect(connectButton).toBeEnabled();
+    expect(takeoutButton).toBeEnabled();
+
+    fireEvent.click(connectButton);
+    expect(prepareOAuthImportMock).toHaveBeenCalled();
+
+    // Rerender as Guest mode
+    mockIsGuestMode = true;
+    rerender(<AppMigrationDialog open onOpenChange={vi.fn()} />);
+    const guestConnectButton = screen.getByRole("button", {
+      name: "Connect Google Tasks",
+    });
+    expect(guestConnectButton).toBeDisabled();
+    expect(
+      screen.getByText(/OAuth import requires a registered account/i),
+    ).toBeInTheDocument();
+  });
+
+  it("renders Google Tasks preview with total task count, project count, skipped duplicates, and flattened subtasks", () => {
+    mockIsGuestMode = false;
+    mockGoogleTasksPreview = {
+      kind: "google-tasks",
+      projects: [
+        {
+          listId: "l1",
+          name: "Project 1",
+          isInbox: false,
+          status: "new",
+          color: "#4285F4",
+          existingProjectId: null,
+          tasks: [
+            {
+              id: "t1",
+              tempId: "tmp1",
+              parentId: null,
+              tempParentId: null,
+              content: "Task 1",
+              description: null,
+              dueDate: null,
+              isCompleted: false,
+              completedAt: null,
+              dayOrder: 1,
+              listId: "l1",
+              originalDepth: 0,
+            },
+            {
+              id: "t2",
+              tempId: "tmp2",
+              parentId: "t1",
+              tempParentId: "tmp1",
+              content: "Subtask 1",
+              description: "[Context: Task 1]",
+              dueDate: null,
+              isCompleted: false,
+              completedAt: null,
+              dayOrder: 2,
+              listId: "l1",
+              originalDepth: 2,
+            },
+          ],
+          duplicatesSkipped: 1,
+          parentRedirects: {},
+          subtasksReassigned: 0,
+        },
+      ],
+      totalTasks: 2,
+      rootTasksCount: 1,
+      subtasksCount: 1,
+      earliestDate: null,
+      latestDate: null,
+      newProjectCount: 1,
+      mergedProjectCount: 0,
+      duplicateTasksSkipped: 1,
+      subtasksReassigned: 0,
+      rawSource: { lists: [], tasksByListId: {} },
+    };
+
+    const onOpenChange = vi.fn();
+    render(<AppMigrationDialog open onOpenChange={onOpenChange} />);
+
+    expect(screen.getByText("Confirm Google Tasks Import")).toBeInTheDocument();
+    expect(screen.getByText("Total tasks found")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("Nested steps flattened")).toBeInTheDocument();
+    expect(screen.getByText("Duplicates skipped")).toBeInTheDocument();
+    expect(screen.getByText("Projects detected")).toBeInTheDocument();
+    expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(1);
+
+    const commitBtn = screen.getByRole("button", {
+      name: "Import 2 tasks",
+    });
+    fireEvent.click(commitBtn);
+    expect(commitGoogleTasksImportMock).toHaveBeenCalled();
   });
 });

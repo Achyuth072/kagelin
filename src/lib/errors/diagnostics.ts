@@ -37,6 +37,9 @@ const SAFE_CONTEXT_KEYS = new Set([
   "swState",
   "failureIndex",
   "failedCount",
+  "provider",
+  "importStage",
+  "apiErrorCode",
 ]);
 
 function extractErrorName(error: unknown): string {
