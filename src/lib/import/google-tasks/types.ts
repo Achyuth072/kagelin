@@ -131,6 +131,28 @@ export interface GoogleTasksProjectPlan {
 }
 
 /**
+ * Existing workspace types for deduplication & planning
+ */
+export interface WorkspaceProject {
+  id: string;
+  name: string;
+  is_inbox: boolean;
+}
+
+export interface WorkspaceTask {
+  id: string;
+  content: string | null;
+  project_id: string | null;
+  parent_id: string | null;
+  is_completed: boolean;
+}
+
+export interface ExistingWorkspace {
+  projects: WorkspaceProject[];
+  tasks: WorkspaceTask[];
+}
+
+/**
  * Pre-commit import preview
  */
 export interface GoogleTasksImportPreview {
@@ -145,4 +167,5 @@ export interface GoogleTasksImportPreview {
   mergedProjectCount: number;
   duplicateTasksSkipped: number;
   subtasksReassigned: number;
+  rawSource: GoogleTasksDataset;
 }
