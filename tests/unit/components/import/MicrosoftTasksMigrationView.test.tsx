@@ -148,6 +148,13 @@ describe("MicrosoftTasksMigrationView", () => {
     it("renders file drop zone with clear disclosure about CSV checklist steps", () => {
       render(<MicrosoftTasksMigrationView />);
 
+      const dropZone = screen.getByRole("button", {
+        name: "Import Microsoft Tasks JSON or Outlook CSV file",
+      });
+      expect(dropZone.className).not.toContain("border-dashed");
+      expect(dropZone.className).toContain("border-border/40");
+      expect(dropZone.querySelector("svg")).toBeInTheDocument();
+
       expect(
         screen.getByText("File Upload (.json or .csv)"),
       ).toBeInTheDocument();

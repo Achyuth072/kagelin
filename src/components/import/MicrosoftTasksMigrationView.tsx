@@ -1,14 +1,7 @@
 "use client";
 
 import { useRef, useState, useId } from "react";
-import {
-  ArrowLeft,
-  FileUp,
-  Link2,
-  Loader2,
-  ListChecks,
-  CheckCircle2,
-} from "lucide-react";
+import { ArrowLeft, FileUp, Link2, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BetaBadge } from "@/components/ui/beta-badge";
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -459,18 +452,16 @@ export function MicrosoftTasksMigrationView({
           }
         }}
         className={cn(
-          "flex flex-col gap-2 p-4 rounded-xl border border-dashed transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+          "flex flex-col gap-2 p-4 rounded-xl border transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
           isDragOver
             ? "border-brand bg-brand/5"
-            : "border-border/60 bg-secondary/10 hover:bg-secondary/20",
+            : "border-border/40 bg-secondary/10 hover:bg-secondary/20",
           isImporting && "opacity-60 cursor-not-allowed pointer-events-none",
         )}
       >
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-9 w-9 rounded-lg bg-brand/10 text-brand shrink-0 flex items-center justify-center">
-              <ListChecks className="h-5 w-5" strokeWidth={2.25} />
-            </div>
+            <MicrosoftTasksGlyph className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
             <div className="min-w-0">
               <p className="text-sm font-medium truncate">
                 File Upload (.json or .csv)
