@@ -121,9 +121,7 @@ export async function GET(request: Request) {
     const reason = e instanceof Error ? e.message : "exchange_failed";
     const targetErrorPath = isValidReturnTo(storedReturnTo)
       ? storedReturnTo!
-      : provider === "google_tasks"
-        ? "/settings?tab=backup"
-        : "/calendar";
+      : fallbackErrorPath;
     const sep = targetErrorPath.includes("?") ? "&" : "?";
     return NextResponse.redirect(
       `${baseUrl}${targetErrorPath}${sep}oauth_error=${encodeURIComponent(reason)}`,

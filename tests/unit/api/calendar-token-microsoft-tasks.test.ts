@@ -63,14 +63,10 @@ describe("GET /api/calendar/token (microsoft_tasks ephemeral OAuth token pull)",
     const body = (await res.json()) as {
       access_token?: string;
       expires_at?: number;
-      accessToken?: string;
-      expiresAt?: number;
     };
 
     expect(body.access_token).toBe("ephemeral-token-xyz");
-    expect(body.accessToken).toBe("ephemeral-token-xyz");
     expect(body.expires_at).toBeGreaterThan(Date.now());
-    expect(body.expiresAt).toBeGreaterThan(Date.now());
 
     // Transient cookie is deleted immediately upon consumption
     expect(h.cookieStore.has("microsoft_tasks_temp_token")).toBe(false);

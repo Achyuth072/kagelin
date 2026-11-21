@@ -29,6 +29,8 @@ import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
 import { useIcsImport, ICS_CONFIRM_THRESHOLD } from "@/lib/hooks/useIcsImport";
 import { useTodoistImport } from "@/lib/hooks/useTodoistImport";
 import { useGoogleTasksImport } from "@/lib/hooks/useGoogleTasksImport";
+import { useMicrosoftTasksImport } from "@/lib/hooks/useMicrosoftTasksImport";
+import { MicrosoftTasksMigrationView } from "@/components/import/MicrosoftTasksMigrationView";
 import {
   isArchivePreview,
   type TodoistProjectStatus,
@@ -38,6 +40,7 @@ import {
   LoopIcon,
   TodoistIcon,
   GoogleTasksIcon,
+  MicrosoftTasksGlyph,
 } from "@/components/settings/MigrationIcons";
 import { MigrationExportTab } from "@/components/settings/MigrationExportTab";
 
@@ -81,6 +84,7 @@ export function AppMigrationDialog({
 
   const [activeTab, setActiveTab] = useState<"import" | "export">(defaultTab);
   const [googleTasksDrillDown, setGoogleTasksDrillDown] = useState(false);
+  const [microsoftTasksDrillDown, setMicrosoftTasksDrillDown] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const icsInputRef = useRef<HTMLInputElement>(null);
   const todoistInputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +96,7 @@ export function AppMigrationDialog({
   if (open && !prevOpen) {
     setActiveTab(defaultTab);
     setGoogleTasksDrillDown(false);
+    setMicrosoftTasksDrillDown(false);
     setPrevOpen(open);
   } else if (!open && prevOpen) {
     setPrevOpen(open);
@@ -120,10 +125,20 @@ export function AppMigrationDialog({
     preview: googleTasksPreview,
     isImporting: isImportingGoogleTasks,
   } = useGoogleTasksImport();
+  const {
+    prepareOAuthImport: prepareMicrosoftOAuthImport,
+    prepareFileImport: prepareMicrosoftFileImport,
+    commitImport: commitMicrosoftTasksImport,
+    cancelImport: cancelMicrosoftTasksImport,
+    preview: microsoftTasksPreview,
+    state: microsoftTasksState,
+    isImporting: isImportingMicrosoftTasks,
+  } = useMicrosoftTasksImport();
 
   const handleTabChange = (val: string) => {
     trigger("toggle");
     setGoogleTasksDrillDown(false);
+    setMicrosoftTasksDrillDown(false);
     setActiveTab(val as "import" | "export");
   };
 
@@ -244,11 +259,51 @@ export function AppMigrationDialog({
     }
   }, [googleTasksPreview, open, onOpenChange]);
 
+  useEffect(() => {
+    if (microsoftTasksPreview && !open) {
+      onOpenChange(true);
+    }
+  }, [microsoftTasksPreview, open, onOpenChange]);
+
   const isAnyImporting =
     isImportingUhabits ||
     isImportingIcs ||
     isImportingTodoist ||
-    isImportingGoogleTasks;
+    isImportingGoogleTasks ||
+    isImportingMicrosoftTasks;
+
+  if (microsoftTasksPreview) {
+    return (
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) cancelMicrosoftTasksImport();
+          onOpenChange(next);
+        }}
+      >
+        <ResponsiveDialogContent className="sm:max-w-[480px] p-4 sm:p-6 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+          <MicrosoftTasksMigrationView
+            preview={microsoftTasksPreview}
+            state={microsoftTasksState}
+            isImporting={isImportingMicrosoftTasks}
+            onCommit={async (opts) => {
+              const success = await commitMicrosoftTasksImport(
+                microsoftTasksPreview,
+                opts,
+              );
+              if (success) {
+                onOpenChange(false);
+              }
+            }}
+            onCancel={() => {
+              cancelMicrosoftTasksImport();
+              onOpenChange(false);
+            }}
+          />
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+    );
+  }
 
   if (googleTasksPreview) {
     const subtasksFlattened = googleTasksPreview.projects.reduce(
@@ -832,6 +887,15 @@ export function AppMigrationDialog({
                     </Button>
                   </div>
                 </div>
+              ) : microsoftTasksDrillDown ? (
+                /* Variant B: Dedicated Drill-down Sub-view (Microsoft To Do) */
+                <MicrosoftTasksMigrationView
+                  onBack={() => setMicrosoftTasksDrillDown(false)}
+                  isImporting={isImportingMicrosoftTasks}
+                  state={microsoftTasksState}
+                  onConnectOAuth={() => void prepareMicrosoftOAuthImport()}
+                  onFileSelect={(file) => void prepareMicrosoftFileImport(file)}
+                />
               ) : (
                 <div className="space-y-4 min-h-[340px]">
                   {/* ICS Card */}
@@ -1195,6 +1259,49 @@ export function AppMigrationDialog({
                       </Button>
                     </div>
                   )}
+
+                  {/* Microsoft To Do Card */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Microsoft To Do import options"
+                    onClick={() => {
+                      trigger("toggle");
+                      setMicrosoftTasksDrillDown(true);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        trigger("toggle");
+                        setMicrosoftTasksDrillDown(true);
+                      }
+                    }}
+                    className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <MicrosoftTasksGlyph className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium flex items-center gap-1.5 truncate">
+                          Microsoft To Do
+                          <BetaBadge />
+                        </p>
+                        <p className="text-xs text-muted-foreground lowercase truncate">
+                          {isGuestMode
+                            ? "Import from JSON or CSV"
+                            : "2 import methods available"}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      className="h-8 text-muted-foreground group-hover:text-foreground pointer-events-none ml-auto shrink-0"
+                    >
+                      <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+                    </Button>
+                  </div>
                 </div>
               )}
 

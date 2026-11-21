@@ -104,6 +104,15 @@ export const MigrationErrorCodeSchema = z.enum([
 
 export type MigrationErrorCode = z.infer<typeof MigrationErrorCodeSchema>;
 
+export const MigrationMilestoneSchema = z.enum([
+  "migration_started",
+  "migration_preview_viewed",
+  "migration_completed",
+  "migration_cancelled",
+]);
+
+export type MigrationMilestone = z.infer<typeof MigrationMilestoneSchema>;
+
 export const MigrationEventSchema = z
   .object({
     name: z.literal("migration_event"),
@@ -114,6 +123,7 @@ export const MigrationEventSchema = z
         ingress: z.enum(["oauth", "takeout_json", "json_file", "csv_file"]),
         phase: z.enum(["connect", "fetch", "plan", "commit"]),
         status: z.enum(["started", "completed", "failed"]),
+        milestone: MigrationMilestoneSchema.optional(),
         task_count: z.number().int().nonnegative().optional(),
         duration_ms: z.number().int().nonnegative().optional(),
         error_code: MigrationErrorCodeSchema.optional(),

@@ -374,7 +374,8 @@ export function BackupSyncSettings() {
   const [showMigrationDialog, setShowMigrationDialog] = useState(() => {
     if (typeof window === "undefined") return false;
     const params = new URLSearchParams(window.location.search);
-    return params.get("connected") === "google_tasks";
+    const connected = params.get("connected");
+    return connected === "google_tasks" || connected === "microsoft_tasks";
   });
 
   useEffect(() => {
@@ -382,7 +383,7 @@ export function BackupSyncSettings() {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get("oauth_error");
     if (oauthError) {
-      notify.error(`Google Tasks connection failed: ${oauthError}`);
+      notify.error(`Task migration connection failed: ${oauthError}`);
       params.delete("oauth_error");
       const nextSearch = params.toString();
       window.history.replaceState(

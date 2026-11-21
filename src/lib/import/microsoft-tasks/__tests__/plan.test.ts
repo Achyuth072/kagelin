@@ -118,10 +118,10 @@ describe("planMicrosoftTasksImport (Deduplication & Planning Engine)", () => {
 
     expect(preview.totalLists).toBe(2);
     expect(preview.totalTasks).toBe(2); // 2 root tasks
-    expect(preview.totalSteps).toBe(1); // 1 step
+    expect(preview.subtasksCount).toBe(1); // 1 step
     expect(preview.totalCompleted).toBe(1); // step-1 is checked
     expect(preview.duplicatesCount).toBe(0);
-    expect(preview.stepsReassigned).toBe(0);
+    expect(preview.subtasksReassigned).toBe(0);
     expect(preview.newProjectCount).toBe(1);
     expect(preview.mergedProjectCount).toBe(0);
     expect(preview.earliestDate).toBe("2026-11-20T00:00:00.000Z");
@@ -281,15 +281,15 @@ describe("planMicrosoftTasksImport (Deduplication & Planning Engine)", () => {
 
     // ms-root-1 is duplicate (1), ms-step-dup is duplicate (1) -> total 2 duplicates skipped
     expect(preview.duplicatesCount).toBe(2);
-    expect(preview.stepsReassigned).toBe(1);
+    expect(preview.subtasksReassigned).toBe(1);
     expect(preview.totalTasks).toBe(0); // 0 root tasks kept
-    expect(preview.totalSteps).toBe(1); // 1 step kept
+    expect(preview.subtasksCount).toBe(1); // 1 step kept
 
     const plan = preview.projects[0];
     expect(plan.tasks).toHaveLength(1);
     expect(plan.tasks[0].id).toBe("ms-step-new");
     expect(plan.tasks[0].parentId).toBe("kagelin-root-100");
-    expect(plan.tasks[0].isStep).toBe(true);
+    expect(plan.tasks[0].tempParentId).toBeDefined();
     expect(plan.tasks[0].isCompleted).toBe(true);
   });
 
@@ -320,11 +320,32 @@ describe("planMicrosoftTasksImport (Deduplication & Planning Engine)", () => {
     // task-b duplicate of task-a (1), step-b1 duplicate of step-a1 (1) -> 2 skipped
     expect(preview.duplicatesCount).toBe(2);
     expect(preview.totalTasks).toBe(1); // 1 root task kept (task-a)
-    expect(preview.totalSteps).toBe(2); // 2 steps kept (step-a1, step-b2)
-    expect(preview.stepsReassigned).toBe(1); // step-b2 reassigned to task-a
+    expect(preview.subtasksCount).toBe(2); // 2 steps kept (step-a1, step-b2)
+    expect(preview.subtasksReassigned).toBe(1); // step-b2 reassigned to task-a
 
     const stepB2 = preview.projects[0].tasks.find((t) => t.id === "step-b2");
     expect(stepB2).toBeDefined();
     expect(stepB2?.parentId).toBe("task-a");
+  });
+
+  it("does not map a user-created list named 'Tasks' to Inbox if wellknownListName is not defaultList per Spec L214", () => {
+    const dataset = createDataset(
+      [
+        {
+          id: "custom-tasks-list",
+          displayName: "Tasks",
+          wellknownListName: "none",
+        },
+      ],
+      {
+        "custom-tasks-list": [{ id: "t1", title: "Custom List Task" }],
+      },
+    );
+
+    const preview = planMicrosoftTasksImport(dataset, emptyWorkspace);
+    const plan = preview.projects[0];
+    expect(plan.isInbox).toBe(false);
+    expect(plan.status).toBe("new");
+    expect(plan.name).toBe("Tasks");
   });
 });

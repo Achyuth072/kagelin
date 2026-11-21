@@ -121,14 +121,6 @@ export async function executeMicrosoftTasksImport(
     }
   };
 
-  const abortListener = () => {
-    // listener for early cancellation notification
-  };
-
-  if (options.signal) {
-    options.signal.addEventListener("abort", abortListener, { once: true });
-  }
-
   try {
     checkAborted();
 
@@ -144,10 +136,7 @@ export async function executeMicrosoftTasksImport(
       let projectId: string | undefined;
       if (project.isInbox) {
         projectId = undefined;
-      } else if (
-        (project.action === "merge" || project.status === "merged") &&
-        project.existingProjectId
-      ) {
+      } else if (project.existingProjectId) {
         projectId = project.existingProjectId;
       } else {
         const createdProject = await projectMutations.create({
@@ -158,12 +147,8 @@ export async function executeMicrosoftTasksImport(
         createdProjectIds.push(createdProject.id);
       }
 
-      const roots = eligibleTasks.filter(
-        (task) => !task.isStep && !task.tempParentId,
-      );
-      const steps = eligibleTasks.filter(
-        (task) => task.isStep || Boolean(task.tempParentId),
-      );
+      const roots = eligibleTasks.filter((task) => !task.tempParentId);
+      const steps = eligibleTasks.filter((task) => Boolean(task.tempParentId));
 
       // 1. Create root tasks first (in chunks of <= 100)
       const rootClientIds = roots.map(() => crypto.randomUUID());
@@ -192,28 +177,31 @@ export async function executeMicrosoftTasksImport(
 
       // 2. Create child checklist Steps (in chunks of <= 100)
       if (steps.length > 0) {
-        const stepInputs = steps.map((task) => {
-          const resolvedParent =
-            resolveParentId(
+        const stepInputs = steps
+          .map((task) => {
+            const resolvedParent = resolveParentId(
               task.tempParentId,
               rootIdByTempId,
               project.parentRedirects,
-            ) ??
-            (task.parentId || undefined);
+            );
+            if (!resolvedParent) return null;
 
-          return {
-            content: task.content,
-            description: task.description ?? undefined,
-            due_date: task.dueDate ?? undefined,
-            project_id: projectId,
-            parent_id: resolvedParent,
-            priority: task.priority,
-            is_completed: task.isCompleted,
-            completed_at: task.completedAt ?? undefined,
-            day_order: task.dayOrder,
-            _clientId: crypto.randomUUID(),
-          };
-        });
+            return {
+              content: task.content,
+              description: task.description ?? undefined,
+              due_date: task.dueDate ?? undefined,
+              project_id: projectId,
+              parent_id: resolvedParent,
+              priority: task.priority,
+              is_completed: task.isCompleted,
+              completed_at: task.completedAt ?? undefined,
+              day_order: task.dayOrder,
+              _clientId: crypto.randomUUID(),
+            };
+          })
+          .filter(
+            (input): input is NonNullable<typeof input> => input !== null,
+          );
 
         for (const chunk of chunkArray(stepInputs, 100)) {
           checkAborted();
@@ -240,9 +228,5 @@ export async function executeMicrosoftTasksImport(
       createdTaskIds.length,
       createdProjectIds.length,
     );
-  } finally {
-    if (options.signal) {
-      options.signal.removeEventListener("abort", abortListener);
-    }
   }
 }

@@ -8,6 +8,7 @@ import {
 import type { IcsImportPreview } from "@/lib/hooks/useIcsImport";
 import type { TodoistPreview } from "@/lib/hooks/useTodoistImport";
 import type { GoogleTasksImportPreview } from "@/lib/import/google-tasks/types";
+import type { MicrosoftTasksImportPreview } from "@/lib/import/microsoft-tasks/types";
 
 const {
   triggerMock,
@@ -21,6 +22,10 @@ const {
   prepareGoogleTasksTakeoutImportMock,
   commitGoogleTasksImportMock,
   cancelGoogleTasksImportMock,
+  prepareMicrosoftOAuthImportMock,
+  prepareMicrosoftFileImportMock,
+  commitMicrosoftTasksImportMock,
+  cancelMicrosoftTasksImportMock,
 } = vi.hoisted(() => ({
   triggerMock: vi.fn(),
   prepareImportMock: vi.fn(),
@@ -33,6 +38,10 @@ const {
   prepareGoogleTasksTakeoutImportMock: vi.fn(),
   commitGoogleTasksImportMock: vi.fn(),
   cancelGoogleTasksImportMock: vi.fn(),
+  prepareMicrosoftOAuthImportMock: vi.fn(),
+  prepareMicrosoftFileImportMock: vi.fn(),
+  commitMicrosoftTasksImportMock: vi.fn(),
+  cancelMicrosoftTasksImportMock: vi.fn(),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -158,13 +167,50 @@ vi.mock("@/lib/hooks/useGoogleTasksImport", () => ({
   },
 }));
 
+let mockMicrosoftTasksPreview: MicrosoftTasksImportPreview | null = null;
+
+vi.mock("@/lib/hooks/useMicrosoftTasksImport", () => ({
+  useMicrosoftTasksImport: () => {
+    return {
+      prepareOAuthImport: async (token?: string) => {
+        return prepareMicrosoftOAuthImportMock(token);
+      },
+      prepareFileImport: async (file: File) => {
+        return prepareMicrosoftFileImportMock(file);
+      },
+      prepareJsonImport: async (file: File) => {
+        return prepareMicrosoftFileImportMock(file);
+      },
+      prepareCsvImport: async (file: File) => {
+        return prepareMicrosoftFileImportMock(file);
+      },
+      commitImport: async (
+        targetPreview?: MicrosoftTasksImportPreview | null,
+        options?: { includeCompleted?: boolean },
+      ) => {
+        return commitMicrosoftTasksImportMock(targetPreview, options);
+      },
+      cancelImport: () => {
+        cancelMicrosoftTasksImportMock();
+      },
+      preview: mockMicrosoftTasksPreview,
+      state: "idle",
+      isImporting: false,
+      error: null,
+      fileName: "MicrosoftTasks.json",
+    };
+  },
+}));
+
 describe("AppMigrationDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGoogleTasksPreview = null;
+    mockMicrosoftTasksPreview = null;
     mockIsGuestMode = false;
     commitImportMock.mockResolvedValue(true);
     commitGoogleTasksImportMock.mockResolvedValue(true);
+    commitMicrosoftTasksImportMock.mockResolvedValue(true);
   });
 
   it("exports ImportDialog as backwards-compatible alias", () => {
@@ -188,6 +234,7 @@ describe("AppMigrationDialog", () => {
     expect(screen.getByText("Loop Habit Tracker")).toBeInTheDocument();
     expect(screen.getByText("Todoist")).toBeInTheDocument();
     expect(screen.getByText("Google Tasks")).toBeInTheDocument();
+    expect(screen.getByText("Microsoft To Do")).toBeInTheDocument();
   });
 
   it("switches to Export tab, plays haptics, and displays export cards", () => {
@@ -569,5 +616,115 @@ describe("AppMigrationDialog", () => {
     const cancelBtn = screen.getByRole("button", { name: "Cancel" });
     fireEvent.click(cancelBtn);
     expect(cancelGoogleTasksImportMock).toHaveBeenCalled();
+  });
+
+  it("renders Microsoft To Do card, drills down to subview, and handles connect", () => {
+    mockIsGuestMode = false;
+    render(<AppMigrationDialog open onOpenChange={vi.fn()} />);
+
+    expect(screen.getByText("Microsoft To Do")).toBeInTheDocument();
+    const entryCard = screen.getByRole("button", {
+      name: "Microsoft To Do import options",
+    });
+    expect(entryCard).toBeInTheDocument();
+
+    // Click entry card to drill down
+    fireEvent.click(entryCard);
+
+    expect(screen.getByText("Microsoft To Do Import")).toBeInTheDocument();
+    const connectButton = screen.getByRole("button", {
+      name: "Connect Microsoft To Do",
+    });
+    expect(connectButton).toBeInTheDocument();
+
+    fireEvent.click(connectButton);
+    expect(prepareMicrosoftOAuthImportMock).toHaveBeenCalled();
+
+    // Back button returns to all apps
+    const backButton = screen.getByRole("button", { name: "Back to all apps" });
+    fireEvent.click(backButton);
+    expect(
+      screen.getByRole("button", { name: "Microsoft To Do import options" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders Microsoft To Do preview with metric chips and commits successfully", () => {
+    mockMicrosoftTasksPreview = {
+      kind: "microsoft-tasks",
+      projects: [
+        {
+          listId: "list-1",
+          name: "Work Project",
+          isInbox: false,
+          action: "create",
+          status: "new",
+          existingProjectId: null,
+          color: "#0078D4",
+          tasks: [
+            {
+              id: "t1",
+              tempId: "temp-1",
+              parentId: null,
+              tempParentId: null,
+              content: "Main Task",
+              description: null,
+              dueDate: "2026-11-25T00:00:00.000Z",
+              isCompleted: false,
+              completedAt: null,
+              priority: 2,
+              dayOrder: 1,
+              listId: "list-1",
+            },
+            {
+              id: "s1",
+              tempId: "temp-s1",
+              parentId: "t1",
+              tempParentId: "temp-1",
+              content: "Sub Step 1",
+              description: null,
+              dueDate: null,
+              isCompleted: true,
+              completedAt: "2026-11-21T00:00:00.000Z",
+              priority: 4,
+              dayOrder: 2,
+              listId: "list-1",
+            },
+          ],
+          duplicatesSkipped: 1,
+          parentRedirects: {},
+          subtasksReassigned: 0,
+        },
+      ],
+      tasks: [],
+      totalLists: 1,
+      totalTasks: 2,
+      totalCompleted: 1,
+      duplicatesCount: 1,
+      rootTasksCount: 1,
+      subtasksCount: 1,
+      earliestDate: "2026-11-25T00:00:00.000Z",
+      latestDate: "2026-11-25T00:00:00.000Z",
+      newProjectCount: 1,
+      mergedProjectCount: 0,
+      subtasksReassigned: 0,
+    };
+
+    const onOpenChange = vi.fn();
+    render(<AppMigrationDialog open onOpenChange={onOpenChange} />);
+
+    expect(
+      screen.getByText("Confirm Microsoft To Do Import"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Total Lists")).toBeInTheDocument();
+    expect(screen.getByText("Total Tasks")).toBeInTheDocument();
+    expect(screen.getByText("Total Steps")).toBeInTheDocument();
+    expect(screen.getByText("Completed")).toBeInTheDocument();
+    expect(screen.getByText("Skipped Duplicates")).toBeInTheDocument();
+
+    const commitBtn = screen.getByRole("button", {
+      name: "Import 2 tasks",
+    });
+    fireEvent.click(commitBtn);
+    expect(commitMicrosoftTasksImportMock).toHaveBeenCalled();
   });
 });

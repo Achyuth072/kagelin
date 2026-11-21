@@ -104,7 +104,6 @@ export interface MappedMicrosoftTask {
   priority: 1 | 2 | 3 | 4;
   dayOrder: number;
   listId: string;
-  isStep: boolean;
 }
 
 export type ParentRedirect =
@@ -121,7 +120,7 @@ export interface MicrosoftTasksProjectPlan {
   tasks: MappedMicrosoftTask[];
   duplicatesSkipped: number;
   parentRedirects: Record<string, ParentRedirect>;
-  stepsReassigned: number;
+  subtasksReassigned: number;
 }
 
 export interface MicrosoftTasksImportPreview {
@@ -130,7 +129,6 @@ export interface MicrosoftTasksImportPreview {
   tasks: MappedMicrosoftTask[];
   totalLists: number;
   totalTasks: number;
-  totalSteps: number;
   totalCompleted: number;
   duplicatesCount: number;
   rootTasksCount: number;
@@ -139,13 +137,11 @@ export interface MicrosoftTasksImportPreview {
   latestDate: string | null;
   newProjectCount: number;
   mergedProjectCount: number;
-  stepsReassigned: number;
+  subtasksReassigned: number;
   rawSource?: MicrosoftTasksDataset;
 }
 
 export interface ExecuteMicrosoftTasksImportOptions {
-  isGuest?: boolean;
-  fileName?: string;
   signal?: AbortSignal;
   includeCompleted?: boolean;
 }

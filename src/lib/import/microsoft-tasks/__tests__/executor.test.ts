@@ -405,4 +405,50 @@ describe("executeMicrosoftTasksImport & rollbackMicrosoftTasksImport", () => {
     expect(projectMutations.delete).toHaveBeenCalledWith("proj-2");
     expect(projectMutations.delete).toHaveBeenCalledWith("proj-1");
   });
+
+  it("safely handles includeCompleted=false when completed root has steps without leaking Graph string ID", async () => {
+    const dataset: MicrosoftTasksDataset = {
+      lists: [
+        {
+          id: "list-1",
+          displayName: "Work",
+          isOwner: true,
+          isShared: false,
+          wellknownListName: "none",
+          tasks: [],
+        },
+      ],
+      tasksByListId: {
+        "list-1": [
+          {
+            id: "ms-graph-completed-root",
+            title: "Completed Task",
+            importance: "normal",
+            status: "completed",
+            checklistItems: [
+              {
+                id: "step-1",
+                displayName: "Incomplete step under completed root",
+                isChecked: false,
+              },
+            ],
+            isReminderOn: false,
+          },
+        ],
+      },
+    };
+
+    const preview = planMicrosoftTasksImport(dataset);
+    const result = await executeMicrosoftTasksImport(preview, {
+      includeCompleted: false,
+    });
+
+    expect(result.importedCount).toBe(0);
+    const createCalls = vi.mocked(taskMutations.createMany).mock.calls;
+    for (const [batch] of createCalls) {
+      for (const item of batch) {
+        expect(item.parent_id).not.toBe("ms-graph-completed-root");
+      }
+    }
+  });
 });

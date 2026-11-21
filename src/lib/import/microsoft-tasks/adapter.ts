@@ -154,6 +154,30 @@ class ThrottledDispatcher {
 }
 
 /**
+ * Parses HTTP Retry-After header as integer seconds or RFC 7231 HTTP-date string.
+ */
+export function parseRetryAfterHeader(header?: string | null): number | null {
+  if (!header) return null;
+  const trimmed = header.trim();
+  if (!trimmed) return null;
+
+  // Format 1: Delay in seconds
+  const seconds = parseInt(trimmed, 10);
+  if (!Number.isNaN(seconds) && seconds >= 0 && /^\d+$/.test(trimmed)) {
+    return seconds * 1000;
+  }
+
+  // Format 2: HTTP-date (e.g. "Wed, 21 Oct 2015 07:28:00 GMT")
+  const dateMs = Date.parse(trimmed);
+  if (!Number.isNaN(dateMs)) {
+    const diff = dateMs - Date.now();
+    return Math.max(0, diff);
+  }
+
+  return null;
+}
+
+/**
  * Executes a single HTTP request with exponential backoff on HTTP 429 and 503.
  */
 async function fetchWithRetry(
@@ -206,15 +230,12 @@ async function fetchWithRetry(
     const isRetryable = status === 429 || status === 503;
 
     if (isRetryable && attempt < maxRetries) {
-      let backoffMs = initialBackoffMs * Math.pow(2, attempt);
-
       const retryAfterHeader = response.headers?.get?.("Retry-After");
-      if (retryAfterHeader) {
-        const parsedSeconds = parseInt(retryAfterHeader, 10);
-        if (!Number.isNaN(parsedSeconds) && parsedSeconds > 0) {
-          backoffMs = Math.max(backoffMs, parsedSeconds * 1000);
-        }
-      }
+      const retryAfterMs = parseRetryAfterHeader(retryAfterHeader);
+      const backoffMs =
+        retryAfterMs !== null
+          ? retryAfterMs
+          : initialBackoffMs * Math.pow(2, attempt);
 
       attempt++;
       await sleep(backoffMs, signal);

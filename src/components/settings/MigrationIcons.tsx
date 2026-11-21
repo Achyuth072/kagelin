@@ -130,3 +130,33 @@ export function GoogleTasksIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function MicrosoftTasksGlyph(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      {...props}
+    >
+      <defs>
+        <linearGradient id="ms-todo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#3AA0F3" />
+          <stop offset="50%" stopColor="#0078D4" />
+          <stop offset="100%" stopColor="#005A9E" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="7" fill="url(#ms-todo-grad)" />
+      <path
+        d="M8.5 16.5L13.5 21.5L23.5 10.5"
+        stroke="#FFFFFF"
+        strokeWidth={3.2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export { MicrosoftTasksGlyph as MicrosoftTasksIcon };

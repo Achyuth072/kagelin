@@ -65,6 +65,18 @@ vi.mock("@/lib/hooks/useGoogleTasksImport", () => ({
   }),
 }));
 
+vi.mock("@/lib/hooks/useMicrosoftTasksImport", () => ({
+  useMicrosoftTasksImport: () => ({
+    prepareOAuthImport: vi.fn(),
+    prepareFileImport: vi.fn(),
+    commitImport: vi.fn(),
+    cancelImport: vi.fn(),
+    preview: null,
+    state: "idle",
+    isImporting: false,
+  }),
+}));
+
 describe("AppMigrationDialog File Import Keyboard Accessibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();

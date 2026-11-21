@@ -299,6 +299,47 @@ describe("fetchMicrosoftTasksDataset (Throttled Microsoft Graph API Transport)",
     expect(dataset.lists[0].displayName).toBe("List 1");
   });
 
+  it("handles HTTP-date string in Retry-After header per Spec L257", async () => {
+    let callCount = 0;
+    const futureDate = new Date(Date.now() + 10).toUTCString();
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("/me/todo/lists") && !urlStr.includes("/tasks")) {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            ok: false,
+            status: 429,
+            headers: new Headers({ "Retry-After": futureDate }),
+            json: async () => ({ error: { message: "Too many requests" } }),
+          } as unknown as Response;
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            value: [{ id: "list-1", displayName: "List 1" }],
+          }),
+        } as Response;
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ value: [] }),
+      } as Response;
+    });
+
+    const dataset = await fetchMicrosoftTasksDataset("mock-token", {
+      fetchFn: fetchMock as unknown as typeof fetch,
+      interRequestDelayMs: 0,
+      initialBackoffMs: 1,
+      maxRetries: 3,
+    });
+
+    expect(callCount).toBe(2);
+    expect(dataset.lists).toHaveLength(1);
+  });
+
   it("chunks batch checklist hydration requests into max 20 sub-requests per batch", async () => {
     const tasksCount = 45;
     const tasks = Array.from({ length: tasksCount }, (_, i) => ({

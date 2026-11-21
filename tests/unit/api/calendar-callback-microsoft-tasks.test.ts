@@ -136,4 +136,33 @@ describe("GET /api/calendar/oauth/callback (microsoft_tasks ephemeral OAuth)", (
     expect(url.searchParams.get("connected")).toBe("microsoft_tasks");
     expect(h.upsertCalled).toBe(false);
   });
+
+  it("redirects to /settings?tab=backup on token exchange failure when return_to is missing per Spec L56", async () => {
+    h.cookieStore.set("calendar_oauth_state", { value: "test-state-err" });
+    h.cookieStore.set("calendar_oauth_verifier", {
+      value: "test-verifier-err",
+    });
+    h.cookieStore.set("calendar_oauth_provider", { value: "microsoft_tasks" });
+
+    const { exchangeAuthCode } =
+      await import("@/lib/calendar-oauth/auth-code-exchange");
+    vi.mocked(exchangeAuthCode).mockRejectedValueOnce(
+      new Error("Exchange network timeout"),
+    );
+
+    const res = await GET(
+      new Request(
+        "https://kagelin.app/api/calendar/oauth/callback?code=bad-code&state=test-state-err",
+      ),
+    );
+
+    expect(res.status).toBe(307);
+    const location = res.headers.get("location");
+    const url = new URL(location!);
+    expect(url.pathname).toBe("/settings");
+    expect(url.searchParams.get("tab")).toBe("backup");
+    expect(url.searchParams.get("oauth_error")).toBe(
+      "Exchange network timeout",
+    );
+  });
 });

@@ -108,16 +108,16 @@ export function planMicrosoftTasksImport(
   }
 
   for (const list of allLists) {
+    const isFlaggedEmails = list.wellknownListName === "flaggedEmails";
     const rawTasks = dataset.tasksByListId[list.id] ?? list.tasks ?? [];
-    const mappedTasks = mapMicrosoftTaskList(rawTasks, list.id);
+    const mappedTasks = mapMicrosoftTaskList(rawTasks, list.id, {
+      isFlaggedEmails,
+    });
     if (mappedTasks.length === 0) continue;
 
     const isDefaultWellknown = list.wellknownListName === "defaultList";
-    const isDefaultId = list.id === "defaultList";
-    const isTasksOrInboxName =
-      normalizeName(list.displayName) === "tasks" ||
-      normalizeName(list.displayName) === "inbox";
-    const isInbox = isDefaultWellknown || isDefaultId || isTasksOrInboxName;
+    const isDefaultId = list.id === "defaultList" || list.id === "default-list";
+    const isInbox = isDefaultWellknown || isDefaultId;
 
     let name = list.displayName.trim();
     if (isInbox) {
@@ -160,12 +160,10 @@ export function planMicrosoftTasksImport(
     const keptRootKeys = new Map<string, string>(); // `${normTitle}::${isCompleted}` -> tempId
     const keptStepsByParent = new Map<string, Set<string>>(); // parentId -> Set of normTitle
     let duplicatesSkipped = 0;
-    let stepsReassigned = 0;
+    let subtasksReassigned = 0;
 
-    const roots = mappedTasks.filter((t) => !t.isStep && !t.tempParentId);
-    const steps = mappedTasks.filter(
-      (t) => t.isStep || Boolean(t.tempParentId),
-    );
+    const roots = mappedTasks.filter((t) => !t.tempParentId);
+    const steps = mappedTasks.filter((t) => Boolean(t.tempParentId));
 
     // 1. Process root tasks
     for (const root of roots) {
@@ -218,7 +216,7 @@ export function planMicrosoftTasksImport(
           if (isWorkspaceDuplicate || isImportDuplicate) {
             duplicatesSkipped++;
           } else {
-            stepsReassigned++;
+            subtasksReassigned++;
             step.parentId = existingParentId;
             keptTaskIds.add(step.tempId);
 
@@ -238,7 +236,7 @@ export function planMicrosoftTasksImport(
           if (isImportDuplicate) {
             duplicatesSkipped++;
           } else {
-            stepsReassigned++;
+            subtasksReassigned++;
             step.parentId = targetTempId;
             step.tempParentId = targetTempId;
             keptTaskIds.add(step.tempId);
@@ -286,15 +284,15 @@ export function planMicrosoftTasksImport(
       tasks: keptTasks,
       duplicatesSkipped,
       parentRedirects,
-      stepsReassigned,
+      subtasksReassigned,
     });
     paletteIndex++;
   }
 
   // Calculate totals and date boundaries
   const allKeptTasks = projectPlans.flatMap((p) => p.tasks);
-  const rootTasks = allKeptTasks.filter((t) => !t.isStep && !t.tempParentId);
-  const steps = allKeptTasks.filter((t) => t.isStep || Boolean(t.tempParentId));
+  const rootTasks = allKeptTasks.filter((t) => !t.tempParentId);
+  const steps = allKeptTasks.filter((t) => Boolean(t.tempParentId));
   const dates: string[] = [];
 
   for (const task of allKeptTasks) {
@@ -311,7 +309,6 @@ export function planMicrosoftTasksImport(
     tasks: allKeptTasks,
     totalLists: projectPlans.length,
     totalTasks: rootTasks.length,
-    totalSteps: steps.length,
     totalCompleted: allKeptTasks.filter((t) => t.isCompleted).length,
     duplicatesCount: projectPlans.reduce(
       (sum, p) => sum + p.duplicatesSkipped,
@@ -324,8 +321,8 @@ export function planMicrosoftTasksImport(
     newProjectCount: projectPlans.filter((p) => p.status === "new").length,
     mergedProjectCount: projectPlans.filter((p) => p.status === "merged")
       .length,
-    stepsReassigned: projectPlans.reduce(
-      (sum, p) => sum + p.stepsReassigned,
+    subtasksReassigned: projectPlans.reduce(
+      (sum, p) => sum + p.subtasksReassigned,
       0,
     ),
     rawSource: dataset,

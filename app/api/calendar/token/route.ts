@@ -26,8 +26,6 @@ export async function GET(request: Request) {
     return NextResponse.json({
       access_token: tempToken,
       expires_at: Date.now() + 3600 * 1000,
-      accessToken: tempToken,
-      expiresAt: Date.now() + 3600 * 1000,
     });
   }
 

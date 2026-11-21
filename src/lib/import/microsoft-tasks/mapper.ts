@@ -67,16 +67,18 @@ export function parseMicrosoftTaskDueDate(
 export function mapMicrosoftTaskList(
   tasks: MicrosoftTaskResource[],
   listId: string,
+  options?: { isFlaggedEmails?: boolean },
 ): MappedMicrosoftTask[] {
   const mappedTasks: MappedMicrosoftTask[] = [];
   let currentDayOrder = 0;
+  const isFlaggedEmails = options?.isFlaggedEmails ?? false;
 
   for (const task of tasks) {
     const rawContent = (task.title || "").trim();
     const content = rawContent || "Untitled Task";
 
     let description: string | null = null;
-    if (task.body?.content) {
+    if (!isFlaggedEmails && task.body?.content) {
       const sanitized =
         task.body.contentType === "html"
           ? stripHtmlTags(task.body.content)
@@ -96,8 +98,7 @@ export function mapMicrosoftTaskList(
 
       completedAt =
         parseIsoTimestamp(completedRaw) ??
-        parseIsoTimestamp(task.lastModifiedDateTime) ??
-        parseIsoTimestamp(task.createdDateTime);
+        parseIsoTimestamp(task.lastModifiedDateTime);
     }
 
     const priority = task.importance === "high" ? 1 : 4;
@@ -115,7 +116,6 @@ export function mapMicrosoftTaskList(
       priority,
       dayOrder: currentDayOrder++,
       listId,
-      isStep: false,
     };
 
     mappedTasks.push(rootMapped);
@@ -146,7 +146,6 @@ export function mapMicrosoftTaskList(
         priority: 4,
         dayOrder: currentDayOrder++,
         listId,
-        isStep: true,
       };
 
       mappedTasks.push(stepMapped);

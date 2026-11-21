@@ -45,6 +45,18 @@ vi.mock("@/lib/hooks/useGoogleTasksImport", () => ({
   }),
 }));
 
+vi.mock("@/lib/hooks/useMicrosoftTasksImport", () => ({
+  useMicrosoftTasksImport: () => ({
+    prepareOAuthImport: vi.fn(),
+    prepareFileImport: vi.fn(),
+    commitImport: vi.fn(),
+    cancelImport: vi.fn(),
+    preview: null,
+    state: "idle",
+    isImporting: false,
+  }),
+}));
+
 vi.mock("@/lib/hooks/useTodoistImport", () => {
   return {
     useTodoistImport: () => {

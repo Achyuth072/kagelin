@@ -97,7 +97,7 @@ describe("useMicrosoftTasksImport", () => {
     expect(result.current.state).toBe("previewing");
     expect(result.current.preview).not.toBeNull();
     expect(result.current.preview?.totalTasks).toBe(1);
-    expect(result.current.preview?.totalSteps).toBe(1);
+    expect(result.current.preview?.subtasksCount).toBe(1);
     expect(telemetry.trackTelemetry).toHaveBeenCalledWith(
       "migration_event",
       expect.objectContaining({
@@ -205,9 +205,43 @@ describe("useMicrosoftTasksImport", () => {
     expect(invalidateQueriesMock).toHaveBeenCalledWith({
       queryKey: ["projects"],
     });
+    expect(invalidateQueriesMock).toHaveBeenCalledWith({
+      queryKey: ["subtasks"],
+    });
     expect(syncScheduler.notifyLocalEdit).toHaveBeenCalled();
     expect(notify.success).toHaveBeenCalled();
     expect(result.current.state).toBe("idle");
     expect(result.current.preview).toBeNull();
+  });
+
+  it("tracks cancellation telemetry when cancelling from previewing state", async () => {
+    const { result } = renderHook(() => useMicrosoftTasksImport());
+    const file = new File([sampleGraphJson], "MicrosoftTasks.json", {
+      type: "application/json",
+    });
+
+    await act(async () => {
+      await result.current.prepareFileImport(file);
+    });
+
+    expect(result.current.state).toBe("previewing");
+
+    act(() => {
+      result.current.cancelImport();
+    });
+
+    expect(result.current.state).toBe("idle");
+    expect(result.current.preview).toBeNull();
+    expect(telemetry.trackTelemetry).toHaveBeenCalledWith(
+      "migration_event",
+      expect.objectContaining({
+        source: "microsoft_tasks",
+        ingress: "json_file",
+        phase: "plan",
+        status: "failed",
+        milestone: "migration_cancelled",
+        error_code: "aborted",
+      }),
+    );
   });
 });

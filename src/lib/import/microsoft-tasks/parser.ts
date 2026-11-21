@@ -79,6 +79,7 @@ function tokenizeCsv(text: string, delimiter = ","): string[][] {
  */
 export function parseOutlookCsvDate(
   dateStr?: string | null,
+  preferredFormat: "DMY" | "MDY" = "MDY",
 ): string | undefined {
   if (!dateStr) return undefined;
   const trimmed = dateStr.trim();
@@ -116,7 +117,12 @@ export function parseOutlookCsvDate(
       return `${y}-${m}-${d}T00:00:00.000Z`;
     }
 
-    // Ambiguous dates: default to M/D/YYYY (or DD/MM/YYYY)
+    // Ambiguous dates: use preferred format
+    if (preferredFormat === "DMY") {
+      const d = p1.padStart(2, "0");
+      const m = p2.padStart(2, "0");
+      return `${y}-${m}-${d}T00:00:00.000Z`;
+    }
     const m = p1.padStart(2, "0");
     const d = p2.padStart(2, "0");
     return `${y}-${m}-${d}T00:00:00.000Z`;
@@ -237,6 +243,56 @@ function normalizeTaskResource(
 }
 
 /**
+ * Normalizes raw list object into a clean MicrosoftTaskListResource
+ */
+function normalizeListResource(
+  rawList: unknown,
+  fallbackTasks: unknown[] = [],
+): MicrosoftTaskListResource {
+  if (!rawList || typeof rawList !== "object") {
+    return {
+      id: crypto.randomUUID(),
+      displayName: "Tasks",
+      isOwner: true,
+      isShared: false,
+      wellknownListName: "none",
+      tasks: [],
+    };
+  }
+
+  const listObj = rawList as Record<string, unknown>;
+  const listId =
+    typeof listObj.id === "string" && listObj.id.trim()
+      ? listObj.id.trim()
+      : crypto.randomUUID();
+  const displayName =
+    typeof listObj.displayName === "string" && listObj.displayName.trim()
+      ? listObj.displayName.trim()
+      : "Tasks";
+  const wellknownListName =
+    listObj.wellknownListName === "defaultList" ||
+    listObj.wellknownListName === "flaggedEmails" ||
+    listObj.wellknownListName === "unknown"
+      ? listObj.wellknownListName
+      : "none";
+
+  const listDirectTasks = Array.isArray(listObj.tasks) ? listObj.tasks : [];
+  const rawTasks = listDirectTasks.length > 0 ? listDirectTasks : fallbackTasks;
+  const tasks: MicrosoftTaskResource[] = rawTasks.map((t) =>
+    normalizeTaskResource(t as Record<string, unknown>),
+  );
+
+  return {
+    id: listId,
+    displayName,
+    isOwner: listObj.isOwner !== false,
+    isShared: Boolean(listObj.isShared),
+    wellknownListName,
+    tasks,
+  };
+}
+
+/**
  * Parses Microsoft Tasks Graph JSON file contents safely into a normalized MicrosoftTasksDataset.
  * Supports `{ lists: [...] }`, `{ value: [...] }`, and raw arrays.
  */
@@ -294,36 +350,9 @@ export function parseMicrosoftTasksJson(
     if (isListOfLists) {
       for (const rawList of parsed) {
         if (!rawList || typeof rawList !== "object") continue;
-        const listObj = rawList as Record<string, unknown>;
-        const listId =
-          typeof listObj.id === "string" && listObj.id.trim()
-            ? listObj.id.trim()
-            : crypto.randomUUID();
-        const displayName =
-          typeof listObj.displayName === "string" && listObj.displayName.trim()
-            ? listObj.displayName.trim()
-            : "Tasks";
-        const wellknownListName =
-          listObj.wellknownListName === "defaultList" ||
-          listObj.wellknownListName === "flaggedEmails" ||
-          listObj.wellknownListName === "unknown"
-            ? listObj.wellknownListName
-            : "none";
-
-        const rawTasks = Array.isArray(listObj.tasks) ? listObj.tasks : [];
-        const tasks: MicrosoftTaskResource[] = rawTasks.map((t) =>
-          normalizeTaskResource(t as Record<string, unknown>),
-        );
-
-        lists.push({
-          id: listId,
-          displayName,
-          isOwner: listObj.isOwner !== false,
-          isShared: Boolean(listObj.isShared),
-          wellknownListName,
-          tasks,
-        });
-        tasksByListId[listId] = tasks;
+        const normalized = normalizeListResource(rawList);
+        lists.push(normalized);
+        tasksByListId[normalized.id] = normalized.tasks;
       }
       return { lists, tasksByListId };
     } else {
@@ -357,42 +386,17 @@ export function parseMicrosoftTasksJson(
 
     for (const rawList of rootObj.lists) {
       if (!rawList || typeof rawList !== "object") continue;
-      const listObj = rawList as Record<string, unknown>;
-      const listId =
-        typeof listObj.id === "string" && listObj.id.trim()
-          ? listObj.id.trim()
-          : crypto.randomUUID();
-      const displayName =
-        typeof listObj.displayName === "string" && listObj.displayName.trim()
-          ? listObj.displayName.trim()
-          : "Tasks";
-      const wellknownListName =
-        listObj.wellknownListName === "defaultList" ||
-        listObj.wellknownListName === "flaggedEmails" ||
-        listObj.wellknownListName === "unknown"
-          ? listObj.wellknownListName
-          : "none";
-
-      const listDirectTasks = Array.isArray(listObj.tasks) ? listObj.tasks : [];
-      const separateTasks = Array.isArray(rawTasksByListId[listId])
-        ? rawTasksByListId[listId]
-        : [];
-
-      const rawTasks =
-        listDirectTasks.length > 0 ? listDirectTasks : separateTasks;
-      const tasks: MicrosoftTaskResource[] = rawTasks.map((t) =>
-        normalizeTaskResource(t as Record<string, unknown>),
-      );
-
-      lists.push({
-        id: listId,
-        displayName,
-        isOwner: listObj.isOwner !== false,
-        isShared: Boolean(listObj.isShared),
-        wellknownListName,
-        tasks,
-      });
-      tasksByListId[listId] = tasks;
+      const rawListId =
+        typeof (rawList as Record<string, unknown>).id === "string"
+          ? ((rawList as Record<string, unknown>).id as string).trim()
+          : "";
+      const separateTasks =
+        rawListId && Array.isArray(rawTasksByListId[rawListId])
+          ? rawTasksByListId[rawListId]
+          : [];
+      const normalized = normalizeListResource(rawList, separateTasks);
+      lists.push(normalized);
+      tasksByListId[normalized.id] = normalized.tasks;
     }
 
     return { lists, tasksByListId };
@@ -422,36 +426,9 @@ export function parseMicrosoftTasksJson(
     if (isListOfLists) {
       for (const rawList of valueArray) {
         if (!rawList || typeof rawList !== "object") continue;
-        const listObj = rawList as Record<string, unknown>;
-        const listId =
-          typeof listObj.id === "string" && listObj.id.trim()
-            ? listObj.id.trim()
-            : crypto.randomUUID();
-        const displayName =
-          typeof listObj.displayName === "string" && listObj.displayName.trim()
-            ? listObj.displayName.trim()
-            : "Tasks";
-        const wellknownListName =
-          listObj.wellknownListName === "defaultList" ||
-          listObj.wellknownListName === "flaggedEmails" ||
-          listObj.wellknownListName === "unknown"
-            ? listObj.wellknownListName
-            : "none";
-
-        const rawTasks = Array.isArray(listObj.tasks) ? listObj.tasks : [];
-        const tasks: MicrosoftTaskResource[] = rawTasks.map((t) =>
-          normalizeTaskResource(t as Record<string, unknown>),
-        );
-
-        lists.push({
-          id: listId,
-          displayName,
-          isOwner: listObj.isOwner !== false,
-          isShared: Boolean(listObj.isShared),
-          wellknownListName,
-          tasks,
-        });
-        tasksByListId[listId] = tasks;
+        const normalized = normalizeListResource(rawList);
+        lists.push(normalized);
+        tasksByListId[normalized.id] = normalized.tasks;
       }
       return { lists, tasksByListId };
     } else {
@@ -529,6 +506,28 @@ export function parseOutlookTasksCsv(
     .filter((r) => r.some((cell) => cell.length > 0));
   if (dataRows.length === 0) {
     throw new Error("Invalid Outlook CSV: No tasks found in CSV");
+  }
+
+  // Detect date format preference from CSV rows (European DD/MM/YYYY vs US M/D/YYYY)
+  let preferredFormat: "DMY" | "MDY" = "MDY";
+  for (const row of dataRows) {
+    const rawDate =
+      (dueDateIdx >= 0 ? row[dueDateIdx] : "") ||
+      (dateCompletedIdx >= 0 ? row[dateCompletedIdx] : "");
+    if (!rawDate) continue;
+    const match = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/.exec(rawDate.trim());
+    if (match) {
+      const n1 = parseInt(match[1], 10);
+      const n2 = parseInt(match[2], 10);
+      if (n1 > 12 && n2 <= 12) {
+        preferredFormat = "DMY";
+        break;
+      }
+      if (n2 > 12 && n1 <= 12) {
+        preferredFormat = "MDY";
+        break;
+      }
+    }
   }
 
   const defaultListId = "default-list";
@@ -609,14 +608,17 @@ export function parseOutlookTasksCsv(
 
     // Parse dates
     const rawDueDate = dueDateIdx >= 0 ? row[dueDateIdx] : undefined;
-    const dueDateIso = parseOutlookCsvDate(rawDueDate);
+    const dueDateIso = parseOutlookCsvDate(rawDueDate, preferredFormat);
     const dueDateTime = dueDateIso
       ? { dateTime: dueDateIso, timeZone: "UTC" }
       : undefined;
 
     const rawCompletedDate =
       dateCompletedIdx >= 0 ? row[dateCompletedIdx] : undefined;
-    const completedDateIso = parseOutlookCsvDate(rawCompletedDate);
+    const completedDateIso = parseOutlookCsvDate(
+      rawCompletedDate,
+      preferredFormat,
+    );
     const completedDateTime = completedDateIso
       ? { dateTime: completedDateIso, timeZone: "UTC" }
       : undefined;

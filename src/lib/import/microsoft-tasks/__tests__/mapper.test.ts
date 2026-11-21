@@ -105,7 +105,6 @@ describe("Microsoft Tasks Mapper (mapMicrosoftTaskList & mapMicrosoftTasksToKage
     expect(mapped[0].dueDate).toBe("2026-11-21T00:00:00.000Z");
     expect(mapped[0].description).toBe("Keep all receipts");
     expect(mapped[0].parentId).toBeNull();
-    expect(mapped[0].isStep).toBe(false);
     expect(mapped[0].dayOrder).toBe(0);
 
     // Low & Normal importance -> 4 (P4)
@@ -214,7 +213,6 @@ describe("Microsoft Tasks Mapper (mapMicrosoftTaskList & mapMicrosoftTasksToKage
     // Root 1
     expect(mapped[0].id).toBe("root-1");
     expect(mapped[0].parentId).toBeNull();
-    expect(mapped[0].isStep).toBe(false);
     expect(mapped[0].dayOrder).toBe(0);
 
     // Step 1-1
@@ -225,7 +223,6 @@ describe("Microsoft Tasks Mapper (mapMicrosoftTaskList & mapMicrosoftTasksToKage
     expect(mapped[1].isCompleted).toBe(true);
     expect(mapped[1].completedAt).toBe("2026-11-21T09:00:00.000Z");
     expect(mapped[1].priority).toBe(4);
-    expect(mapped[1].isStep).toBe(true);
     expect(mapped[1].dayOrder).toBe(1);
 
     // Step 1-2
@@ -234,20 +231,41 @@ describe("Microsoft Tasks Mapper (mapMicrosoftTaskList & mapMicrosoftTasksToKage
     expect(mapped[2].tempParentId).toBe("root-1");
     expect(mapped[2].content).toBe("Notify Stakeholders");
     expect(mapped[2].isCompleted).toBe(false);
-    expect(mapped[2].isStep).toBe(true);
     expect(mapped[2].dayOrder).toBe(2);
 
     // Root 2
     expect(mapped[3].id).toBe("root-2");
     expect(mapped[3].parentId).toBeNull();
-    expect(mapped[3].isStep).toBe(false);
+    expect(mapped[3].tempParentId).toBeNull();
     expect(mapped[3].dayOrder).toBe(3);
 
     // Step 2-1
     expect(mapped[4].id).toBe("step-2-1");
     expect(mapped[4].parentId).toBe("root-2");
-    expect(mapped[4].isStep).toBe(true);
+    expect(mapped[4].tempParentId).toBe("root-2");
     expect(mapped[4].dayOrder).toBe(4);
+  });
+
+  it("omits descriptions for flagged emails list per Spec L44", () => {
+    const rawTasks: MicrosoftTaskResource[] = [
+      {
+        id: "email-task-1",
+        title: "Follow up with client",
+        importance: "normal",
+        status: "notStarted",
+        isReminderOn: false,
+        checklistItems: [],
+        body: {
+          content: "Confidential email body details",
+          contentType: "text",
+        },
+      },
+    ];
+    const mapped = mapMicrosoftTaskList(rawTasks, "flagged-list", {
+      isFlaggedEmails: true,
+    });
+    expect(mapped[0].content).toBe("Follow up with client");
+    expect(mapped[0].description).toBeNull();
   });
 
   it("maps full MicrosoftTasksDataset with multiple lists", () => {

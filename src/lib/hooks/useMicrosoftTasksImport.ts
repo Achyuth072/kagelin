@@ -60,6 +60,16 @@ export function useMicrosoftTasksImport() {
     if (state === "importing") {
       abortControllerRef.current?.abort();
     }
+    if (state === "previewing" || state === "fetching") {
+      trackTelemetry("migration_event", {
+        source: "microsoft_tasks",
+        ingress: currentIngress,
+        phase: state === "previewing" ? "plan" : "fetch",
+        status: "failed",
+        milestone: "migration_cancelled",
+        error_code: "aborted",
+      });
+    }
     setState("idle");
     setPreview(null);
     setError(null);
@@ -77,12 +87,15 @@ export function useMicrosoftTasksImport() {
     setCurrentFileName(fileName);
     setCurrentIngress(ingress);
 
-    trackTelemetry("migration_event", {
-      source: "microsoft_tasks",
-      ingress,
-      phase: "fetch",
-      status: "started",
-    });
+    if (ingress !== "oauth") {
+      trackTelemetry("migration_event", {
+        source: "microsoft_tasks",
+        ingress,
+        phase: "fetch",
+        status: "started",
+        milestone: "migration_started",
+      });
+    }
 
     try {
       const workspace = await fetchMicrosoftTasksWorkspace(isGuestMode);
@@ -107,6 +120,7 @@ export function useMicrosoftTasksImport() {
         ingress,
         phase: "plan",
         status: "completed",
+        milestone: "migration_preview_viewed",
         task_count: plan.totalTasks,
       });
 
@@ -120,6 +134,7 @@ export function useMicrosoftTasksImport() {
       void recordDiagnosticError(err, {
         provider: "microsoft_tasks",
         importStage: "plan",
+        listCount: dataset.lists.length,
       });
       notify.error(msg);
       trigger("thud");
@@ -141,19 +156,20 @@ export function useMicrosoftTasksImport() {
   const prepareFileImport = async (
     file: File,
   ): Promise<MicrosoftTasksImportPreview | null> => {
+    const lowerName = file.name.toLowerCase();
+    const isCsv = lowerName.endsWith(".csv");
+    let ingress: "json_file" | "csv_file" = isCsv ? "csv_file" : "json_file";
+
     try {
       const text = await file.text();
-      const lowerName = file.name.toLowerCase();
-      const isCsv =
-        lowerName.endsWith(".csv") ||
-        text.startsWith("Subject,") ||
-        text.startsWith('"Subject",');
+      const detectedCsv =
+        isCsv || text.startsWith("Subject,") || text.startsWith('"Subject",');
+      ingress = detectedCsv ? "csv_file" : "json_file";
 
-      const dataset = isCsv
+      const dataset = detectedCsv
         ? parseOutlookTasksCsv(text)
         : parseMicrosoftTasksJson(text);
 
-      const ingress = isCsv ? "csv_file" : "json_file";
       return await prepareImportFromDataset(dataset, ingress, file.name);
     } catch (err) {
       console.error("Failed to parse Microsoft Tasks file:", err);
@@ -172,7 +188,7 @@ export function useMicrosoftTasksImport() {
 
       trackTelemetry("migration_event", {
         source: "microsoft_tasks",
-        ingress: "json_file",
+        ingress,
         phase: "fetch",
         status: "failed",
         error_code: "parse_failed",
@@ -180,18 +196,6 @@ export function useMicrosoftTasksImport() {
 
       return null;
     }
-  };
-
-  const prepareJsonImport = async (
-    file: File,
-  ): Promise<MicrosoftTasksImportPreview | null> => {
-    return prepareFileImport(file);
-  };
-
-  const prepareCsvImport = async (
-    file: File,
-  ): Promise<MicrosoftTasksImportPreview | null> => {
-    return prepareFileImport(file);
   };
 
   const prepareOAuthImport = async (
@@ -211,9 +215,8 @@ export function useMicrosoftTasksImport() {
           if (res.ok) {
             const data = (await res.json()) as {
               access_token?: string;
-              accessToken?: string;
             };
-            accessToken = data.accessToken || data.access_token;
+            accessToken = data.access_token;
           }
         } catch (e) {
           void recordDiagnosticError(e, {
@@ -251,6 +254,19 @@ export function useMicrosoftTasksImport() {
         );
       }
     }
+
+    setState("fetching");
+    setError(null);
+    setCurrentIngress("oauth");
+    setCurrentFileName("MicrosoftTasks-OAuth");
+
+    trackTelemetry("migration_event", {
+      source: "microsoft_tasks",
+      ingress: "oauth",
+      phase: "fetch",
+      status: "started",
+      milestone: "migration_started",
+    });
 
     try {
       const dataset = await fetchMicrosoftTasksDataset(accessToken);
@@ -313,8 +329,6 @@ export function useMicrosoftTasksImport() {
     try {
       const { importedCount, createdProjectCount } =
         await executeMicrosoftTasksImport(targetPreview, {
-          isGuest: isGuestMode,
-          fileName: currentFileName,
           signal: controller.signal,
           includeCompleted: options?.includeCompleted ?? true,
         });
@@ -324,6 +338,7 @@ export function useMicrosoftTasksImport() {
         queryClient.invalidateQueries({ queryKey: ["tasks"] }),
         queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
         queryClient.invalidateQueries({ queryKey: ["projects"] }),
+        queryClient.invalidateQueries({ queryKey: ["subtasks"] }),
       ]);
 
       // 2. Notify local sync scheduler of edits
@@ -335,6 +350,7 @@ export function useMicrosoftTasksImport() {
         ingress: currentIngress,
         phase: "commit",
         status: "completed",
+        milestone: "migration_completed",
         task_count: importedCount,
         duration_ms: durationMs,
       });
@@ -355,6 +371,10 @@ export function useMicrosoftTasksImport() {
       void recordDiagnosticError(err, {
         provider: "microsoft_tasks",
         importStage: "commit",
+        listCount: targetPreview.totalLists,
+        taskCount: targetPreview.totalTasks,
+        stepCount: targetPreview.subtasksCount,
+        duplicateCount: targetPreview.duplicatesCount,
       });
 
       const isAborted =
@@ -382,6 +402,7 @@ export function useMicrosoftTasksImport() {
         ingress: currentIngress,
         phase: "commit",
         status: "failed",
+        milestone: isAborted ? "migration_cancelled" : undefined,
         error_code: isAborted ? "aborted" : "commit_failed",
       });
 
@@ -411,8 +432,6 @@ export function useMicrosoftTasksImport() {
   return {
     prepareOAuthImport,
     prepareFileImport,
-    prepareJsonImport,
-    prepareCsvImport,
     commitImport,
     cancelImport,
     preview,
