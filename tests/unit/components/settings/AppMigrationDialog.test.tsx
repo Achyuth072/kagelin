@@ -206,12 +206,7 @@ describe("AppMigrationDialog", () => {
     // Export cards should be rendered
     expect(
       screen.getByRole("button", {
-        name: "Export Loop Habit Tracker database",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", {
-        name: "Export Loop Habit Tracker CSV archive",
+        name: "Export Loop Habit Tracker",
       }),
     ).toBeInTheDocument();
     expect(

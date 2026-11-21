@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { Database, FileDown, Info, Loader2, X } from "lucide-react";
 import { BetaBadge } from "@/components/ui/beta-badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/components/AuthProvider";
 import { useHabits } from "@/lib/hooks/useHabits";
 import { useTasks } from "@/lib/hooks/useTasks";
@@ -123,61 +130,89 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
   return (
     <div className={cn("space-y-4", className)}>
       {/* Loop Habit Tracker Card */}
-      <div className="flex flex-col min-[360px]:flex-row min-[360px]:items-center justify-between gap-2 py-4 px-3.5 sm:gap-3 sm:p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all">
-        <div className="flex items-center gap-2.5 min-[360px]:flex-1 min-w-0">
-          <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
-          <div className="min-w-0">
-            <h3 className="text-sm font-medium leading-snug">
-              Loop Habit
-              <span className="flex items-center gap-1.5">
-                Tracker
-                <BetaBadge />
-              </span>
-            </h3>
-            <p className="text-xs text-muted-foreground lowercase mt-0.5">
-              {habitSummary}
-            </p>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <div
+            role="button"
+            tabIndex={isExportingLoop ? -1 : 0}
+            aria-disabled={isExportingLoop}
+            aria-label="Export Loop Habit Tracker"
+            className={cn(
+              "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+              isExportingLoop &&
+                "pointer-events-none opacity-60 cursor-not-allowed",
+            )}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium flex items-center gap-1.5 truncate">
+                  Loop Habit Tracker
+                  <BetaBadge />
+                </h3>
+                <p className="text-xs text-muted-foreground lowercase mt-0.5 truncate">
+                  {habitSummary}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              tabIndex={-1}
+              aria-hidden="true"
+              className={cn(
+                "h-8 transition-opacity text-brand pointer-events-none ml-auto shrink-0",
+                isExportingLoop
+                  ? "opacity-100"
+                  : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+              )}
+              disabled={isExportingLoop}
+            >
+              {isExportingLoop ? (
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+              ) : (
+                <FileDown className="h-4 w-4" strokeWidth={2.25} />
+              )}
+            </Button>
           </div>
-        </div>
-        {/* Unified segmented control: slim h-7 container with compact micro typography */}
-        <div className="inline-flex items-center h-7 bg-secondary/20 p-0.5 rounded-md border border-border/40 ml-auto shrink-0">
-          <button
-            type="button"
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52 border-border/40">
+          <DropdownMenuItem
             onClick={() => runExport(exportLoopDb)}
             disabled={isExportingLoop}
-            className="inline-flex items-center h-full gap-1.5 px-2.5 rounded text-xs font-medium tracking-tight hover:bg-secondary/50 active:bg-secondary/70 text-foreground transition-all motion-reduce:transition-none disabled:opacity-50"
             aria-label="Export Loop Habit Tracker database"
+            className="flex items-center gap-2 cursor-pointer py-2"
           >
-            {isExportingLoop ? (
-              <Loader2
-                className="h-3 w-3 animate-spin text-brand"
-                strokeWidth={2.25}
-              />
-            ) : (
-              <Database className="h-3 w-3 text-brand" strokeWidth={2.25} />
-            )}
-            <span>.db</span>
-          </button>
-          <div className="h-3 w-[1px] bg-border/40 mx-0.5" />
-          <button
-            type="button"
+            <Database
+              className="h-4 w-4 text-brand shrink-0"
+              strokeWidth={2.25}
+            />
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-medium">Database (.db)</span>
+              <span className="text-[10px] text-muted-foreground truncate">
+                Android Loop app backup
+              </span>
+            </div>
+          </DropdownMenuItem>
+          <DropdownMenuItem
             onClick={() => runExport(exportLoopZip)}
             disabled={isExportingLoop}
-            className="inline-flex items-center h-full gap-1.5 px-2.5 rounded text-xs font-medium tracking-tight hover:bg-secondary/50 active:bg-secondary/70 text-foreground transition-all motion-reduce:transition-none disabled:opacity-50"
             aria-label="Export Loop Habit Tracker CSV archive"
+            className="flex items-center gap-2 cursor-pointer py-2"
           >
-            {isExportingLoop ? (
-              <Loader2
-                className="h-3 w-3 animate-spin text-brand"
-                strokeWidth={2.25}
-              />
-            ) : (
-              <FileDown className="h-3 w-3 text-brand" strokeWidth={2.25} />
-            )}
-            <span>CSV Zip</span>
-          </button>
-        </div>
-      </div>
+            <FileDown
+              className="h-4 w-4 text-brand shrink-0"
+              strokeWidth={2.25}
+            />
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-medium">CSV Archive (.zip)</span>
+              <span className="text-[10px] text-muted-foreground truncate">
+                Habits and checkmarks
+              </span>
+            </div>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Todoist Card */}
       <div
@@ -196,43 +231,43 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
           }
         }}
         className={cn(
-          "flex flex-col min-[360px]:flex-row min-[360px]:items-center justify-between gap-2 py-4 px-3.5 sm:gap-3 sm:p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group",
+          "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
           isExportingTodoist &&
             "pointer-events-none opacity-60 cursor-not-allowed",
         )}
         aria-label="Export Todoist ZIP archive"
       >
-        <div className="flex items-center gap-2.5 min-[360px]:flex-1 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           <TodoistIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
           <div className="min-w-0">
-            <h3 className="text-sm font-medium flex items-center gap-1.5">
+            <h3 className="text-sm font-medium flex items-center gap-1.5 truncate">
               Todoist
               <BetaBadge />
             </h3>
-            <p className="text-xs text-muted-foreground lowercase">
+            <p className="text-xs text-muted-foreground lowercase mt-0.5 truncate">
               {todoistSummary}
             </p>
           </div>
         </div>
-        <div className="inline-flex items-center h-7 bg-secondary/20 p-0.5 rounded-md border border-border/40 ml-auto shrink-0">
-          <button
-            type="button"
-            disabled={isExportingTodoist}
-            tabIndex={-1}
-            className="inline-flex items-center h-full gap-1.5 px-2.5 rounded text-xs font-medium tracking-tight text-foreground disabled:opacity-50"
-            aria-hidden="true"
-          >
-            {isExportingTodoist ? (
-              <Loader2
-                className="h-3 w-3 animate-spin text-brand"
-                strokeWidth={2.25}
-              />
-            ) : (
-              <FileDown className="h-3 w-3 text-brand" strokeWidth={2.25} />
-            )}
-            <span>.zip</span>
-          </button>
-        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          tabIndex={-1}
+          aria-hidden="true"
+          className={cn(
+            "h-8 transition-opacity text-brand pointer-events-none ml-auto shrink-0",
+            isExportingTodoist
+              ? "opacity-100"
+              : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+          )}
+          disabled={isExportingTodoist}
+        >
+          {isExportingTodoist ? (
+            <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+          ) : (
+            <FileDown className="h-4 w-4" strokeWidth={2.25} />
+          )}
+        </Button>
       </div>
 
       {showTodoistTip && (

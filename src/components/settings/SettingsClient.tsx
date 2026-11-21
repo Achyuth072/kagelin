@@ -931,7 +931,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
           <CollapsibleSection
             title="Backup & Data Portability"
             icon={HardDrive}
-            summary="CalDAV sync, database snapshot & uhabits migration"
+            summary="CalDAV sync, database snapshot & third-party app migration"
             isOpen={!!openSections.backup}
             onToggle={() => toggleSection("backup")}
           >

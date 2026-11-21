@@ -225,10 +225,16 @@ describe("MigrationExportTab component rendering", () => {
       mockExportLoopDb.mockResolvedValue(true);
       render(<MigrationExportTab />);
 
-      const dbButton = screen.getByRole("button", {
+      const loopCard = screen.getByRole("button", {
+        name: "Export Loop Habit Tracker",
+      });
+      fireEvent.pointerDown(loopCard, { button: 0, ctrlKey: false });
+      fireEvent.click(loopCard);
+
+      const dbItem = screen.getByRole("menuitem", {
         name: "Export Loop Habit Tracker database",
       });
-      await fireEvent.click(dbButton);
+      await fireEvent.click(dbItem);
 
       expect(mockTrigger).toHaveBeenCalledWith("toggle");
       expect(mockExportLoopDb).toHaveBeenCalledTimes(1);
@@ -238,10 +244,16 @@ describe("MigrationExportTab component rendering", () => {
       mockExportLoopZip.mockResolvedValue(true);
       render(<MigrationExportTab />);
 
-      const zipButton = screen.getByRole("button", {
+      const loopCard = screen.getByRole("button", {
+        name: "Export Loop Habit Tracker",
+      });
+      fireEvent.pointerDown(loopCard, { button: 0, ctrlKey: false });
+      fireEvent.click(loopCard);
+
+      const zipItem = screen.getByRole("menuitem", {
         name: "Export Loop Habit Tracker CSV archive",
       });
-      await fireEvent.click(zipButton);
+      await fireEvent.click(zipItem);
 
       expect(mockTrigger).toHaveBeenCalledWith("toggle");
       expect(mockExportLoopZip).toHaveBeenCalledTimes(1);
@@ -262,27 +274,23 @@ describe("MigrationExportTab component rendering", () => {
       });
     });
 
-    it("disables both Loop buttons and shows spinner when Loop export is active", () => {
+    it("disables Loop card and shows spinner when Loop export is active", () => {
       mockLoopExporting = true;
       mockTodoistExporting = false;
       const { container } = render(<MigrationExportTab />);
 
-      const dbButton = screen.getByRole("button", {
-        name: "Export Loop Habit Tracker database",
-      });
-      const zipButton = screen.getByRole("button", {
-        name: "Export Loop Habit Tracker CSV archive",
+      const loopCard = screen.getByRole("button", {
+        name: "Export Loop Habit Tracker",
       });
       const todoistButton = screen.getByRole("button", {
         name: "Export Todoist ZIP archive",
       });
 
-      expect(dbButton).toBeDisabled();
-      expect(zipButton).toBeDisabled();
-      expect(todoistButton).not.toBeDisabled();
+      expect(loopCard).toHaveAttribute("aria-disabled", "true");
+      expect(todoistButton).not.toHaveAttribute("aria-disabled", "true");
 
       // Check for spinner
-      expect(container.querySelectorAll(".animate-spin").length).toBe(2);
+      expect(container.querySelectorAll(".animate-spin").length).toBe(1);
     });
 
     it("disables Todoist button and shows spinner when Todoist export is active", () => {
@@ -290,18 +298,14 @@ describe("MigrationExportTab component rendering", () => {
       mockTodoistExporting = true;
       const { container } = render(<MigrationExportTab />);
 
-      const dbButton = screen.getByRole("button", {
-        name: "Export Loop Habit Tracker database",
-      });
-      const zipButton = screen.getByRole("button", {
-        name: "Export Loop Habit Tracker CSV archive",
+      const loopCard = screen.getByRole("button", {
+        name: "Export Loop Habit Tracker",
       });
       const todoistButton = screen.getByRole("button", {
         name: "Export Todoist ZIP archive",
       });
 
-      expect(dbButton).not.toBeDisabled();
-      expect(zipButton).not.toBeDisabled();
+      expect(loopCard).not.toHaveAttribute("aria-disabled", "true");
       expect(todoistButton).toHaveAttribute("aria-disabled", "true");
 
       // Check for spinner
