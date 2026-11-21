@@ -87,7 +87,6 @@ describe("fetchGoogleTasksDataset (Throttled Google Tasks API Transport)", () =>
       title: "Work Projects",
     });
 
-    // list-1 should have 1 task (deleted task excluded)
     expect(dataset.tasksByListId["list-1"]).toHaveLength(1);
     expect(dataset.tasksByListId["list-1"][0]).toEqual({
       id: "task-1",
@@ -216,7 +215,7 @@ describe("fetchGoogleTasksDataset (Throttled Google Tasks API Transport)", () =>
     const dataset = await fetchGoogleTasksDataset("mock-token", {
       fetchFn: fetchMock as unknown as typeof fetch,
       interRequestDelayMs: 0,
-      initialBackoffMs: 1, // fast test backoff
+      initialBackoffMs: 1,
       maxRetries: 3,
     });
 
@@ -281,7 +280,6 @@ describe("fetchGoogleTasksDataset (Throttled Google Tasks API Transport)", () =>
         maxActiveSeen = activeRequests;
       }
 
-      // Small async delay simulating network latency
       await new Promise((r) => setTimeout(r, 20));
 
       activeRequests--;

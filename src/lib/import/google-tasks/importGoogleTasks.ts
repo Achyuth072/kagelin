@@ -3,9 +3,6 @@ import { taskMutations } from "@/lib/mutations/task";
 import { projectMutations } from "@/lib/mutations/project";
 import type { GoogleTasksImportPreview, ParentRedirect } from "./types";
 
-/**
- * Split an array of items into batches of at most `chunkSize`.
- */
 export function chunkArray<T>(items: T[], chunkSize = 100): T[][] {
   if (items.length === 0) return [];
   const chunks: T[][] = [];
@@ -15,9 +12,6 @@ export function chunkArray<T>(items: T[], chunkSize = 100): T[][] {
   return chunks;
 }
 
-/**
- * Raised when a Google Tasks import fails or is aborted.
- */
 export class GoogleTasksImportFailure extends Error {
   readonly importedCount: number;
   readonly createdProjectCount: number;
@@ -34,9 +28,6 @@ export class GoogleTasksImportFailure extends Error {
   }
 }
 
-/**
- * Resolves a subtask's parent ID through newly created roots and parentRedirects.
- */
 function resolveParentId(
   tempParentId: string | null,
   rootIdByTempId: Map<string, string>,
@@ -60,17 +51,12 @@ function resolveParentId(
   return undefined;
 }
 
-/**
- * Roll back created tasks in chunks of <= 100 and created projects,
- * restoring the workspace to its pre-import state.
- */
 export async function rollbackGoogleTasksImport(
   createdTaskIds: string[],
   createdProjectIds: string[],
 ): Promise<boolean> {
   let success = true;
 
-  // 1. Delete tasks in batches of <= 100
   for (const chunk of chunkArray(createdTaskIds, 100)) {
     try {
       await taskMutations.deleteMany(chunk);
@@ -80,7 +66,6 @@ export async function rollbackGoogleTasksImport(
     }
   }
 
-  // 2. Delete created projects
   for (const projectId of createdProjectIds) {
     try {
       await projectMutations.delete(projectId);
@@ -100,14 +85,6 @@ export interface ExecuteGoogleTasksImportOptions {
   includeCompleted?: boolean;
 }
 
-/**
- * Executes atomic chunked database mutations for a planned Google Tasks import.
- *
- * - Captures raw source provenance via persistImportSource (ADR 0006).
- * - Creates projects sequentially and accumulates created project IDs.
- * - Inserts tasks in batches of <= 100 items via taskMutations.createMany().
- * - On failure or user abort, triggers rollbackGoogleTasksImport.
- */
 export async function executeGoogleTasksImport(
   preview: GoogleTasksImportPreview,
   options: ExecuteGoogleTasksImportOptions = {},
@@ -151,7 +128,6 @@ export async function executeGoogleTasksImport(
         Boolean(task.tempParentId),
       );
 
-      // 1. Create roots first (in chunks of <= 100)
       const rootClientIds = roots.map(() => crypto.randomUUID());
       const rootInputs = roots.map((task, index) => ({
         content: task.content,
@@ -177,7 +153,6 @@ export async function executeGoogleTasksImport(
         rootIdByTempId.set(task.tempId, rootClientIds[index]);
       });
 
-      // 2. Create subtasks (in chunks of <= 100)
       if (subtasks.length > 0) {
         const subtaskInputs = subtasks.map((task) => {
           const resolvedParent =

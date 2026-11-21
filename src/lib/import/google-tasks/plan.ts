@@ -19,15 +19,11 @@ function normalizeTitle(title: string): string {
   return title.trim().toLowerCase();
 }
 
-/**
- * Indexes existing active workspace root tasks by `(project_id, normalized_title)`
- * and subtasks by `(parent_id, normalized_title)`.
- */
 function indexWorkspace(workspace: ExistingWorkspace) {
   const inboxProjectId = workspace.projects.find((p) => p.is_inbox)?.id ?? null;
 
-  const rootIndex = new Map<string, string>(); // `${projectKey}:${normTitle}` -> taskId
-  const subtaskIndex = new Map<string, string>(); // `${parentId}:${normTitle}` -> taskId
+  const rootIndex = new Map<string, string>();
+  const subtaskIndex = new Map<string, string>();
 
   const activeTasks = workspace.tasks.filter(
     (task) => !task.is_completed && task.content,
@@ -36,7 +32,6 @@ function indexWorkspace(workspace: ExistingWorkspace) {
   for (const task of activeTasks) {
     const normTitle = normalizeTitle(task.content!);
     if (!task.parent_id) {
-      // Root task
       const isInboxTask =
         !task.project_id || task.project_id === inboxProjectId;
       if (isInboxTask) {
@@ -48,7 +43,6 @@ function indexWorkspace(workspace: ExistingWorkspace) {
         rootIndex.set(`${task.project_id}:${normTitle}`, task.id);
       }
     } else {
-      // Subtask
       subtaskIndex.set(`${task.parent_id}:${normTitle}`, task.id);
     }
   }
@@ -62,7 +56,6 @@ export function planGoogleTasksImport(
 ): GoogleTasksImportPreview {
   const { inboxProjectId, rootIndex, subtaskIndex } = indexWorkspace(workspace);
 
-  // Index existing non-inbox projects by normalized name
   const existingProjectsByName = new Map<string, string>();
   for (const project of workspace.projects) {
     if (project.is_inbox || !project.name) continue;
@@ -72,7 +65,6 @@ export function planGoogleTasksImport(
   const projectPlans: GoogleTasksProjectPlan[] = [];
   let paletteIndex = 0;
 
-  // Process lists in dataset.lists, plus any extra listIds in dataset.tasksByListId
   const processedListIds = new Set<string>();
   const allLists = [...dataset.lists];
   for (const list of dataset.lists) {
@@ -120,27 +112,23 @@ export function planGoogleTasksImport(
       }
     }
 
-    // Deduplication within this list
     const parentRedirects: Record<string, ParentRedirect> = {};
     const keptTaskIds = new Set<string>();
-    const keptRootTitles = new Map<string, string>(); // normTitle -> tempId of kept root
-    const keptSubtasksByParent = new Map<string, Set<string>>(); // parentId/tempParentId -> Set of normTitle
+    const keptRootTitles = new Map<string, string>();
+    const keptSubtasksByParent = new Map<string, Set<string>>();
     let duplicatesSkipped = 0;
     let subtasksReassigned = 0;
 
     const roots = mappedTasks.filter((t) => !t.tempParentId);
     const subtasks = mappedTasks.filter((t) => Boolean(t.tempParentId));
 
-    // 1. Process root tasks
     for (const root of roots) {
       const normTitle = normalizeTitle(root.content);
 
-      // Check if it duplicates an existing workspace root task
       const existingTaskId = projectKey
         ? rootIndex.get(`${projectKey}:${normTitle}`)
         : undefined;
 
-      // Check if it duplicates an already kept root in this import
       const importedRootTempId = keptRootTitles.get(normTitle);
 
       if (existingTaskId) {
@@ -161,7 +149,6 @@ export function planGoogleTasksImport(
       }
     }
 
-    // 2. Process subtasks
     for (const subtask of subtasks) {
       const normTitle = normalizeTitle(subtask.content);
       const tempParentId = subtask.tempParentId!;
@@ -171,7 +158,7 @@ export function planGoogleTasksImport(
       if (redirect) {
         if (redirect.kind === "existing") {
           const existingParentId = redirect.taskId;
-          // Check if subtask exists under this existing parent in workspace or in current import
+
           const isWorkspaceDuplicate = subtaskIndex.has(
             `${existingParentId}:${normTitle}`,
           );
@@ -216,7 +203,6 @@ export function planGoogleTasksImport(
           }
         }
       } else {
-        // Parent is a kept root in this import
         const isImportDuplicate = keptSubtasksByParent
           .get(tempParentId)
           ?.has(normTitle);
@@ -236,7 +222,6 @@ export function planGoogleTasksImport(
       }
     }
 
-    // Preserve original DFS traversal order among kept tasks
     const keptTasks = mappedTasks.filter((t) => keptTaskIds.has(t.tempId));
 
     projectPlans.push({
@@ -254,7 +239,6 @@ export function planGoogleTasksImport(
     paletteIndex++;
   }
 
-  // Calculate totals and date boundaries
   const allKeptTasks = projectPlans.flatMap((p) => p.tasks);
   let rootTasksCount = 0;
   let subtasksCount = 0;

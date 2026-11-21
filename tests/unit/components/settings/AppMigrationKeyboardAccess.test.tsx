@@ -65,10 +65,13 @@ vi.mock("@/lib/hooks/useGoogleTasksImport", () => ({
   }),
 }));
 
+const mockPrepareMicrosoftOAuthImport = vi.fn();
+const mockPrepareMicrosoftFileImport = vi.fn();
+
 vi.mock("@/lib/hooks/useMicrosoftTasksImport", () => ({
   useMicrosoftTasksImport: () => ({
-    prepareOAuthImport: vi.fn(),
-    prepareFileImport: vi.fn(),
+    prepareOAuthImport: mockPrepareMicrosoftOAuthImport,
+    prepareFileImport: mockPrepareMicrosoftFileImport,
     commitImport: vi.fn(),
     cancelImport: vi.fn(),
     preview: null,
@@ -178,6 +181,89 @@ describe("AppMigrationDialog File Import Keyboard Accessibility", () => {
     expect(clickSpy).toHaveBeenCalledTimes(1);
 
     fireEvent.keyDown(googleTasksCard, { key: " " });
+    expect(clickSpy).toHaveBeenCalledTimes(2);
+
+    clickSpy.mockRestore();
+  });
+
+  it("renders Microsoft To Do card in registered mode with keyboard accessibility and triggers on Enter and Space", () => {
+    mockIsGuestMode = false;
+    render(<AppMigrationDialog open={true} onOpenChange={vi.fn()} />);
+
+    const msTodoCard = screen.getByRole("button", {
+      name: /microsoft to do import options/i,
+    });
+    expect(msTodoCard).toHaveAttribute("tabindex", "0");
+
+    // Press Enter to drill down
+    fireEvent.keyDown(msTodoCard, { key: "Enter" });
+    expect(screen.getByText("Microsoft To Do Import")).toBeInTheDocument();
+
+    // Test OAuth card keyboard trigger
+    const connectCard = screen.getByRole("button", {
+      name: /connect microsoft to do/i,
+    });
+    expect(connectCard).toHaveAttribute("tabindex", "0");
+    fireEvent.keyDown(connectCard, { key: "Enter" });
+    expect(mockPrepareMicrosoftOAuthImport).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(connectCard, { key: " " });
+    expect(mockPrepareMicrosoftOAuthImport).toHaveBeenCalledTimes(2);
+
+    // Test File upload card keyboard trigger
+    const fileCard = screen.getByRole("button", {
+      name: /import microsoft tasks json or outlook csv file/i,
+    });
+    expect(fileCard).toHaveAttribute("tabindex", "0");
+    const fileInput = screen.getByLabelText(/upload microsoft tasks file/i);
+    const clickSpy = vi.spyOn(fileInput, "click");
+
+    fireEvent.keyDown(fileCard, { key: "Enter" });
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(fileCard, { key: " " });
+    expect(clickSpy).toHaveBeenCalledTimes(2);
+
+    clickSpy.mockRestore();
+
+    // Back button returns to main tiles
+    const backBtn = screen.getByRole("button", { name: /back to all apps/i });
+    fireEvent.click(backBtn);
+
+    // Press Space to drill down
+    const msTodoCardAgain = screen.getByRole("button", {
+      name: /microsoft to do import options/i,
+    });
+    fireEvent.keyDown(msTodoCardAgain, { key: " " });
+    expect(screen.getByText("Microsoft To Do Import")).toBeInTheDocument();
+  });
+
+  it("renders Microsoft To Do card in guest mode with keyboard accessibility and triggers on Enter and Space", () => {
+    mockIsGuestMode = true;
+    render(<AppMigrationDialog open={true} onOpenChange={vi.fn()} />);
+
+    const msTodoCard = screen.getByRole("button", {
+      name: /microsoft to do import options/i,
+    });
+    expect(msTodoCard).toHaveAttribute("tabindex", "0");
+
+    fireEvent.keyDown(msTodoCard, { key: "Enter" });
+    expect(screen.getByText("Microsoft To Do Import")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /connect microsoft to do/i }),
+    ).not.toBeInTheDocument();
+
+    const fileCard = screen.getByRole("button", {
+      name: /import microsoft tasks json or outlook csv file/i,
+    });
+    expect(fileCard).toHaveAttribute("tabindex", "0");
+    const fileInput = screen.getByLabelText(/upload microsoft tasks file/i);
+    const clickSpy = vi.spyOn(fileInput, "click");
+
+    fireEvent.keyDown(fileCard, { key: "Enter" });
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(fileCard, { key: " " });
     expect(clickSpy).toHaveBeenCalledTimes(2);
 
     clickSpy.mockRestore();

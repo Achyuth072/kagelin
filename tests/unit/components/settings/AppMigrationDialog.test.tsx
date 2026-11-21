@@ -725,6 +725,187 @@ describe("AppMigrationDialog", () => {
       name: "Import 2 tasks",
     });
     fireEvent.click(commitBtn);
-    expect(commitMicrosoftTasksImportMock).toHaveBeenCalled();
+    expect(commitMicrosoftTasksImportMock).toHaveBeenCalledWith(
+      mockMicrosoftTasksPreview,
+      {
+        includeCompleted: true,
+      },
+    );
+  });
+
+  it("handles Microsoft To Do file selection and drag-drop in registered mode", async () => {
+    mockIsGuestMode = false;
+    render(<AppMigrationDialog open onOpenChange={vi.fn()} />);
+
+    const entryCard = screen.getByRole("button", {
+      name: "Microsoft To Do import options",
+    });
+    fireEvent.click(entryCard);
+
+    const uploadBtn = screen.getByRole("button", {
+      name: "Import Microsoft Tasks JSON or Outlook CSV file",
+    });
+    expect(uploadBtn).toBeInTheDocument();
+
+    const fileInput = screen.getByLabelText(
+      "Upload Microsoft Tasks file",
+    ) as HTMLInputElement;
+
+    const file = new File(['{"value":[]}'], "Tasks.json", {
+      type: "application/json",
+    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    expect(prepareMicrosoftFileImportMock).toHaveBeenCalledWith(file);
+
+    // Test drag-and-drop on the upload card
+    const dropFile = new File(['{"value":[]}'], "DroppedTasks.json", {
+      type: "application/json",
+    });
+    fireEvent.drop(uploadBtn, {
+      dataTransfer: { files: [dropFile] },
+    });
+
+    expect(prepareMicrosoftFileImportMock).toHaveBeenCalledWith(dropFile);
+  });
+
+  it("handles Microsoft To Do file selection and drag-drop in guest mode", async () => {
+    mockIsGuestMode = true;
+    render(<AppMigrationDialog open onOpenChange={vi.fn()} />);
+
+    const entryCard = screen.getByRole("button", {
+      name: "Microsoft To Do import options",
+    });
+    fireEvent.click(entryCard);
+
+    expect(
+      screen.queryByRole("button", { name: "Connect Microsoft To Do" }),
+    ).not.toBeInTheDocument();
+
+    const uploadBtn = screen.getByRole("button", {
+      name: "Import Microsoft Tasks JSON or Outlook CSV file",
+    });
+    expect(uploadBtn).toBeInTheDocument();
+
+    const fileInput = screen.getByLabelText(
+      "Upload Microsoft Tasks file",
+    ) as HTMLInputElement;
+
+    const file = new File(['{"value":[]}'], "Tasks.json", {
+      type: "application/json",
+    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    expect(prepareMicrosoftFileImportMock).toHaveBeenCalledWith(file);
+
+    // Test drag-and-drop on the upload card
+    const dropFile = new File(['{"value":[]}'], "GuestDropped.json", {
+      type: "application/json",
+    });
+    fireEvent.drop(uploadBtn, {
+      dataTransfer: { files: [dropFile] },
+    });
+
+    expect(prepareMicrosoftFileImportMock).toHaveBeenCalledWith(dropFile);
+  });
+
+  it("allows toggling completed tasks in Microsoft To Do preview and canceling import", () => {
+    mockIsGuestMode = false;
+    mockMicrosoftTasksPreview = {
+      kind: "microsoft-tasks",
+      projects: [
+        {
+          listId: "l1",
+          name: "Project 1",
+          isInbox: false,
+          action: "create",
+          status: "new",
+          existingProjectId: null,
+          color: "#0078D4",
+          tasks: [
+            {
+              id: "t1",
+              tempId: "tmp1",
+              parentId: null,
+              tempParentId: null,
+              content: "Active Task",
+              description: null,
+              dueDate: null,
+              isCompleted: false,
+              completedAt: null,
+              priority: 2,
+              dayOrder: 1,
+              listId: "l1",
+            },
+            {
+              id: "t2",
+              tempId: "tmp2",
+              parentId: null,
+              tempParentId: null,
+              content: "Done Task",
+              description: null,
+              dueDate: null,
+              isCompleted: true,
+              completedAt: "2026-11-20T10:00:00.000Z",
+              priority: 4,
+              dayOrder: 2,
+              listId: "l1",
+            },
+          ],
+          duplicatesSkipped: 0,
+          parentRedirects: {},
+          subtasksReassigned: 0,
+        },
+      ],
+      tasks: [],
+      totalLists: 1,
+      totalTasks: 2,
+      totalCompleted: 1,
+      duplicatesCount: 0,
+      rootTasksCount: 2,
+      subtasksCount: 0,
+      earliestDate: null,
+      latestDate: null,
+      newProjectCount: 1,
+      mergedProjectCount: 0,
+      subtasksReassigned: 0,
+    };
+
+    const onOpenChange = vi.fn();
+    render(<AppMigrationDialog open onOpenChange={onOpenChange} />);
+
+    // Initially includes completed tasks (total 2)
+    const commitBtn = screen.getByRole("button", {
+      name: "Import 2 tasks",
+    });
+    expect(commitBtn).toBeInTheDocument();
+
+    // Toggle include completed checkbox
+    const checkbox = screen.getByRole("checkbox", {
+      name: /include completed tasks/i,
+    });
+    expect(checkbox).toBeChecked();
+    fireEvent.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+
+    // Button label reflects active-only tasks (1 task)
+    const updatedCommitBtn = screen.getByRole("button", {
+      name: "Import 1 tasks",
+    });
+    expect(updatedCommitBtn).toBeInTheDocument();
+
+    fireEvent.click(updatedCommitBtn);
+    expect(commitMicrosoftTasksImportMock).toHaveBeenCalledWith(
+      mockMicrosoftTasksPreview,
+      {
+        includeCompleted: false,
+      },
+    );
+
+    // Test Cancel button calls cancelMicrosoftTasksImportMock
+    const cancelBtn = screen.getByRole("button", { name: "Cancel" });
+    fireEvent.click(cancelBtn);
+    expect(cancelMicrosoftTasksImportMock).toHaveBeenCalled();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

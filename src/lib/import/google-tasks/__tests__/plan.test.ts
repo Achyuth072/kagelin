@@ -134,8 +134,8 @@ describe("planGoogleTasksImport (Deduplication & Planning Engine)", () => {
 
     const dataset = createDataset([{ id: "list-work", title: "Work" }], {
       "list-work": [
-        { id: "gt-root-1", title: "  ship kagelin v1  " }, // exact normalized duplicate
-        { id: "gt-root-2", title: "Write documentation" }, // new task
+        { id: "gt-root-1", title: "  ship kagelin v1  " },
+        { id: "gt-root-2", title: "Write documentation" },
       ],
     });
 
@@ -162,7 +162,7 @@ describe("planGoogleTasksImport (Deduplication & Planning Engine)", () => {
           content: "Old Task",
           project_id: "proj-work",
           parent_id: null,
-          is_completed: true, // completed!
+          is_completed: true,
         },
       ],
     };
@@ -202,8 +202,8 @@ describe("planGoogleTasksImport (Deduplication & Planning Engine)", () => {
 
     const preview = planGoogleTasksImport(dataset, workspace);
 
-    expect(preview.duplicateTasksSkipped).toBe(1); // root was skipped
-    expect(preview.subtasksReassigned).toBe(2); // both children reassigned
+    expect(preview.duplicateTasksSkipped).toBe(1);
+    expect(preview.subtasksReassigned).toBe(2);
     expect(preview.totalTasks).toBe(2);
 
     const workPlan = preview.projects[0];
@@ -240,16 +240,16 @@ describe("planGoogleTasksImport (Deduplication & Planning Engine)", () => {
 
     const dataset = createDataset([{ id: "list-work", title: "Work" }], {
       "list-work": [
-        { id: "gt-root", title: "Launch Product" }, // duplicate root
-        { id: "gt-child-1", title: "prepare press release", parent: "gt-root" }, // duplicate subtask!
-        { id: "gt-child-2", title: "Deploy to production", parent: "gt-root" }, // new subtask!
+        { id: "gt-root", title: "Launch Product" },
+        { id: "gt-child-1", title: "prepare press release", parent: "gt-root" },
+        { id: "gt-child-2", title: "Deploy to production", parent: "gt-root" },
       ],
     });
 
     const preview = planGoogleTasksImport(dataset, workspace);
 
-    expect(preview.duplicateTasksSkipped).toBe(2); // 1 root + 1 subtask
-    expect(preview.subtasksReassigned).toBe(1); // 1 new subtask reassigned
+    expect(preview.duplicateTasksSkipped).toBe(2);
+    expect(preview.subtasksReassigned).toBe(1);
     expect(preview.totalTasks).toBe(1);
 
     const workPlan = preview.projects[0];
@@ -263,16 +263,16 @@ describe("planGoogleTasksImport (Deduplication & Planning Engine)", () => {
       "list-1": [
         { id: "gt-root-a", title: "Same Title" },
         { id: "gt-child-a", title: "Child A", parent: "gt-root-a" },
-        { id: "gt-root-b", title: "Same Title" }, // duplicate root in dataset!
+        { id: "gt-root-b", title: "Same Title" },
         { id: "gt-child-b", title: "Child B", parent: "gt-root-b" },
       ],
     });
 
     const preview = planGoogleTasksImport(dataset, emptyWorkspace);
 
-    expect(preview.duplicateTasksSkipped).toBe(1); // root-b skipped
-    expect(preview.subtasksReassigned).toBe(1); // child-b redirected to root-a
-    expect(preview.totalTasks).toBe(3); // root-a, child-a, child-b
+    expect(preview.duplicateTasksSkipped).toBe(1);
+    expect(preview.subtasksReassigned).toBe(1);
+    expect(preview.totalTasks).toBe(3);
 
     const plan = preview.projects[0];
     expect(plan.parentRedirects["gt-root-b"]).toEqual({
@@ -290,7 +290,7 @@ describe("planGoogleTasksImport (Deduplication & Planning Engine)", () => {
       "list-1": [
         { id: "root-1", title: "My Project" },
         { id: "sub-1", title: "Task X", parent: "root-1" },
-        { id: "sub-2", title: "task x", parent: "root-1" }, // duplicate subtask!
+        { id: "sub-2", title: "task x", parent: "root-1" },
       ],
     });
 
@@ -324,9 +324,9 @@ describe("planGoogleTasksImport (Deduplication & Planning Engine)", () => {
 
     const dataset = createDataset([{ id: "@default", title: "@default" }], {
       "@default": [
-        { id: "gt-1", title: "Inbox Task 1" }, // duplicate of null project_id
-        { id: "gt-2", title: "Inbox Task 2" }, // duplicate of is_inbox project_id
-        { id: "gt-3", title: "Inbox Task 3" }, // new task
+        { id: "gt-1", title: "Inbox Task 1" },
+        { id: "gt-2", title: "Inbox Task 2" },
+        { id: "gt-3", title: "Inbox Task 3" },
       ],
     });
 

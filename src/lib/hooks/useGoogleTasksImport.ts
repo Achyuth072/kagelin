@@ -206,7 +206,6 @@ export function useGoogleTasksImport() {
       return null;
     }
 
-    // Ephemeral token consumed — clear connected URL param
     if (typeof window !== "undefined" && window.location.search) {
       const url = new URL(window.location.href);
       if (url.searchParams.has("connected")) {
@@ -286,14 +285,12 @@ export function useGoogleTasksImport() {
           includeCompleted: options?.includeCompleted ?? true,
         });
 
-      // 1. Invalidate TanStack query cache for affected entities
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["tasks"] }),
         queryClient.invalidateQueries({ queryKey: ["calendar-tasks"] }),
         queryClient.invalidateQueries({ queryKey: ["projects"] }),
       ]);
 
-      // 2. Notify local sync scheduler of edits
       notifyLocalEdit();
 
       const durationMs = Math.round(performance.now() - startTime);
@@ -361,7 +358,6 @@ export function useGoogleTasksImport() {
     prepareOAuthImportRef.current = prepareOAuthImport;
   });
 
-  // Auto-connect detection on OAuth callback return
   useEffect(() => {
     if (typeof window === "undefined" || isAutoConnectingRef.current) return;
 

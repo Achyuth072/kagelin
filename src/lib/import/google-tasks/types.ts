@@ -2,9 +2,6 @@ import { z } from "zod";
 
 export const GOOGLE_TASKS_PREVIEW_KIND = "google-tasks" as const;
 
-/**
- * Google Task List Resource Schema (REST API & normalized dataset)
- */
 export const GoogleTaskListResourceSchema = z
   .object({
     id: z.string().min(1),
@@ -17,9 +14,6 @@ export type GoogleTaskListResource = z.infer<
   typeof GoogleTaskListResourceSchema
 >;
 
-/**
- * Google Task Resource Schema (REST API & normalized dataset)
- */
 export const GoogleTaskResourceSchema = z
   .object({
     id: z.string().min(1),
@@ -37,9 +31,6 @@ export const GoogleTaskResourceSchema = z
 
 export type GoogleTaskResource = z.infer<typeof GoogleTaskResourceSchema>;
 
-/**
- * Unified Google Tasks In-Memory Dataset
- */
 export const GoogleTasksDatasetSchema = z
   .object({
     lists: z.array(GoogleTaskListResourceSchema),
@@ -49,9 +40,6 @@ export const GoogleTasksDatasetSchema = z
 
 export type GoogleTasksDataset = z.infer<typeof GoogleTasksDatasetSchema>;
 
-/**
- * Google Takeout Tasks.json item schema
- */
 export const GoogleTakeoutItemSchema = z.object({
   id: z.string().optional(),
   title: z.string().optional(),
@@ -66,9 +54,6 @@ export const GoogleTakeoutItemSchema = z.object({
 
 export type GoogleTakeoutItem = z.infer<typeof GoogleTakeoutItemSchema>;
 
-/**
- * Google Takeout Tasks.json list schema
- */
 export const GoogleTakeoutListSchema = z.object({
   id: z.string().optional(),
   name: z.string().optional(),
@@ -78,9 +63,6 @@ export const GoogleTakeoutListSchema = z.object({
 
 export type GoogleTakeoutList = z.infer<typeof GoogleTakeoutListSchema>;
 
-/**
- * Google Takeout Tasks.json root schema
- */
 export const GoogleTakeoutExportSchema = z.object({
   kind: z.string().optional(),
   items: z.array(GoogleTakeoutListSchema).optional(),
@@ -88,9 +70,6 @@ export const GoogleTakeoutExportSchema = z.object({
 
 export type GoogleTakeoutExport = z.infer<typeof GoogleTakeoutExportSchema>;
 
-/**
- * Kagelin Mapped Google Task Schema
- */
 export const MappedGoogleTaskSchema = z.object({
   id: z.string(),
   tempId: z.string(),
@@ -108,15 +87,9 @@ export const MappedGoogleTaskSchema = z.object({
 
 export type MappedGoogleTask = z.infer<typeof MappedGoogleTaskSchema>;
 
-/**
- * Subtask parent replacement redirect
- */
 export type ParentRedirect =
   { kind: "existing"; taskId: string } | { kind: "imported"; tempId: string };
 
-/**
- * Planned Google Tasks Project Mapping
- */
 export interface GoogleTasksProjectPlan {
   listId: string;
   name: string;
@@ -130,9 +103,6 @@ export interface GoogleTasksProjectPlan {
   subtasksReassigned: number;
 }
 
-/**
- * Existing workspace types for deduplication & planning
- */
 export interface WorkspaceProject {
   id: string;
   name: string;
@@ -152,9 +122,6 @@ export interface ExistingWorkspace {
   tasks: WorkspaceTask[];
 }
 
-/**
- * Pre-commit import preview
- */
 export interface GoogleTasksImportPreview {
   kind: typeof GOOGLE_TASKS_PREVIEW_KIND;
   projects: GoogleTasksProjectPlan[];

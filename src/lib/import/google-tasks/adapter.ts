@@ -5,50 +5,20 @@ import {
 } from "./types";
 
 export interface FetchGoogleTasksOptions {
-  /**
-   * Google Tasks REST API base URL.
-   * Defaults to "https://tasks.googleapis.com/tasks/v1".
-   */
   baseUrl?: string;
 
-  /**
-   * Minimum delay between outgoing request dispatches (ms).
-   * Defaults to 200ms (enforces 4 QPS throttle ceiling).
-   */
   interRequestDelayMs?: number;
 
-  /**
-   * Maximum concurrent HTTP requests.
-   * Defaults to 2.
-   */
   maxConcurrency?: number;
 
-  /**
-   * Maximum retry attempts on HTTP 429 or 503.
-   * Defaults to 3.
-   */
   maxRetries?: number;
 
-  /**
-   * Base backoff delay for exponential backoff (ms).
-   * Defaults to 1000ms (1s, 2s, 4s).
-   */
   initialBackoffMs?: number;
 
-  /**
-   * Abort signal for request cancellation.
-   */
   signal?: AbortSignal;
 
-  /**
-   * Custom fetch function (useful for mocking/testing).
-   */
   fetchFn?: typeof fetch;
 
-  /**
-   * Optional flag to omit task lists that have zero tasks.
-   * Defaults to false.
-   */
   skipEmptyLists?: boolean;
 }
 
@@ -78,9 +48,6 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
-/**
- * Throttled request dispatcher enforcing concurrency limit and minimum inter-request delay.
- */
 class ThrottledDispatcher {
   private activeCount = 0;
   private lastDispatchTime = 0;
@@ -144,9 +111,6 @@ class ThrottledDispatcher {
   }
 }
 
-/**
- * Executes a single HTTP request with exponential backoff on HTTP 429 and 503.
- */
 async function fetchWithRetry(
   url: string,
   accessToken: string,
@@ -182,10 +146,8 @@ async function fetchWithRetry(
     const isRetryable = status === 429 || status === 503;
 
     if (isRetryable && attempt < maxRetries) {
-      // Calculate exponential backoff: initialBackoffMs * 2^attempt
       let backoffMs = initialBackoffMs * Math.pow(2, attempt);
 
-      // Check Retry-After header if available
       const retryAfterHeader = response.headers?.get?.("Retry-After");
       if (retryAfterHeader) {
         const parsedSeconds = parseInt(retryAfterHeader, 10);
@@ -199,7 +161,6 @@ async function fetchWithRetry(
       continue;
     }
 
-    // Parse error description
     let errorDetail = "";
     try {
       const errData = (await response.json()) as {
@@ -210,9 +171,7 @@ async function fetchWithRetry(
       } else if (typeof errData?.error === "string") {
         errorDetail = errData.error;
       }
-    } catch {
-      // Body not JSON
-    }
+    } catch {}
 
     if (status === 429) {
       throw new Error(
@@ -231,10 +190,6 @@ async function fetchWithRetry(
   }
 }
 
-/**
- * Fetches all Google Task Lists and Tasks for the authenticated user,
- * throttled at 4 QPS with max 2 concurrent connections and exponential backoff.
- */
 export async function fetchGoogleTasksDataset(
   accessToken: string,
   options: FetchGoogleTasksOptions = {},
@@ -266,7 +221,6 @@ export async function fetchGoogleTasksDataset(
       }),
     );
 
-  // 1. Fetch all task lists (paginated with maxResults=100)
   const lists: GoogleTaskListResource[] = [];
   let listPageToken: string | undefined;
 
@@ -307,7 +261,6 @@ export async function fetchGoogleTasksDataset(
     listPageToken = data?.nextPageToken || undefined;
   } while (listPageToken);
 
-  // 2. Fetch tasks for each list concurrently (capped at maxConcurrency)
   const tasksByListId: Record<string, GoogleTaskResource[]> = {};
 
   const fetchTasksForList = async (listId: string) => {
@@ -345,7 +298,6 @@ export async function fetchGoogleTasksDataset(
       for (const item of rawTasks) {
         if (!item || typeof item !== "object") continue;
 
-        // Filter out tombstones / deleted items
         if (item.deleted === true) {
           continue;
         }

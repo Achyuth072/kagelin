@@ -172,6 +172,9 @@ describe("AppMigrationDialog (Microsoft To Do Integration)", () => {
 
     const commitBtn = screen.getByRole("button", { name: "Import 1 tasks" });
     fireEvent.click(commitBtn);
-    expect(mockCommitMicrosoftTasksImport).toHaveBeenCalled();
+    expect(mockCommitMicrosoftTasksImport).toHaveBeenCalledWith(
+      mockMicrosoftTasksPreview,
+      { includeCompleted: true },
+    );
   });
 });

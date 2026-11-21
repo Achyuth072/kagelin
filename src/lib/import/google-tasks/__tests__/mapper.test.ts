@@ -87,7 +87,7 @@ describe("Google Tasks Hierarchy Mapper & DFS Ordering (mapGoogleTaskList & mapG
     const mapped = mapGoogleTaskList(rawTasks, "test-list");
 
     expect(mapped).toHaveLength(5);
-    // Pre-order DFS: Root 1 -> Child 1-1 -> Child 1-2 -> Root 2 -> Child 2-1
+
     expect(mapped.map((t) => t.id)).toEqual([
       "root-1",
       "child-1-1",
@@ -96,7 +96,6 @@ describe("Google Tasks Hierarchy Mapper & DFS Ordering (mapGoogleTaskList & mapG
       "child-2-1",
     ]);
 
-    // Check contiguous dayOrder assignment
     expect(mapped.map((t) => t.dayOrder)).toEqual([0, 1, 2, 3, 4]);
   });
 
@@ -197,18 +196,15 @@ describe("Google Tasks Hierarchy Mapper & DFS Ordering (mapGoogleTaskList & mapG
 
     const mapped = mapGoogleTaskList(rawTasks, "list-1");
 
-    // Root
     expect(mapped[0].id).toBe("root");
     expect(mapped[0].parentId).toBeNull();
     expect(mapped[0].originalDepth).toBe(0);
 
-    // Depth 1 (Phase One)
     expect(mapped[1].id).toBe("stage-1");
     expect(mapped[1].parentId).toBe("root");
     expect(mapped[1].originalDepth).toBe(1);
     expect(mapped[1].description).toBeNull();
 
-    // Depth 2 (Write Specs) - reparented to root, breadcrumb Epic Project > Phase One
     expect(mapped[2].id).toBe("task-1");
     expect(mapped[2].parentId).toBe("root");
     expect(mapped[2].tempParentId).toBe("root");
@@ -218,7 +214,6 @@ describe("Google Tasks Hierarchy Mapper & DFS Ordering (mapGoogleTaskList & mapG
       "[Context: Epic Project > Phase One]\nInclude performance targets",
     );
 
-    // Depth 3 (Benchmark QPS) - reparented to root, breadcrumb Epic Project > Phase One > Write Specs
     expect(mapped[3].id).toBe("subtask-1");
     expect(mapped[3].parentId).toBe("root");
     expect(mapped[3].tempParentId).toBe("root");

@@ -9,13 +9,6 @@ export interface MapGoogleTasksResult {
   tasksByListId: Record<string, MappedGoogleTask[]>;
 }
 
-/**
- * Google Tasks Timezone Safe Due Date Parser
- *
- * Extracts the calendar date part (YYYY-MM-DD) and anchors it directly to
- * UTC midnight without passing through local machine Date offsets to prevent
- * retrospective 1-day drift in Western timezones (UTC-1 through UTC-12).
- */
 export function parseGoogleTaskDueDate(
   dueStr?: string | null,
 ): string | undefined {
@@ -26,9 +19,6 @@ export function parseGoogleTaskDueDate(
   return `${datePart}T00:00:00.000Z`;
 }
 
-/**
- * Compare sibling tasks by lexicographical position string (stable fallback to ID)
- */
 function compareTaskPositions(
   a: GoogleTaskResource,
   b: GoogleTaskResource,
@@ -41,16 +31,6 @@ function compareTaskPositions(
   return a.id.localeCompare(b.id);
 }
 
-/**
- * Maps a single Google Task list's raw tasks into Kagelin's flat/single-level subtask model.
- *
- * - Orders tasks deterministically using pre-order DFS on sibling-scoped `position` strings.
- * - Assigns contiguous 0-indexed integer `dayOrder`.
- * - Keeps `task.content = task.title.trim()` verbatim for title deduplication symmetry.
- * - Direct depth-1 subtasks keep their parentId set to the root task.
- * - Deep subtasks (depth >= 2) are reparented to the root ancestor, and ancestry
- *   breadcrumbs `[Context: Ancestor > Parent]` are prepended to `description`.
- */
 export function mapGoogleTaskList(
   tasks: GoogleTaskResource[],
   listId: string,
@@ -75,7 +55,6 @@ export function mapGoogleTaskList(
     }
   }
 
-  // Sort siblings at every level
   roots.sort(compareTaskPositions);
   for (const siblings of childrenMap.values()) {
     siblings.sort(compareTaskPositions);
@@ -109,7 +88,6 @@ export function mapGoogleTaskList(
       parentId = effectiveRootId;
       description = trimmedNotes || null;
     } else {
-      // Depth >= 2: reparent to root ancestor and embed breadcrumb in description
       parentId = effectiveRootId;
       const breadcrumb = `[Context: ${ancestorTitles.join(" > ")}]`;
       description = trimmedNotes
@@ -151,9 +129,6 @@ export function mapGoogleTaskList(
   return mappedTasks;
 }
 
-/**
- * Maps an entire GoogleTasksDataset across all task lists into Kagelin's format.
- */
 export function mapGoogleTasksToKagelin(
   dataset: GoogleTasksDataset,
 ): MapGoogleTasksResult {
@@ -170,7 +145,6 @@ export function mapGoogleTasksToKagelin(
     allMappedTasks.push(...mapped);
   }
 
-  // Also process any list IDs present in tasksByListId that weren't in lists array
   for (const [listId, rawTasks] of Object.entries(dataset.tasksByListId)) {
     if (!processedListIds.has(listId)) {
       const mapped = mapGoogleTaskList(rawTasks, listId);

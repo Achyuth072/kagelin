@@ -72,29 +72,24 @@ describe("Google Tasks Guest Takeout -> mockStore End-to-End Simulation (Spec L5
       ],
     });
 
-    // 1. Parse Takeout JSON
     const dataset = parseTakeoutJson(takeoutJson);
     expect(dataset.lists).toHaveLength(2);
 
-    // 2. Fetch workspace offline (empty mockStore)
     const workspace = await fetchGoogleTasksWorkspace(true);
     expect(workspace.tasks).toHaveLength(0);
 
-    // 3. Plan import
     const preview = planGoogleTasksImport(dataset, workspace);
     expect(preview.totalTasks).toBe(5);
     expect(preview.rootTasksCount).toBe(2);
     expect(preview.subtasksCount).toBe(3);
     expect(preview.newProjectCount).toBe(1);
 
-    // 4. Execute import into mockStore
     const { importedCount, createdProjectCount } =
       await executeGoogleTasksImport(preview, { isGuest: true });
 
     expect(importedCount).toBe(5);
     expect(createdProjectCount).toBe(1);
 
-    // 5. Verify mockStore state
     const tasks = mockStore.getTasks();
     const projects = mockStore.getProjects();
 
@@ -103,32 +98,28 @@ describe("Google Tasks Guest Takeout -> mockStore End-to-End Simulation (Spec L5
 
     expect(tasks).toHaveLength(5);
 
-    // Check inbox root task
     const groceryTask = tasks.find((t) => t.content === "Buy groceries");
     expect(groceryTask).toBeDefined();
-    expect(groceryTask?.project_id).toBeNull(); // Inbox
+    expect(groceryTask?.project_id).toBeNull();
     expect(groceryTask?.description).toBe("Milk and bread");
     expect(groceryTask?.is_completed).toBe(false);
     expect(groceryTask?.due_date).toBe("2026-11-20T00:00:00.000Z");
 
-    // Check inbox subtask
     const milkTask = tasks.find((t) => t.content === "Organic Whole Milk");
     expect(milkTask).toBeDefined();
     expect(milkTask?.parent_id).toBe(groceryTask?.id);
     expect(milkTask?.is_completed).toBe(true);
     expect(milkTask?.completed_at).toBe("2026-11-19T10:00:00.000Z");
 
-    // Check work project tasks
     const workRoot = tasks.find((t) => t.content === "Launch Kagelin v1");
     expect(workRoot).toBeDefined();
     expect(workRoot?.project_id).toBe(projects[0].id);
 
-    // Check flattened deep subtask
     const deepSub = tasks.find((t) => t.content === "API References");
     expect(deepSub).toBeDefined();
-    // Reparented to root
+
     expect(deepSub?.parent_id).toBe(workRoot?.id);
-    // Ancestry breadcrumb embedded in description
+
     expect(deepSub?.description).toContain(
       "[Context: Launch Kagelin v1 > Write documentation]",
     );

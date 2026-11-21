@@ -4,14 +4,9 @@ import {
   type GoogleTaskResource,
 } from "./types";
 
-/**
- * Parses Google Takeout Tasks.json file contents safely into a normalized GoogleTasksDataset.
- *
- * Automatically assigns lists marked "@default" (or titled/named "@default") to the Inbox.
- */
 export function parseTakeoutJson(jsonContent: string): GoogleTasksDataset {
   let cleanContent = jsonContent;
-  // Strip UTF-8 BOM if present
+
   if (cleanContent.charCodeAt(0) === 0xfeff) {
     cleanContent = cleanContent.slice(1);
   }
@@ -83,7 +78,6 @@ export function parseTakeoutJson(jsonContent: string): GoogleTasksDataset {
       if (!rawItem || typeof rawItem !== "object") continue;
       const itemObj = rawItem as Record<string, unknown>;
 
-      // Filter out deleted items (Google Tasks tombstones)
       if (itemObj.deleted === true) {
         continue;
       }

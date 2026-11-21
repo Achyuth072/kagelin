@@ -165,14 +165,13 @@ describe("executeGoogleTasksImport & rollbackGoogleTasksImport", () => {
     const result = await executeGoogleTasksImport(preview, { isGuest: false });
 
     expect(result.importedCount).toBe(2);
-    expect(result.createdProjectCount).toBe(1); // Only Work Projects, not Inbox
+    expect(result.createdProjectCount).toBe(1);
 
     expect(projectMutations.create).toHaveBeenCalledTimes(1);
     expect(projectMutations.create).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Work Projects" }),
     );
 
-    // Verify task inputs
     const createManyCalls = vi.mocked(taskMutations.createMany).mock.calls;
     const inboxTaskInput = createManyCalls[0][0][0];
     expect(inboxTaskInput.content).toBe("Inbox item");
@@ -203,7 +202,6 @@ describe("executeGoogleTasksImport & rollbackGoogleTasksImport", () => {
 
     expect(result.importedCount).toBe(150);
 
-    // 150 tasks should be split into 2 chunks: 100 and 50
     expect(taskMutations.createMany).toHaveBeenCalledTimes(2);
     expect(vi.mocked(taskMutations.createMany).mock.calls[0][0]).toHaveLength(
       100,
@@ -235,7 +233,7 @@ describe("executeGoogleTasksImport & rollbackGoogleTasksImport", () => {
             id: "root-existing",
             title: "Existing Root",
             status: "needsAction",
-          }, // skipped duplicate
+          },
           {
             id: "sub-redirected",
             title: "New Child of Existing",
@@ -257,9 +255,8 @@ describe("executeGoogleTasksImport & rollbackGoogleTasksImport", () => {
 
     const result = await executeGoogleTasksImport(preview, { isGuest: false });
 
-    expect(result.importedCount).toBe(3); // 1 new root + 2 subtasks
+    expect(result.importedCount).toBe(3);
 
-    // Roots created first, then subtasks
     const createManyCalls = vi.mocked(taskMutations.createMany).mock.calls;
     expect(createManyCalls).toHaveLength(2);
 
@@ -295,7 +292,6 @@ describe("executeGoogleTasksImport & rollbackGoogleTasksImport", () => {
       })) as never;
     });
 
-    // 150 tasks -> chunk 1 succeeds (100 items), chunk 2 fails (50 items)
     const rawTasks = Array.from({ length: 150 }, (_, i) => ({
       id: `task-${i + 1}`,
       title: `Task Number ${i + 1}`,
@@ -315,13 +311,11 @@ describe("executeGoogleTasksImport & rollbackGoogleTasksImport", () => {
       executeGoogleTasksImport(preview, { isGuest: false }),
     ).rejects.toThrow(GoogleTasksImportFailure);
 
-    // Rollback should delete the 100 created tasks
     expect(taskMutations.deleteMany).toHaveBeenCalledTimes(1);
     expect(vi.mocked(taskMutations.deleteMany).mock.calls[0][0]).toHaveLength(
       100,
     );
 
-    // And delete the created project
     expect(projectMutations.delete).toHaveBeenCalledWith("proj-fail-project");
   });
 
@@ -361,7 +355,7 @@ describe("executeGoogleTasksImport & rollbackGoogleTasksImport", () => {
     );
 
     expect(success).toBe(true);
-    // 250 tasks -> 100, 100, 50 (3 calls)
+
     expect(taskMutations.deleteMany).toHaveBeenCalledTimes(3);
     expect(vi.mocked(taskMutations.deleteMany).mock.calls[0][0]).toHaveLength(
       100,
@@ -373,7 +367,6 @@ describe("executeGoogleTasksImport & rollbackGoogleTasksImport", () => {
       50,
     );
 
-    // Both projects deleted
     expect(projectMutations.delete).toHaveBeenCalledWith("proj-1");
     expect(projectMutations.delete).toHaveBeenCalledWith("proj-2");
   });
