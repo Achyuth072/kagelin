@@ -28,15 +28,18 @@ export function getOAuthCredentials(provider: string): {
   clientId: string;
   clientSecret: string;
 } {
+  const isGoogle = provider === "google" || provider === "google_tasks";
+  const isMicrosoft = provider === "outlook" || provider === "microsoft_tasks";
+
   const clientId =
     process.env[`${provider.toUpperCase()}_CLIENT_ID`] ??
-    (provider === "google_tasks" ? process.env.GOOGLE_CLIENT_ID : undefined) ??
+    (isGoogle ? process.env.GOOGLE_CLIENT_ID : undefined) ??
+    (isMicrosoft ? process.env.OUTLOOK_CLIENT_ID : undefined) ??
     "";
   const clientSecret =
     process.env[`${provider.toUpperCase()}_CLIENT_SECRET`] ??
-    (provider === "google_tasks"
-      ? process.env.GOOGLE_CLIENT_SECRET
-      : undefined) ??
+    (isGoogle ? process.env.GOOGLE_CLIENT_SECRET : undefined) ??
+    (isMicrosoft ? process.env.OUTLOOK_CLIENT_SECRET : undefined) ??
     "";
   return { clientId, clientSecret };
 }

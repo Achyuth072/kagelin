@@ -110,8 +110,8 @@ export const MigrationEventSchema = z
     deviceId: z.string().uuid(),
     properties: z
       .object({
-        source: z.literal("google_tasks"),
-        ingress: z.enum(["oauth", "takeout_json"]),
+        source: z.enum(["google_tasks", "microsoft_tasks"]),
+        ingress: z.enum(["oauth", "takeout_json", "json_file", "csv_file"]),
         phase: z.enum(["connect", "fetch", "plan", "commit"]),
         status: z.enum(["started", "completed", "failed"]),
         task_count: z.number().int().nonnegative().optional(),

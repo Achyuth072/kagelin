@@ -22,7 +22,9 @@ export async function GET(request: Request) {
   const storedReturnTo = cookieStore.get("calendar_oauth_return_to")?.value;
 
   const fallbackErrorPath =
-    provider === "google_tasks" ? "/settings?tab=backup" : "/calendar";
+    provider === "google_tasks" || provider === "microsoft_tasks"
+      ? "/settings?tab=backup"
+      : "/calendar";
   const errorBase = isValidReturnTo(storedReturnTo)
     ? storedReturnTo!
     : fallbackErrorPath;
@@ -69,8 +71,9 @@ export async function GET(request: Request) {
       redirectUri,
     });
 
-    if (provider === "google_tasks") {
-      cookieStore.set("google_tasks_temp_token", accessToken, {
+    if (provider === "google_tasks" || provider === "microsoft_tasks") {
+      const cookieName = `${provider}_temp_token`;
+      cookieStore.set(cookieName, accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -83,7 +86,7 @@ export async function GET(request: Request) {
         : "/settings?tab=backup";
       const targetUrl = new URL(targetPath, baseUrl);
       if (!targetUrl.searchParams.has("connected")) {
-        targetUrl.searchParams.set("connected", "google_tasks");
+        targetUrl.searchParams.set("connected", provider);
       }
       return NextResponse.redirect(targetUrl.toString());
     }

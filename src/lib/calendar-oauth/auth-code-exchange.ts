@@ -4,6 +4,7 @@ const TOKEN_ENDPOINTS: Record<string, string> = {
   google: "https://oauth2.googleapis.com/token",
   google_tasks: "https://oauth2.googleapis.com/token",
   outlook: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+  microsoft_tasks: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
 };
 
 export interface AuthCodeExchangeInput {

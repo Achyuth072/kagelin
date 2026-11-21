@@ -40,6 +40,10 @@ const SAFE_CONTEXT_KEYS = new Set([
   "provider",
   "importStage",
   "apiErrorCode",
+  "listCount",
+  "taskCount",
+  "stepCount",
+  "duplicateCount",
 ]);
 
 function extractErrorName(error: unknown): string {

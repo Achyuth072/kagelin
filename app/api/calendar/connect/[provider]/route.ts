@@ -12,6 +12,8 @@ const PROVIDER_AUTH_URLS: Record<string, string> = {
   google: "https://accounts.google.com/o/oauth2/v2/auth",
   google_tasks: "https://accounts.google.com/o/oauth2/v2/auth",
   outlook: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+  microsoft_tasks:
+    "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
 };
 
 const PROVIDER_SCOPES: Record<string, string> = {
@@ -19,6 +21,7 @@ const PROVIDER_SCOPES: Record<string, string> = {
   google_tasks: "https://www.googleapis.com/auth/tasks.readonly openid email",
   outlook:
     "https://graph.microsoft.com/Calendars.ReadWrite offline_access openid email",
+  microsoft_tasks: "https://graph.microsoft.com/Tasks.Read openid email",
 };
 
 export async function GET(
