@@ -256,7 +256,23 @@ describe("AppMigrationDialog", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders Google Tasks card with dual actions and disabled state for guests", () => {
+  it("constrains layout with bounded flex-col scroll container to prevent overscrolling on mobile", () => {
+    render(<AppMigrationDialog open onOpenChange={vi.fn()} />);
+
+    // ResponsiveDialogContent portals to document body with overflow-hidden and flex flex-col with max-h
+    const dialogContent = screen.getByRole("dialog");
+    expect(dialogContent).toBeInTheDocument();
+    expect(dialogContent).toHaveClass("overflow-hidden");
+    expect(dialogContent).toHaveClass("flex-col");
+
+    // The scrollable inner body should have overflow-y-auto and flex-1 min-h-0
+    const scrollableBody = document.querySelector(".overflow-y-auto");
+    expect(scrollableBody).toBeInTheDocument();
+    expect(scrollableBody).toHaveClass("flex-1");
+    expect(scrollableBody).toHaveClass("min-h-0");
+  });
+
+  it("renders Google Tasks card with dual actions for registered users and clean unified file card for guests", () => {
     mockIsGuestMode = false;
     const { rerender } = render(
       <AppMigrationDialog open onOpenChange={vi.fn()} />,
@@ -267,7 +283,7 @@ describe("AppMigrationDialog", () => {
       name: "Connect Google Tasks",
     });
     const takeoutButton = screen.getByRole("button", {
-      name: "Drop Takeout Tasks.json",
+      name: "Upload Tasks.json",
     });
 
     expect(connectButton).toBeEnabled();
@@ -279,13 +295,24 @@ describe("AppMigrationDialog", () => {
     // Rerender as Guest mode
     mockIsGuestMode = true;
     rerender(<AppMigrationDialog open onOpenChange={vi.fn()} />);
-    const guestConnectButton = screen.getByRole("button", {
-      name: "Connect Google Tasks",
-    });
-    expect(guestConnectButton).toBeDisabled();
+
+    // In guest mode, dead OAuth button and disclaimer text are removed
     expect(
-      screen.getByText(/OAuth import requires a registered account/i),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Connect Google Tasks" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/OAuth import requires a registered account/i),
+    ).not.toBeInTheDocument();
+
+    // Guest sees a unified 1-click import card matching the other cards
+    const guestCard = screen.getByRole("button", {
+      name: "Import Google Tasks from Takeout JSON",
+    });
+    expect(guestCard).toBeInTheDocument();
+    expect(screen.getByText("Import from Takeout .json")).toBeInTheDocument();
+
+    fireEvent.click(guestCard);
+    expect(triggerMock).toHaveBeenCalledWith("toggle");
   });
 
   it("renders Google Tasks preview with total task count, project count, skipped duplicates, and flattened subtasks", () => {

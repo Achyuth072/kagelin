@@ -8,6 +8,7 @@ import {
   DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -17,11 +18,13 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerDescription,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
   preventTouchAutoFocus,
 } from "@/components/ui/drawer";
+import { cn } from "@/lib/utils";
 
 interface ResponsiveDialogProps {
   open: boolean;
@@ -190,16 +193,38 @@ export function ResponsiveDialogHeader({
 
   if (isMobile) {
     return (
-      <DrawerHeader className={className} {...props}>
+      <DrawerHeader className={cn("shrink-0", className)} {...props}>
         {children}
       </DrawerHeader>
     );
   }
 
   return (
-    <DialogHeader className={className} {...props}>
+    <DialogHeader className={cn("shrink-0", className)} {...props}>
       {children}
     </DialogHeader>
+  );
+}
+
+export function ResponsiveDialogFooter({
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  const { isMobile } = React.useContext(ResponsiveDialogContext);
+
+  if (isMobile) {
+    return (
+      <DrawerFooter className={cn("shrink-0", className)} {...props}>
+        {children}
+      </DrawerFooter>
+    );
+  }
+
+  return (
+    <DialogFooter className={cn("shrink-0", className)} {...props}>
+      {children}
+    </DialogFooter>
   );
 }
 

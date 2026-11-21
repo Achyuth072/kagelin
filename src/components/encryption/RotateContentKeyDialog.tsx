@@ -108,8 +108,8 @@ export function RotateContentKeyDialog({
         else close();
       }}
     >
-      <ResponsiveDialogContent>
-        <ResponsiveDialogHeader>
+      <ResponsiveDialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+        <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
           <ResponsiveDialogTitle>Rotate content key</ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
             {step === "explain" &&
@@ -121,7 +121,7 @@ export function RotateContentKeyDialog({
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <div className="px-4 pb-4 sm:p-0">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           {step === "explain" && (
             <div className="space-y-4 text-sm text-muted-foreground">
               <ul className="list-disc space-y-1.5 pl-5">

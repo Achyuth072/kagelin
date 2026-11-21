@@ -207,8 +207,8 @@ export function ConnectCalendarDialog({
         </Trigger>
       ) : null}
 
-      <ResponsiveDialogContent className="sm:max-w-lg p-0 overflow-hidden rounded-t-[20px] sm:rounded-xl">
-        <ResponsiveDialogHeader className="px-4 pt-6 sm:px-6 text-left">
+      <ResponsiveDialogContent className="sm:max-w-lg p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh] rounded-t-[20px] sm:rounded-xl">
+        <ResponsiveDialogHeader className="px-4 pt-6 sm:px-6 pb-2 shrink-0 text-left">
           <ResponsiveDialogTitle className="text-xl font-semibold tracking-tight capitalize">
             {step === "select" && "Connect Calendar"}
             {step === "pick_calendars" && `${selectedProvider} Calendars`}

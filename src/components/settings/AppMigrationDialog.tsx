@@ -16,6 +16,7 @@ import {
   Loader2,
   Calendar,
   FileUp,
+  Link2,
   ArrowDownToLine,
   ArrowUpFromLine,
 } from "lucide-react";
@@ -250,8 +251,8 @@ export function AppMigrationDialog({
           onOpenChange(next);
         }}
       >
-        <ResponsiveDialogContent className="sm:max-w-[425px]">
-          <ResponsiveDialogHeader>
+        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+          <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
             <ResponsiveDialogTitle className="type-h2">
               Confirm Google Tasks Import
             </ResponsiveDialogTitle>
@@ -260,7 +261,7 @@ export function AppMigrationDialog({
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <div className="px-4 py-4 sm:px-0">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pt-2">
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Total tasks found</dt>
@@ -371,7 +372,7 @@ export function AppMigrationDialog({
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/40 shrink-0">
             <Button
               variant="ghost"
               onClick={handleCancelGoogleTasksImport}
@@ -410,8 +411,8 @@ export function AppMigrationDialog({
           onOpenChange(next);
         }}
       >
-        <ResponsiveDialogContent className="sm:max-w-[425px]">
-          <ResponsiveDialogHeader>
+        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+          <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
             <ResponsiveDialogTitle className="type-h2">
               Confirm Todoist Import
             </ResponsiveDialogTitle>
@@ -420,7 +421,7 @@ export function AppMigrationDialog({
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <div className="px-4 py-4 sm:px-0">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pt-2">
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Total tasks found</dt>
@@ -532,7 +533,7 @@ export function AppMigrationDialog({
             </p>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/40 shrink-0">
             <Button
               variant="ghost"
               onClick={handleCancelTodoistImport}
@@ -568,8 +569,8 @@ export function AppMigrationDialog({
           onOpenChange(next);
         }}
       >
-        <ResponsiveDialogContent className="sm:max-w-[425px]">
-          <ResponsiveDialogHeader>
+        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+          <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
             <ResponsiveDialogTitle className="type-h2">
               Confirm Import
             </ResponsiveDialogTitle>
@@ -578,7 +579,7 @@ export function AppMigrationDialog({
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
-          <div className="px-4 py-4 sm:px-0">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pt-2">
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Events found</dt>
@@ -603,7 +604,7 @@ export function AppMigrationDialog({
             </dl>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/40 shrink-0">
             <Button
               variant="ghost"
               onClick={handleCancelIcsImport}
@@ -627,8 +628,8 @@ export function AppMigrationDialog({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-[425px]">
-        <ResponsiveDialogHeader>
+      <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+        <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
           <ResponsiveDialogTitle className="type-h2">
             App Migration
           </ResponsiveDialogTitle>
@@ -637,7 +638,7 @@ export function AppMigrationDialog({
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <div className="px-4 py-4 sm:px-0">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <Tabs
             value={activeTab}
             onValueChange={handleTabChange}
@@ -885,60 +886,81 @@ export function AppMigrationDialog({
                 />
               </div>
 
-              <div
-                className={cn(
-                  "p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all",
-                  isAnyImporting && "opacity-60 pointer-events-none",
-                )}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) {
+              {isGuestMode ? (
+                <div
+                  role="button"
+                  tabIndex={isAnyImporting ? -1 : 0}
+                  aria-disabled={isAnyImporting}
+                  aria-label="Import Google Tasks from Takeout JSON"
+                  className={cn(
+                    "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                    isAnyImporting &&
+                      "opacity-60 cursor-not-allowed pointer-events-none",
+                  )}
+                  onClick={(e) => {
+                    if (
+                      isAnyImporting ||
+                      e.target === googleTasksInputRef.current
+                    )
+                      return;
                     trigger("toggle");
-                    void processGoogleTasksFile(file);
-                  }
-                }}
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <GoogleTasksIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
-                  <div>
-                    <p className="text-sm font-medium flex items-center gap-1.5">
-                      Google Tasks
-                      <BetaBadge />
-                    </p>
-                    <p className="text-xs text-muted-foreground lowercase">
-                      Import from Google Tasks or Takeout .json
-                    </p>
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 text-xs"
-                    disabled={isGuestMode || isAnyImporting}
-                    title={
-                      isGuestMode
-                        ? "Sign up or log in to connect via Google OAuth"
-                        : undefined
+                    googleTasksInputRef.current?.click();
+                  }}
+                  onKeyDown={(e) => {
+                    if (isAnyImporting) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      trigger("toggle");
+                      googleTasksInputRef.current?.click();
                     }
-                    onClick={handleConnectGoogleTasks}
-                  >
-                    Connect Google Tasks
-                  </Button>
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      trigger("toggle");
+                      void processGoogleTasksFile(file);
+                    }
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <GoogleTasksIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+                    <div>
+                      <p className="text-sm font-medium flex items-center gap-1.5">
+                        Google Tasks
+                        <BetaBadge />
+                      </p>
+                      <p className="text-xs text-muted-foreground lowercase">
+                        Import from Takeout .json
+                      </p>
+                    </div>
+                  </div>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="flex-1 text-xs"
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    className={cn(
+                      "h-8 transition-opacity text-brand pointer-events-none",
+                      isImportingGoogleTasks
+                        ? "opacity-100"
+                        : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+                    )}
                     disabled={isAnyImporting}
-                    onClick={() => googleTasksInputRef.current?.click()}
                   >
-                    Drop Takeout Tasks.json
+                    {isImportingGoogleTasks ? (
+                      <Loader2
+                        className="h-4 w-4 animate-spin"
+                        strokeWidth={2.25}
+                      />
+                    ) : (
+                      <FileUp className="h-4 w-4" strokeWidth={2.25} />
+                    )}
                   </Button>
                   <input
                     ref={googleTasksInputRef}
@@ -950,13 +972,87 @@ export function AppMigrationDialog({
                     onChange={handleImportGoogleTasksTakeout}
                   />
                 </div>
-                {isGuestMode && (
-                  <p className="type-micro text-muted-foreground mt-2">
-                    OAuth import requires a registered account. Sign up or use
-                    Takeout Tasks.json.
-                  </p>
-                )}
-              </div>
+              ) : (
+                <div
+                  className={cn(
+                    "p-4 rounded-xl border border-border/40 bg-secondary/10 transition-all",
+                    isAnyImporting && "opacity-60 pointer-events-none",
+                  )}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      trigger("toggle");
+                      void processGoogleTasksFile(file);
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3">
+                      <GoogleTasksIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+                      <div>
+                        <p className="text-sm font-medium flex items-center gap-1.5">
+                          Google Tasks
+                          <BetaBadge />
+                        </p>
+                        <p className="text-xs text-muted-foreground lowercase">
+                          Import from Google account or Takeout .json
+                        </p>
+                      </div>
+                    </div>
+                    {isImportingGoogleTasks && (
+                      <Loader2
+                        className="h-4 w-4 animate-spin text-brand shrink-0"
+                        strokeWidth={2.25}
+                      />
+                    )}
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-8 gap-1.5 text-xs font-medium border-border/50 bg-card hover:bg-secondary/40"
+                      disabled={isAnyImporting}
+                      onClick={handleConnectGoogleTasks}
+                    >
+                      <Link2
+                        className="h-3.5 w-3.5 text-brand"
+                        strokeWidth={2.25}
+                      />
+                      Connect Google Tasks
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-8 gap-1.5 text-xs font-medium border-border/50 bg-card hover:bg-secondary/40"
+                      disabled={isAnyImporting}
+                      onClick={() => googleTasksInputRef.current?.click()}
+                    >
+                      <FileUp
+                        className="h-3.5 w-3.5 text-muted-foreground"
+                        strokeWidth={2.25}
+                      />
+                      Upload Tasks.json
+                    </Button>
+                    <input
+                      ref={googleTasksInputRef}
+                      type="file"
+                      accept=".json,application/json"
+                      className="hidden"
+                      aria-label="Upload Google Takeout Tasks.json file"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={handleImportGoogleTasksTakeout}
+                    />
+                  </div>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="export" className="m-0">

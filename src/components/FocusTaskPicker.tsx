@@ -303,14 +303,14 @@ export function FocusTaskPicker() {
       </div>
 
       <ResponsiveDialog open={open} onOpenChange={setOpen}>
-        <ResponsiveDialogContent className="flex flex-col max-h-[55dvh] sm:max-w-sm sm:max-h-[60vh]">
-          <ResponsiveDialogHeader>
+        <ResponsiveDialogContent className="sm:max-w-sm max-h-[85dvh] sm:max-h-[60vh] flex flex-col p-0 overflow-hidden">
+          <ResponsiveDialogHeader className="p-4 pb-2 shrink-0 text-left">
             <ResponsiveDialogTitle>Focus on</ResponsiveDialogTitle>
             <ResponsiveDialogDescription className="sr-only">
               Choose a task for your focus session
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
-          <div className="overflow-y-auto flex-1 scrollbar-hide pb-safe sm:pb-0">
+          <div className="overflow-y-auto flex-1 min-h-0 scrollbar-hide px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
             {renderTaskList()}
           </div>
         </ResponsiveDialogContent>

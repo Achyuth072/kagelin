@@ -343,8 +343,8 @@ function RecoveryCodeCard({ userId }: { userId: string }) {
           if (!open) setNewCode(null);
         }}
       >
-        <ResponsiveDialogContent>
-          <ResponsiveDialogHeader>
+        <ResponsiveDialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+          <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
             <ResponsiveDialogTitle>New recovery code</ResponsiveDialogTitle>
             <ResponsiveDialogDescription>
               Your old recovery code no longer works. Save this one — it&apos;s
@@ -352,7 +352,7 @@ function RecoveryCodeCard({ userId }: { userId: string }) {
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
           {newCode && (
-            <div className="px-4 pb-4 sm:p-0">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
               <RecoveryCodeDisplay
                 recoveryCode={newCode}
                 onContinue={() => setNewCode(null)}
