@@ -15,8 +15,10 @@ vi.mock("@/lib/hooks/useBackNavigation", () => ({
   useBackNavigation: vi.fn(),
 }));
 
+let mockIsGuestMode = false;
+
 vi.mock("@/components/AuthProvider", () => ({
-  useAuth: () => ({ isGuestMode: false, user: { id: "test-user" } }),
+  useAuth: () => ({ isGuestMode: mockIsGuestMode, user: { id: "test-user" } }),
 }));
 
 let mockIcsImporting = false;
@@ -67,6 +69,7 @@ describe("AppMigrationDialog File Import Keyboard Accessibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIcsImporting = false;
+    mockIsGuestMode = false;
   });
 
   it("renders import cards with role=button, tabIndex=0, aria-labels and triggers on Enter and Space", () => {
@@ -141,6 +144,29 @@ describe("AppMigrationDialog File Import Keyboard Accessibility", () => {
     fireEvent.click(icsCard);
     fireEvent.keyDown(icsCard, { key: "Enter" });
     expect(clickSpy).not.toHaveBeenCalled();
+
+    clickSpy.mockRestore();
+  });
+
+  it("renders Google Tasks card in guest mode with keyboard accessibility and triggers on Enter and Space", () => {
+    mockIsGuestMode = true;
+    render(<AppMigrationDialog open={true} onOpenChange={vi.fn()} />);
+
+    const googleTasksCard = screen.getByRole("button", {
+      name: /import google tasks from takeout json/i,
+    });
+    expect(googleTasksCard).toHaveAttribute("tabindex", "0");
+
+    const googleTasksInput = screen.getByLabelText(
+      /upload google takeout tasks\.json file/i,
+    );
+    const clickSpy = vi.spyOn(googleTasksInput, "click");
+
+    fireEvent.keyDown(googleTasksCard, { key: "Enter" });
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(googleTasksCard, { key: " " });
+    expect(clickSpy).toHaveBeenCalledTimes(2);
 
     clickSpy.mockRestore();
   });

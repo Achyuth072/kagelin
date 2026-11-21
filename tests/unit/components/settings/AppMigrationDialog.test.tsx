@@ -142,8 +142,11 @@ vi.mock("@/lib/hooks/useGoogleTasksImport", () => ({
       prepareTakeoutImport: async (file: File) => {
         return prepareGoogleTasksTakeoutImportMock(file);
       },
-      commitImport: async () => {
-        return commitGoogleTasksImportMock();
+      commitImport: async (
+        targetPreview?: GoogleTasksImportPreview | null,
+        options?: { includeCompleted?: boolean },
+      ) => {
+        return commitGoogleTasksImportMock(targetPreview, options);
       },
       cancelImport: () => {
         cancelGoogleTasksImportMock();
@@ -389,6 +392,164 @@ describe("AppMigrationDialog", () => {
       name: "Import 2 tasks",
     });
     fireEvent.click(commitBtn);
-    expect(commitGoogleTasksImportMock).toHaveBeenCalled();
+    expect(commitGoogleTasksImportMock).toHaveBeenCalledWith(undefined, {
+      includeCompleted: true,
+    });
+  });
+
+  it("handles Google Tasks Takeout JSON file selection and drag-drop in registered mode", async () => {
+    mockIsGuestMode = false;
+    render(<AppMigrationDialog open onOpenChange={vi.fn()} />);
+
+    const uploadBtn = screen.getByRole("button", {
+      name: "Upload Tasks.json",
+    });
+    expect(uploadBtn).toBeInTheDocument();
+
+    const fileInput = screen.getByLabelText(
+      "Upload Google Takeout Tasks.json file",
+    ) as HTMLInputElement;
+
+    const file = new File(['{"items":[]}'], "Tasks.json", {
+      type: "application/json",
+    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    expect(prepareGoogleTasksTakeoutImportMock).toHaveBeenCalledWith(file);
+
+    // Test drag-and-drop on the Google Tasks card
+    const card = uploadBtn.closest(".rounded-xl")!;
+    const dropFile = new File(['{"items":[]}'], "DroppedTasks.json", {
+      type: "application/json",
+    });
+    fireEvent.drop(card, {
+      dataTransfer: { files: [dropFile] },
+    });
+
+    expect(prepareGoogleTasksTakeoutImportMock).toHaveBeenCalledWith(dropFile);
+  });
+
+  it("handles Google Tasks Takeout JSON file selection and drag-drop in guest mode", async () => {
+    mockIsGuestMode = true;
+    render(<AppMigrationDialog open onOpenChange={vi.fn()} />);
+
+    const guestCard = screen.getByRole("button", {
+      name: "Import Google Tasks from Takeout JSON",
+    });
+    expect(guestCard).toBeInTheDocument();
+
+    const fileInput = screen.getByLabelText(
+      "Upload Google Takeout Tasks.json file",
+    ) as HTMLInputElement;
+
+    const file = new File(['{"items":[]}'], "Tasks.json", {
+      type: "application/json",
+    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    expect(prepareGoogleTasksTakeoutImportMock).toHaveBeenCalledWith(file);
+
+    // Test drag-and-drop on the guest card
+    const dropFile = new File(['{"items":[]}'], "GuestDropped.json", {
+      type: "application/json",
+    });
+    fireEvent.drop(guestCard, {
+      dataTransfer: { files: [dropFile] },
+    });
+
+    expect(prepareGoogleTasksTakeoutImportMock).toHaveBeenCalledWith(dropFile);
+  });
+
+  it("allows toggling completed tasks in Google Tasks preview and canceling import", () => {
+    mockIsGuestMode = false;
+    mockGoogleTasksPreview = {
+      kind: "google-tasks",
+      projects: [
+        {
+          listId: "l1",
+          name: "Project 1",
+          isInbox: false,
+          status: "new",
+          color: "#4285F4",
+          existingProjectId: null,
+          tasks: [
+            {
+              id: "t1",
+              tempId: "tmp1",
+              parentId: null,
+              tempParentId: null,
+              content: "Active Task",
+              description: null,
+              dueDate: null,
+              isCompleted: false,
+              completedAt: null,
+              dayOrder: 1,
+              listId: "l1",
+              originalDepth: 0,
+            },
+            {
+              id: "t2",
+              tempId: "tmp2",
+              parentId: null,
+              tempParentId: null,
+              content: "Done Task",
+              description: null,
+              dueDate: null,
+              isCompleted: true,
+              completedAt: "2026-11-20T10:00:00.000Z",
+              dayOrder: 2,
+              listId: "l1",
+              originalDepth: 0,
+            },
+          ],
+          duplicatesSkipped: 0,
+          parentRedirects: {},
+          subtasksReassigned: 0,
+        },
+      ],
+      totalTasks: 2,
+      rootTasksCount: 2,
+      subtasksCount: 0,
+      earliestDate: null,
+      latestDate: null,
+      newProjectCount: 1,
+      mergedProjectCount: 0,
+      duplicateTasksSkipped: 0,
+      subtasksReassigned: 0,
+      rawSource: { lists: [], tasksByListId: {} },
+    };
+
+    const onOpenChange = vi.fn();
+    render(<AppMigrationDialog open onOpenChange={onOpenChange} />);
+
+    // Initially includes completed tasks (total 2)
+    const commitBtn = screen.getByRole("button", {
+      name: "Import 2 tasks",
+    });
+    expect(commitBtn).toBeInTheDocument();
+
+    // Toggle include completed checkbox
+    const checkbox = screen.getByRole("checkbox", {
+      name: /include completed tasks/i,
+    });
+    expect(checkbox).toBeChecked();
+    fireEvent.click(checkbox);
+    expect(checkbox).not.toBeChecked();
+
+    // Button label reflects active-only tasks (1 task)
+    const updatedCommitBtn = screen.getByRole("button", {
+      name: "Import 1 tasks",
+    });
+    expect(updatedCommitBtn).toBeInTheDocument();
+
+    fireEvent.click(updatedCommitBtn);
+    expect(commitGoogleTasksImportMock).toHaveBeenCalledWith(undefined, {
+      includeCompleted: false,
+    });
+
+    // Test Cancel button calls cancelGoogleTasksImportMock
+    const cancelBtn = screen.getByRole("button", { name: "Cancel" });
+    fireEvent.click(cancelBtn);
+    expect(cancelGoogleTasksImportMock).toHaveBeenCalled();
   });
 });

@@ -1033,7 +1033,10 @@ export function AppMigrationDialog({
                       size="sm"
                       className="flex-1 h-8 gap-1.5 text-xs font-medium border-border/50 bg-card hover:bg-secondary/40"
                       disabled={isAnyImporting}
-                      onClick={() => googleTasksInputRef.current?.click()}
+                      onClick={() => {
+                        trigger("toggle");
+                        googleTasksInputRef.current?.click();
+                      }}
                     >
                       <FileUp
                         className="h-3.5 w-3.5 text-muted-foreground"
