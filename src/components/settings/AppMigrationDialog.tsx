@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   ResponsiveDialog,
@@ -17,6 +18,8 @@ import {
   Calendar,
   FileUp,
   Link2,
+  ArrowLeft,
+  ChevronRight,
   ArrowDownToLine,
   ArrowUpFromLine,
 } from "lucide-react";
@@ -74,7 +77,10 @@ export function AppMigrationDialog({
   onOpenChange,
   defaultTab = "import",
 }: AppMigrationDialogProps) {
+  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState<"import" | "export">(defaultTab);
+  const [googleTasksDrillDown, setGoogleTasksDrillDown] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const icsInputRef = useRef<HTMLInputElement>(null);
   const todoistInputRef = useRef<HTMLInputElement>(null);
@@ -85,6 +91,7 @@ export function AppMigrationDialog({
   const [prevOpen, setPrevOpen] = useState(open);
   if (open && !prevOpen) {
     setActiveTab(defaultTab);
+    setGoogleTasksDrillDown(false);
     setPrevOpen(open);
   } else if (!open && prevOpen) {
     setPrevOpen(open);
@@ -116,7 +123,16 @@ export function AppMigrationDialog({
 
   const handleTabChange = (val: string) => {
     trigger("toggle");
+    setGoogleTasksDrillDown(false);
     setActiveTab(val as "import" | "export");
+  };
+
+  const processUhabitsFile = async (file: File) => {
+    const success = await importUhabits(file);
+    if (success) {
+      onOpenChange(false);
+      router.push("/habits");
+    }
   };
 
   const handleImportUhabits = async (
@@ -124,8 +140,7 @@ export function AppMigrationDialog({
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const success = await importUhabits(file);
-    if (success) onOpenChange(false);
+    await processUhabitsFile(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -137,14 +152,20 @@ export function AppMigrationDialog({
     if (!result) return;
     if (result.toCreate.length < ICS_CONFIRM_THRESHOLD) {
       const success = await commitImport(result);
-      if (success) onOpenChange(false);
+      if (success) {
+        onOpenChange(false);
+        router.push("/calendar");
+      }
     }
   };
 
   const handleConfirmIcsImport = async () => {
     trigger("toggle");
     const success = await commitImport();
-    if (success) onOpenChange(false);
+    if (success) {
+      onOpenChange(false);
+      router.push("/calendar");
+    }
   };
 
   const handleCancelIcsImport = () => {
@@ -168,7 +189,10 @@ export function AppMigrationDialog({
   const handleConfirmTodoistImport = async () => {
     trigger("toggle");
     const success = await commitTodoistImport();
-    if (success) onOpenChange(false);
+    if (success) {
+      onOpenChange(false);
+      router.push("/?project=all");
+    }
   };
 
   const handleCancelTodoistImport = () => {
@@ -203,7 +227,10 @@ export function AppMigrationDialog({
     const success = await commitGoogleTasksImport(undefined, {
       includeCompleted: includeCompletedGoogleTasks,
     });
-    if (success) onOpenChange(false);
+    if (success) {
+      onOpenChange(false);
+      router.push("/?project=all");
+    }
   };
 
   const handleCancelGoogleTasksImport = () => {
@@ -663,399 +690,523 @@ export function AppMigrationDialog({
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="import" className="space-y-4 m-0">
-              <div
-                role="button"
-                tabIndex={isAnyImporting ? -1 : 0}
-                aria-disabled={isAnyImporting}
-                aria-label="Import ICS calendar file"
-                className={cn(
-                  "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
-                  isAnyImporting &&
-                    "opacity-60 cursor-not-allowed pointer-events-none",
-                )}
-                onClick={(e) => {
-                  if (isAnyImporting || e.target === icsInputRef.current)
-                    return;
-                  trigger("toggle");
-                  icsInputRef.current?.click();
-                }}
-                onKeyDown={(e) => {
-                  if (isAnyImporting) return;
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    trigger("toggle");
-                    icsInputRef.current?.click();
-                  }
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="h-9 w-9 rounded-full bg-brand/10 text-brand shrink-0 flex items-center justify-center">
-                    <Calendar className="h-5 w-5" strokeWidth={2.25} />
+            <TabsContent value="import" className="m-0">
+              {googleTasksDrillDown ? (
+                /* Variant B: Dedicated Drill-down Sub-view */
+                <div className="space-y-4 min-h-[340px]">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        trigger("tick");
+                        setGoogleTasksDrillDown(false);
+                      }}
+                      className="h-7 px-2 -ml-1 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                      aria-label="Back to all apps"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.25} />
+                      Back
+                    </Button>
+                    <span className="text-xs font-medium text-foreground">
+                      Google Tasks Import
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium">ICS (Calendar)</p>
-                    <p className="text-xs text-muted-foreground lowercase">
-                      Import to Calendar
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  className={cn(
-                    "h-8 transition-opacity text-brand pointer-events-none",
-                    isImportingIcs
-                      ? "opacity-100"
-                      : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
-                  )}
-                  disabled={isAnyImporting}
-                >
-                  {isImportingIcs ? (
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      strokeWidth={2.25}
-                    />
-                  ) : (
-                    <FileUp className="h-4 w-4" strokeWidth={2.25} />
-                  )}
-                </Button>
-                <input
-                  ref={icsInputRef}
-                  type="file"
-                  accept=".ics,text/calendar"
-                  className="hidden"
-                  aria-label="Upload iCalendar ICS file"
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={handleImportIcs}
-                />
-              </div>
 
-              <div
-                role="button"
-                tabIndex={isAnyImporting ? -1 : 0}
-                aria-disabled={isAnyImporting}
-                aria-label="Import Loop Habit Tracker database"
-                className={cn(
-                  "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
-                  isAnyImporting &&
-                    "opacity-60 cursor-not-allowed pointer-events-none",
-                )}
-                onClick={(e) => {
-                  if (isAnyImporting || e.target === fileInputRef.current)
-                    return;
-                  trigger("toggle");
-                  fileInputRef.current?.click();
-                }}
-                onKeyDown={(e) => {
-                  if (isAnyImporting) return;
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    trigger("toggle");
-                    fileInputRef.current?.click();
-                  }
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
-                  <div>
-                    <p className="text-sm font-medium flex items-center gap-1.5">
-                      Loop Habit Tracker
-                      <BetaBadge />
-                    </p>
-                    <p className="text-xs text-muted-foreground lowercase">
-                      Import from .db file (Android)
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  className={cn(
-                    "h-8 transition-opacity text-brand pointer-events-none",
-                    isImportingUhabits
-                      ? "opacity-100"
-                      : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
-                  )}
-                  disabled={isAnyImporting}
-                >
-                  {isImportingUhabits ? (
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      strokeWidth={2.25}
-                    />
-                  ) : (
-                    <FileUp className="h-4 w-4" strokeWidth={2.25} />
-                  )}
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".db"
-                  className="hidden"
-                  aria-label="Upload Loop Habit Tracker database file"
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={handleImportUhabits}
-                />
-              </div>
-
-              <div
-                role="button"
-                tabIndex={isAnyImporting ? -1 : 0}
-                aria-disabled={isAnyImporting}
-                aria-label="Import Todoist tasks from CSV or ZIP"
-                className={cn(
-                  "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
-                  isAnyImporting &&
-                    "opacity-60 cursor-not-allowed pointer-events-none",
-                )}
-                onClick={(e) => {
-                  if (isAnyImporting || e.target === todoistInputRef.current)
-                    return;
-                  trigger("toggle");
-                  todoistInputRef.current?.click();
-                }}
-                onKeyDown={(e) => {
-                  if (isAnyImporting) return;
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    trigger("toggle");
-                    todoistInputRef.current?.click();
-                  }
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) {
-                    trigger("toggle");
-                    void processTodoistFile(file);
-                  }
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <TodoistIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
-                  <div>
-                    <p className="text-sm font-medium flex items-center gap-1.5">
-                      Todoist
-                      <BetaBadge />
-                    </p>
-                    <p className="text-xs text-muted-foreground lowercase">
-                      Import tasks from CSV or ZIP backup
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  tabIndex={-1}
-                  aria-hidden="true"
-                  className={cn(
-                    "h-8 transition-opacity text-brand pointer-events-none",
-                    isImportingTodoist
-                      ? "opacity-100"
-                      : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
-                  )}
-                  disabled={isAnyImporting}
-                >
-                  {isImportingTodoist ? (
-                    <Loader2
-                      className="h-4 w-4 animate-spin"
-                      strokeWidth={2.25}
-                    />
-                  ) : (
-                    <FileUp className="h-4 w-4" strokeWidth={2.25} />
-                  )}
-                </Button>
-                <input
-                  ref={todoistInputRef}
-                  type="file"
-                  accept=".csv,.zip,text/csv,application/zip"
-                  className="hidden"
-                  aria-label="Upload Todoist CSV or ZIP backup file"
-                  onClick={(e) => e.stopPropagation()}
-                  onChange={handleImportTodoist}
-                />
-              </div>
-
-              {isGuestMode ? (
-                <div
-                  role="button"
-                  tabIndex={isAnyImporting ? -1 : 0}
-                  aria-disabled={isAnyImporting}
-                  aria-label="Import Google Tasks from Takeout JSON"
-                  className={cn(
-                    "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
-                    isAnyImporting &&
-                      "opacity-60 cursor-not-allowed pointer-events-none",
-                  )}
-                  onClick={(e) => {
-                    if (
-                      isAnyImporting ||
-                      e.target === googleTasksInputRef.current
-                    )
-                      return;
-                    trigger("toggle");
-                    googleTasksInputRef.current?.click();
-                  }}
-                  onKeyDown={(e) => {
-                    if (isAnyImporting) return;
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      trigger("toggle");
-                      googleTasksInputRef.current?.click();
-                    }
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const file = e.dataTransfer.files?.[0];
-                    if (file) {
-                      trigger("toggle");
-                      void processGoogleTasksFile(file);
-                    }
-                  }}
-                >
-                  <div className="flex items-center gap-3">
-                    <GoogleTasksIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
-                    <div>
-                      <p className="text-sm font-medium flex items-center gap-1.5">
-                        Google Tasks
-                        <BetaBadge />
-                      </p>
-                      <p className="text-xs text-muted-foreground lowercase">
-                        Import from Takeout .json
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    tabIndex={-1}
-                    aria-hidden="true"
+                  {/* Row 1: Direct OAuth */}
+                  <div
+                    role="button"
+                    tabIndex={isAnyImporting ? -1 : 0}
+                    aria-disabled={isAnyImporting}
+                    aria-label="Connect Google Tasks"
+                    onClick={() => void handleConnectGoogleTasks()}
+                    onKeyDown={(e) => {
+                      if (
+                        (e.key === "Enter" || e.key === " ") &&
+                        !isAnyImporting
+                      ) {
+                        e.preventDefault();
+                        void handleConnectGoogleTasks();
+                      }
+                    }}
                     className={cn(
-                      "h-8 transition-opacity text-brand pointer-events-none",
-                      isImportingGoogleTasks
-                        ? "opacity-100"
-                        : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      isAnyImporting &&
+                        "opacity-60 cursor-not-allowed pointer-events-none",
                     )}
-                    disabled={isAnyImporting}
                   >
-                    {isImportingGoogleTasks ? (
-                      <Loader2
-                        className="h-4 w-4 animate-spin"
-                        strokeWidth={2.25}
-                      />
-                    ) : (
-                      <FileUp className="h-4 w-4" strokeWidth={2.25} />
-                    )}
-                  </Button>
-                  <input
-                    ref={googleTasksInputRef}
-                    type="file"
-                    accept=".json,application/json"
-                    className="hidden"
-                    aria-label="Upload Google Takeout Tasks.json file"
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={handleImportGoogleTasksTakeout}
-                  />
-                </div>
-              ) : (
-                <div
-                  className={cn(
-                    "p-4 rounded-xl border border-border/40 bg-secondary/10 transition-all",
-                    isAnyImporting && "opacity-60 pointer-events-none",
-                  )}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const file = e.dataTransfer.files?.[0];
-                    if (file) {
-                      trigger("toggle");
-                      void processGoogleTasksFile(file);
-                    }
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <GoogleTasksIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
-                      <div>
-                        <p className="text-sm font-medium flex items-center gap-1.5">
-                          Google Tasks
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium flex items-center gap-1.5 truncate">
+                          Connect Google Account
                           <BetaBadge />
                         </p>
-                        <p className="text-xs text-muted-foreground lowercase">
-                          Import from Google account or Takeout .json
+                        <p className="text-xs text-muted-foreground lowercase truncate">
+                          Direct OAuth automated sync
                         </p>
                       </div>
                     </div>
-                    {isImportingGoogleTasks && (
-                      <Loader2
-                        className="h-4 w-4 animate-spin text-brand shrink-0"
-                        strokeWidth={2.25}
-                      />
-                    )}
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button
-                      type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="flex-1 h-8 gap-1.5 text-xs font-medium border-border/50 bg-card hover:bg-secondary/40"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      className="h-8 transition-opacity text-brand pointer-events-none ml-auto shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                       disabled={isAnyImporting}
-                      onClick={handleConnectGoogleTasks}
                     >
-                      <Link2
-                        className="h-3.5 w-3.5 text-brand"
-                        strokeWidth={2.25}
-                      />
-                      Connect Google Tasks
+                      {isImportingGoogleTasks ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          strokeWidth={2.25}
+                        />
+                      ) : (
+                        <Link2 className="h-4 w-4" strokeWidth={2.25} />
+                      )}
                     </Button>
+                  </div>
+
+                  {/* Row 2: Takeout JSON file */}
+                  <div
+                    role="button"
+                    tabIndex={isAnyImporting ? -1 : 0}
+                    aria-disabled={isAnyImporting}
+                    aria-label="Import Google Tasks Takeout JSON file"
+                    onClick={(e) => {
+                      if (
+                        isAnyImporting ||
+                        e.target === googleTasksInputRef.current
+                      )
+                        return;
+                      trigger("toggle");
+                      googleTasksInputRef.current?.click();
+                    }}
+                    onKeyDown={(e) => {
+                      if (isAnyImporting) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        trigger("toggle");
+                        googleTasksInputRef.current?.click();
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        trigger("toggle");
+                        void processGoogleTasksFile(file);
+                      }
+                    }}
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      isAnyImporting &&
+                        "opacity-60 cursor-not-allowed pointer-events-none",
+                    )}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <GoogleTasksIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium flex items-center gap-1.5 truncate">
+                          Google Takeout
+                        </p>
+                        <p className="text-xs text-muted-foreground lowercase truncate">
+                          Upload Takeout Tasks.json file
+                        </p>
+                      </div>
+                    </div>
                     <Button
-                      type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
-                      className="flex-1 h-8 gap-1.5 text-xs font-medium border-border/50 bg-card hover:bg-secondary/40"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      className="h-8 transition-opacity text-brand pointer-events-none ml-auto shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                       disabled={isAnyImporting}
-                      onClick={() => {
+                    >
+                      <FileUp className="h-4 w-4" strokeWidth={2.25} />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 min-h-[340px]">
+                  {/* ICS Card */}
+                  <div
+                    role="button"
+                    tabIndex={isAnyImporting ? -1 : 0}
+                    aria-disabled={isAnyImporting}
+                    aria-label="Import ICS calendar file"
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      isAnyImporting &&
+                        "opacity-60 cursor-not-allowed pointer-events-none",
+                    )}
+                    onClick={(e) => {
+                      if (isAnyImporting || e.target === icsInputRef.current)
+                        return;
+                      trigger("toggle");
+                      icsInputRef.current?.click();
+                    }}
+                    onKeyDown={(e) => {
+                      if (isAnyImporting) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        trigger("toggle");
+                        icsInputRef.current?.click();
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-brand/10 text-brand shrink-0 flex items-center justify-center">
+                        <Calendar className="h-5 w-5" strokeWidth={2.25} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">ICS (Calendar)</p>
+                        <p className="text-xs text-muted-foreground lowercase">
+                          Import to Calendar
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      className={cn(
+                        "h-8 transition-opacity text-brand pointer-events-none",
+                        isImportingIcs
+                          ? "opacity-100"
+                          : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+                      )}
+                      disabled={isAnyImporting}
+                    >
+                      {isImportingIcs ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          strokeWidth={2.25}
+                        />
+                      ) : (
+                        <FileUp className="h-4 w-4" strokeWidth={2.25} />
+                      )}
+                    </Button>
+                    <input
+                      ref={icsInputRef}
+                      type="file"
+                      accept=".ics,text/calendar"
+                      className="hidden"
+                      aria-label="Upload iCalendar ICS file"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={handleImportIcs}
+                    />
+                  </div>
+
+                  {/* Loop Habit Tracker Card */}
+                  <div
+                    role="button"
+                    tabIndex={isAnyImporting ? -1 : 0}
+                    aria-disabled={isAnyImporting}
+                    aria-label="Import Loop Habit Tracker database file"
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      isAnyImporting &&
+                        "opacity-60 cursor-not-allowed pointer-events-none",
+                    )}
+                    onClick={(e) => {
+                      if (isAnyImporting || e.target === fileInputRef.current)
+                        return;
+                      trigger("toggle");
+                      fileInputRef.current?.click();
+                    }}
+                    onKeyDown={(e) => {
+                      if (isAnyImporting) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        trigger("toggle");
+                        fileInputRef.current?.click();
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        trigger("toggle");
+                        void processUhabitsFile(file);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
+                      <div>
+                        <p className="text-sm font-medium flex items-center gap-1.5">
+                          Loop Habit Tracker
+                          <BetaBadge />
+                        </p>
+                        <p className="text-xs text-muted-foreground lowercase">
+                          Import habits from .db backup
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      className={cn(
+                        "h-8 transition-opacity text-brand pointer-events-none",
+                        isImportingUhabits
+                          ? "opacity-100"
+                          : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+                      )}
+                      disabled={isAnyImporting}
+                    >
+                      {isImportingUhabits ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          strokeWidth={2.25}
+                        />
+                      ) : (
+                        <FileUp className="h-4 w-4" strokeWidth={2.25} />
+                      )}
+                    </Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".db"
+                      className="hidden"
+                      aria-label="Upload Loop Habit Tracker database file"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={handleImportUhabits}
+                    />
+                  </div>
+
+                  {/* Todoist Card */}
+                  <div
+                    role="button"
+                    tabIndex={isAnyImporting ? -1 : 0}
+                    aria-disabled={isAnyImporting}
+                    aria-label="Import Todoist tasks from CSV or ZIP"
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      isAnyImporting &&
+                        "opacity-60 cursor-not-allowed pointer-events-none",
+                    )}
+                    onClick={(e) => {
+                      if (
+                        isAnyImporting ||
+                        e.target === todoistInputRef.current
+                      )
+                        return;
+                      trigger("toggle");
+                      todoistInputRef.current?.click();
+                    }}
+                    onKeyDown={(e) => {
+                      if (isAnyImporting) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        trigger("toggle");
+                        todoistInputRef.current?.click();
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        trigger("toggle");
+                        void processTodoistFile(file);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <TodoistIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+                      <div>
+                        <p className="text-sm font-medium flex items-center gap-1.5">
+                          Todoist
+                          <BetaBadge />
+                        </p>
+                        <p className="text-xs text-muted-foreground lowercase">
+                          Import tasks from CSV or ZIP backup
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      className={cn(
+                        "h-8 transition-opacity text-brand pointer-events-none",
+                        isImportingTodoist
+                          ? "opacity-100"
+                          : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+                      )}
+                      disabled={isAnyImporting}
+                    >
+                      {isImportingTodoist ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          strokeWidth={2.25}
+                        />
+                      ) : (
+                        <FileUp className="h-4 w-4" strokeWidth={2.25} />
+                      )}
+                    </Button>
+                    <input
+                      ref={todoistInputRef}
+                      type="file"
+                      accept=".csv,.zip,text/csv,application/zip"
+                      className="hidden"
+                      aria-label="Upload Todoist CSV or ZIP backup file"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={handleImportTodoist}
+                    />
+                  </div>
+
+                  {/* Google Tasks Card */}
+                  {isGuestMode ? (
+                    <div
+                      role="button"
+                      tabIndex={isAnyImporting ? -1 : 0}
+                      aria-disabled={isAnyImporting}
+                      aria-label="Import Google Tasks from Takeout JSON"
+                      className={cn(
+                        "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                        isAnyImporting &&
+                          "opacity-60 cursor-not-allowed pointer-events-none",
+                      )}
+                      onClick={(e) => {
+                        if (
+                          isAnyImporting ||
+                          e.target === googleTasksInputRef.current
+                        )
+                          return;
                         trigger("toggle");
                         googleTasksInputRef.current?.click();
                       }}
+                      onKeyDown={(e) => {
+                        if (isAnyImporting) return;
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          trigger("toggle");
+                          googleTasksInputRef.current?.click();
+                        }
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) {
+                          trigger("toggle");
+                          void processGoogleTasksFile(file);
+                        }
+                      }}
                     >
-                      <FileUp
-                        className="h-3.5 w-3.5 text-muted-foreground"
-                        strokeWidth={2.25}
-                      />
-                      Upload Tasks.json
-                    </Button>
-                    <input
-                      ref={googleTasksInputRef}
-                      type="file"
-                      accept=".json,application/json"
-                      className="hidden"
-                      aria-label="Upload Google Takeout Tasks.json file"
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={handleImportGoogleTasksTakeout}
-                    />
-                  </div>
+                      <div className="flex items-center gap-3">
+                        <GoogleTasksIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+                        <div>
+                          <p className="text-sm font-medium flex items-center gap-1.5">
+                            Google Tasks
+                            <BetaBadge />
+                          </p>
+                          <p className="text-xs text-muted-foreground lowercase">
+                            Import from Takeout .json
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        className={cn(
+                          "h-8 transition-opacity text-brand pointer-events-none",
+                          isImportingGoogleTasks
+                            ? "opacity-100"
+                            : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+                        )}
+                        disabled={isAnyImporting}
+                      >
+                        {isImportingGoogleTasks ? (
+                          <Loader2
+                            className="h-4 w-4 animate-spin"
+                            strokeWidth={2.25}
+                          />
+                        ) : (
+                          <FileUp className="h-4 w-4" strokeWidth={2.25} />
+                        )}
+                      </Button>
+                    </div>
+                  ) : (
+                    /* Drill-down Sub-view Entry Card */
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Google Tasks import options"
+                      onClick={() => {
+                        trigger("toggle");
+                        setGoogleTasksDrillDown(true);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          trigger("toggle");
+                          setGoogleTasksDrillDown(true);
+                        }
+                      }}
+                      className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <GoogleTasksIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium flex items-center gap-1.5 truncate">
+                            Google Tasks
+                            <BetaBadge />
+                          </p>
+                          <p className="text-xs text-muted-foreground lowercase truncate">
+                            2 import methods available
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                        className="h-8 text-muted-foreground group-hover:text-foreground pointer-events-none ml-auto shrink-0"
+                      >
+                        <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
+
+              <input
+                ref={googleTasksInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                aria-label="Upload Google Takeout Tasks.json file"
+                onClick={(e) => e.stopPropagation()}
+                onChange={handleImportGoogleTasksTakeout}
+              />
             </TabsContent>
 
             <TabsContent value="export" className="m-0">

@@ -277,11 +277,19 @@ describe("AppMigrationDialog", () => {
     );
 
     expect(screen.getByText("Google Tasks")).toBeInTheDocument();
+    const entryCard = screen.getByRole("button", {
+      name: "Google Tasks import options",
+    });
+    expect(entryCard).toBeInTheDocument();
+
+    // Click entry card to drill down
+    fireEvent.click(entryCard);
+
     const connectButton = screen.getByRole("button", {
       name: "Connect Google Tasks",
     });
     const takeoutButton = screen.getByRole("button", {
-      name: "Upload Tasks.json",
+      name: "Import Google Tasks Takeout JSON file",
     });
 
     expect(connectButton).toBeEnabled();
@@ -290,11 +298,21 @@ describe("AppMigrationDialog", () => {
     fireEvent.click(connectButton);
     expect(prepareOAuthImportMock).toHaveBeenCalled();
 
+    // Test back button
+    const backBtn = screen.getByRole("button", { name: "Back to all apps" });
+    fireEvent.click(backBtn);
+    expect(
+      screen.getByRole("button", { name: "Google Tasks import options" }),
+    ).toBeInTheDocument();
+
     // Rerender as Guest mode
     mockIsGuestMode = true;
     rerender(<AppMigrationDialog open onOpenChange={vi.fn()} />);
 
     // In guest mode, dead OAuth button and disclaimer text are removed
+    expect(
+      screen.queryByRole("button", { name: "Google Tasks import options" }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Connect Google Tasks" }),
     ).not.toBeInTheDocument();
@@ -396,10 +414,16 @@ describe("AppMigrationDialog", () => {
     mockIsGuestMode = false;
     render(<AppMigrationDialog open onOpenChange={vi.fn()} />);
 
-    const uploadBtn = screen.getByRole("button", {
-      name: "Upload Tasks.json",
+    // Open drill-down subview
+    const entryCard = screen.getByRole("button", {
+      name: "Google Tasks import options",
     });
-    expect(uploadBtn).toBeInTheDocument();
+    fireEvent.click(entryCard);
+
+    const takeoutBtn = screen.getByRole("button", {
+      name: "Import Google Tasks Takeout JSON file",
+    });
+    expect(takeoutBtn).toBeInTheDocument();
 
     const fileInput = screen.getByLabelText(
       "Upload Google Takeout Tasks.json file",
@@ -413,11 +437,10 @@ describe("AppMigrationDialog", () => {
     expect(prepareGoogleTasksTakeoutImportMock).toHaveBeenCalledWith(file);
 
     // Test drag-and-drop on the Google Tasks card
-    const card = uploadBtn.closest(".rounded-xl")!;
     const dropFile = new File(['{"items":[]}'], "DroppedTasks.json", {
       type: "application/json",
     });
-    fireEvent.drop(card, {
+    fireEvent.drop(takeoutBtn, {
       dataTransfer: { files: [dropFile] },
     });
 

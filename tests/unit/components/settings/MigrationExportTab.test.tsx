@@ -14,6 +14,7 @@ const {
   mockExportLoopDb,
   mockExportLoopZip,
   mockExportTodoistZip,
+  mockDownloadICS,
   mockUseHabits,
   mockUseTasks,
   mockUseProjects,
@@ -22,9 +23,14 @@ const {
   mockExportLoopDb: vi.fn(),
   mockExportLoopZip: vi.fn(),
   mockExportTodoistZip: vi.fn(),
+  mockDownloadICS: vi.fn(),
   mockUseHabits: vi.fn(),
   mockUseTasks: vi.fn(),
   mockUseProjects: vi.fn(),
+}));
+
+vi.mock("@/lib/utils/ics-generator", () => ({
+  downloadICS: (...args: unknown[]) => mockDownloadICS(...args),
 }));
 
 let mockIsGuestMode = false;
@@ -228,10 +234,9 @@ describe("MigrationExportTab component rendering", () => {
       const loopCard = screen.getByRole("button", {
         name: "Export Loop Habit Tracker",
       });
-      fireEvent.pointerDown(loopCard, { button: 0, ctrlKey: false });
       fireEvent.click(loopCard);
 
-      const dbItem = screen.getByRole("menuitem", {
+      const dbItem = screen.getByRole("button", {
         name: "Export Loop Habit Tracker database",
       });
       await fireEvent.click(dbItem);
@@ -247,10 +252,9 @@ describe("MigrationExportTab component rendering", () => {
       const loopCard = screen.getByRole("button", {
         name: "Export Loop Habit Tracker",
       });
-      fireEvent.pointerDown(loopCard, { button: 0, ctrlKey: false });
       fireEvent.click(loopCard);
 
-      const zipItem = screen.getByRole("menuitem", {
+      const zipItem = screen.getByRole("button", {
         name: "Export Loop Habit Tracker CSV archive",
       });
       await fireEvent.click(zipItem);
@@ -272,6 +276,19 @@ describe("MigrationExportTab component rendering", () => {
       await waitFor(() => {
         expect(mockExportTodoistZip).toHaveBeenCalledTimes(1);
       });
+    });
+
+    it("exports Calendar to ICS on click and plays haptic", () => {
+      render(<MigrationExportTab />);
+
+      const icsButton = screen.getByRole("button", {
+        name: "Export Calendar to ICS",
+      });
+      fireEvent.click(icsButton);
+
+      expect(mockTrigger).toHaveBeenCalledWith("thud");
+      expect(mockTrigger).toHaveBeenCalledWith("success");
+      expect(mockDownloadICS).toHaveBeenCalledTimes(1);
     });
 
     it("disables Loop card and shows spinner when Loop export is active", () => {
