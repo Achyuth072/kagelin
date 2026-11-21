@@ -1,5 +1,27 @@
 [
   {
+    "version": "1.52.0-preview.1",
+    "date": "2026-11-21",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Google tasks import dialog, state machine, and observability (IMPORT-02)",
+        "Google tasks ephemeral oauth and throttled api transport",
+        "Google tasks deduplication, parent redirects, and chunked execution",
+        "Google tasks schemas, takeout parser, and timezone mapper"
+      ],
+      "Improved": [
+        "Add hover-reveal parity and dropdown format selection for migration exports"
+      ],
+      "Fixed": [
+        "Enhance google tasks import interactions and test coverage",
+        "Align google tasks import ui and enforce universal modal scroll containment",
+        "Update google tasks icon to 2026 design and normalize migration icon sizes",
+        "Standards compliance, completion mapping, and cancellation for google tasks import"
+      ]
+    }
+  },
+  {
     "version": "1.52.0-preview.0",
     "date": "2026-11-20",
     "channel": "preview",
@@ -822,17 +844,6 @@
         "Reminders open the right habit, deep links keep the back button working, and skipped imports are named",
         "Uhabits export writes valid empty fields and matches habit colors by hue",
         "Habit drawer footer stays fixed and the reminder row fits on one line on narrow screens"
-      ]
-    }
-  },
-  {
-    "version": "1.45.0-preview.5",
-    "date": "2026-09-27",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Uhabits export writes empty strings not null, matches colors by hue",
-        "Overdue 1-in-D habits say due now instead of counting days late"
       ]
     }
   }
