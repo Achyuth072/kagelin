@@ -101,7 +101,7 @@ export interface MappedMicrosoftTask {
   dueDate: string | null;
   isCompleted: boolean;
   completedAt: string | null;
-  priority: number;
+  priority: 1 | 2 | 3 | 4;
   dayOrder: number;
   listId: string;
   isStep: boolean;
@@ -115,11 +115,17 @@ export interface MicrosoftTasksProjectPlan {
   name: string;
   isInbox: boolean;
   action: "create" | "merge";
-  existingProjectId?: string;
-  color?: string;
+  status: "inbox" | "new" | "merged";
+  existingProjectId: string | null;
+  color: string;
+  tasks: MappedMicrosoftTask[];
+  duplicatesSkipped: number;
+  parentRedirects: Record<string, ParentRedirect>;
+  stepsReassigned: number;
 }
 
 export interface MicrosoftTasksImportPreview {
+  kind: typeof MICROSOFT_TASKS_PREVIEW_KIND;
   projects: MicrosoftTasksProjectPlan[];
   tasks: MappedMicrosoftTask[];
   totalLists: number;
@@ -127,6 +133,21 @@ export interface MicrosoftTasksImportPreview {
   totalSteps: number;
   totalCompleted: number;
   duplicatesCount: number;
+  rootTasksCount: number;
+  subtasksCount: number;
+  earliestDate: string | null;
+  latestDate: string | null;
+  newProjectCount: number;
+  mergedProjectCount: number;
+  stepsReassigned: number;
+  rawSource?: MicrosoftTasksDataset;
+}
+
+export interface ExecuteMicrosoftTasksImportOptions {
+  isGuest?: boolean;
+  fileName?: string;
+  signal?: AbortSignal;
+  includeCompleted?: boolean;
 }
 
 export interface WorkspaceProject {
