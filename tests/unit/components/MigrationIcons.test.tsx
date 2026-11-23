@@ -12,5 +12,10 @@ describe("TickTickIcon", () => {
     expect(svg).toHaveAttribute("aria-hidden", "true");
     expect(svg).toHaveClass("h-9", "w-9");
     expect(svg).toHaveAttribute("viewBox", "0 0 24 24");
+
+    const blueArc = container.querySelector('path[fill="#4772FA"]');
+    const amberCheck = container.querySelector('path[fill="#FFB000"]');
+    expect(blueArc).toBeInTheDocument();
+    expect(amberCheck).toBeInTheDocument();
   });
 });

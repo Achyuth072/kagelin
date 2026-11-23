@@ -27,10 +27,10 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useAuth } from "@/components/AuthProvider";
 import { useUhabitsImport } from "@/lib/hooks/useUhabitsImport";
 import { useIcsImport, ICS_CONFIRM_THRESHOLD } from "@/lib/hooks/useIcsImport";
-import { useTodoistImport } from "@/lib/hooks/useTodoistImport";
 import { useGoogleTasksImport } from "@/lib/hooks/useGoogleTasksImport";
 import { useMicrosoftTasksImport } from "@/lib/hooks/useMicrosoftTasksImport";
 import { useTickTickImport } from "@/lib/hooks/useTickTickImport";
+import { useTodoistImport } from "@/lib/hooks/useTodoistImport";
 import { MicrosoftTasksMigrationView } from "@/components/import/MicrosoftTasksMigrationView";
 import { TickTickMigrationView } from "@/components/import/TickTickMigrationView";
 import {
@@ -40,10 +40,10 @@ import {
 import { cn } from "@/lib/utils";
 import {
   LoopIcon,
-  TodoistIcon,
   GoogleTasksIcon,
   MicrosoftTasksGlyph,
   TickTickIcon,
+  TodoistIcon,
 } from "@/components/settings/MigrationIcons";
 import { MigrationExportTab } from "@/components/settings/MigrationExportTab";
 
@@ -1082,9 +1082,8 @@ export function AppMigrationDialog({
                     <div className="flex items-center gap-3">
                       <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
                       <div>
-                        <p className="text-sm font-medium flex items-center gap-1.5">
+                        <p className="text-sm font-medium">
                           Loop Habit Tracker
-                          <BetaBadge />
                         </p>
                         <p className="text-xs text-muted-foreground lowercase">
                           Import habits from .db backup
@@ -1121,179 +1120,6 @@ export function AppMigrationDialog({
                       aria-label="Upload Loop Habit Tracker database file"
                       onClick={(e) => e.stopPropagation()}
                       onChange={handleImportUhabits}
-                    />
-                  </div>
-
-                  {/* Todoist Card */}
-                  <div
-                    role="button"
-                    tabIndex={isAnyImporting ? -1 : 0}
-                    aria-disabled={isAnyImporting}
-                    aria-label="Import Todoist tasks from CSV or ZIP"
-                    className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
-                      isAnyImporting &&
-                        "opacity-60 cursor-not-allowed pointer-events-none",
-                    )}
-                    onClick={(e) => {
-                      if (
-                        isAnyImporting ||
-                        e.target === todoistInputRef.current
-                      )
-                        return;
-                      trigger("toggle");
-                      todoistInputRef.current?.click();
-                    }}
-                    onKeyDown={(e) => {
-                      if (isAnyImporting) return;
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        trigger("toggle");
-                        todoistInputRef.current?.click();
-                      }
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const file = e.dataTransfer.files?.[0];
-                      if (file) {
-                        trigger("toggle");
-                        void processTodoistFile(file);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <TodoistIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
-                      <div>
-                        <p className="text-sm font-medium flex items-center gap-1.5">
-                          Todoist
-                          <BetaBadge />
-                        </p>
-                        <p className="text-xs text-muted-foreground lowercase">
-                          Import tasks from CSV or ZIP backup
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      tabIndex={-1}
-                      aria-hidden="true"
-                      className={cn(
-                        "h-8 transition-opacity text-brand pointer-events-none",
-                        isImportingTodoist
-                          ? "opacity-100"
-                          : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
-                      )}
-                      disabled={isAnyImporting}
-                    >
-                      {isImportingTodoist ? (
-                        <Loader2
-                          className="h-4 w-4 animate-spin"
-                          strokeWidth={2.25}
-                        />
-                      ) : (
-                        <FileUp className="h-4 w-4" strokeWidth={2.25} />
-                      )}
-                    </Button>
-                    <input
-                      ref={todoistInputRef}
-                      type="file"
-                      accept=".csv,.zip,text/csv,application/zip"
-                      className="hidden"
-                      aria-label="Upload Todoist CSV or ZIP backup file"
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={handleImportTodoist}
-                    />
-                  </div>
-
-                  <div
-                    role="button"
-                    tabIndex={isAnyImporting ? -1 : 0}
-                    aria-disabled={isAnyImporting}
-                    aria-label="Import TickTick tasks from CSV"
-                    className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
-                      isAnyImporting &&
-                        "opacity-60 cursor-not-allowed pointer-events-none",
-                    )}
-                    onClick={(e) => {
-                      if (
-                        isAnyImporting ||
-                        e.target === tickTickInputRef.current
-                      )
-                        return;
-                      trigger("toggle");
-                      tickTickInputRef.current?.click();
-                    }}
-                    onKeyDown={(e) => {
-                      if (isAnyImporting) return;
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        trigger("toggle");
-                        tickTickInputRef.current?.click();
-                      }
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      const file = e.dataTransfer.files?.[0];
-                      if (file) {
-                        trigger("toggle");
-                        void processTickTickFile(file);
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <TickTickIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
-                      <div>
-                        <p className="text-sm font-medium flex items-center gap-1.5">
-                          TickTick
-                          <BetaBadge />
-                        </p>
-                        <p className="text-xs text-muted-foreground lowercase">
-                          Import tasks from backup CSV
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      tabIndex={-1}
-                      aria-hidden="true"
-                      className={cn(
-                        "h-8 transition-opacity text-muted-foreground group-hover:text-foreground pointer-events-none ml-auto shrink-0",
-                        isImportingTickTick
-                          ? "opacity-100"
-                          : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
-                      )}
-                      disabled={isAnyImporting}
-                    >
-                      {isImportingTickTick ? (
-                        <Loader2
-                          className="h-4 w-4 animate-spin"
-                          strokeWidth={2.25}
-                        />
-                      ) : (
-                        <FileUp className="h-4 w-4" strokeWidth={2.25} />
-                      )}
-                    </Button>
-                    <input
-                      ref={tickTickInputRef}
-                      type="file"
-                      accept=".csv,text/csv"
-                      className="hidden"
-                      aria-label="Upload TickTick CSV file"
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={handleImportTickTick}
                     />
                   </div>
 
@@ -1459,6 +1285,179 @@ export function AppMigrationDialog({
                     >
                       <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
                     </Button>
+                  </div>
+
+                  <div
+                    role="button"
+                    tabIndex={isAnyImporting ? -1 : 0}
+                    aria-disabled={isAnyImporting}
+                    aria-label="Import TickTick tasks from CSV"
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      isAnyImporting &&
+                        "opacity-60 cursor-not-allowed pointer-events-none",
+                    )}
+                    onClick={(e) => {
+                      if (
+                        isAnyImporting ||
+                        e.target === tickTickInputRef.current
+                      )
+                        return;
+                      trigger("toggle");
+                      tickTickInputRef.current?.click();
+                    }}
+                    onKeyDown={(e) => {
+                      if (isAnyImporting) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        trigger("toggle");
+                        tickTickInputRef.current?.click();
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        trigger("toggle");
+                        void processTickTickFile(file);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <TickTickIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+                      <div>
+                        <p className="text-sm font-medium flex items-center gap-1.5">
+                          TickTick
+                          <BetaBadge />
+                        </p>
+                        <p className="text-xs text-muted-foreground lowercase">
+                          Import tasks from backup CSV
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      className={cn(
+                        "h-8 transition-opacity text-muted-foreground group-hover:text-foreground pointer-events-none ml-auto shrink-0",
+                        isImportingTickTick
+                          ? "opacity-100"
+                          : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+                      )}
+                      disabled={isAnyImporting}
+                    >
+                      {isImportingTickTick ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          strokeWidth={2.25}
+                        />
+                      ) : (
+                        <FileUp className="h-4 w-4" strokeWidth={2.25} />
+                      )}
+                    </Button>
+                    <input
+                      ref={tickTickInputRef}
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="hidden"
+                      aria-label="Upload TickTick CSV file"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={handleImportTickTick}
+                    />
+                  </div>
+
+                  {/* Todoist Card */}
+                  <div
+                    role="button"
+                    tabIndex={isAnyImporting ? -1 : 0}
+                    aria-disabled={isAnyImporting}
+                    aria-label="Import Todoist tasks from CSV or ZIP"
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      isAnyImporting &&
+                        "opacity-60 cursor-not-allowed pointer-events-none",
+                    )}
+                    onClick={(e) => {
+                      if (
+                        isAnyImporting ||
+                        e.target === todoistInputRef.current
+                      )
+                        return;
+                      trigger("toggle");
+                      todoistInputRef.current?.click();
+                    }}
+                    onKeyDown={(e) => {
+                      if (isAnyImporting) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        trigger("toggle");
+                        todoistInputRef.current?.click();
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        trigger("toggle");
+                        void processTodoistFile(file);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <TodoistIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+                      <div>
+                        <p className="text-sm font-medium flex items-center gap-1.5">
+                          Todoist
+                          <BetaBadge />
+                        </p>
+                        <p className="text-xs text-muted-foreground lowercase">
+                          Import tasks from CSV or ZIP backup
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      className={cn(
+                        "h-8 transition-opacity text-brand pointer-events-none",
+                        isImportingTodoist
+                          ? "opacity-100"
+                          : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+                      )}
+                      disabled={isAnyImporting}
+                    >
+                      {isImportingTodoist ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          strokeWidth={2.25}
+                        />
+                      ) : (
+                        <FileUp className="h-4 w-4" strokeWidth={2.25} />
+                      )}
+                    </Button>
+                    <input
+                      ref={todoistInputRef}
+                      type="file"
+                      accept=".csv,.zip,text/csv,application/zip"
+                      className="hidden"
+                      aria-label="Upload Todoist CSV or ZIP backup file"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={handleImportTodoist}
+                    />
                   </div>
                 </div>
               )}

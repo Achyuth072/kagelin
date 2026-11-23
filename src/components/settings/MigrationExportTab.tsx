@@ -346,9 +346,8 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
             <div className="flex items-center gap-3 min-w-0">
               <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
               <div className="min-w-0">
-                <h3 className="text-sm font-medium flex items-center gap-1.5 truncate">
+                <h3 className="text-sm font-medium truncate">
                   Loop Habit Tracker
-                  <BetaBadge />
                 </h3>
                 <p className="text-xs text-muted-foreground lowercase mt-0.5 truncate">
                   {habitSummary}
