@@ -162,6 +162,7 @@ export async function executeTickTickImport(
         is_completed: task.is_completed,
         completed_at: task.completedAt ?? undefined,
         day_order: task.dayOrder,
+        created_at: task.createdAt ?? undefined,
         _clientId: rootClientIds[index],
       }));
 
@@ -185,13 +186,11 @@ export async function executeTickTickImport(
         };
 
         const subtaskInputs = subtasks.map((task) => {
-          const resolvedParent =
-            resolveParentId(
-              task.tempParentId,
-              rootIdByTempId,
-              mergedRedirects,
-            ) ??
-            (task.originalParentId || undefined);
+          const resolvedParent = resolveParentId(
+            task.tempParentId,
+            rootIdByTempId,
+            mergedRedirects,
+          );
 
           return {
             content: task.content,
@@ -205,6 +204,7 @@ export async function executeTickTickImport(
             is_completed: task.is_completed,
             completed_at: task.completedAt ?? undefined,
             day_order: task.dayOrder,
+            created_at: task.createdAt ?? undefined,
             _clientId: crypto.randomUUID(),
           };
         });

@@ -19,7 +19,7 @@ export function mapPriority(priorityStr?: string | null): 1 | 2 | 3 | 4 {
 
 export function parseTickTickDate(
   dateStr?: string | null,
-  options?: { isAllDay?: boolean },
+  options?: { isAllDay?: boolean; timezone?: string },
 ): string | null {
   if (!dateStr) return null;
   const trimmed = dateStr.trim();
@@ -31,6 +31,19 @@ export function parseTickTickDate(
     if (match) {
       return `${match[1]}T00:00:00.000Z`;
     }
+  }
+
+  const hasOffset = /(?:Z|[+-]\d{2}(?::?\d{2})?)$/i.test(trimmed);
+  if (!hasOffset && options?.timezone) {
+    try {
+      const normalizedWithT = trimmed.includes("T")
+        ? trimmed
+        : trimmed.replace(" ", "T");
+      const d = new Date(normalizedWithT);
+      if (!isNaN(d.getTime())) {
+        return d.toISOString();
+      }
+    } catch {}
   }
 
   const date = new Date(trimmed);
@@ -59,15 +72,17 @@ export function mapTickTickTasks(rows: RawTickTickRow[]): MappedTickTickTask[] {
   for (const row of rows) {
     const tempId = tempIdByTaskId.get(row.taskId)!;
     const isAllDay = row["Is All Day"] === "1";
+    const timezone = (row.Timezone || "").trim();
 
-    const doDate = parseTickTickDate(row["Start Date"], { isAllDay });
-    const dueDate = parseTickTickDate(row["Due Date"], { isAllDay });
+    const doDate = parseTickTickDate(row["Start Date"], { isAllDay, timezone });
+    const dueDate = parseTickTickDate(row["Due Date"], { isAllDay, timezone });
+    const createdAt = parseTickTickDate(row["Created Time"], { timezone });
 
     const priority = mapPriority(row.Priority);
 
     const isStatusCompleted = row.Status === "1" || row.Status === "2";
     const completedAt = isStatusCompleted
-      ? parseTickTickDate(row["Completed Time"])
+      ? parseTickTickDate(row["Completed Time"], { timezone })
       : null;
 
     const rawTitle = (row.Title || "").trim();
@@ -144,6 +159,7 @@ export function mapTickTickTasks(rows: RawTickTickRow[]): MappedTickTickTask[] {
         priority,
         dueDate,
         doDate,
+        createdAt,
         is_completed: isStatusCompleted,
         completedAt,
         recurrence,
@@ -164,6 +180,7 @@ export function mapTickTickTasks(rows: RawTickTickRow[]): MappedTickTickTask[] {
           priority: 4,
           dueDate: null,
           doDate: null,
+          createdAt: step.is_completed ? completedAt : createdAt,
           is_completed: step.is_completed,
           completedAt: step.is_completed ? completedAt : null,
           recurrence: null,
@@ -216,6 +233,7 @@ export function mapTickTickTasks(rows: RawTickTickRow[]): MappedTickTickTask[] {
         priority,
         dueDate,
         doDate,
+        createdAt,
         is_completed: isStatusCompleted,
         completedAt,
         recurrence,

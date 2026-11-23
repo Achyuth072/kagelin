@@ -18,6 +18,40 @@ function normalizeTitle(title: string): string {
   return title.trim().toLowerCase();
 }
 
+function rootFingerprint(
+  projectKey: string,
+  normTitle: string,
+  isCompleted: boolean,
+  date?: string | null,
+): string {
+  const normDate = date ? date.split("T")[0] : "";
+  return `${projectKey}:${normTitle}:${isCompleted}:${normDate}`;
+}
+
+function childFingerprint(
+  parentId: string,
+  normTitle: string,
+  isCompleted: boolean,
+): string {
+  return `${parentId}:${normTitle}:${isCompleted}`;
+}
+
+function recordKeptStep(
+  map: Map<string, Set<string>>,
+  parentId: string,
+  stepKey: string,
+  step: MappedTickTickTask,
+  targetList: MappedTickTickTask[],
+) {
+  let set = map.get(parentId);
+  if (!set) {
+    set = new Set<string>();
+    map.set(parentId, set);
+  }
+  set.add(stepKey);
+  targetList.push(step);
+}
+
 function indexWorkspace(workspace: ExistingWorkspace) {
   const inboxProjectId = workspace.projects.find((p) => p.is_inbox)?.id ?? null;
 
@@ -27,20 +61,34 @@ function indexWorkspace(workspace: ExistingWorkspace) {
   for (const task of workspace.tasks) {
     if (!task.content) continue;
     const normTitle = normalizeTitle(task.content);
+    const isCompleted = Boolean(task.is_completed);
+    const date = task.due_date || task.do_date || null;
 
     if (!task.parent_id) {
       const isInboxTask =
         !task.project_id || task.project_id === inboxProjectId;
       if (isInboxTask) {
-        rootIndex.set(`${INBOX_KEY}:${normTitle}`, task.id);
+        rootIndex.set(
+          rootFingerprint(INBOX_KEY, normTitle, isCompleted, date),
+          task.id,
+        );
         if (inboxProjectId) {
-          rootIndex.set(`${inboxProjectId}:${normTitle}`, task.id);
+          rootIndex.set(
+            rootFingerprint(inboxProjectId, normTitle, isCompleted, date),
+            task.id,
+          );
         }
-      } else {
-        rootIndex.set(`${task.project_id}:${normTitle}`, task.id);
+      } else if (task.project_id) {
+        rootIndex.set(
+          rootFingerprint(task.project_id, normTitle, isCompleted, date),
+          task.id,
+        );
       }
     } else {
-      stepIndex.set(`${task.parent_id}:${normTitle}`, task.id);
+      stepIndex.set(
+        childFingerprint(task.parent_id, normTitle, isCompleted),
+        task.id,
+      );
     }
   }
 
@@ -176,7 +224,7 @@ export function planTickTickImport(
     }
 
     const parentRedirects: Record<string, ParentRedirect> = {};
-    const keptRootTitles = new Map<string, string>();
+    const keptRootFingerprints = new Map<string, string>();
     const keptStepsByParent = new Map<string, Set<string>>();
     const keptRoots: MappedTickTickTask[] = [];
     const keptSteps: MappedTickTickTask[] = [];
@@ -188,12 +236,23 @@ export function planTickTickImport(
 
     for (const root of roots) {
       const normTitle = normalizeTitle(root.content);
+      const isCompleted = root.is_completed;
+      const date = root.dueDate || root.doDate || null;
+      const workspaceKey = projectKey
+        ? rootFingerprint(projectKey, normTitle, isCompleted, date)
+        : null;
 
-      const existingTaskId = projectKey
-        ? rootIndex.get(`${projectKey}:${normTitle}`)
+      const existingTaskId = workspaceKey
+        ? rootIndex.get(workspaceKey)
         : undefined;
 
-      const importedRootTempId = keptRootTitles.get(normTitle);
+      const intraBatchKey = rootFingerprint(
+        group.isInbox ? INBOX_KEY : group.name,
+        normTitle,
+        isCompleted,
+        date,
+      );
+      const importedRootTempId = keptRootFingerprints.get(intraBatchKey);
 
       if (existingTaskId) {
         duplicatesSkipped++;
@@ -212,14 +271,16 @@ export function planTickTickImport(
         parentRedirects[root.tempId] = redirect;
         globalParentRedirects[root.tempId] = redirect;
       } else {
-        keptRootTitles.set(normTitle, root.tempId);
+        keptRootFingerprints.set(intraBatchKey, root.tempId);
         keptRoots.push(root);
       }
     }
 
     for (const step of steps) {
       const normTitle = normalizeTitle(step.content);
+      const isCompleted = step.is_completed;
       const tempParentId = step.tempParentId!;
+      const stepKey = `${normTitle}:${isCompleted}`;
 
       const redirect =
         parentRedirects[tempParentId] ?? globalParentRedirects[tempParentId];
@@ -228,62 +289,60 @@ export function planTickTickImport(
         if (redirect.kind === "existing") {
           const existingParentId = redirect.taskId;
           const isWorkspaceDuplicate = stepIndex.has(
-            `${existingParentId}:${normTitle}`,
+            childFingerprint(existingParentId, normTitle, isCompleted),
           );
           const isImportDuplicate = keptStepsByParent
             .get(existingParentId)
-            ?.has(normTitle);
+            ?.has(stepKey);
 
           if (isWorkspaceDuplicate || isImportDuplicate) {
             duplicatesSkipped++;
           } else {
             subtasksReassigned++;
             step.originalParentId = existingParentId;
-
-            let set = keptStepsByParent.get(existingParentId);
-            if (!set) {
-              set = new Set<string>();
-              keptStepsByParent.set(existingParentId, set);
-            }
-            set.add(normTitle);
-            keptSteps.push(step);
+            recordKeptStep(
+              keptStepsByParent,
+              existingParentId,
+              stepKey,
+              step,
+              keptSteps,
+            );
           }
         } else if (redirect.kind === "imported") {
           const targetTempId = redirect.tempId;
           const isImportDuplicate = keptStepsByParent
             .get(targetTempId)
-            ?.has(normTitle);
+            ?.has(stepKey);
 
           if (isImportDuplicate) {
             duplicatesSkipped++;
           } else {
             subtasksReassigned++;
             step.tempParentId = targetTempId;
-
-            let set = keptStepsByParent.get(targetTempId);
-            if (!set) {
-              set = new Set<string>();
-              keptStepsByParent.set(targetTempId, set);
-            }
-            set.add(normTitle);
-            keptSteps.push(step);
+            recordKeptStep(
+              keptStepsByParent,
+              targetTempId,
+              stepKey,
+              step,
+              keptSteps,
+            );
           }
         }
       } else {
         const isImportDuplicate = keptStepsByParent
           .get(tempParentId)
-          ?.has(normTitle);
+          ?.has(stepKey);
 
         if (isImportDuplicate) {
           duplicatesSkipped++;
         } else {
-          let set = keptStepsByParent.get(tempParentId);
-          if (!set) {
-            set = new Set<string>();
-            keptStepsByParent.set(tempParentId, set);
-          }
-          set.add(normTitle);
-          keptSteps.push(step);
+          recordKeptStep(
+            keptStepsByParent,
+            tempParentId,
+            stepKey,
+            step,
+            keptSteps,
+          );
         }
       }
     }

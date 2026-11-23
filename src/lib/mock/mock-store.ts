@@ -643,6 +643,7 @@ class MockStore {
     > & {
       content: string;
       id?: string;
+      created_at?: string;
     },
   ): Task {
     const [newTask] = this.addTasks([task]);
@@ -655,6 +656,7 @@ class MockStore {
       Partial<Omit<Task, "id" | "user_id" | "created_at" | "updated_at">> & {
         content: string;
         id?: string;
+        created_at?: string;
       }
     >,
   ): Task[] {
@@ -683,7 +685,7 @@ class MockStore {
         task.id ||
         `guest-task-${Date.now()}-${index}-${Math.random().toString(36).substr(2, 9)}`,
       user_id: "guest",
-      created_at: now,
+      created_at: task.created_at || now,
       updated_at: now,
     }));
 

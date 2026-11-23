@@ -42,12 +42,12 @@ test.describe("TickTick Migration E2E (Guest Mode)", () => {
     await openAppMigrationDialog(page);
 
     const tickTickCard = page.getByRole("button", {
-      name: "Import TickTick tasks from backup CSV",
+      name: "Import TickTick tasks from CSV",
     });
     await expect(tickTickCard).toBeVisible();
     await expect(tickTickCard.getByText("TickTick")).toBeVisible();
 
-    const fileInput = page.getByLabel("Upload TickTick backup CSV file");
+    const fileInput = page.getByLabel("Upload TickTick CSV file");
     await fileInput.setInputFiles({
       name: "TickTickBackup.csv",
       mimeType: "text/csv",
@@ -88,7 +88,7 @@ test.describe("TickTick Migration E2E (Guest Mode)", () => {
   }) => {
     await openAppMigrationDialog(page);
 
-    const fileInput = page.getByLabel("Upload TickTick backup CSV file");
+    const fileInput = page.getByLabel("Upload TickTick CSV file");
     await fileInput.setInputFiles({
       name: "TickTickBackup.csv",
       mimeType: "text/csv",

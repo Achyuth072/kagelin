@@ -19,6 +19,7 @@ function createMockTask(
     priority: overrides.priority ?? 4,
     dueDate: overrides.dueDate ?? null,
     doDate: overrides.doDate ?? null,
+    createdAt: overrides.createdAt ?? null,
     is_completed: overrides.is_completed ?? false,
     completedAt: overrides.completedAt ?? null,
     recurrence: overrides.recurrence ?? null,
@@ -231,6 +232,44 @@ describe("planTickTickImport (Planning & Deduplication Engine)", () => {
       (t) => t.tempId === "step-for-root-2",
     );
     expect(keptStep?.tempParentId).toBe("root-1");
+  });
+
+  it("distinguishes same-titled tasks with different completion status or dates in deduplication fingerprint", () => {
+    const workspace: ExistingWorkspace = {
+      projects: [{ id: "proj-work", name: "Work", is_inbox: false }],
+      tasks: [
+        {
+          id: "task-completed",
+          content: "Weekly review",
+          project_id: "proj-work",
+          parent_id: null,
+          is_completed: true,
+          due_date: "2026-11-20T00:00:00.000Z",
+        },
+      ],
+    };
+
+    const tasks: MappedTickTickTask[] = [
+      createMockTask({
+        tempId: "task-active",
+        content: "Weekly review",
+        listName: "Work",
+        is_completed: false,
+        dueDate: "2026-11-20T00:00:00.000Z",
+      }),
+      createMockTask({
+        tempId: "task-next-week",
+        content: "Weekly review",
+        listName: "Work",
+        is_completed: false,
+        dueDate: "2026-11-27T00:00:00.000Z",
+      }),
+    ];
+
+    const preview = planTickTickImport(tasks, workspace);
+
+    expect(preview.duplicateTasksSkipped).toBe(0);
+    expect(preview.totalTasks).toBe(2);
   });
 
   it("enforces Guest mode quota limits when task count exceeds 500, bounding to active and recent completed tasks", () => {

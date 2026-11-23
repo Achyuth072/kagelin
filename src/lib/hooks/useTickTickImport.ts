@@ -125,7 +125,9 @@ export function useTickTickImport() {
       });
 
       const msg =
-        err instanceof Error ? err.message : "Failed to parse TickTick backup";
+        err instanceof Error
+          ? err.message
+          : "Failed to parse TickTick CSV file";
       notify.error(msg);
       trigger("thud");
       setError(msg);

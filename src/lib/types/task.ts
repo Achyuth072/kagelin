@@ -57,6 +57,7 @@ export interface CreateTaskInput {
   is_completed?: boolean;
   completed_at?: string | null;
   day_order?: number;
+  created_at?: string;
 }
 
 export interface UpdateTaskInput {

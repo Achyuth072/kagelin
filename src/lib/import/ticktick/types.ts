@@ -72,6 +72,7 @@ export interface MappedTickTickTask {
   priority: 1 | 2 | 3 | 4;
   dueDate: string | null;
   doDate: string | null;
+  createdAt: string | null;
   is_completed: boolean;
   completedAt: string | null;
   recurrence: RecurrenceRule | null;

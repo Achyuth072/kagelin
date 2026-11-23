@@ -213,11 +213,11 @@ describe("AppMigrationDialog (TickTick Integration)", () => {
     expect(screen.getByText("TickTick")).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: "Import TickTick tasks from backup CSV",
+        name: "Import TickTick tasks from CSV",
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByLabelText("Upload TickTick backup CSV file"),
+      screen.getByLabelText("Upload TickTick CSV file"),
     ).toBeInTheDocument();
   });
 
@@ -225,7 +225,7 @@ describe("AppMigrationDialog (TickTick Integration)", () => {
     render(<AppMigrationDialog open onOpenChange={vi.fn()} />);
 
     const fileInput = screen.getByLabelText(
-      "Upload TickTick backup CSV file",
+      "Upload TickTick CSV file",
     ) as HTMLInputElement;
     const testFile = new File(["dummy,csv"], "TickTickBackup.csv", {
       type: "text/csv",

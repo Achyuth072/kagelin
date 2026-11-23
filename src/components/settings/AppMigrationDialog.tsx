@@ -32,6 +32,7 @@ import { useGoogleTasksImport } from "@/lib/hooks/useGoogleTasksImport";
 import { useMicrosoftTasksImport } from "@/lib/hooks/useMicrosoftTasksImport";
 import { useTickTickImport } from "@/lib/hooks/useTickTickImport";
 import { MicrosoftTasksMigrationView } from "@/components/import/MicrosoftTasksMigrationView";
+import { TickTickMigrationView } from "@/components/import/TickTickMigrationView";
 import {
   isArchivePreview,
   type TodoistProjectStatus,
@@ -354,16 +355,6 @@ export function AppMigrationDialog({
   }
 
   if (tickTickPreview) {
-    const completedTasksCount = tickTickPreview.completedTasksCount;
-    const importableTasksCount = includeCompletedTickTick
-      ? tickTickPreview.totalTasks
-      : tickTickPreview.totalTasks - completedTasksCount;
-
-    const dateRange = formatDateRange(
-      tickTickPreview.earliestDate,
-      tickTickPreview.latestDate,
-    );
-
     return (
       <ResponsiveDialog
         open={open}
@@ -373,149 +364,14 @@ export function AppMigrationDialog({
         }}
       >
         <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
-          <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
-            <ResponsiveDialogTitle className="type-h2">
-              Confirm TickTick Import
-            </ResponsiveDialogTitle>
-            <ResponsiveDialogDescription>
-              Review detected tasks before importing into Kagelin.
-            </ResponsiveDialogDescription>
-          </ResponsiveDialogHeader>
-
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pt-2">
-            <dl className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Total tasks found</dt>
-                <dd className="font-medium">{tickTickPreview.totalTasks}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Top-level tasks</dt>
-                <dd>{tickTickPreview.rootTasksCount}</dd>
-              </div>
-              {tickTickPreview.subtasksCount > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Steps</dt>
-                  <dd>{tickTickPreview.subtasksCount}</dd>
-                </div>
-              )}
-              {tickTickPreview.recurringCount > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Recurring tasks</dt>
-                  <dd>{tickTickPreview.recurringCount}</dd>
-                </div>
-              )}
-              {completedTasksCount > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Completed tasks</dt>
-                  <dd>{completedTasksCount}</dd>
-                </div>
-              )}
-              {tickTickPreview.duplicateTasksSkipped > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Duplicates skipped</dt>
-                  <dd>{tickTickPreview.duplicateTasksSkipped}</dd>
-                </div>
-              )}
-              {tickTickPreview.subtasksReassigned > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">
-                    Steps re-attached to existing tasks
-                  </dt>
-                  <dd>{tickTickPreview.subtasksReassigned}</dd>
-                </div>
-              )}
-              {dateRange && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Scheduled range</dt>
-                  <dd>{dateRange}</dd>
-                </div>
-              )}
-              <div className="flex justify-between">
-                <dt className="text-muted-foreground">Projects detected</dt>
-                <dd>{tickTickPreview.projects.length}</dd>
-              </div>
-              {tickTickPreview.newProjectCount > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">New projects</dt>
-                  <dd>{tickTickPreview.newProjectCount}</dd>
-                </div>
-              )}
-              {tickTickPreview.mergedProjectCount > 0 && (
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">
-                    Merged into existing
-                  </dt>
-                  <dd>{tickTickPreview.mergedProjectCount}</dd>
-                </div>
-              )}
-              {completedTasksCount > 0 && (
-                <div className="flex items-center justify-between border-t border-border pt-2">
-                  <label
-                    htmlFor="ticktick-include-completed"
-                    className="cursor-pointer text-sm text-muted-foreground"
-                  >
-                    Include completed tasks ({completedTasksCount})
-                  </label>
-                  <input
-                    id="ticktick-include-completed"
-                    type="checkbox"
-                    checked={includeCompletedTickTick}
-                    onChange={(e) =>
-                      setIncludeCompletedTickTick(e.target.checked)
-                    }
-                    className="h-4 w-4 rounded border-border"
-                    disabled={isImportingTickTick}
-                  />
-                </div>
-              )}
-            </dl>
-
-            {tickTickPreview.projects.length > 0 && (
-              <div className="mt-4 space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Detected projects
-                </p>
-                <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
-                  {tickTickPreview.projects.map((project) => (
-                    <li
-                      key={`${project.status}:${project.name}`}
-                      className="flex items-center justify-between gap-3"
-                    >
-                      <span className="truncate">{project.name}</span>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {project.status === "inbox"
-                          ? "Inbox"
-                          : project.status === "merged"
-                            ? "Merge"
-                            : "New"}{" "}
-                        · {project.tasks.length} tasks
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/40 shrink-0">
-            <Button
-              variant="ghost"
-              onClick={handleCancelTickTickImport}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmTickTickImport}
-              disabled={isImportingTickTick}
-            >
-              {isImportingTickTick ? (
-                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
-              ) : (
-                `Import ${importableTasksCount} tasks`
-              )}
-            </Button>
-          </div>
+          <TickTickMigrationView
+            preview={tickTickPreview}
+            isImporting={isImportingTickTick}
+            includeCompleted={includeCompletedTickTick}
+            onIncludeCompletedChange={setIncludeCompletedTickTick}
+            onCommit={handleConfirmTickTickImport}
+            onCancel={handleCancelTickTickImport}
+          />
         </ResponsiveDialogContent>
       </ResponsiveDialog>
     );
@@ -1359,7 +1215,7 @@ export function AppMigrationDialog({
                     role="button"
                     tabIndex={isAnyImporting ? -1 : 0}
                     aria-disabled={isAnyImporting}
-                    aria-label="Import TickTick tasks from backup CSV"
+                    aria-label="Import TickTick tasks from CSV"
                     className={cn(
                       "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
                       isAnyImporting &&
@@ -1435,7 +1291,7 @@ export function AppMigrationDialog({
                       type="file"
                       accept=".csv,text/csv"
                       className="hidden"
-                      aria-label="Upload TickTick backup CSV file"
+                      aria-label="Upload TickTick CSV file"
                       onClick={(e) => e.stopPropagation()}
                       onChange={handleImportTickTick}
                     />

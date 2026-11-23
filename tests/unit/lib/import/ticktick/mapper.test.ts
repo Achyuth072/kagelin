@@ -122,6 +122,13 @@ describe("TickTick Date Normalization (parseTickTickDate)", () => {
     expect(
       parseTickTickDate("2026-11-25T09:00:00+0000", { isAllDay: false }),
     ).toBe("2026-11-25T09:00:00.000Z");
+
+    expect(
+      parseTickTickDate("2026-11-25T09:00:00", {
+        isAllDay: false,
+        timezone: "UTC",
+      }),
+    ).toBeDefined();
   });
 
   it("returns null for empty or invalid date strings", () => {
@@ -159,6 +166,7 @@ describe("TickTick Tasks Mapper (mapTickTickTasks)", () => {
     expect(task.dueDate).toBe("2026-11-25T11:00:00.000Z");
     expect(task.is_completed).toBe(true);
     expect(task.completedAt).toBe("2026-11-25T10:30:00.000Z");
+    expect(task.createdAt).toBe("2026-11-20T10:00:00.000Z");
     expect(task.description).toBe("#tech #core");
     expect(task.dayOrder).toBe(2);
     expect(task.folderName).toBe("Engineering");

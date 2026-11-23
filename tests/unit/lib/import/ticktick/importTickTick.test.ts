@@ -121,6 +121,7 @@ describe("executeTickTickImport & rollbackTickTickImport (Execution Engine)", ()
               priority: 1,
               dueDate: "2026-11-25T00:00:00.000Z",
               doDate: null,
+              createdAt: "2026-11-20T10:00:00.000Z",
               is_completed: false,
               completedAt: null,
               recurrence: null,
@@ -139,6 +140,7 @@ describe("executeTickTickImport & rollbackTickTickImport (Execution Engine)", ()
               priority: 4,
               dueDate: null,
               doDate: null,
+              createdAt: "2026-11-20T10:05:00.000Z",
               is_completed: false,
               completedAt: null,
               recurrence: null,
@@ -189,6 +191,8 @@ describe("executeTickTickImport & rollbackTickTickImport (Execution Engine)", ()
       .calls[1][0];
     const rootCallArgs = vi.mocked(taskMutations.createMany).mock.calls[0][0];
     expect(subtaskCallArgs[0].parent_id).toBe(rootCallArgs[0]._clientId);
+    expect(rootCallArgs[0].created_at).toBe("2026-11-20T10:00:00.000Z");
+    expect(subtaskCallArgs[0].created_at).toBe("2026-11-20T10:05:00.000Z");
   });
 
   it("handles parentRedirects to existing Kagelin tasks for re-attached child steps", async () => {
@@ -227,6 +231,7 @@ describe("executeTickTickImport & rollbackTickTickImport (Execution Engine)", ()
               priority: 4,
               dueDate: null,
               doDate: null,
+              createdAt: null,
               is_completed: false,
               completedAt: null,
               recurrence: null,
@@ -294,6 +299,7 @@ describe("executeTickTickImport & rollbackTickTickImport (Execution Engine)", ()
               priority: 4,
               dueDate: null,
               doDate: null,
+              createdAt: null,
               is_completed: false,
               completedAt: null,
               recurrence: null,
@@ -312,6 +318,7 @@ describe("executeTickTickImport & rollbackTickTickImport (Execution Engine)", ()
               priority: 4,
               dueDate: null,
               doDate: null,
+              createdAt: "2026-11-20T00:00:00.000Z",
               is_completed: true,
               completedAt: "2026-11-20T00:00:00.000Z",
               recurrence: null,
@@ -400,6 +407,7 @@ describe("executeTickTickImport & rollbackTickTickImport (Execution Engine)", ()
               priority: 4,
               dueDate: null,
               doDate: null,
+              createdAt: null,
               is_completed: false,
               completedAt: null,
               recurrence: null,
@@ -418,6 +426,7 @@ describe("executeTickTickImport & rollbackTickTickImport (Execution Engine)", ()
               priority: 4,
               dueDate: null,
               doDate: null,
+              createdAt: null,
               is_completed: false,
               completedAt: null,
               recurrence: null,
@@ -481,6 +490,7 @@ describe("executeTickTickImport & rollbackTickTickImport (Execution Engine)", ()
               priority: 4,
               dueDate: null,
               doDate: null,
+              createdAt: null,
               is_completed: false,
               completedAt: null,
               recurrence: null,
@@ -513,5 +523,63 @@ describe("executeTickTickImport & rollbackTickTickImport (Execution Engine)", ()
     expect(success).toBe(true);
     expect(taskMutations.deleteMany).toHaveBeenCalledWith(["task-2", "task-1"]);
     expect(projectMutations.deleteMany).toHaveBeenCalledWith(["proj-1"]);
+  });
+
+  it("does not fallback to raw originalParentId when subtask parent is unresolvable", async () => {
+    const preview: TickTickImportPreview = {
+      totalTasks: 1,
+      rootTasksCount: 0,
+      subtasksCount: 1,
+      completedTasksCount: 0,
+      recurringCount: 0,
+      earliestDate: null,
+      latestDate: null,
+      projects: [
+        {
+          name: "Inbox",
+          folderName: null,
+          status: "inbox",
+          isInbox: true,
+          existingProjectId: null,
+          color: "#000000",
+          duplicatesSkipped: 0,
+          parentRedirects: {},
+          subtasksReassigned: 0,
+          tasks: [
+            {
+              tempId: "orphan-step",
+              tempParentId: "non-existent-temp-parent",
+              originalTaskId: "tt-step-orphan",
+              originalParentId: "tt-parent-raw-string-12345",
+              content: "Orphaned Step",
+              description: null,
+              priority: 4,
+              dueDate: null,
+              doDate: null,
+              createdAt: null,
+              is_completed: false,
+              completedAt: null,
+              recurrence: null,
+              listName: "Inbox",
+              folderName: null,
+              dayOrder: 1,
+              originalDepth: 1,
+            },
+          ],
+        },
+      ],
+      parentRedirects: {},
+      duplicateTasksSkipped: 0,
+      subtasksReassigned: 0,
+      newProjectCount: 0,
+      mergedProjectCount: 0,
+      isQuotaLimited: false,
+    };
+
+    await executeTickTickImport(preview);
+
+    const callArgs = vi.mocked(taskMutations.createMany).mock.calls[0][0];
+    expect(callArgs[0].parent_id).toBeUndefined();
+    expect(callArgs[0].parent_id).not.toBe("tt-parent-raw-string-12345");
   });
 });

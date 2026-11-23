@@ -88,6 +88,7 @@ export const taskMutations = {
           is_completed: input.is_completed ?? false,
           completed_at: input.completed_at || null,
           day_order: input.day_order,
+          created_at: input.created_at,
           google_event_id: null,
           google_etag: null,
         })),
@@ -129,6 +130,7 @@ export const taskMutations = {
       completed_at: input.completed_at || null,
       day_order:
         input.day_order !== undefined ? input.day_order : firstDayOrder + index,
+      ...(input.created_at ? { created_at: input.created_at } : {}),
     }));
 
     const { data, error } = await supabase.from("tasks").insert(rows).select();
