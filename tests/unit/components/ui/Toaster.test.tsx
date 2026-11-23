@@ -102,6 +102,16 @@ describe("Toaster component", () => {
     expect(classNames?.closeButton).not.toContain("-mr-");
     expect(classNames?.closeButton).toContain("transition-seijaku-fast");
 
+    expect(classNames?.icon).toContain("relative");
+    expect(classNames?.icon).toContain("flex");
+    expect(classNames?.icon).toContain("size-5");
+    expect(classNames?.icon).toContain("items-center");
+    expect(classNames?.icon).toContain("justify-center");
+    expect(classNames?.icon).not.toContain(
+      "[&>.sonner-loading-wrapper]:relative",
+    );
+    expect(classNames?.icon).toContain("[&>.sonner-loading-wrapper]:absolute");
+
     const closeIcon = lastCall?.icons?.close as React.ReactElement<{
       className?: string;
       strokeWidth?: number;
