@@ -80,6 +80,18 @@ vi.mock("@/lib/hooks/useMicrosoftTasksImport", () => ({
   }),
 }));
 
+vi.mock("@/lib/hooks/useTickTickImport", () => ({
+  useTickTickImport: () => ({
+    prepareImport: vi.fn(),
+    commitImport: vi.fn(),
+    cancelImport: vi.fn(),
+    preview: null,
+    state: "idle",
+    isImporting: false,
+    error: null,
+  }),
+}));
+
 describe("AppMigrationDialog File Import Keyboard Accessibility", () => {
   beforeEach(() => {
     vi.clearAllMocks();

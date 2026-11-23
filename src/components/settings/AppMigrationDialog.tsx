@@ -30,6 +30,7 @@ import { useIcsImport, ICS_CONFIRM_THRESHOLD } from "@/lib/hooks/useIcsImport";
 import { useTodoistImport } from "@/lib/hooks/useTodoistImport";
 import { useGoogleTasksImport } from "@/lib/hooks/useGoogleTasksImport";
 import { useMicrosoftTasksImport } from "@/lib/hooks/useMicrosoftTasksImport";
+import { useTickTickImport } from "@/lib/hooks/useTickTickImport";
 import { MicrosoftTasksMigrationView } from "@/components/import/MicrosoftTasksMigrationView";
 import {
   isArchivePreview,
@@ -41,6 +42,7 @@ import {
   TodoistIcon,
   GoogleTasksIcon,
   MicrosoftTasksGlyph,
+  TickTickIcon,
 } from "@/components/settings/MigrationIcons";
 import { MigrationExportTab } from "@/components/settings/MigrationExportTab";
 
@@ -89,6 +91,9 @@ export function AppMigrationDialog({
   const icsInputRef = useRef<HTMLInputElement>(null);
   const todoistInputRef = useRef<HTMLInputElement>(null);
   const googleTasksInputRef = useRef<HTMLInputElement>(null);
+  const tickTickInputRef = useRef<HTMLInputElement>(null);
+  const [includeCompletedTickTick, setIncludeCompletedTickTick] =
+    useState(true);
   const { trigger } = useHaptic();
   const { isGuestMode } = useAuth();
 
@@ -134,6 +139,13 @@ export function AppMigrationDialog({
     state: microsoftTasksState,
     isImporting: isImportingMicrosoftTasks,
   } = useMicrosoftTasksImport();
+  const {
+    prepareImport: prepareTickTickImport,
+    commitImport: commitTickTickImport,
+    cancelImport: cancelTickTickImport,
+    preview: tickTickPreview,
+    isImporting: isImportingTickTick,
+  } = useTickTickImport();
 
   const handleTabChange = (val: string) => {
     trigger("toggle");
@@ -253,6 +265,35 @@ export function AppMigrationDialog({
     cancelGoogleTasksImport();
   };
 
+  const processTickTickFile = async (file: File) => {
+    await prepareTickTickImport(file);
+    if (tickTickInputRef.current) tickTickInputRef.current.value = "";
+  };
+
+  const handleImportTickTick = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processTickTickFile(file);
+  };
+
+  const handleConfirmTickTickImport = async () => {
+    trigger("toggle");
+    const success = await commitTickTickImport({
+      includeCompleted: includeCompletedTickTick,
+    });
+    if (success) {
+      onOpenChange(false);
+      router.push("/?project=all");
+    }
+  };
+
+  const handleCancelTickTickImport = () => {
+    trigger("tick");
+    cancelTickTickImport();
+  };
+
   useEffect(() => {
     if (googleTasksPreview && !open) {
       onOpenChange(true);
@@ -265,12 +306,19 @@ export function AppMigrationDialog({
     }
   }, [microsoftTasksPreview, open, onOpenChange]);
 
+  useEffect(() => {
+    if (tickTickPreview && !open) {
+      onOpenChange(true);
+    }
+  }, [tickTickPreview, open, onOpenChange]);
+
   const isAnyImporting =
     isImportingUhabits ||
     isImportingIcs ||
     isImportingTodoist ||
     isImportingGoogleTasks ||
-    isImportingMicrosoftTasks;
+    isImportingMicrosoftTasks ||
+    isImportingTickTick;
 
   if (microsoftTasksPreview) {
     return (
@@ -300,6 +348,174 @@ export function AppMigrationDialog({
               onOpenChange(false);
             }}
           />
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+    );
+  }
+
+  if (tickTickPreview) {
+    const completedTasksCount = tickTickPreview.completedTasksCount;
+    const importableTasksCount = includeCompletedTickTick
+      ? tickTickPreview.totalTasks
+      : tickTickPreview.totalTasks - completedTasksCount;
+
+    const dateRange = formatDateRange(
+      tickTickPreview.earliestDate,
+      tickTickPreview.latestDate,
+    );
+
+    return (
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next) handleCancelTickTickImport();
+          onOpenChange(next);
+        }}
+      >
+        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+          <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
+            <ResponsiveDialogTitle className="type-h2">
+              Confirm TickTick Import
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              Review detected tasks before importing into Kagelin.
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pt-2">
+            <dl className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Total tasks found</dt>
+                <dd className="font-medium">{tickTickPreview.totalTasks}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Top-level tasks</dt>
+                <dd>{tickTickPreview.rootTasksCount}</dd>
+              </div>
+              {tickTickPreview.subtasksCount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Steps</dt>
+                  <dd>{tickTickPreview.subtasksCount}</dd>
+                </div>
+              )}
+              {tickTickPreview.recurringCount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Recurring tasks</dt>
+                  <dd>{tickTickPreview.recurringCount}</dd>
+                </div>
+              )}
+              {completedTasksCount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Completed tasks</dt>
+                  <dd>{completedTasksCount}</dd>
+                </div>
+              )}
+              {tickTickPreview.duplicateTasksSkipped > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Duplicates skipped</dt>
+                  <dd>{tickTickPreview.duplicateTasksSkipped}</dd>
+                </div>
+              )}
+              {tickTickPreview.subtasksReassigned > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">
+                    Steps re-attached to existing tasks
+                  </dt>
+                  <dd>{tickTickPreview.subtasksReassigned}</dd>
+                </div>
+              )}
+              {dateRange && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">Scheduled range</dt>
+                  <dd>{dateRange}</dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Projects detected</dt>
+                <dd>{tickTickPreview.projects.length}</dd>
+              </div>
+              {tickTickPreview.newProjectCount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">New projects</dt>
+                  <dd>{tickTickPreview.newProjectCount}</dd>
+                </div>
+              )}
+              {tickTickPreview.mergedProjectCount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground">
+                    Merged into existing
+                  </dt>
+                  <dd>{tickTickPreview.mergedProjectCount}</dd>
+                </div>
+              )}
+              {completedTasksCount > 0 && (
+                <div className="flex items-center justify-between border-t border-border pt-2">
+                  <label
+                    htmlFor="ticktick-include-completed"
+                    className="cursor-pointer text-sm text-muted-foreground"
+                  >
+                    Include completed tasks ({completedTasksCount})
+                  </label>
+                  <input
+                    id="ticktick-include-completed"
+                    type="checkbox"
+                    checked={includeCompletedTickTick}
+                    onChange={(e) =>
+                      setIncludeCompletedTickTick(e.target.checked)
+                    }
+                    className="h-4 w-4 rounded border-border"
+                    disabled={isImportingTickTick}
+                  />
+                </div>
+              )}
+            </dl>
+
+            {tickTickPreview.projects.length > 0 && (
+              <div className="mt-4 space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Detected projects
+                </p>
+                <ul className="max-h-40 space-y-1 overflow-y-auto text-sm">
+                  {tickTickPreview.projects.map((project) => (
+                    <li
+                      key={`${project.status}:${project.name}`}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span className="truncate">{project.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {project.status === "inbox"
+                          ? "Inbox"
+                          : project.status === "merged"
+                            ? "Merge"
+                            : "New"}{" "}
+                        · {project.tasks.length} tasks
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/40 shrink-0">
+            <Button
+              variant="ghost"
+              onClick={handleCancelTickTickImport}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmTickTickImport}
+              disabled={isImportingTickTick}
+            >
+              {isImportingTickTick ? (
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+              ) : (
+                `Import ${importableTasksCount} tasks`
+              )}
+            </Button>
+          </div>
         </ResponsiveDialogContent>
       </ResponsiveDialog>
     );
@@ -1136,6 +1352,92 @@ export function AppMigrationDialog({
                       aria-label="Upload Todoist CSV or ZIP backup file"
                       onClick={(e) => e.stopPropagation()}
                       onChange={handleImportTodoist}
+                    />
+                  </div>
+
+                  <div
+                    role="button"
+                    tabIndex={isAnyImporting ? -1 : 0}
+                    aria-disabled={isAnyImporting}
+                    aria-label="Import TickTick tasks from backup CSV"
+                    className={cn(
+                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      isAnyImporting &&
+                        "opacity-60 cursor-not-allowed pointer-events-none",
+                    )}
+                    onClick={(e) => {
+                      if (
+                        isAnyImporting ||
+                        e.target === tickTickInputRef.current
+                      )
+                        return;
+                      trigger("toggle");
+                      tickTickInputRef.current?.click();
+                    }}
+                    onKeyDown={(e) => {
+                      if (isAnyImporting) return;
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        trigger("toggle");
+                        tickTickInputRef.current?.click();
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        trigger("toggle");
+                        void processTickTickFile(file);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <TickTickIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+                      <div>
+                        <p className="text-sm font-medium flex items-center gap-1.5">
+                          TickTick
+                          <BetaBadge />
+                        </p>
+                        <p className="text-xs text-muted-foreground lowercase">
+                          Import tasks from backup CSV
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      className={cn(
+                        "h-8 transition-opacity text-muted-foreground group-hover:text-foreground pointer-events-none ml-auto shrink-0",
+                        isImportingTickTick
+                          ? "opacity-100"
+                          : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+                      )}
+                      disabled={isAnyImporting}
+                    >
+                      {isImportingTickTick ? (
+                        <Loader2
+                          className="h-4 w-4 animate-spin"
+                          strokeWidth={2.25}
+                        />
+                      ) : (
+                        <FileUp className="h-4 w-4" strokeWidth={2.25} />
+                      )}
+                    </Button>
+                    <input
+                      ref={tickTickInputRef}
+                      type="file"
+                      accept=".csv,text/csv"
+                      className="hidden"
+                      aria-label="Upload TickTick backup CSV file"
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={handleImportTickTick}
                     />
                   </div>
 

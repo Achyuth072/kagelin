@@ -26,6 +26,9 @@ const {
   prepareMicrosoftFileImportMock,
   commitMicrosoftTasksImportMock,
   cancelMicrosoftTasksImportMock,
+  prepareTickTickImportMock,
+  commitTickTickImportMock,
+  cancelTickTickImportMock,
 } = vi.hoisted(() => ({
   triggerMock: vi.fn(),
   prepareImportMock: vi.fn(),
@@ -42,6 +45,9 @@ const {
   prepareMicrosoftFileImportMock: vi.fn(),
   commitMicrosoftTasksImportMock: vi.fn(),
   cancelMicrosoftTasksImportMock: vi.fn(),
+  prepareTickTickImportMock: vi.fn(),
+  commitTickTickImportMock: vi.fn(),
+  cancelTickTickImportMock: vi.fn(),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -202,15 +208,40 @@ vi.mock("@/lib/hooks/useMicrosoftTasksImport", () => ({
   },
 }));
 
+let mockTickTickPreview: unknown = null;
+
+vi.mock("@/lib/hooks/useTickTickImport", () => ({
+  useTickTickImport: () => {
+    return {
+      prepareImport: async (file: File) => {
+        return prepareTickTickImportMock(file);
+      },
+      commitImport: async (options?: { includeCompleted?: boolean }) => {
+        return commitTickTickImportMock(options);
+      },
+      cancelImport: () => {
+        cancelTickTickImportMock();
+      },
+      preview: mockTickTickPreview,
+      state: "idle",
+      isImporting: false,
+      error: null,
+      currentFileName: "TickTickBackup.csv",
+    };
+  },
+}));
+
 describe("AppMigrationDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGoogleTasksPreview = null;
     mockMicrosoftTasksPreview = null;
+    mockTickTickPreview = null;
     mockIsGuestMode = false;
     commitImportMock.mockResolvedValue(true);
     commitGoogleTasksImportMock.mockResolvedValue(true);
     commitMicrosoftTasksImportMock.mockResolvedValue(true);
+    commitTickTickImportMock.mockResolvedValue(true);
   });
 
   it("exports ImportDialog as backwards-compatible alias", () => {

@@ -57,6 +57,18 @@ vi.mock("@/lib/hooks/useMicrosoftTasksImport", () => ({
   }),
 }));
 
+vi.mock("@/lib/hooks/useTickTickImport", () => ({
+  useTickTickImport: () => ({
+    prepareImport: vi.fn(),
+    commitImport: vi.fn(),
+    cancelImport: vi.fn(),
+    preview: null,
+    state: "idle",
+    isImporting: false,
+    error: null,
+  }),
+}));
+
 vi.mock("@/lib/hooks/useTodoistImport", () => {
   return {
     useTodoistImport: () => {
