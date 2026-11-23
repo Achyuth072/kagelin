@@ -330,6 +330,7 @@ describe("TaskList drop race condition (residual snap-back)", () => {
         startHereStates: {},
         setStartHereState: vi.fn(),
         activeDialogCount: 0,
+        openDialogIds: {},
         registerOpenDialog: vi.fn(),
       }),
     );

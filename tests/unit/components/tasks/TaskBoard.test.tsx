@@ -9,6 +9,7 @@ import {
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import TaskList from "@/components/tasks/TaskList";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { useUiStore } from "@/lib/store/uiStore";
 import type { Task } from "@/lib/types/task";
 
@@ -338,6 +339,63 @@ describe("TaskBoard Overlay Drawer and Architecture Consolidation", () => {
       expect(scrollContainer).toHaveClass("w-full");
       expect(screen.getByTestId("board-overlay-drawer")).toBeInTheDocument();
     });
+  });
+
+  it("TB-05c: Inspect mode toggle and task selection cannot trigger split view while a dialog is active", async () => {
+    renderTaskBoard();
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Task Alpha")[0]).toBeInTheDocument();
+    });
+
+    // Select Task Alpha to open overlay drawer
+    act(() => {
+      fireEvent.click(screen.getAllByText("Task Alpha")[0]);
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("board-overlay-drawer")).toBeInTheDocument();
+    });
+
+    const toggleBtn = screen.getByTestId("board-inspect-mode-toggle");
+    expect(toggleBtn).toBeInTheDocument();
+
+    // Render an open DeleteConfirmationDialog
+    const { unmount: unmountDialog } = render(
+      <DeleteConfirmationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        onConfirm={vi.fn()}
+      />,
+    );
+
+    // Attempting to click inspect mode toggle while dialog is active should be disabled and no-op
+    expect(toggleBtn).toBeDisabled();
+    fireEvent.click(toggleBtn);
+
+    // Board inspect mode should remain "overlay", NOT "split"
+    expect(useUiStore.getState().boardInspectMode).toBe("overlay");
+    expect(screen.getByTestId("board-overlay-drawer")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("docked-task-inspector"),
+    ).not.toBeInTheDocument();
+
+    // Now test task selection while dialog is open when boardInspectMode is "split"
+    act(() => {
+      useUiStore.setState({ boardInspectMode: "split" });
+    });
+
+    // Attempting to click another task while dialog is active should not switch task
+    act(() => {
+      fireEvent.click(screen.getAllByText("Task Beta")[0]);
+    });
+    // The active task in inspector should still be task-1, not task-2
+    expect(screen.getByDisplayValue("Task Alpha")).toBeInTheDocument();
+
+    // Close the dialog
+    unmountDialog();
+
+    const activeToggleBtn = screen.getByTestId("board-inspect-mode-toggle");
+    expect(activeToggleBtn).not.toBeDisabled();
   });
 
   it("TB-06: Switching between List and Board view preserves task selection without unmounting", async () => {

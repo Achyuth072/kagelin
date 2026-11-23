@@ -310,6 +310,7 @@ describe("TaskBoard — cross-group snap-back regression", () => {
         startHereStates: {},
         setStartHereState: vi.fn(),
         activeDialogCount: 0,
+        openDialogIds: {},
         registerOpenDialog: vi.fn(),
       }),
     );

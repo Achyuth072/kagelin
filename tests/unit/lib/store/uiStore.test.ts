@@ -165,6 +165,55 @@ describe("useUiStore", () => {
     });
   });
 
+  describe("registerOpenDialog", () => {
+    it("tracks open dialog counts idempotently and survives corrupted/serialized legacy states", () => {
+      // Simulate corrupted legacy state in storage or state: { _openDialogIds: {} }
+      useUiStore.setState({
+        ...useUiStore.getState(),
+        // @ts-expect-error test corrupted legacy state
+        _openDialogIds: {},
+        openDialogIds: undefined,
+        activeDialogCount: 0,
+      });
+
+      expect(() => {
+        useUiStore.getState().registerOpenDialog("dialog-1", true);
+      }).not.toThrow();
+
+      expect(useUiStore.getState().activeDialogCount).toBe(1);
+
+      // Duplicate registration of same ID does not increment count
+      useUiStore.getState().registerOpenDialog("dialog-1", true);
+      expect(useUiStore.getState().activeDialogCount).toBe(1);
+
+      // Registering a second ID increments count
+      useUiStore.getState().registerOpenDialog("dialog-2", true);
+      expect(useUiStore.getState().activeDialogCount).toBe(2);
+
+      // Closing dialog-1 leaves dialog-2 active
+      useUiStore.getState().registerOpenDialog("dialog-1", false);
+      expect(useUiStore.getState().activeDialogCount).toBe(1);
+
+      // Closing dialog-2 resets count to 0
+      useUiStore.getState().registerOpenDialog("dialog-2", false);
+      expect(useUiStore.getState().activeDialogCount).toBe(0);
+    });
+
+    it("excludes openDialogIds and activeDialogCount from persistent storage", () => {
+      const { partialize } = useUiStore.persist.getOptions();
+      useUiStore.getState().registerOpenDialog("dialog-1", true);
+
+      const persisted = partialize!(useUiStore.getState()) as Record<
+        string,
+        unknown
+      >;
+
+      expect(persisted.activeDialogCount).toBeUndefined();
+      expect(persisted.openDialogIds).toBeUndefined();
+      expect(persisted._openDialogIds).toBeUndefined();
+    });
+  });
+
   describe("startHereStates", () => {
     it("manages and persists startHereStates per user", () => {
       const state = {

@@ -63,7 +63,10 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
         {...cardAttributes}
         {...cardListeners}
         className="w-full h-full"
-        onClick={() => onSelect?.(task)}
+        onClick={() => {
+          if (isDndDisabled) return;
+          onSelect?.(task);
+        }}
       >
         {/* Kept on wrapper to avoid busting TaskItem memo on drag-over. */}
         <TaskItem

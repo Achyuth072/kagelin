@@ -380,6 +380,7 @@ function TaskListBase({
 
   const handleTaskClick = useCallback(
     (task: Task) => {
+      if (isAnyModalOpen) return;
       (document.activeElement as HTMLElement)?.blur();
       if (onTaskSelect) {
         onTaskSelect(task);
@@ -390,7 +391,7 @@ function TaskListBase({
         }
       }
     },
-    [onTaskSelect, isDesktopInspector],
+    [onTaskSelect, isDesktopInspector, isAnyModalOpen],
   );
 
   // Wait for the task to load before consuming the requested id.
@@ -814,6 +815,7 @@ function TaskListBase({
   // Follow active task selection when desktop inspector is open during Vim traversal
   useEffect(() => {
     if (
+      !isAnyModalOpen &&
       isDesktopInspector &&
       selectedTask &&
       keyboardSelectedId &&
@@ -824,7 +826,13 @@ function TaskListBase({
         setSelectedTask(nextTask);
       }
     }
-  }, [isDesktopInspector, selectedTask, keyboardSelectedId, navigableTasks]);
+  }, [
+    isDesktopInspector,
+    selectedTask,
+    keyboardSelectedId,
+    navigableTasks,
+    isAnyModalOpen,
+  ]);
 
   // Initial URL check: hydrate task from ?task=<id> without stripping it on
   // mount. Works at every tier (spec stories 21–22): on desktop the docked/
