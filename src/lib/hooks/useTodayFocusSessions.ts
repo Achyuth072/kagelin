@@ -1,27 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import { startOfDay } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { mockStore } from "@/lib/mock/mock-store";
+import { useCurrentTime } from "@/lib/hooks/useCurrentTime";
 
 const supabase = createClient();
 
-/**
- * useTodayFocusSessions — count of focus sessions completed *today*, sourced
- * from the server `focus_logs` (the authoritative, cross-device record) so every
- * device shows the same number. The local focusHistoryStore is per-device and
- * only reflects sessions that device witnessed completing, so it diverges across
- * devices; this reads the shared source instead. refetchOnWindowFocus keeps it
- * fresh when you switch to another device.
- */
+// Parameterized with current date so midnight rollover busts stale cached count
 export function useTodayFocusSessions() {
   const { isGuestMode } = useAuth();
+  const currentTime = useCurrentTime(60_000);
+  const todayDate = format(currentTime, "yyyy-MM-dd");
 
   return useQuery({
-    queryKey: ["today-focus-count", isGuestMode],
+    queryKey: ["today-focus-count", isGuestMode, todayDate],
     staleTime: 30_000,
     queryFn: async (): Promise<number> => {
-      const startIso = startOfDay(new Date()).toISOString();
+      const startIso = startOfDay(currentTime).toISOString();
 
       if (isGuestMode) {
         return mockStore
