@@ -1,5 +1,25 @@
 [
   {
+    "version": "1.52.0-preview.3",
+    "date": "2026-11-23",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Update ticktick icon, alphabetize task imports, and unmark loop beta",
+        "Ticktick migration card, drill-down preview view, and e2e verification",
+        "Ticktick planner, deduplication, executor, and useTickTickImport hook",
+        "Ticktick inbound csv parser, zod validation, and domain mapper"
+      ],
+      "Fixed": [
+        "Gate board split view toggle and selection during active dialogs",
+        "Suppress drag-and-drop and hotkeys while dialogs are open",
+        "Reset idle focus cycle and today session counter on new day",
+        "Anchor sonner toast spinner absolutely to prevent icon misalignment",
+        "Refine ticktick parent resolution, creation timestamps, and preview view"
+      ]
+    }
+  },
+  {
     "version": "1.52.0-preview.2",
     "date": "2026-11-21",
     "channel": "preview",
@@ -830,19 +850,6 @@
       "Fixed": [
         "Keep inputs above the mobile keyboard in drawers",
         "Remove redundant date picker from habit view footer"
-      ]
-    }
-  },
-  {
-    "version": "1.45.1-preview.0",
-    "date": "2026-09-30",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Verify auth locally and record reminder actions in one RPC"
-      ],
-      "Fixed": [
-        "Refresh task detail and single-task caches after edits"
       ]
     }
   }
