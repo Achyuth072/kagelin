@@ -81,13 +81,41 @@ export interface MappedTickTickTask {
   originalDepth: number;
 }
 
+export type ParentRedirect =
+  { kind: "existing"; taskId: string } | { kind: "imported"; tempId: string };
+
+export interface WorkspaceProject {
+  id: string;
+  name: string;
+  is_inbox: boolean;
+}
+
+export interface WorkspaceTask {
+  id: string;
+  content: string;
+  project_id: string | null;
+  parent_id: string | null;
+  is_completed: boolean;
+  due_date?: string | null;
+  do_date?: string | null;
+}
+
+export interface ExistingWorkspace {
+  projects: WorkspaceProject[];
+  tasks: WorkspaceTask[];
+}
+
 export interface TickTickProjectPlan {
   name: string;
   folderName: string | null;
   status: "inbox" | "new" | "merged";
-  existingProjectId?: string;
+  isInbox: boolean;
+  existingProjectId: string | null;
   color: string;
   tasks: MappedTickTickTask[];
+  duplicatesSkipped: number;
+  parentRedirects: Record<string, ParentRedirect>;
+  subtasksReassigned: number;
 }
 
 export interface TickTickImportPreview {
@@ -99,7 +127,30 @@ export interface TickTickImportPreview {
   earliestDate: string | null;
   latestDate: string | null;
   projects: TickTickProjectPlan[];
-  parentRedirects: Record<string, string>;
+  parentRedirects: Record<string, ParentRedirect>;
   duplicateTasksSkipped: number;
   subtasksReassigned: number;
+  newProjectCount: number;
+  mergedProjectCount: number;
+  isQuotaLimited: boolean;
+  rawSource?: {
+    rows: RawTickTickRow[];
+    csvContent?: string;
+  };
+}
+
+export interface PlanTickTickImportOptions {
+  isGuest?: boolean;
+  refDate?: Date;
+  rawSource?: {
+    rows: RawTickTickRow[];
+    csvContent?: string;
+  };
+}
+
+export interface ExecuteTickTickImportOptions {
+  signal?: AbortSignal;
+  includeCompleted?: boolean;
+  isGuest?: boolean;
+  fileName?: string;
 }
