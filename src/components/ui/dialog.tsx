@@ -3,8 +3,18 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useDialogActive } from "@/lib/hooks/useDialogActive";
 
-const Dialog = DialogPrimitive.Root;
+const DialogRoot = DialogPrimitive.Root;
+
+const Dialog = ({
+  open,
+  defaultOpen,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Root>) => {
+  useDialogActive(open ?? defaultOpen);
+  return <DialogRoot open={open} defaultOpen={defaultOpen} {...props} />;
+};
 
 const DialogTrigger = DialogPrimitive.Trigger;
 

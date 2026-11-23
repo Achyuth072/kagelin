@@ -2,16 +2,24 @@ import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
 
 import { cn } from "@/lib/utils";
+import { useDialogActive } from "@/lib/hooks/useDialogActive";
 
 const Drawer = ({
+  open,
+  defaultOpen,
   shouldScaleBackground = true,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
-  <DrawerPrimitive.Root
-    shouldScaleBackground={shouldScaleBackground}
-    {...props}
-  />
-);
+}: React.ComponentProps<typeof DrawerPrimitive.Root>) => {
+  useDialogActive(open ?? defaultOpen);
+  return (
+    <DrawerPrimitive.Root
+      open={open}
+      defaultOpen={defaultOpen}
+      shouldScaleBackground={shouldScaleBackground}
+      {...props}
+    />
+  );
+};
 Drawer.displayName = "Drawer";
 
 const DrawerTrigger = DrawerPrimitive.Trigger;

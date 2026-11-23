@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { priorityCheckboxClasses } from "./task-utils";
 import { useSortableRow, dropLineClasses } from "@/lib/hooks/useSortableRow";
+import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 import { DragHandle } from "@/components/tasks/DragHandle";
 import { computeReorderPairs } from "@/lib/utils/task-dnd";
 import { useUiStore } from "@/lib/store/uiStore";
@@ -80,6 +81,7 @@ interface SubtaskRowProps {
   isEditing: boolean;
   editingContent: string;
   isDesktop: boolean;
+  isDndDisabled?: boolean;
   onStartEdit: (id: string, content: string) => void;
   onSaveEdit: (id: string) => void;
   onDelete: (id: string) => void;
@@ -201,7 +203,10 @@ function SortableSubtaskItem(props: SubtaskRowProps) {
     isDragging,
     dropLine,
     dndStyle,
-  } = useSortableRow(props.id, { respectReducedMotion: true });
+  } = useSortableRow(props.id, {
+    respectReducedMotion: true,
+    disabled: props.isDndDisabled,
+  });
 
   return (
     <div
@@ -297,6 +302,8 @@ export default function SubtaskList({
     [displayItems],
   );
 
+  const isModalOpen = useIsAnyModalOpen();
+
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: isDesktop
       ? { distance: 5 }
@@ -310,7 +317,15 @@ export default function SubtaskList({
   });
   const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
 
+  // Cancel any in-flight subtask reorder immediately if a modal opens mid-interaction.
+  useEffect(() => {
+    if (isModalOpen && activeId) {
+      setActiveId(null);
+    }
+  }, [isModalOpen, activeId]);
+
   const handleDragStart = (event: DragStartEvent) => {
+    if (isModalOpen) return;
     setLocalItems(items);
     setActiveId(event.active.id as string);
     triggerHaptic("toggle");
@@ -549,6 +564,7 @@ export default function SubtaskList({
       isEditing,
       editingContent,
       isDesktop,
+      isDndDisabled: isModalOpen,
       onStartEdit: handleStartEdit,
       onSaveEdit: handleSaveEdit,
       onDelete: handleDeleteSubtask,

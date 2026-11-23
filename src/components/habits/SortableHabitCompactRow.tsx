@@ -17,13 +17,10 @@ interface SortableHabitCompactRowProps {
   onEdit?: () => void;
   onViewInsights?: () => void;
   isDesktop?: boolean;
+  isDndDisabled?: boolean;
 }
 
-/**
- * HabitRowContent is memoized so the row doesn't re-render on every drag frame.
- * useSortable in the wrapper triggers re-renders at 60fps; the content only
- * re-renders when its own props actually change.
- */
+// Memoized to prevent useSortable drag frames from re-rendering row contents.
 const HabitRowContent = memo(
   ({
     habit,
@@ -61,17 +58,13 @@ const HabitRowContent = memo(
 
 HabitRowContent.displayName = "HabitRowContent";
 
-/**
- * Drag wrapper for the compact view. Mirrors SortableListTaskCard: a sortable
- * node with a transform-gated transition (the documented snap-back fix) and a
- * drop-line indicator. Content is memoized to survive 60fps drag re-renders.
- */
 export function SortableHabitCompactRow({
   habit,
   icon,
   onEdit,
   onViewInsights,
   isDesktop,
+  isDndDisabled = false,
 }: SortableHabitCompactRowProps) {
   const {
     attributes,
@@ -81,7 +74,10 @@ export function SortableHabitCompactRow({
     isDragging,
     dropLine,
     dndStyle,
-  } = useSortableRow(habit.id, { respectReducedMotion: true });
+  } = useSortableRow(habit.id, {
+    respectReducedMotion: true,
+    disabled: isDndDisabled,
+  });
 
   return (
     <div

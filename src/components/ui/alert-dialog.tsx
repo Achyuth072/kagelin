@@ -4,8 +4,18 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { useDialogActive } from "@/lib/hooks/useDialogActive";
 
-const AlertDialog = AlertDialogPrimitive.Root;
+const AlertDialogRoot = AlertDialogPrimitive.Root;
+
+const AlertDialog = ({
+  open,
+  defaultOpen,
+  ...props
+}: React.ComponentProps<typeof AlertDialogPrimitive.Root>) => {
+  useDialogActive(open ?? defaultOpen);
+  return <AlertDialogRoot open={open} defaultOpen={defaultOpen} {...props} />;
+};
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
 

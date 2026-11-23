@@ -141,6 +141,9 @@ interface UiState {
   startHereStates: Record<string, StartHereState>;
   setStartHereState: (userId: string, state: StartHereState) => void;
 
+  activeDialogCount: number;
+  registerOpenDialog: (id: string, isOpen: boolean) => void;
+
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
 }
@@ -312,6 +315,26 @@ export const useUiStore = create<UiState>()(
         }));
       },
 
+      activeDialogCount: 0,
+      // Track open dialog IDs in a Set to remain idempotent across nested renders and prevent counter underflows.
+      registerOpenDialog: (id, isOpen) => {
+        set((state) => {
+          const ids = new Set(
+            (state as unknown as { _openDialogIds?: Set<string> })
+              ._openDialogIds,
+          );
+          if (isOpen) {
+            ids.add(id);
+          } else {
+            ids.delete(id);
+          }
+          return {
+            _openDialogIds: ids,
+            activeDialogCount: ids.size,
+          } as unknown as Partial<UiState>;
+        });
+      },
+
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
@@ -351,6 +374,8 @@ export const useUiStore = create<UiState>()(
           isChangelogOpen: _isChangelogOpen,
           setChangelogOpen: _setChangelogOpen,
           shortcutMouseCounts: _shortcutMouseCounts,
+          activeDialogCount: _activeDialogCount,
+          registerOpenDialog: _registerOpenDialog,
           ...rest
         } = state;
         return rest;

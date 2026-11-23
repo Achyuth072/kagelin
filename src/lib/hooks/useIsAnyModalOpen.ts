@@ -4,10 +4,7 @@ import { useProjectActions } from "@/components/ProjectActionsProvider";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useCalendarStore } from "@/lib/calendar/store";
 
-// Shared by GlobalHotkeys and TaskList so hotkeys agree on what counts as
-// "a modal is open" — state-derived, not a DOM probe, so it's correct on the
-// same render the modal opens. Command menu is excluded: it's AppShell-local
-// state whose own input already filters keystrokes via enableOnFormTags: false.
+// State-derived modal check so hotkeys and DnD disable on the initial render a dialog opens.
 export function useIsAnyModalOpen(): boolean {
   const { isAddTaskOpen } = useTaskActions();
   const { isHabitSheetOpen } = useHabitActions();
@@ -18,14 +15,16 @@ export function useIsAnyModalOpen(): boolean {
     (state) => state.isArchivedProjectsOpen,
   );
   const isChangelogOpen = useUiStore((state) => state.isChangelogOpen);
+  const activeDialogCount = useUiStore((state) => state?.activeDialogCount);
 
   return (
-    isAddTaskOpen ||
-    isHabitSheetOpen ||
-    isCreateProjectOpen ||
-    isCreateEventOpen ||
-    isShortcutsHelpOpen ||
-    isArchivedProjectsOpen ||
-    isChangelogOpen
+    Boolean(isAddTaskOpen) ||
+    Boolean(isHabitSheetOpen) ||
+    Boolean(isCreateProjectOpen) ||
+    Boolean(isCreateEventOpen) ||
+    Boolean(isShortcutsHelpOpen) ||
+    Boolean(isArchivedProjectsOpen) ||
+    Boolean(isChangelogOpen) ||
+    (activeDialogCount ?? 0) > 0
   );
 }

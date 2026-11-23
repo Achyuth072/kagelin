@@ -10,8 +10,8 @@ import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 export type DropLine = "none" | "top" | "bottom";
 
 interface UseSortableRowOptions {
-  /** Suppress post-drop transitions when prefers-reduced-motion is active. */
   respectReducedMotion?: boolean;
+  disabled?: boolean;
 }
 
 interface SortableRowState {
@@ -24,15 +24,13 @@ interface SortableRowState {
   dndStyle: React.CSSProperties;
 }
 
-/**
- * Shared drag-row state for vertical sortable lists.
- *
- * Gating transition on transform != null prevents animating the drag offset
- * back to (0,0,0) on drop.
- */
+// Gating transition on transform != null prevents animating back to (0,0,0) on drop.
 export function useSortableRow(
   id: string,
-  { respectReducedMotion = false }: UseSortableRowOptions = {},
+  {
+    respectReducedMotion = false,
+    disabled = false,
+  }: UseSortableRowOptions = {},
 ): SortableRowState {
   const {
     attributes,
@@ -45,7 +43,7 @@ export function useSortableRow(
     isOver,
     active,
     over,
-  } = useSortable({ id });
+  } = useSortable({ id, disabled });
   const prefersReducedMotion = usePrefersReducedMotion();
 
   let dropLine: DropLine = "none";

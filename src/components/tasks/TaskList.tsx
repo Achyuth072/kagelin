@@ -264,6 +264,9 @@ function TaskListBase({
     projects: projectsData,
   });
 
+  const isAnyModalOpen =
+    useIsAnyModalOpen() || (!!selectedTask && !isDesktopInspector);
+
   const dnd = useTaskDnd({
     presentation: processedTasks,
     tasks,
@@ -271,6 +274,7 @@ function TaskListBase({
     groupBy,
     sortBy,
     isDesktop,
+    disabled: isAnyModalOpen,
   });
 
   const listScrollTopRef = useRef(0);
@@ -410,9 +414,6 @@ function TaskListBase({
       ...processedTasks.completed,
     ];
   }, [processedTasks]);
-
-  const isAnyModalOpen =
-    useIsAnyModalOpen() || (!!selectedTask && !isDesktopInspector);
 
   const boardColumns = useMemo<TaskGroup[]>(
     () => getBoardColumns(processedTasks),
@@ -1049,6 +1050,7 @@ function TaskListBase({
                 keyboardSelectedId={keyboardSelectedId}
                 inspectedTaskId={selectedTask?.id ?? null}
                 isDndActive={dnd.isDragging}
+                isDndDisabled={isAnyModalOpen}
                 onScroll={handleContainerScroll}
                 hasOverlayDrawer={isBoardOverlay && !!selectedTask}
                 onAddTask={() => openAddTask()}
@@ -1062,6 +1064,7 @@ function TaskListBase({
                 handleTaskClick={handleTaskClick}
                 keyboardSelectedId={keyboardSelectedId}
                 isDndActive={dnd.isDragging}
+                isDndDisabled={isAnyModalOpen}
                 scrollParent={scrollParent}
                 projectsMap={projectsMap}
                 isDesktop={isDesktop}

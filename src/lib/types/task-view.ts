@@ -31,6 +31,7 @@ export interface UseTaskDndOptions {
   groupBy?: GroupOption;
   sortBy?: SortOption;
   isDesktop?: boolean;
+  disabled?: boolean;
 }
 
 export interface UseTaskDndReturn {
