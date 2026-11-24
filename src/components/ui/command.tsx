@@ -36,7 +36,7 @@ const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
 
   if (isMobile) {
     return (
-      <Drawer {...props} repositionInputs={false}>
+      <Drawer {...props}>
         <DrawerContent className="max-h-[85vh] overflow-hidden p-0">
           <DrawerTitle className="sr-only">Command Menu</DrawerTitle>
           <Command loop className={commandClassName}>

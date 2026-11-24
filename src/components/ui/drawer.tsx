@@ -1,47 +1,122 @@
 import * as React from "react";
-import { Drawer as DrawerPrimitive } from "vaul";
+import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
 
 import { cn } from "@/lib/utils";
 import { useDialogActive } from "@/lib/hooks/useDialogActive";
 
+type VaulDirection = "top" | "bottom" | "left" | "right";
+type BaseUISwipeDirection = "up" | "down" | "left" | "right";
+
+const DIRECTION_MAP: Record<VaulDirection, BaseUISwipeDirection> = {
+  top: "up",
+  bottom: "down",
+  left: "left",
+  right: "right",
+};
+
+type DrawerProps = React.ComponentProps<typeof DrawerPrimitive.Root> & {
+  /** Legacy Vaul prop accepted as a no-op for caller compatibility. */
+  shouldScaleBackground?: boolean;
+  /** Legacy Vaul direction prop mapped to Base UI `swipeDirection`. */
+  direction?: VaulDirection;
+};
+
 const Drawer = ({
   open,
   defaultOpen,
-  shouldScaleBackground = true,
+  shouldScaleBackground: _shouldScaleBackground,
+  direction,
+  swipeDirection,
+  children,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Root>) => {
+}: DrawerProps) => {
   useDialogActive(open ?? defaultOpen);
+  const resolvedSwipeDirection =
+    swipeDirection ?? (direction ? DIRECTION_MAP[direction] : "down");
+
   return (
     <DrawerPrimitive.Root
       open={open}
       defaultOpen={defaultOpen}
-      shouldScaleBackground={shouldScaleBackground}
+      swipeDirection={resolvedSwipeDirection}
       {...props}
-    />
+    >
+      {typeof children === "function" ? (
+        (payload) => (
+          <DrawerPrimitive.VirtualKeyboardProvider>
+            {children(payload)}
+          </DrawerPrimitive.VirtualKeyboardProvider>
+        )
+      ) : (
+        <DrawerPrimitive.VirtualKeyboardProvider>
+          {children}
+        </DrawerPrimitive.VirtualKeyboardProvider>
+      )}
+    </DrawerPrimitive.Root>
   );
 };
 Drawer.displayName = "Drawer";
 
-const DrawerTrigger = DrawerPrimitive.Trigger;
+type DrawerTriggerProps = Omit<
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Trigger>,
+  "children"
+> & {
+  asChild?: boolean;
+  children?: React.ReactNode;
+};
+
+const DrawerTrigger = React.forwardRef<HTMLButtonElement, DrawerTriggerProps>(
+  ({ asChild, children, render, ...props }, ref) => {
+    if (asChild && React.isValidElement(children)) {
+      return <DrawerPrimitive.Trigger ref={ref} render={children} {...props} />;
+    }
+    return (
+      <DrawerPrimitive.Trigger ref={ref} render={render} {...props}>
+        {children}
+      </DrawerPrimitive.Trigger>
+    );
+  },
+);
+DrawerTrigger.displayName = "DrawerTrigger";
 
 const DrawerPortal = DrawerPrimitive.Portal;
 
-const DrawerClose = DrawerPrimitive.Close;
+type DrawerCloseProps = Omit<
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Close>,
+  "children"
+> & {
+  asChild?: boolean;
+  children?: React.ReactNode;
+};
+
+const DrawerClose = React.forwardRef<HTMLButtonElement, DrawerCloseProps>(
+  ({ asChild, children, render, ...props }, ref) => {
+    if (asChild && React.isValidElement(children)) {
+      return <DrawerPrimitive.Close ref={ref} render={children} {...props} />;
+    }
+    return (
+      <DrawerPrimitive.Close ref={ref} render={render} {...props}>
+        {children}
+      </DrawerPrimitive.Close>
+    );
+  },
+);
+DrawerClose.displayName = "DrawerClose";
 
 const DrawerOverlay = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
+  HTMLDivElement,
+  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Backdrop>
 >(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Overlay
+  <DrawerPrimitive.Backdrop
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/60 duration-150 ease-out will-change-[opacity] motion-reduce:animate-none",
+      "fixed inset-0 z-50 bg-black/60 opacity-[calc(1-var(--drawer-swipe-progress,0))] transition-opacity [transition-duration:calc(300ms*var(--drawer-swipe-strength,1))] ease-seijaku will-change-[opacity] data-[swiping]:duration-0 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 motion-reduce:transition-none",
       className,
     )}
     {...props}
   />
 ));
-DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
+DrawerOverlay.displayName = "DrawerOverlay";
 
 function isTouchPointer(): boolean {
   if (typeof window === "undefined") return false;
@@ -68,16 +143,27 @@ function blurActiveInput() {
   }
 }
 
-const DrawerContent = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content> & {
-    overlayClassName?: string;
-  }
->(
+type DrawerContentProps = React.ComponentPropsWithoutRef<
+  typeof DrawerPrimitive.Popup
+> & {
+  overlayClassName?: string;
+  onOpenAutoFocus?: (event: Event) => void;
+};
+
+const DrawerContent = React.forwardRef<HTMLDivElement, DrawerContentProps>(
   (
-    { className, overlayClassName, children, onOpenAutoFocus, ...props },
-    ref,
+    {
+      className,
+      overlayClassName,
+      children,
+      onOpenAutoFocus,
+      initialFocus,
+      ...props
+    },
+    forwardedRef,
   ) => {
+    const popupRef = React.useRef<HTMLDivElement | null>(null);
+
     React.useEffect(() => {
       if (!isTouchPointer()) return;
       blurActiveInput();
@@ -85,24 +171,50 @@ const DrawerContent = React.forwardRef<
       return () => window.cancelAnimationFrame(raf);
     }, []);
 
+    const setPopupRef = (node: HTMLDivElement | null) => {
+      popupRef.current = node;
+      if (typeof forwardedRef === "function") {
+        forwardedRef(node);
+      } else if (forwardedRef) {
+        forwardedRef.current = node;
+      }
+    };
+
+    const resolvedInitialFocus: DrawerContentProps["initialFocus"] =
+      initialFocus !== undefined
+        ? initialFocus
+        : (openType) => {
+            if (onOpenAutoFocus) {
+              const event = new Event("openAutoFocus", { cancelable: true });
+              onOpenAutoFocus(event);
+              preventTouchAutoFocus(event);
+              if (event.defaultPrevented) {
+                return false;
+              }
+            } else if (openType === "touch" || isTouchPointer()) {
+              return false;
+            }
+            return popupRef.current ?? true;
+          };
+
     return (
       <DrawerPortal>
         <DrawerOverlay className={overlayClassName} />
-        <DrawerPrimitive.Content
-          ref={ref}
-          className={cn(
-            "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto max-h-[85dvh] flex-col overflow-y-auto rounded-t-[14px] border border-border/80 bg-background shadow-none motion-reduce:animate-none",
-            className,
-          )}
-          onOpenAutoFocus={(event) => {
-            onOpenAutoFocus?.(event);
-            preventTouchAutoFocus(event);
-          }}
-          {...props}
-        >
-          <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted shrink-0" />
-          {children}
-        </DrawerPrimitive.Content>
+        <DrawerPrimitive.Viewport className="fixed inset-0 z-50 flex items-end justify-center pb-[var(--drawer-keyboard-inset,0px)]">
+          <DrawerPrimitive.Popup
+            ref={setPopupRef}
+            data-slot="drawer-content"
+            initialFocus={resolvedInitialFocus}
+            className={cn(
+              "relative flex h-auto w-full max-h-[85dvh] flex-col overflow-y-auto rounded-t-xl border-t border-border-strong bg-background shadow-none outline-none [transform:translate3d(var(--drawer-swipe-movement-x,0px),var(--drawer-swipe-movement-y,0px),0)] transition-transform [transition-duration:calc(300ms*var(--drawer-swipe-strength,1))] ease-seijaku will-change-transform data-[swiping]:duration-0 data-[swipe-direction=down]:data-[starting-style]:[transform:translateY(100%)] data-[swipe-direction=down]:data-[ending-style]:[transform:translateY(100%)] data-[swipe-direction=up]:data-[starting-style]:[transform:translateY(-100%)] data-[swipe-direction=up]:data-[ending-style]:[transform:translateY(-100%)] data-[swipe-direction=left]:data-[starting-style]:[transform:translateX(-100%)] data-[swipe-direction=left]:data-[ending-style]:[transform:translateX(-100%)] data-[swipe-direction=right]:data-[starting-style]:[transform:translateX(100%)] data-[swipe-direction=right]:data-[ending-style]:[transform:translateX(100%)] motion-reduce:transition-none",
+              className,
+            )}
+            {...props}
+          >
+            <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted shrink-0" />
+            {children}
+          </DrawerPrimitive.Popup>
+        </DrawerPrimitive.Viewport>
       </DrawerPortal>
     );
   },
@@ -132,7 +244,7 @@ const DrawerFooter = ({
 DrawerFooter.displayName = "DrawerFooter";
 
 const DrawerTitle = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Title>,
+  HTMLHeadingElement,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Title>
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Title
@@ -144,10 +256,10 @@ const DrawerTitle = React.forwardRef<
     {...props}
   />
 ));
-DrawerTitle.displayName = DrawerPrimitive.Title.displayName;
+DrawerTitle.displayName = "DrawerTitle";
 
 const DrawerDescription = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Description>,
+  HTMLParagraphElement,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Description>
 >(({ className, ...props }, ref) => (
   <DrawerPrimitive.Description
@@ -156,7 +268,7 @@ const DrawerDescription = React.forwardRef<
     {...props}
   />
 ));
-DrawerDescription.displayName = DrawerPrimitive.Description.displayName;
+DrawerDescription.displayName = "DrawerDescription";
 
 export {
   Drawer,

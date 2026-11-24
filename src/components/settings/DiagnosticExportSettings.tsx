@@ -386,7 +386,7 @@ export function DiagnosticExportSettings() {
                 ) : (
                   <>
                     <pre
-                      data-vaul-no-drag
+                      data-base-ui-swipe-ignore
                       tabIndex={0}
                       role="region"
                       aria-label="Diagnostic report preview"
