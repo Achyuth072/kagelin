@@ -4,6 +4,7 @@ import { memo } from "react";
 import { format } from "date-fns";
 import { MapPin } from "lucide-react";
 import type { CalendarEvent } from "@/lib/calendar/types";
+import { getCalendarEventChipStyle } from "./calendar-event-chip";
 import {
   Popover,
   PopoverContent,
@@ -79,44 +80,24 @@ export const EventOverflowPopover = memo(
                       }
                     }}
                     className={cn(
-                      "group flex flex-col gap-0.5 p-2 rounded-lg transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-                      isTask
-                        ? "bg-brand/8 border-t border-t-border/40 border-r border-r-border/40 border-b border-b-border/40 hover:bg-brand/12"
-                        : "bg-brand text-white hover:brightness-110",
+                      "group flex flex-col gap-0.5 p-2 rounded-lg transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                      "border-t border-r border-b border-border hover:border-border-strong",
                     )}
-                    style={{
-                      ...(isTask && {
-                        borderLeftColor: event.color || "#4B6CB7",
-                        borderLeftWidth: "3px",
-                      }),
-                    }}
+                    style={getCalendarEventChipStyle({
+                      color: event.color,
+                      isTask,
+                      borderLeftWidth: 3,
+                    })}
                   >
-                    <span
-                      className={cn(
-                        "text-[11px] font-bold truncate",
-                        isTask ? "text-foreground" : "text-white",
-                      )}
-                    >
+                    <span className="text-[11px] font-bold truncate text-foreground">
                       <ReadableText text={event.title} />
                     </span>
                     <div className="flex items-center justify-between gap-2 overflow-hidden">
-                      <span
-                        className={cn(
-                          "text-[10px] font-medium shrink-0",
-                          isTask ? "text-muted-foreground" : "text-white/80",
-                        )}
-                      >
+                      <span className="text-[10px] font-medium shrink-0 text-muted-foreground">
                         {formatTime(event.start)}
                       </span>
                       {(event.location || isUnreadable(event, "location")) && (
-                        <span
-                          className={cn(
-                            "text-[9px] truncate flex items-center gap-0.5",
-                            isTask
-                              ? "text-muted-foreground/60"
-                              : "text-white/70",
-                          )}
-                        >
+                        <span className="text-[9px] truncate flex items-center gap-0.5 text-muted-foreground">
                           <MapPin
                             className="h-2.5 w-2.5 shrink-0"
                             strokeWidth={2.25}

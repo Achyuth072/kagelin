@@ -12,7 +12,11 @@ import { PlusIcon, Loader2 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { PwaInstallHint } from "@/components/home/PwaInstallHint";
 import { StartHereCard } from "@/components/home/StartHereCard";
-import type { SortOption, GroupOption } from "@/lib/types/sorting";
+import type {
+  SortOption,
+  GroupOption,
+  TaskViewMode,
+} from "@/lib/types/sorting";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -45,6 +49,12 @@ export function HomeClient() {
   const handleGroupChange = (group: GroupOption) => {
     startTransition(() => {
       setGroupBy(group);
+    });
+  };
+
+  const handleViewModeChange = (mode: TaskViewMode) => {
+    startTransition(() => {
+      setViewMode(mode);
     });
   };
 
@@ -117,7 +127,7 @@ export function HomeClient() {
             viewMode={viewMode}
             onSortChange={handleSortChange}
             onGroupChange={handleGroupChange}
-            onViewModeChange={setViewMode}
+            onViewModeChange={handleViewModeChange}
             onNewTask={openAddTask}
           />
         </div>

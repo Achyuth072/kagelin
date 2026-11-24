@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useTransition } from "react";
 import { HabitCard } from "@/components/habits/HabitCard";
 import { HabitCompactList } from "@/components/habits/HabitCompactList";
 import { useHabits, type HabitWithEntries } from "@/lib/hooks/useHabits";
@@ -22,6 +22,13 @@ export default function HabitsPage() {
   const { trigger } = useHaptic();
   const habitViewMode = useUiStore((s) => s.habitViewMode);
   const setHabitViewMode = useUiStore((s) => s.setHabitViewMode);
+  const [, startTransition] = useTransition();
+
+  const handleViewModeChange = (mode: "grid" | "compact") => {
+    startTransition(() => {
+      setHabitViewMode(mode);
+    });
+  };
 
   const handleOpenCreate = () => {
     trigger("toggle");
@@ -98,7 +105,7 @@ export default function HabitsPage() {
 
         <HabitsPageHeader
           viewMode={habitViewMode}
-          onViewModeChange={setHabitViewMode}
+          onViewModeChange={handleViewModeChange}
           onNewHabit={handleOpenCreate}
         />
       </div>
