@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Plus, LayoutGrid, Rows3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,24 +20,31 @@ export function HabitsPageHeader({
   onViewModeChange,
   onNewHabit,
 }: HabitsPageHeaderProps) {
+  const [activeView, setActiveView] = useState(viewMode);
+  useEffect(() => {
+    setActiveView(viewMode);
+  }, [viewMode]);
+
   const { trigger } = useHaptic();
 
   return (
     <div className="flex items-center gap-2 shrink-0 max-md:justify-between">
       <Tabs
-        value={viewMode}
+        value={activeView}
         onValueChange={(v) => {
+          const next = v as "grid" | "compact";
+          setActiveView(next);
           trigger("toggle");
-          onViewModeChange(v as "grid" | "compact");
+          onViewModeChange(next);
         }}
         className="h-10"
       >
         <TabsList>
           <TabsTrigger
             value="grid"
-            className="relative px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+            className="relative min-w-9 px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
           >
-            {viewMode === "grid" && (
+            {activeView === "grid" && (
               <m.span
                 layoutId="habits-view-pill"
                 transition={SEIJAKU_SPRING_FAST}
@@ -51,9 +59,9 @@ export function HabitsPageHeader({
           </TabsTrigger>
           <TabsTrigger
             value="compact"
-            className="relative px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+            className="relative min-w-9 px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
           >
-            {viewMode === "compact" && (
+            {activeView === "compact" && (
               <m.span
                 layoutId="habits-view-pill"
                 transition={SEIJAKU_SPRING_FAST}

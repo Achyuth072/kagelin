@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -22,28 +23,35 @@ export function PeriodSelector({
   isAllLoading = false,
   className,
 }: PeriodSelectorProps) {
+  const [activePeriod, setActivePeriod] = useState(value);
+  useEffect(() => {
+    setActivePeriod(value);
+  }, [value]);
+
   const reduced = usePrefersReducedMotion();
   const { trigger } = useHaptic();
 
   return (
     <Tabs
-      value={value}
+      value={activePeriod}
       onValueChange={(next) => {
         if (next) {
+          const p = next as StatsPeriod;
+          setActivePeriod(p);
           trigger("tick");
-          onValueChange(next as StatsPeriod);
+          onValueChange(p);
         }
       }}
       className={cn("w-fit", className)}
     >
       <TabsList className="gap-1">
         {STATS_PERIOD_OPTIONS.map((opt) => {
-          const isActive = value === opt.value;
+          const isActive = activePeriod === opt.value;
           return (
             <TabsTrigger
               key={opt.value}
               value={opt.value}
-              className="relative min-w-0 px-2.5 tabular-nums data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+              className="relative min-w-[38px] px-2.5 tabular-nums data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
             >
               {isActive && (
                 <m.span

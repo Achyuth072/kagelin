@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 import {
   CheckCircle2,
   ListFilter,
@@ -55,6 +55,11 @@ function TasksPageHeaderBase({
   onViewModeChange,
   onNewTask,
 }: TasksPageHeaderProps) {
+  const [activeView, setActiveView] = useState(viewMode);
+  useEffect(() => {
+    setActiveView(viewMode);
+  }, [viewMode]);
+
   const { openSheet } = useCompletedTasks();
   const { trigger } = useHaptic();
   const { recordMouseAction } = useShortcutTips();
@@ -78,20 +83,22 @@ function TasksPageHeaderBase({
       </span>
 
       <Tabs
-        value={viewMode}
+        value={activeView}
         onValueChange={(v) => {
+          const next = v as TaskViewMode;
+          setActiveView(next);
           trigger("toggle");
-          onViewModeChange(v as TaskViewMode);
+          onViewModeChange(next);
         }}
         className="h-10"
       >
         <TabsList>
           <TabsTrigger
             value="list"
-            className="relative px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+            className="relative min-w-9 px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
             title="List View (Shift+1)"
           >
-            {viewMode === "list" && (
+            {activeView === "list" && (
               <m.span
                 layoutId="tasks-view-pill"
                 transition={SEIJAKU_SPRING_FAST}
@@ -106,10 +113,10 @@ function TasksPageHeaderBase({
           </TabsTrigger>
           <TabsTrigger
             value="board"
-            className="relative px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+            className="relative min-w-9 px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
             title="Board View (Shift+2)"
           >
-            {viewMode === "board" && (
+            {activeView === "board" && (
               <m.span
                 layoutId="tasks-view-pill"
                 transition={SEIJAKU_SPRING_FAST}
