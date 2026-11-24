@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { exchangeAuthCode } from "@/lib/calendar-oauth/auth-code-exchange";
 import { encryptRefreshToken } from "@/lib/calendar-oauth/token-crypto";
-import { getAppBaseUrl } from "@/lib/calendar-oauth/app-url";
+import { getAppBaseUrl, isValidReturnTo } from "@/lib/calendar-oauth/app-url";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -15,26 +15,36 @@ export async function GET(request: Request) {
   const state = searchParams.get("state");
   const errorParam = searchParams.get("error");
 
+  const cookieStore = await cookies();
+  const storedState = cookieStore.get("calendar_oauth_state")?.value;
+  const codeVerifier = cookieStore.get("calendar_oauth_verifier")?.value;
+  const provider = cookieStore.get("calendar_oauth_provider")?.value;
+  const storedReturnTo = cookieStore.get("calendar_oauth_return_to")?.value;
+
+  const fallbackErrorPath =
+    provider === "google_tasks" || provider === "microsoft_tasks"
+      ? "/settings?tab=backup"
+      : "/calendar";
+  const errorBase = isValidReturnTo(storedReturnTo)
+    ? storedReturnTo!
+    : fallbackErrorPath;
+  const errorSep = errorBase.includes("?") ? "&" : "?";
+
   if (errorParam) {
     return NextResponse.redirect(
-      `${baseUrl}/calendar?oauth_error=${encodeURIComponent(errorParam)}`,
+      `${baseUrl}${errorBase}${errorSep}oauth_error=${encodeURIComponent(errorParam)}`,
     );
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      `${baseUrl}/calendar?oauth_error=missing_params`,
+      `${baseUrl}${errorBase}${errorSep}oauth_error=missing_params`,
     );
   }
 
-  const cookieStore = await cookies();
-  const storedState = cookieStore.get("calendar_oauth_state")?.value;
-  const codeVerifier = cookieStore.get("calendar_oauth_verifier")?.value;
-  const provider = cookieStore.get("calendar_oauth_provider")?.value;
-
   if (!storedState || storedState !== state || !codeVerifier || !provider) {
     return NextResponse.redirect(
-      `${baseUrl}/calendar?oauth_error=invalid_state`,
+      `${baseUrl}${errorBase}${errorSep}oauth_error=invalid_state`,
     );
   }
 
@@ -42,6 +52,7 @@ export async function GET(request: Request) {
   cookieStore.delete("calendar_oauth_state");
   cookieStore.delete("calendar_oauth_verifier");
   cookieStore.delete("calendar_oauth_provider");
+  cookieStore.delete("calendar_oauth_return_to");
 
   const supabase = await createClient();
   const {
@@ -53,12 +64,32 @@ export async function GET(request: Request) {
 
   try {
     const redirectUri = `${baseUrl}/api/calendar/oauth/callback`;
-    const { refreshToken } = await exchangeAuthCode({
+    const { accessToken, refreshToken } = await exchangeAuthCode({
       provider,
       code,
       codeVerifier,
       redirectUri,
     });
+
+    if (provider === "google_tasks" || provider === "microsoft_tasks") {
+      const cookieName = `${provider}_temp_token`;
+      cookieStore.set(cookieName, accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 10,
+        path: "/",
+      });
+
+      const targetPath = isValidReturnTo(storedReturnTo)
+        ? storedReturnTo!
+        : "/settings?tab=backup";
+      const targetUrl = new URL(targetPath, baseUrl);
+      if (!targetUrl.searchParams.has("connected")) {
+        targetUrl.searchParams.set("connected", provider);
+      }
+      return NextResponse.redirect(targetUrl.toString());
+    }
 
     const encKey = process.env.CALENDAR_TOKEN_ENC_KEY;
     if (!encKey) throw new Error("CALENDAR_TOKEN_ENC_KEY not set");
@@ -81,12 +112,19 @@ export async function GET(request: Request) {
     if (upsertError)
       throw new Error(`Token upsert failed: ${upsertError.message}`);
 
-    return NextResponse.redirect(`${baseUrl}/calendar?connected=${provider}`);
+    const targetPath = isValidReturnTo(storedReturnTo)
+      ? storedReturnTo!
+      : `/calendar?connected=${provider}`;
+    return NextResponse.redirect(new URL(targetPath, baseUrl).toString());
   } catch (e) {
     console.error("[calendar-oauth-callback] connect failed:", e);
     const reason = e instanceof Error ? e.message : "exchange_failed";
+    const targetErrorPath = isValidReturnTo(storedReturnTo)
+      ? storedReturnTo!
+      : fallbackErrorPath;
+    const sep = targetErrorPath.includes("?") ? "&" : "?";
     return NextResponse.redirect(
-      `${baseUrl}/calendar?oauth_error=${encodeURIComponent(reason)}`,
+      `${baseUrl}${targetErrorPath}${sep}oauth_error=${encodeURIComponent(reason)}`,
     );
   }
 }

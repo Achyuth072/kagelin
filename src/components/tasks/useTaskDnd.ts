@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   closestCorners,
   KeyboardSensor,
@@ -58,6 +58,7 @@ export function useTaskDnd({
   groupBy = "none",
   sortBy = "custom",
   isDesktop: isDesktopProp,
+  disabled = false,
 }: UseTaskDndOptions): UseTaskDndReturn {
   const isDesktopStore = useUiStore((state) => state.isDesktop);
   const isDesktop = isDesktopProp ?? isDesktopStore;
@@ -138,8 +139,16 @@ export function useTaskDnd({
     clearActiveDrag();
   }, [presentation, clearActiveDrag]);
 
+  // Cancel any active drag immediately if a modal opens mid-interaction.
+  useEffect(() => {
+    if (disabled && (activeId || lockLocal)) {
+      resetDragState();
+    }
+  }, [disabled, activeId, lockLocal, resetDragState]);
+
   const handleDragStart = useCallback(
     (event: DragStartEvent) => {
+      if (disabled) return;
       setLocalActive([...presentation.active]);
       setLocalEvening([...presentation.evening]);
       setLocalGroups(
@@ -174,7 +183,7 @@ export function useTaskDnd({
         triggerHaptic("toggle");
       }
     },
-    [presentation, sortBy, isDesktop, triggerHaptic],
+    [presentation, sortBy, isDesktop, triggerHaptic, disabled],
   );
 
   const handleDragOver = useCallback(

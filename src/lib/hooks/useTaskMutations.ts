@@ -109,10 +109,12 @@ function taskMatchesSlice(task: Task, params?: TaskSliceParams): boolean {
   if (params.filter === "p1") {
     if (task.priority !== 1) return false;
   } else if (params.filter === "today") {
-    if (!task.due_date) return false;
+    if (!task.due_date && !task.do_date) return false;
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
-    if (new Date(task.due_date) > todayEnd) return false;
+    const hasDoToday = task.do_date && new Date(task.do_date) <= todayEnd;
+    const hasDueToday = task.due_date && new Date(task.due_date) <= todayEnd;
+    if (!hasDoToday && !hasDueToday) return false;
   }
 
   return true;
@@ -226,6 +228,7 @@ export function useCreateTask() {
         day_order: 0,
         recurrence: null,
         recurring_series_id: null,
+        reminder_days: newTask.reminder_days ?? 127,
         google_event_id: null,
         google_etag: null,
         created_at: now,

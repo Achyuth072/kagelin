@@ -13,6 +13,7 @@ interface SortableListTaskCardProps {
   isKeyboardSelected?: boolean;
   viewMode?: TaskViewMode;
   isDndActive?: boolean;
+  isDndDisabled?: boolean;
   project?: { color: string; name: string | null };
   isDesktop?: boolean;
   triggerHaptic?: (signature?: "tick" | "toggle" | "thud" | "success") => void;
@@ -91,6 +92,7 @@ export default function SortableListTaskCard({
   isKeyboardSelected,
   viewMode,
   isDndActive,
+  isDndDisabled = false,
   project,
   isDesktop,
   triggerHaptic,
@@ -106,7 +108,7 @@ export default function SortableListTaskCard({
     isDragging,
     dropLine,
     dndStyle,
-  } = useSortableRow(task.id);
+  } = useSortableRow(task.id, { disabled: isDndDisabled });
 
   return (
     <div

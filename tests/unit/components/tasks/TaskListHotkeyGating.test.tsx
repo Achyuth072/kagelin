@@ -13,7 +13,13 @@
  */
 
 import type { ReactNode } from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import TaskList from "@/components/tasks/TaskList";
@@ -242,6 +248,29 @@ describe("TaskList hotkey gating", () => {
       code: "ArrowDown",
     });
     expect(second).toBe(false); // cancelled — vim navigation owns it now
+    await waitFor(() => expect(selected()).toBe("b"));
+  });
+
+  it("blocks j navigation when an alert dialog (e.g. task delete confirmation) is open", async () => {
+    await renderTaskList();
+    await waitFor(() => expect(selected()).toBe(""));
+
+    fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+    await waitFor(() => expect(selected()).toBe("a"));
+
+    // Simulate an open confirmation dialog (e.g. DeleteConfirmationDialog)
+    act(() => {
+      useUiStore.getState().registerOpenDialog("test-delete-dialog", true);
+    });
+
+    fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
+    expect(selected()).toBe("a");
+
+    act(() => {
+      useUiStore.getState().registerOpenDialog("test-delete-dialog", false);
+    });
+
+    fireEvent.keyDown(document, { key: "j", code: "KeyJ" });
     await waitFor(() => expect(selected()).toBe("b"));
   });
 });

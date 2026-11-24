@@ -32,6 +32,7 @@ import { TaskDatePicker } from "./shared/TaskDatePicker";
 import { PriorityGlyph } from "./PriorityGlyph";
 import { TaskNotesRow, type TaskNotesRowHandle } from "./shared/TaskNotesRow";
 import RecurrencePicker from "./TaskSheet/RecurrencePicker";
+import { TaskReminderField } from "./shared/TaskReminderField";
 import { ReadableText } from "@/components/encryption/ReadableText";
 import { isUnreadable } from "@/lib/crypto/unreadable";
 import { TASK_TITLE_CREATE_ID, TASK_TITLE_EDIT_ID } from "./task-utils";
@@ -58,6 +59,8 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
     setPriority,
     recurrence,
     setRecurrence,
+    reminderDays,
+    setReminderDays,
     selectedProjectId,
     setSelectedProjectId,
     datePickerOpen,
@@ -208,7 +211,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
           data-testid="property-strip"
           className="py-0.5 px-0.5 flex flex-col gap-1.5 min-w-0 flex-1"
         >
-          {/* Row 1: Dates (Do Date & Due Date) */}
+          {/* Row 1: Dates & Notification Schedule (Do Date, Due Date, Alerts) */}
           <div className="flex items-center gap-2 flex-wrap">
             <TaskDatePicker
               date={doDate}
@@ -218,10 +221,12 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               onOpenChange={setDoDatePickerOpen}
               variant="chip"
               title="Do Date"
+              description="Operational schedule (when to work on it)"
               icon={CalendarClock}
               {...createDatePickerPositioning}
               error={!!errors?.do_date}
               onEveningSelect={() => setIsEvening(true)}
+              isCompleted={initialTask?.is_completed}
             />
 
             <TaskDatePicker
@@ -232,9 +237,18 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               onOpenChange={setDatePickerOpen}
               variant="chip"
               title="Due Date"
+              description="Deadline (external commitment)"
               icon={Calendar}
               {...createDatePickerPositioning}
               error={!!errors?.due_date}
+              isCompleted={initialTask?.is_completed}
+            />
+
+            {/* Notification / Reminder Days Chip */}
+            <TaskReminderField
+              reminderDays={reminderDays}
+              onReminderDaysChange={setReminderDays}
+              isMobile={isMobile}
             />
           </div>
 

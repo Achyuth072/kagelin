@@ -78,6 +78,9 @@ describe("src/lib/errors/diagnostics.ts", () => {
       source: "error-boundary",
       route: "https://kagelin.app/tasks?query=sensitive-title",
       status: 404,
+      provider: "google_tasks",
+      importStage: "commit",
+      apiErrorCode: "RATE_LIMIT_EXCEEDED",
       arbitraryData: "should-be-omitted-or-redacted",
     });
 
@@ -88,6 +91,9 @@ describe("src/lib/errors/diagnostics.ts", () => {
       source: "error-boundary",
       route: "https://kagelin.app/tasks",
       status: 404,
+      provider: "google_tasks",
+      importStage: "commit",
+      apiErrorCode: "RATE_LIMIT_EXCEEDED",
     });
   });
 

@@ -27,6 +27,7 @@ export interface TaskBoardProps {
   /** Task currently open in the split inspector or overlay drawer. */
   inspectedTaskId?: string | null;
   isDndActive?: boolean;
+  isDndDisabled?: boolean;
   onScroll?: React.UIEventHandler<HTMLDivElement>;
   hasOverlayDrawer?: boolean;
   onAddTask?: () => void;
@@ -82,6 +83,7 @@ export function TaskBoard({
   keyboardSelectedId,
   inspectedTaskId,
   isDndActive = false,
+  isDndDisabled = false,
   onScroll,
   hasOverlayDrawer = false,
   onAddTask,
@@ -192,6 +194,7 @@ export function TaskBoard({
           setActiveTaskId={setActiveTaskId}
           triggerHaptic={triggerHaptic}
           onAddTask={onAddTask}
+          isDndDisabled={isDndDisabled}
           keyboardSelectedId={
             group.tasks.some((t) => t.id === keyboardSelectedId)
               ? keyboardSelectedId
@@ -211,6 +214,7 @@ const KanbanColumn = memo(function KanbanColumn({
   setActiveTaskId,
   triggerHaptic,
   keyboardSelectedId,
+  isDndDisabled = false,
   onAddTask,
 }: {
   group: TaskGroup;
@@ -220,6 +224,7 @@ const KanbanColumn = memo(function KanbanColumn({
   setActiveTaskId: (taskId: string) => void;
   triggerHaptic: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   keyboardSelectedId?: string | null;
+  isDndDisabled?: boolean;
   onAddTask?: () => void;
 }) {
   const { setNodeRef } = useDroppable({ id: group.title });
@@ -265,6 +270,7 @@ const KanbanColumn = memo(function KanbanColumn({
                 triggerHaptic={triggerHaptic}
                 setActiveTaskId={setActiveTaskId}
                 isKeyboardSelected={task.id === keyboardSelectedId}
+                isDndDisabled={isDndDisabled}
               />
             );
           })}

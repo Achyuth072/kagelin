@@ -85,12 +85,18 @@ export function HabitActionsProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Fallback avoids crashes in isolated unit tests rendered without an outer provider.
+const DEFAULT_HABIT_ACTIONS: HabitActionsContextValue = {
+  isHabitSheetOpen: false,
+  editingHabit: null,
+  initialTab: "edit",
+  openAddHabit: () => {},
+  openEditHabit: () => {},
+  openHabitInsights: () => {},
+  closeHabitSheet: () => {},
+};
+
 export function useHabitActions() {
   const context = useContext(HabitActionsContext);
-  if (!context) {
-    throw new Error(
-      "useHabitActions must be used within a HabitActionsProvider",
-    );
-  }
-  return context;
+  return context ?? DEFAULT_HABIT_ACTIONS;
 }

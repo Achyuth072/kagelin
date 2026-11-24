@@ -135,8 +135,8 @@ export function UnlockScreen({
       </form>
 
       <ResponsiveDialog open={newRecoveryCode !== null} onOpenChange={() => {}}>
-        <ResponsiveDialogContent>
-          <ResponsiveDialogHeader>
+        <ResponsiveDialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+          <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
             <ResponsiveDialogTitle>New recovery code</ResponsiveDialogTitle>
             <ResponsiveDialogDescription>
               The recovery code you just used no longer works. Save this one —
@@ -144,7 +144,7 @@ export function UnlockScreen({
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
           {newRecoveryCode && (
-            <div className="px-4 pb-4 sm:p-0">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))]">
               <RecoveryCodeDisplay
                 recoveryCode={newRecoveryCode}
                 onContinue={onUnlocked}

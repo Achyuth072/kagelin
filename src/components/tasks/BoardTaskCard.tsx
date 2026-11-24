@@ -1,20 +1,13 @@
 "use client";
 
 import React from "react";
-import {
-  Calendar,
-  CalendarClock,
-  Check,
-  Moon,
-  Play,
-  Trash2,
-} from "lucide-react";
-import { format, isToday, parseISO } from "date-fns";
+import { Calendar, Check, Moon, Play, Trash2 } from "lucide-react";
 import { StepProgressBadge } from "./StepProgressBadge";
 import { PriorityGlyph } from "./PriorityGlyph";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
 import { formatDueDate, isOverdue, taskDomId } from "./task-utils";
+import { DoDateChip } from "./shared/DoDateChip";
 import { ReadableText } from "@/components/encryption/ReadableText";
 
 interface BoardTaskCardProps {
@@ -40,8 +33,6 @@ export function BoardTaskCard({
   shouldAnimate,
   isKeyboardSelected,
 }: BoardTaskCardProps) {
-  const isPlannedToday = !!task.do_date && isToday(parseISO(task.do_date));
-
   return (
     <div
       id={taskDomId(task.id)}
@@ -140,24 +131,7 @@ export function BoardTaskCard({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap ml-6">
-          {/* Do Date (Planned Today) Chip */}
-          {task.do_date && (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md border",
-                isPlannedToday
-                  ? "bg-secondary/70 border-border/80 text-foreground font-semibold"
-                  : "bg-secondary/35 border-border/40 text-muted-foreground",
-              )}
-            >
-              <CalendarClock className="h-3 w-3" strokeWidth={2.25} />
-              <span>
-                {isPlannedToday
-                  ? "Planned Today"
-                  : format(parseISO(task.do_date), "MMM d")}
-              </span>
-            </span>
-          )}
+          <DoDateChip doDate={task.do_date} isCompleted={task.is_completed} />
 
           {/* Due Date Chip */}
           {task.due_date && (

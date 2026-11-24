@@ -93,6 +93,45 @@ export const ContentUnreadableEventSchema = z
   })
   .strict();
 
+export const MigrationErrorCodeSchema = z.enum([
+  "parse_failed",
+  "fetch_failed",
+  "commit_failed",
+  "rate_limited",
+  "aborted",
+  "unknown",
+]);
+
+export type MigrationErrorCode = z.infer<typeof MigrationErrorCodeSchema>;
+
+export const MigrationMilestoneSchema = z.enum([
+  "migration_started",
+  "migration_preview_viewed",
+  "migration_completed",
+  "migration_cancelled",
+]);
+
+export type MigrationMilestone = z.infer<typeof MigrationMilestoneSchema>;
+
+export const MigrationEventSchema = z
+  .object({
+    name: z.literal("migration_event"),
+    deviceId: z.string().uuid(),
+    properties: z
+      .object({
+        source: z.enum(["google_tasks", "microsoft_tasks", "ticktick"]),
+        ingress: z.enum(["oauth", "takeout_json", "json_file", "csv_file"]),
+        phase: z.enum(["connect", "fetch", "plan", "commit"]),
+        status: z.enum(["started", "completed", "failed"]),
+        milestone: MigrationMilestoneSchema.optional(),
+        task_count: z.number().int().nonnegative().optional(),
+        duration_ms: z.number().int().nonnegative().optional(),
+        error_code: MigrationErrorCodeSchema.optional(),
+      })
+      .strict(),
+  })
+  .strict();
+
 export const TelemetryEventSchema = z.discriminatedUnion("name", [
   AppOpenedEventSchema,
   PwaInstalledEventSchema,
@@ -101,6 +140,7 @@ export const TelemetryEventSchema = z.discriminatedUnion("name", [
   FocusSessionEventSchema,
   SignupCompletedEventSchema,
   ContentUnreadableEventSchema,
+  MigrationEventSchema,
 ]);
 
 export const TelemetryBatchRequestSchema = z

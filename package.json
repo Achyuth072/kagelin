@@ -1,6 +1,6 @@
 {
   "name": "kagelin",
-  "version": "1.51.1",
+  "version": "1.52.0-preview.3",
   "license": "AGPL-3.0-only",
   "private": false,
   "engines": {
@@ -89,7 +89,7 @@
     "libsodium-wrappers-sumo": "^0.8.4",
     "lucide-react": "^1.56.0",
     "motion": "^14.12.0",
-    "next": "16.4.2",
+    "next": "16.4.6",
     "next-themes": "^0.4.6",
     "react": "19.3.0",
     "react-activity-calendar": "^3.2.1",
@@ -113,7 +113,7 @@
   },
   "devDependencies": {
     "@ast-grep/cli": "^0.50.0",
-    "@next/bundle-analyzer": "^16.4.2",
+    "@next/bundle-analyzer": "^16.4.6",
     "@playwright/test": "^1.64.0",
     "@poupe/eslint-plugin-tailwindcss": "^0.3.1",
     "@shadcn/lint": "^0.2.3",
@@ -130,7 +130,7 @@
     "cross-env": "^10.1.0",
     "depcheck": "^1.4.7",
     "eslint": "^9",
-    "eslint-config-next": "16.4.2",
+    "eslint-config-next": "16.4.6",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",

@@ -1,5 +1,84 @@
 [
   {
+    "version": "1.52.0-preview.3",
+    "date": "2026-11-23",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Update ticktick icon, alphabetize task imports, and unmark loop beta",
+        "Ticktick migration card, drill-down preview view, and e2e verification",
+        "Ticktick planner, deduplication, executor, and useTickTickImport hook",
+        "Ticktick inbound csv parser, zod validation, and domain mapper"
+      ],
+      "Fixed": [
+        "Gate board split view toggle and selection during active dialogs",
+        "Suppress drag-and-drop and hotkeys while dialogs are open",
+        "Reset idle focus cycle and today session counter on new day",
+        "Anchor sonner toast spinner absolutely to prevent icon misalignment",
+        "Refine ticktick parent resolution, creation timestamps, and preview view"
+      ]
+    }
+  },
+  {
+    "version": "1.52.0-preview.2",
+    "date": "2026-11-21",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Microsoft tasks migration dialog ui, drill-down subview, and observability",
+        "Ephemeral oauth rails, throttled graph batch crawler, and import hook",
+        "Microsoft tasks deduplication, parent redirects, and chunked execution",
+        "Microsoft tasks schemas, ingress parsers, and timezone mapper",
+        "Adopt drill-down subview for migration dialog and add ics export"
+      ],
+      "Fixed": [
+        "Update microsoft to do icon and align file upload card styling"
+      ]
+    }
+  },
+  {
+    "version": "1.52.0-preview.1",
+    "date": "2026-11-21",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Google tasks import dialog, state machine, and observability (IMPORT-02)",
+        "Google tasks ephemeral oauth and throttled api transport",
+        "Google tasks deduplication, parent redirects, and chunked execution",
+        "Google tasks schemas, takeout parser, and timezone mapper"
+      ],
+      "Improved": [
+        "Add hover-reveal parity and dropdown format selection for migration exports"
+      ],
+      "Fixed": [
+        "Enhance google tasks import interactions and test coverage",
+        "Align google tasks import ui and enforce universal modal scroll containment",
+        "Update google tasks icon to 2026 design and normalize migration icon sizes",
+        "Standards compliance, completion mapping, and cancellation for google tasks import"
+      ]
+    }
+  },
+  {
+    "version": "1.52.0-preview.0",
+    "date": "2026-11-20",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Allow configuring allowed notification days for tasks",
+        "Verify day-planner segregation and remove deprecated task-streak",
+        "Disambiguate lapsed schedule from overdue deadline on task cards",
+        "Purge habit encroachment from task insights UI",
+        "Add task metrics and date classifier utility with orthogonality rules"
+      ],
+      "Fixed": [
+        "Resolve task orthogonality review findings and align date-time wizard",
+        "Allow clearing task dates on chip variant and in date picker wizard",
+        "Update screenshot assets for various views",
+        "Add --remote and --yes flags to supabase db push command"
+      ]
+    }
+  },
+  {
     "version": "1.51.1",
     "date": "2026-11-13",
     "channel": "stable",
@@ -771,61 +850,6 @@
       "Fixed": [
         "Keep inputs above the mobile keyboard in drawers",
         "Remove redundant date picker from habit view footer"
-      ]
-    }
-  },
-  {
-    "version": "1.45.1-preview.0",
-    "date": "2026-09-30",
-    "channel": "preview",
-    "sections": {
-      "Improved": [
-        "Verify auth locally and record reminder actions in one RPC"
-      ],
-      "Fixed": [
-        "Refresh task detail and single-task caches after edits"
-      ]
-    }
-  },
-  {
-    "version": "1.45.0",
-    "date": "2026-09-28",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Archive and restore habits, with re-imports matched to the original by Loop identity",
-        "Five-option frequency authoring (every day, N times a week/month, every N days, N times every D days) with last-done/next-due display",
-        "Habit reminders that follow your frequency window, with done/skip actions and the habit's name shown"
-      ],
-      "Fixed": [
-        "Overdue every-N-days habits say \"due now\" instead of counting days late",
-        "Reminders open the right habit, deep links keep the back button working, and skipped imports are named",
-        "Uhabits export writes valid empty fields and matches habit colors by hue",
-        "Habit drawer footer stays fixed and the reminder row fits on one line on narrow screens"
-      ]
-    }
-  },
-  {
-    "version": "1.45.0-preview.5",
-    "date": "2026-09-27",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Uhabits export writes empty strings not null, matches colors by hue",
-        "Overdue 1-in-D habits say due now instead of counting days late"
-      ]
-    }
-  },
-  {
-    "version": "1.45.0-preview.4",
-    "date": "2026-09-26",
-    "channel": "preview",
-    "sections": {
-      "Fixed": [
-        "Old clients' period edits reach frequency_days, measurable reminders match dayValue",
-        "Reminder actions save, frequency field typing, export keeps edited frequency",
-        "Reminder deep link keeps the back anchor, name all-skipped imports, share habit link contract",
-        "Reminders open their habit, import names skipped habits, and review cleanups"
       ]
     }
   }

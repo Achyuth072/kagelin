@@ -5,6 +5,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { X, Columns2, PanelRight } from "lucide-react";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 import { TaskView } from "./TaskView";
 import { TaskEditorProvider, useTaskEditorContext } from "./TaskEditorProvider";
 
@@ -20,6 +21,7 @@ function TaskDetailPanelContent({ onClose }: { onClose?: () => void }) {
   const boardInspectMode = useUiStore((state) => state.boardInspectMode);
   const setBoardInspectMode = useUiStore((state) => state.setBoardInspectMode);
   const isDockedWide = useMediaQuery("(min-width: 1280px)");
+  const isAnyModalOpen = useIsAnyModalOpen();
 
   const isOverlay = boardInspectMode === "overlay";
   const toggleLabel = isOverlay
@@ -34,11 +36,13 @@ function TaskDetailPanelContent({ onClose }: { onClose?: () => void }) {
             <button
               type="button"
               data-testid="board-inspect-mode-toggle"
+              disabled={isAnyModalOpen}
               onClick={() => {
+                if (isAnyModalOpen) return;
                 trigger("toggle");
                 setBoardInspectMode(isOverlay ? "split" : "overlay");
               }}
-              className="h-9 px-2.5 rounded-lg flex items-center gap-1.5 text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 border border-border/80 transition-all duration-200 text-xs font-medium"
+              className="h-9 px-2.5 rounded-lg flex items-center gap-1.5 text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 border border-border/80 transition-all duration-200 text-xs font-medium disabled:opacity-50 disabled:pointer-events-none"
               aria-label={toggleLabel}
               title={toggleLabel}
             >
@@ -60,11 +64,13 @@ function TaskDetailPanelContent({ onClose }: { onClose?: () => void }) {
           )}
           <button
             type="button"
+            disabled={isAnyModalOpen}
             onClick={() => {
+              if (isAnyModalOpen) return;
               trigger("tick");
               onClose();
             }}
-            className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 border border-border/80 transition-all duration-200"
+            className="h-9 w-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground bg-secondary hover:bg-secondary/80 border border-border/80 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none"
             aria-label="Close task details"
           >
             <X className="h-5 w-5 opacity-80" strokeWidth={2.25} />

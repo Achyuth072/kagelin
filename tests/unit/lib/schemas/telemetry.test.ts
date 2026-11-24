@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   TelemetryEventSchema,
   TelemetryBatchRequestSchema,
+  MigrationEventSchema,
 } from "@/lib/schemas/telemetry";
 
 describe("Telemetry Schemas", () => {
@@ -39,6 +40,51 @@ describe("Telemetry Schemas", () => {
           properties: { table: "tasks", column: "content", id: "t1" },
         }).success,
       ).toBe(false);
+    });
+
+    it("validates valid migration_event event", () => {
+      const result = TelemetryEventSchema.safeParse({
+        name: "migration_event",
+        deviceId: validDeviceId,
+        properties: {
+          source: "google_tasks",
+          ingress: "oauth",
+          phase: "commit",
+          status: "completed",
+          task_count: 42,
+          duration_ms: 1250,
+        },
+      });
+
+      expect(result.success).toBe(true);
+      expect(
+        MigrationEventSchema.safeParse({
+          name: "migration_event",
+          deviceId: validDeviceId,
+          properties: {
+            source: "google_tasks",
+            ingress: "takeout_json",
+            phase: "plan",
+            status: "completed",
+          },
+        }).success,
+      ).toBe(true);
+    });
+
+    it("rejects migration_event with extra properties (strict)", () => {
+      const result = TelemetryEventSchema.safeParse({
+        name: "migration_event",
+        deviceId: validDeviceId,
+        properties: {
+          source: "google_tasks",
+          ingress: "oauth",
+          phase: "fetch",
+          status: "started",
+          unknown_field: true,
+        },
+      });
+
+      expect(result.success).toBe(false);
     });
 
     it("validates valid pwa_installed event", () => {

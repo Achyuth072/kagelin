@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { requireUser } from "@/lib/api/require-user";
 import { getProviderAccessToken } from "@/lib/calendar-oauth/get-access-token";
 
@@ -12,6 +13,21 @@ export async function GET(request: Request) {
 
   const { user, error: authError } = await requireUser();
   if (authError) return authError;
+
+  if (provider === "google_tasks" || provider === "microsoft_tasks") {
+    const cookieName = `${provider}_temp_token`;
+    const cookieStore = await cookies();
+    const tempToken = cookieStore.get(cookieName)?.value;
+    if (!tempToken) {
+      return NextResponse.json({ disconnected: true }, { status: 401 });
+    }
+    // Delete cookie immediately upon consumption (transient one-time pull)
+    cookieStore.delete(cookieName);
+    return NextResponse.json({
+      access_token: tempToken,
+      expires_at: Date.now() + 3600 * 1000,
+    });
+  }
 
   let token;
   try {

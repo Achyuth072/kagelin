@@ -2,17 +2,26 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/api/require-user";
 import { generatePKCE } from "@/lib/calendar-oauth/pkce";
-import { getOAuthRedirectUri } from "@/lib/calendar-oauth/app-url";
+import {
+  getOAuthRedirectUri,
+  isValidReturnTo,
+  getOAuthCredentials,
+} from "@/lib/calendar-oauth/app-url";
 
 const PROVIDER_AUTH_URLS: Record<string, string> = {
   google: "https://accounts.google.com/o/oauth2/v2/auth",
+  google_tasks: "https://accounts.google.com/o/oauth2/v2/auth",
   outlook: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+  microsoft_tasks:
+    "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
 };
 
 const PROVIDER_SCOPES: Record<string, string> = {
   google: "https://www.googleapis.com/auth/calendar openid email",
+  google_tasks: "https://www.googleapis.com/auth/tasks.readonly openid email",
   outlook:
     "https://graph.microsoft.com/Calendars.ReadWrite offline_access openid email",
+  microsoft_tasks: "https://graph.microsoft.com/Tasks.Read openid email",
 };
 
 export async function GET(
@@ -54,12 +63,22 @@ export async function GET(
     path: "/",
   });
 
+  const returnTo = new URL(request.url).searchParams.get("return_to");
+  if (isValidReturnTo(returnTo)) {
+    cookieStore.set("calendar_oauth_return_to", returnTo!, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 10,
+      path: "/",
+    });
+  }
+
+  const { clientId } = getOAuthCredentials(provider);
+
   const redirectUri = getOAuthRedirectUri(request);
   const url = new URL(PROVIDER_AUTH_URLS[provider]);
-  url.searchParams.set(
-    "client_id",
-    process.env[`${provider.toUpperCase()}_CLIENT_ID`] ?? "",
-  );
+  url.searchParams.set("client_id", clientId);
   url.searchParams.set("redirect_uri", redirectUri);
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", PROVIDER_SCOPES[provider]);

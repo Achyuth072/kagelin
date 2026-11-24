@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useBackNavigation } from "@/lib/hooks/useBackNavigation";
+import { useDialogActive } from "@/lib/hooks/useDialogActive";
 
 interface DeleteConfirmationDialogProps {
   isOpen: boolean;
@@ -44,6 +45,9 @@ export function DeleteConfirmationDialog({
 }: DeleteConfirmationDialogProps) {
   const isDesktop = useMediaQuery("(min-width: 641px)");
   const { trigger } = useHaptic();
+
+  // Register with modal tracking so hotkeys and DnD are suppressed while open
+  useDialogActive(isOpen);
 
   // Handle back navigation on mobile to close drawer instead of navigating away
   useBackNavigation(isOpen && !isDesktop, onClose);

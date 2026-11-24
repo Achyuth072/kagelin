@@ -9,11 +9,12 @@ import { Calendar } from "@/components/ui/calendar";
 import { SegmentedTimePicker } from "@/components/ui/segmented-time-picker";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar as CalendarIcon, Clock, Check } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DateTimeWizardProps {
   title?: string;
+  description?: string;
   date: Date | undefined;
   setDate: (date: Date | undefined) => void;
   onClose: () => void;
@@ -23,10 +24,13 @@ interface DateTimeWizardProps {
   compact?: boolean;
   /** Called when the "Evening" quick preset is selected */
   onEveningSelect?: () => void;
+  /** Whether to show a Clear button to unset the date */
+  allowClear?: boolean;
 }
 
 export function DateTimeWizard({
   title,
+  description,
   date,
   setDate,
   onClose,
@@ -34,6 +38,7 @@ export function DateTimeWizard({
   allowPastDates = false,
   compact = false,
   onEveningSelect,
+  allowClear = false,
 }: DateTimeWizardProps) {
   const { trigger } = useHaptic();
   const { formatTime } = useTimeFormat();
@@ -78,6 +83,15 @@ export function DateTimeWizard({
     onClose();
   };
 
+  const handleClear = () => {
+    trigger("toggle");
+    setDate(undefined);
+    onClose();
+  };
+
+  const showClear =
+    allowClear && (tempDate !== undefined || date !== undefined);
+
   return (
     <div className="flex flex-col w-full max-w-[320px] mx-auto bg-popover rounded-md overflow-hidden">
       {/* Header / Tabs */}
@@ -85,6 +99,11 @@ export function DateTimeWizard({
         {title && (
           <div className="px-1 text-xs font-semibold text-foreground/85 tracking-wide">
             {title}
+          </div>
+        )}
+        {description && (
+          <div className="px-1 text-[11px] text-muted-foreground leading-normal">
+            {description}
           </div>
         )}
         <Tabs
@@ -206,14 +225,6 @@ export function DateTimeWizard({
                 Evening
               </Button>
             </div>
-
-            {/* Date View Footer */}
-            <div className="mt-2 w-full flex justify-end">
-              <Button size="sm" className="gap-1.5 w-full" onClick={onSave}>
-                <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
-                Done
-              </Button>
-            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center animate-in slide-in-from-right-5 fade-in duration-200">
@@ -257,15 +268,34 @@ export function DateTimeWizard({
                 </Button>
               ))}
             </div>
-
-            <div className="mt-2 w-full flex justify-end">
-              <Button size="sm" className="gap-1.5 w-full" onClick={onSave}>
-                <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
-                Done
-              </Button>
-            </div>
           </div>
         )}
+
+        <div className="mt-2 w-full flex items-center gap-2">
+          {showClear && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5 flex-1 h-9 sm:h-8 text-muted-foreground hover:text-foreground"
+              onClick={handleClear}
+            >
+              <X className="w-3.5 h-3.5" strokeWidth={2.25} />
+              Clear
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className={cn(
+              "gap-1.5 h-9 sm:h-8",
+              showClear ? "flex-1" : "w-full",
+            )}
+            onClick={onSave}
+          >
+            <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
+            Done
+          </Button>
+        </div>
       </div>
     </div>
   );

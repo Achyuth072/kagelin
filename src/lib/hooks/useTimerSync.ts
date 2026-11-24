@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
+import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/AuthProvider";
 import { useTimerStore } from "@/lib/store/timerStore";
@@ -48,29 +49,41 @@ function remoteRowToState(
   remote: Record<string, unknown>,
   current: TimerState,
 ): TimerState {
+  const isRunning =
+    typeof remote.is_running === "boolean"
+      ? remote.is_running
+      : current.isRunning;
+  const rawCompleted =
+    typeof remote.completed_sessions === "number"
+      ? remote.completed_sessions
+      : current.completedSessions;
+
+  const today = format(new Date(), "yyyy-MM-dd");
+  const remoteDate =
+    typeof remote.updated_at === "string"
+      ? format(new Date(remote.updated_at), "yyyy-MM-dd")
+      : null;
+  const isStaleDay = !isRunning && remoteDate !== null && remoteDate < today;
+
   return {
     ...current,
-    mode: parseMode(remote.mode, current.mode),
-    remainingSeconds:
-      typeof remote.remaining_seconds === "number"
+    mode: isStaleDay ? "focus" : parseMode(remote.mode, current.mode),
+    remainingSeconds: isStaleDay
+      ? current.remainingSeconds
+      : typeof remote.remaining_seconds === "number"
         ? remote.remaining_seconds
         : current.remainingSeconds,
-    isRunning:
-      typeof remote.is_running === "boolean"
-        ? remote.is_running
-        : current.isRunning,
+    isRunning,
     activeTaskId:
       typeof remote.active_task_id === "string" ? remote.active_task_id : null,
-    completedSessions:
-      typeof remote.completed_sessions === "number"
-        ? remote.completed_sessions
-        : current.completedSessions,
+    completedSessions: isStaleDay ? 0 : rawCompleted,
     endsAt:
       typeof remote.ends_at === "string" ? Date.parse(remote.ends_at) : null,
     sourceDeviceId:
       typeof remote.source_device_id === "string"
         ? remote.source_device_id
         : null,
+    lastSessionDate: remoteDate,
   };
 }
 

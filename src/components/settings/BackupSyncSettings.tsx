@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
@@ -371,7 +371,28 @@ export function BackupSyncSettings() {
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
-  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("connected");
+    return connected === "google_tasks" || connected === "microsoft_tasks";
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("oauth_error");
+    if (oauthError) {
+      notify.error(`Task migration connection failed: ${oauthError}`);
+      params.delete("oauth_error");
+      const nextSearch = params.toString();
+      window.history.replaceState(
+        {},
+        "",
+        window.location.pathname + (nextSearch ? `?${nextSearch}` : ""),
+      );
+    }
+  }, []);
 
   // Kept in memory only to avoid persisting credentials locally.
   const [webdavCredentials, setWebdavCredentials] = useState<WebDAVCredentials>(

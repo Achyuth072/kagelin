@@ -40,8 +40,8 @@ export function ArchivedProjectsDialog({
   return (
     <>
       <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-        <ResponsiveDialogContent className="sm:max-w-md p-0 overflow-hidden">
-          <ResponsiveDialogHeader className="px-4 pt-6 shrink-0">
+        <ResponsiveDialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+          <ResponsiveDialogHeader className="px-4 pt-6 shrink-0 text-left">
             <ResponsiveDialogTitle className="type-h2">
               Archived Projects
             </ResponsiveDialogTitle>

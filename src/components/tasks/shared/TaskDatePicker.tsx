@@ -1,6 +1,6 @@
 "use client";
 
-import { format, isBefore, isToday, startOfDay } from "date-fns";
+import { format } from "date-fns";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import { DateTimeWizard } from "@/components/ui/date-time-wizard";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
+import { categorizeTaskSchedule } from "@/lib/utils/task-metrics";
 
 interface TaskDatePickerProps {
   date: Date | undefined;
@@ -28,6 +29,7 @@ interface TaskDatePickerProps {
   onOpenChange: (open: boolean) => void;
   variant?: "icon" | "compact" | "chip";
   title?: string;
+  description?: string;
   activeClassName?: string;
   icon?: LucideIcon;
   side?: "top" | "bottom" | "left" | "right";
@@ -37,6 +39,8 @@ interface TaskDatePickerProps {
   allowPastDates?: boolean;
   error?: boolean;
   onEveningSelect?: () => void;
+  allowClear?: boolean;
+  isCompleted?: boolean;
 }
 
 export function TaskDatePicker({
@@ -47,6 +51,7 @@ export function TaskDatePicker({
   onOpenChange,
   variant = "icon",
   title = "Due Date",
+  description,
   activeClassName = "text-brand bg-brand/10 hover:bg-brand/20 hover:text-brand",
   icon: Icon = CalendarIcon,
   side = "bottom",
@@ -57,14 +62,32 @@ export function TaskDatePicker({
   allowPastDates = false,
   error = false,
   onEveningSelect,
+  allowClear = true,
+  isCompleted = false,
 }: TaskDatePickerProps) {
   const isCompact = variant === "compact";
   const isChip = variant === "chip";
   const isDoDate = title === "Do Date" || title.toLowerCase().includes("start");
-  const isOverdue =
-    !isDoDate && !!date && isBefore(date, startOfDay(new Date()));
-  const isDoDateToday = isDoDate && !!date && isToday(date);
+  const scheduleCategory = date
+    ? categorizeTaskSchedule(
+        isDoDate
+          ? { do_date: date.toISOString(), is_completed: isCompleted }
+          : { due_date: date.toISOString(), is_completed: isCompleted },
+      )
+    : "unscheduled";
+  const isOverdue = scheduleCategory === "overdue";
+  const isDoDateToday = isDoDate && scheduleCategory === "planned_today";
+  const isDoDateReschedule =
+    isDoDate && scheduleCategory === "reschedule_needed";
   const isHighlighted = isDoDateToday || isOverdue;
+
+  const effectiveDescription =
+    description ??
+    (isDoDate
+      ? "Operational schedule (when to work on it)"
+      : title.toLowerCase().includes("due")
+        ? "Deadline (external commitment)"
+        : undefined);
   const { trigger } = useHaptic();
   const { formatDateWithTime } = useTimeFormat();
 
@@ -134,12 +157,19 @@ export function TaskDatePicker({
     ? `${title}: ${formattedDate}`
     : `Set ${title.toLowerCase()}`;
 
+  const hasChipClear = isChip && !!date && allowClear;
+
   const buttonClassName = isChip
     ? cn(
-        "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-7 sm:h-8 shadow-none",
+        "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 border transition-colors shrink-0 h-7 sm:h-8 shadow-none",
         isHighlighted
           ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
-          : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-foreground",
+          : isDoDateReschedule
+            ? "bg-secondary/40 border-border/60 text-muted-foreground border-dashed"
+            : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-foreground",
+        hasChipClear
+          ? "rounded-l-md rounded-r-none border-r-0 pr-2"
+          : "rounded-md",
         error && "border-destructive text-destructive",
       )
     : cn(
@@ -159,19 +189,29 @@ export function TaskDatePicker({
       );
 
   const clearButton =
-    !isChip && date ? (
+    allowClear && date ? (
       <button
         type="button"
         tabIndex={0}
         title={`Clear ${title.toLowerCase()}`}
         aria-label={`Clear ${title.toLowerCase()}`}
-        className={cn(
-          "relative ml-1 p-0.5 rounded cursor-pointer before:absolute before:-inset-2 before:content-['']",
-          isCompact
-            ? "hover:bg-destructive-surface-hover"
-            : "rounded-full hover:bg-current/10",
-          error && "hover:bg-destructive-surface-hover",
-        )}
+        className={
+          isChip
+            ? cn(
+                "inline-flex items-center justify-center h-7 sm:h-8 px-1.5 rounded-r-md rounded-l-none border border-l transition-colors cursor-pointer shrink-0 outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                isHighlighted
+                  ? "bg-secondary/70 border-border/80 hover:bg-secondary/90 border-l-border/60 text-foreground"
+                  : "bg-secondary/40 hover:bg-secondary/60 border-border/50 border-l-border/30 text-muted-foreground hover:text-foreground",
+                error && "border-destructive text-destructive",
+              )
+            : cn(
+                "relative ml-1 p-0.5 rounded cursor-pointer before:absolute before:-inset-2 before:content-[''] transition-colors",
+                isCompact
+                  ? "hover:bg-destructive-surface-hover text-muted-foreground hover:text-destructive"
+                  : "rounded-full hover:bg-current/10",
+                error && "hover:bg-destructive-surface-hover",
+              )
+        }
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
@@ -188,7 +228,10 @@ export function TaskDatePicker({
         }}
       >
         <X
-          className={cn("h-3 w-3", isCompact && "hover:text-destructive")}
+          className={cn(
+            "h-3 w-3",
+            !isChip && isCompact && "hover:text-destructive",
+          )}
           strokeWidth={2.25}
         />
       </button>
@@ -223,12 +266,14 @@ export function TaskDatePicker({
             </ResponsiveDialogHeader>
             <DateTimeWizard
               title={`Set ${title}`}
+              description={effectiveDescription}
               date={date}
               setDate={setDate}
               onClose={() => onOpenChange(false)}
               showTime={showTime}
               allowPastDates={allowPastDates}
               onEveningSelect={onEveningSelect}
+              allowClear={allowClear}
             />
           </ResponsiveDialogContent>
         </ResponsiveDialog>
@@ -260,12 +305,14 @@ export function TaskDatePicker({
         >
           <DateTimeWizard
             title={`Set ${title}`}
+            description={effectiveDescription}
             date={date}
             setDate={setDate}
             onClose={() => onOpenChange(false)}
             showTime={showTime}
             allowPastDates={allowPastDates}
             onEveningSelect={onEveningSelect}
+            allowClear={allowClear}
           />
         </PopoverContent>
       </Popover>

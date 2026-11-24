@@ -31,6 +31,7 @@ export interface UseTaskDndOptions {
   groupBy?: GroupOption;
   sortBy?: SortOption;
   isDesktop?: boolean;
+  disabled?: boolean;
 }
 
 export interface UseTaskDndReturn {
@@ -77,6 +78,8 @@ export interface TaskEditorState {
   setPriority: (value: 1 | 2 | 3 | 4) => void;
   recurrence: RecurrenceRule | null;
   setRecurrence: (value: RecurrenceRule | null) => void;
+  reminderDays: number;
+  setReminderDays: (value: number) => void;
   selectedProjectId: string | null;
   setSelectedProjectId: (value: string | null) => void;
 

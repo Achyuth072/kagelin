@@ -16,3 +16,30 @@ export function getAppBaseUrl(request: Request): string {
 export function getOAuthRedirectUri(request: Request): string {
   return `${getAppBaseUrl(request)}/api/calendar/oauth/callback`;
 }
+
+export function isValidReturnTo(path: string | null | undefined): boolean {
+  if (!path) return false;
+  return /^\/settings\?tab=[a-zA-Z0-9_.~%-]+(&[a-zA-Z0-9_.~%-]+=[a-zA-Z0-9_.~%-]*)*$/.test(
+    path,
+  );
+}
+
+export function getOAuthCredentials(provider: string): {
+  clientId: string;
+  clientSecret: string;
+} {
+  const isGoogle = provider === "google" || provider === "google_tasks";
+  const isMicrosoft = provider === "outlook" || provider === "microsoft_tasks";
+
+  const clientId =
+    process.env[`${provider.toUpperCase()}_CLIENT_ID`] ??
+    (isGoogle ? process.env.GOOGLE_CLIENT_ID : undefined) ??
+    (isMicrosoft ? process.env.OUTLOOK_CLIENT_ID : undefined) ??
+    "";
+  const clientSecret =
+    process.env[`${provider.toUpperCase()}_CLIENT_SECRET`] ??
+    (isGoogle ? process.env.GOOGLE_CLIENT_SECRET : undefined) ??
+    (isMicrosoft ? process.env.OUTLOOK_CLIENT_SECRET : undefined) ??
+    "";
+  return { clientId, clientSecret };
+}

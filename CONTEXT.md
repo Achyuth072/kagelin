@@ -578,6 +578,39 @@ supported task layouts are **List** (`Shift+1`) and **Board** (`Shift+2`).
 
 ---
 
+## Tasks vs Habits (Orthogonality & Anti-Encroachment)
+
+### Task vs Habit
+
+Tasks and Habits are fundamentally orthogonal. Scheduling a task for a
+specific day (assigning a `do_date`) is purely operational timeboxing and does
+not encroach on Habits:
+
+- **Lifecycle**: A Task terminates permanently upon completion (`pending` → `completed`).
+  A Habit is an infinite routine of continuous daily practice that never "finishes".
+- **Dates**: A Task has a `Do Date` (when to work on it), `Due Date` (deadline), or
+  is unscheduled. A Habit has an `Entry` (daily log) evaluated against a `Frequency` (N in D days).
+- **Evaluation**: A Task is binary state with no adherence history. A Habit tracks
+  `Streak` and `Score` over time.
+- **Lapsed state**: An uncompleted task rolls over as overdue debt or operational
+  rescheduling; a missed habit day seals as `Unknown` / `Not done` and decays score without rollover.
+- **Day UX**: Completed tasks diminish or clear to remove clutter; completed habits
+  remain visible in place as satisfied rings / checkmarks.
+
+**Anti-encroachment rules**:
+
+1. A task tracking streaks, adherence rates, or cadence strength is masquerading as a Habit.
+   Recurring tasks (`Series`) spawn discrete terminating occurrences upon completion; `Insights`
+   on a task shows only completion logs and focus duration, never streaks or decay scores.
+2. A habit treated as a disposable item that disappears upon completion is masquerading as a Task.
+3. Day surfaces (Today view, Daily Briefing, Focus Picker) present Tasks and Habits in distinct
+   modules, never as a merged homogeneous checklist.
+4. Schema and types maintain zero bleed: no hybrid rows. Cross-domain conversion is _(deferred)_.
+
+_Avoid_: habit task, daily routine task, task streak, due habit, habit deadline.
+
+---
+
 ## Analytics
 
 ### Stats

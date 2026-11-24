@@ -64,8 +64,8 @@ export function Toaster() {
             "transition-all duration-300 ease-seijaku",
             "[&_[data-icon]]:text-foreground/60",
           ),
-          // unstyled drops Sonner's spinner anchor; its unlayered CSS needs ! to override.
-          icon: "shrink-0 [&>svg]:w-5 [&>svg]:h-5 [&>.sonner-loading-wrapper]:relative!",
+          // Prevents loading spinner from displacing resolved toast icons
+          icon: "relative flex size-5 shrink-0 items-center justify-center [&>svg]:w-5 [&>svg]:h-5 [&>.sonner-loading-wrapper]:absolute [&>.sonner-loading-wrapper]:inset-0 [&>.sonner-loading-wrapper]:m-auto [&>.sonner-loading-wrapper]:pointer-events-none",
           content: "min-w-0 flex-1",
           title:
             "font-semibold text-[13px] sm:text-sm tracking-tight leading-tight",

@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { format } from "date-fns";
 import type { TimerMode, TimerState, TimerSettings } from "@/lib/types/timer";
 import { DEFAULT_TIMER_SETTINGS } from "@/lib/types/timer";
 import { serverNow, isServerClockReady } from "@/lib/store/serverClock";
@@ -53,6 +54,7 @@ const getInitialState = (settings: TimerSettings): TimerState => ({
   activeTaskId: null,
   endsAt: null,
   sourceDeviceId: null,
+  lastSessionDate: null,
 });
 
 // remainingSeconds left until an absolute deadline, clamped at 0.
@@ -139,6 +141,7 @@ export const useTimerStore = create<TimerStore>()(
           state: {
             ...getInitialState(settings),
             completedSessions: rolledBack,
+            lastSessionDate: state.lastSessionDate,
             sourceDeviceId: getDeviceId(),
           },
         });
@@ -182,7 +185,28 @@ export const useTimerStore = create<TimerStore>()(
       },
 
       reconcile: () => {
-        const { state } = get();
+        const { state, settings } = get();
+        const today = format(new Date(), "yyyy-MM-dd");
+
+        // Reset idle cycle progress across calendar days so today starts with fresh focus
+        if (
+          !state.isRunning &&
+          state.completedSessions > 0 &&
+          state.lastSessionDate &&
+          state.lastSessionDate < today
+        ) {
+          set((s) => ({
+            state: {
+              ...s.state,
+              mode: "focus",
+              remainingSeconds: getDurationForMode("focus", settings),
+              completedSessions: 0,
+              lastSessionDate: null,
+            },
+          }));
+          return;
+        }
+
         if (!state.isRunning) return;
 
         // Deploy-boundary transient: a running row whose endsAt hasn't been
@@ -241,6 +265,7 @@ export const useTimerStore = create<TimerStore>()(
             state.mode === "longBreak" ? 0 : state.completedSessions;
         }
 
+        const today = format(new Date(), "yyyy-MM-dd");
         const nextDuration = getDurationForMode(nextMode, settings);
         const nextState: TimerState = {
           ...state,
@@ -251,6 +276,8 @@ export const useTimerStore = create<TimerStore>()(
           // The completing owner writes the next deadline and re-stamps itself.
           endsAt: nextIsRunning ? serverNow() + nextDuration * 1000 : null,
           sourceDeviceId: getDeviceId(),
+          lastSessionDate:
+            state.mode === "focus" ? today : (state.lastSessionDate ?? today),
         };
 
         set({ state: nextState });

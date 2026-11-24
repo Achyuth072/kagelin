@@ -95,6 +95,57 @@ describe("BoardTaskCard", () => {
     expect(dueChip).toHaveClass("bg-secondary/70", "font-semibold");
   });
 
+  it("renders expired do_date with operational replanning styling and prompt without overdue breach badge", () => {
+    const replanTask: Task = {
+      ...baseTask,
+      do_date: "2020-01-15",
+      due_date: null,
+      is_completed: false,
+    };
+    render(
+      <BoardTaskCard
+        task={replanTask}
+        project={undefined}
+        handleComplete={vi.fn()}
+        handlePlayFocus={vi.fn()}
+      />,
+    );
+
+    const replanChip = screen.getByText("Planned for Jan 15").parentElement;
+    expect(replanChip).toBeInTheDocument();
+    expect(replanChip).toHaveAttribute("title", "Needs rescheduling");
+    expect(replanChip).toHaveClass("border-dashed");
+    expect(replanChip).not.toHaveClass("font-semibold", "bg-secondary/70");
+  });
+
+  it("clearly disambiguates expired do_date and expired due_date on board card", () => {
+    const dualTask: Task = {
+      ...baseTask,
+      do_date: "2020-01-10",
+      due_date: "2020-01-15",
+      is_completed: false,
+    };
+    render(
+      <BoardTaskCard
+        task={dualTask}
+        project={undefined}
+        handleComplete={vi.fn()}
+        handlePlayFocus={vi.fn()}
+      />,
+    );
+
+    const replanChip = screen.getByText("Planned for Jan 10").parentElement;
+    expect(replanChip).toBeInTheDocument();
+    expect(replanChip).toHaveAttribute("title", "Needs rescheduling");
+    expect(replanChip).toHaveClass("border-dashed");
+    expect(replanChip).not.toHaveClass("font-semibold", "bg-secondary/70");
+
+    const dueChip = screen.getByText("Jan 15").parentElement;
+    expect(dueChip).toBeInTheDocument();
+    expect(dueChip).toHaveClass("bg-secondary/70", "font-semibold");
+    expect(dueChip).not.toHaveClass("border-dashed");
+  });
+
   it("renders pre-allocated zero-jump action cluster with play and delete buttons", () => {
     const handleDelete = vi.fn();
     const handleFocus = vi.fn();

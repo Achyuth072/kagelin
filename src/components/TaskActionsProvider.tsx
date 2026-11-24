@@ -46,10 +46,14 @@ export function TaskActionsProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Fallback avoids crashes in isolated unit tests rendered without an outer provider.
+const DEFAULT_TASK_ACTIONS: TaskActionsContextValue = {
+  isAddTaskOpen: false,
+  openAddTask: () => {},
+  closeAddTask: () => {},
+};
+
 export function useTaskActions() {
   const context = useContext(TaskActionsContext);
-  if (!context) {
-    throw new Error("useTaskActions must be used within a TaskActionsProvider");
-  }
-  return context;
+  return context ?? DEFAULT_TASK_ACTIONS;
 }

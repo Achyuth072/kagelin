@@ -253,6 +253,9 @@ describe("TaskList DnD layout shift protection", () => {
         markShortcutTipShown: vi.fn(),
         startHereStates: {},
         setStartHereState: vi.fn(),
+        activeDialogCount: 0,
+        openDialogIds: {},
+        registerOpenDialog: vi.fn(),
       }),
     );
   });

@@ -15,17 +15,9 @@ import type { ProcessedTasks, TaskGroup } from "@/lib/hooks/useTaskViewData";
 import { cn } from "@/lib/utils";
 import { isSwipeHintDismissed, dismissSwipeHint } from "@/lib/utils/swipeHint";
 
-/**
- * Threshold of total tasks across groups before virtualization activates.
- * For smaller lists, native rendering preserves DOM compactness and zero scroll overhead.
- * When above threshold, GroupedVirtuoso virtualizes rows while keeping sticky headers.
- */
+// Avoids virtualization overhead on small lists while keeping long grouped lists fast.
 const VIRTUALIZATION_THRESHOLD = 50;
 
-/**
- * DroppableContainer is a lightweight wrapper for dnd-kit drop zones.
- * Removed the extra levels of nesting found in the previous TaskSection.
- */
 function DroppableContainer({
   id,
   children,
@@ -43,10 +35,6 @@ function DroppableContainer({
   );
 }
 
-/**
- * SectionHeader follows the "Shodo" (typography) principles
- * without introducing complex container hierarchies.
- */
 function SectionHeader({
   title,
   count,
@@ -90,18 +78,14 @@ interface TaskListViewProps {
   handleTaskClick: (task: Task) => void;
   keyboardSelectedId: string | null;
   isDndActive?: boolean;
+  isDndDisabled?: boolean;
   scrollParent?: HTMLDivElement | null;
-  // Shared props for performance
   projectsMap: Map<string, Project>;
   isDesktop: boolean;
   triggerHaptic: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   setActiveTaskId: (taskId: string) => void;
 }
 
-/**
- * TaskListView rebuilt with a flat DOM hierarchy.
- * Optimized for dnd-kit performance by minimizing React reconciliation depth.
- */
 function TaskListViewBase({
   processedTasks,
   activeTasks,
@@ -110,6 +94,7 @@ function TaskListViewBase({
   handleTaskClick,
   keyboardSelectedId,
   isDndActive,
+  isDndDisabled = false,
   scrollParent,
   projectsMap,
   isDesktop,
@@ -150,6 +135,7 @@ function TaskListViewBase({
         onSelect={handleTaskClick}
         isKeyboardSelected={task.id === keyboardSelectedId}
         isDndActive={isDndActive}
+        isDndDisabled={isDndDisabled}
         project={project}
         isDesktop={isDesktop}
         triggerHaptic={triggerHaptic}
@@ -177,7 +163,6 @@ function TaskListViewBase({
       className="px-4 md:px-6 pb-12 md:pb-8 flex flex-col gap-8 touch-manipulation"
       data-testid="task-list-container"
     >
-      {/* 1. Grouped Tasks (Sortable & Virtualized when above threshold) */}
       {groups && shouldVirtualizeGroups && (
         <SortableContext
           id="grouped-tasks"
@@ -238,7 +223,6 @@ function TaskListViewBase({
           );
         })}
 
-      {/* 2. Active Tasks (Flat & Sortable) */}
       {!groups && (
         <section className="first:mt-2">
           <SortableContext
@@ -255,7 +239,6 @@ function TaskListViewBase({
         </section>
       )}
 
-      {/* 3. Evening Section (Sortable) */}
       {!groups && (
         <section
           className={cn(
@@ -289,7 +272,6 @@ function TaskListViewBase({
         </section>
       )}
 
-      {/* 4. Completed Section (Static) */}
       {completed.length > 0 && (
         <section className="mt-4">
           <SectionHeader

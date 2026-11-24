@@ -98,6 +98,8 @@ function createMockEditorState(
     setPriority: vi.fn(),
     recurrence: null,
     setRecurrence: vi.fn(),
+    reminderDays: 127,
+    setReminderDays: vi.fn(),
     selectedProjectId: null,
     setSelectedProjectId: vi.fn(),
     datePickerOpen: false,
@@ -453,5 +455,50 @@ describe("TaskView - normalized form patterns & surface parity", () => {
       "panel",
     );
     expect(container.firstChild).toHaveClass("bg-card");
+  });
+
+  it("renders notification days chip in row 1 alongside do and due dates", () => {
+    const setReminderDays = vi.fn();
+    renderTaskView({
+      reminderDays: 127,
+      setReminderDays,
+    });
+
+    const reminderChip = screen.getByRole("button", {
+      name: /notification days: every day/i,
+    });
+    expect(reminderChip).toBeInTheDocument();
+
+    const datePickers = screen.getAllByTestId("date-picker");
+    expect(datePickers).toHaveLength(2);
+
+    // Both date pickers and reminder chip share the same parent row container
+    expect(reminderChip.parentElement).toBe(datePickers[0].parentElement);
+    expect(reminderChip.parentElement).toBe(datePickers[1].parentElement);
+
+    fireEvent.click(reminderChip);
+    expect(screen.getByText(/allowed notification days/i)).toBeInTheDocument();
+
+    const sundayBtn = screen.getByRole("button", { name: "Sunday" });
+    expect(sundayBtn).toBeInTheDocument();
+    expect(sundayBtn).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(sundayBtn);
+    // 127 & ~1 = 126
+    expect(setReminderDays).toHaveBeenCalledWith(126);
+  });
+
+  it("renders notification chip as icon-only on mobile while preserving accessible label", () => {
+    renderTaskView({
+      reminderDays: 127,
+      isMobile: true,
+    });
+
+    const reminderChip = screen.getByRole("button", {
+      name: /notification days: every day/i,
+    });
+    expect(reminderChip).toBeInTheDocument();
+    // On mobile, the visible text label "Alerts:" is omitted so only the bell icon is displayed
+    expect(screen.queryByText(/alerts:/i)).not.toBeInTheDocument();
   });
 });

@@ -133,6 +133,36 @@ describe("TaskDatePicker", () => {
     expect(setDate).toHaveBeenCalledWith(undefined);
   });
 
+  it("should allow clearing chip variant via clear button", async () => {
+    const setDate = vi.fn();
+    const testDate = new Date("2026-11-04T12:00:00Z");
+    const { fireEvent } = await import("@testing-library/react");
+
+    render(
+      <TaskDatePicker
+        {...defaultProps}
+        variant="chip"
+        date={testDate}
+        setDate={setDate}
+        title="Due Date"
+      />,
+    );
+
+    const clearBtn = screen.getByLabelText("Clear due date");
+    expect(clearBtn).toBeInTheDocument();
+    expect(clearBtn).toHaveClass("rounded-r-md", "rounded-l-none", "border-l");
+
+    const triggerBtn = screen.getByTitle("Set due date");
+    expect(triggerBtn).toHaveClass(
+      "rounded-l-md",
+      "rounded-r-none",
+      "border-r-0",
+    );
+
+    fireEvent.click(clearBtn);
+    expect(setDate).toHaveBeenCalledWith(undefined);
+  });
+
   it("should pass contextual title to DateTimeWizard", () => {
     mockDateTimeWizard.mockClear();
     render(<TaskDatePicker {...defaultProps} title="Start Date" />);
@@ -140,6 +170,7 @@ describe("TaskDatePicker", () => {
     expect(mockDateTimeWizard).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Set Start Date",
+        allowClear: true,
       }),
     );
   });
@@ -175,7 +206,7 @@ describe("TaskDatePicker", () => {
         open={false}
       />,
     );
-    const doChipToday = screen.getByRole("button", { name: /do date/i });
+    const doChipToday = screen.getByRole("button", { name: /^do date:/i });
     expect(doChipToday).toHaveClass(
       "bg-secondary/70",
       "border-border/80",
@@ -185,6 +216,7 @@ describe("TaskDatePicker", () => {
     expect(doChipToday).not.toHaveClass("bg-brand/10", "text-brand");
     const todayIcon = doChipToday.querySelector("svg");
     expect(todayIcon).toHaveClass("text-foreground");
+    expect(screen.getByLabelText("Clear do date")).toBeInTheDocument();
     unmountToday();
 
     // Do Date on a future date (not today) should have neutral chip styling
@@ -199,7 +231,7 @@ describe("TaskDatePicker", () => {
         open={false}
       />,
     );
-    const doChipFuture = screen.getByRole("button", { name: /do date/i });
+    const doChipFuture = screen.getByRole("button", { name: /^do date:/i });
     expect(doChipFuture).toHaveClass(
       "bg-secondary/40",
       "border-border/50",
@@ -208,6 +240,7 @@ describe("TaskDatePicker", () => {
     expect(doChipFuture).not.toHaveClass("bg-secondary/70", "font-semibold");
     const futureDoIcon = doChipFuture.querySelector("svg");
     expect(futureDoIcon).toHaveClass("text-muted-foreground");
+    expect(screen.getByLabelText("Clear do date")).toBeInTheDocument();
     unmountFutureDo();
 
     // Normal due date
@@ -228,7 +261,7 @@ describe("TaskDatePicker", () => {
 
     // Overdue due date
     const pastDate = new Date("2020-01-01T00:00:00Z");
-    render(
+    const { unmount: unmountPastDue } = render(
       <TaskDatePicker
         {...defaultProps}
         variant="chip"
@@ -239,5 +272,62 @@ describe("TaskDatePicker", () => {
     );
     const overdueChip = screen.getByTitle("Set due date");
     expect(overdueChip).toHaveClass("bg-secondary/70", "font-semibold");
+    unmountPastDue();
+
+    // Past Do Date should NOT have overdue highlight, but operational replanning dashed border
+    const pastDoDate = new Date("2020-01-01T00:00:00Z");
+    render(
+      <TaskDatePicker
+        {...defaultProps}
+        variant="chip"
+        title="Do Date"
+        date={pastDoDate}
+        open={false}
+      />,
+    );
+    const pastDoChip = screen.getByTitle("Set do date");
+    expect(pastDoChip).not.toHaveClass("bg-secondary/70", "font-semibold");
+    expect(pastDoChip).toHaveClass("border-dashed");
+  });
+
+  it("distinguishes operational schedule from external deadline in wizard descriptions", () => {
+    mockDateTimeWizard.mockClear();
+    const { unmount } = render(
+      <TaskDatePicker {...defaultProps} title="Do Date" open={true} />,
+    );
+    expect(mockDateTimeWizard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Set Do Date",
+        description: "Operational schedule (when to work on it)",
+      }),
+    );
+    unmount();
+
+    mockDateTimeWizard.mockClear();
+    render(<TaskDatePicker {...defaultProps} title="Due Date" open={true} />);
+    expect(mockDateTimeWizard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Set Due Date",
+        description: "Deadline (external commitment)",
+      }),
+    );
+  });
+
+  it("does not render dashed reschedule styling on completed tasks with past do_date", () => {
+    const pastDoDate = new Date();
+    pastDoDate.setDate(pastDoDate.getDate() - 3);
+
+    render(
+      <TaskDatePicker
+        {...defaultProps}
+        variant="chip"
+        title="Do Date"
+        date={pastDoDate}
+        open={false}
+        isCompleted={true}
+      />,
+    );
+    const pastDoChip = screen.getByTitle("Set do date");
+    expect(pastDoChip).not.toHaveClass("border-dashed");
   });
 });

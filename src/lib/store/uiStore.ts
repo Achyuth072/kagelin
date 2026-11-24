@@ -141,6 +141,10 @@ interface UiState {
   startHereStates: Record<string, StartHereState>;
   setStartHereState: (userId: string, state: StartHereState) => void;
 
+  openDialogIds?: Record<string, boolean>;
+  activeDialogCount: number;
+  registerOpenDialog: (id: string, isOpen: boolean) => void;
+
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
 }
@@ -312,6 +316,24 @@ export const useUiStore = create<UiState>()(
         }));
       },
 
+      openDialogIds: {},
+      activeDialogCount: 0,
+      // Track open dialog IDs in an object map to remain idempotent across nested renders and avoid Set serialization crashes.
+      registerOpenDialog: (id, isOpen) => {
+        set((state) => {
+          const next = { ...(state.openDialogIds || {}) };
+          if (isOpen) {
+            next[id] = true;
+          } else {
+            delete next[id];
+          }
+          return {
+            openDialogIds: next,
+            activeDialogCount: Object.keys(next).length,
+          };
+        });
+      },
+
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
@@ -321,6 +343,12 @@ export const useUiStore = create<UiState>()(
       version: 1,
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
+        if (state) {
+          state.activeDialogCount = 0;
+          state.openDialogIds = {};
+          delete (state as unknown as { _openDialogIds?: unknown })
+            ._openDialogIds;
+        }
         if (state?.lastSeenVersion && !state.lastDismissedVersion) {
           state.setLastDismissedVersion(state.lastSeenVersion);
         }
@@ -351,12 +379,20 @@ export const useUiStore = create<UiState>()(
           isChangelogOpen: _isChangelogOpen,
           setChangelogOpen: _setChangelogOpen,
           shortcutMouseCounts: _shortcutMouseCounts,
+          activeDialogCount: _activeDialogCount,
+          openDialogIds: _openDialogIds,
+          registerOpenDialog: _registerOpenDialog,
           ...rest
-        } = state;
+        } = state as typeof state & { _openDialogIds?: unknown };
+        delete (rest as Record<string, unknown>)._openDialogIds;
         return rest;
       },
       migrate: (persistedState: unknown, _version: number) => {
         const state = persistedState as Record<string, unknown> | undefined;
+        if (!state) return state;
+        delete state.activeDialogCount;
+        delete state.openDialogIds;
+        delete state._openDialogIds;
         // "split" and "grid" were retired in favor of "list".
         if (RETIRED_VIEW_MODES.has(state?.viewMode as string)) {
           return { ...state, viewMode: "list" };

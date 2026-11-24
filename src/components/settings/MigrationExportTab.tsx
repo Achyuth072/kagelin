@@ -1,14 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { Database, FileDown, Info, Loader2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronRight,
+  FileDown,
+  Info,
+  Loader2,
+  X,
+} from "lucide-react";
 import { BetaBadge } from "@/components/ui/beta-badge";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/components/AuthProvider";
 import { useHabits } from "@/lib/hooks/useHabits";
 import { useTasks } from "@/lib/hooks/useTasks";
 import { useProjects } from "@/lib/hooks/useProjects";
 import { useUhabitsExport } from "@/lib/hooks/useUhabitsExport";
 import { useTodoistExport } from "@/lib/hooks/useTodoistExport";
+import { useCalendarStore } from "@/lib/calendar/store";
+import { downloadICS } from "@/lib/utils/ics-generator";
+import { notify } from "@/lib/notify";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { mockStore } from "@/lib/mock/mock-store";
 import { cn } from "@/lib/utils";
@@ -30,13 +42,25 @@ export function formatTodoistSummary(
   if (taskCount === 0) {
     return "No active tasks";
   }
-  const taskLabel = taskCount === 1 ? "1 task" : `${taskCount} tasks`;
+
+  const taskStr = taskCount === 1 ? "1 task" : `${taskCount} tasks`;
+
   if (projectCount === 0) {
-    return taskLabel;
+    return taskStr;
   }
-  const projectLabel =
+
+  const projectStr =
     projectCount === 1 ? "1 project" : `${projectCount} projects`;
-  return `${taskLabel} across ${projectLabel}`;
+  return `${taskStr} across ${projectStr}`;
+}
+
+export function formatCalendarSummary(eventCount: number): string {
+  if (eventCount === 0) {
+    return "No calendar events to export";
+  }
+  return eventCount === 1
+    ? "1 event ready to export"
+    : `${eventCount} events ready to export`;
 }
 
 export interface MigrationExportTabProps {
@@ -64,10 +88,12 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
   const { isGuestMode } = useAuth();
   const { trigger } = useHaptic();
   const [showTodoistTip, setShowTodoistTip] = useState(false);
+  const [drillDown, setDrillDown] = useState<"loop-habits" | null>(null);
 
   const habitsQuery = useHabits();
   const tasksQuery = useTasks({ showCompleted: false });
   const projectsQuery = useProjects();
+  const events = useCalendarStore((state) => state.events);
 
   const {
     exportLoopDb,
@@ -101,6 +127,7 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
 
   const habitSummary = formatHabitSummary(habitCount);
   const todoistSummary = formatTodoistSummary(taskCount, projectCount);
+  const calendarSummary = formatCalendarSummary(events.length);
 
   const runExport = async (action: () => Promise<unknown>) => {
     trigger("toggle");
@@ -115,6 +142,18 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
     }
   };
 
+  const handleExportICS = () => {
+    trigger("thud");
+    try {
+      downloadICS(events);
+      notify.success("Calendar exported to .ics");
+      trigger("success");
+    } catch {
+      notify.error("Failed to export calendar");
+      trigger("thud");
+    }
+  };
+
   const handleDismissTip = () => {
     trigger("tick");
     setShowTodoistTip(false);
@@ -122,118 +161,277 @@ export function MigrationExportTab({ className }: MigrationExportTabProps) {
 
   return (
     <div className={cn("space-y-4", className)}>
-      {/* Loop Habit Tracker Card */}
-      <div className="flex flex-col min-[360px]:flex-row min-[360px]:items-center justify-between gap-2 py-4 px-3.5 sm:gap-3 sm:p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all">
-        <div className="flex items-center gap-2.5 min-[360px]:flex-1 min-w-0">
-          <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
-          <div className="min-w-0">
-            <h3 className="text-sm font-medium leading-snug">
-              Loop Habit
-              <span className="flex items-center gap-1.5">
-                Tracker
-                <BetaBadge />
-              </span>
-            </h3>
-            <p className="text-xs text-muted-foreground lowercase mt-0.5">
-              {habitSummary}
-            </p>
+      {drillDown === "loop-habits" ? (
+        /* Dedicated Drill-down Sub-view */
+        <div className="space-y-4 min-h-[260px]">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                trigger("tick");
+                setDrillDown(null);
+              }}
+              className="h-7 px-2 -ml-1 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+              aria-label="Back to all apps"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2.25} />
+              Back
+            </Button>
+            <span className="text-xs font-medium text-foreground">
+              Loop Habit Formats
+            </span>
           </div>
-        </div>
-        {/* Unified segmented control: slim h-7 container with compact micro typography */}
-        <div className="inline-flex items-center h-7 bg-secondary/20 p-0.5 rounded-md border border-border/40 ml-auto shrink-0">
-          <button
-            type="button"
-            onClick={() => runExport(exportLoopDb)}
-            disabled={isExportingLoop}
-            className="inline-flex items-center h-full gap-1.5 px-2.5 rounded text-xs font-medium tracking-tight hover:bg-secondary/50 active:bg-secondary/70 text-foreground transition-all motion-reduce:transition-none disabled:opacity-50"
-            aria-label="Export Loop Habit Tracker database"
-          >
-            {isExportingLoop ? (
-              <Loader2
-                className="h-3 w-3 animate-spin text-brand"
-                strokeWidth={2.25}
-              />
-            ) : (
-              <Database className="h-3 w-3 text-brand" strokeWidth={2.25} />
-            )}
-            <span>.db</span>
-          </button>
-          <div className="h-3 w-[1px] bg-border/40 mx-0.5" />
-          <button
-            type="button"
-            onClick={() => runExport(exportLoopZip)}
-            disabled={isExportingLoop}
-            className="inline-flex items-center h-full gap-1.5 px-2.5 rounded text-xs font-medium tracking-tight hover:bg-secondary/50 active:bg-secondary/70 text-foreground transition-all motion-reduce:transition-none disabled:opacity-50"
-            aria-label="Export Loop Habit Tracker CSV archive"
-          >
-            {isExportingLoop ? (
-              <Loader2
-                className="h-3 w-3 animate-spin text-brand"
-                strokeWidth={2.25}
-              />
-            ) : (
-              <FileDown className="h-3 w-3 text-brand" strokeWidth={2.25} />
-            )}
-            <span>CSV Zip</span>
-          </button>
-        </div>
-      </div>
 
-      {/* Todoist Card */}
-      <div
-        role="button"
-        tabIndex={isExportingTodoist ? -1 : 0}
-        aria-disabled={isExportingTodoist}
-        onClick={() => {
-          if (!isExportingTodoist) {
-            void handleExportTodoist();
-          }
-        }}
-        onKeyDown={(e) => {
-          if ((e.key === "Enter" || e.key === " ") && !isExportingTodoist) {
-            e.preventDefault();
-            void handleExportTodoist();
-          }
-        }}
-        className={cn(
-          "flex flex-col min-[360px]:flex-row min-[360px]:items-center justify-between gap-2 py-4 px-3.5 sm:gap-3 sm:p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-all cursor-pointer group",
-          isExportingTodoist &&
-            "pointer-events-none opacity-60 cursor-not-allowed",
-        )}
-        aria-label="Export Todoist ZIP archive"
-      >
-        <div className="flex items-center gap-2.5 min-[360px]:flex-1 min-w-0">
-          <TodoistIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
-          <div className="min-w-0">
-            <h3 className="text-sm font-medium flex items-center gap-1.5">
-              Todoist
-              <BetaBadge />
-            </h3>
-            <p className="text-xs text-muted-foreground lowercase">
-              {todoistSummary}
-            </p>
+          {/* Row 1: Database (.db) */}
+          <div
+            role="button"
+            tabIndex={isExportingLoop ? -1 : 0}
+            aria-disabled={isExportingLoop}
+            aria-label="Export Loop Habit Tracker database"
+            onClick={() => void runExport(exportLoopDb)}
+            onKeyDown={(e) => {
+              if ((e.key === "Enter" || e.key === " ") && !isExportingLoop) {
+                e.preventDefault();
+                void runExport(exportLoopDb);
+              }
+            }}
+            className={cn(
+              "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+              isExportingLoop &&
+                "pointer-events-none opacity-60 cursor-not-allowed",
+            )}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium">Database (.db)</h3>
+                <p className="text-xs text-muted-foreground lowercase">
+                  Android Loop app backup
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              tabIndex={-1}
+              aria-hidden="true"
+              className={cn(
+                "h-8 transition-opacity text-brand pointer-events-none ml-auto shrink-0",
+                isExportingLoop
+                  ? "opacity-100"
+                  : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+              )}
+              disabled={isExportingLoop}
+            >
+              {isExportingLoop ? (
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+              ) : (
+                <FileDown className="h-4 w-4" strokeWidth={2.25} />
+              )}
+            </Button>
+          </div>
+
+          {/* Row 2: CSV Archive (.zip) */}
+          <div
+            role="button"
+            tabIndex={isExportingLoop ? -1 : 0}
+            aria-disabled={isExportingLoop}
+            aria-label="Export Loop Habit Tracker CSV archive"
+            onClick={() => void runExport(exportLoopZip)}
+            onKeyDown={(e) => {
+              if ((e.key === "Enter" || e.key === " ") && !isExportingLoop) {
+                e.preventDefault();
+                void runExport(exportLoopZip);
+              }
+            }}
+            className={cn(
+              "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+              isExportingLoop &&
+                "pointer-events-none opacity-60 cursor-not-allowed",
+            )}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium">CSV Archive (.zip)</h3>
+                <p className="text-xs text-muted-foreground lowercase">
+                  Habits and checkmarks history
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              tabIndex={-1}
+              aria-hidden="true"
+              className={cn(
+                "h-8 transition-opacity text-brand pointer-events-none ml-auto shrink-0",
+                isExportingLoop
+                  ? "opacity-100"
+                  : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+              )}
+              disabled={isExportingLoop}
+            >
+              <FileDown className="h-4 w-4" strokeWidth={2.25} />
+            </Button>
           </div>
         </div>
-        <div className="inline-flex items-center h-7 bg-secondary/20 p-0.5 rounded-md border border-border/40 ml-auto shrink-0">
-          <button
-            type="button"
-            disabled={isExportingTodoist}
-            tabIndex={-1}
-            className="inline-flex items-center h-full gap-1.5 px-2.5 rounded text-xs font-medium tracking-tight text-foreground disabled:opacity-50"
-            aria-hidden="true"
+      ) : (
+        <div className="space-y-4 min-h-[260px]">
+          {/* Calendar (ICS) Export Card */}
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Export Calendar to ICS"
+            onClick={handleExportICS}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleExportICS();
+              }
+            }}
+            className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
           >
-            {isExportingTodoist ? (
-              <Loader2
-                className="h-3 w-3 animate-spin text-brand"
-                strokeWidth={2.25}
-              />
-            ) : (
-              <FileDown className="h-3 w-3 text-brand" strokeWidth={2.25} />
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 rounded-full bg-brand/10 text-brand shrink-0 flex items-center justify-center">
+                <Calendar className="h-5 w-5" strokeWidth={2.25} />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium flex items-center gap-1.5 truncate">
+                  ICS (Calendar)
+                </h3>
+                <p className="text-xs text-muted-foreground lowercase mt-0.5 truncate">
+                  {calendarSummary}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              tabIndex={-1}
+              aria-hidden="true"
+              className="h-8 transition-opacity text-brand pointer-events-none ml-auto shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+            >
+              <FileDown className="h-4 w-4" strokeWidth={2.25} />
+            </Button>
+          </div>
+
+          {/* Loop Habit Tracker Card */}
+          <div
+            role="button"
+            tabIndex={isExportingLoop ? -1 : 0}
+            aria-disabled={isExportingLoop}
+            aria-label="Export Loop Habit Tracker"
+            onClick={() => {
+              if (isExportingLoop) return;
+              trigger("toggle");
+              setDrillDown("loop-habits");
+            }}
+            onKeyDown={(e) => {
+              if (isExportingLoop) return;
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                trigger("toggle");
+                setDrillDown("loop-habits");
+              }
+            }}
+            className={cn(
+              "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+              isExportingLoop &&
+                "pointer-events-none opacity-60 cursor-not-allowed",
             )}
-            <span>.zip</span>
-          </button>
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <LoopIcon className="h-9 w-9 shrink-0 rounded-full shadow-xs" />
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium truncate">
+                  Loop Habit Tracker
+                </h3>
+                <p className="text-xs text-muted-foreground lowercase mt-0.5 truncate">
+                  {habitSummary}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              tabIndex={-1}
+              aria-hidden="true"
+              className={cn(
+                "h-8 transition-opacity text-brand pointer-events-none ml-auto shrink-0",
+                isExportingLoop
+                  ? "opacity-100"
+                  : "text-muted-foreground group-hover:text-foreground",
+              )}
+              disabled={isExportingLoop}
+            >
+              {isExportingLoop ? (
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+              ) : (
+                <ChevronRight className="h-4 w-4" strokeWidth={2.25} />
+              )}
+            </Button>
+          </div>
+
+          {/* Todoist Card */}
+          <div
+            role="button"
+            tabIndex={isExportingTodoist ? -1 : 0}
+            aria-disabled={isExportingTodoist}
+            onClick={() => {
+              if (!isExportingTodoist) {
+                void handleExportTodoist();
+              }
+            }}
+            onKeyDown={(e) => {
+              if ((e.key === "Enter" || e.key === " ") && !isExportingTodoist) {
+                e.preventDefault();
+                void handleExportTodoist();
+              }
+            }}
+            className={cn(
+              "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+              isExportingTodoist &&
+                "pointer-events-none opacity-60 cursor-not-allowed",
+            )}
+            aria-label="Export Todoist ZIP archive"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <TodoistIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
+              <div className="min-w-0">
+                <h3 className="text-sm font-medium flex items-center gap-1.5 truncate">
+                  Todoist
+                  <BetaBadge />
+                </h3>
+                <p className="text-xs text-muted-foreground lowercase mt-0.5 truncate">
+                  {todoistSummary}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              tabIndex={-1}
+              aria-hidden="true"
+              className={cn(
+                "h-8 transition-opacity text-brand pointer-events-none ml-auto shrink-0",
+                isExportingTodoist
+                  ? "opacity-100"
+                  : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
+              )}
+              disabled={isExportingTodoist}
+            >
+              {isExportingTodoist ? (
+                <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />
+              ) : (
+                <FileDown className="h-4 w-4" strokeWidth={2.25} />
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {showTodoistTip && (
         <div

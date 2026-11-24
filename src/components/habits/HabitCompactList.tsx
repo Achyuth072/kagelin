@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { format, parseISO } from "date-fns";
 import {
@@ -35,6 +35,7 @@ import { dayValue } from "@/lib/utils/habit-score";
 import { cn } from "@/lib/utils";
 import { HabitCompactRow } from "./HabitCompactRow";
 import { SortableHabitCompactRow } from "./SortableHabitCompactRow";
+import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 
 // Suppress dnd-kit's built-in per-onDragOver a11y announcement (fires at
 // drag-over frequency by default) — keep start/end/cancel. See TaskList.tsx.
@@ -96,9 +97,20 @@ export function HabitCompactList({
   const keyboardSensor = useSensor(KeyboardSensor, {
     coordinateGetter: sortableKeyboardCoordinates,
   });
+  const isModalOpen = useIsAnyModalOpen();
   const sensors = useSensors(mouseSensor, touchSensor, keyboardSensor);
 
+  // Cancel any in-flight habit reorder immediately if a modal opens mid-interaction.
+  useEffect(() => {
+    if (isModalOpen && activeId) {
+      setActiveId(null);
+      setLockLocal(false);
+      setLocalHabits(habits);
+    }
+  }, [isModalOpen, activeId, habits]);
+
   const handleDragStart = (event: DragStartEvent) => {
+    if (isModalOpen) return;
     setLocalHabits(habits);
     setActiveId(event.active.id as string);
     triggerHaptic("toggle");
@@ -213,6 +225,7 @@ export function HabitCompactList({
                   onViewInsights ? () => onViewInsights(habit) : undefined
                 }
                 isDesktop={isDesktop}
+                isDndDisabled={isModalOpen}
               />
             ))}
           </div>

@@ -19,7 +19,12 @@ export function isOAuthConnectRedirect(
   search: string,
 ): boolean {
   const params = new URLSearchParams(search);
-  if (pathname === "/settings") return params.has("connecting");
+  if (pathname === "/settings")
+    return (
+      params.has("connecting") ||
+      params.has("connected") ||
+      params.has("oauth_error")
+    );
   if (pathname === "/calendar")
     return params.has("connected") || params.has("oauth_error");
   return false;

@@ -14,6 +14,7 @@ interface SortableBoardTaskCardProps {
   triggerHaptic?: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   setActiveTaskId?: (taskId: string) => void;
   isKeyboardSelected?: boolean;
+  isDndDisabled?: boolean;
 }
 
 export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
@@ -24,6 +25,7 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
   triggerHaptic,
   setActiveTaskId,
   isKeyboardSelected,
+  isDndDisabled = false,
 }: SortableBoardTaskCardProps) {
   const {
     attributes,
@@ -32,7 +34,7 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id });
+  } = useSortable({ id: task.id, disabled: isDndDisabled });
 
   const { onKeyDown: _, ...pointerListeners } = listeners ?? {};
   const cardAttributes = isDesktop ? undefined : attributes;
@@ -61,7 +63,10 @@ export const SortableBoardTaskCard = memo(function SortableBoardTaskCard({
         {...cardAttributes}
         {...cardListeners}
         className="w-full h-full"
-        onClick={() => onSelect?.(task)}
+        onClick={() => {
+          if (isDndDisabled) return;
+          onSelect?.(task);
+        }}
       >
         {/* Kept on wrapper to avoid busting TaskItem memo on drag-over. */}
         <TaskItem

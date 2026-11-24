@@ -4,13 +4,14 @@ import type { Task } from "@/lib/types/task";
 import type { TaskViewMode } from "@/lib/types/sorting";
 import {
   formatDueDate,
+  formatDoDate,
   isOverdue,
   priorityCheckboxClasses,
   priorityTextClasses,
 } from "./task-utils";
 import { DragHandle } from "./DragHandle";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar, Flag, Moon } from "lucide-react";
+import { Calendar, CalendarClock, Flag, Moon } from "lucide-react";
 import { StepProgressBadge } from "./StepProgressBadge";
 import { ReadableText } from "@/components/encryption/ReadableText";
 
@@ -29,8 +30,12 @@ export const TaskGhost = React.memo(
     project,
     viewMode = "list",
   }: TaskGhostProps) {
+    const doDateInfo = task.do_date
+      ? formatDoDate(task.do_date, task.is_completed)
+      : null;
     const hasMetadata = Boolean(
       task.due_date ||
+      task.do_date ||
       task.priority < 4 ||
       task.subtasks?.length ||
       task.is_evening,
@@ -82,8 +87,40 @@ export const TaskGhost = React.memo(
             {/* Metadata Row */}
             {hasMetadata && (
               <div className="flex items-center gap-2.5 flex-wrap ml-6">
+                {task.do_date && doDateInfo && (
+                  <span
+                    className={cn(
+                      "flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider",
+                      doDateInfo.isPlannedToday
+                        ? "text-foreground font-semibold"
+                        : doDateInfo.isRescheduleNeeded
+                          ? "text-muted-foreground border-b border-dashed border-border/80"
+                          : "text-muted-foreground/70",
+                    )}
+                    title={
+                      doDateInfo.isRescheduleNeeded
+                        ? "Needs rescheduling"
+                        : undefined
+                    }
+                    aria-label={
+                      doDateInfo.isRescheduleNeeded
+                        ? `${doDateInfo.text} (Needs rescheduling)`
+                        : undefined
+                    }
+                  >
+                    <CalendarClock className="h-3 w-3" strokeWidth={2.25} />
+                    {doDateInfo.text}
+                  </span>
+                )}
                 {task.due_date && (
-                  <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+                  <span
+                    className={cn(
+                      "flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider",
+                      !task.is_completed && isOverdue(task.due_date)
+                        ? "text-foreground font-bold"
+                        : "text-muted-foreground/70",
+                    )}
+                  >
                     <Calendar className="h-3 w-3" strokeWidth={2.25} />
                     {formatDueDate(task.due_date)}
                   </span>
@@ -168,11 +205,36 @@ export const TaskGhost = React.memo(
 
           {hasMetadata && (
             <div className="flex items-center gap-3 mt-0.5 ml-[2px] mb-1">
+              {task.do_date && doDateInfo && (
+                <span
+                  className={cn(
+                    "type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider whitespace-nowrap",
+                    doDateInfo.isPlannedToday
+                      ? "text-foreground font-semibold"
+                      : doDateInfo.isRescheduleNeeded
+                        ? "text-muted-foreground border-b border-dashed border-border/80"
+                        : "text-muted-foreground/70",
+                  )}
+                  title={
+                    doDateInfo.isRescheduleNeeded
+                      ? "Needs rescheduling"
+                      : undefined
+                  }
+                  aria-label={
+                    doDateInfo.isRescheduleNeeded
+                      ? `${doDateInfo.text} (Needs rescheduling)`
+                      : undefined
+                  }
+                >
+                  <CalendarClock className="h-3 w-3" strokeWidth={2.25} />
+                  {doDateInfo.text}
+                </span>
+              )}
               {task.due_date && (
                 <span
                   className={cn(
                     "type-ui flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider whitespace-nowrap",
-                    isOverdue(task.due_date)
+                    !task.is_completed && isOverdue(task.due_date)
                       ? "text-foreground font-bold"
                       : "text-muted-foreground/70",
                   )}
@@ -215,6 +277,7 @@ export const TaskGhost = React.memo(
       prev.task.is_completed === next.task.is_completed &&
       prev.task.priority === next.task.priority &&
       prev.task.due_date === next.task.due_date &&
+      prev.task.do_date === next.task.do_date &&
       prev.task.is_evening === next.task.is_evening &&
       prev.task.subtasks === next.task.subtasks &&
       prev.viewMode === next.viewMode &&

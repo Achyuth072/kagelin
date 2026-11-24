@@ -1,6 +1,10 @@
+import { getOAuthCredentials } from "./app-url";
+
 const TOKEN_ENDPOINTS: Record<string, string> = {
   google: "https://oauth2.googleapis.com/token",
+  google_tasks: "https://oauth2.googleapis.com/token",
   outlook: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
+  microsoft_tasks: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
 };
 
 export interface AuthCodeExchangeInput {
@@ -24,13 +28,15 @@ export async function exchangeAuthCode(
   const endpoint = TOKEN_ENDPOINTS[provider];
   if (!endpoint) throw new Error(`Unknown provider: ${provider}`);
 
+  const { clientId, clientSecret } = getOAuthCredentials(provider);
+
   const body = new URLSearchParams({
     grant_type: "authorization_code",
     code,
     code_verifier: codeVerifier,
     redirect_uri: redirectUri,
-    client_id: process.env[`${provider.toUpperCase()}_CLIENT_ID`] ?? "",
-    client_secret: process.env[`${provider.toUpperCase()}_CLIENT_SECRET`] ?? "",
+    client_id: clientId,
+    client_secret: clientSecret,
   });
 
   const response = await fetch(endpoint, {

@@ -1,7 +1,3 @@
-/**
- * Pomodoro Timer Types
- */
-
 export type TimerMode = "focus" | "shortBreak" | "longBreak";
 
 export type TaskSwitchBehavior =
@@ -25,6 +21,7 @@ export interface TimerState {
   activeTaskId: string | null;
   endsAt: number | null; // Absolute server-epoch deadline (ms) while running; null when paused/idle
   sourceDeviceId: string | null; // Device that last explicitly wrote the running state (ownership marker)
+  lastSessionDate?: string | null; // Daily cycle reset across midnight rollover
 }
 
 export const DEFAULT_TIMER_SETTINGS: TimerSettings = {

@@ -426,4 +426,67 @@ describe("useTimerStore", () => {
       expect(useTimerStore.getState().state.completedSessions).toBe(0);
     });
   });
+
+  describe("Daily cycle rollover", () => {
+    it("should reset completedSessions and mode to focus when idle and lastSessionDate is from a prior day", () => {
+      useTimerStore.setState((s) => ({
+        state: {
+          ...s.state,
+          mode: "shortBreak",
+          isRunning: false,
+          remainingSeconds: 300,
+          completedSessions: 2,
+          lastSessionDate: "2026-01-01",
+        },
+      }));
+
+      useTimerStore.getState().reconcile();
+
+      const { state } = useTimerStore.getState();
+      expect(state.completedSessions).toBe(0);
+      expect(state.mode).toBe("focus");
+      expect(state.remainingSeconds).toBe(25 * 60);
+      expect(state.lastSessionDate).toBeNull();
+    });
+
+    it("should preserve completedSessions on reconcile when lastSessionDate is today", () => {
+      const today = new Date().toISOString().split("T")[0];
+      useTimerStore.setState((s) => ({
+        state: {
+          ...s.state,
+          mode: "focus",
+          isRunning: false,
+          remainingSeconds: 1500,
+          completedSessions: 2,
+          lastSessionDate: today,
+        },
+      }));
+
+      useTimerStore.getState().reconcile();
+
+      const { state } = useTimerStore.getState();
+      expect(state.completedSessions).toBe(2);
+      expect(state.lastSessionDate).toBe(today);
+    });
+
+    it("should not reset completedSessions if the timer is actively running", () => {
+      useTimerStore.setState((s) => ({
+        state: {
+          ...s.state,
+          mode: "focus",
+          isRunning: true,
+          remainingSeconds: 1200,
+          endsAt: Date.now() + 1200 * 1000,
+          completedSessions: 2,
+          lastSessionDate: "2026-01-01",
+        },
+      }));
+
+      useTimerStore.getState().reconcile();
+
+      const { state } = useTimerStore.getState();
+      expect(state.completedSessions).toBe(2);
+      expect(state.isRunning).toBe(true);
+    });
+  });
 });

@@ -19,7 +19,7 @@ import { fetchAllRows } from "@/lib/supabase/paginate";
 import { notify } from "@/lib/notify";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
-import { isBefore, isToday, parseISO, startOfDay } from "date-fns";
+import { categorizeTaskSchedule } from "@/lib/utils/task-metrics";
 import { Target, Check, Repeat, Plus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/components/AuthProvider";
@@ -108,20 +108,25 @@ export function FocusTaskPicker() {
   });
 
   const groupedTasks = useMemo(() => {
-    const todayStart = startOfDay(new Date());
     const overdue: Task[] = [];
+    const rescheduleNeeded: Task[] = [];
     const today: Task[] = [];
+    const now = new Date();
     for (const task of pickerTasks || []) {
-      const dateStr = task.do_date || task.due_date;
-      if (!dateStr) {
+      const category = categorizeTaskSchedule(task, now);
+      if (category === "overdue") {
         overdue.push(task);
-        continue;
+      } else if (category === "reschedule_needed") {
+        rescheduleNeeded.push(task);
+      } else if (
+        category === "planned_today" ||
+        category === "due_today" ||
+        category === "unscheduled"
+      ) {
+        today.push(task);
       }
-      const date = parseISO(dateStr);
-      if (isToday(date)) today.push(task);
-      else if (isBefore(date, todayStart)) overdue.push(task);
     }
-    return { overdue, today };
+    return { overdue, rescheduleNeeded, today };
   }, [pickerTasks]);
 
   const handleChipTap = useCallback(() => {
@@ -258,6 +263,7 @@ export function FocusTaskPicker() {
     return (
       <div className="py-1">
         {renderSection("overdue", groupedTasks.overdue)}
+        {renderSection("needs rescheduling", groupedTasks.rescheduleNeeded)}
         {renderSection("today", groupedTasks.today)}
       </div>
     );
@@ -297,14 +303,14 @@ export function FocusTaskPicker() {
       </div>
 
       <ResponsiveDialog open={open} onOpenChange={setOpen}>
-        <ResponsiveDialogContent className="flex flex-col max-h-[55dvh] sm:max-w-sm sm:max-h-[60vh]">
-          <ResponsiveDialogHeader>
+        <ResponsiveDialogContent className="sm:max-w-sm max-h-[85dvh] sm:max-h-[60vh] flex flex-col p-0 overflow-hidden">
+          <ResponsiveDialogHeader className="p-4 pb-2 shrink-0 text-left">
             <ResponsiveDialogTitle>Focus on</ResponsiveDialogTitle>
             <ResponsiveDialogDescription className="sr-only">
               Choose a task for your focus session
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
-          <div className="overflow-y-auto flex-1 scrollbar-hide pb-safe sm:pb-0">
+          <div className="overflow-y-auto flex-1 min-h-0 scrollbar-hide px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:pb-4">
             {renderTaskList()}
           </div>
         </ResponsiveDialogContent>

@@ -178,8 +178,8 @@ export function ShortcutsHelp({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-[720px] border-border/80 shadow-none p-0">
-        <ResponsiveDialogHeader className="p-6 pb-2 border-b border-border/80">
+      <ResponsiveDialogContent className="sm:max-w-[720px] max-h-[85dvh] sm:max-h-[90dvh] flex flex-col p-0 overflow-hidden border-border/80 shadow-none">
+        <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left border-b border-border/80">
           <ResponsiveDialogTitle className="flex items-center gap-2.5 text-[24px] font-semibold tracking-[-0.02em] text-foreground">
             <Keyboard
               className="h-5 w-5 text-muted-foreground/70"
@@ -192,7 +192,7 @@ export function ShortcutsHelp({
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
 
-        <div className="max-h-[60vh] overflow-y-auto scrollbar-hide p-6">
+        <div className="flex-1 min-h-0 overflow-y-auto scrollbar-hide p-4 sm:p-6 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
             {shortcuts.map((group) => (
               <div key={group.title} className="space-y-4">

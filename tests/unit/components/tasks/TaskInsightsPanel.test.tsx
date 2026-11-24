@@ -31,13 +31,22 @@ const mockTask: Task = {
   updated_at: "2026-01-01T00:00:00.000Z",
 };
 
-function occ(id: string, dueDate: string, isCompleted: boolean): Task {
+function occ(
+  id: string,
+  dueDate: string,
+  isCompleted: boolean,
+  completedAt: string | null = null,
+): Task {
   return {
     ...mockTask,
     id,
     due_date: `${dueDate}T09:00:00.000Z`,
     is_completed: isCompleted,
-    completed_at: isCompleted ? `${dueDate}T09:00:00.000Z` : null,
+    completed_at: isCompleted
+      ? completedAt
+        ? `${completedAt}T09:00:00.000Z`
+        : `${dueDate}T09:00:00.000Z`
+      : null,
   };
 }
 
@@ -70,7 +79,7 @@ describe("TaskInsightsPanel", () => {
     expect(screen.getByText("No data yet")).toBeInTheDocument();
   });
 
-  it("renders Overview and History with Occurrences", () => {
+  it("renders outcome overview cards and discrete completion log instead of HabitHeatmap", () => {
     vi.mocked(useTasksModule.useTaskSeries).mockReturnValue({
       data: [
         occ("t1", "2026-06-04", true),
@@ -80,10 +89,57 @@ describe("TaskInsightsPanel", () => {
       isLoading: false,
     } as unknown as ReturnType<typeof useTasksModule.useTaskSeries>);
 
+    const { container } = render(<TaskInsightsPanel task={mockTask} />);
+
+    // Outcome metrics
+    expect(screen.getByText("Total Completions")).toBeInTheDocument();
+    expect(screen.getByText("On-Time Delivery Rate")).toBeInTheDocument();
+    expect(screen.getByText("Completion Breakdown")).toBeInTheDocument();
+
+    // Zero streaks
+    expect(screen.queryByText(/streak/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Current Streak")).not.toBeInTheDocument();
+    expect(screen.queryByText("Best Streak")).not.toBeInTheDocument();
+
+    // Zero habit heatmap
+    expect(
+      container.querySelector(".react-activity-calendar"),
+    ).not.toBeInTheDocument();
+
+    // Discrete completion log entries
+    expect(screen.getByText(/completion history/i)).toBeInTheDocument();
+    expect(screen.getByText("Jun 4, 2026")).toBeInTheDocument();
+    expect(screen.getByText("Jun 11, 2026")).toBeInTheDocument();
+  });
+
+  it("differentiates on-time and late outcomes in discrete completion event list", () => {
+    vi.mocked(useTasksModule.useTaskSeries).mockReturnValue({
+      data: [
+        occ("t1", "2026-06-04", true, "2026-06-04"), // On-time
+        occ("t2", "2026-06-11", true, "2026-06-15"), // Late
+      ],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useTasksModule.useTaskSeries>);
+
     render(<TaskInsightsPanel task={mockTask} />);
 
-    expect(screen.getByText("Completion Rate")).toBeInTheDocument();
-    expect(screen.getByText("On-Time")).toBeInTheDocument();
-    expect(screen.getByText("History")).toBeInTheDocument();
+    expect(screen.getByText("On time")).toBeInTheDocument();
+    const lateBadge = screen.getByText("Late");
+    expect(lateBadge).toBeInTheDocument();
+    expect(lateBadge).toHaveClass("text-muted-foreground");
+    expect(lateBadge).not.toHaveClass("text-destructive");
+  });
+
+  it("shows empty completion state when occurrences exist but none are completed", () => {
+    vi.mocked(useTasksModule.useTaskSeries).mockReturnValue({
+      data: [occ("t1", "2026-06-04", false), occ("t2", "2026-06-11", false)],
+      isLoading: false,
+    } as unknown as ReturnType<typeof useTasksModule.useTaskSeries>);
+
+    render(<TaskInsightsPanel task={mockTask} />);
+
+    expect(
+      screen.getByText("No completed occurrences recorded yet."),
+    ).toBeInTheDocument();
   });
 });

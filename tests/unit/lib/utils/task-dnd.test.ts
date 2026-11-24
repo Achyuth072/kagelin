@@ -86,9 +86,11 @@ describe("getTaskUpdatesForGroup", () => {
   });
 
   describe("isDropBlockedGroup", () => {
-    it("blocks drops into Overdue when groupBy is date", () => {
+    it("blocks drops into Overdue and Needs Rescheduling when groupBy is date", () => {
       expect(isDropBlockedGroup("Overdue", "date")).toBe(true);
       expect(isDropBlockedGroup("overdue", "date")).toBe(true);
+      expect(isDropBlockedGroup("Needs Rescheduling", "date")).toBe(true);
+      expect(isDropBlockedGroup("needs rescheduling", "date")).toBe(true);
     });
 
     it("allows drops into non-overdue groups when groupBy is date", () => {
