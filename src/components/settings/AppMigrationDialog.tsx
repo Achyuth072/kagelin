@@ -1346,7 +1346,7 @@ export function AppMigrationDialog({
                       tabIndex={-1}
                       aria-hidden="true"
                       className={cn(
-                        "h-8 transition-opacity text-muted-foreground group-hover:text-foreground pointer-events-none ml-auto shrink-0",
+                        "h-8 transition-opacity text-brand pointer-events-none",
                         isImportingTickTick
                           ? "opacity-100"
                           : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100",
