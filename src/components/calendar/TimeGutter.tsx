@@ -21,7 +21,7 @@ export function TimeGutter({
       ref={ref}
       data-testid="time-gutter"
       className={cn(
-        "w-12 md:w-16 shrink-0 sticky left-0 z-50 bg-background border-r border-border/40 h-fit",
+        "w-12 md:w-16 shrink-0 sticky left-0 z-50 bg-background border-r border-border h-fit",
         className,
       )}
     >

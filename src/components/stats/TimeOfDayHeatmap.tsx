@@ -41,7 +41,7 @@ function getIntensityLevel(minutes: number): number {
 }
 
 const INTENSITY_CLASSES: Record<number, string> = {
-  0: "bg-secondary/40 border border-border/30 hover:bg-secondary/70",
+  0: "bg-secondary/40 border border-border hover:bg-secondary/70",
   1: "bg-brand/20 hover:bg-brand/35",
   2: "bg-brand/45 hover:bg-brand/60",
   3: "bg-brand/70 hover:bg-brand/85",

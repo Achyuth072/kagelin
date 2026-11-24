@@ -386,7 +386,7 @@ function FocusSettingsBody({
         <div className="p-4 sm:p-6 pt-2 overflow-y-auto flex-1 min-h-0 scrollbar-hide">
           <SettingsForm />
         </div>
-        <DrawerFooter className="flex-row items-center gap-3 pt-2 shrink-0 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <DrawerFooter className="flex-row items-center gap-3 pt-2 shrink-0 border-t border-border pb-[calc(1rem+env(safe-area-inset-bottom))]">
           <Button
             type="button"
             variant="outline"
@@ -422,7 +422,7 @@ function FocusSettingsBody({
       <div className="flex-1">
         <SettingsForm />
       </div>
-      <div className="flex items-center gap-3 pt-4 border-t border-border/40 mt-4 shrink-0">
+      <div className="flex items-center gap-3 pt-4 border-t border-border mt-4 shrink-0">
         <div className="flex-1" />
         <Button
           type="button"

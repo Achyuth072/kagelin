@@ -53,7 +53,7 @@ export const EventOverflowPopover = memo(
           onClick={(e) => e.stopPropagation()}
         >
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-border/20 pb-2">
+            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest border-b border-border pb-2">
               {format(day, "EEE, MMM d")}
             </h4>
             <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-hide">

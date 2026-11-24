@@ -88,7 +88,7 @@ describe("TimeOfDayHeatmap", () => {
     render(<TimeOfDayHeatmap matrix={sampleMatrix} />);
 
     const level0Cell = screen.getByTitle("Mon 12:00 AM: 0m");
-    expect(level0Cell).toHaveClass("bg-secondary/40", "border-border/30");
+    expect(level0Cell).toHaveClass("bg-secondary/40", "border-border");
 
     const level1Cell = screen.getByTitle("Mon 9:00 AM: 15m");
     expect(level1Cell).toHaveClass("bg-brand/20");

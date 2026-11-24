@@ -360,11 +360,11 @@ describe("TaskView - normalized form patterns & surface parity", () => {
     expect(editBadge).toHaveClass("font-mono", "uppercase", "text-brand");
   });
 
-  it("renders unboxed standalone native input with border-b border-border/40", () => {
+  it("renders unboxed standalone native input with border-b border-border", () => {
     renderTaskView({ mode: "create" });
     const input = screen.getByLabelText("Task content");
     expect(input.tagName).toBe("INPUT");
-    expect(input).toHaveClass("border-b", "border-border/40", "bg-transparent");
+    expect(input).toHaveClass("border-b", "border-border", "bg-transparent");
   });
 
   it("renders single-line property strip with priority segmented toggle and updates state", () => {
