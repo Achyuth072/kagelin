@@ -33,6 +33,8 @@ import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
 import { cn } from "@/lib/utils";
 import { SyncIndicator } from "@/components/ui/SyncIndicator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import * as m from "motion/react-m";
+import { SEIJAKU_SPRING_FAST } from "@/lib/motion";
 
 interface TasksPageHeaderProps {
   currentSort: SortOption;
@@ -86,19 +88,39 @@ function TasksPageHeaderBase({
         <TabsList>
           <TabsTrigger
             value="list"
-            className="px-2.5"
+            className="relative px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
             title="List View (Shift+1)"
           >
-            <List strokeWidth={2.25} aria-hidden="true" />
-            <span className="hidden lg:inline">List</span>
+            {viewMode === "list" && (
+              <m.span
+                layoutId="tasks-view-pill"
+                transition={SEIJAKU_SPRING_FAST}
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-md bg-card border border-border shadow-xs"
+              />
+            )}
+            <span className="relative z-10 inline-flex items-center gap-1.5">
+              <List strokeWidth={2.25} aria-hidden="true" />
+              <span className="hidden lg:inline">List</span>
+            </span>
           </TabsTrigger>
           <TabsTrigger
             value="board"
-            className="px-2.5"
+            className="relative px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
             title="Board View (Shift+2)"
           >
-            <KanbanSquare strokeWidth={2.25} aria-hidden="true" />
-            <span className="hidden lg:inline">Board</span>
+            {viewMode === "board" && (
+              <m.span
+                layoutId="tasks-view-pill"
+                transition={SEIJAKU_SPRING_FAST}
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-md bg-card border border-border shadow-xs"
+              />
+            )}
+            <span className="relative z-10 inline-flex items-center gap-1.5">
+              <KanbanSquare strokeWidth={2.25} aria-hidden="true" />
+              <span className="hidden lg:inline">Board</span>
+            </span>
           </TabsTrigger>
         </TabsList>
       </Tabs>

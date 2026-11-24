@@ -13,6 +13,7 @@ import {
 import { useMemo, memo } from "react";
 import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/lib/calendar/types";
+import { getCalendarEventChipStyle } from "./calendar-event-chip";
 import { EventOverflowPopover } from "./EventOverflowPopover";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useSwipe } from "@/lib/hooks/useSwipe";
@@ -138,20 +139,19 @@ const MonthDayCell = memo(
                     }
                   }}
                   className={cn(
-                    "text-[10px] md:text-[11px] px-1 md:px-2 py-0.5 mx-[1px] md:mx-0 rounded-sm truncate font-semibold leading-tight hover:brightness-95 transition-all cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-                    isTask
-                      ? "bg-brand/8 border-t border-t-border/40 border-r border-r-border/40 border-b border-b-border/40 text-foreground"
-                      : "bg-brand text-white",
+                    "text-[10px] md:text-[11px] px-1 md:px-2 py-0.5 mx-[1px] md:mx-0 rounded-sm truncate font-semibold leading-tight cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                    "border-t border-r border-b border-border hover:border-border-strong transition-colors text-foreground",
                   )}
-                  style={{
-                    ...(isTask && {
-                      borderLeftColor: event.color || "#4B6CB7",
-                      borderLeftWidth: "3px",
-                    }),
-                  }}
+                  style={getCalendarEventChipStyle({
+                    color: event.color,
+                    isTask,
+                    borderLeftWidth: 3,
+                  })}
                   title={titleText}
                 >
-                  <span className="hidden md:inline">{timeText} </span>
+                  <span className="hidden md:inline text-muted-foreground">
+                    {timeText}{" "}
+                  </span>
                   <ReadableText text={event.title} />
                 </div>
               );

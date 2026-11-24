@@ -936,7 +936,7 @@ function TaskListBase({
       <div
         style={widthStyle}
         className={cn(
-          "opacity-90 pointer-events-none will-change-transform rotate-1 scale-[1.02]",
+          "scale-[1.01] pointer-events-none will-change-transform",
           isBoard
             ? !dnd.activeWidth && "w-[280px]"
             : !dnd.activeWidth && "w-full max-w-[90vw]",

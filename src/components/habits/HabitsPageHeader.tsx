@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { HabitOptionsMenu } from "@/components/habits/HabitOptionsMenu";
+import * as m from "motion/react-m";
+import { SEIJAKU_SPRING_FAST } from "@/lib/motion";
 
 interface HabitsPageHeaderProps {
   viewMode: "grid" | "compact";
@@ -30,13 +32,39 @@ export function HabitsPageHeader({
         className="h-10"
       >
         <TabsList>
-          <TabsTrigger value="grid" className="px-2.5">
-            <LayoutGrid strokeWidth={2.25} aria-hidden="true" />
-            <span className="hidden md:inline">Grid</span>
+          <TabsTrigger
+            value="grid"
+            className="relative px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+          >
+            {viewMode === "grid" && (
+              <m.span
+                layoutId="habits-view-pill"
+                transition={SEIJAKU_SPRING_FAST}
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-md bg-card border border-border shadow-xs"
+              />
+            )}
+            <span className="relative z-10 inline-flex items-center gap-1.5">
+              <LayoutGrid strokeWidth={2.25} aria-hidden="true" />
+              <span className="hidden md:inline">Grid</span>
+            </span>
           </TabsTrigger>
-          <TabsTrigger value="compact" className="px-2.5">
-            <Rows3 strokeWidth={2.25} aria-hidden="true" />
-            <span className="hidden md:inline">Compact</span>
+          <TabsTrigger
+            value="compact"
+            className="relative px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+          >
+            {viewMode === "compact" && (
+              <m.span
+                layoutId="habits-view-pill"
+                transition={SEIJAKU_SPRING_FAST}
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-md bg-card border border-border shadow-xs"
+              />
+            )}
+            <span className="relative z-10 inline-flex items-center gap-1.5">
+              <Rows3 strokeWidth={2.25} aria-hidden="true" />
+              <span className="hidden md:inline">Compact</span>
+            </span>
           </TabsTrigger>
         </TabsList>
       </Tabs>

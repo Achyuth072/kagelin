@@ -153,7 +153,7 @@ function CommandSearchResults({
         })
       }
     >
-      <CheckCircle2 className="mr-2 h-5 w-5" strokeWidth={2.25} />
+      <CheckCircle2 strokeWidth={2.25} />
       <span>
         <ReadableText text={task.content} />
       </span>
@@ -173,7 +173,7 @@ function CommandSearchResults({
         }
         onSelect={() => runCommand(() => openEditHabit(habit))}
       >
-        <Icon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+        <Icon strokeWidth={2.25} />
         <span>
           <ReadableText text={habit.name} />
         </span>
@@ -198,7 +198,7 @@ function CommandSearchResults({
         })
       }
     >
-      <CalendarIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+      <CalendarIcon strokeWidth={2.25} />
       <span>
         <ReadableText text={event.title} />
       </span>
@@ -280,17 +280,17 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             <>
               <CommandGroup heading="Filter by Type">
                 <CommandItem onSelect={() => setSearch("t: ")}>
-                  <CheckCircle2 className="mr-2 h-5 w-5" strokeWidth={2.25} />
+                  <CheckCircle2 strokeWidth={2.25} />
                   <span>Filter Tasks (t:)</span>
                   <CommandShortcut>t:</CommandShortcut>
                 </CommandItem>
                 <CommandItem onSelect={() => setSearch("h: ")}>
-                  <Layers className="mr-2 h-5 w-5" strokeWidth={2.25} />
+                  <Layers strokeWidth={2.25} />
                   <span>Filter Habits (h:)</span>
                   <CommandShortcut>h:</CommandShortcut>
                 </CommandItem>
                 <CommandItem onSelect={() => setSearch("e: ")}>
-                  <CalendarIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+                  <CalendarIcon strokeWidth={2.25} />
                   <span>Filter Events (e:)</span>
                   <CommandShortcut>e:</CommandShortcut>
                 </CommandItem>
@@ -301,36 +301,36 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
 
           <CommandGroup heading="Actions">
             <CommandItem onSelect={() => runCommand(() => openAddTask())}>
-              <PlusIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <PlusIcon strokeWidth={2.25} />
               <span>New Task</span>
               <CommandShortcut>N</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => openAddHabit())}>
-              <PlusIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <PlusIcon strokeWidth={2.25} />
               <span>New Habit</span>
               <CommandShortcut>H</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => openCreateEvent())}>
-              <CalendarPlus className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <CalendarPlus strokeWidth={2.25} />
               <span>New Event</span>
               <CommandShortcut>E</CommandShortcut>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => openCreateProject())}>
-              <FolderPlus className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <FolderPlus strokeWidth={2.25} />
               <span>New Project</span>
               <CommandShortcut>P</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => setArchivedProjectsOpen(true))}
             >
-              <ArchiveRestore className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <ArchiveRestore strokeWidth={2.25} />
               <span>Archived Projects</span>
               <CommandShortcut>A</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => openCompletedSheet())}
             >
-              <CheckCircle2 className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <CheckCircle2 strokeWidth={2.25} />
               <span>Show Completed Tasks</span>
               <CommandShortcut>C</CommandShortcut>
             </CommandItem>
@@ -338,7 +338,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
               keywords={["tutorial", "help", "learn", "guide"]}
               onSelect={() => runCommand(() => void addMeetKagelin())}
             >
-              <GraduationCap className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <GraduationCap strokeWidth={2.25} />
               <span>Add Meet Kagelin Project</span>
             </CommandItem>
             {user && !isGuestMode && (
@@ -350,7 +350,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                   })
                 }
               >
-                <RefreshCw className="mr-2 h-5 w-5" strokeWidth={2.25} />
+                <RefreshCw strokeWidth={2.25} />
                 <span>Sync Now</span>
               </CommandItem>
             )}
@@ -362,13 +362,13 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 })
               }
             >
-              <Monitor className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <Monitor strokeWidth={2.25} />
               <span>
                 {isPiPActive ? "Close PiP Window" : "Open PiP Window"}
               </span>
             </CommandItem>
             <CommandItem onSelect={() => runCommand(() => toggleSidebar())}>
-              <Columns className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <Columns strokeWidth={2.25} />
               <span>Toggle Sidebar</span>
               <CommandShortcut>{formatModChord("B")}</CommandShortcut>
             </CommandItem>
@@ -392,7 +392,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 runCommand(() => router.push("/focus?duration=25"))
               }
             >
-              <Clock className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <Clock strokeWidth={2.25} />
               <span>Pomodoro (25m)</span>
               <CommandShortcut>F</CommandShortcut>
             </CommandItem>
@@ -401,13 +401,13 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 runCommand(() => router.push("/focus?duration=50"))
               }
             >
-              <Clock className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <Clock strokeWidth={2.25} />
               <span>Deep Work (50m)</span>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => router.push("/focus"))}
             >
-              <Clock className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <Clock strokeWidth={2.25} />
               <span>Focus Session</span>
               <CommandShortcut>5</CommandShortcut>
             </CommandItem>
@@ -424,7 +424,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 })
               }
             >
-              <ListFilter className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <ListFilter strokeWidth={2.25} />
               <span>Sort by Date</span>
             </CommandItem>
             <CommandItem
@@ -435,7 +435,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 })
               }
             >
-              <ListFilter className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <ListFilter strokeWidth={2.25} />
               <span>Sort by Priority</span>
             </CommandItem>
             <CommandItem
@@ -446,7 +446,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 })
               }
             >
-              <Layers className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <Layers strokeWidth={2.25} />
               <span>Group by Project</span>
             </CommandItem>
             <CommandItem
@@ -457,7 +457,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 })
               }
             >
-              <Layers className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <Layers strokeWidth={2.25} />
               <span>Ungroup Tasks</span>
             </CommandItem>
             <CommandItem
@@ -468,9 +468,9 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
               }
             >
               {resolvedTheme === "light" ? (
-                <MoonIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+                <MoonIcon strokeWidth={2.25} />
               ) : (
-                <SunIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+                <SunIcon strokeWidth={2.25} />
               )}
               <span>Toggle Dark Mode</span>
               <CommandShortcut>T</CommandShortcut>
@@ -481,28 +481,28 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
 
           <CommandGroup heading="Navigation">
             <CommandItem onSelect={() => runCommand(() => router.push("/"))}>
-              <HomeIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <HomeIcon strokeWidth={2.25} />
               <span>Home</span>
               <CommandShortcut>1</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => router.push("/habits"))}
             >
-              <Layers className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <Layers strokeWidth={2.25} />
               <span>Habits</span>
               <CommandShortcut>2</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => router.push("/calendar"))}
             >
-              <CalendarIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <CalendarIcon strokeWidth={2.25} />
               <span>Calendar</span>
               <CommandShortcut>3</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => router.push("/stats"))}
             >
-              <LayoutGridIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <LayoutGridIcon strokeWidth={2.25} />
               <span>Statistics</span>
               <CommandShortcut>4</CommandShortcut>
             </CommandItem>
@@ -514,14 +514,14 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             <CommandItem
               onSelect={() => runCommand(() => router.push("/settings"))}
             >
-              <SettingsIcon className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <SettingsIcon strokeWidth={2.25} />
               <span>Settings</span>
               <CommandShortcut>6</CommandShortcut>
             </CommandItem>
             <CommandItem
               onSelect={() => runCommand(() => setShortcutsHelpOpen(true))}
             >
-              <Keyboard className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <Keyboard strokeWidth={2.25} />
               <span>Keyboard Shortcuts</span>
               <CommandShortcut>?</CommandShortcut>
             </CommandItem>
@@ -536,12 +536,9 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                 }
               >
                 {copied ? (
-                  <Check
-                    className="mr-2 h-4 w-4 text-green-500"
-                    strokeWidth={2.25}
-                  />
+                  <Check className="text-green-500" strokeWidth={2.25} />
                 ) : (
-                  <Copy className="mr-2 h-5 w-5" strokeWidth={2.25} />
+                  <Copy strokeWidth={2.25} />
                 )}
                 <span>Copy My User ID</span>
               </CommandItem>
@@ -550,12 +547,12 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
               onSelect={() => runCommand(() => setShowSignOutConfirm(true))}
               className="sumi-red-action"
             >
-              <LogOut className="mr-2 h-5 w-5" strokeWidth={2.25} />
+              <LogOut strokeWidth={2.25} />
               <span>Sign Out</span>
             </CommandItem>
           </CommandGroup>
         </CommandList>
-        <div className="hidden sm:flex items-center justify-between border-t border-border bg-sidebar px-3 py-2 text-[11px] font-mono text-muted-foreground">
+        <div className="hidden sm:flex h-8 items-center justify-between border-t border-border bg-sidebar px-3 text-[11px] leading-none font-mono text-muted-foreground">
           <span>↑↓ Navigate · ↵ Select · Esc Close</span>
         </div>
       </CommandDialog>

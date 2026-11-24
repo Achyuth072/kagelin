@@ -6,6 +6,14 @@ export const SEIJAKU_SPRING = {
   damping: 60,
 };
 
+/** Faster critically-damped Seijaku spring for small tactile controls (tab pills, chips, segmented switches). Zero bounce, ~180ms settle. */
+export const SEIJAKU_SPRING_FAST = {
+  type: "spring",
+  mass: 1,
+  stiffness: 550,
+  damping: 48,
+} as const;
+
 /** Seijaku cubic-bezier timing curve and duration for non-spring continuous transitions (e.g. NumberFlow). */
 export const SEIJAKU_TIMING = {
   duration: 280,
