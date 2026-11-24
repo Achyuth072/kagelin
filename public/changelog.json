@@ -1,5 +1,32 @@
 [
   {
+    "version": "1.52.0",
+    "date": "2026-11-24",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Microsoft To Do universal migration with steps and list mapping",
+        "Google Tasks universal migration with hierarchy and notes",
+        "TickTick task and project import from CSV exports",
+        "Configurable task reminder notification days",
+        "Calendar export in standard ICS format"
+      ],
+      "Improved": [
+        "Interactive migration drill-down preview and duplicate counts",
+        "Disambiguate lapsed schedules from overdue deadlines on task cards",
+        "Dedicated task metrics and decoupled habit statistics",
+        "Unified export format dropdowns and hover-reveal actions",
+        "Promote Loop Habit Tracker migration to stable"
+      ],
+      "Fixed": [
+        "Suppress keyboard shortcuts and drag-and-drop during open dialogs",
+        "Reset focus timer cycle and session counter on new day",
+        "Align toast spinner icon to prevent layout shift",
+        "Allow clearing task dates directly in picker and chips"
+      ]
+    }
+  },
+  {
     "version": "1.52.0-preview.3",
     "date": "2026-11-23",
     "channel": "preview",
@@ -835,21 +862,6 @@
       "Fixed": [
         "Let drawers lift above the keyboard instead of shrinking under it",
         "Surface briefing facts failures, dedupe scheduler loops, skip archived habits"
-      ]
-    }
-  },
-  {
-    "version": "1.45.1-preview.1",
-    "date": "2026-10-03",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add optimistic updates and snapshot rollbacks for tasks",
-        "Add optimistic updates for calendar events and habits"
-      ],
-      "Fixed": [
-        "Keep inputs above the mobile keyboard in drawers",
-        "Remove redundant date picker from habit view footer"
       ]
     }
   }
