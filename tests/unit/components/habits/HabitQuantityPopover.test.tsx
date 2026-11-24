@@ -45,7 +45,9 @@ describe("HabitQuantityPopover", () => {
     expect(container.querySelectorAll("button button")).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "Log pages" }));
 
-    expect(document.querySelector("[data-vaul-drawer]")).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-slot="drawer-content"]'),
+    ).toBeInTheDocument();
     expect(mockUseBackNavigation).toHaveBeenCalledWith(
       true,
       expect.any(Function),
@@ -71,6 +73,6 @@ describe("HabitQuantityPopover", () => {
     expect(
       document.querySelector("[data-radix-popper-content-wrapper]"),
     ).toBeInTheDocument();
-    expect(document.querySelector("[data-vaul-drawer]")).toBeNull();
+    expect(document.querySelector('[data-slot="drawer-content"]')).toBeNull();
   });
 });

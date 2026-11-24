@@ -225,7 +225,7 @@ export function SegmentedTimePicker({
         compact ? "py-0" : "py-2",
         className,
       )}
-      data-vaul-no-drag
+      data-base-ui-swipe-ignore
     >
       <div className="flex items-center gap-1.5 md:gap-2 font-light tabular-nums tracking-tighter">
         <div className="flex items-center gap-0.5">
@@ -260,7 +260,7 @@ export function SegmentedTimePicker({
               pattern="[0-9]*"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-lg focus:outline-none"
               aria-label="Adjust Hours"
-              data-vaul-no-drag
+              data-base-ui-swipe-ignore
               onFocus={() => handleFocus("h")}
               onBlur={() => setActiveSegment(null)}
               onKeyDown={(e) => handleKeyDown(e, "h")}
@@ -317,7 +317,7 @@ export function SegmentedTimePicker({
               pattern="[0-9]*"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-lg focus:outline-none"
               aria-label="Adjust Minutes"
-              data-vaul-no-drag
+              data-base-ui-swipe-ignore
               onFocus={() => handleFocus("m")}
               onBlur={() => setActiveSegment(null)}
               onKeyDown={(e) => handleKeyDown(e, "m")}
@@ -345,7 +345,7 @@ export function SegmentedTimePicker({
             onBlur={() => setActiveSegment(null)}
             onKeyDown={(e) => handleKeyDown(e, "p")}
             onWheel={(e) => handleWheel(e, "p")}
-            data-vaul-no-drag
+            data-base-ui-swipe-ignore
             aria-label="Toggle AM PM"
             className={cn(
               "relative flex items-center justify-center rounded-md transition-all duration-300 outline-none uppercase font-bold tracking-[0.05em] text-[10px] self-center border touch-none",

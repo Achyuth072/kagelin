@@ -9,7 +9,7 @@
   "ignoreDependencies": [
     "autoprefixer",
     "tailwindcss",
-    "tailwindcss-animate",
+    "tw-animate-css",
     "@tailwindcss/typography",
     "supabase"
   ]
