@@ -236,13 +236,13 @@ const KanbanColumn = memo(function KanbanColumn({
       ref={setNodeRef}
       className="w-[85vw] md:w-[320px] shrink-0 snap-center bg-sidebar border border-border rounded-xl flex flex-col p-0.5 max-h-[calc(100dvh-200px)] md:max-h-full"
     >
-      <div className="px-3 py-2.5 flex items-center justify-between">
-        <h3 className="type-h3 lowercase tracking-tight text-foreground/70">
+      <div className="px-3 py-2.5 flex items-baseline gap-2">
+        <h3 className="type-h3 tracking-tight text-foreground/70">
           {group.title}
-          <span className="ml-2 text-[11px] font-bold opacity-40 tabular-nums">
-            {group.tasks.length}
-          </span>
         </h3>
+        <span className="type-micro text-muted-foreground font-medium tabular-nums">
+          {group.tasks.length}
+        </span>
       </div>
 
       <SortableContext

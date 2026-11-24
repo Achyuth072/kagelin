@@ -216,81 +216,83 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
         <SidebarContent>
           <SidebarGroup>
             <SidebarGroupContent>
-              <SidebarMenu>
-                {!isMobile && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      onClick={() => {
-                        trigger("toggle");
-                        onOpenSearch();
-                      }}
-                      tooltip={`Search · ${searchKey}`}
-                      aria-keyshortcuts="Control+K Meta+K"
-                    >
-                      <div className="flex items-center justify-center w-5 h-5 shrink-0">
-                        <Search className="h-4 w-4" strokeWidth={2.25} />
-                      </div>
-                      <span className="flex flex-1 items-center">
-                        Search
-                        <NavKey keys={searchKey} always />
-                      </span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-                {mainNavItems
-                  .filter((item) => {
-                    if (isMobile) {
+              <nav aria-label="Primary">
+                <SidebarMenu>
+                  {!isMobile && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => {
+                          trigger("toggle");
+                          onOpenSearch();
+                        }}
+                        tooltip={`Search · ${searchKey}`}
+                        aria-keyshortcuts="Control+K Meta+K"
+                      >
+                        <div className="flex items-center justify-center w-5 h-5 shrink-0">
+                          <Search className="h-4 w-4" strokeWidth={2.25} />
+                        </div>
+                        <span className="flex flex-1 items-center">
+                          Search
+                          <NavKey keys={searchKey} always />
+                        </span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {mainNavItems
+                    .filter((item) => {
+                      if (isMobile) {
+                        return (
+                          item.label !== "Stats" && item.label !== "Calendar"
+                        );
+                      }
+                      return true;
+                    })
+                    .map((item) => {
+                      const Icon = item.icon;
+                      const isActive =
+                        item.label === "All Tasks"
+                          ? pathname === item.path &&
+                            (!currentProjectId || currentProjectId === "all")
+                          : pathname === item.path && !item.isAction;
                       return (
-                        item.label !== "Stats" && item.label !== "Calendar"
-                      );
-                    }
-                    return true;
-                  })
-                  .map((item) => {
-                    const Icon = item.icon;
-                    const isActive =
-                      item.label === "All Tasks"
-                        ? pathname === item.path &&
-                          (!currentProjectId || currentProjectId === "all")
-                        : pathname === item.path && !item.isAction;
-                    return (
-                      <SidebarMenuItem key={item.label}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive}
-                          tooltip={`${item.label} · ${item.shortcut}`}
-                        >
-                          <Link
-                            aria-keyshortcuts={item.shortcut}
-                            href={
-                              item.label === "All Tasks"
-                                ? "/?project=all"
-                                : item.path
-                            }
-                            onClick={(e) => {
-                              if (item.isAction) {
-                                trigger("toggle");
-                                e.preventDefault();
-                                openSheet();
-                                if (isMobile) setOpenMobile(false);
-                              } else {
-                                handleMobileRouteIntent();
-                              }
-                            }}
+                        <SidebarMenuItem key={item.label}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            tooltip={`${item.label} · ${item.shortcut}`}
                           >
-                            <div className="flex items-center justify-center w-5 h-5 shrink-0">
-                              <Icon className="h-4 w-4" strokeWidth={2.25} />
-                            </div>
-                            <span className="flex flex-1 items-center">
-                              {item.label}
-                              {!isMobile && <NavKey keys={item.shortcut} />}
-                            </span>
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-              </SidebarMenu>
+                            <Link
+                              aria-keyshortcuts={item.shortcut}
+                              href={
+                                item.label === "All Tasks"
+                                  ? "/?project=all"
+                                  : item.path
+                              }
+                              onClick={(e) => {
+                                if (item.isAction) {
+                                  trigger("toggle");
+                                  e.preventDefault();
+                                  openSheet();
+                                  if (isMobile) setOpenMobile(false);
+                                } else {
+                                  handleMobileRouteIntent();
+                                }
+                              }}
+                            >
+                              <div className="flex items-center justify-center w-5 h-5 shrink-0">
+                                <Icon className="h-4 w-4" strokeWidth={2.25} />
+                              </div>
+                              <span className="flex flex-1 items-center">
+                                {item.label}
+                                {!isMobile && <NavKey keys={item.shortcut} />}
+                              </span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                </SidebarMenu>
+              </nav>
             </SidebarGroupContent>
           </SidebarGroup>
 
@@ -316,7 +318,8 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
               <button
                 type="button"
                 title="Add Project"
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-sidebar-foreground outline-none ring-sidebar-ring transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2"
+                aria-label="Add Project"
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground outline-none ring-sidebar-ring transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2"
                 onClick={(e) => {
                   e.stopPropagation();
                   trigger("toggle");

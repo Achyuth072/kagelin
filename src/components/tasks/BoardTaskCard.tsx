@@ -108,7 +108,7 @@ export function BoardTaskCard({
                   e.stopPropagation();
                   handlePlayFocus(e);
                 }}
-                className="p-1 rounded text-muted-foreground hover:text-brand hover:bg-secondary/50 transition-colors"
+                className="h-9 w-9 md:h-7 md:w-7 flex items-center justify-center rounded text-muted-foreground hover:text-brand hover:bg-secondary/50 transition-colors"
               >
                 <Play className="h-3.5 w-3.5 fill-current" strokeWidth={2.25} />
               </button>
@@ -121,7 +121,7 @@ export function BoardTaskCard({
                     e.stopPropagation();
                     onDeleteRequest(e);
                   }}
-                  className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-secondary/50 transition-colors"
+                  className="h-9 w-9 md:h-7 md:w-7 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-secondary/50 transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" strokeWidth={2.25} />
                 </button>

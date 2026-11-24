@@ -174,7 +174,7 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
     >
       <div className="flex items-center justify-between pb-2 border-b border-border/40">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Focus by Time of Day
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2">

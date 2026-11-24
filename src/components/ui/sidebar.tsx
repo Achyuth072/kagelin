@@ -236,7 +236,8 @@ const Sidebar = React.forwardRef<
 
     if (collapsible === "none") {
       return (
-        <div
+        <aside
+          aria-label="Sidebar"
           className={cn(
             "flex h-screen w-(--sidebar-width) flex-col bg-sidebar text-sidebar-foreground",
             className,
@@ -245,7 +246,7 @@ const Sidebar = React.forwardRef<
           {...props}
         >
           {children}
-        </div>
+        </aside>
       );
     }
 
@@ -288,12 +289,13 @@ const Sidebar = React.forwardRef<
           style={{ transitionTimingFunction: "var(--ease-seijaku)" }}
           {...props}
         >
-          <div
+          <aside
+            aria-label="Sidebar"
             data-sidebar="sidebar"
             className="flex h-full w-full flex-col overflow-x-hidden bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
           >
             {children}
-          </div>
+          </aside>
         </div>
       </div>
     );
@@ -661,7 +663,7 @@ const SidebarMenuAction = React.forwardRef<
       ref={ref}
       data-sidebar="menu-action"
       className={cn(
-        "absolute right-1 top-1.5 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 peer-hover/menu-button:text-sidebar-accent-foreground [&>svg]:size-4 [&>svg]:shrink-0",
+        "absolute right-1 top-1.5 flex aspect-square w-7 items-center justify-center rounded-md p-0 text-sidebar-foreground outline-none ring-sidebar-ring transition-transform hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 peer-hover/menu-button:text-sidebar-accent-foreground [&>svg]:size-4 [&>svg]:shrink-0",
         // Increases the hit area of the button on mobile.
         "after:absolute after:-inset-2 after:md:hidden",
         "peer-data-[size=sm]/menu-button:top-1",
