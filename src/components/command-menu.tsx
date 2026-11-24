@@ -18,7 +18,6 @@ import {
   ListFilter,
   Layers,
   Clock,
-  Command as CommandIcon,
   ArchiveRestore,
   RefreshCw,
   CalendarPlus,
@@ -262,26 +261,12 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   return (
     <>
       <CommandDialog open={open} onOpenChange={onOpenChange}>
-        <div className="p-6 pb-3 border-b border-border/80 bg-muted/20">
-          <div className="flex items-center gap-2.5">
-            <CommandIcon
-              className="h-5 w-5 text-muted-foreground/70"
-              strokeWidth={2.25}
-            />
-            <h2 className="text-[24px] font-semibold tracking-[-0.02em] text-foreground">
-              Command Menu
-            </h2>
-          </div>
-          <p className="text-[11px] uppercase tracking-[0.02em] text-muted-foreground font-medium pt-1">
-            Quick Actions & Navigation
-          </p>
-        </div>
         <CommandInput
           placeholder="Type a command or search (or t:, h:, e:)..."
           value={search}
           onValueChange={setSearch}
         />
-        <CommandList>
+        <CommandList className="pb-2">
           <CommandEmpty>
             <EmptyState
               icon={SearchX}
@@ -570,6 +555,9 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             </CommandItem>
           </CommandGroup>
         </CommandList>
+        <div className="hidden sm:flex items-center justify-between border-t border-border bg-sidebar px-3 py-2 text-[11px] font-mono text-muted-foreground">
+          <span>↑↓ Navigate · ↵ Select · Esc Close</span>
+        </div>
       </CommandDialog>
 
       <SignOutConfirmation

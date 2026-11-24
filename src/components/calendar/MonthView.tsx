@@ -224,7 +224,7 @@ const MonthView = memo(
         )}
       >
         {/* Week day headers */}
-        <div role="row" className="grid grid-cols-7 border-b border-border/40">
+        <div role="row" className="grid grid-cols-7 border-b border-border">
           {weekDays.map((day) => (
             <div
               key={day}
@@ -242,7 +242,7 @@ const MonthView = memo(
           role="grid"
           aria-label={format(currentDate, "MMMM yyyy")}
           className={cn(
-            "flex-1 min-h-0 grid grid-cols-7 overflow-y-auto divide-x divide-border/40 divide-y divide-border/40 border-b border-r border-border/40",
+            "flex-1 min-h-0 grid grid-cols-7 overflow-y-auto divide-x divide-border divide-y divide-border border-b border-r border-border",
           )}
           style={{ gridTemplateRows: `repeat(${numWeeks}, 1fr)` }}
         >

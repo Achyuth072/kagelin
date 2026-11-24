@@ -84,7 +84,7 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
                   {streaksAtRisk.map((risk) => (
                     <li
                       key={risk.habitId}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 text-sm py-1.5 sm:py-0 border-b border-border/20 last:border-0 sm:border-0"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 text-sm py-1.5 sm:py-0 border-b border-border last:border-0 sm:border-0"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <Flame

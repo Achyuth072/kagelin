@@ -167,7 +167,7 @@ export function MetricsDashboard({
               <span className="text-foreground/80">{adminEmail}</span>
             </div>
           )}
-          <div className="flex items-center gap-1.5 bg-secondary/30 px-2.5 py-1 rounded-md border border-border/30">
+          <div className="flex items-center gap-1.5 bg-secondary/30 px-2.5 py-1 rounded-md border border-border">
             <Clock
               className="w-3.5 h-3.5 text-muted-foreground"
               strokeWidth={2.25}
@@ -458,7 +458,7 @@ export function MetricsDashboard({
       </div>
 
       {/* Footer Info */}
-      <div className="pt-2 text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-border/30">
+      <div className="pt-2 text-xs text-muted-foreground flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-border">
         <div className="flex items-center gap-1.5">
           <TrendingUp
             className="w-3.5 h-3.5 text-muted-foreground/70"

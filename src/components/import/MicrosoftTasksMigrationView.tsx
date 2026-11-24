@@ -165,7 +165,7 @@ export function MicrosoftTasksMigrationView({
 
             return (
               <div key={proj.listId} className="space-y-1.5 text-left">
-                <div className="flex items-center justify-between text-xs font-medium text-foreground pb-1 border-b border-border/30">
+                <div className="flex items-center justify-between text-xs font-medium text-foreground pb-1 border-b border-border">
                   <span className="truncate flex items-center gap-1.5">
                     <span className="font-semibold">{proj.name}</span>
                     <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-secondary/40 text-muted-foreground">
@@ -215,7 +215,7 @@ export function MicrosoftTasksMigrationView({
                         </div>
 
                         {childSteps.length > 0 && (
-                          <ul className="pl-5 space-y-0.5 border-l border-border/30 ml-2">
+                          <ul className="pl-5 space-y-0.5 border-l border-border ml-2">
                             {childSteps.map((step) => (
                               <li
                                 key={step.tempId}

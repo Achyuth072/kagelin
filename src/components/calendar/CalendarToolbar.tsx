@@ -202,14 +202,14 @@ export function CalendarToolbar({
           "flex-1 lg:flex-none flex items-center justify-center min-w-0 px-2 z-10 pointer-events-none",
         )}
       >
-        <div
+        <h1
           className={cn(
             "font-semibold tracking-tight truncate",
             "text-base font-bold lg:text-[28px] lg:tracking-[-0.03em] lg:font-semibold",
           )}
         >
           {renderDateLabel()}
-        </div>
+        </h1>
       </div>
 
       {/* Right cluster */}

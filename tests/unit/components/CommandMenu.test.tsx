@@ -30,9 +30,13 @@ describe("Command Menu Styles", () => {
     const className = item.className;
     console.log("Light Mode ClassName:", className);
 
-    // Check for Brand Selection
-    expect(className).toContain("data-[selected=true]:bg-brand");
-    expect(className).toContain("data-[selected=true]:text-brand-foreground");
+    // Check for Calm Matte Selection
+    expect(className).toContain("data-[selected=true]:bg-accent");
+    expect(className).toContain("data-[selected=true]:text-foreground");
+    expect(className).not.toContain("data-[selected=true]:bg-brand");
+    expect(className).not.toContain(
+      "data-[selected=true]:text-brand-foreground",
+    );
   });
 
   it("TC-CMD-02: CommandItem should have correct selection classes for Dark Mode", () => {
@@ -50,9 +54,13 @@ describe("Command Menu Styles", () => {
     const className = item.className;
     console.log("Dark Mode ClassName:", className);
 
-    // Check for Brand Selection (consistent across modes)
-    expect(className).toContain("data-[selected=true]:bg-brand");
-    expect(className).toContain("data-[selected=true]:text-brand-foreground");
+    // Check for Calm Matte Selection (consistent across modes)
+    expect(className).toContain("data-[selected=true]:bg-accent");
+    expect(className).toContain("data-[selected=true]:text-foreground");
+    expect(className).not.toContain("data-[selected=true]:bg-brand");
+    expect(className).not.toContain(
+      "data-[selected=true]:text-brand-foreground",
+    );
   });
 
   it("TC-CMD-05: CommandItem should NOT use text-primary-foreground in Dark Mode selection (Low Contrast)", () => {
@@ -96,7 +104,10 @@ describe("Command Menu Styles", () => {
     const item = screen.getByTestId("cmd-item");
     const className = item.className;
 
-    // We expect brand-foreground text for legibility on blue background
-    expect(className).toContain("data-[selected=true]:text-brand-foreground");
+    // We expect foreground text for legibility on calm matte accent background
+    expect(className).toContain("data-[selected=true]:text-foreground");
+    expect(className).not.toContain(
+      "data-[selected=true]:text-brand-foreground",
+    );
   });
 });

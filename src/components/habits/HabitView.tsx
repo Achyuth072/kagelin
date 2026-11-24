@@ -237,7 +237,7 @@ export function HabitView(props: HabitViewProps) {
               autoFocusTitle !== undefined ? autoFocusTitle : isFinePointer
             }
             className={cn(
-              "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border/40 pb-2 pt-0.5 outline-none placeholder:text-muted-foreground/50 text-foreground",
+              "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border pb-2 pt-0.5 outline-none placeholder:text-muted-foreground/50 text-foreground",
               errors?.name && "placeholder:text-destructive/60",
             )}
             aria-invalid={!!errors?.name}
@@ -254,7 +254,7 @@ export function HabitView(props: HabitViewProps) {
 
       {/* Inline Appearance Accordion (directly underneath the header) */}
       <CollapsibleReveal open={appearanceOpen}>
-        <div className="px-4 pb-3 pt-1 border-b border-border/30 space-y-3">
+        <div className="px-4 pb-3 pt-1 border-b border-border space-y-3">
           <HabitIconPicker value={icon} onChange={setIcon} variant="compact" />
           <ColorPicker
             value={color}
@@ -457,7 +457,7 @@ export function HabitView(props: HabitViewProps) {
       </div>
 
       {/* Anchored Footer */}
-      <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
+      <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
         <div className="flex items-center gap-2">
           {mode === "edit" && (
             <Button

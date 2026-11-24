@@ -413,7 +413,7 @@ export function EventView({
             autoFocus={isFinePointer && !isRecurring}
             disabled={isRecurring}
             className={cn(
-              "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border/40 pb-2 pt-0.5 outline-none placeholder:text-muted-foreground/50 text-foreground",
+              "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border pb-2 pt-0.5 outline-none placeholder:text-muted-foreground/50 text-foreground",
               errors.title && "placeholder:text-destructive/60",
             )}
           />
@@ -822,7 +822,7 @@ export function EventView({
           <div className="h-1" />
         </div>
 
-        <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background sm:rounded-b-lg w-full max-w-full">
+        <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background sm:rounded-b-lg w-full max-w-full">
           <div className="flex items-center gap-2">
             {/* Left slot aligned with TaskView */}
           </div>

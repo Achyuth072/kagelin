@@ -94,6 +94,7 @@ export default function FocusPage() {
     >
       <m.button
         onClick={anchoredBack}
+        aria-label="Exit focus mode"
         onTapStart={() => trigger("thud")}
         whileTap={!prefersReducedMotion && isPhone ? { scale: 0.95 } : {}}
         className={cn(
@@ -107,6 +108,9 @@ export default function FocusPage() {
       {isPiPSupported && !isPhone && (
         <m.button
           onClick={handlePiP}
+          aria-label={
+            isPiPActive ? "Close Picture-in-Picture" : "Open Picture-in-Picture"
+          }
           onTapStart={() => trigger("thud")}
           whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
           className={cn(
@@ -137,9 +141,9 @@ export default function FocusPage() {
             transition={prefersReducedMotion ? { duration: 0 } : undefined}
             className="flex flex-col items-center text-center"
           >
-            <div className="type-ui font-medium uppercase tracking-widest text-muted-foreground/80">
+            <h1 className="type-ui font-medium uppercase tracking-widest text-muted-foreground/80">
               {MODE_LABELS[state.mode]}
-            </div>
+            </h1>
 
             <div className="mt-2">
               <FocusSyncIndicator />
@@ -189,6 +193,7 @@ export default function FocusPage() {
                   buttonVariants({ variant: "default", size: "icon" }),
                   "h-20 w-20 rounded-full transition-seijaku hover:scale-105 active:scale-95 active:opacity-90 cursor-pointer",
                 )}
+                aria-label={state.isRunning ? "Pause timer" : "Start timer"}
                 onTapStart={() => trigger("thud")}
                 whileTap={
                   !prefersReducedMotion && isPhone ? { scale: 0.95 } : {}
@@ -204,6 +209,7 @@ export default function FocusPage() {
 
               <m.button
                 className={sideControlCls}
+                aria-label="Skip session"
                 onTapStart={() => trigger("thud")}
                 whileTap={
                   !prefersReducedMotion && isPhone ? { scale: 0.95 } : {}

@@ -352,7 +352,7 @@ export function SegmentedTimePicker({
               compact ? "w-11 h-8" : "w-14 h-9",
               activeSegment === "p"
                 ? "text-brand bg-brand/15 border-brand/40 shadow-sm"
-                : "text-foreground/80 bg-transparent border-border/20 hover:border-border/50 hover:text-foreground focus-visible:bg-brand/15 focus-visible:border-brand/40",
+                : "text-foreground/80 bg-transparent border-border hover:border-border/50 hover:text-foreground focus-visible:bg-brand/15 focus-visible:border-brand/40",
               isPM && activeSegment !== "p" ? "text-foreground/90" : "",
             )}
           >

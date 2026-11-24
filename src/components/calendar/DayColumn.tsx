@@ -42,7 +42,7 @@ export function DayColumn({
       style={style}
     >
       <div
-        className="sticky top-0 z-40 bg-background border-b border-border/40 flex flex-col items-center justify-center gap-1"
+        className="sticky top-0 z-40 bg-background border-b border-border flex flex-col items-center justify-center gap-1"
         style={{ height: `${HEADER_HEIGHT}px` }}
       >
         <div
@@ -73,7 +73,7 @@ export function DayColumn({
       {hours.map((hour) => (
         <div
           key={hour}
-          className="border-t border-border/40"
+          className="border-t border-border"
           style={{ height: `${HOUR_HEIGHT}px` }}
         />
       ))}
