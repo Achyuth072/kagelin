@@ -280,7 +280,13 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                               }}
                             >
                               <div className="flex items-center justify-center w-5 h-5 shrink-0">
-                                <Icon className="h-4 w-4" strokeWidth={2.25} />
+                                <Icon
+                                  className={cn(
+                                    "h-4 w-4",
+                                    isActive && "text-brand-text",
+                                  )}
+                                  strokeWidth={2.25}
+                                />
                               </div>
                               <span className="flex flex-1 items-center">
                                 {item.label}
@@ -354,7 +360,14 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                           }}
                         >
                           <div className="flex items-center justify-center w-5 h-5 shrink-0">
-                            <Inbox className="h-4 w-4" strokeWidth={2.25} />
+                            <Inbox
+                              className={cn(
+                                "h-4 w-4",
+                                currentProjectId === "inbox" &&
+                                  "text-brand-text",
+                              )}
+                              strokeWidth={2.25}
+                            />
                           </div>
                           <span>Inbox</span>
                         </Link>
@@ -499,7 +512,13 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                             }}
                           >
                             <div className="flex items-center justify-center w-5 h-5 shrink-0">
-                              <Icon className="h-4 w-4" strokeWidth={2.25} />
+                              <Icon
+                                className={cn(
+                                  "h-4 w-4",
+                                  isActive && "text-brand-text",
+                                )}
+                                strokeWidth={2.25}
+                              />
                             </div>
                             <span className="flex flex-1 items-center">
                               {item.label}
@@ -532,7 +551,13 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                     }}
                   >
                     <div className="flex items-center justify-center w-5 h-5 shrink-0">
-                      <Timer className="h-4 w-4" strokeWidth={2.25} />
+                      <Timer
+                        className={cn(
+                          "h-4 w-4",
+                          pathname === "/focus" && "text-brand-text",
+                        )}
+                        strokeWidth={2.25}
+                      />
                     </div>
                     <span>Focus</span>
                   </Link>
@@ -551,7 +576,13 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                     }}
                   >
                     <div className="flex items-center justify-center w-5 h-5 shrink-0">
-                      <Settings className="h-4 w-4" strokeWidth={2.25} />
+                      <Settings
+                        className={cn(
+                          "h-4 w-4",
+                          pathname === "/settings" && "text-brand-text",
+                        )}
+                        strokeWidth={2.25}
+                      />
                     </div>
                     <span>Settings</span>
                   </Link>

@@ -266,7 +266,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
           value={search}
           onValueChange={setSearch}
         />
-        <CommandList>
+        <CommandList className="pb-2">
           <CommandEmpty>
             <EmptyState
               icon={SearchX}
@@ -555,6 +555,9 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             </CommandItem>
           </CommandGroup>
         </CommandList>
+        <div className="hidden sm:flex items-center justify-between border-t border-border bg-sidebar px-3 py-2 text-[11px] font-mono text-muted-foreground">
+          <span>↑↓ Navigate · ↵ Select · Esc Close</span>
+        </div>
       </CommandDialog>
 
       <SignOutConfirmation
