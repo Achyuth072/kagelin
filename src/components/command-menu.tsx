@@ -49,6 +49,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useSidebar } from "@/components/ui/sidebar";
 import { SignOutConfirmation } from "@/components/auth/SignOutConfirmation";
 import { useDocumentPiP } from "@/lib/hooks/useDocumentPiP";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useUiStore } from "@/lib/store/uiStore";
 import {
   useBackNavigation,
@@ -235,6 +236,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const { user, signOut, isGuestMode } = useAuth();
   const { toggleSidebar } = useSidebar();
   const { openPiP, closePiP, isPiPActive } = useDocumentPiP();
+  const isMobile = useMediaQuery("(max-width: 640px)");
   const setShortcutsHelpOpen = useUiStore(
     (state) => state.setShortcutsHelpOpen,
   );
@@ -262,7 +264,11 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
     <>
       <CommandDialog open={open} onOpenChange={onOpenChange}>
         <CommandInput
-          placeholder="Type a command or search (or t:, h:, e:)..."
+          placeholder={
+            isMobile
+              ? "Type a command or search..."
+              : "Type a command or search (or t:, h:, e:)..."
+          }
           value={search}
           onValueChange={setSearch}
         />
