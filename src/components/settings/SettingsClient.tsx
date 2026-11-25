@@ -63,6 +63,8 @@ import { ChangelogPopup } from "@/components/ui/ChangelogPopup";
 import { AboutSheet } from "@/components/settings/AboutSheet";
 import { PreviewBadge } from "@/components/ui/PreviewBadge";
 import { SettingsContextRail } from "@/components/settings/SettingsContextRail";
+import * as m from "motion/react-m";
+import { SEIJAKU_SPRING_FAST } from "@/lib/motion";
 
 const SignOutConfirmation = dynamic(
   () =>
@@ -1145,16 +1147,27 @@ export function SettingsClient({ version }: SettingsClientProps) {
             >
               {navSectionTabs.map((tab) => {
                 const Icon = tab.icon;
+                const isActive = activeTab === tab.value;
                 return (
                   <TabsTrigger
                     key={tab.value}
                     value={tab.value}
                     id={`settings-mobile-tab-${tab.value}`}
                     aria-controls={`settings-tabpanel-${tab.value}`}
-                    className="h-full px-2"
+                    className="relative h-full px-2 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
                   >
-                    <Icon aria-hidden="true" />
-                    <span className="truncate">{tab.label}</span>
+                    {isActive && (
+                      <m.span
+                        layoutId="settings-mobile-tab-pill"
+                        transition={SEIJAKU_SPRING_FAST}
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-md bg-card border border-border shadow-xs"
+                      />
+                    )}
+                    <span className="relative z-10 inline-flex items-center justify-center gap-1.5 truncate">
+                      <Icon aria-hidden="true" />
+                      <span className="truncate">{tab.label}</span>
+                    </span>
                   </TabsTrigger>
                 );
               })}
