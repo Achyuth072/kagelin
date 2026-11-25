@@ -233,6 +233,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               <button
                 type="button"
                 aria-label="Ignore detected date"
+                data-testid="task-nlp-chip-dismiss"
                 onClick={() => setDismissedMatchText(nlpMatch.matchedText)}
                 className="hover:text-muted-foreground transition-colors p-0.5 rounded cursor-pointer"
               >

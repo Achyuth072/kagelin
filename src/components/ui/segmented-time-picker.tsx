@@ -181,7 +181,6 @@ export function SegmentedTimePicker({
           return;
         }
 
-        // 12h Hours
         if (activeBuffer === "") {
           if (digit === "0") {
             setTypingBuffer("0");
@@ -219,7 +218,6 @@ export function SegmentedTimePicker({
           return;
         }
 
-        // activeBuffer === "1"
         if (digitNum <= 2) {
           setTypingBuffer("");
           setLastTypedAt(0);
@@ -246,7 +244,6 @@ export function SegmentedTimePicker({
         return;
       }
 
-      // Minutes
       const currentHours = is24hr ? hours : h12;
       if (activeBuffer === "") {
         if (digitNum >= 6) {
@@ -402,9 +399,8 @@ export function SegmentedTimePicker({
       )}
       data-base-ui-swipe-ignore
     >
-      <div className="flex items-center gap-1.5 md:gap-2 font-light tabular-nums tracking-tighter">
-        <div className="flex items-center gap-0.5">
-          {/* Hours Segment */}
+      <div className="flex items-center justify-center gap-2 bg-card border border-border rounded-lg p-1.5">
+        <div className="flex items-center gap-1">
           <div className="flex flex-col items-center">
             <button
               type="button"
@@ -414,11 +410,11 @@ export function SegmentedTimePicker({
                 e.stopPropagation();
                 adjustValue("h", 1);
               }}
-              className="sm:hidden min-h-[36px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md"
+              className="sm:hidden min-h-[28px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md"
             >
               <ChevronUp className="h-4 w-4" strokeWidth={2.25} />
             </button>
-            <div className="relative group">
+            <div className="relative group w-[72px] h-14 sm:w-16 sm:h-12">
               <m.div
                 animate={
                   invalidSegment === "h" && !prefersReducedMotion
@@ -427,8 +423,7 @@ export function SegmentedTimePicker({
                 }
                 transition={{ duration: 0.12 }}
                 className={cn(
-                  "relative rounded-lg transition-colors duration-150 border-2 touch-none pointer-events-none select-none",
-                  compact ? "px-2 py-1" : "px-3 md:px-4 py-2",
+                  "relative flex items-center justify-center w-full h-full rounded-md transition-colors duration-150 border-2 touch-none pointer-events-none select-none",
                   activeSegment === "h"
                     ? "text-foreground bg-accent border-brand-text ring-2 ring-ring/20"
                     : "text-foreground bg-secondary border-border hover:bg-accent",
@@ -442,10 +437,7 @@ export function SegmentedTimePicker({
                   transition={
                     prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING
                   }
-                  className={cn(
-                    "leading-none block font-semibold tracking-tight",
-                    compact ? "text-2xl" : "text-4xl md:text-5xl",
-                  )}
+                  className="leading-none block font-mono font-semibold text-2xl tabular-nums tracking-tight"
                 >
                   {formattedHours}
                 </m.span>
@@ -456,7 +448,7 @@ export function SegmentedTimePicker({
                 role="spinbutton"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-lg focus:outline-none"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-md focus:outline-none"
                 aria-label="Adjust Hours"
                 aria-valuenow={displayHours}
                 aria-valuemin={is24hr ? 0 : 1}
@@ -485,7 +477,7 @@ export function SegmentedTimePicker({
                 e.stopPropagation();
                 adjustValue("h", -1);
               }}
-              className="sm:hidden min-h-[36px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md"
+              className="sm:hidden min-h-[28px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md"
             >
               <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
             </button>
@@ -493,15 +485,11 @@ export function SegmentedTimePicker({
 
           <span
             aria-hidden="true"
-            className={cn(
-              "text-muted-foreground font-thin self-center translate-y-[-1px]",
-              compact ? "text-xl" : "text-2xl md:text-3xl",
-            )}
+            className="text-xl font-mono font-semibold text-muted-foreground select-none px-0.5 self-center"
           >
             :
           </span>
 
-          {/* Minutes Segment */}
           <div className="flex flex-col items-center">
             <button
               type="button"
@@ -511,11 +499,11 @@ export function SegmentedTimePicker({
                 e.stopPropagation();
                 adjustValue("m", 1);
               }}
-              className="sm:hidden min-h-[36px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md"
+              className="sm:hidden min-h-[28px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md"
             >
               <ChevronUp className="h-4 w-4" strokeWidth={2.25} />
             </button>
-            <div className="relative group">
+            <div className="relative group w-[72px] h-14 sm:w-16 sm:h-12">
               <m.div
                 animate={
                   invalidSegment === "m" && !prefersReducedMotion
@@ -524,8 +512,7 @@ export function SegmentedTimePicker({
                 }
                 transition={{ duration: 0.12 }}
                 className={cn(
-                  "relative rounded-lg transition-colors duration-150 border-2 touch-none pointer-events-none select-none",
-                  compact ? "px-2 py-1" : "px-3 md:px-4 py-2",
+                  "relative flex items-center justify-center w-full h-full rounded-md transition-colors duration-150 border-2 touch-none pointer-events-none select-none",
                   activeSegment === "m"
                     ? "text-foreground bg-accent border-brand-text ring-2 ring-ring/20"
                     : "text-foreground bg-secondary border-border hover:bg-accent",
@@ -539,10 +526,7 @@ export function SegmentedTimePicker({
                   transition={
                     prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING
                   }
-                  className={cn(
-                    "leading-none block font-semibold tracking-tight",
-                    compact ? "text-2xl" : "text-4xl md:text-5xl",
-                  )}
+                  className="leading-none block font-mono font-semibold text-2xl tabular-nums tracking-tight"
                 >
                   {formattedMinutes}
                 </m.span>
@@ -553,7 +537,7 @@ export function SegmentedTimePicker({
                 role="spinbutton"
                 inputMode="numeric"
                 pattern="[0-9]*"
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-lg focus:outline-none"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer rounded-md focus:outline-none"
                 aria-label="Adjust Minutes"
                 aria-valuenow={minutes}
                 aria-valuemin={0}
@@ -581,7 +565,7 @@ export function SegmentedTimePicker({
                 e.stopPropagation();
                 adjustValue("m", -1);
               }}
-              className="sm:hidden min-h-[36px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md"
+              className="sm:hidden min-h-[28px] min-w-[36px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md"
             >
               <ChevronDown className="h-4 w-4" strokeWidth={2.25} />
             </button>
@@ -604,8 +588,7 @@ export function SegmentedTimePicker({
             data-base-ui-swipe-ignore
             aria-label="Toggle AM PM"
             className={cn(
-              "relative flex items-center justify-center rounded-md transition-colors duration-150 outline-none uppercase font-bold tracking-[0.05em] text-[10px] self-center border touch-none bg-secondary hover:bg-accent border-border text-foreground focus-visible:ring-2 focus-visible:ring-ring min-h-[44px] sm:min-h-[36px]",
-              compact ? "w-11" : "w-14",
+              "relative flex items-center justify-center rounded-md transition-colors duration-150 outline-none uppercase font-semibold tracking-wider text-xs self-center border touch-none bg-secondary hover:bg-accent border-border text-foreground focus-visible:ring-2 focus-visible:ring-ring min-w-[56px] px-3 h-14 sm:h-12",
               activeSegment === "p" &&
                 "bg-accent border-brand-text ring-2 ring-ring/20",
             )}

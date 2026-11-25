@@ -46,7 +46,6 @@ export function DateTimeWizard({
   const [tempDate, setTempDate] = useState<Date | undefined>(date);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Sync tempDate if prop changes externally (optional, but good practice)
   useEffect(() => {
     setTempDate(date);
   }, [date]);
@@ -59,13 +58,11 @@ export function DateTimeWizard({
       return;
     }
 
-    // Preserve time if already set, or set default time (12:00 PM / Noon)
     const updatedDate = new Date(newDate);
     if (tempDate) {
-      // Date already exists, keep its time
       updatedDate.setHours(tempDate.getHours(), tempDate.getMinutes());
     } else {
-      // New date, default to 12:00 PM (noon) instead of 9 AM
+      // Default to 12:00 PM (noon) instead of start-of-day 00:00 or 9 AM to avoid edge cases around date boundary
       updatedDate.setHours(12, 0, 0, 0);
     }
 
@@ -73,7 +70,6 @@ export function DateTimeWizard({
   };
 
   const handleTimeChange = (newTime: Date) => {
-    // SegmentedTimePicker returns a Date object with correct time parts
     setTempDate(newTime);
   };
 
@@ -94,8 +90,7 @@ export function DateTimeWizard({
 
   return (
     <div className="flex flex-col w-full max-w-[320px] mx-auto bg-popover rounded-md overflow-hidden">
-      {/* Header / Tabs */}
-      <div className="flex flex-col px-2.5 pt-2.5 pb-1.5 border-b bg-secondary gap-1">
+      <div className="flex flex-col px-2.5 pt-2.5 pb-1.5 border-b border-border gap-1">
         {title && (
           <div className="px-1 text-xs font-semibold text-foreground tracking-wide">
             {title}
@@ -146,7 +141,6 @@ export function DateTimeWizard({
         </Tabs>
       </div>
 
-      {/* Content Area */}
       <div
         ref={scrollRef}
         className="p-2 sm:p-2.5 overflow-y-auto overscroll-contain"
@@ -185,7 +179,6 @@ export function DateTimeWizard({
                   "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
               }}
             />
-            {/* Quick Presets */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2">
               <Button
                 type="button"
@@ -250,17 +243,12 @@ export function DateTimeWizard({
           </div>
         ) : (
           <div className="flex flex-col items-center animate-in slide-in-from-right-5 fade-in duration-200">
-            <div className="text-sm font-medium text-muted-foreground mb-3">
-              Set Time for {tempDate ? format(tempDate, "MMMM d") : "Today"}
-            </div>
-
             <SegmentedTimePicker
               value={tempDate || new Date()}
               onChange={handleTimeChange}
               onConfirm={onSave}
             />
 
-            {/* Quick Time Presets */}
             <div className="grid grid-cols-2 gap-1.5 mt-3 w-full">
               {[
                 { label: "Morning", hour: 9 },
@@ -273,7 +261,7 @@ export function DateTimeWizard({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-11 sm:h-9 px-2.5 bg-secondary hover:bg-accent border border-border rounded-md flex items-center justify-between text-xs font-medium text-foreground"
+                  className="h-9 sm:h-8 px-2.5 text-xs bg-card hover:bg-accent border border-border rounded-md flex items-center justify-between font-medium text-foreground"
                   onClick={() => {
                     trigger("tick");
                     const d = new Date(tempDate || new Date());
@@ -294,32 +282,31 @@ export function DateTimeWizard({
             </div>
           </div>
         )}
+      </div>
 
-        <div className="mt-2 w-full flex items-center gap-2">
-          {showClear && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 flex-1 h-9 sm:h-8 text-muted-foreground hover:text-foreground"
-              onClick={handleClear}
-            >
-              <X className="w-3.5 h-3.5" strokeWidth={2.25} />
-              Clear
-            </Button>
-          )}
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-t border-border">
+        {showClear ? (
           <Button
+            type="button"
+            variant="ghost"
             size="sm"
-            className={cn(
-              "gap-1.5 h-9 sm:h-8",
-              showClear ? "flex-1" : "w-full",
-            )}
-            onClick={onSave}
+            className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-accent gap-1.5"
+            onClick={handleClear}
           >
-            <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
-            Done
+            <X className="w-3.5 h-3.5" strokeWidth={2.25} />
+            Clear
           </Button>
-        </div>
+        ) : (
+          <div />
+        )}
+        <Button
+          size="sm"
+          className="h-10 px-5 sm:h-8 sm:px-4 w-auto gap-1.5"
+          onClick={onSave}
+        >
+          <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
+          Done
+        </Button>
       </div>
     </div>
   );
