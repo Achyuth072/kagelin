@@ -4,6 +4,8 @@ import { useRef } from "react";
 import { ShieldCheck, X } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
+import { usePathname } from "next/navigation";
+import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 import { Button } from "@/components/ui/button";
 import { PrivacyPolicyLink } from "@/components/ui/privacy-policy-link";
 import { useTelemetryConsent } from "@/lib/hooks/useTelemetryConsent";
@@ -16,13 +18,18 @@ import { NOTIFICATION_LINK_BUTTON_CLASS } from "@/components/ui/notification-lin
 
 export function TelemetryConsentPrompt() {
   const { shouldPrompt: isVisible, setConsent } = useTelemetryConsent();
+  const pathname = usePathname();
+  const isAnyModalOpen = useIsAnyModalOpen();
+  const isFocus = pathname === "/focus";
+  const shouldRender = isVisible && !isFocus && !isAnyModalOpen;
+
   const prefersReducedMotion = usePrefersReducedMotion();
   const { trigger } = useHaptic();
 
   const bannerRef = useRef<HTMLDivElement>(null);
   // Height feeds --telemetry-prompt-offset (read by Toaster's offset formula)
   // so toasts don't overlap this banner.
-  useMeasuredOffset(bannerRef, isVisible, "--telemetry-prompt-offset");
+  useMeasuredOffset(bannerRef, shouldRender, "--telemetry-prompt-offset");
 
   const handleEnable = () => {
     trigger("toggle");
@@ -36,7 +43,7 @@ export function TelemetryConsentPrompt() {
 
   return (
     <AnimatePresence>
-      {isVisible && (
+      {shouldRender && (
         <m.aside
           role="region"
           aria-label="Telemetry consent"
@@ -46,8 +53,8 @@ export function TelemetryConsentPrompt() {
           exit={{ y: 24, opacity: 0 }}
           transition={prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING}
           className={cn(
-            "fixed inset-x-0 bottom-[calc(var(--mobile-nav-height)+0.75rem)] md:bottom-[calc(1.5rem+var(--offline-pill-offset,0px))] z-[var(--z-prompt)]",
-            "flex justify-center px-4 pointer-events-none",
+            "fixed inset-x-0 bottom-[calc(var(--mobile-nav-height)+0.75rem)] md:bottom-[calc(1.5rem+var(--offline-pill-offset,0px))] md:left-auto md:right-6 md:inset-x-auto z-[var(--z-prompt)]",
+            "flex justify-center md:justify-end px-4 md:px-0 pointer-events-none",
           )}
         >
           <div

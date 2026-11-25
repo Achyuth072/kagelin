@@ -178,7 +178,7 @@ export function ShortcutsHelp({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-[720px] max-h-[85dvh] sm:max-h-[90dvh] flex flex-col p-0 overflow-hidden border-border/80 shadow-none">
+      <ResponsiveDialogContent className="sm:max-w-[720px] max-h-[85dvh] sm:max-h-[90dvh] flex flex-col p-0 overflow-hidden">
         <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left border-b border-border/80">
           <ResponsiveDialogTitle className="flex items-center gap-2.5 text-[24px] font-semibold tracking-[-0.02em] text-foreground">
             <Keyboard

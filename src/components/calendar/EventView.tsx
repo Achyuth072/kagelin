@@ -568,6 +568,13 @@ export function EventView({
               <PopoverTrigger asChild>
                 <button
                   type="button"
+                  aria-label={
+                    safeStartDate
+                      ? allDay
+                        ? "Start date"
+                        : "Start date and time"
+                      : "Pick a date"
+                  }
                   disabled={isRecurring}
                   onClick={() => trigger("tick")}
                   className="w-full flex items-center gap-3 px-2 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
@@ -610,6 +617,13 @@ export function EventView({
               <PopoverTrigger asChild>
                 <button
                   type="button"
+                  aria-label={
+                    safeEndDate
+                      ? allDay
+                        ? "End date"
+                        : "End date and time"
+                      : "Pick an end time"
+                  }
                   disabled={isRecurring}
                   onClick={() => trigger("tick")}
                   className="w-full flex items-center gap-3 px-2 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"

@@ -218,7 +218,7 @@
     @apply outline-2 outline-offset-2 outline-ring;
   }
 
-  @media (hover: none) and (pointer: coarse), (max-width: 640px) {
+  @media (hover: none) and (pointer: coarse) {
     :focus:not(:focus-visible) {
       outline: none;
     }

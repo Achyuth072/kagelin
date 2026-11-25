@@ -114,3 +114,34 @@ test("focus page reached via in-app navigation still goes back to the previous p
 
   expect(page.url().replace("http://localhost:3000", "")).toBe("/");
 });
+
+test("Escape in FocusSettingsDialog stays on /focus and Adjust Settings is clickable without telemetry interception", async ({
+  page,
+}) => {
+  await seedGuestMode(page, "http://localhost:3000/focus");
+  assertNotRedirectedToLogin(page);
+
+  // Telemetry consent prompt must not intercept or display on /focus
+  await expect(page.getByTestId("telemetry-consent-prompt")).not.toBeVisible();
+
+  // Click Adjust Settings button
+  const adjustSettingsBtn = page.getByRole("button", {
+    name: /adjust settings/i,
+  });
+  await expect(adjustSettingsBtn).toBeVisible({ timeout: 10000 });
+  await adjustSettingsBtn.click();
+
+  // Settings dialog opens
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible({ timeout: 10000 });
+
+  // Escape closes only the dialog and preserves /focus route
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible({ timeout: 10000 });
+  expect(page.url()).toContain("/focus");
+
+  // Subsequent Escape when no overlay is open exits /focus back to root
+  await page.keyboard.press("Escape");
+  await page.waitForURL("http://localhost:3000/", { timeout: 10000 });
+  expect(page.url().replace("http://localhost:3000", "")).toBe("/");
+});

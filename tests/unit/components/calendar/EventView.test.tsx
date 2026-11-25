@@ -98,6 +98,12 @@ describe("EventView standalone component", () => {
     expect(screen.getByTestId("event-header-badge")).toHaveTextContent(
       "EVENT-NEW",
     );
+    expect(
+      screen.getByRole("button", { name: "Start date and time" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "End date and time" }),
+    ).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/add title/i)).toBeInTheDocument();
     expect(screen.getByTestId("property-strip")).toBeInTheDocument();
     expect(

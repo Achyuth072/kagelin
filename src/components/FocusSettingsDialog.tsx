@@ -48,7 +48,7 @@ const rowCls =
   "flex items-start gap-3 px-3 py-2.5 rounded-md mx-2 hover:bg-muted/40 transition-seijaku-fast";
 
 const numberInputCls =
-  "w-10 bg-transparent border-0 outline-none text-sm text-right text-foreground [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+  "h-8 w-14 tabular-nums bg-transparent border border-border/60 rounded px-2 text-right text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
 const resetBtnCls =
   "h-9 w-9 p-0 [&_svg]:size-5! rounded-lg transition-seijaku-fast";
@@ -93,9 +93,12 @@ function SettingsForm() {
         </IconCell>
         <div className="flex-1 min-w-0 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">
+            <label
+              htmlFor="focus-duration-input"
+              className="text-sm font-medium text-foreground cursor-pointer"
+            >
               Focus Duration
-            </span>
+            </label>
             <div className="flex items-center gap-1.5">
               <input
                 id="focus-duration-input"
@@ -115,6 +118,7 @@ function SettingsForm() {
             </div>
           </div>
           <Slider
+            aria-label="Focus duration slider"
             value={[focusDuration]}
             onValueChange={([value]) =>
               setValue("focusDuration", value, { shouldValidate: true })
@@ -144,9 +148,12 @@ function SettingsForm() {
         </IconCell>
         <div className="flex-1 min-w-0 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">
+            <label
+              htmlFor="short-break-input"
+              className="text-sm font-medium text-foreground cursor-pointer"
+            >
               Short Break
-            </span>
+            </label>
             <div className="flex items-center gap-1.5">
               <input
                 id="short-break-input"
@@ -166,6 +173,7 @@ function SettingsForm() {
             </div>
           </div>
           <Slider
+            aria-label="Short break duration slider"
             value={[shortBreak]}
             onValueChange={([value]) =>
               setValue("shortBreakDuration", value, { shouldValidate: true })
@@ -192,12 +200,16 @@ function SettingsForm() {
         </IconCell>
         <div className="flex-1 min-w-0 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">
+            <label
+              htmlFor="long-break-input"
+              className="text-sm font-medium text-foreground cursor-pointer"
+            >
               Long Break
-            </span>
+            </label>
             <div className="flex items-center gap-1.5">
               <input
                 id="long-break-input"
+                aria-label="Long Break"
                 type="number"
                 {...register("longBreakDuration", { valueAsNumber: true })}
                 className={cn(
@@ -213,6 +225,7 @@ function SettingsForm() {
             </div>
           </div>
           <Slider
+            aria-label="Long break duration slider"
             value={[longBreak]}
             onValueChange={([value]) =>
               setValue("longBreakDuration", value, { shouldValidate: true })
@@ -242,11 +255,15 @@ function SettingsForm() {
         </IconCell>
         <div className="flex-1 min-w-0 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">
+            <label
+              htmlFor="sessions-input"
+              className="text-sm font-medium text-foreground cursor-pointer"
+            >
               Sessions Until Long Break
-            </span>
+            </label>
             <input
               id="sessions-input"
+              aria-label="Sessions Until Long Break"
               type="number"
               {...register("sessionsBeforeLongBreak", { valueAsNumber: true })}
               className={cn(
@@ -260,6 +277,7 @@ function SettingsForm() {
             />
           </div>
           <Slider
+            aria-label="Sessions until long break slider"
             value={[sessions]}
             onValueChange={([value]) =>
               setValue("sessionsBeforeLongBreak", value, {
@@ -289,15 +307,19 @@ function SettingsForm() {
           <Play className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
         </IconCell>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-foreground">
+          <label
+            htmlFor="auto-start-break-switch"
+            className="text-sm font-medium text-foreground cursor-pointer block"
+          >
             Auto-start Breaks
-          </div>
+          </label>
           <p className="text-xs text-muted-foreground">
             Automatically start break timer after focus session
           </p>
         </div>
         <Switch
           id="auto-start-break-switch"
+          aria-label="Auto-start Breaks"
           checked={autoStartBreak}
           onCheckedChange={(checked) =>
             setValue("autoStartBreak", checked, { shouldValidate: true })
@@ -310,15 +332,19 @@ function SettingsForm() {
           <Zap className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
         </IconCell>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-foreground">
+          <label
+            htmlFor="auto-start-focus-switch"
+            className="text-sm font-medium text-foreground cursor-pointer block"
+          >
             Auto-start Focus
-          </div>
+          </label>
           <p className="text-xs text-muted-foreground">
             Automatically start focus timer after break
           </p>
         </div>
         <Switch
           id="auto-start-focus-switch"
+          aria-label="Auto-start Focus"
           checked={autoStartFocus}
           onCheckedChange={(checked) =>
             setValue("autoStartFocus", checked, { shouldValidate: true })
@@ -524,7 +550,7 @@ export function FocusSettingsDialog() {
     <m.button
       className={cn(
         buttonVariants({ variant: "ghost" }),
-        "text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-all cursor-pointer",
+        "text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-seijaku cursor-pointer",
       )}
       onTapStart={() => trigger("thud")}
       whileTap={isPhone ? { scale: 0.95 } : {}}
@@ -537,7 +563,7 @@ export function FocusSettingsDialog() {
   return (
     <ResponsiveDialog open={open} onOpenChange={setOpen}>
       <ResponsiveDialogTrigger asChild>{triggerButton}</ResponsiveDialogTrigger>
-      <ResponsiveDialogContent className="sm:max-w-[425px] max-h-[85dvh] sm:max-h-[90dvh] flex flex-col p-0 overflow-hidden border-border/80 shadow-none">
+      <ResponsiveDialogContent className="sm:max-w-[425px] max-h-[85dvh] sm:max-h-[90dvh] flex flex-col p-0 overflow-hidden">
         <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
           <ResponsiveDialogTitle>Timer Settings</ResponsiveDialogTitle>
           <ResponsiveDialogDescription>

@@ -82,9 +82,7 @@ export default function FocusPage() {
   };
 
   return (
-    <m.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+    <div
       className={cn(
         "flex flex-col items-center justify-center p-6 bg-background relative select-none cursor-default overflow-y-auto",
         isFullscreen && isPhone
@@ -266,6 +264,6 @@ export default function FocusPage() {
           </m.div>
         )}
       </AnimatePresence>
-    </m.div>
+    </div>
   );
 }

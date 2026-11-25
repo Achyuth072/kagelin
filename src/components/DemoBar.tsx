@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { useClearGuestData } from "@/lib/hooks/useGuestStoreActions";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
@@ -17,10 +18,11 @@ import { NOTIFICATION_LINK_BUTTON_CLASS } from "@/components/ui/notification-lin
 
 export function DemoBar() {
   const activeBanner = useActiveBanner();
+  const pathname = usePathname();
   const clearGuestData = useClearGuestData();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
-  const isVisible = activeBanner === "demo";
+  const isVisible = activeBanner === "demo" && pathname !== "/focus";
 
   useStatusPillOffset(cardRef, isVisible);
 

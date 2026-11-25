@@ -179,7 +179,19 @@ export function GlobalHotkeys({
   useHotkeys(
     "esc",
     (event) => {
-      if (window.location.pathname === "/focus") {
+      const isFocus =
+        pathname === "/focus" ||
+        (typeof window !== "undefined" &&
+          window.location.pathname === "/focus");
+
+      if (isFocus) {
+        if (event.defaultPrevented) return;
+        const hasOpenOverlay = Boolean(
+          document.querySelector(
+            '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper], [data-slot="drawer-content"]',
+          ),
+        );
+        if (hasOpenOverlay) return;
         event.preventDefault();
         router.push("/");
       }

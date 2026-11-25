@@ -29,11 +29,24 @@ vi.mock("@/lib/hooks/usePrefersReducedMotion", () => ({
   usePrefersReducedMotion: () => true,
 }));
 
+const mockUsePathname = vi.fn(() => "/");
+const mockUseIsAnyModalOpen = vi.fn(() => false);
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => mockUsePathname(),
+}));
+
+vi.mock("@/lib/hooks/useIsAnyModalOpen", () => ({
+  useIsAnyModalOpen: () => mockUseIsAnyModalOpen(),
+}));
+
 describe("Telemetry Consent UI and Privacy Settings", () => {
   beforeEach(() => {
     localStorage.clear();
     resetTelemetryConsentCache();
     vi.clearAllMocks();
+    mockUsePathname.mockReturnValue("/");
+    mockUseIsAnyModalOpen.mockReturnValue(false);
     telemetryClient.clearTelemetryQueue();
   });
 
@@ -88,6 +101,28 @@ describe("Telemetry Consent UI and Privacy Settings", () => {
   describe("TelemetryConsentPrompt", () => {
     beforeEach(() => {
       markFirstAction();
+    });
+
+    it("does not render prompt when on /focus page", async () => {
+      mockUsePathname.mockReturnValue("/focus");
+      render(<TelemetryConsentPrompt />);
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText(/Kagelin is open source & privacy-first/i),
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    it("does not render prompt when any modal or sheet is open", async () => {
+      mockUseIsAnyModalOpen.mockReturnValue(true);
+      render(<TelemetryConsentPrompt />);
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText(/Kagelin is open source & privacy-first/i),
+        ).not.toBeInTheDocument();
+      });
     });
 
     it("renders prompt when telemetry consent is unprompted after a first action", async () => {
