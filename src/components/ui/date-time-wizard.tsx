@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { useScrollIsolation } from "@/lib/hooks/useScrollIsolation";
@@ -20,11 +20,8 @@ interface DateTimeWizardProps {
   onClose: () => void;
   showTime?: boolean;
   allowPastDates?: boolean;
-  /** Constrain content height to fit inside a Popover using the Radix available-height CSS var */
   compact?: boolean;
-  /** Called when the "Evening" quick preset is selected */
   onEveningSelect?: () => void;
-  /** Whether to show a Clear button to unset the date */
   allowClear?: boolean;
 }
 
@@ -155,90 +152,95 @@ export function DateTimeWizard({
       >
         {step === "date" ? (
           <div className="animate-in fade-in zoom-in-95 duration-200">
-            <Calendar
-              mode="single"
-              selected={tempDate}
-              onSelect={handleDateSelect}
-              disabled={
-                allowPastDates
-                  ? undefined
-                  : { before: new Date(new Date().setHours(0, 0, 0, 0)) }
-              }
-              captionLayout="label"
-              startMonth={new Date(new Date().getFullYear() - 1, 0)}
-              endMonth={new Date(new Date().getFullYear() + 5, 11)}
-              autoFocus
-              className="rounded-md border-0 w-full flex justify-center p-1 sm:p-1.5"
-              classNames={{
-                month: "space-y-2 w-full",
-                month_grid: "w-full border-collapse",
-                weekdays: "flex w-full justify-between",
-                week: "flex w-full justify-between mt-1",
-                day: "p-0 font-normal",
-                weekday:
-                  "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
-              }}
-            />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-10 sm:h-8 px-2 text-[11px] font-medium bg-secondary hover:bg-accent border border-border text-foreground rounded-md"
-                onClick={() => {
-                  trigger("tick");
-                  const today = new Date();
-                  today.setHours(12, 0, 0, 0);
-                  handleDateSelect(today);
+            <div className="bg-card border border-border rounded-lg p-1.5 flex justify-center">
+              <Calendar
+                mode="single"
+                selected={tempDate}
+                onSelect={handleDateSelect}
+                disabled={
+                  allowPastDates
+                    ? undefined
+                    : { before: new Date(new Date().setHours(0, 0, 0, 0)) }
+                }
+                captionLayout="label"
+                startMonth={new Date(new Date().getFullYear() - 1, 0)}
+                endMonth={new Date(new Date().getFullYear() + 5, 11)}
+                autoFocus
+                className="w-full flex justify-center p-0"
+                classNames={{
+                  month: "space-y-2 w-full",
+                  month_grid: "w-full border-collapse",
+                  weekdays: "flex w-full justify-between",
+                  week: "flex w-full justify-between mt-1",
+                  day: "p-0 font-normal",
+                  weekday:
+                    "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
                 }}
-              >
-                Today
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-10 sm:h-8 px-2 text-[11px] font-medium bg-secondary hover:bg-accent border border-border text-foreground rounded-md"
-                onClick={() => {
-                  trigger("tick");
-                  const tomorrow = new Date();
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  tomorrow.setHours(12, 0, 0, 0);
-                  handleDateSelect(tomorrow);
-                }}
-              >
-                Tomorrow
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-10 sm:h-8 px-2 text-[11px] font-medium bg-secondary hover:bg-accent border border-border text-foreground rounded-md"
-                onClick={() => {
-                  trigger("tick");
-                  const nextWeek = new Date();
-                  nextWeek.setDate(nextWeek.getDate() + 7);
-                  nextWeek.setHours(12, 0, 0, 0);
-                  handleDateSelect(nextWeek);
-                }}
-              >
-                Next Week
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-10 sm:h-8 px-2 text-[11px] font-semibold bg-secondary hover:bg-accent border border-border text-brand-text rounded-md"
-                onClick={() => {
-                  trigger("tick");
-                  const evening = new Date();
-                  evening.setHours(18, 0, 0, 0);
-                  setTempDate(evening);
-                  onEveningSelect?.();
-                }}
-              >
-                Evening
-              </Button>
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 mt-2">
+              {[
+                {
+                  label: "Today",
+                  hint: format(new Date(), "EEE"),
+                  onClick: () => {
+                    const today = new Date();
+                    today.setHours(12, 0, 0, 0);
+                    handleDateSelect(today);
+                  },
+                },
+                {
+                  label: "Tomorrow",
+                  hint: format(addDays(new Date(), 1), "EEE"),
+                  onClick: () => {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(12, 0, 0, 0);
+                    handleDateSelect(tomorrow);
+                  },
+                },
+                {
+                  label: "Next Week",
+                  hint: format(addDays(new Date(), 7), "EEE"),
+                  onClick: () => {
+                    const nextWeek = new Date();
+                    nextWeek.setDate(nextWeek.getDate() + 7);
+                    nextWeek.setHours(12, 0, 0, 0);
+                    handleDateSelect(nextWeek);
+                  },
+                },
+                {
+                  label: "Evening",
+                  hint: "6pm",
+                  onClick: () => {
+                    const evening = new Date();
+                    evening.setHours(18, 0, 0, 0);
+                    setTempDate(evening);
+                    onEveningSelect?.();
+                  },
+                },
+              ].map(({ label, hint, onClick }) => (
+                <Button
+                  key={label}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={label}
+                  className="h-9 sm:h-8 px-2.5 text-xs bg-card hover:bg-accent border border-border font-medium flex items-center justify-between text-foreground rounded-md"
+                  onClick={() => {
+                    trigger("tick");
+                    onClick();
+                  }}
+                >
+                  <span>{label}</span>
+                  <span
+                    aria-hidden="true"
+                    className="font-mono tabular-nums text-[11px] text-muted-foreground"
+                  >
+                    {hint}
+                  </span>
+                </Button>
+              ))}
             </div>
           </div>
         ) : (
