@@ -5,6 +5,7 @@ import { format, parseISO } from "date-fns";
 import {
   AreaChart,
   Area,
+  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
@@ -156,27 +157,42 @@ export function HabitScoreChart({ habit, entries }: HabitScoreChartProps) {
           >
             <defs>
               <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={habit.color} stopOpacity={0.25} />
+                <stop offset="0%" stopColor={habit.color} stopOpacity={0.12} />
                 <stop offset="100%" stopColor={habit.color} stopOpacity={0.0} />
               </linearGradient>
             </defs>
+            <CartesianGrid
+              vertical={false}
+              stroke="hsl(var(--border))"
+              strokeDasharray="3 3"
+            />
             <XAxis
               dataKey="date"
               stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
               tickLine={false}
               axisLine={false}
               minTickGap={24}
               tickFormatter={(d: string) => format(parseISO(d), "MMM d")}
+              tick={{
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 11,
+                fontFamily: "var(--font-mono)",
+                style: { fontVariantNumeric: "tabular-nums" },
+              }}
             />
             <YAxis
               domain={[0, 100]}
               stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
               tickLine={false}
               axisLine={false}
               width={36}
               tickFormatter={(v) => `${v}%`}
+              tick={{
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 11,
+                fontFamily: "var(--font-mono)",
+                style: { fontVariantNumeric: "tabular-nums" },
+              }}
             />
             <Tooltip
               cursor={{
@@ -196,7 +212,7 @@ export function HabitScoreChart({ habit, entries }: HabitScoreChartProps) {
               activeDot={{
                 r: 4,
                 fill: habit.color,
-                stroke: "hsl(var(--background))",
+                stroke: "hsl(var(--card))",
                 strokeWidth: 2,
               }}
               // Entry animation is disabled outright (matching FocusTrendChart)

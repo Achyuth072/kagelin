@@ -69,6 +69,7 @@ vi.mock("recharts", () => ({
     <div>{children}</div>
   ),
   Area: () => null,
+  CartesianGrid: () => null,
   XAxis: () => null,
   YAxis: () => null,
   Tooltip: () => null,

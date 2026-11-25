@@ -65,9 +65,9 @@ export function MetricCard({
               className={cn(
                 "text-[11px] md:text-xs font-bold flex items-center gap-1 w-fit px-2 py-0.5 rounded-md mt-1.5 border transition-all",
                 trend.value === 0
-                  ? "text-muted-foreground bg-secondary/60 border-border/60"
+                  ? "text-muted-foreground bg-secondary border-border"
                   : trend.isPositive
-                    ? "text-brand bg-brand/15 border-brand/20"
+                    ? "text-brand-text bg-muted border-border"
                     : "text-destructive bg-destructive-surface border-destructive-surface-border",
               )}
             >
@@ -90,7 +90,7 @@ export function MetricCard({
                   strokeWidth={2.25}
                 />
               )}
-              <span className="tracking-tight">
+              <span className="tracking-tight tabular-nums">
                 <AnimatedNumber value={Math.abs(trend.value)} suffix="%" />
               </span>
             </div>

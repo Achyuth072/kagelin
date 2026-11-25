@@ -25,9 +25,9 @@ describe("MetricCard", () => {
     });
     expect(trendBadge).toBeInTheDocument();
     expect(trendBadge).toHaveClass(
-      "text-brand",
-      "bg-brand/15",
-      "border-brand/20",
+      "text-brand-text",
+      "bg-muted",
+      "border-border",
     );
 
     // Must use Lucide icon svg, not unicode arrow

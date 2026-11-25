@@ -74,7 +74,7 @@ export function GoalsCard({ className }: GoalsCardProps) {
         type="button"
         onClick={() => router.push("/settings?tab=preferences")}
         className={cn(
-          "flex w-full items-center gap-2 rounded-xl border border-dashed border-border/60 px-4 py-3 text-left text-sm text-muted-foreground transition-seijaku-fast hover:border-border hover:text-foreground",
+          "flex w-full items-center gap-2 rounded-xl border border-dashed border-border px-4 py-3 text-left text-sm text-muted-foreground transition-seijaku-fast hover:border-border hover:text-foreground",
           className,
         )}
       >
@@ -85,7 +85,7 @@ export function GoalsCard({ className }: GoalsCardProps) {
   }
 
   return (
-    <Card className={cn("p-4 sm:p-6 border-border/50", className)}>
+    <Card className={cn("p-4 sm:p-6 border-border", className)}>
       <div className="space-y-4">
         <div>
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">

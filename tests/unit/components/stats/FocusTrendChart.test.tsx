@@ -62,6 +62,7 @@ vi.mock("recharts", () => ({
       data-dashed={strokeDasharray}
     />
   ),
+  CartesianGrid: () => null,
   XAxis: () => null,
   YAxis: () => null,
   Tooltip: () => null,
