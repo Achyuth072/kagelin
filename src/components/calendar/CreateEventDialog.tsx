@@ -25,7 +25,7 @@ export function CreateEventDialog({
 }: CreateEventDialogProps) {
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-visible">
+      <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-visible border-border/80 shadow-none">
         <ResponsiveDialogHeader className="sr-only">
           <ResponsiveDialogTitle>
             {event ? "Edit Event" : "Create Event"}

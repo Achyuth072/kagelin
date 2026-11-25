@@ -202,7 +202,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
             autoFocusTitle !== undefined ? autoFocusTitle : isFinePointer
           }
           className={cn(
-            "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border pb-2 pt-0.5 outline-none placeholder:text-muted-foreground/50 text-foreground",
+            "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border pb-2 pt-0.5 outline-none placeholder:text-muted-foreground text-foreground",
             errors?.content && "placeholder:text-destructive/60",
           )}
           aria-invalid={!!errors?.content}
@@ -448,7 +448,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
       {/* Anchored Footer — Project Selector on Left, Action CTAs on Right */}
       <div
         className={cn(
-          "shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border pb-[calc(1rem+env(safe-area-inset-bottom))] w-full max-w-full",
+          "shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border/80 pb-[calc(1rem+env(safe-area-inset-bottom))] w-full max-w-full",
           layout === "panel" ? "bg-card" : "bg-background",
         )}
       >

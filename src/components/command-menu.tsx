@@ -558,7 +558,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             </CommandItem>
           </CommandGroup>
         </CommandList>
-        <div className="hidden sm:flex h-8 items-center justify-between border-t border-border bg-sidebar px-3 text-[11px] leading-none font-mono text-muted-foreground">
+        <div className="hidden sm:flex h-8 items-center justify-between border-t border-border/80 bg-sidebar px-3 text-[11px] leading-none font-mono text-muted-foreground">
           <span>↑↓ Navigate · ↵ Select · Esc Close</span>
         </div>
       </CommandDialog>

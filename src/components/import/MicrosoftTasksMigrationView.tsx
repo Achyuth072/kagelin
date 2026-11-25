@@ -117,7 +117,7 @@ export function MicrosoftTasksMigrationView({
 
         {/* Live Metric Chips */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pb-3 shrink-0">
-          <div className="flex flex-col p-2 rounded-lg bg-secondary/20 border border-border/40 text-center">
+          <div className="flex flex-col p-2 rounded-lg bg-secondary/30 border border-border/80 text-center">
             <span className="text-[11px] text-muted-foreground">
               Total Lists
             </span>
@@ -125,7 +125,7 @@ export function MicrosoftTasksMigrationView({
               {preview.totalLists}
             </span>
           </div>
-          <div className="flex flex-col p-2 rounded-lg bg-secondary/20 border border-border/40 text-center">
+          <div className="flex flex-col p-2 rounded-lg bg-secondary/30 border border-border/80 text-center">
             <span className="text-[11px] text-muted-foreground">
               Total Tasks
             </span>
@@ -133,7 +133,7 @@ export function MicrosoftTasksMigrationView({
               {preview.totalTasks}
             </span>
           </div>
-          <div className="flex flex-col p-2 rounded-lg bg-secondary/20 border border-border/40 text-center">
+          <div className="flex flex-col p-2 rounded-lg bg-secondary/30 border border-border/80 text-center">
             <span className="text-[11px] text-muted-foreground">
               Total Steps
             </span>
@@ -141,13 +141,13 @@ export function MicrosoftTasksMigrationView({
               {preview.subtasksCount}
             </span>
           </div>
-          <div className="flex flex-col p-2 rounded-lg bg-secondary/20 border border-border/40 text-center">
+          <div className="flex flex-col p-2 rounded-lg bg-secondary/30 border border-border/80 text-center">
             <span className="text-[11px] text-muted-foreground">Completed</span>
             <span className="text-sm font-semibold text-foreground">
               {preview.totalCompleted}
             </span>
           </div>
-          <div className="col-span-2 sm:col-span-1 flex flex-col p-2 rounded-lg bg-secondary/20 border border-border/40 text-center">
+          <div className="col-span-2 sm:col-span-1 flex flex-col p-2 rounded-lg bg-secondary/30 border border-border/80 text-center">
             <span className="text-[11px] text-muted-foreground">
               Skipped Duplicates
             </span>
@@ -158,7 +158,7 @@ export function MicrosoftTasksMigrationView({
         </div>
 
         {/* Scroll-contained hierarchy list */}
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 rounded-xl border border-border/40 bg-secondary/10 space-y-3">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 rounded-xl border border-border/80 bg-secondary/15 space-y-3">
           {preview.projects.map((proj) => {
             const rootTasks = proj.tasks.filter((t) => !t.tempParentId);
             const stepTasks = proj.tasks.filter((t) => Boolean(t.tempParentId));
@@ -275,7 +275,7 @@ export function MicrosoftTasksMigrationView({
 
         {/* Include completed checkbox */}
         {completedTasksCount > 0 && (
-          <div className="flex items-center justify-between border-t border-border/40 pt-2.5 mt-2 shrink-0">
+          <div className="flex items-center justify-between border-t border-border/80 pt-2.5 mt-2 shrink-0">
             <label
               htmlFor={checkboxId}
               className="cursor-pointer text-xs text-muted-foreground select-none"
@@ -313,7 +313,7 @@ export function MicrosoftTasksMigrationView({
         )}
 
         {/* Commit and Cancel Controls */}
-        <div className="flex justify-end gap-2 pt-3 border-t border-border/40 shrink-0 mt-2">
+        <div className="flex justify-end gap-2 pt-3 border-t border-border/80 shrink-0 mt-2">
           <Button
             variant="ghost"
             onClick={handleCancel}
@@ -380,7 +380,7 @@ export function MicrosoftTasksMigrationView({
             }
           }}
           className={cn(
-            "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+            "flex items-center justify-between p-4 rounded-xl border border-border/80 bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
             isImporting && "opacity-60 cursor-not-allowed pointer-events-none",
           )}
         >
@@ -455,7 +455,7 @@ export function MicrosoftTasksMigrationView({
           "flex flex-col gap-2 p-4 rounded-xl border transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
           isDragOver
             ? "border-brand bg-brand/5"
-            : "border-border/40 bg-secondary/10 hover:bg-secondary/20",
+            : "border-border/80 bg-secondary/30 hover:bg-secondary/50",
           isImporting && "opacity-60 cursor-not-allowed pointer-events-none",
         )}
       >

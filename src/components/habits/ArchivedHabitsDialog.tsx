@@ -43,7 +43,7 @@ export function ArchivedHabitsDialog({
   return (
     <>
       <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-        <ResponsiveDialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+        <ResponsiveDialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh] border-border/80 shadow-none">
           <ResponsiveDialogHeader className="px-4 pt-6 shrink-0 text-left">
             <ResponsiveDialogTitle className="type-h2">
               Archived Habits

@@ -135,7 +135,7 @@ export function UnlockScreen({
       </form>
 
       <ResponsiveDialog open={newRecoveryCode !== null} onOpenChange={() => {}}>
-        <ResponsiveDialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+        <ResponsiveDialogContent className="sm:max-w-md p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh] border-border/80 shadow-none">
           <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
             <ResponsiveDialogTitle>New recovery code</ResponsiveDialogTitle>
             <ResponsiveDialogDescription>

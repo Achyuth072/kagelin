@@ -171,7 +171,7 @@ function CompletedTasksSheetBody({
           {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-secondary/10"
+              className="flex items-center gap-3 p-3 rounded-xl border border-border/80 bg-secondary/30"
             >
               <Skeleton className="h-4 w-4 rounded-sm shrink-0" />
               <div className="flex-1 space-y-2">
@@ -219,10 +219,10 @@ function CompletedTasksSheetBody({
       className={
         isMobile
           ? "max-h-[92dvh] h-[92dvh] flex flex-col overflow-hidden"
-          : "max-w-lg h-[80vh] flex flex-col p-0 overflow-hidden border-border bg-background"
+          : "max-w-lg h-[80vh] flex flex-col p-0 overflow-hidden border border-border/80 bg-background shadow-none"
       }
     >
-      <div className="flex flex-row items-center justify-between border-b border-border/50 px-6 py-4 shrink-0">
+      <div className="flex flex-row items-center justify-between border-b border-border/80 px-6 py-4 shrink-0">
         <ResponsiveDialogTitle className="flex items-center gap-2 cursor-default">
           <CheckCircle2
             className="h-5 w-5 sm:h-4 sm:w-4 text-foreground/70"
@@ -284,7 +284,7 @@ function CompletedTasksSheetBody({
       </div>
 
       {completedTasks.length > 0 && (
-        <div className="px-6 py-4 sm:py-3 border-b border-border/40 bg-secondary/5 shrink-0">
+        <div className="px-6 py-4 sm:py-3 border-b border-border/80 bg-secondary/10 shrink-0">
           <div className="relative group">
             <Search
               className="absolute left-3.5 sm:left-3 top-1/2 -translate-y-1/2 h-5 w-5 sm:h-4 sm:w-4 text-muted-foreground sm:group-focus-within:text-brand transition-colors"

@@ -207,13 +207,13 @@ export function ConnectCalendarDialog({
         </Trigger>
       ) : null}
 
-      <ResponsiveDialogContent className="sm:max-w-lg p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh] rounded-t-[20px] sm:rounded-xl">
-        <ResponsiveDialogHeader className="px-4 pt-6 sm:px-6 pb-2 shrink-0 text-left">
+      <ResponsiveDialogContent className="sm:max-w-lg border-border/80 shadow-none p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+        <ResponsiveDialogHeader className="px-4 pt-6 sm:px-6 pb-3 border-b border-border/80 shrink-0 text-left">
           <ResponsiveDialogTitle className="text-xl font-semibold tracking-tight capitalize">
             {step === "select" && "Connect Calendar"}
             {step === "pick_calendars" && `${selectedProvider} Calendars`}
           </ResponsiveDialogTitle>
-          <ResponsiveDialogDescription className="text-sm text-muted-foreground/80">
+          <ResponsiveDialogDescription className="text-sm text-muted-foreground mt-1">
             {step === "select" && "Sync your events from external providers."}
             {step === "pick_calendars" &&
               "Choose which calendars to sync with Kagelin."}
@@ -228,7 +228,7 @@ export function ConnectCalendarDialog({
             {connectedProviders.map((p) => (
               <div
                 key={p}
-                className="flex items-center justify-between rounded-lg border border-border/50 bg-card/50 px-3 py-2"
+                className="flex items-center justify-between rounded-lg border border-border/80 bg-secondary/30 px-3 py-2"
               >
                 <div className="flex items-center gap-2">
                   <CheckCircle2
@@ -333,7 +333,7 @@ export function ConnectCalendarDialog({
                 {pickerCalendars.map((cal) => (
                   <label
                     key={cal.url}
-                    className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/50 px-3 py-2.5 cursor-pointer hover:bg-accent/30"
+                    className="flex items-center gap-3 rounded-lg border border-border/80 bg-secondary/30 px-3 py-2.5 cursor-pointer hover:bg-secondary/50"
                   >
                     <Checkbox
                       checked={pickerSelected.has(cal.url)}
@@ -462,9 +462,9 @@ function ProviderButton({
     <button
       onClick={onClick}
       className={cn(
-        "flex flex-col items-center justify-center p-6 rounded-xl border bg-card/50",
-        "transition-all duration-300 ease-out",
-        "hover:border-border/80 hover:bg-accent/30 hover:shadow-sm",
+        "flex flex-col items-center justify-center p-6 rounded-xl border border-border/80 bg-secondary/20",
+        "transition-seijaku-fast",
+        "hover:border-border-strong hover:bg-secondary/40 shadow-none",
         "active:scale-[0.98] group relative",
       )}
     >

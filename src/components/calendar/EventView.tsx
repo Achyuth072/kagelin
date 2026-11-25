@@ -413,7 +413,7 @@ export function EventView({
             autoFocus={isFinePointer && !isRecurring}
             disabled={isRecurring}
             className={cn(
-              "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border pb-2 pt-0.5 outline-none placeholder:text-muted-foreground/50 text-foreground",
+              "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border pb-2 pt-0.5 outline-none placeholder:text-muted-foreground text-foreground",
               errors.title && "placeholder:text-destructive/60",
             )}
           />
@@ -436,7 +436,7 @@ export function EventView({
               className="py-1 px-0.5 flex items-center gap-2 overflow-x-auto scrollbar-hide min-w-0 flex-1 pr-2"
             >
               {/* All day switch chip */}
-              <div className="flex items-center gap-1.5 bg-secondary/40 rounded-md px-2.5 py-1 border border-border/50 shrink-0 h-7 sm:h-8">
+              <div className="flex items-center gap-1.5 bg-secondary rounded-md px-2.5 py-1 border border-border/80 shrink-0 h-7 sm:h-8">
                 <Sun
                   className="h-3.5 w-3.5 text-muted-foreground"
                   strokeWidth={2.25}
@@ -471,8 +471,8 @@ export function EventView({
                 className={cn(
                   "flex items-center gap-1.5 rounded-md px-2.5 py-1 border transition-colors shrink-0 h-7 sm:h-8 text-xs sm:text-[13px] font-medium cursor-pointer",
                   reminderMinutes !== null
-                    ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
-                    : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+                    ? "bg-secondary border-border/80 font-semibold text-foreground"
+                    : "bg-secondary hover:bg-accent border-border/80 text-muted-foreground hover:text-foreground",
                   (isRecurring || isGuestMode) &&
                     "opacity-50 cursor-not-allowed hover:bg-secondary/40 hover:text-muted-foreground",
                 )}
@@ -530,7 +530,7 @@ export function EventView({
                         "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer",
                         isSelected
                           ? "bg-secondary border-border/80 text-foreground font-semibold"
-                          : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+                          : "bg-secondary hover:bg-accent border-border/80 text-muted-foreground hover:text-foreground",
                       )}
                     >
                       <span>{o.label}</span>
@@ -822,7 +822,7 @@ export function EventView({
           <div className="h-1" />
         </div>
 
-        <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background sm:rounded-b-lg w-full max-w-full">
+        <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border/80 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background sm:rounded-b-lg w-full max-w-full">
           <div className="flex items-center gap-2">
             {/* Left slot aligned with TaskView */}
           </div>
