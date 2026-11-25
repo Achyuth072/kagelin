@@ -36,7 +36,7 @@ const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
 
   if (isMobile) {
     return (
-      <Drawer {...props} repositionInputs={false}>
+      <Drawer {...props}>
         <DrawerContent className="max-h-[85vh] overflow-hidden p-0">
           <DrawerTitle className="sr-only">Command Menu</DrawerTitle>
           <Command loop className={commandClassName}>
@@ -49,7 +49,10 @@ const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
 
   return (
     <Dialog {...props}>
-      <DialogContent className="overflow-hidden p-0 shadow-none border-border/60 bg-background sm:max-w-[480px] sm:rounded-lg">
+      <DialogContent
+        showClose={false}
+        className="overflow-hidden p-0 border border-border/80 bg-background shadow-none sm:max-w-[480px] sm:rounded-lg"
+      >
         <DialogTitle className="sr-only">Command Menu</DialogTitle>
         <Command loop className={commandClassName}>
           {children}
@@ -91,7 +94,7 @@ const CommandList = React.forwardRef<
   <CommandPrimitive.List
     ref={ref}
     className={cn(
-      "max-h-[350px] overflow-y-auto overflow-x-hidden scrollbar-hide py-2",
+      "max-h-[350px] overflow-y-auto overflow-x-hidden scrollbar-hide py-2 pb-2",
       className,
     )}
     {...props}
@@ -148,10 +151,10 @@ const CommandItem = React.forwardRef<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm px-3 py-2 text-[15px] outline-none",
-      "data-[selected=true]:bg-brand data-[selected=true]:text-brand-foreground",
+      "relative flex cursor-default select-none items-center gap-2.5 rounded-sm px-3 py-2 text-[15px] outline-none",
+      "data-[selected=true]:bg-accent data-[selected=true]:text-foreground",
       "data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
-      "[&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0",
+      "[&_svg]:pointer-events-none [&_svg]:size-5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground data-[selected=true]:[&_svg]:text-brand-text",
       className,
     )}
     {...props}
@@ -169,7 +172,7 @@ const CommandShortcut = ({
       className={cn(
         // Keyboard hints are meaningless without a physical keyboard — hide on
         // non-desktop (the menu also drops to a drawer at this size).
-        "max-md:hidden in-data-[selected=true]:text-brand-foreground",
+        "max-md:hidden in-data-[selected=true]:text-brand-text",
         className,
       )}
       {...props}

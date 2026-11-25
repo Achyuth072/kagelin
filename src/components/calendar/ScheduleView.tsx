@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { CalendarEvent } from "@/lib/calendar/types";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { ReadableText } from "@/components/encryption/ReadableText";
+import { getCalendarEventChipStyle } from "./calendar-event-chip";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useShortcutTips } from "@/lib/hooks/useShortcutTips";
@@ -87,7 +88,7 @@ const ScheduleView = memo(
                 <div
                   className={cn(
                     "sticky top-0 z-10 bg-background",
-                    "py-4 border-b border-border/40",
+                    "py-4 border-b border-border",
                   )}
                 >
                   <div className="flex items-baseline gap-3">
@@ -118,43 +119,45 @@ const ScheduleView = memo(
                 {/* Events for this day */}
                 <div className="space-y-2 pl-2">
                   {dayEvents.length > 0 ? (
-                    dayEvents.map((event) => (
-                      <div
-                        key={event.id}
-                        className={cn(
-                          "flex gap-4 p-4 rounded-xl hover:bg-accent/30 cursor-pointer transition-all active:scale-[0.99] mb-2",
-                          "bg-(--event-color)/15 font-medium border-l-4 border-(--event-color)",
-                        )}
-                        style={
-                          {
-                            "--event-color":
-                              event.color || "hsl(var(--primary))",
-                          } as React.CSSProperties
-                        }
-                      >
-                        {/* Time */}
-                        <div className="shrink-0 w-20 text-sm text-muted-foreground">
-                          {event.allDay ? (
-                            "All day"
-                          ) : (
-                            <>
-                              <div>{formatTime(event.start)}</div>
-                              {event.end && (
-                                <div className="text-xs">
-                                  {formatTime(event.end)}
-                                </div>
-                              )}
-                            </>
+                    dayEvents.map((event) => {
+                      const isTask = Boolean(event.metadata?.taskId);
+                      return (
+                        <div
+                          key={event.id}
+                          className={cn(
+                            "flex gap-4 p-4 rounded-xl cursor-pointer transition-all active:scale-[0.99] mb-2 font-medium",
+                            "border-t border-r border-b border-border hover:border-border-strong text-foreground",
                           )}
-                        </div>
+                          style={getCalendarEventChipStyle({
+                            color: event.color,
+                            isTask,
+                            borderLeftWidth: 3,
+                          })}
+                        >
+                          {/* Time */}
+                          <div className="shrink-0 w-20 text-sm text-muted-foreground">
+                            {event.allDay ? (
+                              "All day"
+                            ) : (
+                              <>
+                                <div>{formatTime(event.start)}</div>
+                                {event.end && (
+                                  <div className="text-xs">
+                                    {formatTime(event.end)}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold truncate">
-                            <ReadableText text={event.title} />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold truncate text-foreground">
+                              <ReadableText text={event.title} />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="text-center py-4 text-muted-foreground text-sm">
                       No events

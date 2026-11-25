@@ -330,7 +330,7 @@ export function AppMigrationDialog({
           onOpenChange(next);
         }}
       >
-        <ResponsiveDialogContent className="sm:max-w-[480px] p-4 sm:p-6 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+        <ResponsiveDialogContent className="sm:max-w-[480px] p-4 sm:p-6 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh] border-border/80 shadow-none">
           <MicrosoftTasksMigrationView
             preview={microsoftTasksPreview}
             state={microsoftTasksState}
@@ -363,7 +363,7 @@ export function AppMigrationDialog({
           onOpenChange(next);
         }}
       >
-        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh] border-border/80 shadow-none">
           <TickTickMigrationView
             preview={tickTickPreview}
             isImporting={isImportingTickTick}
@@ -405,7 +405,7 @@ export function AppMigrationDialog({
           onOpenChange(next);
         }}
       >
-        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh] border-border/80 shadow-none">
           <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
             <ResponsiveDialogTitle className="type-h2">
               Confirm Google Tasks Import
@@ -526,7 +526,7 @@ export function AppMigrationDialog({
             )}
           </div>
 
-          <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/40 shrink-0">
+          <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/80 shrink-0">
             <Button
               variant="ghost"
               onClick={handleCancelGoogleTasksImport}
@@ -565,7 +565,7 @@ export function AppMigrationDialog({
           onOpenChange(next);
         }}
       >
-        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh] border-border/80 shadow-none">
           <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
             <ResponsiveDialogTitle className="type-h2">
               Confirm Todoist Import
@@ -687,7 +687,7 @@ export function AppMigrationDialog({
             </p>
           </div>
 
-          <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/40 shrink-0">
+          <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/80 shrink-0">
             <Button
               variant="ghost"
               onClick={handleCancelTodoistImport}
@@ -723,7 +723,7 @@ export function AppMigrationDialog({
           onOpenChange(next);
         }}
       >
-        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+        <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh] border-border/80 shadow-none">
           <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
             <ResponsiveDialogTitle className="type-h2">
               Confirm Import
@@ -758,7 +758,7 @@ export function AppMigrationDialog({
             </dl>
           </div>
 
-          <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/40 shrink-0">
+          <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/80 shrink-0">
             <Button
               variant="ghost"
               onClick={handleCancelIcsImport}
@@ -782,7 +782,7 @@ export function AppMigrationDialog({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh]">
+      <ResponsiveDialogContent className="sm:max-w-[425px] p-0 overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90dvh] border-border/80 shadow-none">
         <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
           <ResponsiveDialogTitle className="type-h2">
             App Migration
@@ -858,7 +858,7 @@ export function AppMigrationDialog({
                       }
                     }}
                     className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      "flex items-center justify-between p-4 rounded-xl border border-border/80 bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
                       isAnyImporting &&
                         "opacity-60 cursor-not-allowed pointer-events-none",
                     )}
@@ -931,7 +931,7 @@ export function AppMigrationDialog({
                       }
                     }}
                     className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      "flex items-center justify-between p-4 rounded-xl border border-border/80 bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
                       isAnyImporting &&
                         "opacity-60 cursor-not-allowed pointer-events-none",
                     )}
@@ -977,7 +977,7 @@ export function AppMigrationDialog({
                     aria-disabled={isAnyImporting}
                     aria-label="Import ICS calendar file"
                     className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      "flex items-center justify-between p-4 rounded-xl border border-border/80 bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
                       isAnyImporting &&
                         "opacity-60 cursor-not-allowed pointer-events-none",
                     )}
@@ -1047,7 +1047,7 @@ export function AppMigrationDialog({
                     aria-disabled={isAnyImporting}
                     aria-label="Import Loop Habit Tracker database file"
                     className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      "flex items-center justify-between p-4 rounded-xl border border-border/80 bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
                       isAnyImporting &&
                         "opacity-60 cursor-not-allowed pointer-events-none",
                     )}
@@ -1131,7 +1131,7 @@ export function AppMigrationDialog({
                       aria-disabled={isAnyImporting}
                       aria-label="Import Google Tasks from Takeout JSON"
                       className={cn(
-                        "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                        "flex items-center justify-between p-4 rounded-xl border border-border/80 bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
                         isAnyImporting &&
                           "opacity-60 cursor-not-allowed pointer-events-none",
                       )}
@@ -1218,7 +1218,7 @@ export function AppMigrationDialog({
                           setGoogleTasksDrillDown(true);
                         }
                       }}
-                      className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
+                      className="flex items-center justify-between p-4 rounded-xl border border-border/80 bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <GoogleTasksIcon className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
@@ -1260,7 +1260,7 @@ export function AppMigrationDialog({
                         setMicrosoftTasksDrillDown(true);
                       }
                     }}
-                    className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
+                    className="flex items-center justify-between p-4 rounded-xl border border-border/80 bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <MicrosoftTasksGlyph className="h-9 w-9 shrink-0 rounded-lg shadow-xs overflow-hidden" />
@@ -1293,7 +1293,7 @@ export function AppMigrationDialog({
                     aria-disabled={isAnyImporting}
                     aria-label="Import TickTick tasks from CSV"
                     className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      "flex items-center justify-between p-4 rounded-xl border border-border/80 bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
                       isAnyImporting &&
                         "opacity-60 cursor-not-allowed pointer-events-none",
                     )}
@@ -1380,7 +1380,7 @@ export function AppMigrationDialog({
                     aria-disabled={isAnyImporting}
                     aria-label="Import Todoist tasks from CSV or ZIP"
                     className={cn(
-                      "flex items-center justify-between p-4 rounded-xl border border-border/40 bg-secondary/10 hover:bg-secondary/20 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
+                      "flex items-center justify-between p-4 rounded-xl border border-border/80 bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background",
                       isAnyImporting &&
                         "opacity-60 cursor-not-allowed pointer-events-none",
                     )}

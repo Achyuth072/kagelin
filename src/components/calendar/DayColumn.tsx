@@ -14,6 +14,7 @@ import type {
 } from "@/lib/calendar/types";
 import { CurrentTimeIndicator } from "./CurrentTimeIndicator";
 import { ReadableText } from "@/components/encryption/ReadableText";
+import { getCalendarEventChipStyle } from "./calendar-event-chip";
 
 interface DayColumnProps {
   column: DayColumnData;
@@ -42,7 +43,7 @@ export function DayColumn({
       style={style}
     >
       <div
-        className="sticky top-0 z-40 bg-background border-b border-border/40 flex flex-col items-center justify-center gap-1"
+        className="sticky top-0 z-40 bg-background border-b border-border flex flex-col items-center justify-center gap-1"
         style={{ height: `${HEADER_HEIGHT}px` }}
       >
         <div
@@ -73,7 +74,7 @@ export function DayColumn({
       {hours.map((hour) => (
         <div
           key={hour}
-          className="border-t border-border/40"
+          className="border-t border-border"
           style={{ height: `${HOUR_HEIGHT}px` }}
         />
       ))}
@@ -95,10 +96,7 @@ export function DayColumn({
             aria-label={`${timeText}: ${titleText}`}
             className={cn(
               "absolute rounded-sm px-1 md:px-2 py-1 text-[10px] md:text-xs cursor-pointer overflow-hidden flex flex-col gap-0.5",
-              "z-10 hover:z-20 hover:brightness-95 active:scale-[0.98] transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-              isTask
-                ? "bg-brand/8 border-t border-t-border/40 border-r border-r-border/40 border-b border-b-border/40 text-foreground"
-                : "bg-brand/90 text-white border-l-2 border-brand",
+              "z-10 hover:z-20 border-t border-r border-b border-border hover:border-border-strong active:scale-[0.98] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand text-foreground",
             )}
             onClick={(e) => {
               e.stopPropagation();
@@ -117,22 +115,18 @@ export function DayColumn({
               left: "1px",
               right: "1px",
               width: "calc(100% - 2px)",
-              ...(isTask && {
-                borderLeftColor: event.color || "#4B6CB7",
-                borderLeftWidth: "4px",
+              ...getCalendarEventChipStyle({
+                color: event.color,
+                isTask,
+                borderLeftWidth: 4,
               }),
             }}
           >
-            <div className="font-bold truncate text-[10px] md:text-[11px] leading-tight">
+            <div className="font-bold truncate text-[10px] md:text-[11px] leading-tight text-foreground">
               <ReadableText text={event.title} />
             </div>
             {heightPx > 40 && (
-              <div
-                className={cn(
-                  "text-[9px] md:text-[10px] leading-tight font-medium",
-                  isTask ? "text-muted-foreground/70" : "text-white/80",
-                )}
-              >
+              <div className="text-[9px] md:text-[10px] leading-tight font-medium text-muted-foreground">
                 {formatTime(event.start)}
               </div>
             )}

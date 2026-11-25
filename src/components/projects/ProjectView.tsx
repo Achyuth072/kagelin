@@ -110,7 +110,7 @@ export function ProjectView({
       }}
     >
       {/* Header: Monospace Domain Badge & Native Title Input */}
-      <div className="px-5 pt-5 pb-4 border-b border-border/40 shrink-0">
+      <div className="px-5 pt-5 pb-4 border-b border-border/80 shrink-0">
         <span
           data-testid="project-header-badge"
           className="text-[10px] sm:text-xs font-mono uppercase text-brand tracking-wider font-semibold block mb-1.5"
@@ -168,7 +168,7 @@ export function ProjectView({
       </div>
 
       {/* Pinned Symmetrical Footer */}
-      <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-t border-border/40 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
+      <div className="shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-t border-border/80 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
         {/* Left Slot: Lifecycle & Destructive Actions (Edit Mode Only) */}
         <div className="flex items-center gap-1.5">
           {mode === "edit" && onArchive && (

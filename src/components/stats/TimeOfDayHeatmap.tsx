@@ -41,7 +41,7 @@ function getIntensityLevel(minutes: number): number {
 }
 
 const INTENSITY_CLASSES: Record<number, string> = {
-  0: "bg-secondary/40 border border-border/30 hover:bg-secondary/70",
+  0: "bg-secondary/40 border border-border hover:bg-secondary/70",
   1: "bg-brand/20 hover:bg-brand/35",
   2: "bg-brand/45 hover:bg-brand/60",
   3: "bg-brand/70 hover:bg-brand/85",
@@ -172,9 +172,9 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
         className,
       )}
     >
-      <div className="flex items-center justify-between pb-2 border-b border-border/40">
+      <div className="flex items-center justify-between pb-2 border-b border-border">
         <div>
-          <h3 className="text-sm font-semibold text-foreground">
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Focus by Time of Day
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5 flex flex-wrap items-center gap-2">
@@ -183,7 +183,7 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
               <button
                 type="button"
                 onClick={() => setSelectedCell(null)}
-                className="text-[11px] font-mono text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary/40 border border-border/50"
+                className="text-[11px] font-mono text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary hover:bg-accent border border-border"
                 title="Reset selection"
               >
                 <RotateCcw className="h-2.5 w-2.5" strokeWidth={2.25} />

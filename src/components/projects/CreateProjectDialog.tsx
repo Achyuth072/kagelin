@@ -75,7 +75,7 @@ export function CreateProjectDialog({
 
   return (
     <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
-      <ResponsiveDialogContent className="sm:max-w-[400px] p-0 overflow-hidden">
+      <ResponsiveDialogContent className="sm:max-w-[400px] p-0 overflow-hidden border-border/80 shadow-none">
         <ResponsiveDialogHeader className="sr-only">
           <ResponsiveDialogTitle>Create Project</ResponsiveDialogTitle>
           <ResponsiveDialogDescription>

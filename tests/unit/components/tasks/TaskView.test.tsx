@@ -119,6 +119,9 @@ function createMockEditorState(
     isPending: false,
     hasContent: true,
     errors: {},
+    nlpMatch: null,
+    dismissedMatchText: null,
+    setDismissedMatchText: vi.fn(),
     onSubmit: vi.fn(),
     onKeyDown: vi.fn(),
     showDeleteDialog: false,
@@ -230,9 +233,9 @@ describe("TaskView - create mode", () => {
     expect(setContent).toHaveBeenCalledWith("Line 1 Line 2 Line 3");
   });
 
-  it("prevents default on Shift+Enter in title and does not submit", () => {
+  it("prevents default on Shift+Enter in title and submits with keepOpen in creation mode", () => {
     const onSubmit = vi.fn();
-    renderTaskView({ mode: "create", onSubmit });
+    renderTaskView({ mode: "create", onSubmit, hasContent: true });
 
     const titleInput = screen.getByPlaceholderText("What needs to be done?");
     const notPrevented = fireEvent.keyDown(titleInput, {
@@ -241,7 +244,7 @@ describe("TaskView - create mode", () => {
     });
 
     expect(notPrevented).toBe(false);
-    expect(onSubmit).not.toHaveBeenCalled();
+    expect(onSubmit).toHaveBeenCalledWith({ keepOpen: true });
   });
 });
 
@@ -360,11 +363,11 @@ describe("TaskView - normalized form patterns & surface parity", () => {
     expect(editBadge).toHaveClass("font-mono", "uppercase", "text-brand");
   });
 
-  it("renders unboxed standalone native input with border-b border-border/40", () => {
+  it("renders unboxed standalone native input with border-b border-border", () => {
     renderTaskView({ mode: "create" });
     const input = screen.getByLabelText("Task content");
     expect(input.tagName).toBe("INPUT");
-    expect(input).toHaveClass("border-b", "border-border/40", "bg-transparent");
+    expect(input).toHaveClass("border-b", "border-border", "bg-transparent");
   });
 
   it("renders single-line property strip with priority segmented toggle and updates state", () => {
@@ -500,5 +503,51 @@ describe("TaskView - normalized form patterns & surface parity", () => {
     expect(reminderChip).toBeInTheDocument();
     // On mobile, the visible text label "Alerts:" is omitted so only the bell icon is displayed
     expect(screen.queryByText(/alerts:/i)).not.toBeInTheDocument();
+  });
+
+  it("renders live NLP date chip when active in creation mode and handles dismissal", () => {
+    const setDismissedMatchText = vi.fn();
+    renderTaskView({
+      mode: "create",
+      nlpMatch: {
+        cleanedTitle: "Call dentist",
+        matchedText: "tomorrow",
+        date: new Date("2026-11-26T10:00:00Z"),
+        field: "do_date",
+        hasTime: false,
+      },
+      setDismissedMatchText,
+    });
+
+    const chip = screen.getByTestId("task-nlp-chip");
+    expect(chip).toBeInTheDocument();
+    expect(chip).toHaveTextContent(/Do:/i);
+
+    const dismissBtn = screen.getByRole("button", {
+      name: /ignore detected date/i,
+    });
+    fireEvent.click(dismissBtn);
+    expect(setDismissedMatchText).toHaveBeenCalledWith("tomorrow");
+  });
+
+  it("does not render live NLP date chip in edit mode", () => {
+    renderTaskView({
+      mode: "edit",
+      task: baseTask,
+      nlpMatch: {
+        cleanedTitle: "Call dentist",
+        matchedText: "tomorrow",
+        date: new Date("2026-11-26T10:00:00Z"),
+        field: "do_date",
+        hasTime: false,
+      },
+    });
+
+    expect(screen.queryByTestId("task-nlp-chip")).not.toBeInTheDocument();
+  });
+
+  it("displays desktop-only hint Shift+↵ add another in creation mode", () => {
+    renderTaskView({ mode: "create" });
+    expect(screen.getByText(/Shift\+↵ add another/i)).toBeInTheDocument();
   });
 });

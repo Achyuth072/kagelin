@@ -62,7 +62,7 @@ export default function TaskSheet({
     <ResponsiveDialog open={open} onOpenChange={onClose}>
       <ResponsiveDialogContent
         className={cn(
-          "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none sm:grid-cols-[minmax(0,1fr)] sm:max-w-lg border-border/80",
+          "w-full gap-0 rounded-lg p-0 overflow-hidden outline-none sm:grid-cols-[minmax(0,1fr)] sm:max-w-lg border-border/80 shadow-none",
         )}
       >
         <div className="flex flex-col max-h-[90dvh] min-w-0">

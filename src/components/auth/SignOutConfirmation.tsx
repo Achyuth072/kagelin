@@ -52,7 +52,7 @@ export function SignOutConfirmation({
   if (isDesktop) {
     return (
       <AlertDialog open={isOpen} onOpenChange={onClose}>
-        <AlertDialogContent className="max-w-md border-border/40">
+        <AlertDialogContent className="max-w-md border-border/80">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <LogOut className="h-5 w-5" strokeWidth={2.25} />

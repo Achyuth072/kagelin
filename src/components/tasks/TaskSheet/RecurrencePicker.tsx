@@ -72,8 +72,8 @@ export default function RecurrencePicker({
           className={cn(
             "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-7 sm:h-8 shadow-none",
             hasRecurrence
-              ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
-              : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+              ? "bg-secondary border-border font-semibold text-foreground"
+              : "bg-secondary hover:bg-accent border-border text-muted-foreground hover:text-foreground",
           )}
           onClick={() => {
             trigger("toggle");
@@ -119,8 +119,8 @@ export default function RecurrencePicker({
                     className={cn(
                       "flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer",
                       isSelected
-                        ? "bg-secondary border-border/80 text-foreground font-semibold"
-                        : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+                        ? "bg-secondary border-border text-foreground font-semibold"
+                        : "bg-secondary hover:bg-accent border-border text-muted-foreground hover:text-foreground",
                     )}
                     onClick={() => {
                       trigger("toggle");
@@ -192,7 +192,7 @@ export default function RecurrencePicker({
             className={cn(
               "h-9 w-9 p-0 transition-all group relative border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none",
               hasRecurrence
-                ? "text-brand bg-brand/10 hover:bg-brand/20 hover:text-brand border-transparent"
+                ? "text-brand-text bg-accent border-border-strong hover:bg-accent hover:text-brand-text border-transparent"
                 : "text-muted-foreground hover:text-foreground hover:bg-accent",
             )}
             onClick={() => {

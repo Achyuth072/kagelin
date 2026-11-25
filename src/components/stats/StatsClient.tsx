@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
@@ -85,6 +86,13 @@ const PERIOD_LABELS: Record<StatsPeriod, string> = {
 export function StatsClient() {
   const statsPeriod = useUiStore((s) => s.statsPeriod);
   const setStatsPeriod = useUiStore((s) => s.setStatsPeriod);
+  const [, startTransition] = useTransition();
+
+  const handlePeriodChange = (period: StatsPeriod) => {
+    startTransition(() => {
+      setStatsPeriod(period);
+    });
+  };
 
   const { data: stats, isLoading, isFetching } = useStats(statsPeriod);
   const { data: projects } = useProjects();
@@ -152,7 +160,7 @@ export function StatsClient() {
 
         <PeriodSelector
           value={statsPeriod}
-          onValueChange={setStatsPeriod}
+          onValueChange={handlePeriodChange}
           isAllLoading={statsPeriod === "all" && isFetching}
         />
 

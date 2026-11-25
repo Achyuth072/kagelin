@@ -34,7 +34,7 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
   const hasProjection = tasks.soFar > 0 || focusHours.soFar > 0;
 
   return (
-    <Card className={cn("p-4 sm:p-6 border-border/50", className)}>
+    <Card className={cn("p-4 sm:p-6 border-border", className)}>
       <div className="space-y-5">
         <div>
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -84,7 +84,7 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
                   {streaksAtRisk.map((risk) => (
                     <li
                       key={risk.habitId}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 text-sm py-1.5 sm:py-0 border-b border-border/20 last:border-0 sm:border-0"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 text-sm py-1.5 sm:py-0 border-b border-border last:border-0 sm:border-0"
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <Flame
@@ -141,7 +141,7 @@ function ProjectionMetric({
           <AnimatedNumber value={projected} />
         </span>
       </div>
-      <div className="h-2 sm:h-1.5 overflow-hidden rounded-[3px] bg-secondary/40">
+      <div className="h-2 sm:h-1.5 overflow-hidden rounded-[3px] bg-muted">
         <div
           className="h-full rounded-[3px] bg-foreground/70"
           style={{

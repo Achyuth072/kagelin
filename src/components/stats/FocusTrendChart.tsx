@@ -6,6 +6,7 @@ import {
   ComposedChart,
   Area,
   Line,
+  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
@@ -24,6 +25,61 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { LineChart as LineChartIcon } from "lucide-react";
 import type { StatsPeriod } from "@/lib/types/stats";
 import { AnimatedNumber } from "@/components/ui/animated-number";
+
+interface FocusTrendTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    name?: string;
+    value?: number;
+    dataKey?: string | number;
+    color?: string;
+    payload?: AggregatedTrendPoint;
+  }>;
+  label?: string;
+}
+
+function FocusTrendTooltip({ active, payload }: FocusTrendTooltipProps) {
+  if (!active || !payload || !payload.length) return null;
+  const point = payload[0]?.payload;
+  const tooltipLabel = point?.tooltipLabel;
+  const hours =
+    point?.hours ??
+    (payload.find((p) => p.dataKey === "hours")?.value as number | undefined) ??
+    0;
+  const tasks =
+    point?.tasksCompleted ??
+    (payload.find((p) => p.dataKey === "tasksCompleted")?.value as
+      number | undefined) ??
+    0;
+
+  return (
+    <div className="rounded-lg border border-border-strong bg-popover px-3 py-2 text-xs text-popover-foreground shadow-sm">
+      <div className="mb-1.5 font-mono text-[11px] text-muted-foreground">
+        {tooltipLabel}
+      </div>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-brand" />
+            <span className="text-muted-foreground">Focus hours</span>
+          </div>
+          <span className="font-mono font-medium tabular-nums text-foreground">
+            {hours}h
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-muted-foreground" />
+            <span className="text-muted-foreground">Tasks completed</span>
+          </div>
+          <span className="font-mono font-medium tabular-nums text-foreground">
+            {tasks}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface FocusTrendChartProps {
   data: TrendDataPoint[];
@@ -86,7 +142,7 @@ export function FocusTrendChart({
   };
 
   return (
-    <Card className={cn("p-4 sm:p-6 border-border/50", className)}>
+    <Card className={cn("p-4 sm:p-6 border-border", className)}>
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
           <div>
@@ -195,7 +251,7 @@ export function FocusTrendChart({
                     <stop
                       offset="0%"
                       stopColor="hsl(var(--brand))"
-                      stopOpacity={0.2}
+                      stopOpacity={0.12}
                     />
                     <stop
                       offset="100%"
@@ -204,33 +260,53 @@ export function FocusTrendChart({
                     />
                   </linearGradient>
                 </defs>
+                <CartesianGrid
+                  vertical={false}
+                  stroke="hsl(var(--border))"
+                  strokeDasharray="3 3"
+                />
                 <XAxis
                   dataKey="label"
                   stroke="hsl(var(--muted-foreground))"
-                  fontSize={isMobile ? 11 : 12}
                   tickLine={false}
                   axisLine={false}
                   interval={tickInterval}
                   tickMargin={10}
+                  tick={{
+                    fill: "hsl(var(--muted-foreground))",
+                    fontSize: 11,
+                    fontFamily: "var(--font-mono)",
+                    style: { fontVariantNumeric: "tabular-nums" },
+                  }}
                 />
                 <YAxis
                   yAxisId="hours"
                   width={isMobile ? 28 : 36}
                   stroke="hsl(var(--muted-foreground))"
-                  fontSize={isMobile ? 11 : 12}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(value) => `${value}h`}
+                  tick={{
+                    fill: "hsl(var(--muted-foreground))",
+                    fontSize: 11,
+                    fontFamily: "var(--font-mono)",
+                    style: { fontVariantNumeric: "tabular-nums" },
+                  }}
                 />
                 <YAxis
                   yAxisId="tasks"
                   orientation="right"
                   width={isMobile ? 22 : 28}
                   stroke="hsl(var(--muted-foreground))"
-                  fontSize={isMobile ? 11 : 12}
                   tickLine={false}
                   axisLine={false}
                   allowDecimals={false}
+                  tick={{
+                    fill: "hsl(var(--muted-foreground))",
+                    fontSize: 11,
+                    fontFamily: "var(--font-mono)",
+                    style: { fontVariantNumeric: "tabular-nums" },
+                  }}
                 />
                 <Tooltip
                   cursor={{
@@ -238,21 +314,7 @@ export function FocusTrendChart({
                     strokeWidth: 1,
                     strokeDasharray: "2 2",
                   }}
-                  content={isMobile ? () => null : undefined}
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                  }}
-                  labelStyle={{ color: "hsl(var(--foreground))" }}
-                  labelFormatter={(_label, payload) =>
-                    payload?.[0]?.payload?.tooltipLabel || _label
-                  }
-                  formatter={(value, name) => [
-                    value,
-                    name === "hours" ? "Focus hours" : "Tasks completed",
-                  ]}
+                  content={isMobile ? () => null : <FocusTrendTooltip />}
                 />
                 <Area
                   yAxisId="hours"
@@ -271,7 +333,11 @@ export function FocusTrendChart({
                   stroke="hsl(var(--brand))"
                   strokeWidth={2.5}
                   dot={false}
-                  activeDot={{ r: 5 }}
+                  activeDot={{
+                    r: 5,
+                    stroke: "hsl(var(--card))",
+                    strokeWidth: 2,
+                  }}
                   isAnimationActive={false}
                 />
                 <Line
@@ -282,7 +348,11 @@ export function FocusTrendChart({
                   strokeWidth={2}
                   strokeDasharray="4 4"
                   dot={false}
-                  activeDot={{ r: 5 }}
+                  activeDot={{
+                    r: 5,
+                    stroke: "hsl(var(--card))",
+                    strokeWidth: 2,
+                  }}
                   isAnimationActive={false}
                 />
               </ComposedChart>

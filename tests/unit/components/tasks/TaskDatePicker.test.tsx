@@ -187,8 +187,8 @@ describe("TaskDatePicker", () => {
     );
     const doChip = screen.getByRole("button", { name: /do date/i });
     expect(doChip).toHaveClass(
-      "bg-secondary/40",
-      "border-border/50",
+      "bg-secondary",
+      "border-border",
       "text-foreground",
     );
     expect(doChip).not.toHaveClass("bg-brand/10", "text-brand");
@@ -208,8 +208,8 @@ describe("TaskDatePicker", () => {
     );
     const doChipToday = screen.getByRole("button", { name: /^do date:/i });
     expect(doChipToday).toHaveClass(
-      "bg-secondary/70",
-      "border-border/80",
+      "bg-secondary",
+      "border-border",
       "font-semibold",
       "text-foreground",
     );
@@ -233,11 +233,11 @@ describe("TaskDatePicker", () => {
     );
     const doChipFuture = screen.getByRole("button", { name: /^do date:/i });
     expect(doChipFuture).toHaveClass(
-      "bg-secondary/40",
-      "border-border/50",
+      "bg-secondary",
+      "border-border",
       "text-foreground",
     );
-    expect(doChipFuture).not.toHaveClass("bg-secondary/70", "font-semibold");
+    expect(doChipFuture).not.toHaveClass("font-semibold");
     const futureDoIcon = doChipFuture.querySelector("svg");
     expect(futureDoIcon).toHaveClass("text-muted-foreground");
     expect(screen.getByLabelText("Clear do date")).toBeInTheDocument();
@@ -256,7 +256,7 @@ describe("TaskDatePicker", () => {
       />,
     );
     const dueChip = screen.getByTitle("Set due date");
-    expect(dueChip).toHaveClass("bg-secondary/40", "border-border/50");
+    expect(dueChip).toHaveClass("bg-secondary", "border-border");
     unmountDue();
 
     // Overdue due date
@@ -271,7 +271,7 @@ describe("TaskDatePicker", () => {
       />,
     );
     const overdueChip = screen.getByTitle("Set due date");
-    expect(overdueChip).toHaveClass("bg-secondary/70", "font-semibold");
+    expect(overdueChip).toHaveClass("bg-secondary", "font-semibold");
     unmountPastDue();
 
     // Past Do Date should NOT have overdue highlight, but operational replanning dashed border
@@ -286,7 +286,7 @@ describe("TaskDatePicker", () => {
       />,
     );
     const pastDoChip = screen.getByTitle("Set do date");
-    expect(pastDoChip).not.toHaveClass("bg-secondary/70", "font-semibold");
+    expect(pastDoChip).not.toHaveClass("font-semibold");
     expect(pastDoChip).toHaveClass("border-dashed");
   });
 

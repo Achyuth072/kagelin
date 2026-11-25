@@ -1,6 +1,6 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-@plugin "tailwindcss-animate";
 @plugin "@tailwindcss/typography";
 
 /* eslint-disable tailwindcss/no-invalid-at-rules */
@@ -15,7 +15,7 @@
 
   --font-sans:
     var(--font-inter), ui-sans-serif, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", "Inter", "Roberta", sans-serif;
+    "Segoe UI", "Inter", sans-serif;
   --font-serif: "Lyon-Text", "Georgia", serif;
   --font-mono:
     var(--font-jetbrains), "SFMono-Regular", "Menlo", "JetBrains Mono",
@@ -44,10 +44,12 @@
     var(--destructive-surface-foreground)
   );
   --color-border: hsl(var(--border));
+  --color-border-strong: hsl(var(--border-strong));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
   --color-brand: hsl(var(--brand));
   --color-brand-foreground: hsl(var(--brand-foreground));
+  --color-brand-text: hsl(var(--brand-text));
 
   --color-sidebar: hsl(var(--sidebar));
   --color-sidebar-foreground: hsl(var(--sidebar-foreground));
@@ -121,19 +123,19 @@
 }
 
 :root {
-  --background: 40 20% 99%;
+  --background: 45 14% 97%;
   --foreground: 0 0% 18%;
-  --card: 60 9% 96%;
+  --card: 0 0% 100%;
   --card-foreground: 0 0% 18%;
-  --popover: 40 20% 99%;
+  --popover: 0 0% 100%;
   --popover-foreground: 0 0% 18%;
   --primary: 0 0% 18%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 60 9% 96%; /* kept for sidebar */
+  --secondary: 45 10% 94%;
   --secondary-foreground: 0 0% 18%;
-  --muted: 60 9% 96%;
+  --muted: 45 10% 93%;
   --muted-foreground: 0 0% 43%; /* AA text contrast */
-  --accent: 60 9% 96%;
+  --accent: 45 8% 91%;
   --accent-foreground: 0 0% 18%;
   --destructive: 12 40% 45%; /* darkened for AA contrast */
   --destructive-foreground: 0 0% 98%;
@@ -143,18 +145,20 @@
   --destructive-surface-border: 12 30% 78%;
   /* --destructive only reaches 3.2:1 on this wash in dark mode. */
   --destructive-surface-foreground: 12 45% 38%;
-  --border: 0 0% 60%; /* AA non-text contrast */
-  --input: 0 0% 60%;
+  --border: 45 7% 83%;
+  --border-strong: 45 6% 74%;
+  --input: 0 0% 55%;
   --ring: 0 0% 18%;
   --brand: 220 44% 50%;
   --brand-foreground: 0 0% 100%;
-  --sidebar: 60 9% 96%;
+  --brand-text: 220 48% 44%;
+  --sidebar: 45 10% 94%;
   --sidebar-foreground: 0 0% 18%;
   --sidebar-primary: 220 44% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 60 5% 91%;
+  --sidebar-accent: 45 8% 89%;
   --sidebar-accent-foreground: 0 0% 18%;
-  --sidebar-border: 60 5% 91%;
+  --sidebar-border: 45 7% 86%;
   --sidebar-ring: 0 0% 18%;
 }
 
@@ -163,15 +167,15 @@
   --foreground: 0 0% 90%;
   --card: 0 0% 13%;
   --card-foreground: 0 0% 90%;
-  --popover: 0 0% 13%;
+  --popover: 0 0% 10%;
   --popover-foreground: 0 0% 90%;
   --primary: 0 0% 90%;
   --primary-foreground: 0 0% 10%;
-  --secondary: 0 0% 13%;
+  --secondary: 0 0% 15%;
   --secondary-foreground: 0 0% 90%;
-  --muted: 0 0% 13%;
+  --muted: 0 0% 15%;
   --muted-foreground: 0 0% 63%;
-  --accent: 0 0% 13%;
+  --accent: 0 0% 16%;
   --accent-foreground: 0 0% 90%;
   --destructive: 12 32% 52%; /* lightened for AA text contrast */
   --destructive-foreground: 0 0% 98%;
@@ -179,30 +183,55 @@
   --destructive-surface-hover: 12 25% 25%;
   --destructive-surface-border: 12 25% 34%;
   --destructive-surface-foreground: 12 45% 65%;
-  --border: 0 0% 34%; /* AA non-text contrast */
-  --input: 0 0% 34%;
+  --border: 0 0% 19%;
+  --border-strong: 0 0% 24%;
+  --input: 0 0% 42%;
   --ring: 0 0% 90%;
   --brand: 220 44% 50%;
   --brand-foreground: 0 0% 100%;
-  --sidebar: 0 0% 13%;
+  --brand-text: 220 62% 68%;
+  --sidebar: 0 0% 8%;
   --sidebar-foreground: 0 0% 90%;
   --sidebar-primary: 220 44% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 0% 20%;
+  --sidebar-accent: 0 0% 15%;
   --sidebar-accent-foreground: 0 0% 90%;
-  --sidebar-border: 0 0% 20%;
+  --sidebar-border: 0 0% 18%;
   --sidebar-ring: 0 0% 90%;
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
   }
   html {
     @apply bg-background;
   }
   body {
     @apply bg-background text-foreground;
+    /* eslint-disable-next-line tailwindcss/no-invalid-properties */
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Fallback for components that don't set their own focus ring */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+
+  @media (hover: none) and (pointer: coarse), (max-width: 640px) {
+    :focus:not(:focus-visible) {
+      outline: none;
+    }
+
+    button:focus,
+    button:focus-visible,
+    [role="button"]:focus,
+    [role="button"]:focus-visible,
+    [role="tab"]:focus,
+    [role="tab"]:focus-visible {
+      outline: none;
+      box-shadow: none;
+    }
   }
 }
 
@@ -226,16 +255,6 @@ input[type="checkbox"],
 input[type="radio"] {
   user-select: none;
 }
-
-/* Faster drawer close for responsive back navigation */
-/* eslint-disable tailwindcss/no-important */
-[vaul-drawer] {
-  transition: transform 120ms cubic-bezier(0.32, 0.72, 0, 1) !important;
-}
-[vaul-drawer][vaul-drawer-direction="bottom"] {
-  transition: transform 120ms cubic-bezier(0.32, 0.72, 0, 1) !important;
-}
-/* eslint-enable tailwindcss/no-important */
 
 input,
 textarea,
@@ -369,9 +388,7 @@ input[type="password"]:has(+ button)::-ms-clear {
 
   .task-ink-completed {
     opacity: 0.4;
-    transition:
-      opacity 500ms ease-out,
-      filter 500ms ease-out;
+    transition: opacity 240ms var(--ease-seijaku);
   }
 }
 
@@ -380,9 +397,7 @@ input[type="password"]:has(+ button)::-ms-clear {
 .task-ink-completed-card {
   opacity: 0.5 !important;
   filter: grayscale(1) contrast(0.9) brightness(0.9) !important;
-  transition:
-    opacity 700ms ease-out,
-    filter 700ms ease-out !important;
+  transition: opacity 240ms var(--ease-seijaku) !important;
   pointer-events: auto !important;
 }
 
@@ -533,20 +548,6 @@ input[type="password"]:has(+ button)::-ms-clear {
   /* No Firefox equivalent — scrollbar-width has no per-axis control. */
   .no-horizontal-scrollbar::-webkit-scrollbar:horizontal {
     display: none;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-
-  /* Fallback for components that don't set their own focus ring */
-  :focus-visible {
-    @apply outline-2 outline-offset-2 outline-ring;
   }
 }
 

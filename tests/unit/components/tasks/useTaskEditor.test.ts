@@ -337,4 +337,86 @@ describe("useTaskEditor", () => {
       expect(result.current.content).toBe("Existing Task Title");
     });
   });
+
+  it("detects live NLP date match and saves cleanedTitle and date on submit", async () => {
+    const onClose = vi.fn();
+    const { result } = renderHook(() => useTaskEditor({ open: true, onClose }));
+
+    act(() => {
+      result.current.setContent("Submit report by Friday");
+    });
+
+    await waitFor(() => {
+      expect(result.current.nlpMatch).not.toBeNull();
+      expect(result.current.nlpMatch?.cleanedTitle).toBe("Submit report");
+      expect(result.current.nlpMatch?.field).toBe("due_date");
+    });
+
+    await act(async () => {
+      result.current.onSubmit();
+    });
+
+    expect(mockCreateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Submit report",
+        due_date: expect.any(String),
+      }),
+    );
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("suppresses NLP suggestion when dismissed and saves raw title", async () => {
+    const onClose = vi.fn();
+    const { result } = renderHook(() => useTaskEditor({ open: true, onClose }));
+
+    act(() => {
+      result.current.setContent("Call dentist tomorrow");
+    });
+
+    await waitFor(() => {
+      expect(result.current.nlpMatch).not.toBeNull();
+    });
+
+    act(() => {
+      result.current.setDismissedMatchText(
+        result.current.nlpMatch!.matchedText,
+      );
+    });
+
+    expect(result.current.nlpMatch).toBeNull();
+
+    await act(async () => {
+      result.current.onSubmit();
+    });
+
+    expect(mockCreateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Call dentist tomorrow",
+        do_date: undefined,
+      }),
+    );
+  });
+
+  it("rapid entry with keepOpen resets form and does not call onClose", async () => {
+    const onClose = vi.fn();
+    const { result } = renderHook(() => useTaskEditor({ open: true, onClose }));
+
+    act(() => {
+      result.current.setContent("Task one");
+    });
+
+    await act(async () => {
+      result.current.onSubmit({ keepOpen: true });
+    });
+
+    expect(mockCreateMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: "Task one",
+      }),
+    );
+    expect(onClose).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(result.current.content).toBe("");
+    });
+  });
 });

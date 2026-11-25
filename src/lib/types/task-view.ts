@@ -3,6 +3,7 @@ import type { CreateTaskInput } from "@/lib/schemas/task";
 import type { UseFormReturn, FieldErrors } from "react-hook-form";
 import type { RecurrenceRule } from "@/lib/utils/recurrence";
 import type { GroupOption, SortOption } from "@/lib/types/sorting";
+import type { ParsedTaskInput } from "@/lib/utils/nlp-task";
 import type {
   CollisionDetection,
   DragEndEvent,
@@ -103,7 +104,11 @@ export interface TaskEditorState {
   hasContent: boolean;
   errors: FieldErrors<TaskFormValues>;
 
-  onSubmit: () => void;
+  nlpMatch: ParsedTaskInput | null;
+  dismissedMatchText: string | null;
+  setDismissedMatchText: (text: string | null) => void;
+
+  onSubmit: (options?: { keepOpen?: boolean } | React.SyntheticEvent) => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
 
   showDeleteDialog: boolean;

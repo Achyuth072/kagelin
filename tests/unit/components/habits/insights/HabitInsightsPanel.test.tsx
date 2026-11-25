@@ -21,6 +21,7 @@ vi.mock("recharts", () => ({
     <svg data-testid="area-chart">{children}</svg>
   ),
   Area: () => <div />,
+  CartesianGrid: () => null,
   XAxis: () => null,
   YAxis: () => null,
   Tooltip: () => null,
@@ -80,7 +81,7 @@ describe("HabitInsightsPanel", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders all 5 cards with entries and identity banner", () => {
+  it("renders all 5 cards with entries and identity banner", async () => {
     vi.mocked(useHabitsModule.useHabit).mockReturnValue({
       data: {
         ...mockHabit,
@@ -119,7 +120,7 @@ describe("HabitInsightsPanel", () => {
     expect(screen.getByText("Best Streaks")).toBeInTheDocument();
     expect(screen.getByText("Frequency")).toBeInTheDocument();
 
-    expect(screen.getByTestId("area-chart")).toBeInTheDocument();
+    expect(await screen.findByTestId("area-chart")).toBeInTheDocument();
 
     expect(
       screen.getByRole("group", { name: format(new Date(), "MMMM yyyy") }),

@@ -75,7 +75,7 @@ test.describe("Task Creation (Guest Mode)", () => {
     await taskRow.click();
 
     // Edit sheet opens with the steps section collapsed
-    await page.getByRole("button", { name: /subtasks/i }).click();
+    await page.getByRole("button", { name: /^steps \(/i }).click();
     await expect(page.getByText("Step One")).toBeVisible();
     await expect(page.getByText("Step Two")).toBeVisible();
   });
@@ -101,7 +101,7 @@ test.describe("Task Creation (Guest Mode)", () => {
     await expect(taskRow).toBeVisible();
     await taskRow.click();
 
-    await page.getByRole("button", { name: /subtasks/i }).click();
+    await page.getByRole("button", { name: /^steps \(/i }).click();
     await expect(page.getByText("Auto-flushed step")).toBeVisible();
   });
 

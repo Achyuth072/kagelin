@@ -211,7 +211,7 @@ export function HabitView(props: HabitViewProps) {
               "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-transform active:scale-95 border shadow-xs cursor-pointer",
               appearanceOpen
                 ? "ring-2 ring-brand border-brand"
-                : "border-border/60 hover:bg-secondary/40",
+                : "border-border/80 hover:bg-secondary/40",
             )}
             style={{
               backgroundColor: `${color}15`,
@@ -237,7 +237,7 @@ export function HabitView(props: HabitViewProps) {
               autoFocusTitle !== undefined ? autoFocusTitle : isFinePointer
             }
             className={cn(
-              "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border/40 pb-2 pt-0.5 outline-none placeholder:text-muted-foreground/50 text-foreground",
+              "w-full text-xl font-semibold tracking-tight bg-transparent border-b border-border pb-2 pt-0.5 outline-none placeholder:text-muted-foreground text-foreground",
               errors?.name && "placeholder:text-destructive/60",
             )}
             aria-invalid={!!errors?.name}
@@ -254,7 +254,7 @@ export function HabitView(props: HabitViewProps) {
 
       {/* Inline Appearance Accordion (directly underneath the header) */}
       <CollapsibleReveal open={appearanceOpen}>
-        <div className="px-4 pb-3 pt-1 border-b border-border/30 space-y-3">
+        <div className="px-4 pb-3 pt-1 border-b border-border/80 space-y-3">
           <HabitIconPicker value={icon} onChange={setIcon} variant="compact" />
           <ColorPicker
             value={color}
@@ -304,7 +304,7 @@ export function HabitView(props: HabitViewProps) {
               "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-7 sm:h-8 shadow-none",
               frequencyOpen
                 ? "bg-secondary border-border/80 text-foreground font-semibold"
-                : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+                : "bg-secondary hover:bg-accent border-border/80 text-muted-foreground hover:text-foreground",
             )}
           >
             <Repeat
@@ -352,7 +352,7 @@ export function HabitView(props: HabitViewProps) {
                 aria-label="Target unit"
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                className="h-8 px-2.5 text-xs sm:text-[13px] rounded-lg border border-border/40 bg-secondary/15 w-28 outline-none placeholder:text-muted-foreground/60 text-foreground focus:ring-1 focus:ring-brand"
+                className="h-8 px-2.5 text-xs sm:text-[13px] rounded-lg border border-border/80 bg-background w-28 outline-none placeholder:text-muted-foreground/60 text-foreground focus:ring-1 focus:ring-brand"
               />
               <Tabs
                 value={targetType}
@@ -457,7 +457,7 @@ export function HabitView(props: HabitViewProps) {
       </div>
 
       {/* Anchored Footer */}
-      <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border/40 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
+      <div className="shrink-0 flex items-center justify-between gap-3 p-4 border-t border-border/80 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-background w-full max-w-full">
         <div className="flex items-center gap-2">
           {mode === "edit" && (
             <Button

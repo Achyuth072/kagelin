@@ -1,6 +1,7 @@
 "use client";
 
 import { createElement, useState } from "react";
+import dynamic from "next/dynamic";
 import { BarChart3, Download, Loader2 } from "lucide-react";
 import { notify } from "@/lib/notify";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,18 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { InsightSection } from "@/components/ui/InsightSection";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { HabitOverviewCards } from "@/components/habits/insights/HabitOverviewCards";
-import { HabitScoreChart } from "@/components/habits/insights/HabitScoreChart";
+const HabitScoreChart = dynamic(
+  () =>
+    import("@/components/habits/insights/HabitScoreChart").then(
+      (m) => m.HabitScoreChart,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[180px] w-full rounded-lg bg-muted border border-border" />
+    ),
+  },
+);
 import { HabitMonthGrid } from "@/components/habits/insights/HabitMonthGrid";
 import { HabitBestStreaksCard } from "@/components/habits/insights/HabitBestStreaksCard";
 import { HabitFrequencyGrid } from "@/components/habits/insights/HabitFrequencyGrid";

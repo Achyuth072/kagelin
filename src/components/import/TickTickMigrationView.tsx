@@ -187,7 +187,7 @@ export function TickTickMigrationView({
         )}
       </div>
 
-      <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/40 shrink-0">
+      <div className="flex justify-end gap-2 p-4 sm:p-6 pt-2 border-t border-border/80 shrink-0">
         <Button
           variant="ghost"
           onClick={onCancel}

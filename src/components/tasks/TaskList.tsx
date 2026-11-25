@@ -71,7 +71,7 @@ export function BoardViewSkeleton() {
           key={col}
           className="flex flex-col gap-3 rounded-xl border border-border/40 bg-secondary/10 p-4"
         >
-          <div className="flex items-center justify-between pb-2 border-b border-border/30">
+          <div className="flex items-center justify-between pb-2 border-b border-border">
             <Skeleton className="h-4 w-24 rounded" />
             <Skeleton className="h-4 w-6 rounded-full" />
           </div>
@@ -79,7 +79,7 @@ export function BoardViewSkeleton() {
             {[1, 2, 3].map((card) => (
               <div
                 key={card}
-                className="p-3 rounded-lg border border-border/30 bg-background/60 space-y-2"
+                className="p-3 rounded-lg border border-border bg-background/60 space-y-2"
               >
                 <div className="flex items-center gap-2">
                   <Skeleton className="h-3.5 w-3.5 rounded-sm shrink-0" />
@@ -936,7 +936,7 @@ function TaskListBase({
       <div
         style={widthStyle}
         className={cn(
-          "opacity-90 pointer-events-none will-change-transform rotate-1 scale-[1.02]",
+          "scale-[1.01] pointer-events-none will-change-transform",
           isBoard
             ? !dnd.activeWidth && "w-[280px]"
             : !dnd.activeWidth && "w-full max-w-[90vw]",

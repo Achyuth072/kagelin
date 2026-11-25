@@ -52,7 +52,7 @@ export function TaskDatePicker({
   variant = "icon",
   title = "Due Date",
   description,
-  activeClassName = "text-brand bg-brand/10 hover:bg-brand/20 hover:text-brand",
+  activeClassName = "text-brand-text bg-accent border-border-strong hover:bg-accent hover:text-brand-text",
   icon: Icon = CalendarIcon,
   side = "bottom",
   sideOffset = 4,
@@ -163,10 +163,10 @@ export function TaskDatePicker({
     ? cn(
         "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 border transition-colors shrink-0 h-7 sm:h-8 shadow-none",
         isHighlighted
-          ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
+          ? "bg-secondary border-border font-semibold text-foreground"
           : isDoDateReschedule
-            ? "bg-secondary/40 border-border/60 text-muted-foreground border-dashed"
-            : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-foreground",
+            ? "bg-secondary border-border text-muted-foreground border-dashed"
+            : "bg-secondary hover:bg-accent border-border text-foreground",
         hasChipClear
           ? "rounded-l-md rounded-r-none border-r-0 pr-2"
           : "rounded-md",
@@ -200,8 +200,8 @@ export function TaskDatePicker({
             ? cn(
                 "inline-flex items-center justify-center h-7 sm:h-8 px-1.5 rounded-r-md rounded-l-none border border-l transition-colors cursor-pointer shrink-0 outline-none focus-visible:ring-1 focus-visible:ring-ring",
                 isHighlighted
-                  ? "bg-secondary/70 border-border/80 hover:bg-secondary/90 border-l-border/60 text-foreground"
-                  : "bg-secondary/40 hover:bg-secondary/60 border-border/50 border-l-border/30 text-muted-foreground hover:text-foreground",
+                  ? "bg-secondary border-border hover:bg-accent border-l-border text-foreground"
+                  : "bg-secondary hover:bg-accent border-border border-l-border text-muted-foreground hover:text-foreground",
                 error && "border-destructive text-destructive",
               )
             : cn(

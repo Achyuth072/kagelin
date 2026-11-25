@@ -152,7 +152,7 @@ describe("MicrosoftTasksMigrationView", () => {
         name: "Import Microsoft Tasks JSON or Outlook CSV file",
       });
       expect(dropZone.className).not.toContain("border-dashed");
-      expect(dropZone.className).toContain("border-border/40");
+      expect(dropZone.className).toContain("border-border/80");
       expect(dropZone.querySelector("svg")).toBeInTheDocument();
 
       expect(

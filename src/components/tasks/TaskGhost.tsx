@@ -157,7 +157,7 @@ export const TaskGhost = React.memo(
       <div
         className={cn(
           "flex items-center w-full gap-2 md:gap-3 touch-none opacity-98 transition-all duration-200",
-          "bg-background border border-primary/20 shadow-sm rounded-xl relative overflow-hidden px-4 py-3",
+          "bg-card border border-border-strong shadow-sm rounded-xl relative overflow-hidden px-4 py-3",
         )}
       >
         {/* Shodo Accent Stripe */}

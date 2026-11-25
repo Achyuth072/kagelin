@@ -1,5 +1,49 @@
 [
   {
+    "version": "1.53.0-preview.2",
+    "date": "2026-11-25",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Suppress focus rings on tabs and touch devices",
+        "Adjust mobile settings tabs for narrow screens",
+        "Add sliding pill animation to mobile settings tabs"
+      ]
+    }
+  },
+  {
+    "version": "1.53.0-preview.1",
+    "date": "2026-11-25",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Polish stats and habit insights charts to ink and matte specification",
+        "Task quick-add NLP chips, rapid entry, and matte cleanup"
+      ],
+      "Improved": [
+        "Lazy-load HabitScoreChart and HabitSheet to prevent recharts leak"
+      ]
+    }
+  },
+  {
+    "version": "1.53.0-preview.0",
+    "date": "2026-11-25",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Tactile motion, sliding switcher pills, and opaque calendar chips"
+      ],
+      "Improved": [
+        "Migrate Drawer to Base UI and swap tailwindcss-animate for tw-animate-css",
+        "Smooth sliding pill transitions on mobile headers"
+      ],
+      "Fixed": [
+        "Use compact placeholder on mobile in command menu to prevent text truncation",
+        "Align TickTick migration card upload button styling with brand accent"
+      ]
+    }
+  },
+  {
     "version": "1.52.0",
     "date": "2026-11-24",
     "channel": "stable",
@@ -814,54 +858,6 @@
         "Event reminders open the right event and show the right time left",
         "Briefings skip archived habits",
         "Removed a duplicate date picker from the habit view"
-      ]
-    }
-  },
-  {
-    "version": "1.45.1-preview.4",
-    "date": "2026-10-06",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Show Done and Snooze actions on task and event reminder notifications",
-        "Add task complete and reminder snooze API routes",
-        "Queue snooze and task-complete RPCs and tag task and event reminder payloads"
-      ],
-      "Improved": [
-        "Share reminder types and name notification click data for all reminders"
-      ],
-      "Fixed": [
-        "Drop snoozes for switched-off reminders and restate a timed event's time left",
-        "Keep pending reminders on unrelated edits and end all-day snoozes with their day"
-      ]
-    }
-  },
-  {
-    "version": "1.45.1-preview.3",
-    "date": "2026-10-06",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add event reminder controls to the event form and notification settings",
-        "Queue event reminder pushes from a calendar event trigger"
-      ],
-      "Fixed": [
-        "Cancel reminders on pending delete, keep today's all-day reminder, route event pushes"
-      ]
-    }
-  },
-  {
-    "version": "1.45.1-preview.2",
-    "date": "2026-10-05",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Evening plan reports finished and tomorrow, briefings carry encrypted next-up name",
-        "Morning brief counts today's tasks, overdue by do or due date, due, events and pending habits"
-      ],
-      "Fixed": [
-        "Let drawers lift above the keyboard instead of shrinking under it",
-        "Surface briefing facts failures, dedupe scheduler loops, skip archived habits"
       ]
     }
   }
