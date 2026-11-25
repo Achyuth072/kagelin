@@ -217,6 +217,22 @@
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-ring;
   }
+
+  @media (hover: none) and (pointer: coarse), (max-width: 640px) {
+    :focus:not(:focus-visible) {
+      outline: none;
+    }
+
+    button:focus,
+    button:focus-visible,
+    [role="button"]:focus,
+    [role="button"]:focus-visible,
+    [role="tab"]:focus,
+    [role="tab"]:focus-visible {
+      outline: none;
+      box-shadow: none;
+    }
+  }
 }
 
 html,

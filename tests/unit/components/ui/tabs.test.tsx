@@ -154,4 +154,20 @@ describe("Tabs Component", () => {
     expect(tab.className).toContain("[&_svg]:size-3.5");
     expect(tab.className).toContain("[&_svg]:shrink-0");
   });
+
+  it("suppresses focus ring classes on TabsTrigger", () => {
+    render(
+      <Tabs defaultValue="first">
+        <TabsList>
+          <TabsTrigger value="first">First Tab</TabsTrigger>
+        </TabsList>
+      </Tabs>,
+    );
+
+    const tab = screen.getByRole("tab", { name: "First Tab" });
+    expect(tab.className).toContain("focus:outline-none");
+    expect(tab.className).toContain("focus-visible:outline-none");
+    expect(tab.className).not.toContain("focus-visible:ring-2");
+    expect(tab.className).not.toContain("focus-visible:ring-ring");
+  });
 });

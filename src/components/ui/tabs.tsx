@@ -29,7 +29,7 @@ const tabsListVariants = cva(
 );
 
 const tabsTriggerVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium tracking-tight border border-transparent ring-offset-background transition-seijaku-fast focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-1.5 [&_svg]:size-3.5 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md font-medium tracking-tight border border-transparent transition-seijaku-fast focus:outline-none focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 gap-1.5 [&_svg]:size-3.5 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -125,7 +125,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "mt-2 focus:outline-none focus-visible:outline-none",
       className,
     )}
     {...props}
