@@ -1,5 +1,23 @@
 [
   {
+    "version": "1.53.0-preview.0",
+    "date": "2026-11-25",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Tactile motion, sliding switcher pills, and opaque calendar chips"
+      ],
+      "Improved": [
+        "Migrate Drawer to Base UI and swap tailwindcss-animate for tw-animate-css",
+        "Smooth sliding pill transitions on mobile headers"
+      ],
+      "Fixed": [
+        "Use compact placeholder on mobile in command menu to prevent text truncation",
+        "Align TickTick migration card upload button styling with brand accent"
+      ]
+    }
+  },
+  {
     "version": "1.52.0",
     "date": "2026-11-24",
     "channel": "stable",
@@ -847,21 +865,6 @@
       ],
       "Fixed": [
         "Cancel reminders on pending delete, keep today's all-day reminder, route event pushes"
-      ]
-    }
-  },
-  {
-    "version": "1.45.1-preview.2",
-    "date": "2026-10-05",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Evening plan reports finished and tomorrow, briefings carry encrypted next-up name",
-        "Morning brief counts today's tasks, overdue by do or due date, due, events and pending habits"
-      ],
-      "Fixed": [
-        "Let drawers lift above the keyboard instead of shrinking under it",
-        "Surface briefing facts failures, dedupe scheduler loops, skip archived habits"
       ]
     }
   }
