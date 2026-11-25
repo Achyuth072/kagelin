@@ -155,7 +155,7 @@ describe("Tabs Component", () => {
     expect(tab.className).toContain("[&_svg]:shrink-0");
   });
 
-  it("suppresses focus ring classes on TabsTrigger", () => {
+  it("preserves keyboard focus ring classes on TabsTrigger", () => {
     render(
       <Tabs defaultValue="first">
         <TabsList>
@@ -165,9 +165,9 @@ describe("Tabs Component", () => {
     );
 
     const tab = screen.getByRole("tab", { name: "First Tab" });
-    expect(tab.className).toContain("focus:outline-none");
-    expect(tab.className).toContain("focus-visible:outline-none");
-    expect(tab.className).not.toContain("focus-visible:ring-2");
-    expect(tab.className).not.toContain("focus-visible:ring-ring");
+    expect(tab.className).toContain("focus-visible:ring-2");
+    expect(tab.className).toContain("focus-visible:ring-ring");
+    expect(tab.className).toContain("focus-visible:ring-offset-1");
+    expect(tab.className).not.toContain("focus-visible:outline-none");
   });
 });
