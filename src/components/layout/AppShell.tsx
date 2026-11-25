@@ -25,7 +25,6 @@ import { Header as HeaderComponent } from "@/components/layout/Header";
 const AppSidebar = React.memo(SidebarComponent);
 const MobileNav = React.memo(MobileNavComponent);
 const Header = React.memo(HeaderComponent);
-import { HabitSheet } from "@/components/habits/HabitSheet";
 import {
   HabitActionsProvider,
   useHabitActions,
@@ -60,6 +59,10 @@ const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 const TaskSheet = dynamic(() => import("@/components/tasks/TaskSheet"), {
   ssr: false,
 });
+const HabitSheet = dynamic(
+  () => import("@/components/habits/HabitSheet").then((mod) => mod.HabitSheet),
+  { ssr: false },
+);
 const CommandMenu = dynamic(
   () => import("@/components/command-menu").then((mod) => mod.CommandMenu),
   { ssr: false },
