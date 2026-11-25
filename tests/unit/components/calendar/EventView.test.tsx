@@ -155,4 +155,42 @@ describe("EventView standalone component", () => {
       expect(onClose).toHaveBeenCalled();
     });
   });
+
+  it("auto-shifts endDate to preserve duration when startDate changes", async () => {
+    render(<EventView event={sampleEvent} onClose={vi.fn()} />);
+    await flushResetTimer();
+
+    const startBtn = screen.getByRole("button", {
+      name: "Start date and time",
+    });
+    const endBtn = screen.getByRole("button", { name: "End date and time" });
+    expect(endBtn).toHaveTextContent(/November 10th, 2026/i);
+
+    fireEvent.click(startBtn);
+
+    const tomorrowBtn = await screen.findByRole("button", {
+      name: "Tomorrow",
+    });
+    fireEvent.click(tomorrowBtn);
+
+    const doneBtn = screen.getByRole("button", { name: /done/i });
+    fireEvent.click(doneBtn);
+
+    // Tomorrow at preserved 10:00 AM with preserved 1h duration -> 11:00 AM
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowMonthDay = tomorrow.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Start date and time" }),
+      ).toHaveTextContent(new RegExp(`${tomorrowMonthDay}.*10:00 AM`, "i"));
+      expect(
+        screen.getByRole("button", { name: "End date and time" }),
+      ).toHaveTextContent(new RegExp(`${tomorrowMonthDay}.*11:00 AM`, "i"));
+    });
+  });
 });

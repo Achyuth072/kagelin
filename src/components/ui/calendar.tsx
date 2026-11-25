@@ -62,13 +62,13 @@ function Calendar({
           defaultClassNames.nav,
         ),
         button_previous: cn(
-          buttonVariants({ variant: buttonVariant }),
-          "h-[--cell-size] w-[--cell-size] select-none p-0 aria-disabled:opacity-50",
+          buttonVariants({ variant: buttonVariant, size: "icon" }),
+          "size-11 sm:size-8 select-none p-0 aria-disabled:opacity-50",
           defaultClassNames.button_previous,
         ),
         button_next: cn(
-          buttonVariants({ variant: buttonVariant }),
-          "h-[--cell-size] w-[--cell-size] select-none p-0 aria-disabled:opacity-50",
+          buttonVariants({ variant: buttonVariant, size: "icon" }),
+          "size-11 sm:size-8 select-none p-0 aria-disabled:opacity-50",
           defaultClassNames.button_next,
         ),
         month_caption: cn(
@@ -119,10 +119,7 @@ function Calendar({
         ),
         range_middle: cn("rounded-none", defaultClassNames.range_middle),
         range_end: cn("bg-accent rounded-r-md", defaultClassNames.range_end),
-        today: cn(
-          "text-brand font-semibold rounded-full border-2 border-brand/40",
-          defaultClassNames.today,
-        ),
+        today: cn(defaultClassNames.today),
         outside: cn(
           "text-muted-foreground aria-selected:text-muted-foreground",
           defaultClassNames.outside,
@@ -224,6 +221,7 @@ function CalendarDayButton({
   className,
   day,
   modifiers,
+  children,
   ...props
 }: React.ComponentProps<typeof DayButton>) {
   const defaultClassNames = getDefaultClassNames();
@@ -232,6 +230,8 @@ function CalendarDayButton({
   React.useEffect(() => {
     if (modifiers.focused) ref.current?.focus();
   }, [modifiers.focused]);
+
+  const isTodayUnselected = Boolean(modifiers.today && !modifiers.selected);
 
   return (
     <Button
@@ -249,12 +249,21 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "data-[selected-single=true]:bg-brand data-[selected-single=true]:text-primary-foreground data-[selected-single=true]:rounded-full data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-start=true]:bg-brand data-[range-start=true]:text-primary-foreground data-[range-end=true]:bg-brand data-[range-end=true]:text-primary-foreground group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring/50 flex aspect-square h-auto w-full min-w-[--cell-size] flex-col gap-1 font-normal leading-none data-[range-end=true]:rounded-full data-[range-middle=true]:rounded-none data-[range-start=true]:rounded-full group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-[3px] [&>span]:text-xs [&>span]:opacity-70",
+        "relative size-10 sm:size-9 p-0 flex aspect-square flex-col items-center justify-center gap-0.5 font-normal leading-none focus-visible:ring-2 focus-visible:ring-ring data-[selected-single=true]:bg-brand data-[selected-single=true]:text-brand-foreground data-[selected-single=true]:font-semibold data-[selected-single=true]:rounded-md data-[range-middle=true]:bg-accent data-[range-middle=true]:text-accent-foreground data-[range-middle=true]:rounded-none data-[range-start=true]:bg-brand data-[range-start=true]:text-brand-foreground data-[range-start=true]:rounded-md data-[range-end=true]:bg-brand data-[range-end=true]:text-brand-foreground data-[range-end=true]:rounded-md group-data-[focused=true]/day:border-ring group-data-[focused=true]/day:ring-ring group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-2",
+        isTodayUnselected && "font-semibold text-brand-text",
         defaultClassNames.day,
         className,
       )}
       {...props}
-    />
+    >
+      <span>{children}</span>
+      {isTodayUnselected && (
+        <span
+          aria-hidden="true"
+          className="h-1 w-1 rounded-full bg-brand-text"
+        />
+      )}
+    </Button>
   );
 }
 
