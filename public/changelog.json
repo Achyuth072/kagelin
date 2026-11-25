@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.53.0-preview.1",
+    "date": "2026-11-25",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Polish stats and habit insights charts to ink and matte specification",
+        "Task quick-add NLP chips, rapid entry, and matte cleanup"
+      ],
+      "Improved": [
+        "Lazy-load HabitScoreChart and HabitSheet to prevent recharts leak"
+      ]
+    }
+  },
+  {
     "version": "1.53.0-preview.0",
     "date": "2026-11-25",
     "channel": "preview",
@@ -851,20 +865,6 @@
       "Fixed": [
         "Drop snoozes for switched-off reminders and restate a timed event's time left",
         "Keep pending reminders on unrelated edits and end all-day snoozes with their day"
-      ]
-    }
-  },
-  {
-    "version": "1.45.1-preview.3",
-    "date": "2026-10-06",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Add event reminder controls to the event form and notification settings",
-        "Queue event reminder pushes from a calendar event trigger"
-      ],
-      "Fixed": [
-        "Cancel reminders on pending delete, keep today's all-day reminder, route event pushes"
       ]
     }
   }
