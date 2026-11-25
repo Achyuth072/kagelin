@@ -1154,7 +1154,7 @@ export function SettingsClient({ version }: SettingsClientProps) {
                     value={tab.value}
                     id={`settings-mobile-tab-${tab.value}`}
                     aria-controls={`settings-tabpanel-${tab.value}`}
-                    className="relative h-full px-2 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+                    className="relative h-full px-1.5 min-[390px]:px-2 text-xs min-[390px]:text-[13px] data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
                   >
                     {isActive && (
                       <m.span
@@ -1165,7 +1165,10 @@ export function SettingsClient({ version }: SettingsClientProps) {
                       />
                     )}
                     <span className="relative z-10 inline-flex items-center justify-center gap-1.5 truncate">
-                      <Icon aria-hidden="true" />
+                      <Icon
+                        aria-hidden="true"
+                        className="hidden min-[390px]:inline-block"
+                      />
                       <span className="truncate">{tab.label}</span>
                     </span>
                   </TabsTrigger>
