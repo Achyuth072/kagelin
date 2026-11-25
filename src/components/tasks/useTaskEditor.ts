@@ -18,6 +18,7 @@ import { omitUntouchedUnreadable } from "@/lib/crypto/unreadable";
 import { UNREADABLE_LABEL } from "@/components/encryption/ReadableText";
 import { taskToFormValues, defaultTaskFormValues } from "./task-utils";
 import { useTaskEditorDrafts } from "@/lib/store/taskEditorDrafts";
+import { parseTaskInput } from "@/lib/utils/nlp-task";
 import type {
   UseTaskEditorOptions,
   TaskEditorState,
@@ -71,6 +72,13 @@ export function useTaskEditor({
   const [draftSubtasks, setDraftSubtasks] = useState<string[]>([]);
   const [pendingStep, setPendingStep] = useState("");
   const [showSubtasks, setShowSubtasks] = useState(false);
+  const [dismissedMatchText, setDismissedMatchText] = useState<string | null>(
+    null,
+  );
+  const [hasManualDueDate, setHasManualDueDate] = useState<boolean>(
+    Boolean(initialDate),
+  );
+  const [hasManualDoDate, setHasManualDoDate] = useState<boolean>(false);
 
   const content = useWatch({ control, name: "content" }) ?? "";
   const watchedDueDate = useWatch({ control, name: "due_date" });
@@ -112,6 +120,9 @@ export function useTaskEditor({
     if (open) {
       setDraftSubtasks([]);
       setPendingStep("");
+      setDismissedMatchText(null);
+      setHasManualDueDate(Boolean(initialDate));
+      setHasManualDoDate(false);
     }
   }
 
@@ -150,6 +161,9 @@ export function useTaskEditor({
 
   useEffect(() => {
     if (open) {
+      setDismissedMatchText(null);
+      setHasManualDueDate(Boolean(initialDate));
+      setHasManualDoDate(false);
       if (task) {
         const draft = useTaskEditorDrafts.getState().popDraft(task.id);
         reset(draft ?? taskToFormValues(task));
@@ -165,8 +179,33 @@ export function useTaskEditor({
     }
   }, [open, task, initialDate, initialContent, reset, triggerValidation]);
 
+  const nlpMatch = useMemo(() => {
+    if (task) return null;
+    const trimmed = content.trim();
+    if (trimmed.length < 3) return null;
+    const match = parseTaskInput(trimmed);
+    if (!match) return null;
+    const isTargetManuallySet =
+      match.field === "due_date"
+        ? hasManualDueDate || Boolean(dueDate)
+        : hasManualDoDate || Boolean(doDate);
+    if (isTargetManuallySet) return null;
+    if (dismissedMatchText && match.matchedText === dismissedMatchText) {
+      return null;
+    }
+    return match;
+  }, [
+    task,
+    content,
+    dueDate,
+    doDate,
+    hasManualDueDate,
+    hasManualDoDate,
+    dismissedMatchText,
+  ]);
+
   const onFormSubmit = useCallback(
-    (data: CreateTaskInput) => {
+    (data: CreateTaskInput, options?: { keepOpen?: boolean }) => {
       triggerHaptic("thud");
 
       const stepToFlush = pendingStep.trim();
@@ -195,13 +234,19 @@ export function useTaskEditor({
           setPendingStep("");
         }
       } else {
+        const finalContent = nlpMatch ? nlpMatch.cleanedTitle : data.content;
+        const finalDueDate =
+          nlpMatch?.field === "due_date" ? nlpMatch.date : data.due_date;
+        const finalDoDate =
+          nlpMatch?.field === "do_date" ? nlpMatch.date : data.do_date;
+
         const clientId = crypto.randomUUID();
         const createInput = {
-          content: data.content,
+          content: finalContent,
           description: data.description,
           priority: data.priority,
-          due_date: toIsoString(data.due_date),
-          do_date: toIsoString(data.do_date),
+          due_date: toIsoString(finalDueDate),
+          do_date: toIsoString(finalDoDate),
           is_evening: data.is_evening,
           project_id: data.project_id ?? undefined,
           parent_id: data.parent_id,
@@ -228,11 +273,19 @@ export function useTaskEditor({
         }
         setDraftSubtasks([]);
         setPendingStep("");
+        setDismissedMatchText(null);
+        setHasManualDueDate(false);
+        setHasManualDoDate(false);
       }
-      onClose?.();
+      if (options?.keepOpen) {
+        reset(defaultTaskFormValues({}));
+      } else {
+        onClose?.();
+      }
     },
     [
       task,
+      nlpMatch,
       pendingStep,
       updateMutation,
       inboxProject?.id,
@@ -240,13 +293,19 @@ export function useTaskEditor({
       createMutation,
       recurrence,
       draftSubtasks,
+      reset,
       onClose,
     ],
   );
 
-  const onSubmit = useCallback(() => {
-    void handleSubmit(onFormSubmit)();
-  }, [handleSubmit, onFormSubmit]);
+  const onSubmit = useCallback(
+    (options?: { keepOpen?: boolean } | React.SyntheticEvent) => {
+      const keepOpen =
+        options && "keepOpen" in options ? Boolean(options.keepOpen) : false;
+      void handleSubmit((data) => onFormSubmit(data, { keepOpen }))();
+    },
+    [handleSubmit, onFormSubmit],
+  );
 
   const onDeleteRequest = useCallback(() => {
     if (!task) return;
@@ -283,13 +342,17 @@ export function useTaskEditor({
     [setValue],
   );
   const setDueDate = useCallback(
-    (value: Date | undefined) =>
-      setValue("due_date", value, { shouldValidate: true }),
+    (value: Date | undefined) => {
+      setHasManualDueDate(Boolean(value));
+      setValue("due_date", value, { shouldValidate: true });
+    },
     [setValue],
   );
   const setDoDate = useCallback(
-    (value: Date | undefined) =>
-      setValue("do_date", value, { shouldValidate: true }),
+    (value: Date | undefined) => {
+      setHasManualDoDate(Boolean(value));
+      setValue("do_date", value, { shouldValidate: true });
+    },
     [setValue],
   );
   const setIsEvening = useCallback(
@@ -366,6 +429,10 @@ export function useTaskEditor({
     isPending,
     hasContent,
     errors: form.formState.errors,
+
+    nlpMatch,
+    dismissedMatchText,
+    setDismissedMatchText,
 
     onSubmit,
     onKeyDown,
