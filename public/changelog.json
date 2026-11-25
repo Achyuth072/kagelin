@@ -1,5 +1,32 @@
 [
   {
+    "version": "1.53.0",
+    "date": "2026-11-25",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Natural language date parsing in task quick-add",
+        "Interactive preview chips for detected task dates",
+        "Shift+Enter shortcut for rapid multi-task entry",
+        "Tactile active press feedback on interactive buttons"
+      ],
+      "Improved": [
+        "Smooth sliding indicator pills across all view switchers",
+        "Migrate mobile drawer to Base UI for smoother gestures",
+        "Polished stats charts with monospaced tabular numerals",
+        "Rich popover metric tooltips on focus trend charts",
+        "Lazy-load habit score charts to prevent memory leaks",
+        "Solid opaque calendar event chips for better contrast",
+        "Elevated dark surface contrast and hairline borders",
+        "Calibrated command palette layout and keyboard hints"
+      ],
+      "Fixed": [
+        "Suppress unwanted focus rings on tabs and touch devices",
+        "Prevent command menu placeholder truncation on mobile"
+      ]
+    }
+  },
+  {
     "version": "1.53.0-preview.2",
     "date": "2026-11-25",
     "channel": "preview",
@@ -834,30 +861,6 @@
       "Added": [
         "Bind daily-briefing next-up copy to its source row",
         "Client-generated ids and row-bound v2 readers for encrypted tables"
-      ]
-    }
-  },
-  {
-    "version": "1.46.0",
-    "date": "2026-10-07",
-    "channel": "stable",
-    "sections": {
-      "Added": [
-        "Done and Snooze buttons on reminder notifications",
-        "Event reminders",
-        "Morning brief and evening plan now sum up your day and name your next-up item"
-      ],
-      "Improved": [
-        "Tasks, events and habits update instantly and roll back if saving fails",
-        "Reminder actions are faster"
-      ],
-      "Fixed": [
-        "Drawers stay above the mobile keyboard",
-        "Task details refresh right after you edit them",
-        "Reminders stop correctly when switched off, snoozed past their day or deleted, and survive unrelated edits",
-        "Event reminders open the right event and show the right time left",
-        "Briefings skip archived habits",
-        "Removed a duplicate date picker from the habit view"
       ]
     }
   }
