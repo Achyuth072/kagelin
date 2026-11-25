@@ -22,6 +22,7 @@ import {
   Send,
   SlidersHorizontal,
   Trash2,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,6 +38,7 @@ import { ReadableText } from "@/components/encryption/ReadableText";
 import { isUnreadable } from "@/lib/crypto/unreadable";
 import { TASK_TITLE_CREATE_ID, TASK_TITLE_EDIT_ID } from "./task-utils";
 import { useTaskEditorContext } from "./TaskEditorProvider";
+import { formatTaskNlpChip } from "@/lib/utils/nlp-task";
 
 export interface TaskViewProps {
   layout?: "sheet" | "panel";
@@ -83,6 +85,8 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
     onKeyDown,
     errors,
     autoFocusTitle,
+    nlpMatch,
+    setDismissedMatchText,
   } = useTaskEditorContext();
 
   const { trigger } = useHaptic();
@@ -96,6 +100,15 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
       e.preventDefault();
       // Stop Enter from bubbling to the container which also listens for Cmd+Enter
       e.stopPropagation();
+
+      if (e.shiftKey && mode === "create") {
+        if (!hasContent || isPending) return;
+        onSubmit({ keepOpen: true });
+        setTimeout(() => {
+          titleInputRef.current?.focus();
+        }, 0);
+        return;
+      }
 
       if (e.metaKey || e.ctrlKey) {
         onSubmit();
@@ -200,6 +213,34 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
             {errors.content.message}
           </p>
         )}
+        {mode === "create" && nlpMatch && (
+          <div className="mt-2 flex items-center">
+            <span
+              data-testid="task-nlp-chip"
+              className="bg-muted border border-border rounded-md px-2 py-1 type-ui text-foreground inline-flex items-center gap-1.5 shadow-none"
+            >
+              <Calendar
+                className="h-3.5 w-3.5 text-brand-text shrink-0"
+                strokeWidth={2.25}
+              />
+              <span>
+                {formatTaskNlpChip(
+                  nlpMatch.field,
+                  nlpMatch.date,
+                  nlpMatch.hasTime,
+                )}
+              </span>
+              <button
+                type="button"
+                aria-label="Ignore detected date"
+                onClick={() => setDismissedMatchText(nlpMatch.matchedText)}
+                className="hover:text-muted-foreground transition-colors p-0.5 rounded cursor-pointer"
+              >
+                <X className="h-3 w-3" strokeWidth={2.25} />
+              </button>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Property Strip — 2-Row Balanced Grid (Row 1: Dates, Row 2: Priority & Cadence) */}
@@ -266,8 +307,8 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               className={cn(
                 "inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-medium px-2.5 py-1 rounded-md border transition-colors shrink-0 h-7 sm:h-8 shadow-none",
                 priority !== 4
-                  ? "bg-secondary/70 border-border/80 font-semibold text-foreground"
-                  : "bg-secondary/40 hover:bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground",
+                  ? "bg-secondary border-border font-semibold text-foreground"
+                  : "bg-secondary hover:bg-accent border-border text-muted-foreground hover:text-foreground",
               )}
               aria-label={`Priority P${priority}`}
               title={`Priority P${priority}`}
@@ -344,7 +385,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
         )}
       >
         {/* Row 1: Steps Checklist */}
-        <div className="flex items-start gap-3 px-2 py-2 rounded-md hover:bg-muted/40 transition-colors">
+        <div className="flex items-start gap-3 px-2 py-2 rounded-md hover:bg-accent transition-colors">
           <IconCell className="text-muted-foreground">
             <ListTodo className="h-4 w-4" strokeWidth={2.25} />
           </IconCell>
@@ -421,7 +462,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
         >
           <SelectTrigger
             onPointerDown={() => trigger("toggle")}
-            className="flex items-center gap-2 bg-secondary/40 hover:bg-secondary/60 border border-border/50 rounded-lg px-2.5 py-1.5 text-xs font-medium cursor-pointer transition-colors max-w-[180px] h-9 shadow-none text-foreground [&>svg]:opacity-100 [&>svg]:text-foreground shrink-0"
+            className="flex items-center gap-2 bg-secondary hover:bg-accent border border-border rounded-lg px-2.5 py-1.5 text-xs font-medium cursor-pointer transition-colors max-w-[180px] h-9 shadow-none text-foreground [&>svg]:opacity-100 [&>svg]:text-foreground shrink-0"
           >
             <SelectValue placeholder="Inbox" />
           </SelectTrigger>
@@ -459,6 +500,11 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
         </Select>
 
         <div className="flex items-center gap-2">
+          {mode === "create" && (
+            <span className="type-micro font-mono text-muted-foreground hidden sm:inline">
+              Shift+↵ add another
+            </span>
+          )}
           {mode === "edit" && (
             <Button
               type="button"

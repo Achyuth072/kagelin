@@ -135,7 +135,7 @@ describe("RecurrencePicker Repetition State", () => {
     });
     expect(chip.className).toContain("text-foreground");
     expect(chip.className).toContain("font-semibold");
-    expect(chip.className).toContain("bg-secondary/70");
+    expect(chip.className).toContain("bg-secondary");
   });
 
   it("should toggle inline expansion on chip click and allow selecting presets and modes", () => {
