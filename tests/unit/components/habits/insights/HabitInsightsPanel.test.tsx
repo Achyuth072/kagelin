@@ -21,6 +21,7 @@ vi.mock("recharts", () => ({
     <svg data-testid="area-chart">{children}</svg>
   ),
   Area: () => <div />,
+  CartesianGrid: () => null,
   XAxis: () => null,
   YAxis: () => null,
   Tooltip: () => null,

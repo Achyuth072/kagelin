@@ -136,7 +136,7 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
 
   if (isLoading) {
     return (
-      <Card className={cn("p-4 sm:p-6 border-border/50", className)}>
+      <Card className={cn("p-4 sm:p-6 border-border", className)}>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <Skeleton className="h-4 w-32" />
@@ -148,9 +148,7 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
   }
 
   return (
-    <Card
-      className={cn("p-4 sm:p-6 border-border/50 overflow-hidden", className)}
-    >
+    <Card className={cn("p-4 sm:p-6 border-border overflow-hidden", className)}>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -189,7 +187,7 @@ export function ActivityHeatmap({ className }: ActivityHeatmapProps) {
                         <TooltipTrigger asChild>{block}</TooltipTrigger>
                         <TooltipContent
                           side="top"
-                          className="bg-popover text-popover-foreground border-border/60 text-[12px] font-medium px-2.5 py-1"
+                          className="bg-popover text-popover-foreground border border-border-strong shadow-sm text-[12px] font-medium tabular-nums px-2.5 py-1"
                         >
                           {tooltip}
                         </TooltipContent>

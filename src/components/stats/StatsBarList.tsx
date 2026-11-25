@@ -58,7 +58,7 @@ export function StatsBarList({
               {item.displayValue}
             </div>
           </div>
-          <div className="w-full sm:w-auto sm:flex-1 h-3 sm:h-4 shrink-0 rounded-[3px] bg-secondary/50 overflow-hidden">
+          <div className="w-full sm:w-auto sm:flex-1 h-3 sm:h-4 shrink-0 rounded-[3px] bg-muted overflow-hidden">
             <div
               className="h-full rounded-[3px] bg-foreground/70"
               style={{

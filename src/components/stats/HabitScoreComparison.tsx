@@ -40,7 +40,7 @@ export function HabitScoreComparison({ className }: HabitScoreComparisonProps) {
   }));
 
   return (
-    <Card className={cn("p-4 sm:p-6 border-border/50", className)}>
+    <Card className={cn("p-4 sm:p-6 border-border", className)}>
       <div className="space-y-4">
         <div>
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">

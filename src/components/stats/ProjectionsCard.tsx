@@ -34,7 +34,7 @@ export function ProjectionsCard({ className }: ProjectionsCardProps) {
   const hasProjection = tasks.soFar > 0 || focusHours.soFar > 0;
 
   return (
-    <Card className={cn("p-4 sm:p-6 border-border/50", className)}>
+    <Card className={cn("p-4 sm:p-6 border-border", className)}>
       <div className="space-y-5">
         <div>
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -141,7 +141,7 @@ function ProjectionMetric({
           <AnimatedNumber value={projected} />
         </span>
       </div>
-      <div className="h-2 sm:h-1.5 overflow-hidden rounded-[3px] bg-secondary/40">
+      <div className="h-2 sm:h-1.5 overflow-hidden rounded-[3px] bg-muted">
         <div
           className="h-full rounded-[3px] bg-foreground/70"
           style={{

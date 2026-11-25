@@ -51,6 +51,7 @@ vi.mock("recharts", () => ({
       data-key={dataKey}
     />
   ),
+  CartesianGrid: () => null,
   XAxis: () => null,
   YAxis: () => null,
   Tooltip: ({ content }: { content?: unknown }) => (

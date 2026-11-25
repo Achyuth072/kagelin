@@ -172,7 +172,7 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
         className,
       )}
     >
-      <div className="flex items-center justify-between pb-2 border-b border-border/40">
+      <div className="flex items-center justify-between pb-2 border-b border-border">
         <div>
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Focus by Time of Day
@@ -183,7 +183,7 @@ export function TimeOfDayHeatmap({ matrix, className }: TimeOfDayHeatmapProps) {
               <button
                 type="button"
                 onClick={() => setSelectedCell(null)}
-                className="text-[11px] font-mono text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary/40 border border-border/50"
+                className="text-[11px] font-mono text-muted-foreground hover:text-foreground inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-secondary hover:bg-accent border border-border"
                 title="Reset selection"
               >
                 <RotateCcw className="h-2.5 w-2.5" strokeWidth={2.25} />
