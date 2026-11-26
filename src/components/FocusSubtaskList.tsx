@@ -51,7 +51,7 @@ export function FocusSubtaskList() {
         >
           <ChevronRight
             className={cn(
-              "h-3.5 w-3.5 transition-all duration-200",
+              "h-3.5 w-3.5 transition-transform duration-200",
               isExpanded && "rotate-90 text-brand",
             )}
             strokeWidth={2.25}

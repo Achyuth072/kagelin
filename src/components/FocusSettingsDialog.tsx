@@ -33,6 +33,11 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTimer } from "@/components/TimerProvider";
 import { useTimerStore } from "@/lib/store/timerStore";
+import {
+  TimerSettings,
+  TaskSwitchBehavior,
+  getDurationForMode,
+} from "@/lib/types/timer";
 
 import {
   useForm,
@@ -42,7 +47,6 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FocusSettingsSchema } from "@/lib/schemas/settings";
-import { TimerSettings, TaskSwitchBehavior } from "@/lib/types/timer";
 
 const rowCls =
   "flex items-start gap-3 px-3 py-2.5 rounded-md mx-2 hover:bg-muted/40 transition-seijaku-fast";
@@ -85,8 +89,27 @@ function SettingsForm() {
   const autoStartFocus = useWatch({ control, name: "autoStartFocus" });
   const taskSwitchBehavior = useWatch({ control, name: "taskSwitchBehavior" });
 
+  const isRunning = useTimerStore((s) => s.state.isRunning);
+  const remainingSeconds = useTimerStore((s) => s.state.remainingSeconds);
+  const sessionDurationSeconds = useTimerStore(
+    (s) => s.state.sessionDurationSeconds,
+  );
+  const mode = useTimerStore((s) => s.state.mode);
+  const storeSettings = useTimerStore((s) => s.settings);
+  const totalSeconds =
+    sessionDurationSeconds ?? getDurationForMode(mode, storeSettings);
+  const isActiveOrPaused =
+    isRunning ||
+    sessionDurationSeconds != null ||
+    remainingSeconds < totalSeconds;
+
   return (
     <div className="py-2">
+      {isActiveOrPaused && (
+        <p className="px-3 pb-2 text-xs text-muted-foreground">
+          Duration changes apply to your next session
+        </p>
+      )}
       <div className={rowCls}>
         <IconCell>
           <Timer className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
@@ -472,10 +495,18 @@ function FocusSettingsBody({
   );
 }
 
-export function FocusSettingsDialog() {
+export function FocusSettingsDialog({
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+} = {}) {
   const { settings, updateSettings } = useTimer();
   const { trigger, isPhone } = useHaptic();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = controlledOnOpenChange ?? setUncontrolledOpen;
 
   const methods = useForm<TimerSettings>({
     resolver: zodResolver(FocusSettingsSchema),

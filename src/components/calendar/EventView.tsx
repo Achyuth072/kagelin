@@ -474,7 +474,7 @@ export function EventView({
               className="py-1 px-0.5 flex items-center gap-2 overflow-x-auto scrollbar-hide min-w-0 flex-1 pr-2"
             >
               {/* All day switch chip */}
-              <div className="flex items-center gap-1.5 bg-secondary rounded-md px-2.5 py-1 border border-border/80 shrink-0 h-7 sm:h-8">
+              <div className="flex items-center gap-1.5 bg-secondary rounded-md px-2.5 py-1 border border-border/80 shrink-0 min-h-10">
                 <Sun
                   className="h-3.5 w-3.5 text-muted-foreground"
                   strokeWidth={2.25}
@@ -491,7 +491,6 @@ export function EventView({
                     trigger("toggle");
                     setValue("all_day", checked);
                   }}
-                  className="scale-75 origin-right"
                 />
               </div>
 

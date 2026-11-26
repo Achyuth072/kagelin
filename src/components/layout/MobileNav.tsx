@@ -24,7 +24,7 @@ export function MobileNav() {
   }, [router]);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t bg-sidebar md:hidden nav-safe-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-sidebar md:hidden nav-safe-bottom">
       <div className="flex items-stretch justify-around h-[var(--mobile-nav-content-height)]">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -33,17 +33,19 @@ export function MobileNav() {
           return (
             <m.button
               key={item.path}
+              type="button"
               onTapStart={() => trigger("toggle")} // Subtle vibration for nav
               whileTap={isPhone ? { scale: 0.95 } : {}}
               onClick={() => router.push(item.path)}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center justify-center flex-1 gap-1 py-[var(--mobile-nav-item-pad)] transition-colors cursor-pointer outline-none",
+                "flex flex-col items-center justify-center flex-1 gap-1 py-[var(--mobile-nav-item-pad)] transition-colors duration-150 cursor-pointer outline-none",
                 isActive
-                  ? "text-brand"
+                  ? "text-brand-text"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon className="h-5 w-5" />
+              <Icon className="h-5 w-5" strokeWidth={2.25} />
               <span className="text-xs font-medium leading-4">
                 {item.label}
               </span>
