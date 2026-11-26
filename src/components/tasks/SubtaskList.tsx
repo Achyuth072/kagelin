@@ -167,7 +167,7 @@ function SubtaskItemContent({
             }
           }}
           className={cn(
-            "flex-1 text-[14px] leading-snug transition-all break-all cursor-text focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm",
+            "flex-1 text-[14px] leading-snug transition-colors duration-150 break-all cursor-text focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm",
             isCompleted &&
               "text-muted-foreground/60 line-through decoration-muted-foreground/20",
           )}

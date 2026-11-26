@@ -191,4 +191,23 @@ describe("BoardTaskCard", () => {
     const squircle = checkbox.querySelector("span");
     expect(squircle).toHaveClass("w-3.5", "h-3.5", "rounded-[3.5px]");
   });
+
+  it("renders crisp matte indicator with data-vim-focused and aria-current when isKeyboardSelected is true", () => {
+    const { container } = render(
+      <BoardTaskCard
+        task={baseTask}
+        project={undefined}
+        handleComplete={vi.fn()}
+        handlePlayFocus={vi.fn()}
+        isKeyboardSelected={true}
+      />,
+    );
+
+    const card = container.firstElementChild;
+    expect(card).toHaveAttribute("data-vim-focused", "true");
+    expect(card).toHaveAttribute("aria-current", "true");
+    expect(card?.className).toContain("border-l-2");
+    expect(card?.className).toContain("border-brand-text");
+    expect(card?.className).toContain("bg-accent");
+  });
 });

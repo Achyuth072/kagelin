@@ -52,7 +52,7 @@ const HeaderTimer = React.memo(function HeaderTimer() {
       onClick={() => {
         router.push("/focus");
       }}
-      className="flex items-center gap-2 px-3 py-2 min-h-[40px] rounded-lg bg-transparent hover:bg-accent/40 active:scale-95 transition-all outline-none min-w-0"
+      className="flex items-center gap-2 px-3 py-2 min-h-[40px] rounded-lg bg-transparent hover:bg-accent/40 active:scale-95 transition-[color,background-color,border-color,transform] duration-150 outline-none min-w-0"
     >
       <Timer
         strokeWidth={2.25}
@@ -126,7 +126,7 @@ export const Header = React.memo(function Header({
     <header className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between h-[var(--mobile-header-height)] px-4 pt-[env(safe-area-inset-top,0px)] border-b bg-sidebar md:hidden">
       {/* Left group: Hamburger + What's New indicator */}
       <div className="flex items-center gap-1.5 shrink-0">
-        <SidebarTrigger className="h-9 w-9 active:scale-95 transition-all [&_svg]:stroke-[2.25px]" />
+        <SidebarTrigger className="h-9 w-9 active:scale-95 transition-[color,background-color,border-color,transform] duration-150 [&_svg]:stroke-[2.25px]" />
         {hasNewVersion && (
           <button
             type="button"
@@ -153,7 +153,7 @@ export const Header = React.memo(function Header({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 bg-transparent hover:bg-accent/40 active:scale-95 transition-all"
+                className="h-9 w-9 bg-transparent hover:bg-accent/40 active:scale-95 transition-[color,background-color,border-color,transform] duration-150"
                 onPointerDown={() => trigger("toggle")}
               >
                 <MoreVertical className="h-5 w-5" strokeWidth={2.25} />

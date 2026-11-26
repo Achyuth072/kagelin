@@ -38,10 +38,13 @@ export function BoardTaskCard({
       id={taskDomId(task.id)}
       role="gridcell"
       aria-selected={isKeyboardSelected}
+      aria-current={isKeyboardSelected ? "true" : undefined}
+      data-vim-focused={isKeyboardSelected ? "true" : undefined}
       className={cn(
-        "relative bg-background border border-border/80 hover:border-border transition-all cursor-pointer group/card rounded-xl overflow-hidden",
-        isKeyboardSelected &&
-          "ring-2 ring-primary ring-offset-1 ring-offset-background bg-secondary/40 z-10",
+        "relative bg-background border border-border/80 cursor-pointer group/card rounded-xl overflow-hidden transition-[color,background-color,border-color,transform] duration-150",
+        isKeyboardSelected
+          ? "border-l-2 border-brand-text bg-accent hover:bg-accent hover:border-l-brand-text z-10"
+          : "hover:border-border",
       )}
       onClick={onClick}
     >
@@ -72,7 +75,7 @@ export function BoardTaskCard({
             >
               <span
                 className={cn(
-                  "w-3.5 h-3.5 rounded-[3.5px] border transition-all flex items-center justify-center",
+                  "w-3.5 h-3.5 rounded-[3.5px] border transition-colors duration-150 flex items-center justify-center",
                   task.is_completed
                     ? "bg-foreground border-foreground text-background"
                     : "border-border/80 group-hover/card:border-brand bg-card",
