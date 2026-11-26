@@ -181,8 +181,9 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
     );
 
     const cardRoot = container.firstElementChild;
-    expect(cardRoot?.className).toContain("border-l-2");
-    expect(cardRoot?.className).toContain("border-brand-text");
+    expect(cardRoot?.className).toContain("ring-1");
+    expect(cardRoot?.className).toContain("ring-inset");
+    expect(cardRoot?.className).toContain("ring-brand-text");
     expect(cardRoot?.className).toContain("bg-accent");
     expect(cardRoot).toHaveAttribute("data-vim-focused", "true");
     expect(cardRoot).toHaveAttribute("aria-current", "true");
@@ -206,8 +207,9 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
     );
 
     const cardRoot = container.firstElementChild;
-    expect(cardRoot?.className).toContain("border-l-2");
-    expect(cardRoot?.className).toContain("border-brand-text");
+    expect(cardRoot?.className).toContain("ring-1");
+    expect(cardRoot?.className).toContain("ring-inset");
+    expect(cardRoot?.className).toContain("ring-brand-text");
     expect(cardRoot?.className).toContain("bg-accent");
     expect(cardRoot).toHaveAttribute("data-vim-focused", "true");
     expect(cardRoot).toHaveAttribute("aria-current", "true");
@@ -234,8 +236,9 @@ describe("Vim Keyboard Navigation & Highlighting", () => {
 
     const cardText = screen.getByText("Active 1");
     const boardCard = cardText.closest(".group\\/card");
-    expect(boardCard?.className).toContain("border-l-2");
-    expect(boardCard?.className).toContain("border-brand-text");
+    expect(boardCard?.className).toContain("ring-1");
+    expect(boardCard?.className).toContain("ring-inset");
+    expect(boardCard?.className).toContain("ring-brand-text");
     expect(boardCard?.className).toContain("bg-accent");
     expect(boardCard).toHaveAttribute("data-vim-focused", "true");
     expect(boardCard).toHaveAttribute("aria-current", "true");

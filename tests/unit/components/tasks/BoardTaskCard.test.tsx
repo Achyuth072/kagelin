@@ -206,8 +206,9 @@ describe("BoardTaskCard", () => {
     const card = container.firstElementChild;
     expect(card).toHaveAttribute("data-vim-focused", "true");
     expect(card).toHaveAttribute("aria-current", "true");
-    expect(card?.className).toContain("border-l-2");
-    expect(card?.className).toContain("border-brand-text");
+    expect(card?.className).toContain("ring-1");
+    expect(card?.className).toContain("ring-inset");
+    expect(card?.className).toContain("ring-brand-text");
     expect(card?.className).toContain("bg-accent");
   });
 });

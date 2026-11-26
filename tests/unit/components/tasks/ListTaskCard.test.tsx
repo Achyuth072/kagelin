@@ -267,8 +267,9 @@ describe("ListTaskCard", () => {
     expect(row).toBeInTheDocument();
     expect(row).toHaveAttribute("data-vim-focused", "true");
     expect(row).toHaveAttribute("aria-current", "true");
-    expect(row?.className).toContain("border-l-2");
-    expect(row?.className).toContain("border-brand-text");
+    expect(row?.className).toContain("ring-1");
+    expect(row?.className).toContain("ring-inset");
+    expect(row?.className).toContain("ring-brand-text");
     expect(row?.className).toContain("bg-accent");
   });
 });

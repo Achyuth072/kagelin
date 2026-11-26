@@ -43,7 +43,7 @@ export function BoardTaskCard({
       className={cn(
         "relative bg-background border border-border/80 cursor-pointer group/card rounded-xl overflow-hidden transition-[color,background-color,border-color,transform] duration-150",
         isKeyboardSelected
-          ? "border-l-2 border-brand-text bg-accent hover:bg-accent hover:border-l-brand-text z-10"
+          ? "ring-1 ring-inset ring-brand-text bg-accent hover:bg-accent z-10"
           : "hover:border-border",
       )}
       onClick={onClick}

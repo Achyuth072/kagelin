@@ -67,10 +67,13 @@ export function ListTaskCard({
       }
       className={cn(
         "group relative flex items-start p-3.5 sm:p-4 pl-4 sm:pl-5 transition-colors cursor-pointer select-none w-full touch-manipulation",
-        !isExpanded && "border-b border-border/40",
+        !isExpanded &&
+          (isKeyboardSelected
+            ? "border-b border-border"
+            : "border-b border-border/40"),
         isKeyboardSelected
-          ? "border-l-2 border-brand-text bg-accent hover:bg-accent z-10 rounded-xl"
-          : "border-l-2 border-l-transparent hover:bg-secondary/10",
+          ? "ring-1 ring-inset ring-brand-text bg-accent hover:bg-accent z-10 rounded-xl"
+          : "hover:bg-secondary/10",
       )}
       data-task-row
       data-testid="task-list-row"
