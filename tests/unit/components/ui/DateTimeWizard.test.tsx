@@ -77,4 +77,27 @@ describe("DateTimeWizard", () => {
 
     expect(screen.queryByRole("button", { name: /clear/i })).toBeNull();
   });
+
+  it("allows clicking Time tab when date is undefined and auto-selects Today", async () => {
+    const { fireEvent } = await import("@testing-library/react");
+    render(
+      <DateTimeWizard
+        title="Set Due Date"
+        date={undefined}
+        setDate={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    const timeTab = screen.getByRole("tab", { name: /time/i });
+    expect(timeTab).not.toBeDisabled();
+
+    // Radix Tabs activates on mouseDown / click / pointerDown
+    fireEvent.mouseDown(timeTab);
+    fireEvent.click(timeTab);
+
+    expect(
+      screen.getByRole("spinbutton", { name: "Adjust Hours" }),
+    ).toBeInTheDocument();
+  });
 });

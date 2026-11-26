@@ -93,9 +93,9 @@ test.describe("Task Quick Add NLP, Rapid Capture & Matte Surfaces", () => {
     await expect(page.getByTestId("task-nlp-chip")).not.toBeVisible();
     await expect(input).toHaveValue("Tomorrow");
 
-    // 2c: "Check May invoice" -> triggers chip, dismiss with x, confirm verbatim save
+    // 2c: "Check June invoice" -> triggers chip, dismiss with x, confirm verbatim save
     await input.clear();
-    await input.fill("Check May invoice");
+    await input.fill("Check June invoice");
     const chip = page.getByTestId("task-nlp-chip");
     await expect(chip).toBeVisible();
 
@@ -110,14 +110,14 @@ test.describe("Task Quick Add NLP, Rapid Capture & Matte Surfaces", () => {
       page.getByRole("heading", { name: "New Task" }),
     ).not.toBeVisible();
 
-    // Verify verbatim save: "Check May invoice"
-    const mayTask = page
+    // Verify verbatim save: "Check June invoice"
+    const juneTask = page
       .getByTestId("task-list-container")
-      .getByText("Check May invoice", { exact: true });
-    await expect(mayTask).toBeVisible();
+      .getByText("Check June invoice", { exact: true });
+    await expect(juneTask).toBeVisible();
 
     // Reopen and verify no date was set
-    await mayTask.click();
+    await juneTask.click();
     await expect(
       page.getByRole("button", { name: "Set do date" }),
     ).toBeVisible();
