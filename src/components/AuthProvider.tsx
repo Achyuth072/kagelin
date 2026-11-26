@@ -15,6 +15,8 @@ import { EMAIL_CONFIRMED_PATH } from "@/lib/auth/auth-routes";
 import { sanitizeNextPath } from "@/lib/auth/safe-redirect";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
 import { migrationIntent } from "@/lib/migration/intent";
+import { clearTelemetryQueue } from "@/lib/telemetry/client";
+import { resetTelemetryConsent } from "@/lib/telemetry/store";
 import type { OAuthProviderId } from "@/lib/auth/providers";
 import type {
   User,
@@ -124,6 +126,8 @@ export function AuthProvider({
         lastRealUserIdRef.current !== s.user.id
       ) {
         purge();
+        resetTelemetryConsent();
+        clearTelemetryQueue();
       }
       lastRealUserIdRef.current = s.user.id;
       // Record intent before clearing the flag so migration binds to this account.
@@ -141,6 +145,10 @@ export function AuthProvider({
       } else {
         // Purge keys left behind if a session ended while the tab was closed.
         purge();
+        if (lastRealUserIdRef.current) {
+          resetTelemetryConsent();
+          clearTelemetryQueue();
+        }
         lastRealUserIdRef.current = null;
         clearGuestFlag();
         setSession(null);
@@ -315,11 +323,15 @@ export function AuthProvider({
     if (isGuestMode) {
       // Guest data is the user's only copy — never purged.
       clearGuestFlag();
+      resetTelemetryConsent();
+      clearTelemetryQueue();
       setUser(null);
       setIsGuestMode(false);
     } else {
       await supabase.auth.signOut({ scope: "local" });
       await purgeDeviceContentSafely();
+      resetTelemetryConsent();
+      clearTelemetryQueue();
     }
   }, [supabase.auth, isGuestMode, purgeDeviceContentSafely]);
 
@@ -327,6 +339,8 @@ export function AuthProvider({
     const { error } = await supabase.auth.signOut({ scope: "global" });
     if (!error) {
       await purgeDeviceContentSafely();
+      resetTelemetryConsent();
+      clearTelemetryQueue();
     }
     return { error };
   }, [supabase.auth, purgeDeviceContentSafely]);
