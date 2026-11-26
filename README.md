@@ -69,12 +69,23 @@ See the [full feature list](docs/features.md).
 | Shortcut        | Action                                                            |
 | --------------- | ----------------------------------------------------------------- |
 | `1–6`           | Quick navigation (Home, Habits, Calendar, Stats, Focus, Settings) |
-| `Shift+1 / 2`   | Switch view (Board / List)                                        |
+| `Shift+1 / 2`   | Switch view (List / Board)                                        |
+| `j / k`         | Select next / previous task                                       |
+| `h / l`         | Select column left / right (Board)                                |
 | `gg / G`        | Jump to top / bottom of task list or board                        |
+| `Enter / o`     | Open selected task                                                |
+| `Space / x`     | Toggle task completion                                            |
+| `d / Backspace` | Delete selected task                                              |
 | `yy / p / u`    | Yank task / paste task / undo action                              |
 | `Ctrl/Cmd+K`    | Open Command Palette                                              |
 | `Ctrl/Cmd+B`    | Toggle Sidebar                                                    |
 | `N / H / E / P` | Create new (Task, Habit, Event, Project)                          |
+| `Shift+Enter`   | Add another task (task dialog)                                    |
+| `Space`         | Focus timer: Start / Pause                                        |
+| `s`             | Focus timer: Skip session                                         |
+| `Shift+R`       | Focus timer: Stop session                                         |
+| `,`             | Focus timer: Timer settings                                       |
+| `Esc`           | Clear selection / Close dialogs / Exit focus mode                 |
 | `? / Shift+H`   | View all shortcuts                                                |
 
 <details>

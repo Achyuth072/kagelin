@@ -173,7 +173,7 @@ export function TaskDatePicker({
         error && "border-destructive text-destructive",
       )
     : cn(
-        "h-9 transition-all shrink-0 group [&_svg]:!size-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none",
+        "h-9 transition-colors duration-150 shrink-0 group [&_svg]:!size-4 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none",
         error &&
           "border-destructive-surface-border bg-destructive-surface text-destructive hover:bg-destructive-surface-hover hover:text-destructive",
         isCompact

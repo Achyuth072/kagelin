@@ -20,7 +20,7 @@ export function OAuthProviderRow() {
             aria-label={provider.label}
             title={provider.label}
             onClick={() => signInWithOAuth(provider.id)}
-            className="flex items-center justify-center h-11 bg-background/50 border-border hover:bg-accent transition-all duration-200"
+            className="flex items-center justify-center h-11 bg-background/50 border-border hover:bg-accent transition-colors duration-150"
           >
             <Icon className="h-4 w-4" />
           </Button>

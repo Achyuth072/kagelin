@@ -208,7 +208,7 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
               )}
             >
               <span className="type-h2 whitespace-nowrap">Kagelin</span>
-              <SidebarTrigger className="h-9 w-9 shrink-0 active:scale-95 transition-all [&_svg]:stroke-[2.25px]" />
+              <SidebarTrigger className="h-9 w-9 shrink-0 active:scale-95 transition-[color,background-color,border-color,transform] duration-150 [&_svg]:stroke-[2.25px]" />
             </div>
           </div>
         </SidebarHeader>
@@ -642,7 +642,7 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
           >
             {!isMobile && (
               <div className="absolute inset-x-0 flex justify-center w-full transition-opacity duration-200 ease-seijaku group-data-[state=expanded]:opacity-0 group-data-[state=expanded]:pointer-events-none">
-                <SidebarTrigger className="h-9 w-9 active:scale-95 transition-all" />
+                <SidebarTrigger className="h-9 w-9 active:scale-95 transition-[color,background-color,border-color,transform] duration-150" />
               </div>
             )}
 

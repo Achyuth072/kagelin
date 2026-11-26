@@ -125,7 +125,7 @@ const ScheduleView = memo(
                         <div
                           key={event.id}
                           className={cn(
-                            "flex gap-4 p-4 rounded-xl cursor-pointer transition-all active:scale-[0.99] mb-2 font-medium",
+                            "flex gap-4 p-4 rounded-xl cursor-pointer transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.99] mb-2 font-medium",
                             "border-t border-r border-b border-border hover:border-border-strong text-foreground",
                           )}
                           style={getCalendarEventChipStyle({

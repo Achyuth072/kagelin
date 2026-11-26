@@ -69,7 +69,7 @@ export function TaskPrioritySelect({
         onPointerDown={() => trigger("toggle")}
         className={cn(
           // Matches the Evening / Subtasks / DatePicker tags
-          "h-9 transition-all shrink-0 [&>svg]:hidden shadow-none border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-lg",
+          "h-9 transition-colors duration-150 shrink-0 [&>svg]:hidden shadow-none border border-input bg-background hover:bg-accent hover:text-accent-foreground rounded-lg",
           !isSelected && "w-9 px-0 text-muted-foreground hover:text-foreground",
           isSelected &&
             "w-auto px-2.5 min-w-[68px] text-[13px] text-brand bg-brand/10 border-transparent hover:bg-brand/20 hover:text-brand",

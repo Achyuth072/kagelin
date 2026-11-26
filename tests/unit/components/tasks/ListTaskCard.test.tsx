@@ -246,4 +246,30 @@ describe("ListTaskCard", () => {
     expect(deleteButton).toBeInTheDocument();
     expect(deleteButton.className).toContain("hidden md:inline-flex");
   });
+
+  it("renders crisp matte indicator with data-vim-focused and aria-current when isKeyboardSelected is true", () => {
+    const task: Task = { ...baseTask };
+    const { container } = render(
+      <ListTaskCard
+        task={task}
+        isDesktop={true}
+        isExpanded={false}
+        toggleExpand={vi.fn()}
+        handleComplete={vi.fn()}
+        handlePlayFocus={vi.fn()}
+        onDeleteRequest={vi.fn()}
+        project={undefined}
+        isKeyboardSelected={true}
+      />,
+    );
+
+    const row = container.querySelector("[data-task-row]");
+    expect(row).toBeInTheDocument();
+    expect(row).toHaveAttribute("data-vim-focused", "true");
+    expect(row).toHaveAttribute("aria-current", "true");
+    expect(row?.className).toContain("ring-1");
+    expect(row?.className).toContain("ring-inset");
+    expect(row?.className).toContain("ring-brand-text");
+    expect(row?.className).toContain("bg-accent");
+  });
 });

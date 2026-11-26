@@ -58,17 +58,22 @@ export function ListTaskCard({
       id={taskDomId(task.id)}
       role="row"
       aria-selected={isKeyboardSelected}
+      aria-current={isKeyboardSelected ? "true" : undefined}
+      data-vim-focused={isKeyboardSelected ? "true" : undefined}
       aria-description={
         !isDesktop && !task.is_completed
           ? "Swipe right to complete, swipe left to delete"
           : undefined
       }
       className={cn(
-        "group relative flex items-start p-3.5 sm:p-4 pl-4 sm:pl-5 transition-colors cursor-pointer select-none hover:bg-secondary/10 w-full touch-manipulation",
-        !isExpanded && "border-b border-border/40",
+        "group relative flex items-start p-3.5 sm:p-4 pl-4 sm:pl-5 transition-colors cursor-pointer select-none w-full touch-manipulation",
+        !isExpanded &&
+          (isKeyboardSelected
+            ? "border-b border-border"
+            : "border-b border-border/40"),
         isKeyboardSelected
-          ? "ring-2 ring-primary ring-inset bg-secondary/40 z-10 rounded-xl"
-          : "",
+          ? "ring-1 ring-inset ring-brand-text bg-accent hover:bg-accent z-10 rounded-xl"
+          : "hover:bg-secondary/10",
       )}
       data-task-row
       data-testid="task-list-row"
@@ -113,7 +118,7 @@ export function ListTaskCard({
         >
           <span
             className={cn(
-              "w-3.5 h-3.5 rounded-[3.5px] border transition-all flex items-center justify-center",
+              "w-3.5 h-3.5 rounded-[3.5px] border transition-colors duration-150 flex items-center justify-center",
               task.is_completed
                 ? "bg-foreground border-foreground text-background"
                 : "border-border/80 group-hover:border-brand bg-card",

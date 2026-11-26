@@ -190,7 +190,7 @@ export default function RecurrencePicker({
             variant="ghost"
             size="sm"
             className={cn(
-              "h-9 w-9 p-0 transition-all group relative border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none",
+              "h-9 w-9 p-0 transition-colors duration-150 group relative border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-none",
               hasRecurrence
                 ? "text-brand-text bg-accent border-border-strong hover:bg-accent hover:text-brand-text border-transparent"
                 : "text-muted-foreground hover:text-foreground hover:bg-accent",
