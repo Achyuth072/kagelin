@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.54.0-preview.1",
+    "date": "2026-11-26",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Reset telemetry consent prompt on sign-out for shared devices (#166)",
+        "Serialize offline mutation replay and preserve local dates across midnight"
+      ]
+    }
+  },
+  {
     "version": "1.54.0-preview.0",
     "date": "2026-11-26",
     "channel": "preview",
@@ -859,16 +870,6 @@
     "sections": {
       "Added": [
         "Rotate content key with keyring reads, atomic RPC and queue re-seal"
-      ]
-    }
-  },
-  {
-    "version": "1.47.0-preview.1",
-    "date": "2026-10-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Seal row-bound -v2, re-seal existing content and reject -v1 after upgrade"
       ]
     }
   }
