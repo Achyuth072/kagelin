@@ -1,9 +1,11 @@
+import { statSync } from "fs";
+import { join } from "path";
 import { test, expect } from "@playwright/test";
 
 // Requires a production build (`npm run build && npm start`) — SW is off in dev.
 
 const BASE = "http://localhost:3000";
-const WASM_BYTES = 659730;
+const WASM_BYTES = statSync(join(process.cwd(), "public/sql-wasm.wasm")).size;
 
 test.describe("service worker delivery of the sql.js binary", () => {
   test.setTimeout(90_000);
