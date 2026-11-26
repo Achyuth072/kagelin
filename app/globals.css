@@ -576,3 +576,13 @@ input[type="password"]:has(+ button)::-ms-clear {
   }
   /* eslint-enable tailwindcss/no-important */
 }
+
+@keyframes colon-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}

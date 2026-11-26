@@ -10,6 +10,7 @@ export interface AnimatedCountdownProps {
   className?: string;
   willChange?: boolean;
   animated?: boolean;
+  isRunning?: boolean;
   "data-testid"?: string;
 }
 
@@ -18,6 +19,7 @@ export function AnimatedCountdown({
   className,
   willChange = true,
   animated: animatedProp,
+  isRunning = false,
   "data-testid": testId,
 }: AnimatedCountdownProps) {
   const isVisible = useIsDocumentVisible();
@@ -43,7 +45,15 @@ export function AnimatedCountdown({
           animated={animated}
           respectMotionPreference
         />
-        <span aria-hidden="true">:</span>
+        <span
+          aria-hidden="true"
+          className={cn(
+            isRunning &&
+              "animate-[colon-pulse_2s_ease-in-out_infinite] motion-reduce:animate-none",
+          )}
+        >
+          :
+        </span>
         <NumberFlow
           value={secs}
           format={{ minimumIntegerDigits: 2 }}

@@ -131,7 +131,7 @@ export const Header = React.memo(function Header({
           <button
             type="button"
             onClick={() => setChangelogOpen(true)}
-            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-foreground/70 hover:bg-accent/40 active:scale-95 transition-all"
+            className="flex items-center justify-center gap-1 min-h-9 min-w-9 rounded-lg px-2 py-1.5 text-foreground/70 hover:bg-accent active:scale-95 transition-colors duration-150"
             aria-label="What's New — new version available"
           >
             <Sparkles className="h-4 w-4 shrink-0" strokeWidth={2.25} />

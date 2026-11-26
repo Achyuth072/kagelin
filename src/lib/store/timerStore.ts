@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { format } from "date-fns";
 import type { TimerMode, TimerState, TimerSettings } from "@/lib/types/timer";
-import { DEFAULT_TIMER_SETTINGS } from "@/lib/types/timer";
+import { DEFAULT_TIMER_SETTINGS, getDurationForMode } from "@/lib/types/timer";
 import { serverNow, isServerClockReady } from "@/lib/store/serverClock";
 import { getDeviceId } from "@/lib/store/deviceId";
 
@@ -34,17 +34,6 @@ interface TimerStore {
   completeTimer: (options?: { skipLog?: boolean }) => void;
 }
 
-function getDurationForMode(mode: TimerMode, settings: TimerSettings): number {
-  switch (mode) {
-    case "focus":
-      return settings.focusDuration * 60;
-    case "shortBreak":
-      return settings.shortBreakDuration * 60;
-    case "longBreak":
-      return settings.longBreakDuration * 60;
-  }
-}
-
 // Helper to get initial state
 const getInitialState = (settings: TimerSettings): TimerState => ({
   mode: "focus",
@@ -52,6 +41,7 @@ const getInitialState = (settings: TimerSettings): TimerState => ({
   remainingSeconds: settings.focusDuration * 60,
   completedSessions: 0,
   activeTaskId: null,
+  sessionDurationSeconds: null,
   endsAt: null,
   sourceDeviceId: null,
   lastSessionDate: null,
@@ -99,6 +89,9 @@ export const useTimerStore = create<TimerStore>()(
             ...s.state,
             isRunning: true,
             activeTaskId: targetTaskId,
+            sessionDurationSeconds:
+              s.state.sessionDurationSeconds ??
+              getDurationForMode(s.state.mode, s.settings),
             // Anchor the deadline to the time that remains — resuming a partial
             // session must not inflate back toward the full duration.
             endsAt: serverNow() + s.state.remainingSeconds * 1000,
@@ -169,8 +162,15 @@ export const useTimerStore = create<TimerStore>()(
           const merged = { ...s.settings, ...newSettings };
           const newState = { ...s.state };
 
-          // If timer is idle, sync the displayed time to new duration
-          if (!s.state.isRunning) {
+          // Only sync remainingSeconds when genuinely idle — never wipe paused
+          // mid-session time or jump progress during an active session.
+          const isIdle =
+            !s.state.isRunning &&
+            s.state.sessionDurationSeconds == null &&
+            s.state.remainingSeconds ===
+              getDurationForMode(s.state.mode, s.settings);
+
+          if (isIdle) {
             newState.remainingSeconds = getDurationForMode(
               s.state.mode,
               merged,
@@ -201,6 +201,7 @@ export const useTimerStore = create<TimerStore>()(
               mode: "focus",
               remainingSeconds: getDurationForMode("focus", settings),
               completedSessions: 0,
+              sessionDurationSeconds: null,
               lastSessionDate: null,
             },
           }));
@@ -273,6 +274,7 @@ export const useTimerStore = create<TimerStore>()(
           isRunning: nextIsRunning,
           remainingSeconds: nextDuration,
           completedSessions: newCompletedSessions,
+          sessionDurationSeconds: nextIsRunning ? nextDuration : null,
           // The completing owner writes the next deadline and re-stamps itself.
           endsAt: nextIsRunning ? serverNow() + nextDuration * 1000 : null,
           sourceDeviceId: getDeviceId(),

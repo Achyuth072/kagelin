@@ -65,6 +65,7 @@ const getShortcuts = (
       { keys: ["a"], description: "Archived Projects" },
       { keys: ["c"], description: "Toggle Completed Tasks" },
       { keys: [platformKey, "Enter"], description: "Save Task/Habit/Event" },
+      { keys: ["Shift", "Enter"], description: "Add another task" },
       { keys: [platformKey, "K"], description: "Search / Command Menu" },
       { keys: ["T"], description: "Switch Theme" },
       { keys: ["f"], description: "Focus Mode" },
@@ -130,6 +131,16 @@ const getShortcuts = (
       },
       { keys: ["p"], description: "Paste Yanked Task" },
       { keys: ["Esc"], description: "Clear Selection" },
+    ],
+  },
+  {
+    title: "Focus Timer",
+    shortcuts: [
+      { keys: ["Space"], description: "Start / Pause" },
+      { keys: ["s"], description: "Skip session" },
+      { keys: ["Shift", "R"], description: "Stop session" },
+      { keys: [","], description: "Timer settings" },
+      { keys: ["Esc"], description: "Exit focus mode" },
     ],
   },
 ];

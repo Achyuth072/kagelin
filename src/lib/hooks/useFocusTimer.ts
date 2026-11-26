@@ -15,7 +15,7 @@ import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useTimerSync } from "@/lib/hooks/useTimerSync";
 import { getDeviceId } from "@/lib/store/deviceId";
-import { TimerState } from "@/lib/types/timer";
+import { TimerState, getDurationForMode } from "@/lib/types/timer";
 import { trackTelemetry } from "@/lib/telemetry/client";
 import { markFirstAction } from "@/lib/telemetry/store";
 import {
@@ -39,6 +39,15 @@ type TimerCompleteEvent = CustomEvent<{
     skipNotification?: boolean;
   };
 }>;
+
+function formatMmSs(totalSeconds: number): string {
+  const safe = Math.max(0, Math.floor(totalSeconds));
+  const mins = Math.floor(safe / 60)
+    .toString()
+    .padStart(2, "0");
+  const secs = (safe % 60).toString().padStart(2, "0");
+  return `${mins}:${secs}`;
+}
 
 export function useFocusTimer() {
   const queryClient = useQueryClient();
@@ -299,6 +308,45 @@ export function useFocusTimer() {
       }
     })();
   }, [isGuestMode, hydrate, syncToServer]);
+
+  // Keep document.title synchronized across all routes.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const modeLabel =
+      state.mode === "focus"
+        ? "Focus"
+        : state.mode === "shortBreak"
+          ? "Short Break"
+          : "Long Break";
+    const totalSeconds =
+      state.sessionDurationSeconds ?? getDurationForMode(state.mode, settings);
+    const isPausedMidSession =
+      !state.isRunning &&
+      (state.sessionDurationSeconds != null ||
+        state.remainingSeconds < totalSeconds);
+
+    if (state.isRunning) {
+      document.title = `${formatMmSs(state.remainingSeconds)} · ${modeLabel} — Kagelin`;
+    } else if (isPausedMidSession) {
+      document.title = `Paused (${formatMmSs(state.remainingSeconds)}) · Kagelin`;
+    } else {
+      document.title = "Kagelin";
+    }
+  }, [
+    state.isRunning,
+    state.mode,
+    state.remainingSeconds,
+    state.sessionDurationSeconds,
+    settings,
+  ]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof document !== "undefined") {
+        document.title = "Kagelin";
+      }
+    };
+  }, []);
 
   return {
     state,

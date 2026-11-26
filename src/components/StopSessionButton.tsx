@@ -8,6 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { getDurationForMode } from "@/lib/types/timer";
 import { useTimerActions } from "@/components/TimerProvider";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { notify } from "@/lib/notify";
@@ -24,23 +25,22 @@ export function StopSessionButton({
   isPhone = false,
   onStopExecuted,
 }: StopSessionButtonProps) {
-  const { isRunning, remainingSeconds } = useTimerStore((s) => s.state);
-  const totalSeconds = useTimerStore((s) => {
-    const settings = s.settings;
-    switch (s.state.mode) {
-      case "focus":
-        return settings.focusDuration * 60;
-      case "shortBreak":
-        return settings.shortBreakDuration * 60;
-      case "longBreak":
-        return settings.longBreakDuration * 60;
-    }
-  });
+  const { isRunning, remainingSeconds, sessionDurationSeconds } = useTimerStore(
+    (s) => s.state,
+  );
+  const totalSeconds = useTimerStore(
+    (s) =>
+      s.state.sessionDurationSeconds ??
+      getDurationForMode(s.state.mode, s.settings),
+  );
 
   const { cancel } = useTimerActions();
   const { trigger } = useHaptic();
 
-  const isSessionActive = isRunning || remainingSeconds < totalSeconds;
+  const isSessionActive =
+    isRunning ||
+    sessionDurationSeconds != null ||
+    remainingSeconds < totalSeconds;
 
   const handleStop = () => {
     if (!isSessionActive) return;
