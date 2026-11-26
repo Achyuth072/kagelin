@@ -31,6 +31,7 @@ import { DrawerFooter } from "@/components/ui/drawer";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SEIJAKU_SPRING_FAST } from "@/lib/motion";
 import { useTimer } from "@/components/TimerProvider";
 import { useTimerStore } from "@/lib/store/timerStore";
 import {
@@ -72,6 +73,7 @@ const TAB_TO_TASK_SWITCH: Record<string, TaskSwitchBehavior> = {
 };
 
 function SettingsForm() {
+  const { trigger } = useHaptic();
   const {
     register,
     control,
@@ -397,6 +399,7 @@ function SettingsForm() {
             value={TASK_SWITCH_TO_TAB[taskSwitchBehavior]}
             onValueChange={(v) => {
               if (v) {
+                trigger("tick");
                 setValue("taskSwitchBehavior", TAB_TO_TASK_SWITCH[v], {
                   shouldValidate: true,
                 });
@@ -405,9 +408,33 @@ function SettingsForm() {
             className="w-full"
           >
             <TabsList size="sm" className="grid grid-cols-3 w-full">
-              <TabsTrigger value="keep">Keep</TabsTrigger>
-              <TabsTrigger value="pause">Pause</TabsTrigger>
-              <TabsTrigger value="reset">Reset</TabsTrigger>
+              {(
+                [
+                  { value: "keep", label: "Keep" },
+                  { value: "pause", label: "Pause" },
+                  { value: "reset", label: "Reset" },
+                ] as const
+              ).map((tab) => {
+                const isActive =
+                  TASK_SWITCH_TO_TAB[taskSwitchBehavior] === tab.value;
+                return (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className="relative data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+                  >
+                    {isActive && (
+                      <m.span
+                        layoutId="focus-task-switch-pill"
+                        transition={SEIJAKU_SPRING_FAST}
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-md bg-card border border-border/80 shadow-xs"
+                      />
+                    )}
+                    <span className="relative z-10">{tab.label}</span>
+                  </TabsTrigger>
+                );
+              })}
             </TabsList>
           </Tabs>
         </div>
@@ -594,7 +621,7 @@ export function FocusSettingsDialog({
   return (
     <ResponsiveDialog open={open} onOpenChange={setOpen}>
       <ResponsiveDialogTrigger asChild>{triggerButton}</ResponsiveDialogTrigger>
-      <ResponsiveDialogContent className="sm:max-w-[425px] max-h-[85dvh] sm:max-h-[90dvh] flex flex-col p-0 overflow-hidden">
+      <ResponsiveDialogContent className="sm:max-w-[425px] max-h-[85dvh] sm:max-h-[90dvh] flex flex-col p-0 overflow-hidden border-border/80 shadow-none">
         <ResponsiveDialogHeader className="p-4 sm:p-6 pb-2 shrink-0 text-left">
           <ResponsiveDialogTitle>Timer Settings</ResponsiveDialogTitle>
           <ResponsiveDialogDescription>
