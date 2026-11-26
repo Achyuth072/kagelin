@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { parseTaskInput, formatTaskNlpChip } from "@/lib/utils/nlp-task";
 
 describe("parseTaskInput", () => {
@@ -68,6 +68,15 @@ describe("parseTaskInput", () => {
 
 describe("formatTaskNlpChip", () => {
   const refDate = new Date("2026-11-25T10:00:00Z");
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(refDate);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it("formats tomorrow do_date as Do: Tomorrow", () => {
     const tomorrow = new Date(refDate);
