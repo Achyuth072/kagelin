@@ -57,11 +57,16 @@ export function useCreateCalendarEvent() {
   const { isGuestMode } = useAuth();
 
   return useMutation({
-    mutationFn: (input: CreateCalendarEventInput) =>
+    mutationKey: ["createCalendarEvent"],
+    scope: { id: "calendar-events" },
+    mutationFn: (input: CreateCalendarEventInput & { _clientId?: string }) =>
       calendarEventMutations.create(input),
-    onMutate: async (input: CreateCalendarEventInput) => {
+    onMutate: async (
+      input: CreateCalendarEventInput & { _clientId?: string },
+    ) => {
       const context = await prepareCalendarSnapshot(queryClient);
-      const tempId = crypto.randomUUID();
+      const tempId = input._clientId || crypto.randomUUID();
+      input._clientId = tempId;
       const now = new Date().toISOString();
 
       const optimisticEvent: CalendarEvent = {
@@ -124,6 +129,8 @@ export function useUpdateCalendarEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: ["updateCalendarEvent"],
+    scope: { id: "calendar-events" },
     mutationFn: (input: UpdateCalendarEventInput) =>
       calendarEventMutations.update(input),
     onMutate: async (input: UpdateCalendarEventInput) => {
@@ -157,6 +164,8 @@ export function useDeleteCalendarEvent() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: ["deleteCalendarEvent"],
+    scope: { id: "calendar-events" },
     mutationFn: (id: string) => calendarEventMutations.delete(id),
     onMutate: async (id: string) => {
       const context = await prepareCalendarSnapshot(queryClient);
