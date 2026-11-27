@@ -1,5 +1,26 @@
 [
   {
+    "version": "1.54.0",
+    "date": "2026-11-27",
+    "channel": "stable",
+    "sections": {
+      "Added": [
+        "Redesigned focus mode with keyboard shortcuts and mobile nav",
+        "Enhanced date and time picker drawers with accessible controls",
+        "Custom branded 404 error page and strict transport security"
+      ],
+      "Improved": [
+        "Refined Vim card selection indicator and keyboard navigation",
+        "Enforced touch target sizes and animated focus settings dialog"
+      ],
+      "Fixed": [
+        "Serialized offline mutation queue to prevent sync conflicts",
+        "Preserved local dates across midnight during offline logging",
+        "Reset telemetry consent prompt on sign-out for shared devices"
+      ]
+    }
+  },
+  {
     "version": "1.54.0-preview.1",
     "date": "2026-11-26",
     "channel": "preview",
@@ -860,16 +881,6 @@
         "Cancel a replaced Re-seal run and cover the retired-key calendar pull",
         "Finish Re-seal for imports, block stale key-row writes, purge rotated-out devices",
         "Guard key-row markers, keep -v1 rejection through rotation, report unreadable values in Re-seal"
-      ]
-    }
-  },
-  {
-    "version": "1.47.0-preview.2",
-    "date": "2026-10-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Rotate content key with keyring reads, atomic RPC and queue re-seal"
       ]
     }
   }
