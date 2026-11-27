@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/AuthProvider";
 import { handleMutationError } from "@/lib/utils/mutation-error";
@@ -20,8 +21,9 @@ export function useCreateHabit() {
 
   return useMutation({
     mutationKey: ["createHabit"],
+    scope: { id: "habits" },
     mutationFn: habitMutations.create,
-    onMutate: async (input: CreateHabitInput) => {
+    onMutate: async (input: CreateHabitInput & { _clientId?: string }) => {
       await queryClient.cancelQueries({ queryKey: ["habits"] });
 
       const snapshot = queryClient.getQueriesData<HabitWithEntries[]>({
@@ -34,8 +36,10 @@ export function useCreateHabit() {
         -1,
       );
 
-      const tempId = crypto.randomUUID();
-      const today = new Date().toISOString().split("T")[0];
+      const tempId = input._clientId || crypto.randomUUID();
+      input._clientId = tempId;
+      const today = format(new Date(), "yyyy-MM-dd");
+      input.start_date = input.start_date ?? today;
       const now = new Date().toISOString();
 
       const optimisticHabit: HabitWithEntries = {
@@ -94,6 +98,7 @@ export function useUpdateHabit() {
 
   return useMutation({
     mutationKey: ["updateHabit"],
+    scope: { id: "habits" },
     mutationFn: habitMutations.update,
     onMutate: async (input: UpdateHabitInput) => {
       await queryClient.cancelQueries({ queryKey: ["habits"] });
@@ -137,6 +142,7 @@ function useSetHabitArchived(archive: boolean) {
 
   return useMutation({
     mutationKey: [archive ? "archiveHabit" : "unarchiveHabit"],
+    scope: { id: "habits" },
     mutationFn: (habitId: string) =>
       habitMutations.update({
         id: habitId,
@@ -197,6 +203,7 @@ export function useDeleteHabit() {
 
   return useMutation({
     mutationKey: ["deleteHabit"],
+    scope: { id: "habits" },
     mutationFn: habitMutations.delete,
     onMutate: async (habitId) => {
       await queryClient.cancelQueries({ queryKey: ["habits"] });
@@ -225,6 +232,7 @@ export function useReorderHabits() {
 
   return useMutation({
     mutationKey: ["reorderHabits"],
+    scope: { id: "habits" },
     mutationFn: habitMutations.reorder,
     onMutate: async (pairs: { id: string; sort_order: number }[]) => {
       await queryClient.cancelQueries({ queryKey: ["habits"] });
@@ -265,6 +273,7 @@ export function useMarkHabitComplete() {
 
   return useMutation({
     mutationKey: ["markHabitComplete"],
+    scope: { id: "habits" },
     mutationFn: habitMutations.markComplete,
     onMutate: async ({ habitId, date, value = 1 }) => {
       await queryClient.cancelQueries({ queryKey: ["habits"] });

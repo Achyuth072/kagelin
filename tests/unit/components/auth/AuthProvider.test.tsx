@@ -4,6 +4,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AuthProvider, useAuth } from "@/components/AuthProvider";
 import { createClient } from "@/lib/supabase/client";
 import { purgeDeviceContent } from "@/lib/crypto/purge";
+import {
+  TELEMETRY_CONSENT_KEY,
+  TELEMETRY_DEVICE_ID_KEY,
+  TELEMETRY_FIRST_ACTION_KEY,
+  markFirstAction,
+  resetTelemetryConsentCache,
+  setTelemetryConsent,
+} from "@/lib/telemetry/store";
 import type { Session, User, UserIdentity } from "@supabase/supabase-js";
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -45,7 +53,7 @@ function mockSupabase(session: Session | null) {
       linkIdentity: vi.fn().mockResolvedValue({ error: null }),
       unlinkIdentity: vi.fn().mockResolvedValue({ error: null }),
       refreshSession: vi.fn().mockResolvedValue({ data: { session } }),
-      signOut: vi.fn(),
+      signOut: vi.fn().mockResolvedValue({ error: null }),
     },
   };
 }
@@ -53,6 +61,7 @@ function mockSupabase(session: Session | null) {
 describe("AuthProvider", () => {
   beforeEach(() => {
     localStorage.clear();
+    resetTelemetryConsentCache();
     document.cookie = "kanso_guest_mode=; path=/; max-age=0";
   });
 
@@ -336,6 +345,8 @@ describe("AuthProvider", () => {
   });
 
   it("signs out a registered user via Supabase, not the guest-flag path, and purges the device's content", async () => {
+    markFirstAction();
+    setTelemetryConsent("granted");
     const supabase = mockSupabase(mockSession);
     vi.mocked(createClient).mockReturnValue(
       supabase as unknown as ReturnType<typeof createClient>,
@@ -354,6 +365,57 @@ describe("AuthProvider", () => {
 
     expect(supabase.auth.signOut).toHaveBeenCalledTimes(1);
     expect(purgeDeviceContent).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(TELEMETRY_CONSENT_KEY)).toBeNull();
+    expect(localStorage.getItem(TELEMETRY_DEVICE_ID_KEY)).toBeNull();
+    expect(localStorage.getItem(TELEMETRY_FIRST_ACTION_KEY)).toBeNull();
+  });
+
+  it("resets telemetry consent on guest sign-out and signOutAllDevices", async () => {
+    localStorage.setItem("kanso_guest_mode", "true");
+    markFirstAction();
+    setTelemetryConsent("denied");
+    const guestSupabase = mockSupabase(null);
+    vi.mocked(createClient).mockReturnValue(
+      guestSupabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const guestHook = renderHook(() => useAuth(), {
+      wrapper: ({ children }) =>
+        withQueryClient(
+          <AuthProvider initialIsGuest={true}>{children}</AuthProvider>,
+        ),
+    });
+
+    await waitFor(() =>
+      expect(guestHook.result.current.isGuestMode).toBe(true),
+    );
+    await guestHook.result.current.signOut();
+
+    expect(localStorage.getItem(TELEMETRY_CONSENT_KEY)).toBeNull();
+    expect(localStorage.getItem(TELEMETRY_FIRST_ACTION_KEY)).toBeNull();
+
+    markFirstAction();
+    setTelemetryConsent("granted");
+    const realSupabase = mockSupabase(mockSession);
+    vi.mocked(createClient).mockReturnValue(
+      realSupabase as unknown as ReturnType<typeof createClient>,
+    );
+
+    const realHook = renderHook(() => useAuth(), {
+      wrapper: ({ children }) =>
+        withQueryClient(
+          <AuthProvider initialIsGuest={false}>{children}</AuthProvider>,
+        ),
+    });
+
+    await waitFor(() =>
+      expect(realHook.result.current.user?.id).toBe("real-user-id"),
+    );
+    await realHook.result.current.signOutAllDevices();
+
+    expect(localStorage.getItem(TELEMETRY_CONSENT_KEY)).toBeNull();
+    expect(localStorage.getItem(TELEMETRY_DEVICE_ID_KEY)).toBeNull();
+    expect(localStorage.getItem(TELEMETRY_FIRST_ACTION_KEY)).toBeNull();
   });
 
   it("forces the account picker for google and github", async () => {

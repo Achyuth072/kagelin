@@ -99,7 +99,7 @@ const MonthDayCell = memo(
               onDateNumberClick?.(day);
             }}
             className={cn(
-              "text-xs md:text-sm font-bold transition-all hover:bg-brand/10",
+              "text-xs md:text-sm font-bold transition-colors duration-150 hover:bg-brand/10",
               "w-6 h-6 md:w-8 md:h-8 flex items-center justify-center rounded-lg",
               isCompact && "w-5 h-5 md:w-6 md:h-6 text-[10px] md:text-xs",
               isCurrentDay && "bg-brand text-white shadow-sm hover:bg-brand/90",

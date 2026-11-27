@@ -7,6 +7,7 @@ import { recordDiagnosticError } from "@/lib/errors/diagnostics";
 import { createClient } from "@/lib/supabase/client";
 import { taskMutations } from "@/lib/mutations/task";
 import { habitMutations } from "@/lib/mutations/habit";
+import { calendarEventMutations } from "@/lib/mutations/calendar-event";
 import { projectMutations } from "@/lib/mutations/project";
 import { focusMutations } from "@/lib/mutations/focus";
 import { asyncStoragePersister } from "@/lib/query-cache-purge";
@@ -44,34 +45,57 @@ export default function QueryProvider({
 
     client.setMutationDefaults(["createTask"], {
       mutationFn: taskMutations.create,
+      scope: { id: "tasks" },
     });
     client.setMutationDefaults(["toggleTask"], {
       mutationFn: taskMutations.toggle,
+      scope: { id: "tasks" },
     });
     client.setMutationDefaults(["updateTask"], {
       mutationFn: taskMutations.update,
+      scope: { id: "tasks" },
     });
     client.setMutationDefaults(["deleteTask"], {
       mutationFn: taskMutations.delete,
+      scope: { id: "tasks" },
     });
     client.setMutationDefaults(["reorderTasks"], {
       mutationFn: taskMutations.reorder,
+      scope: { id: "tasks" },
     });
     client.setMutationDefaults(["clearCompletedTasks"], {
       mutationFn: taskMutations.clearCompleted,
+      scope: { id: "tasks" },
     });
 
     client.setMutationDefaults(["createHabit"], {
       mutationFn: habitMutations.create,
+      scope: { id: "habits" },
     });
     client.setMutationDefaults(["updateHabit"], {
       mutationFn: habitMutations.update,
+      scope: { id: "habits" },
     });
     client.setMutationDefaults(["deleteHabit"], {
       mutationFn: habitMutations.delete,
+      scope: { id: "habits" },
     });
     client.setMutationDefaults(["markHabitComplete"], {
       mutationFn: habitMutations.markComplete,
+      scope: { id: "habits" },
+    });
+
+    client.setMutationDefaults(["createCalendarEvent"], {
+      mutationFn: calendarEventMutations.create,
+      scope: { id: "calendar-events" },
+    });
+    client.setMutationDefaults(["updateCalendarEvent"], {
+      mutationFn: calendarEventMutations.update,
+      scope: { id: "calendar-events" },
+    });
+    client.setMutationDefaults(["deleteCalendarEvent"], {
+      mutationFn: calendarEventMutations.delete,
+      scope: { id: "calendar-events" },
     });
 
     client.setMutationDefaults(["createProject"], {

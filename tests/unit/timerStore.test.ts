@@ -489,4 +489,75 @@ describe("useTimerStore", () => {
       expect(state.isRunning).toBe(true);
     });
   });
+
+  describe("mid-session settings & sessionDurationSeconds", () => {
+    beforeEach(() => {
+      useTimerStore.setState({
+        state: {
+          mode: "focus",
+          isRunning: false,
+          remainingSeconds: 25 * 60,
+          completedSessions: 0,
+          activeTaskId: null,
+          sessionDurationSeconds: null,
+          endsAt: null,
+          sourceDeviceId: null,
+        },
+        settings: DEFAULT_TIMER_SETTINGS,
+      });
+    });
+
+    it("stamps sessionDurationSeconds on start() and clears it on stop() and cancel()", () => {
+      useTimerStore.getState().start();
+      expect(useTimerStore.getState().state.sessionDurationSeconds).toBe(1500);
+
+      useTimerStore.getState().stop();
+      expect(useTimerStore.getState().state.sessionDurationSeconds).toBeNull();
+
+      useTimerStore.getState().start();
+      expect(useTimerStore.getState().state.sessionDurationSeconds).toBe(1500);
+
+      useTimerStore.getState().cancel();
+      expect(useTimerStore.getState().state.sessionDurationSeconds).toBeNull();
+    });
+
+    it("preserves remainingSeconds and sessionDurationSeconds when updateSettings is called while paused mid-session", () => {
+      useTimerStore.getState().start();
+      vi.advanceTimersByTime(5 * 60 * 1000);
+      useTimerStore.getState().tick();
+      useTimerStore.getState().pause();
+
+      const pausedRemaining = useTimerStore.getState().state.remainingSeconds;
+      expect(pausedRemaining).toBe(20 * 60);
+
+      useTimerStore.getState().updateSettings({ focusDuration: 15 });
+
+      const { state, settings } = useTimerStore.getState();
+      expect(settings.focusDuration).toBe(15);
+      expect(state.remainingSeconds).toBe(20 * 60);
+      expect(state.sessionDurationSeconds).toBe(25 * 60);
+    });
+
+    it("preserves remainingSeconds, endsAt, and sessionDurationSeconds when updateSettings is called while running", () => {
+      useTimerStore.getState().start();
+      vi.advanceTimersByTime(60 * 1000);
+      useTimerStore.getState().tick();
+
+      const prevEndsAt = useTimerStore.getState().state.endsAt;
+      useTimerStore.getState().updateSettings({ focusDuration: 10 });
+
+      const { state } = useTimerStore.getState();
+      expect(state.remainingSeconds).toBe(24 * 60);
+      expect(state.endsAt).toBe(prevEndsAt);
+      expect(state.sessionDurationSeconds).toBe(25 * 60);
+
+      const total = state.sessionDurationSeconds ?? 10 * 60;
+      const progress = Math.min(
+        100,
+        Math.max(0, ((total - state.remainingSeconds) / total) * 100),
+      );
+      expect(progress).toBeGreaterThanOrEqual(0);
+      expect(progress).toBeLessThanOrEqual(100);
+    });
+  });
 });

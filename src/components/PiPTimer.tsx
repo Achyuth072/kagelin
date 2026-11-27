@@ -63,7 +63,7 @@ export const PiPTimer = memo(function PiPTimer({ onClose }: PiPTimerProps) {
         <button
           onClick={handlePlayPause}
           aria-label={isRunning ? "Pause timer" : "Start timer"}
-          className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 active:scale-95 transition-all"
+          className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:opacity-90 active:scale-95 transition-[color,background-color,border-color,transform,opacity] duration-150"
         >
           {isRunning ? (
             <Pause className="h-5 w-5" strokeWidth={2.25} />
@@ -76,7 +76,7 @@ export const PiPTimer = memo(function PiPTimer({ onClose }: PiPTimerProps) {
           <button
             onClick={onClose}
             aria-label="Close Picture-in-Picture"
-            className="h-10 w-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center hover:bg-secondary/80 active:scale-95 transition-all"
+            className="h-10 w-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center hover:bg-secondary/80 active:scale-95 transition-[color,background-color,border-color,transform] duration-150"
           >
             <X className="h-4 w-4" strokeWidth={2.25} />
           </button>

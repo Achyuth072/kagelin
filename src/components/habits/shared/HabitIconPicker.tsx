@@ -105,7 +105,7 @@ const IconButton = memo(
         aria-checked={isSelected}
         onClick={() => onSelect(item.name)}
         className={cn(
-          "h-9 w-9 px-0 transition-all shrink-0 border rounded-lg shadow-none flex items-center justify-center transform-gpu",
+          "h-9 w-9 px-0 transition-[color,background-color,border-color,transform] duration-150 shrink-0 border rounded-lg shadow-none flex items-center justify-center transform-gpu",
           isSelected
             ? "text-brand bg-brand/10 border-transparent font-semibold"
             : "border-border/50 bg-background hover:bg-secondary text-muted-foreground hover:text-foreground",

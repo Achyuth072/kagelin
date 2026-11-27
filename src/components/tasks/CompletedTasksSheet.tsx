@@ -291,7 +291,7 @@ function CompletedTasksSheetBody({
               strokeWidth={2.25}
             />
             <Input
-              className="pl-11 sm:pl-9 bg-secondary/20 h-12 sm:h-9 text-base sm:text-sm shadow-none border-input focus:border-border-strong focus:bg-secondary/30 rounded-xl sm:rounded-md transition-all placeholder:text-muted-foreground"
+              className="pl-11 sm:pl-9 bg-secondary/20 h-12 sm:h-9 text-base sm:text-sm shadow-none border-input focus:border-border-strong focus:bg-secondary/30 rounded-xl sm:rounded-md transition-colors duration-150 placeholder:text-muted-foreground"
               placeholder="Search completed tasks..."
               aria-label="Search completed tasks"
               value={searchQuery}

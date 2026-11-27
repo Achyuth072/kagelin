@@ -15,8 +15,10 @@ import {
   TELEMETRY_DEVICE_ID_KEY,
   TELEMETRY_FIRST_ACTION_KEY,
   getTelemetryConsent,
+  hasTakenFirstAction,
   markFirstAction,
   setTelemetryConsent,
+  resetTelemetryConsent,
   resetTelemetryConsentCache,
 } from "@/lib/telemetry/store";
 import * as telemetryClient from "@/lib/telemetry/client";
@@ -29,11 +31,24 @@ vi.mock("@/lib/hooks/usePrefersReducedMotion", () => ({
   usePrefersReducedMotion: () => true,
 }));
 
+const mockUsePathname = vi.fn(() => "/");
+const mockUseIsAnyModalOpen = vi.fn(() => false);
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => mockUsePathname(),
+}));
+
+vi.mock("@/lib/hooks/useIsAnyModalOpen", () => ({
+  useIsAnyModalOpen: () => mockUseIsAnyModalOpen(),
+}));
+
 describe("Telemetry Consent UI and Privacy Settings", () => {
   beforeEach(() => {
     localStorage.clear();
     resetTelemetryConsentCache();
     vi.clearAllMocks();
+    mockUsePathname.mockReturnValue("/");
+    mockUseIsAnyModalOpen.mockReturnValue(false);
     telemetryClient.clearTelemetryQueue();
   });
 
@@ -88,6 +103,28 @@ describe("Telemetry Consent UI and Privacy Settings", () => {
   describe("TelemetryConsentPrompt", () => {
     beforeEach(() => {
       markFirstAction();
+    });
+
+    it("does not render prompt when on /focus page", async () => {
+      mockUsePathname.mockReturnValue("/focus");
+      render(<TelemetryConsentPrompt />);
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText(/Kagelin is open source & privacy-first/i),
+        ).not.toBeInTheDocument();
+      });
+    });
+
+    it("does not render prompt when any modal or sheet is open", async () => {
+      mockUseIsAnyModalOpen.mockReturnValue(true);
+      render(<TelemetryConsentPrompt />);
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText(/Kagelin is open source & privacy-first/i),
+        ).not.toBeInTheDocument();
+      });
     });
 
     it("renders prompt when telemetry consent is unprompted after a first action", async () => {
@@ -288,6 +325,33 @@ describe("Telemetry Consent UI and Privacy Settings", () => {
         expect(localStorage.getItem(TELEMETRY_CONSENT_KEY)).toBe("denied");
         expect(localStorage.getItem(TELEMETRY_DEVICE_ID_KEY)).toBeNull();
       });
+    });
+
+    it("clears consent, device ID, and first-action state on resetTelemetryConsent", async () => {
+      markFirstAction();
+      setTelemetryConsent("granted");
+      expect(localStorage.getItem(TELEMETRY_CONSENT_KEY)).toBe("granted");
+      expect(localStorage.getItem(TELEMETRY_DEVICE_ID_KEY)).toBeTruthy();
+      expect(localStorage.getItem(TELEMETRY_FIRST_ACTION_KEY)).toBe("true");
+
+      render(<TelemetryConsentPrompt />);
+      expect(
+        screen.queryByText(/Kagelin is open source & privacy-first/i),
+      ).not.toBeInTheDocument();
+
+      act(() => {
+        resetTelemetryConsent();
+      });
+
+      expect(getTelemetryConsent()).toBe("unprompted");
+      expect(hasTakenFirstAction()).toBe(false);
+      expect(localStorage.getItem(TELEMETRY_CONSENT_KEY)).toBeNull();
+      expect(localStorage.getItem(TELEMETRY_DEVICE_ID_KEY)).toBeNull();
+      expect(localStorage.getItem(TELEMETRY_FIRST_ACTION_KEY)).toBeNull();
+      // Remains hidden until the next user takes their first action.
+      expect(
+        screen.queryByText(/Kagelin is open source & privacy-first/i),
+      ).not.toBeInTheDocument();
     });
   });
 });

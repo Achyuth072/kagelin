@@ -1,5 +1,35 @@
 [
   {
+    "version": "1.54.0-preview.1",
+    "date": "2026-11-26",
+    "channel": "preview",
+    "sections": {
+      "Fixed": [
+        "Reset telemetry consent prompt on sign-out for shared devices (#166)",
+        "Serialize offline mutation replay and preserve local dates across midnight"
+      ]
+    }
+  },
+  {
+    "version": "1.54.0-preview.0",
+    "date": "2026-11-26",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add HSTS header and branded 404 page",
+        "Add animated tab pill and align dialog styling in FocusSettingsDialog",
+        "Vim selection clarity, shortcut parity and motion cleanup",
+        "Focus timer excellence, hit targets, and 3-tab mobile nav",
+        "Polish dark-mode surface separation, time picker proportions, and wizard footer",
+        "Polish date and time pickers with accessible spinbuttons and responsive drawers"
+      ],
+      "Fixed": [
+        "Unify vim card selection onto inset matte ring",
+        "Critical interaction, accessibility, and instant navigation polish"
+      ]
+    }
+  },
+  {
     "version": "1.53.0",
     "date": "2026-11-25",
     "channel": "stable",
@@ -840,27 +870,6 @@
     "sections": {
       "Added": [
         "Rotate content key with keyring reads, atomic RPC and queue re-seal"
-      ]
-    }
-  },
-  {
-    "version": "1.47.0-preview.1",
-    "date": "2026-10-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Seal row-bound -v2, re-seal existing content and reject -v1 after upgrade"
-      ]
-    }
-  },
-  {
-    "version": "1.47.0-preview.0",
-    "date": "2026-10-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Bind daily-briefing next-up copy to its source row",
-        "Client-generated ids and row-bound v2 readers for encrypted tables"
       ]
     }
   }

@@ -151,6 +151,33 @@ export function setTelemetryConsent(status: "granted" | "denied"): void {
   }
 }
 
+export function resetTelemetryConsent(): void {
+  cachedConsent = null;
+  cachedDeviceId = null;
+  cachedFirstAction = null;
+
+  if (!isLocalStorageAvailable()) {
+    return;
+  }
+
+  try {
+    localStorage.removeItem(TELEMETRY_CONSENT_KEY);
+    localStorage.removeItem(TELEMETRY_DEVICE_ID_KEY);
+    localStorage.removeItem(TELEMETRY_FIRST_ACTION_KEY);
+
+    if (
+      typeof window !== "undefined" &&
+      typeof window.dispatchEvent === "function"
+    ) {
+      window.dispatchEvent(
+        new CustomEvent(TELEMETRY_CONSENT_EVENT, { detail: "unprompted" }),
+      );
+    }
+  } catch (error) {
+    void recordDiagnosticError(error);
+  }
+}
+
 export function getOrCreateDeviceId(): string | null {
   if (!isLocalStorageAvailable()) {
     return null;

@@ -35,6 +35,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { CollapsibleReveal } from "@/components/ui/collapsible-reveal";
 import {
   Tooltip,
@@ -58,6 +64,7 @@ import { parseEventInput } from "@/lib/utils/nlp-event";
 import { cn } from "@/lib/utils";
 import { IconCell } from "@/components/ui/IconCell";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { useLocationHistoryStore } from "@/lib/store/locationHistoryStore";
 import { useScrollIsolation } from "@/lib/hooks/useScrollIsolation";
@@ -151,6 +158,7 @@ export function EventView({
   const updateEvent = useUpdateCalendarEvent();
   const deleteEvent = useDeleteCalendarEvent();
   const isFinePointer = useMediaQuery("(pointer: fine)");
+  const isMobile = useIsMobile();
   const normalizedDefaultDate = coerceValidDate(defaultDate);
   const normalizedEventStart = coerceValidDate(event?.start);
   const normalizedEventEnd = coerceValidDate(event?.end);
@@ -296,8 +304,38 @@ export function EventView({
     reset,
   ]);
 
+  const handleStartDateChange = (nextStart: Date | undefined) => {
+    if (!nextStart) {
+      setStartDate(undefined);
+      return;
+    }
+    const prevStart = coerceValidDate(startDate);
+    const prevEnd = coerceValidDate(endDate);
+    const durationMs =
+      prevStart && prevEnd ? prevEnd.getTime() - prevStart.getTime() : 3600000;
+    const safeDurationMs = durationMs > 0 ? durationMs : 3600000;
+    setStartDate(nextStart);
+    setEndDate(new Date(nextStart.getTime() + safeDurationMs));
+  };
+
+  const handleEndDateChange = (nextEnd: Date | undefined) => {
+    if (!nextEnd) {
+      setEndDate(undefined);
+      return;
+    }
+    if (safeStartDate && nextEnd.getTime() < safeStartDate.getTime()) {
+      setEndDate(getDefaultEndDate(safeStartDate));
+      return;
+    }
+    setEndDate(nextEnd);
+  };
+
   const onFormSubmit = (data: CreateEventFormData) => {
     if (!safeStartDate || !safeEndDate) return;
+    const clampedEndDate =
+      safeEndDate.getTime() < safeStartDate.getTime()
+        ? getDefaultEndDate(safeStartDate)
+        : safeEndDate;
     trigger("thud");
     if (data.location) addLocation(data.location);
     const reminderPayload = isGuestMode
@@ -315,7 +353,7 @@ export function EventView({
         description: data.description || undefined,
         location: data.location || undefined,
         start_time: safeStartDate.toISOString(),
-        end_time: safeEndDate.toISOString(),
+        end_time: clampedEndDate.toISOString(),
         all_day: data.all_day,
         ...reminderPayload,
       });
@@ -325,7 +363,7 @@ export function EventView({
         description: data.description || undefined,
         location: data.location || undefined,
         start_time: safeStartDate.toISOString(),
-        end_time: safeEndDate.toISOString(),
+        end_time: clampedEndDate.toISOString(),
         all_day: data.all_day,
         ...reminderPayload,
       });
@@ -436,7 +474,7 @@ export function EventView({
               className="py-1 px-0.5 flex items-center gap-2 overflow-x-auto scrollbar-hide min-w-0 flex-1 pr-2"
             >
               {/* All day switch chip */}
-              <div className="flex items-center gap-1.5 bg-secondary rounded-md px-2.5 py-1 border border-border/80 shrink-0 h-7 sm:h-8">
+              <div className="flex items-center gap-1.5 bg-secondary rounded-md px-2.5 py-1 border border-border/80 shrink-0 min-h-10">
                 <Sun
                   className="h-3.5 w-3.5 text-muted-foreground"
                   strokeWidth={2.25}
@@ -453,7 +491,6 @@ export function EventView({
                     trigger("toggle");
                     setValue("all_day", checked);
                   }}
-                  className="scale-75 origin-right"
                 />
               </div>
 
@@ -564,12 +601,25 @@ export function EventView({
               !isRecurring && "hover:bg-muted/40 transition-seijaku-fast",
             )}
           >
-            <Popover open={showStartPicker} onOpenChange={setShowStartPicker}>
-              <PopoverTrigger asChild>
+            {isMobile ? (
+              <ResponsiveDialog
+                open={showStartPicker}
+                onOpenChange={setShowStartPicker}
+              >
                 <button
                   type="button"
+                  aria-label={
+                    safeStartDate
+                      ? allDay
+                        ? "Start date"
+                        : "Start date and time"
+                      : "Pick a date"
+                  }
                   disabled={isRecurring}
-                  onClick={() => trigger("tick")}
+                  onClick={() => {
+                    trigger("tick");
+                    setShowStartPicker(true);
+                  }}
                   className="w-full flex items-center gap-3 px-2 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <IconCell>
@@ -586,32 +636,90 @@ export function EventView({
                       : "Pick a date"}
                   </span>
                 </button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-auto p-0 overflow-hidden"
-                align="start"
-                collisionPadding={16}
-                style={{
-                  maxHeight:
-                    "min(380px, var(--radix-popover-content-available-height, 80dvh))",
-                }}
-              >
-                <DateTimeWizard
-                  date={safeStartDate}
-                  setDate={setStartDate}
-                  onClose={() => setShowStartPicker(false)}
-                  showTime={!allDay}
-                  compact
-                />
-              </PopoverContent>
-            </Popover>
+                <ResponsiveDialogContent className="w-full p-0">
+                  <ResponsiveDialogHeader className="sr-only">
+                    <ResponsiveDialogTitle>
+                      Start date and time
+                    </ResponsiveDialogTitle>
+                  </ResponsiveDialogHeader>
+                  <DateTimeWizard
+                    date={safeStartDate}
+                    setDate={handleStartDateChange}
+                    onClose={() => setShowStartPicker(false)}
+                    showTime={!allDay}
+                  />
+                </ResponsiveDialogContent>
+              </ResponsiveDialog>
+            ) : (
+              <Popover open={showStartPicker} onOpenChange={setShowStartPicker}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={
+                      safeStartDate
+                        ? allDay
+                          ? "Start date"
+                          : "Start date and time"
+                        : "Pick a date"
+                    }
+                    disabled={isRecurring}
+                    onClick={() => trigger("tick")}
+                    className="w-full flex items-center gap-3 px-2 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <IconCell>
+                      <Calendar
+                        className="h-4 w-4 text-muted-foreground"
+                        strokeWidth={2.25}
+                      />
+                    </IconCell>
+                    <span className="text-sm text-foreground">
+                      {safeStartDate
+                        ? allDay
+                          ? format(safeStartDate, "PPP")
+                          : format(safeStartDate, "PPP p")
+                        : "Pick a date"}
+                    </span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-auto p-0 overflow-hidden"
+                  align="start"
+                  collisionPadding={16}
+                  style={{
+                    maxHeight:
+                      "min(380px, var(--radix-popover-content-available-height, 80dvh))",
+                  }}
+                >
+                  <DateTimeWizard
+                    date={safeStartDate}
+                    setDate={handleStartDateChange}
+                    onClose={() => setShowStartPicker(false)}
+                    showTime={!allDay}
+                    compact
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
 
-            <Popover open={showEndPicker} onOpenChange={setShowEndPicker}>
-              <PopoverTrigger asChild>
+            {isMobile ? (
+              <ResponsiveDialog
+                open={showEndPicker}
+                onOpenChange={setShowEndPicker}
+              >
                 <button
                   type="button"
+                  aria-label={
+                    safeEndDate
+                      ? allDay
+                        ? "End date"
+                        : "End date and time"
+                      : "Pick an end time"
+                  }
                   disabled={isRecurring}
-                  onClick={() => trigger("tick")}
+                  onClick={() => {
+                    trigger("tick");
+                    setShowEndPicker(true);
+                  }}
                   className="w-full flex items-center gap-3 px-2 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <IconCell>
@@ -628,25 +736,70 @@ export function EventView({
                       : "Pick an end time"}
                   </span>
                 </button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-auto p-0 overflow-hidden"
-                align="start"
-                collisionPadding={16}
-                style={{
-                  maxHeight:
-                    "min(380px, var(--radix-popover-content-available-height, 80dvh))",
-                }}
-              >
-                <DateTimeWizard
-                  date={safeEndDate}
-                  setDate={setEndDate}
-                  onClose={() => setShowEndPicker(false)}
-                  showTime={!allDay}
-                  compact
-                />
-              </PopoverContent>
-            </Popover>
+                <ResponsiveDialogContent className="w-full p-0">
+                  <ResponsiveDialogHeader className="sr-only">
+                    <ResponsiveDialogTitle>
+                      End date and time
+                    </ResponsiveDialogTitle>
+                  </ResponsiveDialogHeader>
+                  <DateTimeWizard
+                    date={safeEndDate}
+                    setDate={handleEndDateChange}
+                    onClose={() => setShowEndPicker(false)}
+                    showTime={!allDay}
+                  />
+                </ResponsiveDialogContent>
+              </ResponsiveDialog>
+            ) : (
+              <Popover open={showEndPicker} onOpenChange={setShowEndPicker}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label={
+                      safeEndDate
+                        ? allDay
+                          ? "End date"
+                          : "End date and time"
+                        : "Pick an end time"
+                    }
+                    disabled={isRecurring}
+                    onClick={() => trigger("tick")}
+                    className="w-full flex items-center gap-3 px-2 py-2 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <IconCell>
+                      <Clock
+                        className="h-4 w-4 text-muted-foreground"
+                        strokeWidth={2.25}
+                      />
+                    </IconCell>
+                    <span className="text-sm text-muted-foreground">
+                      {safeEndDate
+                        ? allDay
+                          ? format(safeEndDate, "PPP")
+                          : format(safeEndDate, "PPP p")
+                        : "Pick an end time"}
+                    </span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-auto p-0 overflow-hidden"
+                  align="start"
+                  collisionPadding={16}
+                  style={{
+                    maxHeight:
+                      "min(380px, var(--radix-popover-content-available-height, 80dvh))",
+                  }}
+                >
+                  <DateTimeWizard
+                    date={safeEndDate}
+                    setDate={handleEndDateChange}
+                    onClose={() => setShowEndPicker(false)}
+                    showTime={!allDay}
+                    compact
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
 
           <div className="h-1" />

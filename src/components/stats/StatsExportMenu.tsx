@@ -68,7 +68,7 @@ export function StatsExportMenu({ stats, period }: StatsExportMenuProps) {
           variant="outline"
           size="sm"
           disabled={noData || busy}
-          className="gap-2 h-9 border-border/60 hover:bg-secondary/40 transition-all font-medium"
+          className="gap-2 h-9 border-border/60 hover:bg-secondary/40 transition-colors duration-150 font-medium"
         >
           {busy ? (
             <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.25} />

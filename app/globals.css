@@ -167,7 +167,7 @@
   --foreground: 0 0% 90%;
   --card: 0 0% 13%;
   --card-foreground: 0 0% 90%;
-  --popover: 0 0% 10%;
+  --popover: 0 0% 16%;
   --popover-foreground: 0 0% 90%;
   --primary: 0 0% 90%;
   --primary-foreground: 0 0% 10%;
@@ -175,7 +175,7 @@
   --secondary-foreground: 0 0% 90%;
   --muted: 0 0% 15%;
   --muted-foreground: 0 0% 63%;
-  --accent: 0 0% 16%;
+  --accent: 0 0% 20%;
   --accent-foreground: 0 0% 90%;
   --destructive: 12 32% 52%; /* lightened for AA text contrast */
   --destructive-foreground: 0 0% 98%;
@@ -184,7 +184,7 @@
   --destructive-surface-border: 12 25% 34%;
   --destructive-surface-foreground: 12 45% 65%;
   --border: 0 0% 19%;
-  --border-strong: 0 0% 24%;
+  --border-strong: 0 0% 27%;
   --input: 0 0% 42%;
   --ring: 0 0% 90%;
   --brand: 220 44% 50%;
@@ -218,7 +218,7 @@
     @apply outline-2 outline-offset-2 outline-ring;
   }
 
-  @media (hover: none) and (pointer: coarse), (max-width: 640px) {
+  @media (hover: none) and (pointer: coarse) {
     :focus:not(:focus-visible) {
       outline: none;
     }
@@ -575,4 +575,14 @@ input[type="password"]:has(+ button)::-ms-clear {
     }
   }
   /* eslint-enable tailwindcss/no-important */
+}
+
+@keyframes colon-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }

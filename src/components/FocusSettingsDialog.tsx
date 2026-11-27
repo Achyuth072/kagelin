@@ -31,8 +31,14 @@ import { DrawerFooter } from "@/components/ui/drawer";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SEIJAKU_SPRING_FAST } from "@/lib/motion";
 import { useTimer } from "@/components/TimerProvider";
 import { useTimerStore } from "@/lib/store/timerStore";
+import {
+  TimerSettings,
+  TaskSwitchBehavior,
+  getDurationForMode,
+} from "@/lib/types/timer";
 
 import {
   useForm,
@@ -42,13 +48,12 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FocusSettingsSchema } from "@/lib/schemas/settings";
-import { TimerSettings, TaskSwitchBehavior } from "@/lib/types/timer";
 
 const rowCls =
   "flex items-start gap-3 px-3 py-2.5 rounded-md mx-2 hover:bg-muted/40 transition-seijaku-fast";
 
 const numberInputCls =
-  "w-10 bg-transparent border-0 outline-none text-sm text-right text-foreground [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+  "h-8 w-14 tabular-nums bg-transparent border border-border/60 rounded px-2 text-right text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
 const resetBtnCls =
   "h-9 w-9 p-0 [&_svg]:size-5! rounded-lg transition-seijaku-fast";
@@ -68,6 +73,7 @@ const TAB_TO_TASK_SWITCH: Record<string, TaskSwitchBehavior> = {
 };
 
 function SettingsForm() {
+  const { trigger } = useHaptic();
   const {
     register,
     control,
@@ -85,17 +91,39 @@ function SettingsForm() {
   const autoStartFocus = useWatch({ control, name: "autoStartFocus" });
   const taskSwitchBehavior = useWatch({ control, name: "taskSwitchBehavior" });
 
+  const isRunning = useTimerStore((s) => s.state.isRunning);
+  const remainingSeconds = useTimerStore((s) => s.state.remainingSeconds);
+  const sessionDurationSeconds = useTimerStore(
+    (s) => s.state.sessionDurationSeconds,
+  );
+  const mode = useTimerStore((s) => s.state.mode);
+  const storeSettings = useTimerStore((s) => s.settings);
+  const totalSeconds =
+    sessionDurationSeconds ?? getDurationForMode(mode, storeSettings);
+  const isActiveOrPaused =
+    isRunning ||
+    sessionDurationSeconds != null ||
+    remainingSeconds < totalSeconds;
+
   return (
     <div className="py-2">
+      {isActiveOrPaused && (
+        <p className="px-3 pb-2 text-xs text-muted-foreground">
+          Duration changes apply to your next session
+        </p>
+      )}
       <div className={rowCls}>
         <IconCell>
           <Timer className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
         </IconCell>
         <div className="flex-1 min-w-0 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">
+            <label
+              htmlFor="focus-duration-input"
+              className="text-sm font-medium text-foreground cursor-pointer"
+            >
               Focus Duration
-            </span>
+            </label>
             <div className="flex items-center gap-1.5">
               <input
                 id="focus-duration-input"
@@ -115,6 +143,7 @@ function SettingsForm() {
             </div>
           </div>
           <Slider
+            aria-label="Focus duration slider"
             value={[focusDuration]}
             onValueChange={([value]) =>
               setValue("focusDuration", value, { shouldValidate: true })
@@ -144,9 +173,12 @@ function SettingsForm() {
         </IconCell>
         <div className="flex-1 min-w-0 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">
+            <label
+              htmlFor="short-break-input"
+              className="text-sm font-medium text-foreground cursor-pointer"
+            >
               Short Break
-            </span>
+            </label>
             <div className="flex items-center gap-1.5">
               <input
                 id="short-break-input"
@@ -166,6 +198,7 @@ function SettingsForm() {
             </div>
           </div>
           <Slider
+            aria-label="Short break duration slider"
             value={[shortBreak]}
             onValueChange={([value]) =>
               setValue("shortBreakDuration", value, { shouldValidate: true })
@@ -192,12 +225,16 @@ function SettingsForm() {
         </IconCell>
         <div className="flex-1 min-w-0 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">
+            <label
+              htmlFor="long-break-input"
+              className="text-sm font-medium text-foreground cursor-pointer"
+            >
               Long Break
-            </span>
+            </label>
             <div className="flex items-center gap-1.5">
               <input
                 id="long-break-input"
+                aria-label="Long Break"
                 type="number"
                 {...register("longBreakDuration", { valueAsNumber: true })}
                 className={cn(
@@ -213,6 +250,7 @@ function SettingsForm() {
             </div>
           </div>
           <Slider
+            aria-label="Long break duration slider"
             value={[longBreak]}
             onValueChange={([value]) =>
               setValue("longBreakDuration", value, { shouldValidate: true })
@@ -242,11 +280,15 @@ function SettingsForm() {
         </IconCell>
         <div className="flex-1 min-w-0 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-foreground">
+            <label
+              htmlFor="sessions-input"
+              className="text-sm font-medium text-foreground cursor-pointer"
+            >
               Sessions Until Long Break
-            </span>
+            </label>
             <input
               id="sessions-input"
+              aria-label="Sessions Until Long Break"
               type="number"
               {...register("sessionsBeforeLongBreak", { valueAsNumber: true })}
               className={cn(
@@ -260,6 +302,7 @@ function SettingsForm() {
             />
           </div>
           <Slider
+            aria-label="Sessions until long break slider"
             value={[sessions]}
             onValueChange={([value]) =>
               setValue("sessionsBeforeLongBreak", value, {
@@ -289,15 +332,19 @@ function SettingsForm() {
           <Play className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
         </IconCell>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-foreground">
+          <label
+            htmlFor="auto-start-break-switch"
+            className="text-sm font-medium text-foreground cursor-pointer block"
+          >
             Auto-start Breaks
-          </div>
+          </label>
           <p className="text-xs text-muted-foreground">
             Automatically start break timer after focus session
           </p>
         </div>
         <Switch
           id="auto-start-break-switch"
+          aria-label="Auto-start Breaks"
           checked={autoStartBreak}
           onCheckedChange={(checked) =>
             setValue("autoStartBreak", checked, { shouldValidate: true })
@@ -310,15 +357,19 @@ function SettingsForm() {
           <Zap className="h-4 w-4 text-muted-foreground" strokeWidth={2.25} />
         </IconCell>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium text-foreground">
+          <label
+            htmlFor="auto-start-focus-switch"
+            className="text-sm font-medium text-foreground cursor-pointer block"
+          >
             Auto-start Focus
-          </div>
+          </label>
           <p className="text-xs text-muted-foreground">
             Automatically start focus timer after break
           </p>
         </div>
         <Switch
           id="auto-start-focus-switch"
+          aria-label="Auto-start Focus"
           checked={autoStartFocus}
           onCheckedChange={(checked) =>
             setValue("autoStartFocus", checked, { shouldValidate: true })
@@ -348,6 +399,7 @@ function SettingsForm() {
             value={TASK_SWITCH_TO_TAB[taskSwitchBehavior]}
             onValueChange={(v) => {
               if (v) {
+                trigger("tick");
                 setValue("taskSwitchBehavior", TAB_TO_TASK_SWITCH[v], {
                   shouldValidate: true,
                 });
@@ -356,9 +408,33 @@ function SettingsForm() {
             className="w-full"
           >
             <TabsList size="sm" className="grid grid-cols-3 w-full">
-              <TabsTrigger value="keep">Keep</TabsTrigger>
-              <TabsTrigger value="pause">Pause</TabsTrigger>
-              <TabsTrigger value="reset">Reset</TabsTrigger>
+              {(
+                [
+                  { value: "keep", label: "Keep" },
+                  { value: "pause", label: "Pause" },
+                  { value: "reset", label: "Reset" },
+                ] as const
+              ).map((tab) => {
+                const isActive =
+                  TASK_SWITCH_TO_TAB[taskSwitchBehavior] === tab.value;
+                return (
+                  <TabsTrigger
+                    key={tab.value}
+                    value={tab.value}
+                    className="relative data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+                  >
+                    {isActive && (
+                      <m.span
+                        layoutId="focus-task-switch-pill"
+                        transition={SEIJAKU_SPRING_FAST}
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-md bg-card border border-border/80 shadow-xs"
+                      />
+                    )}
+                    <span className="relative z-10">{tab.label}</span>
+                  </TabsTrigger>
+                );
+              })}
             </TabsList>
           </Tabs>
         </div>
@@ -446,10 +522,18 @@ function FocusSettingsBody({
   );
 }
 
-export function FocusSettingsDialog() {
+export function FocusSettingsDialog({
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+} = {}) {
   const { settings, updateSettings } = useTimer();
   const { trigger, isPhone } = useHaptic();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = controlledOnOpenChange ?? setUncontrolledOpen;
 
   const methods = useForm<TimerSettings>({
     resolver: zodResolver(FocusSettingsSchema),
@@ -524,7 +608,7 @@ export function FocusSettingsDialog() {
     <m.button
       className={cn(
         buttonVariants({ variant: "ghost" }),
-        "text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-all cursor-pointer",
+        "text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 active:bg-accent/50 transition-seijaku cursor-pointer",
       )}
       onTapStart={() => trigger("thud")}
       whileTap={isPhone ? { scale: 0.95 } : {}}

@@ -233,8 +233,9 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
               <button
                 type="button"
                 aria-label="Ignore detected date"
+                data-testid="task-nlp-chip-dismiss"
                 onClick={() => setDismissedMatchText(nlpMatch.matchedText)}
-                className="hover:text-muted-foreground transition-colors p-0.5 rounded cursor-pointer"
+                className="relative before:absolute before:-inset-1.5 hover:text-muted-foreground transition-colors p-0.5 rounded cursor-pointer"
               >
                 <X className="h-3 w-3" strokeWidth={2.25} />
               </button>
@@ -397,7 +398,7 @@ export function TaskView({ layout = "sheet" }: TaskViewProps = {}) {
                 setShowSubtasks(!showSubtasks);
               }}
               aria-label={`Steps (${doneSubtaskCount}/${totalSubtaskCount})`}
-              className="flex items-center justify-between w-full text-left cursor-pointer select-none"
+              className="flex items-center justify-between w-full min-h-9 py-1.5 text-left cursor-pointer select-none"
             >
               <span className="text-muted-foreground font-medium">
                 Steps ({doneSubtaskCount}/{totalSubtaskCount})

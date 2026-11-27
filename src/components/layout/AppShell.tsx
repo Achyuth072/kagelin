@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useLayoutEffect, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/components/AuthProvider";
 import { CompletedTasksProvider } from "@/components/CompletedTasksProvider";
@@ -199,9 +199,11 @@ function ChangelogPopupWatcher() {
 function GlobalOverlays({
   commandOpen,
   onCommandOpenChange,
+  isFocus,
 }: {
   commandOpen: boolean;
   onCommandOpenChange: (open: boolean) => void;
+  isFocus: boolean;
 }) {
   const { isAddTaskOpen, closeAddTask } = useTaskActions();
   const { isHabitSheetOpen, editingHabit, initialTab, closeHabitSheet } =
@@ -256,7 +258,7 @@ function GlobalOverlays({
       <FloatingTimer />
       <ChangelogPopupWatcher />
       <ChangelogManualTrigger />
-      <TelemetryConsentPrompt />
+      {!isFocus && <TelemetryConsentPrompt />}
     </>
   );
 }
@@ -281,6 +283,7 @@ function ChangelogManualTrigger() {
 
 function AppShellContent({ children }: AppShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const isFocus = pathname === "/focus";
   const hideMobileNav = pathname === "/focus" || pathname === "/settings";
   const isFixedHeight =
@@ -311,6 +314,33 @@ function AppShellContent({ children }: AppShellProps) {
   useEffect(() => {
     trackAppOpened();
 
+    const routes = [
+      "/",
+      "/habits",
+      "/calendar",
+      "/stats",
+      "/focus",
+      "/settings",
+    ];
+    const prefetchRoutes = () => {
+      routes.forEach((route) => {
+        try {
+          router.prefetch(route);
+        } catch {}
+      });
+    };
+
+    let cancelPrefetch: (() => void) | undefined;
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const handle = (window as Window).requestIdleCallback(prefetchRoutes, {
+        timeout: 1500,
+      });
+      cancelPrefetch = () => (window as Window).cancelIdleCallback(handle);
+    } else {
+      const timer = setTimeout(prefetchRoutes, 1500);
+      cancelPrefetch = () => clearTimeout(timer);
+    }
+
     const params = new URLSearchParams(window.location.search);
     if (params.get("signup") === "1") {
       trackSignupCompleted();
@@ -318,7 +348,11 @@ function AppShellContent({ children }: AppShellProps) {
       cleanUrl.searchParams.delete("signup");
       window.history.replaceState({}, "", cleanUrl.toString());
     }
-  }, []);
+
+    return () => {
+      cancelPrefetch?.();
+    };
+  }, [router]);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
@@ -382,7 +416,7 @@ function AppShellContent({ children }: AppShellProps) {
             )}
           </div>
           <OfflineIndicator />
-          <DemoBar />
+          {!isFocus && <DemoBar />}
         </SidebarInset>
 
         {!hideMobileNav && <MobileNav />}
@@ -392,6 +426,7 @@ function AppShellContent({ children }: AppShellProps) {
         <GlobalOverlays
           commandOpen={commandOpen}
           onCommandOpenChange={setCommandOpen}
+          isFocus={isFocus}
         />
         <Toaster />
       </SidebarProvider>

@@ -201,6 +201,7 @@ export function useCreateTask() {
 
   return useMutation({
     mutationKey: ["createTask"],
+    scope: { id: "tasks" },
     mutationFn: taskMutations.create,
     onMutate: async (newTask) => {
       const snapshot = await prepareTasksSnapshot(queryClient);
@@ -271,6 +272,7 @@ export function useToggleTask() {
 
   return useMutation({
     mutationKey: ["toggleTask"],
+    scope: { id: "tasks" },
     mutationFn: taskMutations.toggle,
     onMutate: async ({ id, is_completed }) => {
       const snapshot = await prepareTasksSnapshot(queryClient);
@@ -339,6 +341,7 @@ export function useUpdateTask() {
 
   return useMutation({
     mutationKey: ["updateTask"],
+    scope: { id: "tasks" },
     mutationFn: taskMutations.update,
     onMutate: async (updates) => {
       const snapshot = await prepareTasksSnapshot(queryClient);
@@ -400,6 +403,7 @@ export function useDeleteTask() {
 
   return useMutation({
     mutationKey: ["deleteTask"],
+    scope: { id: "tasks" },
     mutationFn: taskMutations.delete,
     onMutate: async (id) => {
       const snapshot = await prepareTasksSnapshot(queryClient);
@@ -543,6 +547,7 @@ export function useReorderTasks() {
 
   return useMutation({
     mutationKey: ["reorderTasks"],
+    scope: { id: "tasks" },
     mutationFn: taskMutations.reorder,
     onMutate: async (pairs: { id: string; day_order: number }[]) => {
       const snapshot = await prepareTasksSnapshot(queryClient);
@@ -591,6 +596,7 @@ export function useClearCompletedTasks() {
 
   return useMutation({
     mutationKey: ["clearCompletedTasks"],
+    scope: { id: "tasks" },
     mutationFn: taskMutations.clearCompleted,
     onMutate: async () => {
       const snapshot = await prepareTasksSnapshot(queryClient);
@@ -621,6 +627,7 @@ export function useDuplicateTask() {
 
   return useMutation({
     mutationKey: ["duplicateTask"],
+    scope: { id: "tasks" },
     mutationFn: ({
       sourceTask,
       overrides,

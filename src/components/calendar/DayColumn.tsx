@@ -62,7 +62,7 @@ export function DayColumn({
             onDateNumberClick?.(column.date);
           }}
           className={cn(
-            "text-lg md:text-xl font-bold inline-flex items-center justify-center transition-all",
+            "text-lg md:text-xl font-bold inline-flex items-center justify-center transition-colors duration-150",
             "hover:bg-brand/10 rounded-lg w-9 h-9 md:w-11 md:h-11",
             isToday && "bg-brand text-white shadow-sm hover:bg-brand/90",
           )}

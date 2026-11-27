@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { createClient } from "@/lib/supabase/client";
 import { mockStore } from "@/lib/mock/mock-store";
 import {
@@ -70,7 +71,9 @@ function frequencyColumns(
 }
 
 export const habitMutations = {
-  create: async (input: CreateHabitInput): Promise<Habit> => {
+  create: async (
+    input: CreateHabitInput & { _clientId?: string },
+  ): Promise<Habit> => {
     const isGuest =
       typeof window !== "undefined" &&
       localStorage.getItem("kanso_guest_mode") === "true";
@@ -84,7 +87,7 @@ export const habitMutations = {
       color: input.color || "#4B6CB7",
       icon: input.icon || null,
       archived_at: input.archived_at ?? null,
-      start_date: input.start_date || new Date().toISOString().split("T")[0],
+      start_date: input.start_date || format(new Date(), "yyyy-MM-dd"),
       habit_type,
       frequency_count: input.frequency_count ?? null,
       ...frequencyColumns(input),
@@ -124,7 +127,7 @@ export const habitMutations = {
     const { data, error } = await supabase
       .from("habits")
       .insert({
-        id: crypto.randomUUID(),
+        id: input._clientId || crypto.randomUUID(),
         user_id: user.id,
         ...habitData,
         sort_order: nextSortOrder,

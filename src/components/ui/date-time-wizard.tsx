@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { useTimeFormat } from "@/lib/hooks/useTimeFormat";
 import { useScrollIsolation } from "@/lib/hooks/useScrollIsolation";
@@ -20,11 +20,8 @@ interface DateTimeWizardProps {
   onClose: () => void;
   showTime?: boolean;
   allowPastDates?: boolean;
-  /** Constrain content height to fit inside a Popover using the Radix available-height CSS var */
   compact?: boolean;
-  /** Called when the "Evening" quick preset is selected */
   onEveningSelect?: () => void;
-  /** Whether to show a Clear button to unset the date */
   allowClear?: boolean;
 }
 
@@ -46,7 +43,6 @@ export function DateTimeWizard({
   const [tempDate, setTempDate] = useState<Date | undefined>(date);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Sync tempDate if prop changes externally (optional, but good practice)
   useEffect(() => {
     setTempDate(date);
   }, [date]);
@@ -59,13 +55,11 @@ export function DateTimeWizard({
       return;
     }
 
-    // Preserve time if already set, or set default time (12:00 PM / Noon)
     const updatedDate = new Date(newDate);
     if (tempDate) {
-      // Date already exists, keep its time
       updatedDate.setHours(tempDate.getHours(), tempDate.getMinutes());
     } else {
-      // New date, default to 12:00 PM (noon) instead of 9 AM
+      // Default to 12:00 PM (noon) instead of start-of-day 00:00 or 9 AM to avoid edge cases around date boundary
       updatedDate.setHours(12, 0, 0, 0);
     }
 
@@ -73,7 +67,6 @@ export function DateTimeWizard({
   };
 
   const handleTimeChange = (newTime: Date) => {
-    // SegmentedTimePicker returns a Date object with correct time parts
     setTempDate(newTime);
   };
 
@@ -94,29 +87,34 @@ export function DateTimeWizard({
 
   return (
     <div className="flex flex-col w-full max-w-[320px] mx-auto bg-popover rounded-md overflow-hidden">
-      {/* Header / Tabs */}
-      <div className="flex flex-col p-2 border-b bg-muted/40 gap-1.5">
+      <div className="flex flex-col px-2.5 pt-2.5 pb-1.5 border-b border-border gap-1">
         {title && (
-          <div className="px-1 text-xs font-semibold text-foreground/85 tracking-wide">
+          <div className="px-1 text-xs font-semibold text-foreground tracking-wide">
             {title}
           </div>
         )}
         {description && (
-          <div className="px-1 text-[11px] text-muted-foreground leading-normal">
+          <div className="px-1 text-[11px] text-muted-foreground leading-snug">
             {description}
           </div>
         )}
         <Tabs
           value={step}
           onValueChange={(v) => {
+            const nextStep = v as "date" | "time";
             trigger("toggle");
-            setStep(v as "date" | "time");
+            if (nextStep === "time" && !tempDate) {
+              const todayNoon = new Date();
+              todayNoon.setHours(12, 0, 0, 0);
+              setTempDate(todayNoon);
+            }
+            setStep(nextStep);
           }}
           className="w-full"
         >
           <TabsList
             className={cn(
-              "grid w-full h-9 p-0.5 bg-muted/50",
+              "grid w-full h-9 p-0.5 bg-muted",
               showTime ? "grid-cols-2" : "grid-cols-1",
             )}
           >
@@ -130,8 +128,7 @@ export function DateTimeWizard({
             {showTime && (
               <TabsTrigger
                 value="time"
-                disabled={!tempDate}
-                className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                className="text-xs font-medium data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-sm"
               >
                 <Clock aria-hidden="true" strokeWidth={2.25} />
                 {tempDate ? formatTime(tempDate) : "Time"}
@@ -141,10 +138,9 @@ export function DateTimeWizard({
         </Tabs>
       </div>
 
-      {/* Content Area */}
       <div
         ref={scrollRef}
-        className="p-2 sm:p-3 overflow-y-auto overscroll-contain"
+        className="p-2 sm:p-2.5 overflow-y-auto overscroll-contain"
         style={
           compact
             ? {
@@ -156,89 +152,106 @@ export function DateTimeWizard({
       >
         {step === "date" ? (
           <div className="animate-in fade-in zoom-in-95 duration-200">
-            <Calendar
-              mode="single"
-              selected={tempDate}
-              onSelect={handleDateSelect}
-              disabled={
-                allowPastDates
-                  ? undefined
-                  : { before: new Date(new Date().setHours(0, 0, 0, 0)) }
-              }
-              captionLayout="label"
-              startMonth={new Date(new Date().getFullYear() - 1, 0)}
-              endMonth={new Date(new Date().getFullYear() + 5, 11)}
-              autoFocus
-              className="rounded-md border-0 w-full flex justify-center p-3"
-              classNames={{
-                month: "space-y-4 w-full",
-                month_grid: "w-full border-collapse space-y-1",
-                weekdays: "flex w-full justify-between",
-                week: "flex w-full justify-between mt-2",
-
-                day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 rounded-md hover:bg-accent hover:text-accent-foreground",
-                weekday:
-                  "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
-              }}
-            />
-            {/* Quick Presets */}
-            <div className="grid grid-cols-3 gap-2 mt-3 p-1 bg-muted/20 rounded-md border border-border/50">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-[10px] sm:text-xs font-semibold hover:bg-background hover:shadow-sm"
-                onClick={() => {
-                  trigger("tick");
-                  const today = new Date();
-                  today.setHours(12, 0, 0, 0); // Default Noon
-                  handleDateSelect(today);
+            <div className="bg-card border border-border rounded-lg p-1.5 flex justify-center">
+              <Calendar
+                mode="single"
+                selected={tempDate}
+                onSelect={handleDateSelect}
+                disabled={
+                  allowPastDates
+                    ? undefined
+                    : { before: new Date(new Date().setHours(0, 0, 0, 0)) }
+                }
+                captionLayout="label"
+                startMonth={new Date(new Date().getFullYear() - 1, 0)}
+                endMonth={new Date(new Date().getFullYear() + 5, 11)}
+                autoFocus
+                className="w-full flex justify-center p-0"
+                classNames={{
+                  month: "space-y-2 w-full",
+                  month_grid: "w-full border-collapse",
+                  weekdays: "flex w-full justify-between",
+                  week: "flex w-full justify-between mt-1",
+                  day: "p-0 font-normal",
+                  weekday:
+                    "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
                 }}
-              >
-                Today
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-[10px] sm:text-xs font-semibold hover:bg-background hover:shadow-sm"
-                onClick={() => {
-                  trigger("tick");
-                  const tomorrow = new Date();
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  tomorrow.setHours(12, 0, 0, 0); // Default Noon
-                  handleDateSelect(tomorrow);
-                }}
-              >
-                Tomorrow
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-[10px] sm:text-xs font-bold text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 hover:text-purple-700 dark:hover:text-purple-300"
-                onClick={() => {
-                  trigger("tick");
-                  const evening = new Date();
-                  evening.setHours(18, 0, 0, 0); // 6 PM
-                  setTempDate(evening);
-                  onEveningSelect?.();
-                }}
-              >
-                Evening
-              </Button>
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 mt-2">
+              {[
+                {
+                  label: "Today",
+                  hint: format(new Date(), "EEE"),
+                  onClick: () => {
+                    const today = new Date();
+                    today.setHours(12, 0, 0, 0);
+                    handleDateSelect(today);
+                  },
+                },
+                {
+                  label: "Tomorrow",
+                  hint: format(addDays(new Date(), 1), "EEE"),
+                  onClick: () => {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(12, 0, 0, 0);
+                    handleDateSelect(tomorrow);
+                  },
+                },
+                {
+                  label: "Next Week",
+                  hint: format(addDays(new Date(), 7), "EEE"),
+                  onClick: () => {
+                    const nextWeek = new Date();
+                    nextWeek.setDate(nextWeek.getDate() + 7);
+                    nextWeek.setHours(12, 0, 0, 0);
+                    handleDateSelect(nextWeek);
+                  },
+                },
+                {
+                  label: "Evening",
+                  hint: "6pm",
+                  onClick: () => {
+                    const evening = new Date();
+                    evening.setHours(18, 0, 0, 0);
+                    setTempDate(evening);
+                    onEveningSelect?.();
+                  },
+                },
+              ].map(({ label, hint, onClick }) => (
+                <Button
+                  key={label}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  aria-label={label}
+                  className="h-9 sm:h-8 px-2.5 text-xs bg-card hover:bg-accent border border-border font-medium flex items-center justify-between text-foreground rounded-md"
+                  onClick={() => {
+                    trigger("tick");
+                    onClick();
+                  }}
+                >
+                  <span>{label}</span>
+                  <span
+                    aria-hidden="true"
+                    className="font-mono tabular-nums text-[11px] text-muted-foreground"
+                  >
+                    {hint}
+                  </span>
+                </Button>
+              ))}
             </div>
           </div>
         ) : (
           <div className="flex flex-col items-center animate-in slide-in-from-right-5 fade-in duration-200">
-            <div className="text-sm font-medium text-muted-foreground mb-4">
-              Set Time for {tempDate ? format(tempDate, "MMMM d") : "Today"}
-            </div>
-
             <SegmentedTimePicker
               value={tempDate || new Date()}
               onChange={handleTimeChange}
+              onConfirm={onSave}
             />
 
-            {/* Quick Time Presets */}
-            <div className="grid grid-cols-4 gap-1.5 mt-4 p-1 bg-muted/20 rounded-md border border-border/50">
+            <div className="grid grid-cols-2 gap-1.5 mt-3 w-full">
               {[
                 { label: "Morning", hour: 9 },
                 { label: "Afternoon", hour: 13 },
@@ -247,9 +260,10 @@ export function DateTimeWizard({
               ].map(({ label, hour }) => (
                 <Button
                   key={label}
+                  type="button"
                   variant="ghost"
                   size="sm"
-                  className="h-8 text-[10px] sm:text-xs font-semibold hover:bg-background hover:shadow-sm flex flex-col gap-0 leading-none py-1"
+                  className="h-9 sm:h-8 px-2.5 text-xs bg-card hover:bg-accent border border-border rounded-md flex items-center justify-between font-medium text-foreground"
                   onClick={() => {
                     trigger("tick");
                     const d = new Date(tempDate || new Date());
@@ -258,7 +272,7 @@ export function DateTimeWizard({
                   }}
                 >
                   <span>{label}</span>
-                  <span className="text-[9px] font-normal opacity-60">
+                  <span className="font-mono tabular-nums text-[11px] text-muted-foreground">
                     {hour < 12
                       ? `${hour}am`
                       : hour === 12
@@ -270,32 +284,31 @@ export function DateTimeWizard({
             </div>
           </div>
         )}
+      </div>
 
-        <div className="mt-2 w-full flex items-center gap-2">
-          {showClear && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 flex-1 h-9 sm:h-8 text-muted-foreground hover:text-foreground"
-              onClick={handleClear}
-            >
-              <X className="w-3.5 h-3.5" strokeWidth={2.25} />
-              Clear
-            </Button>
-          )}
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-t border-border">
+        {showClear ? (
           <Button
+            type="button"
+            variant="ghost"
             size="sm"
-            className={cn(
-              "gap-1.5 h-9 sm:h-8",
-              showClear ? "flex-1" : "w-full",
-            )}
-            onClick={onSave}
+            className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-accent gap-1.5"
+            onClick={handleClear}
           >
-            <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
-            Done
+            <X className="w-3.5 h-3.5" strokeWidth={2.25} />
+            Clear
           </Button>
-        </div>
+        ) : (
+          <div />
+        )}
+        <Button
+          size="sm"
+          className="h-10 px-5 sm:h-8 sm:px-4 w-auto gap-1.5"
+          onClick={onSave}
+        >
+          <Check className="w-3.5 h-3.5" strokeWidth={2.25} />
+          Done
+        </Button>
       </div>
     </div>
   );

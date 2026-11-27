@@ -26,7 +26,7 @@ const YearDayButton = ({
     <button
       {...props}
       className={cn(
-        "h-8 w-8 p-0 font-bold rounded-lg transition-all flex items-center justify-center relative select-none",
+        "h-8 w-8 p-0 font-bold rounded-lg transition-colors duration-150 flex items-center justify-center relative select-none",
         "hover:bg-brand/10 hover:text-foreground text-muted-foreground/80",
         isToday &&
           "bg-brand text-white !opacity-100 shadow-sm hover:!bg-brand/90 hover:!text-white",

@@ -95,7 +95,7 @@ function TasksPageHeaderBase({
         <TabsList>
           <TabsTrigger
             value="list"
-            className="relative min-w-9 px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+            className="relative h-9 sm:h-8 min-w-10 sm:min-w-9 px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
             title="List View (Shift+1)"
           >
             {activeView === "list" && (
@@ -113,7 +113,7 @@ function TasksPageHeaderBase({
           </TabsTrigger>
           <TabsTrigger
             value="board"
-            className="relative min-w-9 px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
+            className="relative h-9 sm:h-8 min-w-10 sm:min-w-9 px-2.5 data-[state=active]:bg-transparent data-[state=active]:border-transparent data-[state=active]:shadow-none"
             title="Board View (Shift+2)"
           >
             {activeView === "board" && (
@@ -147,7 +147,7 @@ function TasksPageHeaderBase({
               size="sm"
               aria-label="Filter and sort options"
               className={cn(
-                "p-0 hover:bg-foreground/5 shrink-0 transition-colors h-8 w-8 rounded-md",
+                "p-0 hover:bg-accent shrink-0 transition-colors h-9 w-9 sm:h-8 sm:w-8 rounded-md",
                 !isFilterActive && "hover:bg-transparent",
               )}
               onPointerDown={() => trigger("toggle")}

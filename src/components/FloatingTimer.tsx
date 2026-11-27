@@ -11,27 +11,27 @@ import { useMeasuredOffset } from "@/lib/hooks/useMeasuredOffset";
 import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useTimerStore } from "@/lib/store/timerStore";
+import { getDurationForMode } from "@/lib/types/timer";
 import { useTimer } from "@/components/TimerProvider";
 import { SEIJAKU_SPRING } from "@/lib/motion";
+import { cn } from "@/lib/utils";
 
 export const FloatingTimer = memo(function FloatingTimer() {
   const mode = useTimerStore((s) => s.state.mode);
   const isRunning = useTimerStore((s) => s.state.isRunning);
   const remainingSeconds = useTimerStore((s) => s.state.remainingSeconds);
   const completedSessions = useTimerStore((s) => s.state.completedSessions);
-  const totalSeconds = useTimerStore((s) => {
-    const settings = s.settings;
-    switch (s.state.mode) {
-      case "focus":
-        return (settings?.focusDuration ?? 25) * 60;
-      case "shortBreak":
-        return (settings?.shortBreakDuration ?? 5) * 60;
-      case "longBreak":
-        return (settings?.longBreakDuration ?? 15) * 60;
-      default:
-        return 25 * 60;
-    }
-  });
+  const sessionDurationSeconds = useTimerStore(
+    (s) => s.state.sessionDurationSeconds,
+  );
+  const totalSeconds = useTimerStore(
+    (s) =>
+      s.state.sessionDurationSeconds ??
+      getDurationForMode(
+        s.state.mode as "focus" | "shortBreak" | "longBreak",
+        s.settings,
+      ),
+  );
   // useTimer(), not useTimerActions(): needs `start`, which isn't in the
   // stable actions-only slice.
   const { start, pause } = useTimer();
@@ -52,7 +52,18 @@ export const FloatingTimer = memo(function FloatingTimer() {
     }
   }, [isRunning, pathname]);
 
-  const isSessionActive = isRunning || remainingSeconds < totalSeconds;
+  const isSessionActive =
+    isRunning ||
+    sessionDurationSeconds != null ||
+    remainingSeconds < totalSeconds;
+
+  const progress =
+    totalSeconds > 0
+      ? Math.min(
+          100,
+          Math.max(0, ((totalSeconds - remainingSeconds) / totalSeconds) * 100),
+        )
+      : 0;
 
   const shouldShow =
     isSessionActive &&
@@ -104,7 +115,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
               : { opacity: 0, y: 100, scale: 0.8 }
           }
           transition={prefersReducedMotion ? { duration: 0 } : SEIJAKU_SPRING}
-          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[var(--z-floating)] bg-card border border-border rounded-xl shadow-sm p-4 min-w-[200px] select-none"
+          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-[var(--z-floating)] bg-card border border-border rounded-xl shadow-sm p-4 min-w-[200px] select-none overflow-hidden"
           style={{ touchAction: "none" }}
         >
           <div className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground mb-1 text-center">
@@ -116,14 +127,17 @@ export const FloatingTimer = memo(function FloatingTimer() {
           </div>
 
           <div className="text-3xl font-light font-mono tracking-tight text-foreground tabular-nums text-center mb-3">
-            <AnimatedCountdown seconds={remainingSeconds} />
+            <AnimatedCountdown
+              seconds={remainingSeconds}
+              isRunning={isRunning}
+            />
           </div>
 
           <div className="flex items-center justify-center gap-2">
             <button
               onClick={handlePlayPause}
               aria-label={isRunning ? "Pause timer" : "Start timer"}
-              className="h-10 w-10 rounded-full bg-brand text-brand-foreground flex items-center justify-center hover:shadow-brand/20 active:scale-95 transition-all shadow-xs"
+              className="h-10 w-10 rounded-full bg-brand text-brand-foreground flex items-center justify-center hover:shadow-brand/20 active:scale-95 transition-transform duration-150 shadow-xs cursor-pointer"
             >
               {isRunning ? (
                 <Pause className="h-4 w-4 fill-current" strokeWidth={2.25} />
@@ -138,7 +152,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
             <button
               onClick={handleMaximize}
               aria-label="Maximize timer"
-              className="h-8 w-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center hover:bg-secondary/80 active:scale-95 transition-all"
+              className="h-9 w-9 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center hover:bg-accent active:scale-95 transition-colors duration-150 cursor-pointer"
             >
               <Maximize2 className="h-3.5 w-3.5" strokeWidth={2.25} />
             </button>
@@ -146,7 +160,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
             <button
               onClick={handleClose}
               aria-label="Close timer"
-              className="h-8 w-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center hover:bg-secondary/80 active:scale-95 transition-all"
+              className="h-9 w-9 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center hover:bg-accent active:scale-95 transition-colors duration-150 cursor-pointer"
             >
               <X className="h-3.5 w-3.5" strokeWidth={2.25} />
             </button>
@@ -158,6 +172,19 @@ export const FloatingTimer = memo(function FloatingTimer() {
               : mode === "longBreak"
                 ? "Cycle Complete"
                 : `Break after Session ${completedSessions}`}
+          </div>
+
+          <div
+            aria-hidden="true"
+            className="absolute bottom-0 left-0 right-0 h-[2px] bg-muted overflow-hidden"
+          >
+            <div
+              className={cn(
+                "h-full w-full transition-transform duration-300 ease-out motion-reduce:transition-none",
+                isRunning ? "bg-brand" : "bg-muted-foreground",
+              )}
+              style={{ transform: `translateX(-${100 - progress}%)` }}
+            />
           </div>
         </m.div>
       )}
