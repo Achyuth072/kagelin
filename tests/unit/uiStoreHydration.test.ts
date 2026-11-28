@@ -42,17 +42,24 @@ describe("uiStore Hydration", () => {
     expect(state.timeFormat).toBe("system");
     expect(state.viewMode).toBe("list");
     expect(state.sortBy).toBe("date");
+    expect(state.showDailyBrief).toBe(true);
   });
 
   it("should rehydrate values from localStorage and set _hasHydrated to true", async () => {
     const state = await rehydrateFrom(
-      { timeFormat: "24h", viewMode: "list", sortBy: "priority" },
+      {
+        timeFormat: "24h",
+        viewMode: "list",
+        sortBy: "priority",
+        showDailyBrief: false,
+      },
       1,
     );
 
     expect(state._hasHydrated).toBe(true);
     expect(state.timeFormat).toBe("24h");
     expect(state.viewMode).toBe("list");
+    expect(state.showDailyBrief).toBe(false);
   });
 
   it.each(["grid", "split"])(

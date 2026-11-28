@@ -1,7 +1,7 @@
 "use client";
 
 import React, { memo, useState, useEffect } from "react";
-import { Moon } from "lucide-react";
+import { Moon, Plus } from "lucide-react";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -84,6 +84,7 @@ interface TaskListViewProps {
   isDesktop: boolean;
   triggerHaptic: (signature?: "tick" | "toggle" | "thud" | "success") => void;
   setActiveTaskId: (taskId: string) => void;
+  onAddTask?: () => void;
 }
 
 function TaskListViewBase({
@@ -100,6 +101,7 @@ function TaskListViewBase({
   isDesktop,
   triggerHaptic,
   setActiveTaskId,
+  onAddTask,
 }: TaskListViewProps) {
   const { completed } = processedTasks;
   const groups = groupTasks;
@@ -163,6 +165,24 @@ function TaskListViewBase({
       className="px-4 md:px-6 pb-12 md:pb-8 flex flex-col gap-8 touch-manipulation"
       data-testid="task-list-container"
     >
+      {onAddTask && (
+        <button
+          type="button"
+          onClick={() => {
+            triggerHaptic("toggle");
+            onAddTask();
+          }}
+          className="w-full flex items-center justify-between h-10 px-3 -mb-4 rounded-lg border border-dashed border-border hover:border-border-strong hover:bg-accent text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
+        >
+          <span className="inline-flex items-center gap-2">
+            <Plus className="h-4 w-4" strokeWidth={2.25} />
+            <span>Add a task…</span>
+          </span>
+          <kbd className="hidden sm:inline-flex font-mono text-[11px] bg-secondary border border-border rounded px-1.5 py-0.5">
+            N
+          </kbd>
+        </button>
+      )}
       {groups && shouldVirtualizeGroups && (
         <SortableContext
           id="grouped-tasks"

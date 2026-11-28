@@ -190,6 +190,8 @@ describe("TaskList DnD layout shift protection", () => {
         setCustomSortEnteredViaDrag: vi.fn(),
         habitViewMode: "grid",
         setHabitViewMode: vi.fn(),
+        showDailyBrief: true,
+        setShowDailyBrief: vi.fn(),
         statsPeriod: "30d",
         setStatsPeriod: vi.fn(),
         timeFormat: "system",

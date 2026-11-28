@@ -1086,6 +1086,7 @@ function TaskListBase({
                 isDesktop={isDesktop}
                 triggerHaptic={triggerHaptic}
                 setActiveTaskId={setActiveTaskId}
+                onAddTask={() => openAddTask()}
               />
             )}
           </div>

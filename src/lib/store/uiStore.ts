@@ -66,6 +66,9 @@ interface UiState {
   habitViewMode: "grid" | "compact";
   setHabitViewMode: (mode: "grid" | "compact") => void;
 
+  showDailyBrief: boolean;
+  setShowDailyBrief: (show: boolean) => void;
+
   statsPeriod: StatsPeriod;
   setStatsPeriod: (period: StatsPeriod) => void;
   timeFormat: "12h" | "24h" | "system";
@@ -170,6 +173,9 @@ export const useUiStore = create<UiState>()(
 
       habitViewMode: "grid",
       setHabitViewMode: (mode) => set({ habitViewMode: mode }),
+
+      showDailyBrief: true,
+      setShowDailyBrief: (show) => set({ showDailyBrief: show }),
 
       statsPeriod: "30d",
       setStatsPeriod: (period) => set({ statsPeriod: period }),

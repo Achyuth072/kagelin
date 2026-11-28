@@ -18,6 +18,7 @@ import {
   KeyRound,
   LogOut,
   Palette,
+  PanelTop,
   RotateCcw,
   Shield,
   Sliders,
@@ -51,6 +52,7 @@ import {
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { PwaInstallRow } from "@/components/settings/PwaInstallRow";
 import { ShortcutTipsRow } from "@/components/settings/ShortcutTipsRow";
+import { ToggleRow } from "@/components/settings/ToggleRow";
 import { DeleteUserDataDialog } from "@/components/settings/DeleteUserDataDialog";
 import { BackupSyncSettings } from "@/components/settings/BackupSyncSettings";
 import { AccountSection } from "@/components/settings/AccountSection";
@@ -340,6 +342,8 @@ export function SettingsClient({ version }: SettingsClientProps) {
   const setHapticsEnabled = useUiStore((state) => state.setHapticsEnabled);
   const timeFormat = useUiStore((state) => state.timeFormat);
   const setTimeFormat = useUiStore((state) => state.setTimeFormat);
+  const showDailyBrief = useUiStore((state) => state.showDailyBrief);
+  const setShowDailyBrief = useUiStore((state) => state.setShowDailyBrief);
   const goals = useUiStore((state) => state.goals);
   const setGoals = useUiStore((state) => state.setGoals);
   const { user, signOut, signOutAllDevices, isGuestMode } = useAuth();
@@ -741,6 +745,17 @@ export function SettingsClient({ version }: SettingsClientProps) {
               </div>
 
               {isDesktop && <ShortcutTipsRow />}
+
+              <ToggleRow
+                icon={PanelTop}
+                title="Daily Brief"
+                description="Show today's tasks, next event, and focus summary on Home"
+                checked={showDailyBrief}
+                onChange={(checked) => {
+                  trigger("toggle");
+                  setShowDailyBrief(checked);
+                }}
+              />
             </div>
           </CollapsibleSection>
 

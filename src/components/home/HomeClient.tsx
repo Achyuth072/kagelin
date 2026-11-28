@@ -12,6 +12,7 @@ import { PlusIcon, Loader2 } from "lucide-react";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { PwaInstallHint } from "@/components/home/PwaInstallHint";
 import { StartHereCard } from "@/components/home/StartHereCard";
+import { DailyBriefStrip } from "@/components/home/DailyBriefStrip";
 import type {
   SortOption,
   GroupOption,
@@ -35,6 +36,7 @@ export function HomeClient() {
   const setSortBy = useUiStore((state) => state.setSortBy);
   const setGroupBy = useUiStore((state) => state.setGroupBy);
   const setViewMode = useUiStore((state) => state.setViewMode);
+  const showDailyBrief = useUiStore((state) => state.showDailyBrief);
   const { openAddTask } = useTaskActions();
   const { trigger } = useHaptic();
 
@@ -134,6 +136,10 @@ export function HomeClient() {
       </div>
 
       <StartHereCard />
+
+      {showDailyBrief && (
+        <DailyBriefStrip projectId={currentProjectId} filter={filter} />
+      )}
 
       <div
         className="flex-1 min-h-0 transition-opacity duration-150"
