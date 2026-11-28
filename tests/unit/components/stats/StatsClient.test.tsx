@@ -1,6 +1,24 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { StatsClient } from "@/components/stats/StatsClient";
+
+let mockTasksState = {
+  data: [{ id: "t1" }] as Array<{ id: string }> | undefined,
+  isLoading: false,
+};
+let mockHabitsState = {
+  data: [
+    {
+      id: "h1",
+      name: "Habit 1",
+      color: "#3b82f6",
+      entries: [],
+    },
+  ] as
+    Array<{ id: string; name: string; color: string; entries: [] }> | undefined,
+  isLoading: false,
+};
+let mockHeatmapState = { activeDays: 20, isLoading: false };
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -45,25 +63,15 @@ vi.mock("@/lib/hooks/useProjects", () => ({
 }));
 
 vi.mock("@/lib/hooks/useTasks", () => ({
-  useTasks: () => ({ data: [{ id: "t1" }], isLoading: false }),
+  useTasks: () => mockTasksState,
 }));
 
 vi.mock("@/lib/hooks/useHabits", () => ({
-  useHabits: () => ({
-    data: [
-      {
-        id: "h1",
-        name: "Habit 1",
-        color: "#3b82f6",
-        entries: [],
-      },
-    ],
-    isLoading: false,
-  }),
+  useHabits: () => mockHabitsState,
 }));
 
 vi.mock("@/lib/hooks/useHeatmapData", () => ({
-  useHeatmapData: () => ({ activeDays: 20, isLoading: false }),
+  useHeatmapData: () => mockHeatmapState,
 }));
 
 // Mock dynamic imports to keep test fast and focused
@@ -76,6 +84,15 @@ vi.mock("next/dynamic", () => ({
 }));
 
 describe("StatsClient", () => {
+  beforeEach(() => {
+    mockTasksState = { data: [{ id: "t1" }], isLoading: false };
+    mockHabitsState = {
+      data: [{ id: "h1", name: "Habit 1", color: "#3b82f6", entries: [] }],
+      isLoading: false,
+    };
+    mockHeatmapState = { activeDays: 20, isLoading: false };
+  });
+
   it("renders the 6 core production metric cards in responsive grid", () => {
     const { container } = render(<StatsClient />);
 
@@ -103,5 +120,19 @@ describe("StatsClient", () => {
       ".grid-cols-2.md\\:grid-cols-3.xl\\:grid-cols-6",
     );
     expect(grid).toBeInTheDocument();
+  });
+
+  it("renders core stats cards immediately while tasks, habits, and heatmap are still loading", () => {
+    mockTasksState = { data: undefined, isLoading: true };
+    mockHabitsState = { data: undefined, isLoading: true };
+    mockHeatmapState = { activeDays: 0, isLoading: true };
+
+    render(<StatsClient />);
+
+    expect(screen.getByText("Total Focus")).toBeInTheDocument();
+    expect(screen.getByText("24.5h")).toBeInTheDocument();
+    expect(
+      screen.queryByText(/start a focus session/i),
+    ).not.toBeInTheDocument();
   });
 });

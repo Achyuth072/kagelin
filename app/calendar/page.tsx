@@ -1,16 +1,34 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, startTransition } from "react";
+import dynamic from "next/dynamic";
 import { startOfWeek } from "date-fns";
 import { useCalendarStore } from "@/lib/calendar/store";
 import { CalendarToolbar } from "@/components/calendar/CalendarToolbar";
 import { CalendarReconnectBanner } from "@/components/calendar/CalendarReconnectBanner";
-import { TimeGrid } from "@/components/calendar/TimeGrid";
-import { MobileWeekGrid } from "@/components/calendar/MobileWeekGrid";
-import { YearView } from "@/components/calendar/YearView";
 import { MonthView } from "@/components/calendar/MonthView";
-import { ScheduleView } from "@/components/calendar/ScheduleView";
 import { useCalendarEvents } from "@/lib/hooks/useCalendarEvents";
+
+const TimeGrid = dynamic(
+  () => import("@/components/calendar/TimeGrid").then((m) => m.TimeGrid),
+  { ssr: false },
+);
+const MobileWeekGrid = dynamic(
+  () =>
+    import("@/components/calendar/MobileWeekGrid").then(
+      (m) => m.MobileWeekGrid,
+    ),
+  { ssr: false },
+);
+const YearView = dynamic(
+  () => import("@/components/calendar/YearView").then((m) => m.YearView),
+  { ssr: false },
+);
+const ScheduleView = dynamic(
+  () =>
+    import("@/components/calendar/ScheduleView").then((m) => m.ScheduleView),
+  { ssr: false },
+);
 import { useCalendarSync } from "@/lib/hooks/useCalendarSync";
 import { useIsMobile } from "@/lib/hooks/useIsMobile";
 import type { CalendarEventUI } from "@/lib/types/calendar-event";
@@ -56,8 +74,10 @@ export default function CalendarPage() {
 
   const handleDateNumberClick = useCallback(
     (date: Date) => {
-      setDate(date);
-      setView("day");
+      startTransition(() => {
+        setDate(date);
+        setView("day");
+      });
     },
     [setDate, setView],
   );

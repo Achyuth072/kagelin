@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { CheckSquare, Calendar, BarChart3 } from "lucide-react";
-import * as m from "motion/react-m";
 import { useHaptic } from "@/lib/hooks/useHaptic";
 import { cn } from "@/lib/utils";
 
@@ -15,13 +14,7 @@ const navItems = [
 
 export function MobileNav() {
   const pathname = usePathname();
-  const router = useRouter();
   const { trigger, isPhone } = useHaptic();
-
-  // Prefetch all routes on mount for instant navigation
-  useEffect(() => {
-    navItems.forEach((item) => router.prefetch(item.path));
-  }, [router]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-sidebar md:hidden nav-safe-bottom">
@@ -31,15 +24,15 @@ export function MobileNav() {
           const isActive = pathname === item.path;
 
           return (
-            <m.button
+            <Link
               key={item.path}
-              type="button"
-              onTapStart={() => trigger("toggle")} // Subtle vibration for nav
-              whileTap={isPhone ? { scale: 0.95 } : {}}
-              onClick={() => router.push(item.path)}
+              href={item.path}
+              prefetch={true}
+              onPointerDown={() => trigger("toggle")} // Subtle vibration for nav
               aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center justify-center flex-1 gap-1 py-[var(--mobile-nav-item-pad)] transition-colors duration-150 cursor-pointer outline-none",
+                "flex flex-col items-center justify-center flex-1 gap-1 py-[var(--mobile-nav-item-pad)] transition-[color,transform] duration-150 cursor-pointer outline-none",
+                isPhone && "active:scale-95",
                 isActive
                   ? "text-brand-text"
                   : "text-muted-foreground hover:text-foreground",
@@ -49,7 +42,7 @@ export function MobileNav() {
               <span className="text-xs font-medium leading-4">
                 {item.label}
               </span>
-            </m.button>
+            </Link>
           );
         })}
       </div>

@@ -12,7 +12,7 @@ import { usePrefersReducedMotion } from "@/lib/hooks/usePrefersReducedMotion";
 import { useUiStore } from "@/lib/store/uiStore";
 import { useTimerStore } from "@/lib/store/timerStore";
 import { getDurationForMode } from "@/lib/types/timer";
-import { useTimer } from "@/components/TimerProvider";
+import { useTimerActions } from "@/components/TimerProvider";
 import { SEIJAKU_SPRING } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -32,9 +32,7 @@ export const FloatingTimer = memo(function FloatingTimer() {
         s.settings,
       ),
   );
-  // useTimer(), not useTimerActions(): needs `start`, which isn't in the
-  // stable actions-only slice.
-  const { start, pause } = useTimer();
+  const { start, pause } = useTimerActions();
 
   const pathname = usePathname();
   const router = useRouter();

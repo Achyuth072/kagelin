@@ -101,7 +101,7 @@ export function StatsClient() {
   const { data: habits, isLoading: habitsLoading } = useHabits();
   const { activeDays, isLoading: heatmapLoading } = useHeatmapData();
 
-  if (isLoading || tasksLoading || habitsLoading || heatmapLoading) {
+  if (isLoading) {
     return (
       <div className="px-4 md:px-6 py-6">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -124,7 +124,14 @@ export function StatsClient() {
     );
   }
 
-  if (!openTasks?.length && !habits?.length && activeDays === 0) {
+  if (
+    !tasksLoading &&
+    !habitsLoading &&
+    !heatmapLoading &&
+    !openTasks?.length &&
+    !habits?.length &&
+    activeDays === 0
+  ) {
     return (
       <div className="px-4 md:px-6 py-6">
         <h1 className="type-h1 text-2xl md:text-3xl">Statistics</h1>

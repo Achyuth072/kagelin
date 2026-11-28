@@ -196,7 +196,7 @@ function ChangelogPopupWatcher() {
   );
 }
 
-function GlobalOverlays({
+const GlobalOverlays = React.memo(function GlobalOverlays({
   commandOpen,
   onCommandOpenChange,
   isFocus,
@@ -261,7 +261,7 @@ function GlobalOverlays({
       {!isFocus && <TelemetryConsentPrompt />}
     </>
   );
-}
+});
 
 function ChangelogManualTrigger() {
   const [forceVersion, setForceVersion] = useState<string | null>(() => {

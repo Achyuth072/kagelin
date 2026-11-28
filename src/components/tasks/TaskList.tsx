@@ -49,8 +49,16 @@ import { useIsAnyModalOpen } from "@/lib/hooks/useIsAnyModalOpen";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useTaskViewData, getBoardColumns } from "@/lib/hooks/useTaskViewData";
 import { TaskListView } from "./TaskListView";
-import { TaskBoard } from "./TaskBoard";
+import dynamic from "next/dynamic";
 import { TaskGhost } from "./TaskGhost";
+
+const TaskBoard = dynamic(
+  () => import("./TaskBoard").then((m) => m.TaskBoard),
+  {
+    ssr: false,
+    loading: () => <BoardViewSkeleton />,
+  },
+);
 import { useTimerStore } from "@/lib/store/timerStore";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
