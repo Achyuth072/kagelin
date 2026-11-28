@@ -1,6 +1,5 @@
 "use client";
 
-import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import { useTimer } from "@/components/TimerProvider";
 import { buttonVariants, Button } from "@/components/ui/button";
@@ -293,187 +292,165 @@ export default function FocusPage() {
 
       <FullscreenToggle />
 
-      <AnimatePresence mode="wait">
-        {!isPiPActive ? (
-          <m.div
-            key="timer-content"
-            initial={
-              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10 }
-            }
-            animate={{ opacity: 1, y: 0 }}
-            exit={
-              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -10 }
-            }
-            transition={prefersReducedMotion ? { duration: 0 } : undefined}
-            className="flex flex-col items-center text-center"
-          >
-            <div className="flex items-center justify-center gap-2">
-              <h1 className="type-ui font-medium uppercase tracking-widest text-muted-foreground">
-                {MODE_LABELS[state.mode]}
-              </h1>
-              {isPausedMidSession && (
-                <span className="bg-muted border border-border text-muted-foreground font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-md">
-                  PAUSED
-                </span>
-              )}
-            </div>
-
-            <div className={cn("mt-2", chromeDimCls)}>
-              <FocusSyncIndicator />
-            </div>
-
-            <div className={chromeDimCls}>
-              <FocusTaskPicker />
-              <FocusSubtaskList />
-            </div>
-
-            <div
-              role="timer"
-              aria-label={`${MODE_LABELS[state.mode]} timer, ${Math.floor(state.remainingSeconds / 60)} minutes ${state.remainingSeconds % 60} seconds remaining`}
-              className={cn(
-                "text-7xl sm:text-8xl md:text-[10rem] font-extralight font-mono tracking-tighter text-foreground tabular-nums mt-6 leading-none transition-opacity duration-200",
-                isPausedMidSession && "opacity-75",
-              )}
-            >
-              <AnimatedCountdown
-                seconds={state.remainingSeconds}
-                isRunning={state.isRunning}
-              />
-            </div>
-
-            <div className="w-full max-w-[240px] mt-12 mb-6">
-              <Progress
-                value={progress}
-                className="h-[3px] opacity-100 bg-muted"
-                indicatorClassName={
-                  isPausedMidSession ? "bg-muted-foreground" : "bg-brand"
-                }
-              />
-            </div>
-
-            <div className="flex flex-col items-center gap-2 mb-10">
-              <p className="type-ui text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {state.mode === "focus"
-                  ? `Session ${state.completedSessions + 1} of ${
-                      settings.sessionsBeforeLongBreak
-                    }`
-                  : state.mode === "longBreak"
-                    ? "Cycle Complete"
-                    : `Break after Session ${state.completedSessions}`}
-              </p>
-
-              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary border border-border">
-                <Target className="h-3 w-3 text-primary" strokeWidth={2.25} />
-                <span className="type-ui text-[10px] font-semibold text-primary">
-                  {todaySessionsCount} TODAY
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <StopSessionButton
-                className={cn(sideControlCls, chromeDimCls)}
-                isPhone={isPhone}
-                onStopExecuted={() => {
-                  if (isPiPActive) closePiP();
-                }}
-              />
-
-              <m.button
-                className={cn(
-                  buttonVariants({
-                    variant: state.isRunning ? "outline" : "default",
-                    size: "icon",
-                  }),
-                  "h-20 w-20 rounded-full transition-seijaku hover:scale-105 active:scale-95 cursor-pointer",
-                  state.isRunning
-                    ? "bg-card border border-border-strong text-foreground hover:bg-accent"
-                    : "bg-brand text-brand-foreground hover:bg-brand",
-                )}
-                aria-label={state.isRunning ? "Pause timer" : "Start timer"}
-                onTapStart={() => trigger("thud")}
-                whileTap={
-                  !prefersReducedMotion && isPhone ? { scale: 0.95 } : {}
-                }
-                onClick={handlePlayPause}
-              >
-                {state.isRunning ? (
-                  <Pause className="h-8 w-8" strokeWidth={2.25} />
-                ) : (
-                  <Play className="h-8 w-8 ml-0.5" strokeWidth={2.25} />
-                )}
-              </m.button>
-
-              <m.button
-                className={cn(sideControlCls, chromeDimCls)}
-                aria-label="Skip session"
-                onTapStart={() => trigger("thud")}
-                whileTap={
-                  !prefersReducedMotion && isPhone ? { scale: 0.95 } : {}
-                }
-                onClick={skip}
-              >
-                <SkipForward className="h-5 w-5" strokeWidth={2.25} />
-              </m.button>
-            </div>
-
-            {!state.isRunning && !isPausedMidSession && (
-              <p className="hidden md:block mt-4 font-mono text-[11px] text-muted-foreground">
-                Space to start
-              </p>
+      {!isPiPActive ? (
+        <div
+          key="timer-content"
+          className="flex flex-col items-center text-center"
+        >
+          <div className="flex items-center justify-center gap-2">
+            <h1 className="type-ui font-medium uppercase tracking-widest text-muted-foreground">
+              {MODE_LABELS[state.mode]}
+            </h1>
+            {isPausedMidSession && (
+              <span className="bg-muted border border-border text-muted-foreground font-mono text-[11px] uppercase tracking-wider px-2 py-0.5 rounded-md">
+                PAUSED
+              </span>
             )}
+          </div>
 
-            <div className={chromeDimCls}>
-              <ResetCycleButton
-                onResetExecuted={() => {
-                  if (isPiPActive) closePiP();
-                }}
-              />
-            </div>
+          <div className={cn("mt-2", chromeDimCls)}>
+            <FocusSyncIndicator />
+          </div>
 
-            <div className={cn("mt-16", chromeDimCls)}>
-              <FocusSettingsDialog
-                open={settingsOpen}
-                onOpenChange={setSettingsOpen}
-              />
-            </div>
-          </m.div>
-        ) : (
-          <m.div
-            key="pip-active-indicator"
-            initial={
-              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }
-            }
-            animate={{ opacity: 1, scale: 1 }}
-            exit={
-              prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }
-            }
-            transition={prefersReducedMotion ? { duration: 0 } : undefined}
-            className="flex flex-col items-center justify-center text-center py-12"
+          <div className={chromeDimCls}>
+            <FocusTaskPicker />
+            <FocusSubtaskList />
+          </div>
+
+          <div
+            role="timer"
+            aria-label={`${MODE_LABELS[state.mode]} timer, ${Math.floor(state.remainingSeconds / 60)} minutes ${state.remainingSeconds % 60} seconds remaining`}
+            className={cn(
+              "text-7xl sm:text-8xl md:text-[10rem] font-extralight font-mono tracking-tighter text-foreground tabular-nums mt-6 leading-none transition-opacity duration-200",
+              isPausedMidSession && "opacity-75",
+            )}
           >
-            <div className="w-20 h-20 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
-              <Minimize2
-                className="h-10 w-10 text-primary animate-pulse motion-reduce:animate-none"
-                strokeWidth={2.25}
-              />
-            </div>
-            <h2 className="text-2xl font-semibold tracking-tight mb-2">
-              Viewing in PiP
-            </h2>
-            <p className="text-muted-foreground max-w-[280px]">
-              The timer is running in a floating window. You can browse other
-              pages in Kagelin.
+            <AnimatedCountdown
+              seconds={state.remainingSeconds}
+              isRunning={state.isRunning}
+            />
+          </div>
+
+          <div className="w-full max-w-[240px] mt-12 mb-6">
+            <Progress
+              value={progress}
+              className="h-[3px] opacity-100 bg-muted"
+              indicatorClassName={
+                isPausedMidSession ? "bg-muted-foreground" : "bg-brand"
+              }
+            />
+          </div>
+
+          <div className="flex flex-col items-center gap-2 mb-10">
+            <p className="type-ui text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              {state.mode === "focus"
+                ? `Session ${state.completedSessions + 1} of ${
+                    settings.sessionsBeforeLongBreak
+                  }`
+                : state.mode === "longBreak"
+                  ? "Cycle Complete"
+                  : `Break after Session ${state.completedSessions}`}
             </p>
-            <Button
-              variant="outline"
-              className="mt-8 rounded-full px-6"
-              onClick={closePiP}
+
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary border border-border">
+              <Target className="h-3 w-3 text-primary" strokeWidth={2.25} />
+              <span className="type-ui text-[10px] font-semibold text-primary">
+                {todaySessionsCount} TODAY
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <StopSessionButton
+              className={cn(sideControlCls, chromeDimCls)}
+              isPhone={isPhone}
+              onStopExecuted={() => {
+                if (isPiPActive) closePiP();
+              }}
+            />
+
+            <m.button
+              className={cn(
+                buttonVariants({
+                  variant: state.isRunning ? "outline" : "default",
+                  size: "icon",
+                }),
+                "h-20 w-20 rounded-full transition-seijaku hover:scale-105 active:scale-95 cursor-pointer",
+                state.isRunning
+                  ? "bg-card border border-border-strong text-foreground hover:bg-accent"
+                  : "bg-brand text-brand-foreground hover:bg-brand",
+              )}
+              aria-label={state.isRunning ? "Pause timer" : "Start timer"}
+              onTapStart={() => trigger("thud")}
+              whileTap={!prefersReducedMotion && isPhone ? { scale: 0.95 } : {}}
+              onClick={handlePlayPause}
             >
-              Return to main view
-            </Button>
-          </m.div>
-        )}
-      </AnimatePresence>
+              {state.isRunning ? (
+                <Pause className="h-8 w-8" strokeWidth={2.25} />
+              ) : (
+                <Play className="h-8 w-8 ml-0.5" strokeWidth={2.25} />
+              )}
+            </m.button>
+
+            <m.button
+              className={cn(sideControlCls, chromeDimCls)}
+              aria-label="Skip session"
+              onTapStart={() => trigger("thud")}
+              whileTap={!prefersReducedMotion && isPhone ? { scale: 0.95 } : {}}
+              onClick={skip}
+            >
+              <SkipForward className="h-5 w-5" strokeWidth={2.25} />
+            </m.button>
+          </div>
+
+          {!state.isRunning && !isPausedMidSession && (
+            <p className="hidden md:block mt-4 font-mono text-[11px] text-muted-foreground">
+              Space to start
+            </p>
+          )}
+
+          <div className={chromeDimCls}>
+            <ResetCycleButton
+              onResetExecuted={() => {
+                if (isPiPActive) closePiP();
+              }}
+            />
+          </div>
+
+          <div className={cn("mt-16", chromeDimCls)}>
+            <FocusSettingsDialog
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+            />
+          </div>
+        </div>
+      ) : (
+        <div
+          key="pip-active-indicator"
+          className="flex flex-col items-center justify-center text-center py-12"
+        >
+          <div className="w-20 h-20 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
+            <Minimize2
+              className="h-10 w-10 text-primary animate-pulse motion-reduce:animate-none"
+              strokeWidth={2.25}
+            />
+          </div>
+          <h2 className="text-2xl font-semibold tracking-tight mb-2">
+            Viewing in PiP
+          </h2>
+          <p className="text-muted-foreground max-w-[280px]">
+            The timer is running in a floating window. You can browse other
+            pages in Kagelin.
+          </p>
+          <Button
+            variant="outline"
+            className="mt-8 rounded-full px-6"
+            onClick={closePiP}
+          >
+            Return to main view
+          </Button>
+        </div>
+      )}
 
       <AlertDialog open={stopConfirmOpen} onOpenChange={setStopConfirmOpen}>
         <AlertDialogContent>

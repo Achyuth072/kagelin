@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, startTransition } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
@@ -218,7 +218,9 @@ export function CalendarToolbar({
           value={view}
           onValueChange={(v) => {
             trigger("toggle");
-            setView(v as CalendarView);
+            startTransition(() => {
+              setView(v as CalendarView);
+            });
           }}
         >
           <SelectTrigger

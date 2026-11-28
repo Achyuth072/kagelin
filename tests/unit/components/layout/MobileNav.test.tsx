@@ -1,28 +1,26 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import React from "react";
 import { MobileNav } from "@/components/layout/MobileNav";
 
-const { mockPush, mockPrefetch } = vi.hoisted(() => ({
-  mockPush: vi.fn(),
-  mockPrefetch: vi.fn(),
-}));
-
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
-  useRouter: () => ({ push: mockPush, prefetch: mockPrefetch }),
 }));
 
-vi.mock("motion/react-m", () => ({
-  button: ({
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    prefetch: _prefetch,
     children,
-    onTapStart: _onTapStart,
-    whileTap: _whileTap,
     ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    onTapStart?: unknown;
-    whileTap?: unknown;
-  }) => <button {...props}>{children}</button>,
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+    href: string;
+    prefetch?: boolean;
+  }) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock("@/lib/hooks/useHaptic", () => ({
@@ -34,7 +32,7 @@ describe("MobileNav", () => {
     vi.clearAllMocks();
   });
 
-  it("renders 3 core tabs and navigates to each route", () => {
+  it("renders 3 core tabs as links to each route", () => {
     render(<MobileNav />);
 
     const expected = [
@@ -44,12 +42,11 @@ describe("MobileNav", () => {
     ];
 
     for (const item of expected) {
-      const btn = screen.getByRole("button", { name: item.label });
-      expect(btn).toBeInTheDocument();
-      fireEvent.click(btn);
-      expect(mockPush).toHaveBeenCalledWith(item.path);
+      const link = screen.getByRole("link", { name: item.label });
+      expect(link).toBeInTheDocument();
+      expect(link).toHaveAttribute("href", item.path);
     }
 
-    expect(screen.getAllByRole("button")).toHaveLength(3);
+    expect(screen.getAllByRole("link")).toHaveLength(3);
   });
 });

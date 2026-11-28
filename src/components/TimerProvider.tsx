@@ -20,9 +20,9 @@ interface TimerContextValue {
 }
 
 // Wraps the raw timerStore actions with DB sync (#70) — call these, not
-// useTimerStore((s) => s.pause) etc. Excludes `start`, which closes over
-// per-tick state and so can't be made referentially stable.
+// useTimerStore((s) => s.pause) etc.
 interface TimerActionsContextValue {
+  start: (taskId?: string) => void;
   pause: () => void;
   stop: () => void;
   cancel: () => void;
@@ -51,13 +51,21 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   // callers who don't need to re-render on tick.
   const actions = useMemo(
     () => ({
+      start: timer.start,
       pause: timer.pause,
       stop: timer.stop,
       cancel: timer.cancel,
       skip: timer.skip,
       updateSettings: timer.updateSettings,
     }),
-    [timer.pause, timer.stop, timer.cancel, timer.skip, timer.updateSettings],
+    [
+      timer.start,
+      timer.pause,
+      timer.stop,
+      timer.cancel,
+      timer.skip,
+      timer.updateSettings,
+    ],
   );
 
   const value = useMemo(
@@ -65,10 +73,9 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       state: timer.state,
       settings: timer.settings,
       isLoaded: timer.isLoaded,
-      start: timer.start,
       ...actions,
     }),
-    [timer.state, timer.settings, timer.isLoaded, timer.start, actions],
+    [timer.state, timer.settings, timer.isLoaded, actions],
   );
 
   return (

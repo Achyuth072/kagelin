@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter, usePathname } from "next/navigation";
-import { useTimer } from "@/components/TimerProvider";
+import { useTimerStore } from "@/lib/store/timerStore";
 import { useCompletedTasks } from "@/components/CompletedTasksProvider";
 import { useActiveTask } from "@/lib/hooks/useActiveTask";
 import { useHaptic } from "@/lib/hooks/useHaptic";
@@ -37,13 +37,15 @@ import { ReadableText } from "@/components/encryption/ReadableText";
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 
 const HeaderTimer = React.memo(function HeaderTimer() {
-  const { state } = useTimer();
+  const remainingSeconds = useTimerStore((s) => s.state.remainingSeconds);
+  const isRunning = useTimerStore((s) => s.state.isRunning);
+  const activeTaskId = useTimerStore((s) => s.state.activeTaskId);
   const { trigger } = useHaptic();
   const router = useRouter();
-  const { data: activeTask } = useActiveTask(state.activeTaskId);
+  const { data: activeTask } = useActiveTask(activeTaskId);
 
-  const minutes = Math.floor(state.remainingSeconds / 60);
-  const seconds = state.remainingSeconds % 60;
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
   const displayTime = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
   return (
@@ -57,7 +59,7 @@ const HeaderTimer = React.memo(function HeaderTimer() {
       <Timer
         strokeWidth={2.25}
         className={`h-5 w-5 shrink-0 ${
-          state.isRunning
+          isRunning
             ? "text-primary animate-pulse motion-reduce:animate-none"
             : "text-muted-foreground"
         }`}
@@ -65,7 +67,7 @@ const HeaderTimer = React.memo(function HeaderTimer() {
       <div className="flex flex-col items-start text-left min-w-0">
         <span
           className={`text-base font-mono font-semibold tabular-nums leading-none ${
-            state.isRunning ? "text-primary" : "text-muted-foreground"
+            isRunning ? "text-primary" : "text-muted-foreground"
           }`}
         >
           {displayTime}

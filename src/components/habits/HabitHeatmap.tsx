@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import {
   ActivityCalendar,
   type Activity,
@@ -41,7 +41,7 @@ function renderBlock(block: BlockElement, activity: Activity, color: string) {
   });
 }
 
-export function HabitHeatmap({
+export const HabitHeatmap = React.memo(function HabitHeatmap({
   entries,
   color,
   className,
@@ -51,38 +51,48 @@ export function HabitHeatmap({
   habit = {},
 }: HabitHeatmapProps) {
   const { resolvedTheme } = useTheme();
+  const { habit_type, target_type, target_value } = habit;
 
-  const today = new Date().toISOString().split("T")[0];
-  const dataMap = new Map(entries.map((e) => [e.date, e.value]));
+  const calendarData = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const dataMap = new Map(entries.map((e) => [e.date, e.value]));
 
-  // The calendar spans only first→last date; pin both edges so a new habit still gets a full year.
-  const paddedDays = new Set<string>();
-  const ensureDay = (date: string) => {
-    if (dataMap.has(date)) return;
-    dataMap.set(date, 0);
-    paddedDays.add(date);
-  };
-  if (startDate) ensureDay(startDate);
-  ensureDay(today);
-  ensureDay(format(subMonths(new Date(), 12), "yyyy-MM-dd"));
+    // The calendar spans only first→last date; pin both edges so a new habit still gets a full year.
+    const paddedDays = new Set<string>();
+    const ensureDay = (date: string) => {
+      if (dataMap.has(date)) return;
+      dataMap.set(date, 0);
+      paddedDays.add(date);
+    };
+    if (startDate) ensureDay(startDate);
+    ensureDay(today);
+    ensureDay(format(subMonths(now, 12), "yyyy-MM-dd"));
 
-  const calendarData = Array.from(dataMap.entries())
-    .map(([date, value]) => {
-      // A padded day has no entry; scoring its 0 would read as "met" for an at_most habit.
-      const progress = paddedDays.has(date) ? 0 : dayValue(value, habit);
-      return {
-        date,
-        count: value,
-        // Any progress gets at least the lightest shade; only a met target gets the darkest.
-        level: progress <= 0 ? 0 : Math.max(1, Math.floor(progress * 4)),
-      };
-    })
-    .sort((a, b) => a.date.localeCompare(b.date));
+    const habitConfig = { habit_type, target_type, target_value };
+    return Array.from(dataMap.entries())
+      .map(([date, value]) => {
+        // A padded day has no entry; scoring its 0 would read as "met" for an at_most habit.
+        const progress = paddedDays.has(date)
+          ? 0
+          : dayValue(value, habitConfig);
+        return {
+          date,
+          count: value,
+          // Any progress gets at least the lightest shade; only a met target gets the darkest.
+          level: progress <= 0 ? 0 : Math.max(1, Math.floor(progress * 4)),
+        };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [entries, startDate, habit_type, target_type, target_value]);
 
-  const theme = {
-    dark: ["#262626", `${color}33`, `${color}66`, `${color}99`, color],
-    light: ["#ebebeb", `${color}33`, `${color}66`, `${color}99`, color],
-  };
+  const theme = useMemo(
+    () => ({
+      dark: ["#262626", `${color}33`, `${color}66`, `${color}99`, color],
+      light: ["#ebebeb", `${color}33`, `${color}66`, `${color}99`, color],
+    }),
+    [color],
+  );
 
   return (
     <div className={className} style={{ width: "fit-content" }}>
@@ -123,4 +133,4 @@ export function HabitHeatmap({
       />
     </div>
   );
-}
+});

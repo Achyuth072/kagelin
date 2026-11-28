@@ -44,7 +44,7 @@ vi.mock("@/lib/store/timerStore", () => ({
 }));
 
 vi.mock("@/components/TimerProvider", () => ({
-  useTimer: () => ({ start: vi.fn(), pause: vi.fn() }),
+  useTimerActions: () => ({ start: vi.fn(), pause: vi.fn() }),
 }));
 
 vi.mock("@/lib/store/uiStore", () => ({

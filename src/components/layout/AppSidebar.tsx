@@ -1,10 +1,10 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import packageJson from "../../../package.json";
 const { version } = packageJson;
 import type { Project } from "@/lib/types/task";
@@ -145,7 +145,6 @@ interface AppSidebarProps {
 
 export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { isMobile, setOpenMobile } = useSidebar();
   const { openSheet } = useCompletedTasks();
@@ -171,14 +170,6 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
   const setArchivedProjectsOpen = useUiStore((s) => s.setArchivedProjectsOpen);
 
   const currentProjectId = searchParams.get("project");
-
-  // Prefetch all routes on mount for instant navigation
-  useEffect(() => {
-    const allRoutes = [...mainNavItems, ...secondaryNavItems].map(
-      (item) => item.path,
-    );
-    allRoutes.forEach((path) => router.prefetch(path));
-  }, [router]);
 
   const handleMobileRouteIntent = () => {
     trigger("toggle");
@@ -263,6 +254,7 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                           >
                             <Link
                               aria-keyshortcuts={item.shortcut}
+                              prefetch={true}
                               href={
                                 item.label === "All Tasks"
                                   ? "/?project=all"
@@ -506,6 +498,7 @@ export function AppSidebar({ onOpenSearch }: AppSidebarProps) {
                         >
                           <Link
                             aria-keyshortcuts={item.shortcut}
+                            prefetch={true}
                             href={item.path}
                             onClick={() => {
                               trigger("toggle");

@@ -41,6 +41,10 @@ const nextConfig: NextConfig = {
     agentUpgrade: "security",
     cpus: 2,
     webpackMemoryOptimizations: true,
+    staleTimes: {
+      dynamic: 300,
+      static: 300,
+    },
   },
   async headers() {
     return [

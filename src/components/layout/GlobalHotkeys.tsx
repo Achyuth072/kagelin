@@ -1,5 +1,6 @@
 "use client";
 
+import { startTransition } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useRouter, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -201,12 +202,20 @@ export function GlobalHotkeys({
 
   // --- NAVIGATION (g + 1-6, or just 1-6?) ---
   // Using 1-6 for quick tab switching is standard
-  useHotkeys("1", () => router.push("/"), options); // Home/Tasks
-  useHotkeys("2", () => router.push("/habits"), options); // Habits
-  useHotkeys("3", () => router.push("/calendar"), options); // Calendar
-  useHotkeys("4", () => router.push("/stats"), options); // Statistics
-  useHotkeys("5", () => router.push("/focus"), options); // Focus
-  useHotkeys("6", () => router.push("/settings"), options); // Settings
+  useHotkeys("1", () => startTransition(() => router.push("/")), options); // Home/Tasks
+  useHotkeys("2", () => startTransition(() => router.push("/habits")), options); // Habits
+  useHotkeys(
+    "3",
+    () => startTransition(() => router.push("/calendar")),
+    options,
+  ); // Calendar
+  useHotkeys("4", () => startTransition(() => router.push("/stats")), options); // Statistics
+  useHotkeys("5", () => startTransition(() => router.push("/focus")), options); // Focus
+  useHotkeys(
+    "6",
+    () => startTransition(() => router.push("/settings")),
+    options,
+  ); // Settings
 
   return null;
 }

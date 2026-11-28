@@ -113,7 +113,7 @@ vi.mock("@/lib/store/timerStore", () => ({
 // store (see #70 — a raw-store bypass here never persists to the DB, so a
 // later resync-on-visibility silently resumes/re-pauses the timer).
 vi.mock("@/components/TimerProvider", () => ({
-  useTimer: () => ({
+  useTimerActions: () => ({
     start: mockSyncedStart,
     pause: mockSyncedPause,
   }),

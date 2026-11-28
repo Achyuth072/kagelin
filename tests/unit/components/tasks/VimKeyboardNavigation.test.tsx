@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import TaskList from "@/components/tasks/TaskList";
@@ -151,11 +151,19 @@ async function renderTaskList(props?: { onTaskSelect?: (task: Task) => void }) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
-  return render(
+  const result = render(
     <QueryClientProvider client={qc}>
       <TaskList {...props} />
     </QueryClientProvider>,
   );
+  if (uiState.viewMode === "board") {
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("board-view-skeleton"),
+      ).not.toBeInTheDocument();
+    });
+  }
+  return result;
 }
 
 describe("Vim Keyboard Navigation & Highlighting", () => {

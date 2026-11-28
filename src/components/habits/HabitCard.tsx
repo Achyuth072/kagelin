@@ -37,7 +37,7 @@ interface HabitCardProps {
   onViewInsights?: () => void;
 }
 
-export function HabitCard({
+export const HabitCard = React.memo(function HabitCard({
   habit,
   icon: Icon,
   onToggle,
@@ -280,4 +280,4 @@ export function HabitCard({
       </div>
     </Card>
   );
-}
+});
