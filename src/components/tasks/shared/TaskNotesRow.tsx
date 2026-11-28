@@ -107,62 +107,60 @@ export const TaskNotesRow = forwardRef<TaskNotesRowHandle, TaskNotesRowProps>(
     }, [isEditing]);
 
     return (
-      <div className="mx-2">
-        <div
-          className="flex items-start gap-3 px-3 py-2.5 rounded-md transition-seijaku-fast hover:bg-muted/40 cursor-text"
-          onClick={() => {
-            if (!unreadable && !isEditing) {
-              startEditing();
-            }
-          }}
-        >
-          <IconCell className="pt-[5px] text-muted-foreground">
-            <FileText className="h-4 w-4" strokeWidth={2.25} />
-          </IconCell>
-          {unreadable ? (
-            <span className="text-xs flex-1 min-w-0">
-              <ReadableText text={null} />
-            </span>
-          ) : (
-            <div className="flex-1 text-xs">
-              {showPreview && (
-                <div
-                  className="w-full text-foreground whitespace-pre-wrap break-words leading-relaxed font-sans text-xs"
-                  tabIndex={0}
-                  role="button"
-                  aria-label="Edit notes"
-                  onClick={(e) => {
-                    e.stopPropagation();
+      <div
+        className="flex items-start gap-3 px-2 py-2 rounded-md hover:bg-accent transition-seijaku-fast cursor-text"
+        onClick={() => {
+          if (!unreadable && !isEditing) {
+            startEditing();
+          }
+        }}
+      >
+        <IconCell className="pt-[5px] text-muted-foreground">
+          <FileText className="h-4 w-4" strokeWidth={2.25} />
+        </IconCell>
+        {unreadable ? (
+          <span className="text-xs flex-1 min-w-0">
+            <ReadableText text={null} />
+          </span>
+        ) : (
+          <div className="flex-1 text-xs">
+            {showPreview && (
+              <div
+                className="w-full text-foreground whitespace-pre-wrap break-words leading-relaxed font-sans text-xs"
+                tabIndex={0}
+                role="button"
+                aria-label="Edit notes"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startEditing();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
                     startEditing();
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      startEditing();
-                    }
-                  }}
-                >
-                  {parseLinkTokens(description)}
-                </div>
+                  }
+                }}
+              >
+                {parseLinkTokens(description)}
+              </div>
+            )}
+            <textarea
+              ref={textareaRef}
+              id="task-description"
+              aria-label="Notes"
+              placeholder="Add notes"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onFocus={() => setIsEditing(true)}
+              onBlur={() => setIsEditing(false)}
+              hidden={showPreview}
+              className={cn(
+                "w-full field-sizing-content max-h-32 p-0 bg-transparent border-0 outline-none resize-none leading-relaxed text-foreground placeholder:text-muted-foreground/60 font-sans text-xs",
+                showPreview && "hidden",
               )}
-              <textarea
-                ref={textareaRef}
-                id="task-description"
-                aria-label="Notes"
-                placeholder="Add notes"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                onFocus={() => setIsEditing(true)}
-                onBlur={() => setIsEditing(false)}
-                hidden={showPreview}
-                className={cn(
-                  "w-full field-sizing-content max-h-32 p-0 bg-transparent border-0 outline-none resize-none leading-relaxed text-foreground placeholder:text-muted-foreground/60 font-sans text-xs",
-                  showPreview && "hidden",
-                )}
-              />
-            </div>
-          )}
-        </div>
+            />
+          </div>
+        )}
       </div>
     );
   },
