@@ -1,5 +1,22 @@
 [
   {
+    "version": "1.55.0-preview.0",
+    "date": "2026-11-28",
+    "channel": "preview",
+    "sections": {
+      "Added": [
+        "Add daily brief strip, settings toggle, and inline add task trigger",
+        "Redesign compact habits view into ink and matte ledger"
+      ],
+      "Improved": [
+        "Eliminate route-switching and view-switching lag across navigation and views"
+      ],
+      "Fixed": [
+        "Align notes row with steps icon column"
+      ]
+    }
+  },
+  {
     "version": "1.54.0",
     "date": "2026-11-27",
     "channel": "stable",
@@ -866,21 +883,6 @@
       "Fixed": [
         "Toast a refused save when the gate does not lock the device",
         "Purge once for a burst of refused writes and explain a key change on load"
-      ]
-    }
-  },
-  {
-    "version": "1.47.0-preview.3",
-    "date": "2026-10-07",
-    "channel": "preview",
-    "sections": {
-      "Added": [
-        "Disclose passphrase and recovery code change in rotation"
-      ],
-      "Fixed": [
-        "Cancel a replaced Re-seal run and cover the retired-key calendar pull",
-        "Finish Re-seal for imports, block stale key-row writes, purge rotated-out devices",
-        "Guard key-row markers, keep -v1 rejection through rotation, report unreadable values in Re-seal"
       ]
     }
   }
