@@ -63,6 +63,11 @@ describe("HabitCompactRow rolling-7 strip", () => {
     expect(screen.getByText(/streak/)).toBeInTheDocument();
   });
 
+  it("omits the streak badge when streak is 0", () => {
+    render(<HabitCompactRow habit={{ ...mockHabit, entries: [] }} />);
+    expect(screen.queryByText(/streak/i)).not.toBeInTheDocument();
+  });
+
   it("renders a fixed 7-cell strip (one column per day, no scroll)", () => {
     const { container } = render(<HabitCompactRow habit={mockHabit} />);
     const strip = container.querySelector(".grid-cols-7");
@@ -78,11 +83,11 @@ describe("HabitCompactRow rolling-7 strip", () => {
     expect(container.querySelectorAll(".bg-transparent")).toHaveLength(5);
   });
 
-  it("rings the rightmost (today) cell", () => {
+  it("marks the rightmost (today) cell with data-today", () => {
     const { container } = render(<HabitCompactRow habit={mockHabit} />);
     const buttons = container.querySelectorAll("button");
     const todayButton = buttons[buttons.length - 1];
-    expect(todayButton.querySelector(".ring-2")).toBeTruthy();
+    expect(todayButton).toHaveAttribute("data-today", "true");
   });
 
   it("treats a null start_date as no before-start cutoff", () => {

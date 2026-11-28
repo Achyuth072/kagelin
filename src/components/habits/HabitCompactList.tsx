@@ -51,10 +51,10 @@ interface HabitCompactListProps {
 }
 
 /**
- * Timeline Matrix compact view (Variant B):
- * - Folio-continuous container with synchronized 7-day timeline header.
- * - Desktop row height: 44px (h-11) for comfortable power-user density.
- * - 24px × 24px squircle cells with 4px tactile gaps.
+ * Timeline Matrix compact view (Ink & Matte ledger):
+ * - Folio-continuous container with synchronized 7-day timeline header on both desktop and mobile.
+ * - Desktop: 28px × 28px squircle cells (w-[236px]) with 6px (gap-1.5) tactile gaps.
+ * - Mobile: Full-width synchronized 7-day column strip with 32px tap tiles.
  * - Drag-to-reorder via dnd-kit hybrid (desktop left-edge handle, mobile long-press).
  */
 export function HabitCompactList({
@@ -167,46 +167,76 @@ export function HabitCompactList({
       // idle, which is pure overhead for this flat single-list case.
       measuring={{ droppable: { strategy: MeasuringStrategy.WhileDragging } }}
     >
-      <div className="w-full flex flex-col rounded-xl border border-border/80 bg-card overflow-hidden">
+      <div className="w-full flex flex-col rounded-xl border border-border bg-card overflow-hidden">
         {/* Synchronized Timeline Header */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-secondary/30 border-b border-border/60 select-none">
-          <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-between gap-x-3 px-4 py-2.5 bg-secondary border-b border-border select-none">
+          <div className="flex items-center gap-2.5 min-w-0">
             <span className="text-xs font-semibold tracking-tight uppercase text-foreground">
               Habits
             </span>
-            <span className="text-[11px] font-medium bg-secondary border border-border/60 text-muted-foreground px-2 py-0.5 rounded-full tabular-nums">
+            <span className="text-[11px] font-mono font-medium bg-card border border-border text-muted-foreground px-2 py-0.5 rounded-full tabular-nums">
               {completedTodayCount} of {habits.length} done today
             </span>
           </div>
 
-          {/* 7-Day Calendar Strip Header (Synchronized with 192px squircle grid) */}
-          <div className="hidden sm:flex items-center">
-            <div className="grid grid-cols-7 gap-1 w-[192px] text-center">
+          {/* Desktop 7-Day Calendar Strip Header (Synchronized with 236px squircle grid) */}
+          <div className="hidden sm:flex items-center gap-x-3 shrink-0">
+            <div className="grid grid-cols-7 gap-1.5 w-[236px] text-center">
               {headerDays.map((d) => {
                 const dateNum = format(parseISO(d.date), "d");
                 return (
                   <div
                     key={d.date}
+                    data-today={d.isToday ? "true" : undefined}
                     className={cn(
-                      "flex flex-col items-center leading-none py-1 rounded-[6px] transition-colors",
+                      "flex flex-col items-center justify-center leading-none py-1 rounded-md transition-colors",
                       d.isToday
-                        ? "bg-secondary font-bold text-foreground"
+                        ? "bg-foreground text-background font-semibold px-1 py-0.5"
                         : "text-muted-foreground",
                     )}
                   >
                     <span className="text-[10px] font-bold uppercase tracking-wider">
                       {d.weekdayLabel}
                     </span>
-                    <span className="text-xs tabular-nums font-semibold mt-0.5">
+                    <span className="text-xs font-mono tabular-nums font-semibold mt-0.5">
                       {dateNum}
                     </span>
                   </div>
                 );
               })}
             </div>
-            {/* Spacer matching row's onViewInsights button (w-7 ml-2) for column alignment */}
-            {onViewInsights && <div className="w-7 ml-2" />}
+            {/* Spacer matching row's onViewInsights button (w-7) for column alignment */}
+            {onViewInsights && <div className="w-7 shrink-0" />}
           </div>
+        </div>
+
+        {/* Mobile Synchronized 7-Day Calendar Strip */}
+        <div
+          data-testid="mobile-timeline-header"
+          className="sm:hidden grid grid-cols-7 gap-1.5 px-4 py-1.5 border-b border-border bg-secondary text-center select-none"
+        >
+          {headerDays.map((d) => {
+            const dateNum = format(parseISO(d.date), "d");
+            return (
+              <div
+                key={d.date}
+                data-today={d.isToday ? "true" : undefined}
+                className={cn(
+                  "flex flex-col items-center justify-center leading-none py-1 rounded-md transition-colors",
+                  d.isToday
+                    ? "bg-foreground text-background font-semibold px-1 py-0.5"
+                    : "text-muted-foreground",
+                )}
+              >
+                <span className="text-[10px] font-bold uppercase tracking-wider">
+                  {d.weekdayLabel}
+                </span>
+                <span className="text-xs font-mono tabular-nums font-semibold mt-0.5">
+                  {dateNum}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Sortable Rows */}
@@ -214,7 +244,7 @@ export function HabitCompactList({
           items={habitIds}
           strategy={verticalListSortingStrategy}
         >
-          <div className="divide-y divide-border/40">
+          <div className="divide-y divide-border">
             {displayHabits.map((habit) => (
               <SortableHabitCompactRow
                 key={habit.id}

@@ -91,6 +91,7 @@ describe("HabitCompactList", () => {
 
     expect(screen.getByText("Habits")).toBeInTheDocument();
     expect(screen.getByText(/1 of 2 done today/i)).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-timeline-header")).toBeInTheDocument();
   });
 
   it("renders all habit rows in the list", () => {

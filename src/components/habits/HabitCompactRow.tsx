@@ -6,7 +6,7 @@ import {
   BarChart2,
   Check,
   X,
-  Pause,
+  Minus,
   Flame,
   type LucideIcon,
 } from "lucide-react";
@@ -55,10 +55,11 @@ interface HabitCompactRowProps {
 }
 
 /**
- * Compact habit row (Variant B: Timeline Matrix):
- * - Height: 44px (h-11) on desktop, single unified line.
- * - Left: Optional DragHandle (desktop), habit accent stripe, icon, title, optional cadence, micro streak badge.
- * - Right: 7-day 24px squircle matrix with 4px gap + hover insight button.
+ * Compact habit row (Ink & Matte ledger):
+ * - Desktop: Natural vertical breathing (min-h-[52px] py-2.5), icon + stacked title/cadence,
+ *   right-aligned tabular metadata zone, 28px squircle 7-day matrix (w-[236px]), and hover insight button.
+ * - Mobile: Top row with identity, frequency ring / active streak (> 0), and muted insight button;
+ *   bottom row with full-width synchronized 7-day tap tiles.
  */
 export function HabitCompactRow({
   habit,
@@ -102,10 +103,10 @@ export function HabitCompactRow({
       }}
       {...(!isDesktop ? dragAttributes : {})}
       {...(!isDesktop ? dragListeners : {})}
-      className="group flex flex-col sm:flex-row items-start sm:items-center justify-between px-4 py-2.5 sm:py-0 sm:h-11 transition-seijaku-fast hover:bg-secondary/40 active:bg-secondary/70 cursor-pointer select-none"
+      className="group flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-2.5 px-4 py-3 sm:py-2.5 sm:min-h-[52px] transition-seijaku-fast hover:bg-accent active:bg-secondary cursor-pointer select-none"
     >
-      {/* Left: Desktop Drag Handle + Accent Stripe + Icon + Name + Cadence + Micro Streak */}
-      <div className="flex min-w-0 items-center gap-2.5 flex-1 w-full sm:w-auto">
+      {/* Left: Desktop Drag Handle + Icon + Stacked Name & Cadence */}
+      <div className="order-1 flex min-w-0 flex-1 items-center gap-2.5">
         {isDesktop && (
           <DragHandle
             ref={dragActivatorRef}
@@ -115,13 +116,9 @@ export function HabitCompactRow({
             className="shrink-0 -ml-1 mr-0.5"
           />
         )}
-        <div
-          className="w-1.5 h-5 sm:h-6 rounded-full shrink-0"
-          style={{ backgroundColor: habit.color }}
-        />
         {Icon ? (
           <Icon
-            className="h-4.5 w-4.5 shrink-0"
+            className="h-4 w-4 shrink-0"
             strokeWidth={2.25}
             style={{ color: habit.color }}
           />
@@ -131,17 +128,22 @@ export function HabitCompactRow({
             style={{ backgroundColor: habit.color }}
           />
         )}
-        <span className="truncate text-[14px] font-medium tracking-tight text-foreground">
-          <ReadableText text={habit.name} />
-        </span>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium tracking-tight text-foreground">
+            <ReadableText text={habit.name} />
+          </div>
+          {lastDoneNext && (
+            <div className="truncate text-xs text-muted-foreground mt-0.5">
+              {lastDoneNextLabel(lastDoneNext)}
+            </div>
+          )}
+        </div>
+      </div>
 
-        {/* Optional Cadence: 1-in-D or Frequency Ring */}
-        {lastDoneNext ? (
-          <span className="text-[12px] font-medium text-foreground/70 hidden md:inline shrink-0">
-            {lastDoneNextLabel(lastDoneNext)}
-          </span>
-        ) : (
-          frequencyProgress && (
+      {/* Metadata Zone: Frequency Ring + Active Streak (> 0) */}
+      {(frequencyProgress || streak > 0) && (
+        <div className="order-2 flex shrink-0 items-center justify-end gap-2 font-mono tabular-nums text-xs text-muted-foreground sm:mr-1">
+          {!lastDoneNext && frequencyProgress && (
             <CircularProgress
               value={frequencyProgress.completed}
               max={frequencyProgress.target}
@@ -149,29 +151,30 @@ export function HabitCompactRow({
               strokeWidth={2.5}
               color={habit.color}
               label={frequencyProgressLabel(frequencyProgress)}
-              className="mr-0.5 hidden md:inline-flex shrink-0"
+              className="shrink-0"
             />
-          )
-        )}
+          )}
 
-        {/* Micro streak badge */}
-        <div
-          className="ml-auto sm:ml-2 flex items-center gap-1 shrink-0 bg-secondary/80 border border-border/50 px-2 py-0.5 rounded-[5px] text-xs tabular-nums font-semibold text-foreground"
-          title={`${streak} streak`}
-        >
-          <Flame
-            className="h-3.5 w-3.5 text-brand"
-            strokeWidth={2.25}
-            aria-hidden
-          />
-          <span>{streak}</span>
-          <span className="sr-only">streak</span>
+          {streak > 0 && (
+            <div
+              className="inline-flex items-center gap-1 rounded-md bg-secondary border border-border px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums text-foreground"
+              title={`${streak} day streak`}
+            >
+              <Flame
+                className="h-3 w-3 text-brand"
+                strokeWidth={2.25}
+                aria-hidden
+              />
+              <span>{streak}d</span>
+              <span className="sr-only">streak</span>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
-      {/* Right: Unbroken 7-Day Squircle Matrix (192px width, 24px squircles) + Insights Button */}
-      <div className="flex shrink-0 items-center w-full sm:w-auto justify-between sm:justify-start mt-2.5 sm:mt-0">
-        <div className="grid grid-cols-7 gap-1 w-full sm:w-[192px]">
+      {/* 7-Day Squircle Matrix (full width on mobile, 236px on sm+) */}
+      <div className="order-4 w-full sm:order-3 sm:w-[236px] shrink-0">
+        <div className="grid grid-cols-7 gap-1.5 w-full">
           {days.map((day) => (
             <CompactMatrixCell
               key={day.date}
@@ -187,22 +190,23 @@ export function HabitCompactRow({
             />
           ))}
         </div>
-
-        {onViewInsights && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewInsights();
-            }}
-            className="hidden sm:flex ml-2 h-7 w-7 items-center justify-center rounded-[6px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-seijaku-fast hover:bg-secondary hover:text-foreground shrink-0"
-            aria-label="View insights"
-            title="View Insights"
-          >
-            <BarChart2 className="h-4 w-4" strokeWidth={2.25} />
-          </button>
-        )}
       </div>
+
+      {/* View Insights Button (top-right on mobile, trailing on desktop) */}
+      {onViewInsights && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewInsights();
+          }}
+          className="order-3 sm:order-4 flex h-8 w-8 sm:h-7 sm:w-7 items-center justify-center rounded-md text-muted-foreground opacity-75 hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 transition-seijaku-fast hover:bg-secondary hover:text-foreground shrink-0"
+          aria-label="View insights"
+          title="View Insights"
+        >
+          <BarChart2 className="h-4 w-4" strokeWidth={2.25} />
+        </button>
+      )}
     </div>
   );
 }
@@ -247,7 +251,7 @@ function CompactMatrixCell({
     return (
       <div
         aria-hidden
-        className="h-6 w-6 rounded-[7px] bg-transparent opacity-15"
+        className="h-8 w-full sm:h-7 sm:w-7 rounded-lg sm:rounded-[7px] bg-transparent opacity-15"
       />
     );
   }
@@ -257,7 +261,7 @@ function CompactMatrixCell({
   const buttonContent = (
     <span
       className={cn(
-        "flex h-full w-full items-center justify-center rounded-[6px] transition-seijaku-fast",
+        "flex h-full w-full items-center justify-center rounded-lg sm:rounded-[7px] transition-seijaku-fast",
         filled
           ? "border-transparent text-white"
           : missed
@@ -265,8 +269,8 @@ function CompactMatrixCell({
             : skipped
               ? "bg-secondary border border-border text-muted-foreground"
               : isToday
-                ? "border-2 border-foreground bg-secondary/40 hover:bg-secondary/60 ring-2 ring-brand ring-offset-1 ring-offset-card"
-                : "border border-border/50 bg-secondary/25 hover:bg-secondary/60 hover:border-border",
+                ? "border-2 border-border-strong bg-secondary hover:border-brand"
+                : "border border-border bg-background hover:border-border-strong",
       )}
       style={filled ? { backgroundColor: color } : undefined}
     >
@@ -278,9 +282,9 @@ function CompactMatrixCell({
         />
       )}
       {missed && <X className="h-3 w-3" strokeWidth={2.25} />}
-      {skipped && <Pause className="h-2.5 w-2.5" strokeWidth={2.25} />}
+      {skipped && <Minus className="h-3 w-3" strokeWidth={2.25} />}
       {isMeasurable && loggedValue !== null && !filled && (
-        <span className="text-[10px] font-semibold tabular-nums leading-none">
+        <span className="text-[10px] font-mono font-semibold tabular-nums leading-none">
           {loggedValue}
         </span>
       )}
@@ -290,6 +294,7 @@ function CompactMatrixCell({
   const cellButton = (
     <button
       type="button"
+      data-today={isToday ? "true" : undefined}
       onClick={(e) => {
         e.stopPropagation();
         onActivate();
@@ -302,7 +307,7 @@ function CompactMatrixCell({
       aria-label={cellLabel}
       title={stateText}
       className={cn(
-        "relative flex h-6 w-6 items-center justify-center rounded-[7px] transition-seijaku-fast shrink-0 p-0",
+        "relative flex h-8 w-full sm:h-7 sm:w-7 items-center justify-center rounded-lg sm:rounded-[7px] transition-seijaku-fast shrink-0 p-0",
         coarse && "before:absolute before:-inset-1.5 before:content-['']",
       )}
     >
